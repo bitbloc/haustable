@@ -3,6 +3,7 @@ import { bookingReducer, initialState } from './bookingReducer'
 import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
 import { fetchAndSortMenu } from '../utils/menuHelper'
+import { safeTimestampUrl } from '../utils/urlHelper'
 
 const BookingContext = createContext()
 
@@ -46,14 +47,13 @@ export function BookingProvider({ children }) {
                 const settings = initialState.settings
                 if (settingsData) {
                     const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
-                    if (map.floorplan_url) settings.floorplanUrl = `${map.floorplan_url}?t=${Date.now()}`
-                    if (map.payment_qr_url) settings.qrCodeUrl = `${map.payment_qr_url}?t=${Date.now()}`
+                    if (map.floorplan_url) settings.floorplanUrl = safeTimestampUrl(map.floorplan_url)
+                    if (map.payment_qr_url) settings.qrCodeUrl = safeTimestampUrl(map.payment_qr_url)
                     if (map.policy_dine_in) settings.policyNote = map.policy_dine_in
                     if (map.booking_min_spend) settings.minSpend = parseInt(map.booking_min_spend)
                     if (map.booking_min_advance_hours) settings.minAdvanceHours = Number(map.booking_min_advance_hours)
-                    if (map.booking_min_advance_hours) settings.minAdvanceHours = Number(map.booking_min_advance_hours)
                     if (map.booking_time_slots) settings.bookingTimeSlots = map.booking_time_slots.split(',').map(s => s.trim())
-                    if (map.alert_sound_url) settings.soundAlertUrl = `${map.alert_sound_url}?t=${Date.now()}`
+                    if (map.alert_sound_url) settings.soundAlertUrl = safeTimestampUrl(map.alert_sound_url)
                     
                     // Side Dishes Config (JSON)
                     if (map.side_dish_config) {

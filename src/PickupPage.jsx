@@ -13,6 +13,7 @@ import { usePromotion } from './hooks/usePromotion'
 import { useMenuData } from './hooks/useMenuData' // NEW
 import { useOrderSubmission } from './hooks/useOrderSubmission' // NEW
 import { useServiceGuard } from './hooks/useServiceGuard'
+import { safeTimestampUrl } from './utils/urlHelper'
 import { Tag, AlertCircle, Crown, Coffee } from 'lucide-react'
 
 // --- Main Page ---
@@ -71,7 +72,7 @@ export default function PickupPage() {
             const { data: settings } = await supabase.from('app_settings').select('*')
             if (settings) {
                 const map = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
-                if (map.payment_qr_url) setQrCodeUrl(`${map.payment_qr_url}?t=${Date.now()}`)
+                if (map.payment_qr_url) setQrCodeUrl(safeTimestampUrl(map.payment_qr_url))
                 if (map.policy_pickup) setPolicyNote(map.policy_pickup)
                 if (map.pickup_min_advance_hours) setMinAdvanceHours(Number(map.pickup_min_advance_hours))
                 if (map.opening_time) setOpeningTime(map.opening_time)

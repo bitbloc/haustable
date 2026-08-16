@@ -20,3 +20,29 @@ export function getAppOrigin() {
   }
   return typeof window !== 'undefined' ? window.location.origin : PUBLIC_DOMAIN;
 }
+
+/**
+ * Appends a cache-busting timestamp to HTTP/HTTPS or relative URLs,
+ * but safely ignores Base64 Data URLs and Blob URLs to prevent malformed URL errors.
+ */
+export function safeTimestampUrl(url, timestamp = Date.now()) {
+  if (!url || typeof url !== 'string') return url || '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  const hasParams = trimmed.includes('?');
+  return `${trimmed}${hasParams ? '&' : '?'}t=${timestamp}`;
+}
+
+/**
+ * Safely formats a URL for CSS backgroundImage with surrounding double quotes.
+ * This prevents CSS parsers from breaking data: URLs at commas, which would otherwise
+ * cause secondary background layer relative URL fetches and HTTP 414 URI Too Large errors.
+ */
+export function safeCssUrl(url) {
+  if (!url || typeof url !== 'string') return undefined;
+  const clean = url.trim().replace(/"/g, '\\"');
+  return `url("${clean}")`;
+}
+

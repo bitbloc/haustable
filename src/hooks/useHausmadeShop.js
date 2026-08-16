@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { safeTimestampUrl } from '../utils/urlHelper'
 
 export function useHausmadeShop() {
     const [menuItems, setMenuItems] = useState([])
@@ -45,7 +46,7 @@ export function useHausmadeShop() {
                     shippingFee: Number(settingsMap.hausmade_shipping_fee ?? 50),
                     freeShippingMinItems: Number(settingsMap.hausmade_free_shipping_min_items ?? 3),
                     freeShippingMinAmount: Number(settingsMap.hausmade_free_shipping_min_amount ?? 0),
-                    paymentQrUrl: settingsMap.payment_qr_url ? `${settingsMap.payment_qr_url}?t=${Date.now()}` : '',
+                    paymentQrUrl: safeTimestampUrl(settingsMap.payment_qr_url) || '',
                     bankAccountName: settingsMap.bank_account_name || 'IN THE HAUS',
                     bankAccountNo: settingsMap.bank_account_no || '123-4-56789-0',
                     bankName: settingsMap.bank_name || 'กสิกรไทย (KBank)',

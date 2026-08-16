@@ -163,13 +163,15 @@ export default function ReededGlassBackground({ imageUrl }) {
 
         const image = new Image();
         if (imageUrl) {
-            // Add cache-busting timestamp
-            const timestamp = new Date().getTime();
-            const hasParams = imageUrl.includes('?');
-            const cacheBustedUrl = `${imageUrl}${hasParams ? '&' : '?'}t=${timestamp}`;
+            const isDataOrBlob = typeof imageUrl === 'string' && (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:'));
+            const finalUrl = isDataOrBlob 
+                ? imageUrl 
+                : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${Date.now()}`;
             
-            image.src = cacheBustedUrl;
-            image.crossOrigin = "anonymous";
+            image.src = finalUrl;
+            if (!isDataOrBlob && (finalUrl.startsWith('http://') || finalUrl.startsWith('https://'))) {
+                image.crossOrigin = "anonymous";
+            }
             image.onload = () => {
                 gl.bindTexture(gl.TEXTURE_2D, texture);
                 gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -180,6 +182,9 @@ export default function ReededGlassBackground({ imageUrl }) {
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            };
+            image.onerror = (e) => {
+                console.warn('[ReededGlassBackground] Failed to load background image:', e);
             };
         }
 

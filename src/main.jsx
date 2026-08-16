@@ -31,6 +31,19 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
+// Auto-recover from stale chunks after new deployments
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    console.warn('[Vite] Dynamic import preload error detected. Reloading page for new deployment...', event);
+    const lastReload = sessionStorage.getItem('vite_chunk_reload_ts');
+    const now = Date.now();
+    if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+      sessionStorage.setItem('vite_chunk_reload_ts', now.toString());
+      window.location.reload();
+    }
+  });
+}
+
 if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
@@ -42,3 +55,4 @@ if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
       });
   });
 }
+

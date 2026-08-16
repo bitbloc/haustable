@@ -9,7 +9,7 @@ import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { logger } from './utils/logger'
-import { getAppOrigin } from './utils/urlHelper'
+import { getAppOrigin, safeTimestampUrl } from './utils/urlHelper'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -1319,7 +1319,7 @@ export default function AdminSettings() {
                                 <h2 className="text-lg font-bold text-ink mb-3">QR Payment</h2>
                                 <div className="mb-4 flex justify-center bg-canvas p-4 rounded-2xl border border-gray-100">
                                     {settings.payment_qr_url ? (
-                                        <img src={`${settings.payment_qr_url}?t=${timestamp}`} className="w-32 h-32 object-cover rounded-xl border border-brand" />
+                                        <img src={safeTimestampUrl(settings.payment_qr_url, timestamp)} className="w-32 h-32 object-cover rounded-xl border border-brand" />
                                     ) : (
                                         <div className="w-32 h-32 bg-gray-150 rounded-xl flex items-center justify-center text-subInk text-xs">No QR</div>
                                     )}
@@ -1342,7 +1342,7 @@ export default function AdminSettings() {
                                 <h2 className="text-lg font-bold text-ink mb-3">Floor Plan</h2>
                                 <div className="mb-4 flex justify-center bg-canvas p-4 rounded-2xl border border-gray-100">
                                     {settings.floorplan_url ? (
-                                        <img src={`${settings.floorplan_url}?t=${timestamp}`} className="w-full h-32 object-cover rounded-xl border border-gray-100" />
+                                        <img src={safeTimestampUrl(settings.floorplan_url, timestamp)} className="w-full h-32 object-cover rounded-xl border border-gray-100" />
                                     ) : (
                                         <div className="w-full h-32 bg-gray-150 rounded-xl flex items-center justify-center text-subInk text-xs">No Plan</div>
                                     )}
@@ -1365,7 +1365,7 @@ export default function AdminSettings() {
                                 <h2 className="text-lg font-bold text-ink mb-3">Home Background</h2>
                                 <div className="mb-4 flex justify-center bg-canvas p-4 rounded-2xl border border-gray-100">
                                     {settings.home_background_url ? (
-                                        <img src={`${settings.home_background_url}?t=${timestamp}`} className="w-full h-32 object-cover rounded-xl border border-gray-100" />
+                                        <img src={safeTimestampUrl(settings.home_background_url, timestamp)} className="w-full h-32 object-cover rounded-xl border border-gray-100" />
                                     ) : (
                                         <div className="w-full h-32 bg-gray-150 rounded-xl flex items-center justify-center text-subInk text-xs">Default Background</div>
                                     )}
@@ -2174,7 +2174,7 @@ export default function AdminSettings() {
                                             <div className="w-20 h-20 bg-white rounded-lg border border-[#D1D1CD] flex items-center justify-center overflow-hidden shrink-0">
                                                 {settings.receipt_shop_logo_url ? (
                                                     <img 
-                                                        src={`${settings.receipt_shop_logo_url}?t=${timestamp}`} 
+                                                        src={safeTimestampUrl(settings.receipt_shop_logo_url, timestamp)} 
                                                         alt="Shop Logo"
                                                         className="max-w-full max-h-full object-contain p-1"
                                                     />
@@ -3098,7 +3098,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
             <label className="block text-xs font-bold text-brandDark uppercase">{label}</label>
             <div className={`relative w-full ${aspect} rounded-2xl overflow-hidden bg-gray-100 border border-gray-200`}>
                 {settings[settingKey] ? (
-                    <img src={`${settings[settingKey]}?t=${timestamp}`} className="w-full h-full object-cover" alt={label} />
+                    <img src={safeTimestampUrl(settings[settingKey], timestamp)} className="w-full h-full object-cover" alt={label} />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-subInk text-sm">{placeholder || 'ยังไม่มีรูป'}</div>
                 )}
@@ -3216,7 +3216,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
 
                                     <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-gray-150 border border-gray-200 flex items-center justify-center">
                                         {url ? (
-                                            <img src={`${url}?t=${timestamp}`} alt={`Menu ${slot}`} className="w-full h-full object-cover" />
+                                            <img src={safeTimestampUrl(url, timestamp)} alt={`Menu ${slot}`} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
                                         )}
@@ -3278,7 +3278,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
                         <div key={n} className="space-y-2 bg-canvas p-3 rounded-xl border border-gray-200">
                             <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
                                 {settings[`link_sig_img_${n}`] ? (
-                                    <img src={`${settings[`link_sig_img_${n}`]}?t=${timestamp}`} className="w-full h-full object-cover" alt={`Sig ${n}`} />
+                                    <img src={safeTimestampUrl(settings[`link_sig_img_${n}`], timestamp)} className="w-full h-full object-cover" alt={`Sig ${n}`} />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-subInk text-[10px]">#{n}</div>
                                 )}
@@ -3324,7 +3324,7 @@ function LinkPageManager({ settings, handleSave, timestamp, setTimestamp }) {
 
                                     <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-gray-150 border border-gray-200 flex items-center justify-center">
                                         {url ? (
-                                            <img src={`${url}?t=${timestamp}`} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
+                                            <img src={safeTimestampUrl(url, timestamp)} alt={`Atm ${slot}`} className="w-full h-full object-cover" />
                                         ) : (
                                             <div className="text-center text-gray-300 text-xs font-bold font-mono">Empty</div>
                                         )}

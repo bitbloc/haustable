@@ -6,7 +6,7 @@ import { DndContext, useDraggable, useSensor, useSensors, MouseSensor, TouchSens
 import { CSS } from '@dnd-kit/utilities';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { QRCodeSVG } from 'qrcode.react';
-import { getAppOrigin } from './utils/urlHelper';
+import { getAppOrigin, safeTimestampUrl, safeCssUrl } from './utils/urlHelper';
 import { toast } from 'sonner';
 
 // Draggable Table Unit Component
@@ -150,7 +150,7 @@ export default function AdminTableEditor() {
                 .eq('key', 'floorplan_url')
                 .single();
             if (settingsData?.value) {
-                setFloorplanUrl(`${settingsData.value}?t=${Date.now()}`);
+                setFloorplanUrl(safeTimestampUrl(settingsData.value));
             }
         } catch (err) {
             console.error('Fetch error:', err);
@@ -338,7 +338,7 @@ export default function AdminTableEditor() {
             
             if (setErr) throw setErr;
 
-            setFloorplanUrl(`${publicUrl}?t=${Date.now()}`);
+            setFloorplanUrl(safeTimestampUrl(publicUrl));
             toast.success('Floorplan schematic image updated');
         } catch (err) {
             toast.error('Floorplan upload failed: ' + err.message);
@@ -641,7 +641,7 @@ export default function AdminTableEditor() {
                                                 style={{
                                                     width: '1000px',
                                                     height: '750px',
-                                                    backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                                    backgroundImage: safeCssUrl(floorplanUrl),
                                                     backgroundSize: '100% 100%',
                                                     backgroundRepeat: 'no-repeat',
                                                     opacity: bgOpacity / 100

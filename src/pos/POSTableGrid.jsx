@@ -18,6 +18,7 @@ import {
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
+import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 
 const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
@@ -95,7 +96,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                 .eq('key', 'floorplan_url')
                 .single();
             if (settingsData?.value) {
-                setFloorplanUrl(`${settingsData.value}?t=${new Date().getTime()}`);
+                setFloorplanUrl(safeTimestampUrl(settingsData.value));
             }
         } catch (err) {
             console.error("Error fetching floorplan URL:", err);
@@ -342,7 +343,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                                             style={{
                                                 width: '1000px',
                                                 height: '750px',
-                                                backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                                backgroundImage: safeCssUrl(floorplanUrl),
                                                 backgroundSize: 'cover',
                                                 backgroundPosition: 'center',
                                             }}

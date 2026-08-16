@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { safeTimestampUrl, safeCssUrl } from '../../utils/urlHelper';
 
 export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable }) {
     const [tables, setTables] = useState([]);
@@ -66,7 +67,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                 .eq('key', 'floorplan_url')
                 .single();
             if (settingsData?.value) {
-                setFloorplanUrl(`${settingsData.value}?t=${Date.now()}`);
+                setFloorplanUrl(safeTimestampUrl(settingsData.value));
             }
 
             // 3. Fetch active bookings of today with order items & menu items
@@ -551,7 +552,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                             style={{
                                                 width: '1000px',
                                                 height: '750px',
-                                                backgroundImage: floorplanUrl ? `url(${floorplanUrl})` : undefined,
+                                                backgroundImage: safeCssUrl(floorplanUrl),
                                                 backgroundSize: '100% 100%',
                                                 backgroundRepeat: 'no-repeat'
                                             }}

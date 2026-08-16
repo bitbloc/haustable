@@ -5,6 +5,7 @@ import { Maximize, Minimize, ZoomIn, ZoomOut, RotateCw, X, Image } from 'lucide-
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import { supabase } from '../../lib/supabaseClient' // For direct Tooltip availability check if needed
+import { safeCssUrl } from '../../utils/urlHelper'
 
 export default function StepTableSelection() {
     const { t } = useLanguage()
@@ -241,7 +242,7 @@ export default function StepTableSelection() {
                                 <div
                                     className="relative w-[1000px] aspect-video bg-paper border border-[var(--color-rule)] origin-center"
                                     style={{
-                                        backgroundImage: settings.floorplanUrl ? `url(${settings.floorplanUrl})` : undefined,
+                                        backgroundImage: safeCssUrl(settings.floorplanUrl),
                                         backgroundSize: '100% 100%',
                                         backgroundRepeat: 'no-repeat',
                                     }}
