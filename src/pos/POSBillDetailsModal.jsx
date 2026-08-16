@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, X, Loader2 } from 'lucide-react';
+import { FileText, X, Loader2, Receipt, Printer } from 'lucide-react';
 import { getShortBookingId } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
+import TaxInvoiceModal from '../components/admin/tax/TaxInvoiceModal';
+import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
 
 const getBookingPaymentMethod = (b) => {
     if (!b) return 'CASH';
@@ -48,14 +50,36 @@ class ModalErrorBoundary extends React.Component {
 }
 
 function POSBillDetailsContent({ booking: initialBooking, onClose }) {
-    if (!initialBooking) return null;
+    const [fetchedBooking, setFetchedBooking] = useState(null);
+    const [showTaxModal, setShowTaxModal] = useState(false);
+    const [printInvoiceData, setPrintInvoiceData] = useState(null);
+    const [companySettings, setCompanySettings] = useState(() => {
+        try {
+            const local = localStorage.getItem('onhaus_tax_settings');
+            return local ? JSON.parse(local) : {};
+        } catch {
+            return {};
+        }
+    });
 
-    const [booking, setBooking] = useState(initialBooking);
-    const [loading, setLoading] = useState(false);
+    const booking = fetchedBooking || initialBooking;
+
+    useEffect(() => {
+        supabase
+            .from('app_settings')
+            .select('key, value')
+            .like('key', 'tax_%')
+            .then(({ data }) => {
+                if (data && data.length > 0) {
+                    const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    setCompanySettings(map);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (initialBooking?.id && (!initialBooking.order_items || initialBooking.order_items.length === 0 || !initialBooking.profiles)) {
-            setLoading(true);
             supabase
                 .from('bookings')
                 .select(`
@@ -79,15 +103,14 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 .maybeSingle()
                 .then(({ data, error }) => {
                     if (!error && data) {
-                        setBooking(data);
+                        setFetchedBooking(data);
                     }
-                    setLoading(false);
                 })
-                .catch(() => setLoading(false));
-        } else {
-            setBooking(initialBooking);
+                .catch(() => {});
         }
     }, [initialBooking]);
+
+    if (!booking) return null;
 
     const shortId = getShortBookingId(booking);
     const bookingTimeStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : '-';
@@ -198,7 +221,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                                     try {
                                         const parsed = JSON.parse(rawOpts);
                                         opts = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === 'object' ? Object.values(parsed) : [rawOpts]);
-                                    } catch (e) {
+                                    } catch {
                                         opts = rawOpts ? [rawOpts] : [];
                                     }
                                 } else if (rawOpts && typeof rawOpts === 'object') {
@@ -287,15 +310,49 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 </div>
                 
                 {/* Footer */}
-                <div className="p-4 bg-white border-t border-[#D1D1CD] shrink-0">
+                <div className="p-4 bg-white border-t border-[#D1D1CD] shrink-0 flex items-center gap-2">
                     <button 
+                        type="button"
+                        onClick={() => setShowTaxModal(true)}
+                        className="flex-1 cursor-pointer bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-md"
+                    >
+                        <Receipt size={15} />
+                        <span>ออกใบเสร็จ / ใบกำกับภาษี</span>
+                    </button>
+                    
+                    <button 
+                        type="button"
                         onClick={onClose}
-                        className="w-full cursor-pointer bg-[#1A1A1A] hover:bg-black text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors"
+                        className="w-24 cursor-pointer bg-[#1A1A1A] hover:bg-black text-white py-2.5 rounded-lg font-mono font-bold text-xs transition-colors"
                     >
                         CLOSE
                     </button>
                 </div>
             </div>
+
+            {/* Modal: Issue Tax Invoice from this bill */}
+            {showTaxModal && (
+                <TaxInvoiceModal
+                    booking={booking}
+                    companySettings={companySettings}
+                    onClose={() => setShowTaxModal(false)}
+                    onSaveSuccess={(savedInvoice, printImmediately) => {
+                        setShowTaxModal(false);
+                        if (printImmediately) {
+                            setPrintInvoiceData(savedInvoice);
+                        }
+                    }}
+                />
+            )}
+
+            {/* Modal: Print A4 View */}
+            {printInvoiceData && (
+                <TaxInvoicePrintView
+                    invoice={printInvoiceData}
+                    companySettings={companySettings}
+                    onClose={() => setPrintInvoiceData(null)}
+                />
+            )}
         </div>
     );
 }

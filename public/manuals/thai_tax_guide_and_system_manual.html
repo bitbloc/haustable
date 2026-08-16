@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คู่มือภาษีร้านอาหารและระบบบริหารจัดการหลังบ้าน - IN THE HAUS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;600;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-paper: #FBFBFA;
+            --color-paper-2: #F3F3F0;
+            --color-rule: #E2E2DC;
+            --color-ink: #181816;
+            --color-neutral: #5C5C55;
+            --color-muted: #8C8C82;
+            --color-accent: #C85A32; /* Clay Terracotta */
+            --color-accent-dark: #A24220;
+            --color-emerald: #1B7A4E;
+            --color-amber: #B45309;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #E8E8E3;
+            color: var(--color-ink);
+            font-family: 'Sarabun', 'Prompt', sans-serif;
+            font-size: 14px;
+            line-height: 1.65;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .no-print-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #181816;
+            color: #FFF;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .btn-print {
+            background: var(--color-accent);
+            color: #FFF;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+        .btn-print:hover {
+            background: var(--color-accent-dark);
+            transform: translateY(-1px);
+        }
+
+        .book-container {
+            max-width: 860px;
+            margin: 30px auto;
+            background: #FFF;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .page {
+            padding: 45px 55px;
+            background: #FFF;
+            position: relative;
+        }
+
+        .page-break {
+            page-break-after: always;
+            border-bottom: 2px dashed #E0E0D8;
+            margin-bottom: 20px;
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Prompt', sans-serif;
+            font-weight: 700;
+            color: var(--color-ink);
+            line-height: 1.3;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Cover Page */
+        .cover {
+            padding: 90px 55px 70px;
+            text-align: left;
+            background: linear-gradient(180deg, #FBFBFA 0%, #F2F2ED 100%);
+            border-bottom: 4px solid var(--color-accent);
+        }
+        .cover-tag {
+            display: inline-block;
+            background: var(--color-accent);
+            color: #FFF;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+        }
+        .cover-title {
+            font-size: 34px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            color: #111;
+        }
+        .cover-subtitle {
+            font-size: 17px;
+            color: var(--color-neutral);
+            margin-bottom: 40px;
+            font-weight: 400;
+            max-width: 650px;
+        }
+        .cover-meta {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            padding-top: 25px;
+            border-top: 1px solid var(--color-rule);
+            font-family: 'Prompt', sans-serif;
+            font-size: 12px;
+        }
+        .cover-meta-item strong {
+            display: block;
+            color: var(--color-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Section Headings */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 2px solid var(--color-ink);
+            padding-bottom: 8px;
+            margin: 30px 0 20px;
+        }
+        .section-num {
+            background: var(--color-ink);
+            color: #FFF;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 800;
+            font-size: 14px;
+            padding: 3px 10px;
+            border-radius: 4px;
+        }
+        .section-title {
+            font-size: 22px;
+        }
+
+        h3 {
+            font-size: 16px;
+            margin: 22px 0 10px;
+            color: var(--color-accent-dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        p {
+            margin-bottom: 12px;
+            color: #2D2D29;
+            text-align: justify;
+        }
+
+        /* Callout Alert Boxes */
+        .callout {
+            border-left: 4px solid var(--color-accent);
+            background: #FAF5F2;
+            padding: 14px 18px;
+            border-radius: 0 8px 8px 0;
+            margin: 16px 0;
+            font-size: 13.5px;
+        }
+        .callout-title {
+            font-family: 'Prompt', sans-serif;
+            font-weight: 700;
+            color: var(--color-accent-dark);
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .callout-success {
+            border-left-color: var(--color-emerald);
+            background: #F0F8F4;
+        }
+        .callout-success .callout-title {
+            color: var(--color-emerald);
+        }
+
+        .callout-warning {
+            border-left-color: var(--color-amber);
+            background: #FFFBEB;
+        }
+        .callout-warning .callout-title {
+            color: var(--color-amber);
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 22px;
+            font-size: 13px;
+        }
+        th {
+            background: #F4F4EE;
+            color: var(--color-ink);
+            font-family: 'Prompt', sans-serif;
+            font-weight: 700;
+            text-align: left;
+            padding: 10px 12px;
+            border: 1px solid var(--color-rule);
+            font-size: 12px;
+        }
+        td {
+            padding: 9px 12px;
+            border: 1px solid var(--color-rule);
+            vertical-align: top;
+        }
+        tr:nth-child(even) td {
+            background: #FAFAF8;
+        }
+
+        /* Steps & Checklists */
+        .step-card {
+            background: #FDFDFD;
+            border: 1px solid var(--color-rule);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 14px;
+            align-items: flex-start;
+        }
+        .step-badge {
+            background: #181816;
+            color: #FFF;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 12px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            shrink: 0;
+            margin-top: 2px;
+        }
+        .step-content {
+            flex: 1;
+        }
+        .step-content strong {
+            font-family: 'Prompt', sans-serif;
+            font-size: 14px;
+            color: #111;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .badge-grade {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .badge-grade-a { background: #D1FAE5; color: #065F46; }
+        .badge-grade-b { background: #FEF3C7; color: #92400E; }
+        .badge-grade-c { background: #E5E7EB; color: #374151; }
+
+        /* Print Specifics */
+        @media print {
+            body {
+                background: #FFF;
+                color: #000;
+            }
+            .no-print-bar {
+                display: none !important;
+            }
+            .book-container {
+                max-width: 100%;
+                margin: 0;
+                box-shadow: none;
+                border-radius: 0;
+            }
+            .page {
+                padding: 10mm 15mm;
+            }
+            .page-break {
+                page-break-after: always;
+                border: none;
+                margin: 0;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 10mm 12mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Floating Top Toolbar (Screen Only) -->
+    <div class="no-print-bar">
+        <div>
+            <strong>IN THE HAUS</strong> // คู่มือภาษีและระบบบริหารจัดการหลังบ้านฉบับสมบูรณ์
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" class="btn-print">
+                🖨️ บันทึกเป็น PDF (Print / Save PDF)
+            </button>
+        </div>
+    </div>
+
+    <div class="book-container">
+        
+        <!-- COVER PAGE -->
+        <div class="page cover">
+            <span class="cover-tag">EXECUTIVE GUIDE &amp; MANUAL</span>
+            <h1 class="cover-title">คู่มือภาษีร้านอาหาร &amp;<br>ระบบบริหารจัดการหลังบ้าน</h1>
+            <p class="cover-subtitle">
+                คู่มือฉบับเข้าใจง่ายสำหรับผู้ประกอบการร้านอาหารและคาเฟ่ (ไม่มีพื้นฐานบัญชีอ่านรู้เรื่องทันที) พร้อมขั้นตอนการใช้งานระบบออกใบเสร็จ/ใบกำกับภาษี และบันทึกต้นทุน Makro ฉบับสมบูรณ์
+            </p>
+
+            <div class="cover-meta">
+                <div class="cover-meta-item">
+                    <strong>ESTABLISHMENT</strong>
+                    IN THE HAUS
+                </div>
+                <div class="cover-meta-item">
+                    <strong>VERSION &amp; YEAR</strong>
+                    Ver 2.0 (ปี 2026 - 2027)
+                </div>
+                <div class="cover-meta-item">
+                    <strong>TAX COMPLIANCE</strong>
+                    สรรพากรไทย (มาตรา 86/4 &amp; 105)
+                </div>
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- CHAPTER 1 -->
+        <div class="page">
+            <div class="section-header">
+                <span class="section-num">01</span>
+                <h2 class="section-title">พื้นฐานภาษีร้านอาหารและคาเฟ่ (เข้าใจง่ายใน 5 นาที)</h2>
+            </div>
+
+            <p>
+                สำหรับผู้ประกอบการที่เปิดร้านอาหารหรือคาเฟ่ หลายท่านอาจกังวลเรื่องภาษีเพราะคิดว่ามีความซับซ้อน แต่ในความเป็นจริง หลักการพื้นฐานของกรมสรรพากรมีสูตรหัวใจหลักเพียงข้อเดียวคือ:
+            </p>
+
+            <div class="callout callout-success">
+                <span class="callout-title">💡 สูตรคำนวณภาษีเงินได้:</span>
+                <strong>ภาษีที่ต้องเสีย = ( รายรับรวมทั้งปี - ค่าใช้จ่ายที่นำมาหักได้ ) × อัตราภาษี</strong><br>
+                <em>"ยิ่งเราเก็บหลักฐานค่าใช้จ่ายได้ครบถ้วน ถูกต้องตามจริงมากเท่าไหร่ กำไรทางภาษีจะลดลง ทำให้เสียภาษีน้อยลงอย่างถูกต้องตามกฎหมาย 100%"</em>
+            </div>
+
+            <h3>1.1 เกณฑ์รายได้ 1.8 ล้านบาท/ปี (สำคัญที่สุด!)</h3>
+            <p>
+                สรรพากรกำหนดเกณฑ์สำหรับทุกธุรกิจในไทยไว้ว่า:
+            </p>
+            <ul>
+                <li><strong>รายได้ไม่เกิน 1,800,000 บาท/ปี</strong>: <span style="color:var(--color-emerald); font-weight:700;">ยังไม่ต้องจดทะเบียน VAT</span> (เป็นสถานะของร้านปัจจุบัน) สามารถขายอาหารและเครื่องดื่มได้โดยไม่ต้องคิดภาษีมูลค่าเพิ่ม 7% กับลูกค้า และออกเอกสารเป็น <strong>"ใบเสร็จรับเงิน (Official Receipt)"</strong></li>
+                <li><strong>รายได้สะสมแตะ 1,800,000 บาท/ปี</strong>: <strong>กฎหมายบังคับให้ต้องยื่นจดทะเบียนภาษีมูลค่าเพิ่ม (ภ.พ.20) ภายใน 30 วัน</strong> นับจากวันที่รายรับเกิน 1.8 ล้านบาท และเมื่อจดแล้วจะต้องเริ่มคิด VAT 7% พร้อมออก <strong>"ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูปแบบ"</strong></li>
+            </ul>
+
+            <div class="callout callout-warning">
+                <span class="callout-title">⚠️ ทำไมในระบบ In The Haus จึงมีเกจมิเตอร์วัด 1.8 ล้านบาท?</span>
+                เพื่อให้เจ้าของร้านรู้ตัวล่วงหน้าแบบ Real-time ว่ายอดขายสะสมของร้านใกล้ถึง 1.8 ล้านบาทหรือยัง จะได้เตรียมความพร้อมยื่นจด VAT ล่วงหน้าได้ทันเวลาโดยไม่โดนเบี้ยปรับย้อนหลังครับ
+            </div>
+
+            <h3>1.2 ภาษีหัก ณ ที่จ่าย (Withholding Tax / ใบ 50 ทวิ) คืออะไร?</h3>
+            <p>
+                เมื่อร้านของเรามีการจ่ายเงินค่าบริการหรือค่าเช่าให้บุคคลอื่น กฎหมายกำหนดให้เรา **"หักเงินไว้ส่วนหนึ่งก่อนจ่าย"** แล้วนำส่งสรรพากรภายในวันที่ 7 ของเดือนถัดไป (พร้อมออกหนังสือรับรองหัก ณ ที่จ่าย หรือใบ 50 ทวิ ให้ผู้รับเงิน) อัตราที่พบบ่อยในร้านอาหารมีดังนี้:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ประเภทรายจ่าย</th>
+                        <th>อัตราที่ต้องหัก</th>
+                        <th>ตัวอย่างจริงในร้าน</th>
+                        <th>แบบยื่นภาษี</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ค่าเช่าพื้นที่ / ค่าเช่าร้าน</strong></td>
+                        <td><strong style="color:var(--color-accent);">5%</strong></td>
+                        <td>จ่ายค่าเช่าร้านเดือนละ 20,000 บาท หักไว้ 1,000 บาท (โอนให้เจ้าของที่ 19,000 บาท)</td>
+                        <td>ภ.ง.ด. 3 หรือ 53</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ค่าจ้างบริการ / ช่างซ่อม / ที่ปรึกษา</strong></td>
+                        <td><strong style="color:var(--color-accent);">3%</strong></td>
+                        <td>จ้างช่างเดินไฟ, จ้างนักร้องดนตรีสด, จ้างทำบัญชี</td>
+                        <td>ภ.ง.ด. 3 หรือ 53</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ค่าโฆษณา / Influencer</strong></td>
+                        <td><strong style="color:var(--color-accent);">2%</strong></td>
+                        <td>จ้างบริษัททำการตลาด, จ้างอินฟลูเอนเซอร์รีวิวร้าน</td>
+                        <td>ภ.ง.ด. 53</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ค่าขนส่ง / Logistics</strong></td>
+                        <td><strong style="color:var(--color-accent);">1%</strong></td>
+                        <td>ค่ารถขนส่งวัตถุดิบรายใหญ่</td>
+                        <td>ภ.ง.ด. 53</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- CHAPTER 2 -->
+        <div class="page">
+            <div class="section-header">
+                <span class="section-num">02</span>
+                <h2 class="section-title">คู่มือการเก็บหลักฐานค่าใช้จ่าย (Expense Tax Deduction)</h2>
+            </div>
+
+            <p>
+                หลักการสำคัญคือ <strong>"สรรพากรจะยอมให้หักค่าใช้จ่ายตามจริง ก็ต่อเมื่อมีเอกสารหลักฐานที่พิสูจน์ได้ว่าจ่ายจริงเพื่อกิจการ"</strong> โดยแบ่งเกรดความน่าเชื่อถือของเอกสารออกเป็น 3 เกรด ดังนี้:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 90px;">เกรด</th>
+                        <th>ประเภทเอกสาร</th>
+                        <th>ตัวอย่าง</th>
+                        <th>ผลทางภาษี</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><span class="badge-grade badge-grade-a">🥇 เกรด A</span></td>
+                        <td><strong>ใบกำกับภาษีเต็มรูปแบบ</strong><br><small>(มีชื่อร้าน + เลข 13 หลัก)</small></td>
+                        <td>บิลซื้อของ Makro, บิล Lotus, บิลค่าน้ำค่าไฟจากการไฟฟ้า, บิลเติมน้ำมันปั๊ม ปตท./บางจาก, บิลซื้อของ HomePro</td>
+                        <td><strong>นำไปหักลดหย่อนภาษีได้ 100%</strong> สรรพากรยอมรับทันทีโดยไม่มีข้อโต้แย้ง</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge-grade badge-grade-b">🥈 เกรด B</span></td>
+                        <td><strong>บิลเงินสด + สลิปโอนเงิน</strong></td>
+                        <td>ซื้อผักสด/ผลไม้ร้านค้าส่งที่มีบิลเงินสดระบุชื่อร้านค้า + สำเนาสลิปโอนเงินเข้าบัญชีร้านผู้ขาย</td>
+                        <td><strong>นำไปหักค่าใช้จ่ายได้</strong> เนื่องจากมีสลิปการเงินพิสูจน์การจ่ายเงินจริง</td>
+                    </tr>
+                    <tr>
+                        <td><span class="badge-grade badge-grade-c">🥉 เกรด C</span></td>
+                        <td><strong>ใบสำคัญรับเงิน + สลิปโอน</strong><br><small>(ทำขึ้นเองในร้าน)</small></td>
+                        <td>ซื้อของสดตลาดสดที่แม่ค้าไม่มีบิล ให้แม่ค้าเซ็นชื่อรับเงิน หรือแนบสลิปโอนเงินค่าจ้างรายวัน</td>
+                        <td><strong>ใช้เป็นหลักฐานได้</strong> สำหรับรายจ่ายที่ไม่มีบิลจากภายนอก</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h3>2.1 เช็กลิสต์วิธีเก็บค่าใช้จ่ายแต่ละประเภท (Step-by-Step)</h3>
+
+            <div class="step-card">
+                <div class="step-badge">1</div>
+                <div class="step-content">
+                    <strong>🛒 ซื้อวัตถุดิบ Makro / Lotus / ซูเปอร์มาร์เก็ต</strong>
+                    แจ้งพนักงานแคชเชียร์ทุกครั้งว่า <em>"ขอใบกำกับภาษีเต็มรูป"</em> แจ้งชื่อร้าน/ชื่อเจ้าของ + เลขประจำตัวผู้เสียภาษี 13 หลัก หรือสมัครบัตรสมาชิก Makro บันทึกข้อมูลร้านไว้ พนักงานจะพิมพ์สลิปยาว/เอกสาร A4 ออกมาให้ทันที
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">2</div>
+                <div class="step-content">
+                    <strong>⛽ ค่าน้ำมันรถไปซื้อของ / รับส่งวัตถุดิบ</strong>
+                    เวลาเติมน้ำมันที่ปั๊ม (ปตท., บางจาก, Shell) เดินไปที่ตู้แคชเชียร์หรือบอกเด็กปั๊มว่า <em>"ขอใบกำกับภาษีเต็มรูป"</em> ปั๊มจะพิมพ์บิลที่มีชื่อร้านและยอด VAT 7% ให้ทันที
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">3</div>
+                <div class="step-content">
+                    <strong>📣 ค่ายิงแอด Facebook / TikTok / IG Ads</strong>
+                    เข้าไปที่ <em>Ads Manager > การเรียกเก็บเงิน (Billing)</em> ดาวน์โหลดไฟล์ใบเสร็จ (Receipt / Invoice) ที่เป็น PDF ของแต่ละเดือนมาเก็บไว้เป็นหลักฐาน
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">4</div>
+                <div class="step-content">
+                    <strong>⚡ ค่าน้ำ / ค่าไฟ / อินเทอร์เน็ต / ค่าเช่าร้าน</strong>
+                    เก็บใบแจ้งหนี้และใบเสร็จรับเงินจากการไฟฟ้านครหลวง/ภูมิภาค, การประปา, 3BB/True/AIS และสลิปโอนเงินค่าเช่าร้านทุกเดือน
+                </div>
+            </div>
+
+            <div class="callout callout-warning">
+                <span class="callout-title">🚫 ข้อควรระวังเด็ดขาด:</span>
+                ห้ามนำค่าใช้จ่ายส่วนตัวที่ไม่เกี่ยวกับกิจการร้าน (เช่น ค่าช้อปปิ้งส่วนตัว, ค่าอาหารทานเองนอกร้าน) มาลงเป็นค่าใช้จ่ายของร้านเด็ดขาด เพราะสรรพากรจะตัดออกและอาจถูกตรวจสอบย้อนหลังได้ครับ
+            </div>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- CHAPTER 3 -->
+        <div class="page">
+            <div class="section-header">
+                <span class="section-num">03</span>
+                <h2 class="section-title">คู่มือการใช้งานระบบภาษี &amp; บันทึกค่าใช้จ่าย In The Haus</h2>
+            </div>
+
+            <p>
+                ระบบหลังบ้านของ In The Haus ถูกออกแบบมาให้ใช้งานง่าย ครบวงจรทั้งฝั่งรายรับ (ออกใบเสร็จ) และฝั่งรายจ่าย (ถ่ายรูปบิล Makro) ดังนี้:
+            </p>
+
+            <h3>3.1 การออกใบเสร็จรับเงิน / ใบกำกับภาษี (จากหน้า POS และหลังบ้าน)</h3>
+            
+            <div class="step-card">
+                <div class="step-badge">1</div>
+                <div class="step-content">
+                    <strong>ออกเอกสารจากหน้าบิล POS หน้าร้านใน 1 คลิก</strong>
+                    เมื่อลูกค้าขอใบเสร็จรับเงินเพื่อนำไปเบิกบริษัท ในหน้าประวัติบิล / รายละเอียดบิล POS ให้กดปุ่ม <strong>"📄 ออกใบเสร็จ / ใบกำกับภาษี"</strong> ระบบจะดึงรายการอาหาร, ยอดเงิน, โต๊ะ มากรอกในแบบฟอร์มให้อัตโนมัติทันที
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">2</div>
+                <div class="step-content">
+                    <strong>กรอกข้อมูลผู้ซื้อ &amp; ตรวจสอบเลข 13 หลัก</strong>
+                    กรอกชื่อบริษัทลูกค้า, เลขประจำตัวผู้เสียภาษี 13 หลัก (ระบบมีตัวตรวจจับ Mod 11 Checksum ขึ้นไฟเขียวเมื่อเลขถูกต้อง), เลือกสำนักงานใหญ่หรือสาขา และที่อยู่
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">3</div>
+                <div class="step-content">
+                    <strong>พิมพ์เอกสารขนาด A4 มาตรฐาน</strong>
+                    ระบบจะสร้างเอกสารขนาด A4 ที่ถูกต้องตามเกณฑ์มาตรา 86/4 และ 105 มีระบบแปลงจำนวนเงินเป็นตัวอักษรภาษาไทย (Baht Text) เช่น <em>"หนึ่งพันห้าร้อยบาทถ้วน"</em> พร้อมสลับพิมพ์ได้ทั้งฉบับ **ต้นฉบับ (ORIGINAL)** และ **สำเนา (COPY)**
+                </div>
+            </div>
+
+            <h3>3.2 การบันทึกค่าใช้จ่าย &amp; ถ่ายรูปบิล Makro / ค่าน้ำไฟ (จากมือถือ)</h3>
+
+            <div class="step-card">
+                <div class="step-badge">1</div>
+                <div class="step-content">
+                    <strong>เข้าหน้าบันทึกค่าใช้จ่าย</strong>
+                    ไปที่เมนู <strong>Admin > Tax &amp; Invoices > แท็บ "ค่าใช้จ่ายร้าน &amp; บิล Makro"</strong> หรือกดปุ่มสีส้ม <strong>"+ บันทึกบิล Makro / ค่าน้ำไฟ"</strong>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">2</div>
+                <div class="step-content">
+                    <strong>ถ่ายรูปใบเสร็จ &amp; กรอกยอดเงิน</strong>
+                    กดที่ช่องกล้องถ่ายรูปเพื่อถ่ายใบเสร็จ Makro หรือสลิปโอนเงิน (ระบบย่อขนาดให้อัตโนมัติ), กรอกยอดเงิน, เลือกหมวดหมู่ (🛒 วัตถุดิบ, ⚡ น้ำไฟ, 🏠 ค่าเช่า, ⛽ น้ำมัน, 📣 ยิงแอด), แล้วกด <strong>"บันทึกค่าใช้จ่าย"</strong>
+                </div>
+            </div>
+
+            <div class="step-card">
+                <div class="step-badge">3</div>
+                <div class="step-content">
+                    <strong>ดูสรุปกำไรสุทธิแท้จริง (Real Net Profit) &amp; Export บัญชี</strong>
+                    ระบบจะนำรายรับ POS มาลบกับรายจ่าย Makro และค่าน้ำไฟอัตโนมัติ แสดงกำไรสุทธิและสัดส่วน Food Cost % ทันที สิ้นปีสามารถกดปุ่ม <strong>"Export CSV / บัญชี"</strong> เพื่อส่งให้นักบัญชีได้ในคลิกเดียว
+                </div>
+            </div>
+
+            <h3>3.3 การสลับเปิดใช้งานระบบ VAT 7% ในอนาคต (1-Click Switch)</h3>
+            <p>
+                เมื่อร้านจดทะเบียนภาษีมูลค่าเพิ่มเรียบร้อยในปีหน้า เพียงเข้าไปที่แท็บ **"ตั้งค่าระบบภาษี"** แล้วเปิดสวิตช์ **"จดทะเบียนภาษีมูลค่าเพิ่มแล้ว (VAT 7%)"** ระบบจะเปลี่ยนเอกสารเป็น *"ใบเสร็จรับเงิน / ใบกำกับภาษีเต็มรูปแบบ"* และเปิดใช้งาน **รายงานภาษีขาย (ภ.พ.30)** ให้อัตโนมัติทันทีโดยไม่ต้องแก้ไขโค้ดใหม่เลยครับ
+            </p>
+        </div>
+
+        <div class="page-break"></div>
+
+        <!-- CHAPTER 4 -->
+        <div class="page">
+            <div class="section-header">
+                <span class="section-num">04</span>
+                <h2 class="section-title">ปฏิทินภาษีประจำปีสำหรับร้านอาหาร (Tax Calendar Checklist)</h2>
+            </div>
+
+            <p>
+                สรุปกำหนดการยื่นภาษีที่เจ้าของร้านอาหารควรรู้ เพื่อวางแผนการเงินและยื่นภาษีได้ตรงเวลา ไม่เสียค่าปรับ:
+            </p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ช่วงเวลา</th>
+                        <th>ภาษีที่เกี่ยวข้อง</th>
+                        <th>หน้าที่ของร้าน</th>
+                        <th>เอกสารที่ต้องใช้</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>ทุกวันที่ 1-7<br>ของทุกเดือน</strong></td>
+                        <td>ภาษีหัก ณ ที่จ่าย<br>(ภ.ง.ด. 1, 3, 53)</td>
+                        <td>ยื่นนำส่งภาษีหัก ณ ที่จ่าย กรณีมีจ่ายค่าเช่าร้าน หรือค่าบริการในเดือนที่ผ่านมา</td>
+                        <td>รายงานภาษีหัก ณ ที่จ่าย + สำเนาใบ 50 ทวิ</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ทุกวันที่ 1-15<br>ของทุกเดือน<br><small>(เมื่อจด VAT แล้ว)</small></strong></td>
+                        <td>ภาษีมูลค่าเพิ่ม<br>(ภ.พ.30)</td>
+                        <td>ยื่นรายงานภาษีขายและภาษีซื้อ เพื่อนำส่งภาษีมูลค่าเพิ่ม 7% ประจำเดือน</td>
+                        <td>รายงานภาษีขาย (Export จากระบบ In The Haus) + ใบกำกับภาษีซื้อ Makro</td>
+                    </tr>
+                    <tr>
+                        <td><strong>กรกฎาคม - กันยายน<br>(กลางปี)</strong></td>
+                        <td>ภาษีเงินได้ครึ่งปี<br>(ภ.ง.ด. 94)</td>
+                        <td>ยื่นสรุปรายรับ-รายจ่ายของช่วง 6 เดือนแรก (ม.ค. - มิ.ย.)</td>
+                        <td>รายงานสรุปยอดขาย POS + สมุดรายจ่ายสะสม 6 เดือน</td>
+                    </tr>
+                    <tr>
+                        <td><strong>มกราคม - มีนาคม<br>(สิ้นปี)</strong></td>
+                        <td>ภาษีเงินได้ประจำปี<br>(ภ.ง.ด. 90 / 50)</td>
+                        <td>ยื่นสรุปรายรับ-รายจ่ายทั้งปีเพื่อคำนวณภาษีเงินได้ประจำปีสุทธิ</td>
+                        <td>รายงานรายรับ POS ทั้งปี + รายงานค่าใช้จ่ายรวมทั้งปี (Export CSV)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="callout callout-success" style="margin-top: 30px;">
+                <span class="callout-title">🎉 สรุปคำแนะนำสำหรับ In The Haus:</span>
+                1. <strong>ทุกครั้งที่ซื้อของ Makro / เติมน้ำมัน</strong>: ขอใบกำกับภาษีเต็มรูปเสมอ<br>
+                2. <strong>ทุกครั้งที่จ่ายเงิน</strong>: เข้ามือถือกดบันทึกค่าใช้จ่ายและถ่ายรูปบิลเก็บไว้ในระบบทันที (ใช้เวลาไม่เกิน 30 วินาที)<br>
+                3. <strong>เมื่อสิ้นเดือน</strong>: ดูตัวเลขกำไรสุทธิและสัดส่วน Food Cost % ในระบบ เพื่อควบคุมต้นทุน<br>
+                4. <strong>เมื่อสิ้นปี</strong>: กดปุ่ม Export ส่งไฟล์ให้นักบัญชีจัดทำงบได้ทันทีอย่างสบายใจ ไร้กังวลเรื่องภาษี 100%!
+            </div>
+
+            <div style="margin-top: 50px; padding-top: 20px; border-top: 1px solid var(--color-rule); text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--color-muted);">
+                IN THE HAUS MANAGEMENT SYSTEM · THAI TAX &amp; INVOICING SUITE · ALL RIGHTS RESERVED
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Auto print trigger if query param ?print=true is supplied
+        if (window.location.search.includes('print=true')) {
+            window.addEventListener('load', () => {
+                setTimeout(() => window.print(), 500);
+            });
+        }
+    </script>
+</body>
+</html>

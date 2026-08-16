@@ -1,9 +1,9 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import { useState, useEffect } from 'react'
-import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt } from 'lucide-react'
+import { AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import './AdminLayout.css'
 
@@ -11,7 +11,6 @@ export default function AdminLayout() {
     const [authStatus, setAuthStatus] = useState('loading')
     const [pendingCount, setPendingCount] = useState(0)
     const location = useLocation()
-    const navigate = useNavigate()
     const [sidebarOpen, setSidebarOpen] = useState(false)
 
     useEffect(() => {
@@ -19,31 +18,23 @@ export default function AdminLayout() {
             try {
                 const { data: { user }, error } = await supabase.auth.getUser()
                 if (error || !user) {
-                    console.error("Admin Auth Error:", error)
                     setAuthStatus('unauthenticated')
                     return
                 }
 
-                // Security Check
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('role')
                     .eq('id', user.id)
                     .single()
 
-                if (profileError || !profile) {
-                    console.error("Profile Fetch Error:", profileError)
+                if (profileError || !profile || profile.role !== 'admin') {
                     setAuthStatus('unauthorized')
                     return
                 }
 
-                if (profile.role === 'admin') {
-                    setAuthStatus('authorized')
-                } else {
-                    setAuthStatus('unauthorized')
-                }
-            } catch (err) {
-                console.error("Unexpected Admin Auth Error:", err)
+                setAuthStatus('authorized')
+            } catch {
                 setAuthStatus('unauthenticated')
             }
         }
@@ -52,32 +43,35 @@ export default function AdminLayout() {
 
     // Real-time Pending Inbox Counter
     useEffect(() => {
-        fetchPendingCount()
+        let isMounted = true;
+
+        const updateCount = async () => {
+            try {
+                const { count, error } = await supabase
+                    .from('bookings')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('status', 'pending');
+
+                if (isMounted && !error && typeof count === 'number') {
+                    setPendingCount(count);
+                }
+            } catch (err) {
+                console.error('Error fetching inbox counter:', err);
+            }
+        };
+
+        updateCount();
 
         const channel = supabase
             .channel('admin-layout-inbox-counter')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchPendingCount)
-            .subscribe()
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, updateCount)
+            .subscribe();
 
         return () => {
-            supabase.removeChannel(channel)
-        }
-    }, [])
-
-    const fetchPendingCount = async () => {
-        try {
-            const { count, error } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending')
-
-            if (!error && typeof count === 'number') {
-                setPendingCount(count)
-            }
-        } catch (e) {
-            console.error('Error fetching inbox counter:', e)
-        }
-    }
+            isMounted = false;
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     const handleLogout = async () => {
         await supabase.auth.signOut()
@@ -102,7 +96,7 @@ export default function AdminLayout() {
     if (authStatus === 'unauthenticated') return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />
     if (authStatus === 'unauthorized') return <Navigate to="/" replace />
 
-    // Consolidated 7 Core Hubs
+    // Consolidated 8 Core Hubs
     const menuItems = [
         { 
             path: '/admin', 
@@ -133,7 +127,13 @@ export default function AdminLayout() {
             path: '/admin/financial', 
             icon: TrendingUp, 
             label: 'Financial & Insights',
-            isActive: (pathname) => pathname.startsWith('/admin/financial')
+            isActive: (pathname) => pathname === '/admin/financial'
+        },
+        { 
+            path: '/admin/tax', 
+            icon: Receipt, 
+            label: 'Tax & Invoices',
+            isActive: (pathname) => pathname.startsWith('/admin/tax')
         },
         { 
             path: '/admin/marketing', 

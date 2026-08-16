@@ -21,6 +21,7 @@ const PickupPage = lazy(() => import('./PickupPage'))
 const AdsLandingPage = lazy(() => import('./AdsLandingPage'))
 const AdminDashboard = lazy(() => import('./AdminDashboard'))
 const AdminFinancialDashboard = lazy(() => import('./components/admin/AdminFinancialDashboard'))
+const AdminTaxHub = lazy(() => import('./components/admin/tax/AdminTaxHub'))
 const AdminSettings = lazy(() => import('./AdminSettings'))
 const AdminTableEditor = lazy(() => import('./AdminTableEditor'))
 const AdminMenu = lazy(() => import('./admin/AdminMenuPage'))
@@ -162,6 +163,7 @@ function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="financial" element={<AdminFinancialDashboard />} />
+                <Route path="tax" element={<AdminTaxHub />} />
                 <Route path="bookings" element={<AdminBookings />} />
                 <Route path="tables" element={<AdminTableManager defaultTab="live" />} />
                 <Route path="editor" element={<AdminTableManager defaultTab="editor" />} />

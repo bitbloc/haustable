@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { getThaiDate } from '../../utils/timeUtils'
 import { toast } from 'sonner'
@@ -517,6 +518,14 @@ export default function AdminFinancialDashboard() {
                             <BarChart2 size={16} />
                             <span>เทียบช่วงก่อน</span>
                         </button>
+
+                        <Link
+                            to="/admin/tax"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
+                        >
+                            <Receipt size={16} />
+                            <span>ระบบภาษี & ใบกำกับ</span>
+                        </Link>
 
                         <button
                             onClick={handleExportReport}
