@@ -10,13 +10,16 @@ import {
     RotateCcw,
     RotateCw,
     ExternalLink,
-    AlertTriangle
+    AlertTriangle,
+    Printer,
+    FileText
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
 import { findDuplicateClusters } from '../../../utils/duplicateDetector';
 import { parseReceiptUrls } from '../../../utils/receiptImageHelper';
+import MonthlyTaxReceiptsExporter from './MonthlyTaxReceiptsExporter';
 import { toast } from 'sonner';
 
 export default function ExpensesTab({ 
@@ -44,6 +47,7 @@ export default function ExpensesTab({
 
     const [isAllPeriods, setIsAllPeriods] = useState(false);
     const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+    const [showMonthlyExporter, setShowMonthlyExporter] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
@@ -470,6 +474,15 @@ export default function ExpensesTab({
                     </button>
 
                     <button
+                        onClick={() => setShowMonthlyExporter(true)}
+                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm"
+                        title="เปิดระบบจัดการพิมพ์หลักฐานใบเสร็จทั้งเดือน (A4 Print / B&W Enhanced)"
+                    >
+                        <Printer size={13} className="text-emerald-300" />
+                        <span>🧾 EXPORT TAX (พิมพ์หลักฐาน)</span>
+                    </button>
+
+                    <button
                         onClick={onOpenCreateModal}
                         className="px-4 py-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm"
                     >
@@ -721,6 +734,17 @@ export default function ExpensesTab({
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* MONTHLY TAX RECEIPTS EXPORTER WORKBENCH */}
+            {showMonthlyExporter && (
+                <MonthlyTaxReceiptsExporter
+                    initialMonth={isAllPeriods ? null : selectedMonth}
+                    onClose={() => {
+                        setShowMonthlyExporter(false);
+                        loadExpenses();
+                    }}
+                />
             )}
         </div>
     );

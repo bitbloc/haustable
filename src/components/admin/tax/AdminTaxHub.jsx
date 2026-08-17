@@ -27,6 +27,7 @@ import TaxInvoiceModal from './TaxInvoiceModal';
 import TaxInvoicePrintView from './TaxInvoicePrintView';
 import ExpenseModal from './ExpenseModal';
 import ReceiptPickerModal from './ReceiptPickerModal';
+import MonthlyTaxReceiptsExporter from './MonthlyTaxReceiptsExporter';
 
 export default function AdminTaxHub() {
     // Navigation Sub-tab
@@ -51,6 +52,7 @@ export default function AdminTaxHub() {
     // Modals
     const [showInvoiceModal, setShowInvoiceModal] = useState(false);
     const [showReceiptPicker, setShowReceiptPicker] = useState(false);
+    const [showMonthlyExporter, setShowMonthlyExporter] = useState(false);
     const [editingInvoice, setEditingInvoice] = useState(null);
     const [selectedBookingForInvoice, setSelectedBookingForInvoice] = useState(null);
     const [activePrintInvoice, setActivePrintInvoice] = useState(null);
@@ -244,6 +246,15 @@ export default function AdminTaxHub() {
                             <BookOpen size={14} className="text-[var(--color-neutral)]" />
                             <span>MANUAL (PDF)</span>
                         </a>
+
+                        <button
+                            onClick={() => setShowMonthlyExporter(true)}
+                            className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                            title="Export and print all monthly receipts with B&W auto-crop"
+                        >
+                            <FileText size={14} className="text-emerald-300" />
+                            <span>🧾 EXPORT MONTHLY TAX (จัดพิมพ์ทั้งเดือน)</span>
+                        </button>
 
                         <button
                             onClick={() => setShowReceiptPicker(true)}
@@ -593,6 +604,15 @@ export default function AdminTaxHub() {
                         setActiveTab('expenses');
                         setExpensesKey(k => k + 1);
                     }}
+                />
+            )}
+
+            {/* 2.1 Monthly Tax Receipts Exporter & A4 Dossier Workbench */}
+            {showMonthlyExporter && (
+                <MonthlyTaxReceiptsExporter
+                    initialMonth={monthFilter}
+                    companySettings={companySettings}
+                    onClose={() => setShowMonthlyExporter(false)}
                 />
             )}
 
