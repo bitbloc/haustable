@@ -36,6 +36,23 @@ export function safeTimestampUrl(url, timestamp = Date.now()) {
 }
 
 /**
+ * Safely optimizes an image URL via wsrv.nl image proxy for fast loading and reduced bandwidth.
+ */
+export function optimizeImageUrl(url, width = 600, quality = 80) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/') || !trimmed.startsWith('http')) {
+    return trimmed;
+  }
+  try {
+    const cleanUrl = trimmed.split('?')[0];
+    return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
+  } catch {
+    return trimmed;
+  }
+}
+
+/**
  * Safely formats a URL for CSS backgroundImage with surrounding double quotes.
  * This prevents CSS parsers from breaking data: URLs at commas, which would otherwise
  * cause secondary background layer relative URL fetches and HTTP 414 URI Too Large errors.
@@ -45,4 +62,3 @@ export function safeCssUrl(url) {
   const clean = url.trim().replace(/"/g, '\\"');
   return `url("${clean}")`;
 }
-

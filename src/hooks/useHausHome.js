@@ -11,6 +11,7 @@ export const useHausHome = (session) => {
     const [status, setStatus] = useState({ isOpen: false, text: 'LOADING' })
     const [settings, setSettings] = useState(null)
     const [userRole, setUserRole] = useState(null)
+    const [profile, setProfile] = useState(null)
     const [showAuthModal, setShowAuthModal] = useState(false)
     
     // Line Auth State
@@ -28,7 +29,9 @@ export const useHausHome = (session) => {
         
         const now = new Date()
         const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-        const isOpen = currentTime >= s.opening_time && currentTime < s.closing_time
+        const openTime = s.opening_time || '11:30'
+        const closeTime = s.closing_time || '23:30'
+        const isOpen = currentTime >= openTime && currentTime < closeTime
         return { isOpen, text: isOpen ? 'OPEN' : 'CLOSED' }
     }
 
@@ -84,18 +87,53 @@ export const useHausHome = (session) => {
         if (settings) setStatus(checkServiceStatus(settings, 'shop_mode_table')) 
     }, [settings])
 
-    // Effect: Fetch Role
+    // Effect: Fetch Profile & Role + Realtime
     useEffect(() => {
-        const fetchRole = async () => {
-            if (session?.user) {
-                const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).single()
-                if (profile) setUserRole(profile.role)
-            } else {
-                setUserRole(null)
+        if (!session?.user) {
+            setUserRole(null)
+            setProfile(null)
+            return
+        }
+
+        const fetchProfile = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', session.user.id)
+                    .single()
+                
+                if (data) {
+                    setProfile(data)
+                    setUserRole(data.role || 'customer')
+                }
+            } catch (err) {
+                console.error("Error fetching home user profile:", err)
             }
         }
-        fetchRole()
-    }, [session])
+
+        fetchProfile()
+
+        // Realtime subscription on user profile (for live xhaus_balance, tier, etc.)
+        const profileSub = supabase
+            .channel(`home_profile_${session.user.id}`)
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'profiles', 
+                filter: `id=eq.${session.user.id}` 
+            }, (payload) => {
+                if (payload.new) {
+                    setProfile(payload.new)
+                    if (payload.new.role) setUserRole(payload.new.role)
+                }
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(profileSub)
+        }
+    }, [session?.user?.id])
 
     // Effect: LINE Auth Guard
     useEffect(() => {
@@ -168,6 +206,7 @@ export const useHausHome = (session) => {
         status,
         settings,
         userRole,
+        profile,
         showAuthModal,
         setShowAuthModal,
         handleLogout,
