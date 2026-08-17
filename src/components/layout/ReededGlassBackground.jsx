@@ -4,7 +4,9 @@ export default function ReededGlassBackground({ imageUrl }) {
     const canvasRef = useRef(null);
 
     useEffect(() => {
+        if (!imageUrl) return;
         const canvas = canvasRef.current;
+        if (!canvas) return;
         // ใช้ WebGL1 หรือ 2 ก็ได้ แต่ Code นี้เขียนรองรับ GL2
         const gl = canvas.getContext('webgl2');
 

@@ -78,7 +78,7 @@ export function useOrderSubmission() {
 
             } else if (lineIdToken) {
                 // --- LINE USER (Edge Function) ---
-                console.warn("Submitting via Edge Function (No Supabase Session)...")
+                console.warn("Submitting via Edge Function (LINE LIFF Session)...")
                 const { data, error: fnError } = await supabase.functions.invoke('manage-booking', {
                     body: { 
                         action: 'create_booking', 
@@ -89,11 +89,45 @@ export function useOrderSubmission() {
 
                 if (fnError) throw fnError
                 if (!data.success) throw new Error(data.error || 'Booking Failed')
-                resultData = data.data
-                trackingToken = data.data?.tracking_token
+                resultData = data.data || data.booking
+                trackingToken = resultData?.tracking_token || bookingPayload.tracking_token
+
+                if (finalSlipUrl && resultData?.id) {
+                    supabase.rpc('register_payment_slip', {
+                        p_booking_id: resultData.id,
+                        p_file_name: finalSlipUrl,
+                        p_amount: resultData.total_amount || 0
+                    }).catch(err => console.warn('Slips registry error:', err));
+                }
 
             } else {
-                throw new Error("User not authenticated.")
+                // --- GUEST / DIRECT INSERT (Auto-linked by DB Trigger if phone matches member) ---
+                console.log("Submitting as Guest Order...")
+                const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
+                    ...finalBookingPayload,
+                    user_id: null
+                }).select().single()
+
+                if (bookingError) throw bookingError
+                resultData = bookingData
+                trackingToken = bookingData.tracking_token
+
+                if (finalSlipUrl) {
+                    supabase.rpc('register_payment_slip', {
+                        p_booking_id: bookingData.id,
+                        p_file_name: finalSlipUrl,
+                        p_amount: bookingData.total_amount || 0
+                    }).catch(err => console.warn('Slips registry error:', err));
+                }
+
+                if (orderItemsPayload && orderItemsPayload.length > 0) {
+                    const items = orderItemsPayload.map(item => ({
+                        booking_id: bookingData.id,
+                        ...item
+                    }))
+                    const { error: itemsError } = await supabase.from('order_items').insert(items)
+                    if (itemsError) throw itemsError
+                }
             }
 
             if (resultData) {

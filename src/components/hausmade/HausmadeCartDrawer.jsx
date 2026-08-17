@@ -1,7 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOrderSubmission } from '../../hooks/useOrderSubmission'
+import { usePromotion } from '../../hooks/usePromotion'
 import { getThaiDate, toThaiISO } from '../../utils/timeUtils'
+import { supabase } from '../../lib/supabaseClient'
+
+const LAST_ADDRESS_STORAGE_KEY = 'hausmade_last_shipping_address'
 
 export default function HausmadeCartDrawer({
     isOpen,
@@ -15,7 +19,8 @@ export default function HausmadeCartDrawer({
         calculatedShippingFee,
         isFreeShipping,
         itemsNeededForFreeShipping,
-        totalAmount,
+        amountNeededForFreeShipping,
+        totalAmount: rawTotalAmount,
         updateQuantity,
         removeFromCart,
         clearCart,
@@ -44,15 +49,94 @@ export default function HausmadeCartDrawer({
 
     const [specialRequest, setSpecialRequest] = useState('')
     const [slipFile, setSlipFile] = useState(null)
+    const [slipPreviewUrl, setSlipPreviewUrl] = useState(null)
     const [submittedOrder, setSubmittedOrder] = useState(null)
     const [validationError, setValidationError] = useState('')
+    const [copyFeedback, setCopyFeedback] = useState('')
+
+    // Promotion Code Hook
+    const { 
+        promoCode, setPromoCode, 
+        appliedPromo, promoError, isValidating: isPromoValidating, 
+        applyCode, removePromo, revalidatePromo 
+    } = usePromotion()
+
+    // Final total calculation with discount
+    const discountAmount = appliedPromo?.discountAmount || 0
+    const activeShippingFee = fulfilmentMode === 'pickup' ? 0 : calculatedShippingFee
+    const finalTotalAmount = Math.max(0, (cartSubtotal - discountAmount) + activeShippingFee)
+
+    // Revalidate promo code when cartSubtotal changes
+    useEffect(() => {
+        if (appliedPromo) {
+            revalidatePromo(cartSubtotal, 'ordering')
+        }
+    }, [cartSubtotal, appliedPromo, revalidatePromo])
+
+    // Auto-fill from Profile & localStorage
+    useEffect(() => {
+        let isMounted = true
+        async function loadPrefill() {
+            try {
+                // 1. Check Auth & Profile
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user && isMounted) {
+                    if (user.user_metadata?.full_name) setContactName(user.user_metadata.full_name)
+                    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+                    if (profile && isMounted) {
+                        if (profile.display_name) setContactName(profile.display_name)
+                        if (profile.phone_number) setContactPhone(profile.phone_number)
+                    }
+                }
+
+                // 2. Load cached shipping address
+                const cachedAddr = localStorage.getItem(LAST_ADDRESS_STORAGE_KEY)
+                if (cachedAddr && isMounted) {
+                    const parsed = JSON.parse(cachedAddr)
+                    if (parsed.addressLine) setAddressLine(parsed.addressLine)
+                    if (parsed.subDistrict) setSubDistrict(parsed.subDistrict)
+                    if (parsed.district) setDistrict(parsed.district)
+                    if (parsed.province) setProvince(parsed.province)
+                    if (parsed.postalCode) setPostalCode(parsed.postalCode)
+                    if (!contactName && parsed.contactName) setContactName(parsed.contactName)
+                    if (!contactPhone && parsed.contactPhone) setContactPhone(parsed.contactPhone)
+                }
+            } catch (err) {
+                console.warn('Auto-fill load error:', err)
+            }
+        }
+
+        if (isOpen) {
+            loadPrefill()
+        }
+        return () => { isMounted = false }
+    }, [isOpen])
 
     if (!isOpen) return null
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
-            setSlipFile(e.target.files[0])
+            const file = e.target.files[0]
+            setSlipFile(file)
+            setSlipPreviewUrl(URL.createObjectURL(file))
         }
+    }
+
+    const handleRemoveSlip = () => {
+        setSlipFile(null)
+        if (slipPreviewUrl) URL.revokeObjectURL(slipPreviewUrl)
+        setSlipPreviewUrl(null)
+    }
+
+    const handleCopy = (text, label) => {
+        navigator.clipboard.writeText(text)
+        setCopyFeedback(label)
+        setTimeout(() => setCopyFeedback(''), 2500)
+    }
+
+    const handleApplyPromoCode = async () => {
+        if (!promoCode.trim()) return
+        await applyCode(promoCode.trim().toUpperCase(), cartSubtotal, 'ordering')
     }
 
     const handleSubmitOrder = async (e) => {
@@ -86,6 +170,21 @@ export default function HausmadeCartDrawer({
             ? `${addressLine} ${subDistrict ? 'ต.' + subDistrict : ''} ${district ? 'อ.' + district : ''} จ.${province} ${postalCode}`.trim()
             : 'รับหน้าร้าน IN THE HAUS'
 
+        // Save last used address
+        if (fulfilmentMode === 'shipping') {
+            try {
+                localStorage.setItem(LAST_ADDRESS_STORAGE_KEY, JSON.stringify({
+                    contactName,
+                    contactPhone,
+                    addressLine,
+                    subDistrict,
+                    district,
+                    province,
+                    postalCode
+                }))
+            } catch {}
+        }
+
         const trackingToken = `HM-${Date.now().toString(36).toUpperCase()}`
 
         const targetDateStr = pickupDate === 'tomorrow'
@@ -105,14 +204,16 @@ export default function HausmadeCartDrawer({
             pickup_contact_phone: contactPhone,
             booking_time: bookingDateTime,
             status: 'pending',
-            deposit_amount: totalAmount,
-            total_amount: totalAmount,
+            deposit_amount: finalTotalAmount,
+            total_amount: finalTotalAmount,
+            discount_amount: discountAmount,
+            promotion_code_id: appliedPromo?.id || null,
             customer_note: specialRequest ? `[HAUSMADE ${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${fulfilmentMode.toUpperCase()}]`,
             order_type: fulfilmentMode === 'shipping' ? 'hausmade_shipping' : 'hausmade_pickup',
             booking_type: 'hausmade',
             tracking_token: trackingToken,
             shipping_address: fullShippingAddress,
-            shipping_fee: calculatedShippingFee
+            shipping_fee: activeShippingFee
         }
 
         const orderItemsPayload = cart.map(item => ({
@@ -122,14 +223,18 @@ export default function HausmadeCartDrawer({
             selected_options: item.optionsText || null
         }))
 
+        // Optional LINE LIFF token if user is inside LINE
+        const lineIdToken = window.liff?.isLoggedIn?.() ? window.liff.getIDToken() : null
+
         await submitOrder({
             bookingPayload,
             orderItemsPayload,
             slipFile,
-            onSuccess: (result) => {
+            lineIdToken,
+            onSuccess: () => {
                 setSubmittedOrder({
                     trackingToken,
-                    totalAmount,
+                    totalAmount: finalTotalAmount,
                     fulfilmentMode,
                     shippingAddress: fullShippingAddress
                 })
@@ -184,48 +289,70 @@ export default function HausmadeCartDrawer({
                             <div className="flex flex-col gap-5 py-6">
                                 <div className="border border-[oklch(45%_0.08_140)] bg-[oklch(45%_0.08_140)]/10 p-5 border-l-4 border-l-[oklch(45%_0.08_140)]">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(45%_0.08_140)] uppercase tracking-wider block mb-1">
-                                        [ ORDER CONFIRMED // สั่งซื้อสำเร็จ ]
+                                        [ ORDER TRANSMITTED // สั่งซื้อสำเร็จ ]
                                     </span>
                                     <h3 className="text-lg font-bold text-[oklch(18%_0.012_28)]">
                                         ขอบคุณสำหรับคำสั่งซื้อ HAUSMADE
                                     </h3>
-                                    <p className="text-xs text-[oklch(42%_0.010_28)] mt-1">
+                                    <p className="text-xs text-[oklch(42%_0.010_28)] mt-1 leading-relaxed">
                                         ระบบได้รับสลิปการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการแพ็คสินค้าและจัดส่งให้โดยเร็วที่สุด
                                     </p>
                                 </div>
 
-                                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2 font-mono text-[12px]">
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2.5 font-mono text-[12px]">
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
                                         <span className="text-[oklch(55%_0.010_28)]">TRACKING TOKEN:</span>
-                                        <span className="font-bold text-[oklch(52%_0.16_28)]">{submittedOrder.trackingToken}</span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-[oklch(52%_0.16_28)]">{submittedOrder.trackingToken}</span>
+                                            <button
+                                                onClick={() => handleCopy(submittedOrder.trackingToken, 'คัดลอก Tracking Token แล้ว!')}
+                                                className="px-2 py-0.5 border border-[oklch(85%_0.012_28)] bg-white text-[10px] uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors"
+                                            >
+                                                [ COPY ]
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
                                         <span className="text-[oklch(55%_0.010_28)]">FULFILMENT:</span>
-                                        <span className="font-bold">{submittedOrder.fulfilmentMode === 'shipping' ? 'จัดส่งพัสดุเอกชน' : 'รับหน้าร้าน'}</span>
+                                        <span className="font-bold">{submittedOrder.fulfilmentMode === 'shipping' ? '🚚 จัดส่งพัสดุเอกชน' : '🏪 รับหน้าร้าน'}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                    <div className="flex justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
                                         <span className="text-[oklch(55%_0.010_28)]">DESTINATION:</span>
                                         <span className="font-bold text-right max-w-[200px] truncate">{submittedOrder.shippingAddress}</span>
                                     </div>
                                     <div className="flex justify-between pt-1">
                                         <span className="text-[oklch(55%_0.010_28)]">TOTAL PAID:</span>
-                                        <span className="font-bold">฿{submittedOrder.totalAmount.toLocaleString()}.-</span>
+                                        <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">฿{submittedOrder.totalAmount.toLocaleString()}.-</span>
                                     </div>
                                 </div>
 
-                                <button
-                                    onClick={() => {
-                                        setSubmittedOrder(null)
-                                        onClose()
-                                    }}
-                                    className="w-full py-3.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(52%_0.16_28)] transition-colors text-center"
-                                >
-                                    [ RETURN TO SHOP // กลับสู่หน้าร้าน ]
-                                </button>
+                                {copyFeedback && (
+                                    <div className="p-2 bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)] text-[oklch(45%_0.08_140)] font-mono text-xs font-bold text-center">
+                                        {copyFeedback}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-2.5">
+                                    <a
+                                        href={`/tracking/${submittedOrder.trackingToken}`}
+                                        className="w-full py-3.5 bg-[oklch(52%_0.16_28)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity text-center"
+                                    >
+                                        [ TRACK ORDER // ติดตามสถานะพัสดุ ]
+                                    </a>
+                                    <button
+                                        onClick={() => {
+                                            setSubmittedOrder(null)
+                                            onClose()
+                                        }}
+                                        className="w-full py-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] transition-colors text-center"
+                                    >
+                                        [ RETURN TO STORE // กลับสู่หน้าร้าน ]
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <>
-                                {/* Fulfilment Switcher (Braun Dial Tabs) */}
+                                {/* Fulfilment Switcher (Tabular Dial) */}
                                 <div className="flex flex-col gap-2">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
                                         [ FULFILMENT MODE // วิธีรับสินค้า ]
@@ -257,27 +384,34 @@ export default function HausmadeCartDrawer({
                                 </div>
 
                                 {/* Free Shipping Progress Bar */}
-                                {fulfilmentMode === 'shipping' && settings.freeShippingMinItems > 0 && (
+                                {fulfilmentMode === 'shipping' && (settings.freeShippingMinItems > 0 || settings.freeShippingMinAmount > 0) && (
                                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col gap-2">
                                         <div className="flex justify-between font-mono text-[10px] font-bold">
                                             <span className="text-[oklch(18%_0.012_28)]">
-                                                {isFreeShipping ? '[ FREE SHIPPING UNLOCKED // ได้รับสิทธิ์จัดส่งฟรี ]' : `[ FREE SHIPPING PROMO // ซื้อครบ ${settings.freeShippingMinItems} ชิ้นส่งฟรี ]`}
+                                                {isFreeShipping
+                                                    ? '[ FREE SHIPPING UNLOCKED // ได้รับสิทธิ์จัดส่งฟรี ]'
+                                                    : `[ PROMOTION // ซื้อครบ ${settings.freeShippingMinItems > 0 ? `${settings.freeShippingMinItems} ชิ้น` : ''} ${settings.freeShippingMinAmount > 0 ? `หรือ ฿${settings.freeShippingMinAmount}.-` : ''} ส่งฟรี ]`}
                                             </span>
                                             <span className="text-[oklch(52%_0.16_28)] font-bold">
-                                                {cartItemCount}/{settings.freeShippingMinItems} ITEMS
+                                                {isFreeShipping ? 'FREE' : `${cartItemCount}/${settings.freeShippingMinItems} ITEMS`}
                                             </span>
                                         </div>
                                         <div className="w-full h-2 bg-[oklch(85%_0.012_28)] overflow-hidden">
                                             <motion.div
                                                 className="h-full bg-[oklch(52%_0.16_28)]"
                                                 initial={{ width: 0 }}
-                                                animate={{ width: `${Math.min(100, (cartItemCount / settings.freeShippingMinItems) * 100)}%` }}
+                                                animate={{
+                                                    width: `${Math.min(100, Math.max(
+                                                        settings.freeShippingMinItems > 0 ? (cartItemCount / settings.freeShippingMinItems) * 100 : 0,
+                                                        settings.freeShippingMinAmount > 0 ? (cartSubtotal / settings.freeShippingMinAmount) * 100 : 0
+                                                    ))}%`
+                                                }}
                                                 transition={{ duration: 0.4 }}
                                             />
                                         </div>
-                                        {itemsNeededForFreeShipping > 0 && (
+                                        {!isFreeShipping && (
                                             <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                                                * ซื้อเพิ่มอีก {itemsNeededForFreeShipping} ชิ้น เพื่อรับสิทธิ์จัดส่งฟรีทั่วประเทศ
+                                                * ซื้อเพิ่มอีก {itemsNeededForFreeShipping > 0 ? `${itemsNeededForFreeShipping} ชิ้น` : ''} {amountNeededForFreeShipping > 0 ? `หรือ ฿${amountNeededForFreeShipping}.-` : ''} เพื่อรับสิทธิ์ส่งฟรีทั่วประเทศ
                                             </span>
                                         )}
                                     </div>
@@ -349,6 +483,51 @@ export default function HausmadeCartDrawer({
                                     )}
                                 </div>
 
+                                {/* Promo Code Section */}
+                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 flex flex-col gap-2">
+                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        [ PROMO CODE // โค้ดส่วนลด ]
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            placeholder="กรอกรหัสส่วนลด"
+                                            value={promoCode}
+                                            onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                                            disabled={!!appliedPromo}
+                                            className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] font-mono text-xs uppercase focus:outline-none focus:border-[oklch(52%_0.16_28)] disabled:bg-[oklch(94%_0.010_28)]"
+                                        />
+                                        {appliedPromo ? (
+                                            <button
+                                                type="button"
+                                                onClick={removePromo}
+                                                className="px-3 py-1.5 border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)] text-white font-mono text-xs font-bold uppercase"
+                                            >
+                                                [ ลบโค้ด ]
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={handleApplyPromoCode}
+                                                disabled={!promoCode.trim() || isPromoValidating}
+                                                className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold uppercase hover:bg-[oklch(52%_0.16_28)] transition-colors disabled:opacity-50"
+                                            >
+                                                {isPromoValidating ? '...' : '[ APPLY ]'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {promoError && (
+                                        <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                            [ ! ]: {promoError}
+                                        </span>
+                                    )}
+                                    {appliedPromo && (
+                                        <span className="font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                            ✓ ใช้โค้ด {appliedPromo.code} สำเร็จ (-฿{appliedPromo.discountAmount}.-)
+                                        </span>
+                                    )}
+                                </div>
+
                                 {/* Form Inputs Section */}
                                 <form onSubmit={handleSubmitOrder} className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-5">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
@@ -388,7 +567,7 @@ export default function HausmadeCartDrawer({
                                         <div className="flex flex-col gap-3">
                                             <div>
                                                 <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                                                    ที่อยู่จัดส่ง (บ้านเลขที่ / ถนน / ซอย) *
+                                                    ที่อยู่จัดส่ง (บ้านเลขที่ / อาคาร / ซอย / ถนน) *
                                                 </label>
                                                 <input
                                                     type="text"
@@ -485,6 +664,19 @@ export default function HausmadeCartDrawer({
                                         </div>
                                     )}
 
+                                    <div>
+                                        <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                            หมายเหตุเพิ่มเติม (Optional)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={specialRequest}
+                                            onChange={(e) => setSpecialRequest(e.target.value)}
+                                            placeholder="เช่น ฝากไว้หน้าบ้าน / บดละเอียดสำหรับ Moka pot"
+                                            className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                        />
+                                    </div>
+
                                     {/* Payment Section */}
                                     <div className="border-t border-[oklch(85%_0.012_28)] pt-5 flex flex-col gap-3">
                                         <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
@@ -504,23 +696,67 @@ export default function HausmadeCartDrawer({
                                                 </div>
                                             )}
 
-                                            <div className="text-center font-mono text-xs">
+                                            <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
                                                 <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.bankAccountName}</div>
-                                                <div className="text-[oklch(52%_0.16_28)] font-bold mt-0.5">{settings.bankAccountNo}</div>
+                                                <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.bankAccountNo}</div>
                                                 <div className="text-[oklch(55%_0.010_28)] text-[10px]">{settings.bankName}</div>
                                             </div>
+
+                                            {/* 1-Click Copy Buttons */}
+                                            <div className="flex gap-2 w-full mt-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCopy(settings.bankAccountNo.replace(/-/g, ''), 'คัดลอกเลขบัญชีแล้ว!')}
+                                                    className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                >
+                                                    [ COPY ACCT NO. ]
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleCopy(finalTotalAmount.toString(), 'คัดลอกยอดเงินแล้ว!')}
+                                                    className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                >
+                                                    [ COPY ฿{finalTotalAmount} ]
+                                                </button>
+                                            </div>
+
+                                            {copyFeedback && (
+                                                <span className="font-mono text-[10px] font-bold text-[oklch(45%_0.08_140)]">
+                                                    ✓ {copyFeedback}
+                                                </span>
+                                            )}
                                         </div>
 
-                                        <div>
-                                            <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        {/* Slip Uploader with Preview */}
+                                        <div className="flex flex-col gap-2">
+                                            <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block">
                                                 แนบสลิปการชำระเงิน *
                                             </label>
-                                            <input
-                                                type="file"
-                                                accept="image/*"
-                                                onChange={handleFileChange}
-                                                className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
-                                            />
+
+                                            {slipPreviewUrl ? (
+                                                <div className="relative border border-[oklch(85%_0.012_28)] bg-white p-2 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={slipPreviewUrl} alt="Slip Preview" className="w-12 h-12 object-cover border" />
+                                                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] truncate max-w-[180px]">
+                                                            {slipFile?.name || 'slip.jpg'}
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveSlip}
+                                                        className="px-2.5 py-1 border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-mono text-[10px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors"
+                                                    >
+                                                        [ เปลี่ยนรูป ]
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    onChange={handleFileChange}
+                                                    className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] cursor-pointer"
+                                                />
+                                            )}
                                         </div>
                                     </div>
 
@@ -530,6 +766,12 @@ export default function HausmadeCartDrawer({
                                             <span>ยอดรวมสินค้า ({cartItemCount} ชิ้น):</span>
                                             <span>฿{cartSubtotal.toLocaleString()}.-</span>
                                         </div>
+                                        {discountAmount > 0 && (
+                                            <div className="flex justify-between text-[oklch(45%_0.08_140)] font-bold">
+                                                <span>ส่วนลดโปรโมชั่น ({appliedPromo?.code}):</span>
+                                                <span>-฿{discountAmount.toLocaleString()}.-</span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between text-[oklch(42%_0.010_28)]">
                                             <span>ค่าจัดส่งพัสดุ:</span>
                                             {fulfilmentMode === 'pickup' ? (
@@ -542,7 +784,7 @@ export default function HausmadeCartDrawer({
                                         </div>
                                         <div className="flex justify-between text-sm font-bold text-[oklch(18%_0.012_28)] border-t border-[oklch(85%_0.012_28)] pt-2 mt-1">
                                             <span>ยอดชำระสุทธิ:</span>
-                                            <span className="text-[oklch(52%_0.16_28)]">฿{totalAmount.toLocaleString()}.-</span>
+                                            <span className="text-[oklch(52%_0.16_28)]">฿{finalTotalAmount.toLocaleString()}.-</span>
                                         </div>
                                     </div>
 
@@ -560,7 +802,7 @@ export default function HausmadeCartDrawer({
                                         className="w-full py-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(52%_0.16_28)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6"
                                     >
                                         <span>{isSubmitting ? 'TRANSMITTING ORDER...' : 'TRANSMIT ORDER // ชำระเงิน'}</span>
-                                        <span>฿{totalAmount.toLocaleString()}.-</span>
+                                        <span>฿{finalTotalAmount.toLocaleString()}.-</span>
                                     </button>
                                 </form>
                             </>
@@ -571,3 +813,4 @@ export default function HausmadeCartDrawer({
         </AnimatePresence>
     )
 }
+
