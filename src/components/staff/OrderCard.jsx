@@ -179,18 +179,24 @@ export default function OrderCard({ order, onUpdateStatus, onVerifyPayment, onPr
                      </div>
                 </div>
                 
-                <div className="flex flex-col items-center justify-center px-4 bg-[oklch(94%_0.010_28)] min-w-[80px]">
+                <div className="flex flex-col items-center justify-center px-3 py-1 bg-[oklch(94%_0.010_28)] min-w-[85px] text-right font-mono">
                     {isKDS ? (
                         <OrderTimer createdAt={order.created_at} />
                     ) : (
-                        <>
-                            <div className="font-mono text-sm text-[oklch(18%_0.012_28)]">
-                                {formatThaiTimeOnly(order.booking_time)}
+                        <div className="flex flex-col items-end gap-0.5">
+                            <div className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                สั่ง: {formatThaiTimeOnly(order.created_at || order.booking_time)}
                             </div>
-                            <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                                ORDERED
-                            </div>
-                        </>
+                            {isPickup ? (
+                                <div className="text-xs font-bold text-amber-900 bg-amber-100/90 px-1 py-0.5 rounded border border-amber-300/70">
+                                    รับ: {formatThaiTimeOnly(order.booking_time)}
+                                </div>
+                            ) : (
+                                <div className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                    จอง: {formatThaiTimeOnly(order.booking_time)}
+                                </div>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>

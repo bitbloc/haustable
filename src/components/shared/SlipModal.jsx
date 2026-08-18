@@ -396,7 +396,13 @@ export default function SlipModal({ booking, type, onClose }) {
 
     // Generate HTML for Print
     const getPrintHtml = () => {
-        const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
+        const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString()
+        const orderPlacedStr = new Date(orderPlacedAtRaw).toLocaleString('th-TH', {
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        })
+        const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
+            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+        })
         
         let staffName = resolveStaffDisplayName(booking);
         
@@ -590,9 +596,6 @@ export default function SlipModal({ booking, type, onClose }) {
         const depositAmt = Number(booking.deposit_amount) || 0;
         const totalAmt = Number(booking.total_amount) || 0;
         const balanceDue = Math.max(0, totalAmt - depositAmt);
-        const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
-            year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-        });
 
         // QR Code Section HTML - ONLY for billing tab (PromptPay before payment)
         let qrSectionHtml = ''
@@ -819,8 +822,15 @@ export default function SlipModal({ booking, type, onClose }) {
                     <div class="meta">
                         <div class="row"><span class="label">ช่องทาง / SOURCE</span> <span class="val" style="font-weight: bold;">${(isOnlinePickup || isOnlineBooking) ? 'ONLINE (ออนไลน์)' : 'IN HAUS (หน้าร้าน)'}</span></div>
                         <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isOnlinePickup ? 'ONLINE PICKUP (รับกลับออนไลน์)' : (isOnlineBooking ? 'ONLINE BOOKING (จองโต๊ะออนไลน์)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'))}</span></div>
-                        <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${dateStr}</span></div>
-                        ${isOnlineSource ? `<div class="row"><span class="label">เวลานัดหมาย / TIME</span> <span class="val">${formattedBookingTimeStr}</span></div>` : ''}
+                        ${isPickupOrder ? `
+                            <div class="row"><span class="label">เวลาที่สั่ง / ORDER TIME</span> <span class="val">${orderPlacedStr}</span></div>
+                            <div class="row"><span class="label">วันเวลามารับ / PICKUP TIME</span> <span class="val" style="font-weight: bold; color: #b91c1c;">${formattedBookingTimeStr}</span></div>
+                        ` : isOnlineBooking ? `
+                            <div class="row"><span class="label">เวลาทำรายการ / BOOKED AT</span> <span class="val">${orderPlacedStr}</span></div>
+                            <div class="row"><span class="label">วันเวลาที่จอง / RESERVATION</span> <span class="val" style="font-weight: bold; color: #b91c1c;">${formattedBookingTimeStr}</span></div>
+                        ` : `
+                            <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${orderPlacedStr}</span></div>
+                        `}
                         <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
                         <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || booking.guest_count || 1} คน</span></div>
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
@@ -1074,7 +1084,20 @@ export default function SlipModal({ booking, type, onClose }) {
     `
 
     const queueNo = getShortBookingId(booking)
-    const dateStr = new Date(booking.booking_time).toLocaleString('th-TH')
+    const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString()
+    const orderPlacedStr = new Date(orderPlacedAtRaw).toLocaleString('th-TH', {
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    })
+    const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    })
+    const remarkLower = (booking.staff_remark || '').toLowerCase()
+    const noteLower = (booking.customer_note || '').toLowerCase()
+    const sourceLower = (booking.source || '').toLowerCase()
+    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url
+    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr')
+    const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr'
+    
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
     const discountAmount = Number(booking.discount_amount) || 0;
     const displayTotalAmount = booking.total_amount || Math.max(0, subtotal - discountAmount);
@@ -1194,8 +1217,28 @@ export default function SlipModal({ booking, type, onClose }) {
                             <div className="text-gray-500">QUEUE NO.</div>
                             <div className="text-right font-mono">#{queueNo}</div>
                             
-                            <div className="text-gray-500">DATE</div>
-                            <div className="text-right">{dateStr}</div>
+                            {isPickupOrder ? (
+                                <>
+                                    <div className="text-gray-500">ORDER TIME</div>
+                                    <div className="text-right">{orderPlacedStr}</div>
+
+                                    <div className="text-gray-500 text-red-600 font-extrabold">PICKUP TIME</div>
+                                    <div className="text-right text-red-600 font-black">{formattedBookingTimeStr}</div>
+                                </>
+                            ) : isOnlineBooking ? (
+                                <>
+                                    <div className="text-gray-500">BOOKED AT</div>
+                                    <div className="text-right">{orderPlacedStr}</div>
+
+                                    <div className="text-gray-500 text-red-600 font-extrabold">RESERVED TIME</div>
+                                    <div className="text-right text-red-600 font-black">{formattedBookingTimeStr}</div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-gray-500">DATE & TIME</div>
+                                    <div className="text-right">{orderPlacedStr}</div>
+                                </>
+                            )}
                             
                             <div className="text-gray-500">GUEST</div>
                             <div className="text-right break-words">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>

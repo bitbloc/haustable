@@ -695,7 +695,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     const queueNo = getShortBookingId(booking);
-    const dateStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : new Date().toLocaleString('th-TH');
+    
+    // Order Created/Placed timestamp (when the customer/staff submitted the order)
+    const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString();
+    const orderPlacedDate = new Date(orderPlacedAtRaw);
+    const orderPlacedStr = orderPlacedDate.toLocaleString('th-TH', { 
+        year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' 
+    });
+
+    // Scheduled Booking / Pickup appointment timestamp (when customer arrives/picks up)
+    const bookingAppointmentDate = booking.booking_time ? new Date(booking.booking_time) : orderPlacedDate;
+    const formattedBookingTimeStr = bookingAppointmentDate.toLocaleString('th-TH', { 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
 
     let cfg = {};
     try {
@@ -785,9 +797,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const depositAmt = Number(booking.deposit_amount) || 0;
     const totalAmt = Number(booking.total_amount) || 0;
     const balanceDue = Math.max(0, totalAmt - depositAmt);
-    const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
-        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
-    });
 
     if (isKitchenTab) {
         let serviceType = 'IN HAUS DINE-IN (ทานที่ร้าน)';
@@ -812,11 +821,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .align('left')
                .bold(true)
                .line(`บริการ: ${serviceType}`)
-               .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`)
-               .line(`เวลาสั่ง: ${dateStr}`);
+               .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`);
 
-        if (isOnlineSource && !isLineman) {
-            encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
+        if (isPickupOrder) {
+            encoder.line(`เวลาสั่ง: ${orderPlacedStr}`);
+            if (isOnlinePickup || booking.booking_time) {
+                encoder.line(`วันเวลามารับ: ${formattedBookingTimeStr}`);
+            }
+        } else if (isOnlineBooking) {
+            encoder.line(`เวลาทำรายการ: ${orderPlacedStr}`)
+                   .line(`วันเวลาที่จองโต๊ะ: ${formattedBookingTimeStr}`);
+        } else {
+            encoder.line(`เวลาสั่ง: ${orderPlacedStr}`);
         }
 
         encoder.line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`)
@@ -848,11 +864,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .bold(true)
                .line(`ช่องทาง: ${channelText}`)
                .line(`ประเภทบริการ: ${isLineman ? 'เดลิเวอรี (LINE MAN)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : (isOnlineBooking ? 'จองโต๊ะออนไลน์ (RESERVATION)' : 'ทานที่ร้าน (DINE-IN)'))}`)
-               .bold(false)
-               .line(`วันที่-เวลา: ${dateStr}`);
+               .bold(false);
 
-        if (isOnlineSource && !isLineman) {
-            encoder.line(`เวลานัดหมาย: ${formattedBookingTimeStr}`);
+        if (isPickupOrder) {
+            encoder.line(`เวลาทำรายการ: ${orderPlacedStr}`);
+            if (isOnlinePickup || booking.booking_time) {
+                encoder.line(`วันเวลามารับ: ${formattedBookingTimeStr}`);
+            }
+        } else if (isOnlineBooking) {
+            encoder.line(`เวลาทำรายการ: ${orderPlacedStr}`)
+                   .line(`วันเวลาที่จองโต๊ะ: ${formattedBookingTimeStr}`);
+        } else {
+            encoder.line(`วันที่-เวลา: ${orderPlacedStr}`);
         }
 
         encoder.line(`ลูกค้า: ${customerName}`);
@@ -875,7 +898,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                    .line(`ยอดคงเหลือชำระเพิ่ม: ฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}`)
                    .bold(false);
         }
-        encoder.line(divider);
     }
 
     // Items Header

@@ -787,6 +787,11 @@ export default function AdminBookings() {
                                                             <Calendar size={10} />
                                                             <span>{formatThaiDateOnly(booking.booking_time || booking.created_at)}</span>
                                                         </div>
+                                                        {booking.created_at && (
+                                                            <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                                                สั่ง: {formatThaiTimeOnly(booking.created_at)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
 
@@ -972,7 +977,7 @@ export default function AdminBookings() {
                                                                         ORDER ITEMS & PREFERENCES BREAKDOWN
                                                                     </span>
                                                                     <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                                                        CREATED: {formatThaiTime(booking.created_at)}
+                                                                        สั่งเมื่อ: {formatThaiTime(booking.created_at)} | นัดหมาย: {formatThaiTime(booking.booking_time)}
                                                                     </span>
                                                                 </div>
 

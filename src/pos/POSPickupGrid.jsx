@@ -190,18 +190,18 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                             </div>
                                          )}
                                          <div className="text-[10px] font-mono text-[#767673] line-clamp-1 mt-1 uppercase">
-                                             ID: {order.id.substring(0,8)}
+                                             ID: #{order.id.substring(0,8)}
                                          </div>
                                     </div>
             
-                                    <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673]">
-                                        <div className="flex items-center gap-1">
-                                            <ShoppingBag size={12} />
-                                            <span>PICKUP</span>
+                                    <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[10px] font-mono font-bold tracking-wider">
+                                        <div className="flex items-center gap-1 text-[#767673]">
+                                            <Clock size={11} />
+                                            <span>สั่ง: {order.created_at ? new Date(order.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'}) : '-'}</span>
                                         </div>
-                                        <div className="flex items-center gap-1 text-[#1A1A1A]">
-                                            <Clock size={12} />
-                                            <span>{new Date(order.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+                                        <div className="flex items-center gap-1 text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-300/80 font-bold">
+                                            <ShoppingBag size={11} />
+                                            <span>รับ: {new Date(order.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
                                         </div>
                                     </div>
                                 </motion.button>

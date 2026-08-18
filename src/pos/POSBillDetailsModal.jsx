@@ -113,10 +113,19 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
     if (!booking) return null;
 
     const shortId = getShortBookingId(booking);
-    const bookingTimeStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH') : '-';
+    const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString();
+    const orderPlacedStr = new Date(orderPlacedAtRaw).toLocaleString('th-TH', { 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+    const bookingTimeStr = booking.booking_time ? new Date(booking.booking_time).toLocaleString('th-TH', { 
+        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+    }) : '-';
+    
+    const isPickup = booking.booking_type === 'pickup';
+    const isDineInBooking = booking.booking_type === 'dine_in';
     const profileObj = Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles;
     const tableObj = Array.isArray(booking.tables_layout) ? booking.tables_layout[0] : booking.tables_layout;
-    const tableName = tableObj?.table_name || booking.table_name || (booking.booking_type === 'pickup' ? 'PICK' : '-');
+    const tableName = tableObj?.table_name || booking.table_name || (isPickup ? 'PICK' : '-');
 
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
@@ -130,7 +139,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                                 Bill #{shortId}
                             </h2>
                             <p className="text-[10px] text-[#A3A39E] font-mono">
-                                {bookingTimeStr}
+                                เวลาทำรายการ: {orderPlacedStr} น.
                             </p>
                         </div>
                     </div>
@@ -142,13 +151,42 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
                     
+                    {/* Timestamp Details & Order Type */}
+                    <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm font-mono text-xs">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-[#767673] uppercase tracking-wider">ประเภทบริการ / SERVICE</span>
+                            <span className="text-xs font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                {isPickup ? 'รับกลับบ้าน (PICKUP)' : `โต๊ะ ${tableName}`}
+                            </span>
+                        </div>
+
+                        <div className="bg-[#F5F5F2] border border-[#ECECE9] rounded-lg p-2.5 flex flex-col gap-1.5">
+                            <div className="flex justify-between items-center text-[11px] text-[#767673]">
+                                <span>เวลาทำรายการ (Order Time):</span>
+                                <span className="font-bold text-[#1A1A1A]">{orderPlacedStr} น.</span>
+                            </div>
+                            {isPickup ? (
+                                <div className="flex justify-between items-center text-[11px] text-amber-950 font-bold border-t border-[#D1D1CD] pt-1.5">
+                                    <span>วันเวลามารับ (Pickup Time):</span>
+                                    <span className="bg-amber-100/90 text-amber-900 px-2 py-0.5 rounded border border-amber-300">
+                                        {bookingTimeStr} น.
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="flex justify-between items-center text-[11px] text-[#1A1A1A] font-bold border-t border-[#D1D1CD] pt-1.5">
+                                    <span>วันเวลาที่จองโต๊ะ (Reserved For):</span>
+                                    <span className="bg-[oklch(92%_0.012_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                                        {bookingTimeStr} น.
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Member / Guest Info */}
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-2 shadow-sm">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">Customer / สมาชิก</span>
-                            <span className="text-xs font-mono font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                {booking.booking_type === 'pickup' ? 'รับกลับ (PICKUP)' : `โต๊ะ ${tableName}`}
-                            </span>
+                            <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">Customer / ข้อมูลลูกค้า</span>
                         </div>
 
                         {profileObj ? (

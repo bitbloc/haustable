@@ -283,15 +283,36 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const renderCard = (order, typeBadge) => {
         const shortId = getShortBookingId(order);
         const isLineman = isOrderLineman(order);
-        const orderTimeStr = order.created_at ? new Date(order.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : null;
-        const bookingTimeStr = new Date(order.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const isPickup = order.booking_type === 'pickup';
+        
+        // Order submission timestamp (when created)
+        const orderDate = order.created_at ? new Date(order.created_at) : new Date(order.booking_time);
+        const orderTimeStr = orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        
+        // Scheduled appointment / Pickup / Table reservation date & time
+        const bookingDate = new Date(order.booking_time);
+        const bookingTimeOnly = bookingDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        
+        const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+        const bDateStr = bookingDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+        let dateLabel = 'วันนี้';
+        if (todayStr !== bDateStr) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tomorrowStr = tomorrow.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+            if (tomorrowStr === bDateStr) {
+                dateLabel = 'พรุ่งนี้';
+            } else {
+                dateLabel = bookingDate.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+            }
+        }
+
         const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer', 'ลูกค้าทั่วไป'];
         const name = order.profiles?.display_name 
             || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
             || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
             || (isLineman ? `LINE MAN #${shortId}` : 'Guest');
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
-        const isPickup = order.booking_type === 'pickup';
         const items = order.order_items || [];
         const tableName = order.tables_layout?.table_name;
         const isPaid = (order.deposit_amount >= order.total_amount && order.total_amount > 0) || order.status === 'paid' || isLineman;
@@ -344,10 +365,23 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </span>
                     </div>
 
-                    <div className="text-right font-mono shrink-0">
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">
-                            {orderTimeStr ? `ORDER: ${orderTimeStr}` : `TIME: ${bookingTimeStr}`}
+                    <div className="text-right font-mono shrink-0 flex flex-col items-end gap-0.5">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                            สั่ง: {orderTimeStr} น.
                         </span>
+                        {isPickup ? (
+                            <span className="text-[11px] font-bold text-amber-900 bg-amber-100/90 px-1.5 py-0.5 rounded border border-amber-300/80">
+                                รับ: {dateLabel} {bookingTimeOnly} น.
+                            </span>
+                        ) : isLineman ? (
+                            <span className="text-[11px] font-bold text-[oklch(45%_0.08_140)] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                เวลารับ: {bookingTimeOnly} น.
+                            </span>
+                        ) : (
+                            <span className="text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded border border-[oklch(85%_0.012_28)]">
+                                จอง: {dateLabel} {bookingTimeOnly} น.
+                            </span>
+                        )}
                     </div>
                 </div>
 
