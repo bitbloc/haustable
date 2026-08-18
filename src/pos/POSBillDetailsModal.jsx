@@ -27,7 +27,7 @@ class ModalErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             return (
-                <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+                <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 font-sans">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 border border-[#D1D1CD]">
                         <div className="flex justify-between items-center border-b pb-3">
                             <h3 className="font-bold text-red-600 text-sm">Bill Details Display Notice</h3>
@@ -128,7 +128,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
     const tableName = tableObj?.table_name || booking.table_name || (isPickup ? 'PICK' : '-');
 
     return (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 font-sans">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 font-sans">
             <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden border border-[#D1D1CD]">
                 {/* Header */}
                 <div className="bg-[#1A1A1A] text-white p-4 flex items-center justify-between shrink-0">

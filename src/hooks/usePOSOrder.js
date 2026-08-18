@@ -11,7 +11,7 @@ export function usePOSOrder() {
         if (!isOnline()) {
             console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
             const bookings = posCache.getBookings();
-            const booking = bookings.find(b => b.table_id === tableId && b.status !== 'completed');
+            const booking = bookings.find(b => b.table_id === tableId && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
             return booking || null;
         }
 
@@ -34,12 +34,16 @@ export function usePOSOrder() {
                 const currentBookings = posCache.getBookings().filter(b => b.table_id !== tableId);
                 currentBookings.push(data);
                 posCache.setBookings(currentBookings);
+            } else {
+                // Table is free / booking closed or voided -> remove from posCache
+                const currentBookings = posCache.getBookings().filter(b => b.table_id !== tableId);
+                posCache.setBookings(currentBookings);
             }
             return data;
         } catch (err) {
             console.error('Network error fetching booking, fallback to cache:', err);
             const bookings = posCache.getBookings();
-            return bookings.find(b => b.table_id === tableId && b.status !== 'completed') || null;
+            return bookings.find(b => b.table_id === tableId && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show') || null;
         }
     }, []);
 
@@ -784,6 +788,57 @@ export function usePOSOrder() {
         }
     };
 
+    const deleteOrderItem = async (orderItemId, bookingId = null) => {
+        if (!orderItemId) return true;
+        try {
+            if (isOnline() && typeof orderItemId === 'string' && !orderItemId.startsWith('local_')) {
+                const { error } = await supabase
+                    .from('order_items')
+                    .delete()
+                    .eq('id', orderItemId);
+                if (error) console.warn("Supabase deleteOrderItem error:", error);
+            }
+            if (bookingId) {
+                const bookings = posCache.getBookings();
+                const booking = bookings.find(b => b.id === bookingId);
+                if (booking && booking.order_items) {
+                    booking.order_items = booking.order_items.filter(i => i.id !== orderItemId);
+                    posCache.setBookings(bookings);
+                }
+            }
+            return true;
+        } catch (err) {
+            console.error("Error deleting order item:", err);
+            return false;
+        }
+    };
+
+    const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null) => {
+        if (!orderItemId || newQty <= 0) return true;
+        try {
+            if (isOnline() && typeof orderItemId === 'string' && !orderItemId.startsWith('local_')) {
+                const { error } = await supabase
+                    .from('order_items')
+                    .update({ quantity: newQty })
+                    .eq('id', orderItemId);
+                if (error) console.warn("Supabase updateOrderItemDbQty error:", error);
+            }
+            if (bookingId) {
+                const bookings = posCache.getBookings();
+                const booking = bookings.find(b => b.id === bookingId);
+                if (booking && booking.order_items) {
+                    const item = booking.order_items.find(i => i.id === orderItemId);
+                    if (item) item.quantity = newQty;
+                    posCache.setBookings(bookings);
+                }
+            }
+            return true;
+        } catch (err) {
+            console.error("Error updating order item qty:", err);
+            return false;
+        }
+    };
+
     return {
         loading,
         getActiveBooking,
@@ -794,6 +849,8 @@ export function usePOSOrder() {
         acceptOrder,
         uploadPaymentSlip,
         attachCustomerToBooking,
-        updateGuestCount
+        updateGuestCount,
+        deleteOrderItem,
+        updateOrderItemDbQty
     };
 }

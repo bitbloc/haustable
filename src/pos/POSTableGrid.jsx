@@ -37,7 +37,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
             if (cachedTables.length > 0) {
                 const merged = cachedTables.map(t => {
-                    const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed');
+                    const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
                     return {
                         ...t,
                         status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
@@ -147,7 +147,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
                     
                     const merged = cachedTables.map(t => {
-                        const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed');
+                        const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
                         return {
                             ...t,
                             status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
@@ -312,7 +312,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 {viewMode === 'floorplan' ? (
                     <div className="flex-1 w-full h-full relative">
                         {/* Status Legend Overlay */}
-                        <div className="absolute bottom-4 left-4 z-20 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-4 rounded-xl shadow-md backdrop-blur-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] select-none">
+                        <div className="absolute bottom-4 left-4 z-20 bg-[#F5F5F2] border border-[#D1D1CD] p-4 rounded-xl shadow-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] select-none">
                             <span className="text-[#1A1A1A] border-b border-[#D1D1CD] pb-1.5 mb-1">คำอธิบายสถานะโต๊ะ (TABLE STATUS)</span>
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span>
@@ -342,7 +342,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
                                     {/* Floating Zoom Controls */}
-                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[#F5F5F2]/95 border border-[#D1D1CD] p-1 rounded-lg shadow-md backdrop-blur-md">
+                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg shadow-md">
                                         <button type="button" onClick={() => zoomIn()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom In"><ZoomIn size={14} /></button>
                                         <button type="button" onClick={() => zoomOut()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom Out"><ZoomOut size={14} /></button>
                                         <button type="button" onClick={() => resetTransform()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Reset View"><Maximize size={14} /></button>
@@ -511,7 +511,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                 <span>No tables found matching registry query</span>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
                                 {filteredTables.map((table) => {
                                     const isOccupied = table.status === 'occupied';
                                     const isPending = table.status === 'pending';

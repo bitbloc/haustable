@@ -62,6 +62,19 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
     useEffect(() => {
         fetchOpenBills();
+
+        const openBillsSub = supabase.channel('pos-open-bills-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchOpenBills();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
+                fetchOpenBills();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(openBillsSub);
+        };
     }, [refreshKey]);
 
     // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills)
@@ -312,7 +325,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                         <span>No bills match current filter criteria</span>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                         {filteredOrders.map((order) => {
                             const isVoid = order.status === 'void' || order.status === 'cancelled';
                             const isTable = !!order.table_id;

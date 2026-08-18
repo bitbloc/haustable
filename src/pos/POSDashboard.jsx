@@ -1287,7 +1287,7 @@ export default function POSDashboard() {
         }
     };
 
-    const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount } = usePOSOrder();
+    const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount, deleteOrderItem, updateOrderItemDbQty } = usePOSOrder();
 
     const [openTableModalData, setOpenTableModalData] = useState(null);
     const [openTablePaxInput, setOpenTablePaxInput] = useState('2');
@@ -1563,22 +1563,38 @@ export default function POSDashboard() {
     }, []);
 
     const handleUpdateQuantity = useCallback((itemId, delta) => {
-        setCurrentOrder(prev => ({
-            ...prev,
-            items: prev.items.map(item => {
-                if (item.id === itemId) {
-                    const isReward = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
-                    if (isReward && delta > 0) {
-                        toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
-                        return item;
-                    }
-                    const newQty = Math.max(0, item.quantity + delta);
-                    return { ...item, quantity: newQty };
+        setCurrentOrder(prev => {
+            const targetItem = prev.items.find(i => i.id === itemId);
+            if (!targetItem) return prev;
+
+            const isReward = targetItem.is_reward || !!targetItem.claim_code || (targetItem.name || '').includes('แลกสิทธิ');
+            if (isReward && delta > 0) {
+                toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+                return prev;
+            }
+
+            const newQty = Math.max(0, targetItem.quantity + delta);
+
+            // If item is saved in database (has db_id) and quantity reaches 0, delete it from order_items in Supabase!
+            if (targetItem.db_id) {
+                if (newQty === 0) {
+                    deleteOrderItem(targetItem.db_id, activeBooking?.id);
+                } else {
+                    updateOrderItemDbQty(targetItem.db_id, newQty, activeBooking?.id);
                 }
-                return item;
-            }).filter(item => item.quantity > 0)
-        }));
-    }, []);
+            }
+
+            return {
+                ...prev,
+                items: prev.items.map(item => {
+                    if (item.id === itemId) {
+                        return { ...item, quantity: newQty };
+                    }
+                    return item;
+                }).filter(item => item.quantity > 0)
+            };
+        });
+    }, [activeBooking, deleteOrderItem, updateOrderItemDbQty]);
 
     const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({
@@ -2565,7 +2581,7 @@ export default function POSDashboard() {
 
             {/* Walk-in Pickup Modal */}
             {showPickupModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-2xl font-sans text-[#1A1A1A] animate-in fade-in zoom-in duration-200">
                         <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
                             <div>
@@ -2612,7 +2628,7 @@ export default function POSDashboard() {
 
             {/* Notification History Drawer Modal */}
             {showNotifDrawer && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end">
+                <div className="fixed inset-0 bg-black/60 z-50 flex justify-end">
                     <div className="bg-[#F5F5F2] border-l border-[#D1D1CD] w-full max-w-md h-full shadow-2xl font-sans text-[#1A1A1A] flex flex-col animate-in slide-in-from-right duration-200">
                         <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
@@ -2691,7 +2707,7 @@ export default function POSDashboard() {
 
             {/* Open Table Modal */}
             {openTableModalData && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 select-none font-sans">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 select-none font-sans">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[#1A1A1A]">
                         <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
                             <div className="flex items-center gap-2.5">
@@ -2783,7 +2799,7 @@ export default function POSDashboard() {
             {/* 🔔 Incoming Online Bookings Floating Pop-up Overlay Modal (Dieter Rams Ultra-Minimalist + Thai Modern Style, Hallmark Approved - ZERO ICONS) */}
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-zero-icons */}
             {showPendingModal && pendingBookingsList.length > 0 && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
                     <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
                         {/* Rams Matte Dark Ink Header (No Icons) */}
                         <div className="bg-[oklch(18%_0.012_28)] px-5 py-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
@@ -2956,7 +2972,7 @@ export default function POSDashboard() {
             )}
 
             {showMoveModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans select-none">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-xl p-5 flex flex-col gap-4">
                         <div className="flex justify-between items-center pb-2 border-b border-[#D1D1CD]">
                             <div>
@@ -2992,7 +3008,7 @@ export default function POSDashboard() {
             )}
 
             {showMergeModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans select-none">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm shadow-xl p-5 flex flex-col gap-4">
                         <div className="flex justify-between items-center pb-2 border-b border-[#D1D1CD]">
                             <div>
@@ -3028,7 +3044,7 @@ export default function POSDashboard() {
             )}
 
             {showSplitModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center z-50 p-4 font-sans select-none">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans select-none">
                     <POSSplitPaymentModal 
                         order={currentOrder}
                         activeBooking={activeBooking}
@@ -3041,7 +3057,7 @@ export default function POSDashboard() {
             {/* Open Shift / PIN Verification Overlay (Full Screen PIN Pad) */}
             {/* Always require PIN on fresh page load, even if shift exists */}
             {(!activeShift || !isPinVerified) && (
-                <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-[#ECECE9]/95 z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
                         {!showOpeningFloatModal ? (
@@ -3164,7 +3180,7 @@ export default function POSDashboard() {
                 const summary = getShiftSummary();
                 const adjustments = activeShift.adjustments || [];
                 return (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                         <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
                             <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3 shrink-0">
                                 <div>
@@ -3314,7 +3330,7 @@ export default function POSDashboard() {
 
             {/* Petty Cash Adjustment Modal (เบิกจ่ายระหว่างวัน เข้า-ออก) */}
             {showCashAdjustmentModal && activeShift && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
                             <div>
@@ -3427,7 +3443,7 @@ export default function POSDashboard() {
 
             {/* Lock Screen Overlay (Full Screen PIN Pad / Staff Grid) */}
             {isLocked && activeShift && (
-                <div className="fixed inset-0 bg-[#ECECE9]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-[#ECECE9]/95 z-50 flex items-center justify-center p-4">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
                         {/* Enter PIN Code to Unlock */}

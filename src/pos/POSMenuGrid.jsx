@@ -152,26 +152,10 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         }
     }, [isSyncing]);
 
-    const handleItemClick = async (item) => {
-        let opts = item.menu_item_options;
-
-        if (!opts || !Array.isArray(opts) || opts.length === 0) {
-            try {
-                const { data } = await supabase
-                    .from('menu_item_options')
-                    .select('*, option_groups(*, option_choices(*)))')
-                    .eq('menu_item_id', item.id);
-                if (data && data.length > 0) {
-                    opts = data;
-                    setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, menu_item_options: opts } : i));
-                }
-            } catch (e) {
-                console.warn('On-demand options fetch failed:', e);
-            }
-        }
-
+    const handleItemClick = (item) => {
+        const opts = item.menu_item_options;
         const cachedImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
-        if (opts && opts.length > 0) {
+        if (opts && Array.isArray(opts) && opts.length > 0) {
             setSelectedItemForModal({ ...item, image_url: cachedImg, menu_item_options: opts });
         } else {
             onAddItem({ ...item, image_url: cachedImg });
@@ -269,7 +253,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
 
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5">
                     {filteredItems.map(item => {
                         const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
                         const displayImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
@@ -288,7 +272,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                                         </div>
                                     )}
                                     {hasOptions && (
-                                        <div className="absolute top-2 left-2 bg-black/80 backdrop-blur-xs text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <div className="absolute top-2 left-2 bg-black/85 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                             <span>มีตัวเลือก</span>
                                         </div>
                                     )}

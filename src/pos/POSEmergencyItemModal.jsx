@@ -30,11 +30,11 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
             setQuantity(1);
             setDestination('kitchen');
             setNote('');
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 if (nameInputRef.current) {
                     nameInputRef.current.focus();
                 }
-            }, 100);
+            });
         }
     }, [isOpen]);
 
@@ -119,7 +119,7 @@ export default function POSEmergencyItemModal({ isOpen, onClose, onConfirm }) {
 
     return (
         <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none touch-manipulation font-sans"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 select-none touch-manipulation font-sans"
             onClick={onClose}
         >
             <div 

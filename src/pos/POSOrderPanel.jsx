@@ -1584,7 +1584,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 font-sans backdrop-blur-sm"
+                        className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 font-sans"
                     >
                         <motion.div 
                             initial={{ scale: 0.97, y: 10 }}
@@ -1910,7 +1910,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Edit Guest Count (Pax) Modal */}
             {showEditPaxModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-sans">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 font-sans">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-[#1A1A1A]">
                         <div className="p-4.5 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
