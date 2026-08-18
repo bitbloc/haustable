@@ -15,6 +15,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 
+// Session freshness validator (Discards sessions older than 16 hours from previous days)
+function isBookingActiveAndFresh(booking) {
+    if (!booking) return false;
+    if (!['pending', 'confirmed', 'seated', 'ready'].includes(booking.status)) return false;
+    if (booking.booking_time) {
+        const bookingAgeMs = Date.now() - new Date(booking.booking_time).getTime();
+        const MAX_SESSION_AGE_MS = 16 * 60 * 60 * 1000; // 16 hours
+        if (bookingAgeMs > MAX_SESSION_AGE_MS) {
+            console.warn('[Status] Stale booking session detected (>16h):', booking.id);
+            return false;
+        }
+    }
+    return true;
+}
+
 export default function CustomerOrderStatus() {
     const { tableId } = useParams();
     const navigate = useNavigate();
@@ -31,6 +46,7 @@ export default function CustomerOrderStatus() {
 
     useEffect(() => {
         let channelSub = null;
+        let settingsSub = null;
 
         const initStatus = async () => {
             if (tableId) {
@@ -39,10 +55,10 @@ export default function CustomerOrderStatus() {
             const numericId = await fetchActiveOrder();
 
             if (numericId) {
-                // Setup realtime subscription with resolved numeric ID
-                channelSub = supabase.channel(`customer-order-${numericId}`)
+                // Setup realtime subscription with resolved numeric ID (listen to all changes)
+                channelSub = supabase.channel(`customer-order-status-${numericId}`)
                     .on('postgres_changes', { 
-                        event: 'UPDATE', 
+                        event: '*', 
                         schema: 'public', 
                         table: 'bookings',
                         filter: `table_id=eq.${numericId}` 
@@ -61,6 +77,17 @@ export default function CustomerOrderStatus() {
                             console.warn(`[Realtime Status] Channel status: ${status}`, err || '');
                         }
                     });
+
+                // App settings realtime listener
+                settingsSub = supabase.channel(`customer-status-settings-${numericId}`)
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'app_settings'
+                    }, () => {
+                        fetchPaymentQr();
+                    })
+                    .subscribe();
             }
         };
 
@@ -68,8 +95,25 @@ export default function CustomerOrderStatus() {
 
         return () => {
             if (channelSub) supabase.removeChannel(channelSub);
+            if (settingsSub) supabase.removeChannel(settingsSub);
         };
     }, [tableId]);
+
+    const fetchPaymentQr = async () => {
+        try {
+            const { data: qrData } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', 'payment_qr_url')
+                .maybeSingle();
+
+            if (qrData?.value) {
+                setPaymentQrUrl(qrData.value);
+            }
+        } catch (e) {
+            console.warn('Failed to fetch payment QR:', e);
+        }
+    };
 
     const fetchActiveOrder = async (silent = false) => {
         if (!silent) setLoading(true);
@@ -135,13 +179,30 @@ export default function CustomerOrderStatus() {
                 query = query.eq('tracking_token', savedToken);
             }
 
-            const { data: bookingData, error: bookingError } = await query
+            let { data: bookingData, error: bookingError } = await query
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
 
-            if (bookingError || !bookingData) {
+            // If query with savedToken yielded nothing, fallback to query latest active table booking
+            if (!bookingData && savedToken) {
+                const { data: fallbackData } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*)')
+                    .eq('table_id', numericTableId)
+                    .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                    .order('booking_time', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                bookingData = fallbackData;
+            }
+
+            if (bookingError || !bookingData || !isBookingActiveAndFresh(bookingData)) {
                 setBooking(null);
+                setOrderItems([]);
+                // Clear stale tracking tokens
+                if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                if (numericTableId) localStorage.removeItem(`table_${numericTableId}_token`);
                 setLoading(false);
                 return numericTableId;
             }
@@ -156,15 +217,7 @@ export default function CustomerOrderStatus() {
             setOrderItems(itemsData || []);
 
             // Fetch payment QR Code
-            const { data: qrData } = await supabase
-                .from('app_settings')
-                .select('value')
-                .eq('key', 'payment_qr_url')
-                .maybeSingle();
-
-            if (qrData?.value) {
-                setPaymentQrUrl(qrData.value);
-            }
+            await fetchPaymentQr();
 
             return numericTableId;
 
@@ -268,8 +321,8 @@ export default function CustomerOrderStatus() {
                                     const startMins = Math.max(0, Math.floor((Date.now() - new Date(booking.booking_time).getTime()) / 60000));
                                     const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`;
                                     return (
-                                        <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.2 rounded-sm font-mono text-[9px] font-bold">
-                                            ⏱️ {formatted}
+                                        <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.2 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
+                                            ELAPSED {formatted}
                                         </span>
                                     );
                                 })()}
@@ -285,9 +338,9 @@ export default function CustomerOrderStatus() {
                             setEditPaxInput(String(booking.pax || 1));
                             setShowPaxModal(true);
                         }}
-                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] px-2.5 py-1 rounded-sm text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                        className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] px-2.5 py-1 rounded-sm text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm uppercase"
                     >
-                        <span>👥 {booking.pax || 1} ท่าน</span>
+                        <span>PAX: {booking.pax || 1} ท่าน</span>
                         <Edit size={10} className="text-[var(--color-accent)]" />
                     </button>
                 </div>
@@ -352,8 +405,8 @@ export default function CustomerOrderStatus() {
                 <section className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4 shadow-sm relative overflow-hidden">
                     <div className="flex items-start justify-between gap-3 mb-2.5">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/20 flex items-center justify-center font-black">
-                                <Gamepad2 size={18} />
+                            <div className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] border border-[var(--color-ink)] flex items-center justify-center font-mono font-black text-xs">
+                                P2E
                             </div>
                             <div>
                                 <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
@@ -370,14 +423,14 @@ export default function CustomerOrderStatus() {
                     </div>
 
                     <p className="text-xs text-[var(--color-ink)] leading-relaxed mb-3.5">
-                        ระหว่างรอห้องครัวจัดเตรียมอาหาร ชวนเล่นเกม <strong>Flappy Cat / TaiPla</strong> สะสมแต้ม 🪙 <strong>xhaus</strong> และรับสิทธิ์แลกของรางวัลพิเศษได้ทันที!
+                        ระหว่างรอห้องครัวจัดเตรียมอาหาร ชวนเล่นเกม <strong>Flappy Cat / TaiPla</strong> สะสมแต้ม <strong>xhaus</strong> และรับสิทธิ์แลกของรางวัลพิเศษได้ทันที!
                     </p>
 
                     <button
                         onClick={() => navigate(`/arcade?tableId=${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
                         className="w-full bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-[var(--color-paper)] py-2.5 px-4 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-97 cursor-pointer flex items-center justify-center gap-2"
                     >
-                        <span>🎮 เข้าสู่ Arcade เล่นเกมรออาหาร</span>
+                        <span>เข้าสู่ Arcade เล่นเกมรออาหาร</span>
                         <ArrowRight size={14} />
                     </button>
                 </section>

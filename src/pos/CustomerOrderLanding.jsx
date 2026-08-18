@@ -4,14 +4,14 @@
  * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { 
     Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, 
     ShieldCheck, Check, Bell, Receipt, Smartphone, CheckCircle, 
     Clock, Crown, UserCheck, Phone, Gamepad2, UserPlus, Music, 
-    ChevronRight, Sparkles, RefreshCw, Layers
+    ChevronRight, Sparkles, RefreshCw, Layers, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
@@ -32,6 +32,21 @@ function getDistance(lat1, lon1, lat2, lon2) {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
     return R * c; // Distance in meters
+}
+
+// Session freshness validator (Discards sessions older than 16 hours from previous days)
+function isBookingActiveAndFresh(booking) {
+    if (!booking) return false;
+    if (!['pending', 'confirmed', 'seated', 'ready'].includes(booking.status)) return false;
+    if (booking.booking_time) {
+        const bookingAgeMs = Date.now() - new Date(booking.booking_time).getTime();
+        const MAX_SESSION_AGE_MS = 16 * 60 * 60 * 1000; // 16 hours
+        if (bookingAgeMs > MAX_SESSION_AGE_MS) {
+            console.warn('[Landing] Stale booking session detected (>16h):', booking.id);
+            return false;
+        }
+    }
+    return true;
 }
 
 export default function CustomerOrderLanding() {
@@ -89,11 +104,11 @@ export default function CustomerOrderLanding() {
     });
     const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
 
-    // 30-second interval ticker to evaluate kitchen closing time in real-time
+    // 15-second interval ticker to evaluate kitchen closing time in real-time
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTimeTick(Date.now());
-        }, 30000);
+        }, 15000);
         return () => clearInterval(interval);
     }, []);
 
@@ -191,8 +206,52 @@ export default function CustomerOrderLanding() {
         return null;
     };
 
-    const refreshActiveBooking = async (resolvedId) => {
-        const targetId = resolvedId || table?.id || tableId;
+    // Live Fetch Menu Items & Categories
+    const fetchMenuData = useCallback(async () => {
+        try {
+            const [catRes, itemRes] = await Promise.all([
+                supabase.from('menu_categories').select('*').order('display_order'),
+                supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
+            ]);
+            
+            if (catRes.data) {
+                setCategories(catRes.data);
+            }
+            if (itemRes.data) {
+                const sortedItems = (itemRes.data || []).sort((a, b) => {
+                    const recA = a.is_recommended === true;
+                    const recB = b.is_recommended === true;
+                    if (recA !== recB) return recA ? -1 : 1;
+
+                    const orderA = a.sort_order ?? a.display_order ?? 999999;
+                    const orderB = b.sort_order ?? b.display_order ?? 999999;
+                    if (orderA !== orderB) return orderA - orderB;
+
+                    return (a.name || '').localeCompare(b.name || '');
+                });
+                setMenuItems(sortedItems);
+            }
+        } catch (err) {
+            console.warn('Failed to fetch menu data:', err);
+        }
+    }, []);
+
+    // Live Fetch App Settings
+    const fetchSettings = useCallback(async () => {
+        try {
+            const { data: settingsData } = await supabase.from('app_settings').select('*');
+            if (settingsData) {
+                const map = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                setSettings(prev => ({ ...prev, ...map }));
+            }
+        } catch (err) {
+            console.warn('Failed to fetch settings:', err);
+        }
+    }, []);
+
+    // Refresh Table's Active Booking (and cleanup stale sessions)
+    const refreshActiveBooking = useCallback(async (resolvedId) => {
+        const targetId = resolvedId || table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
         if (!targetId) return;
         try {
             const { data: bookingData } = await supabase
@@ -204,14 +263,79 @@ export default function CustomerOrderLanding() {
                 .limit(1)
                 .maybeSingle();
 
-            setActiveBooking(bookingData || null);
-            if (bookingData?.pax) {
-                setPaxCount(bookingData.pax);
+            if (bookingData && isBookingActiveAndFresh(bookingData)) {
+                setActiveBooking(bookingData);
+                if (bookingData.pax) {
+                    setPaxCount(bookingData.pax);
+                }
+            } else {
+                // Table session is free or was closed/completed in POS -> Clean stale tokens
+                setActiveBooking(null);
+                if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
             }
         } catch (err) {
             console.error('Error refreshing active booking:', err);
         }
-    };
+    }, [table?.id, tableId]);
+
+    // Realtime Postgres Listeners for Table Session & Catalog Changes
+    useEffect(() => {
+        if (!table?.id) return;
+
+        // 1. Table Session Channel (Live Orders, Bill Changes, Calling Staff)
+        const tableChannel = supabase.channel(`realtime_landing_table_${table.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'bookings',
+                filter: `table_id=eq.${table.id}`
+            }, () => {
+                refreshActiveBooking(table.id);
+            })
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'order_items'
+            }, () => {
+                refreshActiveBooking(table.id);
+            })
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime Landing Table] Channel: ${status}`, err || '');
+                }
+            });
+
+        // 2. Realtime Menu Catalog & App Settings Sync (Instant admin price/status/cutoff updates)
+        const catalogChannel = supabase.channel(`realtime_landing_catalog_${table.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'menu_items'
+            }, () => {
+                fetchMenuData();
+            })
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'menu_categories'
+            }, () => {
+                fetchMenuData();
+            })
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'app_settings'
+            }, () => {
+                fetchSettings();
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(tableChannel);
+            supabase.removeChannel(catalogChannel);
+        };
+    }, [table?.id, refreshActiveBooking, fetchMenuData, fetchSettings]);
 
     useEffect(() => {
         initPage();
@@ -268,29 +392,6 @@ export default function CustomerOrderLanding() {
             if (isDigits && tableData.table_name && tableData.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
                 navigate(`/table/${encodeURIComponent(tableData.table_name)}`, { replace: true });
             }
-
-            // Realtime subscription using numeric table ID
-            const sub = supabase.channel(`landing-session-${tableData.id}`)
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'bookings',
-                    filter: `table_id=eq.${tableData.id}`
-                }, () => {
-                    refreshActiveBooking(tableData.id);
-                })
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'order_items'
-                }, () => {
-                    refreshActiveBooking(tableData.id);
-                })
-                .subscribe((status, err) => {
-                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                        console.warn(`[Realtime Landing] Channel status: ${status}`, err || '');
-                    }
-                });
 
             // 2. Fetch App Settings
             const { data: settingsData } = await supabase
@@ -358,11 +459,14 @@ export default function CustomerOrderLanding() {
                 }
             }
 
-            if (bookingData) {
+            if (bookingData && isBookingActiveAndFresh(bookingData)) {
                 setActiveBooking(bookingData);
                 if (bookingData.pax) setPaxCount(bookingData.pax);
             } else {
+                // Table is free or booking is stale -> Clear stale tracking token
                 setActiveBooking(null);
+                if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                if (tableData.id) localStorage.removeItem(`table_${tableData.id}_token`);
                 if (tableData?.capacity) setPaxCount(tableData.capacity);
                 setShowPaxModal(true);
             }
@@ -375,26 +479,8 @@ export default function CustomerOrderLanding() {
                 setGpsChecking(false);
             }
 
-            // 5. Fetch Menu
-            const [catRes, itemRes] = await Promise.all([
-                supabase.from('menu_categories').select('*').order('display_order'),
-                supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
-            ]);
-            
-            setCategories(catRes.data || []);
-            
-            const sortedItems = (itemRes.data || []).sort((a, b) => {
-                const recA = a.is_recommended === true;
-                const recB = b.is_recommended === true;
-                if (recA !== recB) return recA ? -1 : 1;
-
-                const orderA = a.sort_order ?? a.display_order ?? 999999;
-                const orderB = b.sort_order ?? b.display_order ?? 999999;
-                if (orderA !== orderB) return orderA - orderB;
-
-                return a.name.localeCompare(b.name);
-            });
-            setMenuItems(sortedItems);
+            // 5. Fetch Menu Catalog
+            await fetchMenuData();
             
         } catch (err) {
             console.error('Initialization error:', err);
@@ -657,17 +743,18 @@ export default function CustomerOrderLanding() {
         const currentTotalMins = currentHour * 60 + currentMinute;
 
         if (closeTotalMins > openTotalMins) {
-            // e.g. Open 10:00 - 22:00 -> Closed before 10:00 AM or after 22:00 PM
+            // Same-day operating window: e.g. Open 10:00 - 22:00 -> Closed before 10:00 or after 22:00
             return currentTotalMins < openTotalMins || currentTotalMins >= closeTotalMins;
         } else {
-            return currentTotalMins < openTotalMins && currentTotalMins >= closeTotalMins;
+            // Overnight operating window: e.g. Open 17:00 - 02:00 -> Closed between 02:00 and 17:00
+            return currentTotalMins >= closeTotalMins && currentTotalMins < openTotalMins;
         }
     };
 
     const isKitchenClosed = checkIsKitchenClosed(settings);
 
-    // Closed category IDs set
-    const closedCategoryIds = React.useMemo(() => {
+    // Closed category identifiers set (IDs and lowercase names)
+    const closedCategoryIdentifiers = useMemo(() => {
         const set = new Set();
         if (settings?.qr_kitchen_closed_categories) {
             try {
@@ -675,7 +762,12 @@ export default function CustomerOrderLanding() {
                     ? JSON.parse(settings.qr_kitchen_closed_categories)
                     : settings.qr_kitchen_closed_categories;
                 if (Array.isArray(parsed)) {
-                    parsed.forEach(id => set.add(id));
+                    parsed.forEach(id => {
+                        if (id) {
+                            set.add(String(id));
+                            set.add(String(id).toLowerCase());
+                        }
+                    });
                 }
             } catch (e) {
                 console.warn('Error parsing qr_kitchen_closed_categories:', e);
@@ -684,35 +776,101 @@ export default function CustomerOrderLanding() {
         if (categories && Array.isArray(categories)) {
             categories.forEach(cat => {
                 if (cat.hide_on_kitchen_close === true) {
-                    set.add(cat.id);
+                    set.add(String(cat.id));
+                    if (cat.name) {
+                        set.add(cat.name.trim().toLowerCase());
+                    }
                 }
             });
         }
         return set;
     }, [settings?.qr_kitchen_closed_categories, categories, currentTimeTick]);
 
-    // Filter categories & menu items based on kitchen cutoff
-    const visibleCategories = React.useMemo(() => {
-        if (!isKitchenClosed) return categories;
-        return categories.filter(cat => !closedCategoryIds.has(cat.id));
-    }, [categories, isKitchenClosed, closedCategoryIds]);
+    // Check if an item belongs to a closed kitchen category
+    const isItemKitchenClosed = useCallback((item) => {
+        if (!isKitchenClosed) return false;
+        if (!item) return false;
 
-    const visibleMenuItems = React.useMemo(() => {
+        const catId = item.category_id ? String(item.category_id) : '';
+        const catName = (item.category || item.category_name || '').trim().toLowerCase();
+
+        if (catId && closedCategoryIdentifiers.has(catId)) return true;
+        if (catName && closedCategoryIdentifiers.has(catName)) return true;
+
+        if (catId && categories.length > 0) {
+            const matchedCat = categories.find(c => String(c.id) === catId);
+            if (matchedCat && matchedCat.hide_on_kitchen_close === true) return true;
+        }
+        if (catName && categories.length > 0) {
+            const matchedCat = categories.find(c => (c.name || '').trim().toLowerCase() === catName);
+            if (matchedCat && matchedCat.hide_on_kitchen_close === true) return true;
+        }
+
+        return false;
+    }, [isKitchenClosed, closedCategoryIdentifiers, categories]);
+
+    // Filter categories based on kitchen cutoff
+    const visibleCategories = useMemo(() => {
+        if (!isKitchenClosed) return categories;
+        return categories.filter(cat => {
+            const idStr = String(cat.id);
+            const nameStr = (cat.name || '').trim().toLowerCase();
+            return !closedCategoryIdentifiers.has(idStr) && !closedCategoryIdentifiers.has(nameStr) && cat.hide_on_kitchen_close !== true;
+        });
+    }, [categories, isKitchenClosed, closedCategoryIdentifiers]);
+
+    // Filter menu items based on kitchen cutoff
+    const visibleMenuItems = useMemo(() => {
         if (!isKitchenClosed) return menuItems;
-        return menuItems.filter(item => !closedCategoryIds.has(item.category_id));
-    }, [menuItems, isKitchenClosed, closedCategoryIds]);
+        return menuItems.filter(item => !isItemKitchenClosed(item));
+    }, [menuItems, isKitchenClosed, isItemKitchenClosed]);
+
+    // Recommended Menu Items (Filtered by active kitchen status)
+    const recommendedMenuItems = useMemo(() => {
+        return visibleMenuItems.filter(item => item.is_recommended === true);
+    }, [visibleMenuItems]);
 
     // Active Category auto-reset if selected category becomes closed
     useEffect(() => {
-        if (isKitchenClosed && activeCategory !== 'all' && closedCategoryIds.has(activeCategory)) {
-            setActiveCategory('all');
+        if (isKitchenClosed && activeCategory !== 'all' && activeCategory !== 'recommended') {
+            const isSelectedClosed = closedCategoryIdentifiers.has(String(activeCategory)) || 
+                categories.some(c => String(c.id) === String(activeCategory) && c.hide_on_kitchen_close === true);
+            if (isSelectedClosed) {
+                setActiveCategory('all');
+            }
         }
-    }, [isKitchenClosed, activeCategory, closedCategoryIds]);
+    }, [isKitchenClosed, activeCategory, closedCategoryIdentifiers, categories]);
+
+    // Filtered Items for Display
+    const filteredItems = useMemo(() => {
+        return visibleMenuItems.filter(item => {
+            let matchesCat = true;
+            if (activeCategory === 'all') {
+                matchesCat = true;
+            } else if (activeCategory === 'recommended') {
+                matchesCat = item.is_recommended === true;
+            } else {
+                const catId = item.category_id ? String(item.category_id) : '';
+                const catName = (item.category || item.category_name || '').trim().toLowerCase();
+                const targetCat = categories.find(c => String(c.id) === String(activeCategory));
+                const targetName = targetCat ? targetCat.name.trim().toLowerCase() : String(activeCategory).toLowerCase();
+                
+                matchesCat = (catId === String(activeCategory)) || (catName === targetName);
+            }
+
+            const searchTrim = search.trim().toLowerCase();
+            const matchesSearch = !searchTrim || 
+                item.name.toLowerCase().includes(searchTrim) || 
+                (item.description && item.description.toLowerCase().includes(searchTrim));
+
+            return matchesCat && matchesSearch;
+        });
+    }, [visibleMenuItems, activeCategory, search, categories]);
 
     // Cart Operations
     const handleAddToCart = (item) => {
-        if (isKitchenClosed && closedCategoryIds.has(item.category_id)) {
-            toast.error(`ขออภัยครับ อยู่นอกเวลาสั่งอาหาร (ครัวเปิดรับ ${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.)`);
+        if (isItemKitchenClosed(item)) {
+            toast.error(`ขออภัยครับ อยู่นอกเวลาสั่งอาหารครัว (ครัวเปิดรับ ${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.)`);
             return;
         }
         setSelectedItem(item);
@@ -761,10 +919,10 @@ export default function CustomerOrderLanding() {
 
         // Cart validation against kitchen closed categories
         if (isKitchenClosed) {
-            const invalidItems = cart.filter(item => closedCategoryIds.has(item.category_id));
+            const invalidItems = cart.filter(item => isItemKitchenClosed(item));
             if (invalidItems.length > 0) {
                 toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากอยู่นอกเวลาครัว (${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
-                setCart(prev => prev.filter(item => !closedCategoryIds.has(item.category_id)));
+                setCart(prev => prev.filter(item => !isItemKitchenClosed(item)));
                 setSubmitting(false);
                 return;
             }
@@ -781,7 +939,9 @@ export default function CustomerOrderLanding() {
                 .limit(1)
                 .maybeSingle();
 
-            let currentBooking = latestTableSession || activeBooking;
+            let currentBooking = (latestTableSession && isBookingActiveAndFresh(latestTableSession)) 
+                ? latestTableSession 
+                : (activeBooking && isBookingActiveAndFresh(activeBooking) ? activeBooking : null);
 
             let remarkStr = 'QR Walk-in Guest';
             if (tableRemarkInput.trim()) {
@@ -876,13 +1036,6 @@ export default function CustomerOrderLanding() {
     const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0);
 
-    const filteredItems = visibleMenuItems.filter(item => {
-        const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
-        const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
-                              (item.description && item.description.toLowerCase().includes(search.toLowerCase()));
-        return matchesCat && matchesSearch;
-    });
-
     if (loading) {
         const isNumeric = /^\d+$/.test((tableId || '').trim());
         const cachedName = localStorage.getItem('active_customer_table_name');
@@ -941,6 +1094,8 @@ export default function CustomerOrderLanding() {
             </div>
         );
     }
+
+    const currentCategoryObj = categories.find(c => String(c.id) === String(activeCategory));
 
     return (
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
@@ -1002,8 +1157,8 @@ export default function CustomerOrderLanding() {
                                 const startMins = Math.max(0, Math.floor((Date.now() - new Date(activeBooking.booking_time).getTime()) / 60000));
                                 const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h ${startMins % 60}m`;
                                 return (
-                                    <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.5 rounded-sm font-mono text-[9px] font-bold">
-                                        ⏱️ {formatted}
+                                    <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.5 rounded-sm font-mono text-[9px] font-bold tracking-wider uppercase">
+                                        ELAPSED {formatted}
                                     </span>
                                 );
                             })()}
@@ -1017,8 +1172,8 @@ export default function CustomerOrderLanding() {
                         onClick={() => setShowPaxModal(true)}
                         className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
                     >
-                        <span>👥 {paxCount} ท่าน</span>
-                        <span className="text-[10px] text-[var(--color-accent)] underline">แก้ไข</span>
+                        <span>PAX: {paxCount} ท่าน</span>
+                        <span className="text-[10px] text-[var(--color-accent)] underline uppercase">EDIT</span>
                     </button>
                 </div>
 
@@ -1026,35 +1181,35 @@ export default function CustomerOrderLanding() {
                 <div className="px-4 py-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between">
                     {memberProfile ? (
                         <div className="flex items-center gap-3 text-xs">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/30 flex items-center justify-center font-bold shrink-0">
-                                <Crown size={16} />
+                            <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/30 flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                                CRM
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5 font-bold text-[var(--color-ink)] flex-wrap">
                                     <span>คุณ {memberProfile.display_name || memberProfile.nickname || 'สมาชิก'}</span>
-                                    <span className="px-1.5 py-0.2 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold rounded-sm uppercase">
+                                    <span className="px-1.5 py-0.2 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold rounded-sm uppercase tracking-wider">
                                         {tierDetails.current_tier || 'Haus Common'} ({tierDetails.multiplier || '1.0'}x)
                                     </span>
                                     {(memberProfile.free_drink_quota || 0) > 0 && (
-                                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase">
-                                            🎉 ฟรี {memberProfile.free_drink_quota} แก้ว
+                                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
+                                            FREE {memberProfile.free_drink_quota} DRINKS
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2 text-[10px] font-mono font-bold mt-0.5 flex-wrap">
-                                    <span className="text-[var(--color-accent)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} xhaus</span>
+                                    <span className="text-[var(--color-accent)]">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} XHAUS</span>
                                     <span className="text-[var(--color-rule)]">|</span>
-                                    <span className="text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10 แก้ว</span>
+                                    <span className="text-[var(--color-ink)]">STAMPS: {memberProfile.drink_stamp_count || 0}/10</span>
                                 </div>
                             </div>
                         </div>
                     ) : (
                         <div className="flex items-center gap-2.5 text-xs">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-accent)] flex items-center justify-center shrink-0">
-                                <Crown size={15} />
+                            <div className="w-8 h-8 rounded-sm bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                                CRM
                             </div>
                             <div>
-                                <span className="font-bold text-[var(--color-ink)] block text-xs">สมาชิกสะสมแต้ม HAUS</span>
+                                <span className="font-bold text-[var(--color-ink)] block text-xs uppercase font-mono tracking-wider">HAUS MEMBERSHIP</span>
                                 <span className="text-[10px] text-[var(--color-neutral)]">ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 10 แถม 1</span>
                             </div>
                         </div>
@@ -1064,24 +1219,20 @@ export default function CustomerOrderLanding() {
                         {memberProfile && (
                             <Link
                                 to="/member-card"
-                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-1.5 rounded-sm text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1.5 rounded-sm text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
                                 title="เปิดบัตรสมาชิกดิจิทัล"
                             >
-                                <Crown size={12} className="text-[var(--color-accent)]" />
-                                <span>บัตร</span>
+                                <span>CARD</span>
                             </Link>
                         )}
                         <button
                             onClick={() => setShowMemberModal(true)}
-                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
                         >
                             {memberProfile ? (
-                                <span>สลับ</span>
+                                <span>SWITCH</span>
                             ) : (
-                                <>
-                                    <UserPlus size={13} className="text-[var(--color-accent)]" />
-                                    <span>เข้าสู่ระบบ / สมัคร</span>
-                                </>
+                                <span>SIGN IN / JOIN</span>
                             )}
                         </button>
                     </div>
@@ -1094,21 +1245,21 @@ export default function CustomerOrderLanding() {
                         className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] rounded-sm flex items-center justify-between group transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/20 flex items-center justify-center font-black shrink-0">
-                                <Gamepad2 size={18} />
+                            <div className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] border border-[var(--color-ink)] flex items-center justify-center font-mono font-black text-xs shrink-0">
+                                P2E
                             </div>
                             <div>
                                 <div className="flex items-center gap-2">
                                     <span className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase">HAUS ARCADE PLAYGROUND</span>
-                                    <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase">P2E</span>
+                                    <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">REWARDS</span>
                                 </div>
                                 <span className="text-[10px] text-[var(--color-neutral)] mt-0.5 block">
                                     เล่นเกม Flappy Cat / TaiPla สะสมแต้ม xhaus ระหว่างรอห้องครัวปรุงอาหาร
                                 </span>
                             </div>
                         </div>
-                        <div className="flex items-center gap-1 text-[var(--color-ink)] font-mono text-xs font-bold shrink-0">
-                            <span>เล่นเกม</span>
+                        <div className="flex items-center gap-1 text-[var(--color-ink)] font-mono text-xs font-bold uppercase tracking-wider shrink-0">
+                            <span>PLAY</span>
                             <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                         </div>
                     </Link>
@@ -1119,8 +1270,8 @@ export default function CustomerOrderLanding() {
                     <div className="p-3 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                         <div className="p-3 bg-[var(--color-ink)] text-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] flex items-center justify-between gap-3 shadow-sm">
                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/20 text-[var(--color-accent)] border border-[var(--color-accent)]/40 flex items-center justify-center font-bold shrink-0">
-                                    <Clock size={16} />
+                                <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)] text-[var(--color-paper)] flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                                    OFF
                                 </div>
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -1159,6 +1310,7 @@ export default function CustomerOrderLanding() {
                     </div>
 
                     <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                        {/* All Menu Pill */}
                         <button 
                             onClick={() => setActiveCategory('all')} 
                             className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
@@ -1169,8 +1321,31 @@ export default function CustomerOrderLanding() {
                         >
                             ทั้งหมด ({visibleMenuItems.length})
                         </button>
+
+                        {/* Recommended Pill */}
+                        {recommendedMenuItems.length > 0 && (
+                            <button 
+                                onClick={() => setActiveCategory('recommended')} 
+                                className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
+                                    activeCategory === 'recommended' 
+                                        ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-paper)]' 
+                                        : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]'
+                                }`}
+                            >
+                                เมนูแนะนำ ({recommendedMenuItems.length})
+                            </button>
+                        )}
+
+                        {/* Dynamic Category List */}
                         {visibleCategories.map(cat => {
-                            const count = visibleMenuItems.filter(i => i.category_id === cat.id).length;
+                            const catIdStr = String(cat.id);
+                            const catNameStr = (cat.name || '').trim().toLowerCase();
+                            const count = visibleMenuItems.filter(i => {
+                                const iCatId = i.category_id ? String(i.category_id) : '';
+                                const iCatName = (i.category || i.category_name || '').trim().toLowerCase();
+                                return iCatId === catIdStr || iCatName === catNameStr;
+                            }).length;
+
                             return (
                                 <button 
                                     key={cat.id} 
@@ -1190,6 +1365,100 @@ export default function CustomerOrderLanding() {
 
                 {/* Menu Grid Listing */}
                 <main className="flex-1 p-3">
+                    {/* Top Highlight Showcase: HAUS SIGNATURE & RECOMMENDED */}
+                    {activeCategory === 'all' && !search.trim() && recommendedMenuItems.length > 0 && (
+                        <section className="mb-4 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-3.5 shadow-xs">
+                            <div className="flex items-center justify-between mb-2.5">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-1.5">
+                                        <span>HAUS SIGNATURES</span>
+                                        <span className="text-[9px] text-[var(--color-neutral)] font-normal">/ เมนูแนะนำ</span>
+                                    </h3>
+                                </div>
+                                <button
+                                    onClick={() => setActiveCategory('recommended')}
+                                    className="text-[10px] font-mono font-bold text-[var(--color-accent)] hover:underline flex items-center gap-0.5 cursor-pointer uppercase"
+                                >
+                                    <span>SEE ALL ({recommendedMenuItems.length})</span>
+                                    <ChevronRight size={12} />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                {recommendedMenuItems.slice(0, 6).map(item => {
+                                    const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
+                                    const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+
+                                    return (
+                                        <motion.div
+                                            key={`rec-${item.id}`}
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => handleAddToCart(item)}
+                                            className="bg-[var(--color-paper)] rounded-sm border border-[var(--color-accent)]/30 hover:border-[var(--color-ink)] p-2.5 flex flex-col justify-between text-left group cursor-pointer transition-all relative shadow-xs"
+                                        >
+                                            <div>
+                                                <div className="aspect-[4/3] rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] mb-2">
+                                                    {item.image_url ? (
+                                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-lg uppercase font-mono">
+                                                            {item.name.charAt(0)}
+                                                        </div>
+                                                    )}
+                                                    <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider shadow-xs">
+                                                        SIGNATURE
+                                                    </div>
+                                                    {inCartCount > 0 && (
+                                                        <div className="absolute top-1.5 right-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
+                                                            {inCartCount}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <h4 className="font-bold text-xs text-[var(--color-ink)] line-clamp-1 leading-tight">
+                                                    {item.name}
+                                                </h4>
+                                                {item.description && (
+                                                    <p className="text-[10px] text-[var(--color-neutral)] line-clamp-2 mt-0.5 leading-snug">
+                                                        {item.description}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="pt-2 mt-1 border-t border-[var(--color-rule)]/60 flex items-center justify-between">
+                                                <span className="text-[var(--color-ink)] font-mono font-bold text-xs">
+                                                    ฿{Number(item.price).toLocaleString()}
+                                                </span>
+                                                <div className="flex items-center gap-1">
+                                                    {hasOptions && (
+                                                        <span className="text-[8px] font-mono text-[var(--color-neutral)]">
+                                                            + OPTIONS
+                                                        </span>
+                                                    )}
+                                                    <div className="w-6 h-6 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
+                                                        <Plus size={12} />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* Section Title Header */}
+                    <div className="mb-2.5 flex items-center justify-between">
+                        <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-neutral)]">
+                            {activeCategory === 'all' ? (
+                                search ? `ผลการค้นหา "${search}" (${filteredItems.length})` : `รายการทั้งหมด (${filteredItems.length})`
+                            ) : activeCategory === 'recommended' ? (
+                                `HAUS SIGNATURE DISHES & DRINKS (${filteredItems.length})`
+                            ) : (
+                                `หมวดหมู่: ${currentCategoryObj?.name || 'รายการ'} (${filteredItems.length})`
+                            )}
+                        </h3>
+                    </div>
+
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         {filteredItems.map(item => {
                             const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
@@ -1260,8 +1529,13 @@ export default function CustomerOrderLanding() {
                     </div>
 
                     {filteredItems.length === 0 && (
-                        <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider">
-                            ไม่พบรายการอาหารที่ค้นหา
+                        <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider space-y-2">
+                            <p>ไม่พบรายการอาหารในหมวดหมู่นี้</p>
+                            {isKitchenClosed && (
+                                <p className="text-[10px] text-[var(--color-accent)]">
+                                    (รายการอาหารหลักปิดรับออเดอร์แล้ว ครัวเปิดรับ {settings.qr_kitchen_open_time || '10:00'} - {settings.qr_kitchen_close_time || '22:00'} น.)
+                                </p>
+                            )}
                         </div>
                     )}
                 </main>
@@ -1421,7 +1695,7 @@ export default function CustomerOrderLanding() {
                             {/* Kitchen Remark Input */}
                             <div className="pt-2 border-t border-[var(--color-rule)] shrink-0">
                                 <label className="block text-[9px] font-mono font-bold text-[var(--color-neutral)] uppercase tracking-wider mb-1">
-                                    📝 หมายเหตุเพิ่มเติมถึงครัว (KITCHEN NOTE)
+                                    หมายเหตุถึงครัว (KITCHEN NOTE)
                                 </label>
                                 <input
                                     type="text"
@@ -1565,7 +1839,7 @@ export default function CustomerOrderLanding() {
                                                                 <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono">
                                                                     {Array.isArray(item.selected_options) ? (
                                                                         item.selected_options.map((opt, i) => (
-                                                                            <div key={i}>▶ {typeof opt === 'object' ? opt.name : opt}</div>
+                                                                            <div key={i}>- {typeof opt === 'object' ? opt.name : opt}</div>
                                                                         ))
                                                                     ) : null}
                                                                 </div>
@@ -1701,7 +1975,6 @@ export default function CustomerOrderLanding() {
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
                             <div className="flex items-center gap-2">
-                                <Crown className="text-[var(--color-accent)]" size={16} />
                                 <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ระบบสมาชิก HAUS MEMBER</h3>
                             </div>
                             <button onClick={() => setShowMemberModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
@@ -1731,13 +2004,12 @@ export default function CustomerOrderLanding() {
                                         ระบุเบอร์โทรศัพท์เพื่อค้นหาสมาชิก
                                     </label>
                                     <div className="relative">
-                                        <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" />
                                         <input
                                             type="tel"
                                             placeholder="08X-XXX-XXXX"
                                             value={memberPhoneInput}
                                             onChange={(e) => setMemberPhoneInput(e.target.value)}
-                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 pl-9 pr-3 text-sm font-mono font-bold text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
+                                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-3 text-sm font-mono font-bold text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
                                         />
                                     </div>
                                     <button
@@ -1751,7 +2023,7 @@ export default function CustomerOrderLanding() {
                             ) : (
                                 <form onSubmit={handleRegisterMember} className="space-y-3">
                                     <div className="bg-amber-50 border border-amber-200 rounded-sm p-2.5 text-xs text-amber-800 leading-relaxed">
-                                        ✨ ไม่พบสมาชิกเบอร์ <strong>{newMemberForm.phone_number}</strong> สามารถระบุชื่อเพื่อสมัครสมาชิกทันที!
+                                        ไม่พบสมาชิกเบอร์ <strong>{newMemberForm.phone_number}</strong> สามารถระบุชื่อเพื่อสมัครสมาชิกทันที!
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">
