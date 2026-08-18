@@ -68,86 +68,12 @@ export default class GameOverScene extends Phaser.Scene {
     // 5. Score Display
     this.add.text(width / 2, 170, `SCORE: ${this.finalScore}`, {
       fontFamily: 'Courier New, monospace',
-      fontSize: '28px',
+      fontSize: '32px',
       fill: '#DFFF00',
       stroke: '#000000',
       strokeThickness: 6,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(5);
-
-    // 6. Direct Score Claim Button (only if score > 0)
-    if (this.finalScore > 0) {
-      const claimBtn = this.add.text(width / 2, 280, 'SAVE SCORE / บันทึกแต้ม', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '24px',
-        fill: '#DFFF00',
-        stroke: '#000000',
-        strokeThickness: 6,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setInteractive();
-
-      // Pulse the claim button
-      this.tweens.add({
-        targets: claimBtn,
-        scaleX: 1.05,
-        scaleY: 1.05,
-        duration: 600,
-        yoyo: true,
-        repeat: -1
-      });
-
-      // Handle button click
-      claimBtn.on('pointerdown', (pointer) => {
-        // Prevent event propagation so it doesn't trigger restart
-        pointer.event.stopPropagation();
-        
-        // Trigger React claim modal
-        const onClaimScore = this.registry.get('onClaimScore');
-        if (onClaimScore) {
-          onClaimScore(this.finalScore);
-        }
-      });
-      
-      this.add.text(width / 2, 330, 'บันทึกแต้มลงบอร์ดจัดอันดับ', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '14px',
-        fill: '#FFFFFF',
-        stroke: '#000000',
-        strokeThickness: 3,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
-    } else {
-      // If score is 0, encourage them to try harder
-      this.add.text(width / 2, 300, 'TRY TO GET AT LEAST 1 POINT\nTO CLAIM REWARDS!', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '18px',
-        fill: '#FFFFFF',
-        align: 'center',
-        stroke: '#000000',
-        strokeThickness: 4,
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
-    }
-
-    // 6. Play Again Button
-    const restartBtn = this.add.text(width / 2, height - 120, 'TOUCH HERE TO RESTART / เล่นใหม่', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '18px',
-      fill: '#DFFF00',
-      stroke: '#000000',
-      strokeThickness: 5,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setInteractive();
-
-    // Pulse retry button
-    this.tweens.add({
-      targets: restartBtn,
-      scaleX: 1.08,
-      scaleY: 1.08,
-      duration: 650,
-      yoyo: true,
-      repeat: -1
-    });
+    }).setOrigin(0.5).setDepth(20);
 
     const triggerRestart = () => {
       try { this.sound.stopAll(); } catch (e) {}
@@ -157,19 +83,92 @@ export default class GameOverScene extends Phaser.Scene {
         onGameOver(this.finalScore);
       }
 
-      this.scene.start('MenuScene');
+      this.scene.start('PlayScene');
     };
 
-    restartBtn.on('pointerdown', (pointer) => {
-      pointer.event.stopPropagation();
+    // 6. Direct Score Claim Button (if score > 0)
+    if (this.finalScore > 0) {
+      const claimBtnBg = this.add.rectangle(width / 2, 240, 360, 52, 0x1f1d24).setOrigin(0.5).setDepth(25).setStrokeStyle(3, 0xDFFF00).setInteractive();
+      const claimBtn = this.add.text(width / 2, 240, '💾 SAVE SCORE / บันทึกแต้ม', {
+        fontFamily: 'Courier New, monospace',
+        fontSize: '20px',
+        fill: '#DFFF00',
+        stroke: '#000000',
+        strokeThickness: 5,
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(26).setInteractive();
+
+      // Pulse the claim button
+      this.tweens.add({
+        targets: [claimBtn, claimBtnBg],
+        scaleX: 1.04,
+        scaleY: 1.04,
+        duration: 600,
+        yoyo: true,
+        repeat: -1
+      });
+
+      const handleClaimClick = (pointer) => {
+        if (pointer && pointer.event) pointer.event.stopPropagation();
+        const onClaimScore = this.registry.get('onClaimScore');
+        if (onClaimScore) {
+          onClaimScore(this.finalScore);
+        }
+      };
+
+      claimBtn.on('pointerdown', handleClaimClick);
+      claimBtnBg.on('pointerdown', handleClaimClick);
+    }
+
+    // 7. Prominent "PLAY AGAIN / เริ่มใหม่อีกครั้ง" Button (High depth, clearly visible)
+    const retryY = this.finalScore > 0 ? 325 : 260;
+    const restartBtnBg = this.add.rectangle(width / 2, retryY, 360, 54, 0xEA580C).setOrigin(0.5).setDepth(25).setStrokeStyle(3, 0xFFFFFF).setInteractive();
+    const restartBtn = this.add.text(width / 2, retryY, '▶ PLAY AGAIN / เริ่มใหม่', {
+      fontFamily: 'Courier New, monospace',
+      fontSize: '22px',
+      fill: '#FFFFFF',
+      stroke: '#000000',
+      strokeThickness: 6,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(26).setInteractive();
+
+    // Pulse retry button
+    this.tweens.add({
+      targets: [restartBtn, restartBtnBg],
+      scaleX: 1.05,
+      scaleY: 1.05,
+      duration: 500,
+      yoyo: true,
+      repeat: -1
+    });
+
+    const handleRestartClick = (pointer) => {
+      if (pointer && pointer.event) pointer.event.stopPropagation();
+      triggerRestart();
+    };
+
+    restartBtn.on('pointerdown', handleRestartClick);
+    restartBtnBg.on('pointerdown', handleRestartClick);
+
+    // 8. Helpful hint subtext
+    this.add.text(width / 2, retryY + 52, '[ แตะที่ใดก็ได้บนหน้าจอเพื่อเริ่มใหม่ ]', {
+      fontFamily: 'Courier New, monospace',
+      fontSize: '13px',
+      fill: '#FFFFFF',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(25);
+
+    // 9. Tap anywhere on background or press SPACE to restart immediately
+    this.input.on('pointerdown', (pointer) => {
+      // Small delay prevents instant accidental clicks
       triggerRestart();
     });
 
-    // Tap background (outside claim button area) to restart if score is 0
-    if (this.finalScore === 0) {
-      this.input.on('pointerdown', () => {
-        triggerRestart();
-      });
+    if (this.input.keyboard) {
+      this.input.keyboard.on('keydown-SPACE', () => triggerRestart());
+      this.input.keyboard.on('keydown-ENTER', () => triggerRestart());
     }
   }
 }

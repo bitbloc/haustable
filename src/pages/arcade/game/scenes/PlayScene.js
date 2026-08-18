@@ -11,6 +11,9 @@ export default class PlayScene extends Phaser.Scene {
     this.baseSpeed = -230;
     this.speedMultiplier = 1.0;
     
+    // Pipe tracking array for 100% reliable scoring
+    this.pipePairs = [];
+
     // Dash & Invincibility State
     this.isDashing = false;
     this.isInvincible = false;
@@ -45,7 +48,7 @@ export default class PlayScene extends Phaser.Scene {
       stroke: '#000000',
       strokeThickness: 8,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(20);
+    }).setOrigin(0.5).setDepth(100);
 
     // 4. Create Player (Cat - scaled up)
     this.player = this.physics.add.sprite(100, height / 2, 'cat');
@@ -175,12 +178,18 @@ export default class PlayScene extends Phaser.Scene {
     });
 
     // Check pipe scoring by X position (100% reliable Flappy Bird scoring pattern)
-    this.satowGroup.getChildren().forEach((child) => {
-      if (child && child.isTopPipe && !child.hasScored && child.x <= this.player.x) {
-        child.hasScored = true;
-        this.addScore();
+    if (this.pipePairs) {
+      for (let i = 0; i < this.pipePairs.length; i++) {
+        const pair = this.pipePairs[i];
+        if (!pair.scored && pair.top && pair.top.active) {
+          if (pair.top.x <= this.player.x) {
+            pair.scored = true;
+            this.addScore();
+          }
+        }
       }
-    });
+      this.pipePairs = this.pipePairs.filter(p => p.top && p.top.active && p.top.x > -100);
+    }
 
     // Clean up offscreen kitchen knives
     if (this.knifeGroup) {
@@ -419,6 +428,16 @@ export default class PlayScene extends Phaser.Scene {
       this.activeSensors.push(scoreSensor);
     }
     
+    // Register pipe pair for foolproof scoring
+    if (this.pipePairs) {
+      this.pipePairs.push({
+        top: topSatow,
+        bottom: bottomSatow,
+        sensor: scoreSensor,
+        scored: false
+      });
+    }
+
     // Destroy sensor after it goes offscreen (4 seconds is plenty to go from spawn to left screen edge)
     this.time.delayedCall(4000, () => {
       if (scoreSensor && scoreSensor.active) {
@@ -448,6 +467,14 @@ export default class PlayScene extends Phaser.Scene {
     this.score += 1;
     if (this.scoreText) {
       this.scoreText.setText(this.score.toString());
+      this.tweens.add({
+        targets: this.scoreText,
+        scaleX: 1.35,
+        scaleY: 1.35,
+        duration: 80,
+        yoyo: true,
+        ease: 'Quad.easeOut'
+      });
     }
 
     // Play score sound
@@ -456,19 +483,19 @@ export default class PlayScene extends Phaser.Scene {
     // Floating Score Popup Effect (+1)
     const popup = this.add.text(this.player.x + 24, this.player.y - 14, '+1', {
       fontFamily: 'Courier New, monospace',
-      fontSize: '22px',
+      fontSize: '24px',
       fill: '#DFFF00',
       stroke: '#000000',
-      strokeThickness: 5,
+      strokeThickness: 6,
       fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(25);
+    }).setOrigin(0.5).setDepth(110);
 
     this.tweens.add({
       targets: popup,
       y: popup.y - 36,
       alpha: 0,
-      scaleX: 1.25,
-      scaleY: 1.25,
+      scaleX: 1.3,
+      scaleY: 1.3,
       duration: 450,
       ease: 'Quad.easeOut',
       onComplete: () => popup.destroy()
@@ -480,15 +507,15 @@ export default class PlayScene extends Phaser.Scene {
     }
     
     // Scale spawn delay to maintain horizontal obstacle gaps
-    if (this.spawnTimer) {
-      const newDelay = 1800 / this.speedMultiplier;
-      this.spawnTimer.delay = newDelay;
-    }
-    
-    // Dynamically shorten knife spawn delay (make hazards more frequent as score goes up)
-    if (this.knifeTimer) {
-      this.knifeTimer.delay = Math.max(1200, 2800 - this.score * 120);
-    }
+    try {
+      if (this.spawnTimer) {
+        const newDelay = 1800 / this.speedMultiplier;
+        this.spawnTimer.delay = newDelay;
+      }
+      if (this.knifeTimer) {
+        this.knifeTimer.delay = Math.max(1200, 2800 - this.score * 120);
+      }
+    } catch (e) {}
     
     // Instantly accelerate active obstacles
     const currentSpeed = this.baseSpeed * this.speedMultiplier;
@@ -521,22 +548,19 @@ export default class PlayScene extends Phaser.Scene {
         }
       });
     }
-
-    // Pulse score text
-    if (this.scoreText) {
-      this.tweens.add({
-        targets: this.scoreText,
-        scaleX: 1.3,
-        scaleY: 1.3,
-        duration: 100,
-        yoyo: true
-      });
-    }
   }
 
   handleScoreSensor(player, sensor) {
     if (this.isGameOver) return;
     if (sensor && sensor.active) {
+      // If crossing detection didn't trigger yet, trigger here as backup
+      if (this.pipePairs) {
+        const pair = this.pipePairs.find(p => p.sensor === sensor);
+        if (pair && !pair.scored) {
+          pair.scored = true;
+          this.addScore();
+        }
+      }
       sensor.destroy();
     }
   }
