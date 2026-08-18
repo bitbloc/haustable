@@ -383,7 +383,8 @@ export default function AdminTableEditor() {
         const appOrigin = getAppOrigin();
 
         const cardsHtml = selectedTablesToPrint.map(table => {
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appOrigin + '/table/' + table.id)}`;
+            const tableIdentifier = encodeURIComponent(table.table_name || table.id);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(appOrigin + '/table/' + tableIdentifier)}`;
             return `
                 <div class="qr-card">
                     <div class="header">
@@ -1008,7 +1009,7 @@ export default function AdminTableEditor() {
 
                                 <div className="p-2 border border-black bg-white my-1">
                                     <QRCodeSVG
-                                        value={`${getAppOrigin()}/table/${selectedTable.id}`}
+                                        value={`${getAppOrigin()}/table/${encodeURIComponent(selectedTable.table_name || selectedTable.id)}`}
                                         size={150}
                                         level="H"
                                     />

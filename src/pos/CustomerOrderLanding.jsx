@@ -4,7 +4,7 @@
  * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { 
@@ -206,25 +206,37 @@ export default function CustomerOrderLanding() {
     const initPage = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Table Layout (Supports numeric ID or table_name string like 'H1')
+            // 1. Fetch Table Layout (Prioritizes table_name like 'O1', fallback to numeric ID)
             let tableData = null;
             const cleanParam = (tableId || '').trim();
             const isDigits = /^\d+$/.test(cleanParam);
 
             if (isDigits) {
-                const { data } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .or(`id.eq.${parseInt(cleanParam)},table_name.ilike.${cleanParam}`)
-                    .maybeSingle();
-                tableData = data;
-            } else {
-                const { data } = await supabase
+                // Priority 1: Match table_name exactly (e.g. table actually named "11")
+                const { data: byName } = await supabase
                     .from('tables_layout')
                     .select('*')
                     .ilike('table_name', cleanParam)
                     .maybeSingle();
-                tableData = data;
+
+                if (byName) {
+                    tableData = byName;
+                } else {
+                    // Priority 2: Fallback to primary key id (e.g. scanned legacy flyer with numeric id)
+                    const { data: byId } = await supabase
+                        .from('tables_layout')
+                        .select('*')
+                        .eq('id', parseInt(cleanParam))
+                        .maybeSingle();
+                    tableData = byId;
+                }
+            } else {
+                const { data: byName } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .ilike('table_name', cleanParam)
+                    .maybeSingle();
+                tableData = byName;
             }
 
             if (!tableData) {
@@ -237,6 +249,11 @@ export default function CustomerOrderLanding() {
             // Save tableId and table_name for arcade and return navigation
             localStorage.setItem('active_customer_table_id', tableData.id.toString());
             localStorage.setItem('active_customer_table_name', tableData.table_name || `Table ${tableData.id}`);
+
+            // If accessed via numeric ID (e.g. /table/11) but table's true name is different (e.g. "O1"), normalize URL
+            if (isDigits && tableData.table_name && tableData.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
+                navigate(`/table/${encodeURIComponent(tableData.table_name)}`, { replace: true });
+            }
 
             // Realtime subscription using numeric table ID
             const sub = supabase.channel(`landing-session-${tableData.id}`)
@@ -743,7 +760,7 @@ export default function CustomerOrderLanding() {
             localStorage.setItem(`table_${tableId}_token`, currentBooking.tracking_token);
 
             // Redirect to status page
-            navigate(`/table/${tableId}/status`);
+            navigate(`/table/${encodeURIComponent(table?.table_name || tableId)}/status`);
 
         } catch (err) {
             console.error('Checkout error:', err);
@@ -764,10 +781,16 @@ export default function CustomerOrderLanding() {
     });
 
     if (loading) {
+        const isNumeric = /^\d+$/.test((tableId || '').trim());
+        const cachedName = localStorage.getItem('active_customer_table_name');
+        const displayLoadingName = table?.table_name || (!isNumeric ? tableId : (cachedName && localStorage.getItem('active_customer_table_id') === tableId ? cachedName : null));
+
         return (
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)]">
                 <div className="w-10 h-10 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">Connecting Table {tableId}...</p>
+                <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">
+                    {displayLoadingName ? `Connecting Table ${displayLoadingName}...` : 'Connecting Table...'}
+                </p>
             </div>
         );
     }
@@ -830,7 +853,7 @@ export default function CustomerOrderLanding() {
                                 IN THE HAUS
                             </span>
                             <span className="bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-                                {table?.table_name || `TABLE ${tableId}`}
+                                {table?.table_name || 'TABLE'}
                             </span>
                         </div>
                         <div className="flex items-center gap-1 text-[var(--color-accent-2)] font-mono text-[9px] font-bold uppercase">
@@ -842,7 +865,7 @@ export default function CustomerOrderLanding() {
                     {/* Quick Nav Links (Arcade, Member) */}
                     <div className="flex items-center divide-x divide-[var(--color-rule)]">
                         <Link 
-                            to={`/arcade?tableId=${tableId}`} 
+                            to={`/arcade?tableId=${encodeURIComponent(table?.table_name || tableId)}`} 
                             className="p-3 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
                             title="Haus Arcade"
                         >
@@ -964,7 +987,7 @@ export default function CustomerOrderLanding() {
                 {/* Entertainment & Arcade Playground Banner */}
                 <div className="p-3 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                     <Link
-                        to={`/arcade?tableId=${tableId}`}
+                        to={`/arcade?tableId=${encodeURIComponent(table?.table_name || tableId)}`}
                         className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] rounded-sm flex items-center justify-between group transition-all"
                     >
                         <div className="flex items-center gap-3">

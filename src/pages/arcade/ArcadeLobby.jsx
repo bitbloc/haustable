@@ -272,16 +272,36 @@ export default function ArcadeLobby() {
       const cleanParam = effectiveParam.trim();
       const isDigits = /^\d+$/.test(cleanParam);
       
-      let tableQuery = supabase.from('tables_layout').select('id, table_name');
-      if (isDigits) {
-        tableQuery = tableQuery.or(`id.eq.${parseInt(cleanParam)},table_name.ilike.${cleanParam}`);
-      } else {
-        tableQuery = tableQuery.ilike('table_name', cleanParam);
-      }
+      const resolveTable = async () => {
+        let tableData = null;
+        if (isDigits) {
+          const { data: byName } = await supabase
+            .from('tables_layout')
+            .select('id, table_name')
+            .ilike('table_name', cleanParam)
+            .maybeSingle();
 
-      tableQuery.maybeSingle().then(async ({ data }) => {
-        if (data) {
-          const display = data.table_name || `Table ${data.id}`;
+          if (byName) {
+            tableData = byName;
+          } else {
+            const { data: byId } = await supabase
+              .from('tables_layout')
+              .select('id, table_name')
+              .eq('id', parseInt(cleanParam))
+              .maybeSingle();
+            tableData = byId;
+          }
+        } else {
+          const { data: byName } = await supabase
+            .from('tables_layout')
+            .select('id, table_name')
+            .ilike('table_name', cleanParam)
+            .maybeSingle();
+          tableData = byName;
+        }
+
+        if (tableData) {
+          const display = tableData.table_name || `Table ${tableData.id}`;
           
           // If not explicitly provided in URL params, verify if there is an active booking
           if (!queryTableId) {
@@ -289,7 +309,7 @@ export default function ArcadeLobby() {
               const { data: activeBookings } = await supabase
                 .from('bookings')
                 .select('id, status')
-                .eq('table_id', data.id)
+                .eq('table_id', tableData.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .limit(1);
 
@@ -304,9 +324,9 @@ export default function ArcadeLobby() {
             } catch (e) {}
           }
 
-          setActiveTableId(data.id.toString());
+          setActiveTableId(tableData.table_name || tableData.id.toString());
           setActiveTableName(display);
-          localStorage.setItem('active_customer_table_id', data.id.toString());
+          localStorage.setItem('active_customer_table_id', tableData.id.toString());
           localStorage.setItem('active_customer_table_name', display);
         } else if (queryTableId) {
           setActiveTableId(cleanParam);
@@ -315,7 +335,9 @@ export default function ArcadeLobby() {
           setActiveTableId(null);
           setActiveTableName('');
         }
-      });
+      };
+
+      resolveTable();
     } else {
       setActiveTableId(null);
       setActiveTableName('');

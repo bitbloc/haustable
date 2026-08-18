@@ -80,25 +80,39 @@ export default function CustomerOrderStatus() {
             const isDigits = /^\d+$/.test(cleanParam);
 
             if (isDigits) {
-                const { data } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .or(`id.eq.${parseInt(cleanParam)},table_name.ilike.${cleanParam}`)
-                    .maybeSingle();
-                resolvedTable = data;
-            } else {
-                const { data } = await supabase
+                const { data: byName } = await supabase
                     .from('tables_layout')
                     .select('*')
                     .ilike('table_name', cleanParam)
                     .maybeSingle();
-                resolvedTable = data;
+
+                if (byName) {
+                    resolvedTable = byName;
+                } else {
+                    const { data: byId } = await supabase
+                        .from('tables_layout')
+                        .select('*')
+                        .eq('id', parseInt(cleanParam))
+                        .maybeSingle();
+                    resolvedTable = byId;
+                }
+            } else {
+                const { data: byName } = await supabase
+                    .from('tables_layout')
+                    .select('*')
+                    .ilike('table_name', cleanParam)
+                    .maybeSingle();
+                resolvedTable = byName;
             }
 
             if (resolvedTable) {
                 setResolvedTableInfo(resolvedTable);
                 localStorage.setItem('active_customer_table_id', resolvedTable.id.toString());
                 localStorage.setItem('active_customer_table_name', resolvedTable.table_name || `Table ${resolvedTable.id}`);
+
+                if (isDigits && resolvedTable.table_name && resolvedTable.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
+                    navigate(`/table/${encodeURIComponent(resolvedTable.table_name)}/status`, { replace: true });
+                }
             }
 
             const numericTableId = resolvedTable?.id || (isDigits ? parseInt(cleanParam) : null);
@@ -189,10 +203,16 @@ export default function CustomerOrderStatus() {
     };
 
     if (loading) {
+        const isNumeric = /^\d+$/.test((tableId || '').trim());
+        const cachedName = localStorage.getItem('active_customer_table_name');
+        const displayLoadingName = resolvedTableInfo?.table_name || (!isNumeric ? tableId : (cachedName && localStorage.getItem('active_customer_table_id') === tableId ? cachedName : null));
+
         return (
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)]">
                 <div className="w-10 h-10 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mb-4" />
-                <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">Loading Order Status...</p>
+                <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">
+                    {displayLoadingName ? `Loading Table ${displayLoadingName} Status...` : 'Loading Order Status...'}
+                </p>
             </div>
         );
     }
@@ -208,7 +228,7 @@ export default function CustomerOrderStatus() {
                     ยังไม่พบรายการสั่งอาหารในเซสชันปัจจุบันของโต๊ะนี้
                 </p>
                 <button 
-                    onClick={() => navigate(`/table/${tableId}`)} 
+                    onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)} 
                     className="bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] px-6 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-sm"
                 >
                     ไปที่หน้าสั่งอาหาร (Go to Menu)
@@ -236,14 +256,14 @@ export default function CustomerOrderStatus() {
                 <div className="max-w-2xl mx-auto flex items-center justify-between p-3.5">
                     <div className="flex items-center gap-3">
                         <button 
-                            onClick={() => navigate(`/table/${tableId}`)}
+                            onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
                             className="p-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-[var(--color-rule)] rounded-sm text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                         >
                             <ArrowLeft size={16} />
                         </button>
                         <div>
                             <h1 className="font-bold text-sm text-[var(--color-ink)] flex items-center gap-2">
-                                <span>สถานะออเดอร์โต๊ะ {booking.tables_layout?.table_name || tableId}</span>
+                                <span>สถานะออเดอร์โต๊ะ {resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId}</span>
                                 {booking.booking_time && (() => {
                                     const startMins = Math.max(0, Math.floor((Date.now() - new Date(booking.booking_time).getTime()) / 60000));
                                     const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`;
@@ -276,7 +296,7 @@ export default function CustomerOrderStatus() {
             <div className="max-w-2xl mx-auto w-full p-4 space-y-4">
                 {/* Order More Action Banner */}
                 <button
-                    onClick={() => navigate(`/table/${tableId}`)}
+                    onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
                     className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
                 >
                     <Plus size={14} />
@@ -354,7 +374,7 @@ export default function CustomerOrderStatus() {
                     </p>
 
                     <button
-                        onClick={() => navigate(`/arcade?tableId=${tableId}`)}
+                        onClick={() => navigate(`/arcade?tableId=${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
                         className="w-full bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-[var(--color-paper)] py-2.5 px-4 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-97 cursor-pointer flex items-center justify-center gap-2"
                     >
                         <span>🎮 เข้าสู่ Arcade เล่นเกมรออาหาร</span>
@@ -471,7 +491,7 @@ export default function CustomerOrderStatus() {
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between">
                             <div>
                                 <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ปรับจำนวนลูกค้า (PARTY SIZE)</h3>
-                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">โต๊ะ {booking.tables_layout?.table_name || tableId}</p>
+                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">โต๊ะ {resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId}</p>
                             </div>
                             <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
                                 <X size={15} />
