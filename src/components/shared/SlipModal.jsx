@@ -3,8 +3,7 @@ import { X, Printer as PrinterIcon, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
-import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -539,15 +538,16 @@ export default function SlipModal({ booking, type, onClose }) {
             </div>
         ` : ''
 
+        const cleanCustNote = getCleanCustomerNote(booking.customer_note);
         const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
         const combinedNotes = [];
-        if (booking.customer_note?.trim()) combinedNotes.push(`<strong>ลูกค้า:</strong> ${booking.customer_note.trim()}`);
+        if (cleanCustNote) combinedNotes.push(`<strong>ลูกค้า:</strong> ${cleanCustNote}`);
         if (cleanStaffNote) combinedNotes.push(`<strong>พนักงาน:</strong> ${cleanStaffNote}`);
 
         const noteHtml = (combinedNotes.length > 0) ? `
-            <div class="kitchen-note-box" style="${isKitchen ? 'font-size: 14px; padding: 10px;' : ''}">
-                <div class="kitchen-note-label" style="${isKitchen ? 'font-size: 11px; margin-bottom: 6px;' : ''}">หมายเหตุ / NOTES</div>
-                ${combinedNotes.map(n => `<div style="margin-top: 3px; ${isKitchen ? 'font-size: 14px; font-weight: bold; line-height: 1.3;' : ''}">${n}</div>`).join('')}
+            <div class="kitchen-note-box" style="font-size: 10px; padding: 6px 8px; margin-top: 8px;">
+                <div class="kitchen-note-label" style="font-size: 8px; margin-bottom: 3px;">หมายเหตุ / NOTES</div>
+                ${combinedNotes.map(n => `<div style="margin-top: 2px; font-size: 10px; font-weight: bold; line-height: 1.3;">${n}</div>`).join('')}
             </div>
         ` : ''
 
@@ -1398,14 +1398,19 @@ export default function SlipModal({ booking, type, onClose }) {
                             </>
                         )}
 
-                        {/* Note for Kitchen & Staff (Always show if present) */}
-                        {(booking.customer_note || booking.staff_remark) && (
-                            <div className={`bg-black text-white p-3 font-mono ${isKitchenTab ? 'text-xs font-bold' : 'text-[10px]'} relative mt-4`}>
-                                <div className={`absolute -top-2 left-2 bg-black px-1 ${isKitchenTab ? 'text-[9px]' : 'text-[8px]'} font-bold uppercase tracking-wider`}>Note for Staff / Kitchen</div>
-                                {booking.customer_note && <div><strong>ลูกค้า:</strong> {booking.customer_note}</div>}
-                                {booking.staff_remark && <div><strong>พนักงาน:</strong> {booking.staff_remark}</div>}
-                            </div>
-                        )}
+                        {/* Note for Kitchen & Staff (Cleaned) */}
+                        {(() => {
+                            const cleanCust = getCleanCustomerNote(booking.customer_note);
+                            const cleanStaff = getCleanStaffRemark(booking.staff_remark);
+                            if (!cleanCust && !cleanStaff) return null;
+                            return (
+                                <div className="bg-black text-white p-2.5 font-mono text-[10px] relative mt-3 rounded">
+                                    <div className="text-[8px] font-bold uppercase tracking-wider border-b border-white/40 pb-1 mb-1.5 opacity-80">หมายเหตุ / NOTES</div>
+                                    {cleanCust && <div><strong>ลูกค้า:</strong> {cleanCust}</div>}
+                                    {cleanStaff && <div><strong>พนักงาน:</strong> {cleanStaff}</div>}
+                                </div>
+                            );
+                        })()}
                         
                         {/* Footer & ASCII Art */}
                         {!isKitchenTab && (

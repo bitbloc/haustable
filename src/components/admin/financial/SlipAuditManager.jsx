@@ -9,7 +9,7 @@ import html2canvas from 'html2canvas';
 import ViewSlipModal from '../../shared/ViewSlipModal';
 import {
     fetchPrinterConfigOnline, initPrinterConfigSync,
-    generateDivider, getShortBookingId
+    generateDivider, getShortBookingId, getCleanCustomerNote, getCleanStaffRemark
 } from '../../../utils/printerHelper';
 import { posCache, getOfflineQueue } from '../../../utils/offlineHelper';
 import {
@@ -950,16 +950,21 @@ export default function SlipAuditManager({
                                         </div>
                                     )}
 
-                                    {/* Note for Staff / Kitchen */}
-                                    {(order.customer_note || order.staff_remark) && (
-                                        <div className="bg-black text-white p-3 font-mono text-[10px] relative mt-4">
-                                            <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase tracking-wider">
-                                                NOTE FOR STAFF / KITCHEN
+                                    {/* Note for Staff / Kitchen (Cleaned) */}
+                                    {(() => {
+                                        const cleanCust = getCleanCustomerNote(order.customer_note);
+                                        const cleanStaff = getCleanStaffRemark(order.staff_remark);
+                                        if (!cleanCust && !cleanStaff) return null;
+                                        return (
+                                            <div className="bg-black text-white p-2.5 font-mono text-[10px] relative mt-3 rounded">
+                                                <div className="text-[8px] font-bold uppercase tracking-wider border-b border-white/40 pb-1 mb-1.5 opacity-80">
+                                                    NOTE FOR STAFF / KITCHEN
+                                                </div>
+                                                {cleanCust && <div><strong>ลูกค้า:</strong> {cleanCust}</div>}
+                                                {cleanStaff && <div><strong>พนักงาน:</strong> {cleanStaff}</div>}
                                             </div>
-                                            {order.customer_note && <div><strong>ลูกค้า:</strong> {order.customer_note}</div>}
-                                            {order.staff_remark && <div><strong>พนักงาน:</strong> {order.staff_remark}</div>}
-                                        </div>
-                                    )}
+                                        );
+                                    })()}
 
                                     {/* ASCII Art & Footer */}
                                     <div className="text-center mt-5 space-y-1">

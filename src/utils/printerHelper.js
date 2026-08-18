@@ -301,20 +301,65 @@ function encodeUTF8(str) {
     return bytes;
 }
 
+// Clean auto-generated system customer notes (e.g. 'Walk-in Customer', 'Walk-in Pick-up')
+export function getCleanCustomerNote(note) {
+    if (!note) return '';
+    const n = String(note).trim();
+    if (!n) return '';
+    const lower = n.toLowerCase();
+    const defaultPlaceholders = [
+        'walk-in guest',
+        'walk-in pick-up',
+        'walk-in pickup',
+        'walk-in customer',
+        'walk-in',
+        'walk-in-customer',
+        'walk-in customer (offline)',
+        'walk-in pick-up (offline)',
+        'walk-in pick-up (offline sync)',
+        'walk-in pick-up (offline fallback)',
+        'offline walk-in',
+        'qr walk-in guest',
+        'anonymous user',
+        'ลูกค้าทั่วไป',
+        'ลูกค้าทั่วไป (walk-in)',
+        'internal block',
+        'maintenance block'
+    ];
+    if (defaultPlaceholders.includes(lower) || lower.startsWith('walk-in')) {
+        return '';
+    }
+    const cleaned = n.replace('[CUSTOMER_ARRIVED]', '').replace('[CALL_STAFF]', '').replace('[CALL_BILL]', '').trim();
+    return cleaned;
+}
+
 // Clean auto-generated system remarks (e.g. 'Walk-in Guest', '[CALL_STAFF]')
 export function getCleanStaffRemark(remark) {
     if (!remark) return '';
     const r = String(remark).trim();
     if (!r) return '';
     const lower = r.toLowerCase();
+    const defaultPlaceholders = [
+        'walk-in guest',
+        'walk-in pick-up',
+        'walk-in pickup',
+        'walk-in customer',
+        'walk-in',
+        'walk-in-customer',
+        'walk-in customer (offline)',
+        'walk-in pick-up (offline)',
+        'walk-in pick-up (offline sync)',
+        'walk-in pick-up (offline fallback)',
+        'offline walk-in',
+        'qr walk-in guest',
+        'anonymous user',
+        'ลูกค้าทั่วไป',
+        'ลูกค้าทั่วไป (walk-in)'
+    ];
     
     if (
-        lower === 'walk-in guest' ||
-        lower === 'qr walk-in guest' ||
-        lower === 'offline walk-in' ||
-        lower.includes('walk-in guest (offline') ||
-        lower === 'walk-in pick-up (offline sync)' ||
-        lower === 'walk-in pick-up (offline fallback)' ||
+        defaultPlaceholders.includes(lower) ||
+        lower.startsWith('walk-in') ||
         lower === '[call_staff]' ||
         lower === '[call_bill]' ||
         lower.startsWith('merged into table') ||
@@ -1124,28 +1169,23 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // Notes
+    const cleanCustomerNote = getCleanCustomerNote(booking.customer_note);
     const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
     const combinedNotes = [];
-    if (booking.customer_note?.trim()) {
-        const cNote = booking.customer_note.trim();
-        if (cNote.toLowerCase() !== 'walk-in customer') {
-            combinedNotes.push(`ลูกค้า: ${cNote}`);
-        }
-    }
+    if (cleanCustomerNote) combinedNotes.push(`ลูกค้า: ${cleanCustomerNote}`);
     if (cleanStaffNote) combinedNotes.push(`พนักงาน: ${cleanStaffNote}`);
 
     if (combinedNotes.length > 0) {
         if (isKitchenTab) {
-            const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
             encoder.align('left')
                    .bold(true)
-                   .size(1, 1)
+                   .size(0, 0)
                    .line('หมายเหตุ:');
             combinedNotes.forEach(noteLine => {
-                const lines = wrapTextByWords(noteLine, maxDoubleCols);
-                lines.forEach(l => encoder.line(l));
+                const lines = wrapTextByWords(noteLine, maxCols - 2);
+                lines.forEach(l => encoder.line(`- ${l}`));
             });
-            encoder.size(0, 0).bold(false);
+            encoder.bold(false);
         } else {
             encoder.align('left')
                    .bold(true)
