@@ -6,18 +6,27 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function check() {
-  const { data: bookings, error } = await supabase
-    .from('bookings')
-    .select('id, created_at, booking_time, total_amount, status')
-    .gte('created_at', '2026-01-01T00:00:00.000Z')
-    .lte('created_at', '2026-12-31T23:59:59.999Z');
+  let allBookings = [];
+  let page = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id, created_at, booking_time, total_amount, status')
+      .gte('created_at', '2026-01-01T00:00:00.000Z')
+      .lte('created_at', '2026-12-31T23:59:59.999Z')
+      .range(page * pageSize, (page + 1) * pageSize - 1);
 
-  if (error) {
-    console.error('Query error:', error);
-    return;
+    if (error) {
+      console.error('Query error:', error);
+      break;
+    }
+    allBookings = allBookings.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    page++;
   }
 
-  const completed = (bookings || []).filter(b => b.status === 'completed' || b.status === 'confirmed');
+  const completed = (allBookings || []).filter(b => b.status === 'completed' || b.status === 'confirmed');
   const sum = completed.reduce((s, b) => s + Number(b.total_amount || 0), 0);
 
   const jan = completed.filter(b => (b.booking_time || b.created_at).startsWith('2026-01')).reduce((s, b) => s + Number(b.total_amount || 0), 0);
@@ -27,13 +36,14 @@ async function check() {
   const may = completed.filter(b => (b.booking_time || b.created_at).startsWith('2026-05')).reduce((s, b) => s + Number(b.total_amount || 0), 0);
   const jun = completed.filter(b => (b.booking_time || b.created_at).startsWith('2026-06')).reduce((s, b) => s + Number(b.total_amount || 0), 0);
   const jul = completed.filter(b => (b.booking_time || b.created_at).startsWith('2026-07')).reduce((s, b) => s + Number(b.total_amount || 0), 0);
+  const aug = completed.filter(b => (b.booking_time || b.created_at).startsWith('2026-08')).reduce((s, b) => s + Number(b.total_amount || 0), 0);
 
   const q1 = jan + feb + mar;
   const q2 = apr + may + jun;
 
-  console.log('=== 2026 POS REVENUE BREAKDOWN (JAN - JUL 2026) ===');
+  console.log('=== 2026 POS REVENUE BREAKDOWN (JAN - AUG 2026) ===');
   console.log(`Total Completed Bookings: ${completed.length}`);
-  console.log(`- January 2026:    ฿${jan.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+  console.log(`- January 2026:    ฿${jan.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: ~620k Q1)`);
   console.log(`- February 2026:   ฿${feb.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
   console.log(`- March 2026:      ฿${mar.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
   console.log(`  >> Q1 Subtotal:  ฿${q1.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: 620,037.80)`);
@@ -42,10 +52,15 @@ async function check() {
   console.log(`- June 2026:       ฿${jun.toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
   console.log(`  >> Q2 Subtotal:  ฿${q2.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: 770,202.60)`);
   console.log(`- July 2026:       ฿${jul.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: 327,147.45)`);
+  console.log(`- August 2026:     ฿${aug.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: 171,318.80 + live POS)`);
   console.log('----------------------------------------------------');
-  console.log(`🔥 YTD GROSS TOTAL (Jan - Jul): ฿${sum.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Expected: 1,717,387.85)`);
+  console.log(`🔥 YTD GROSS TOTAL (Jan - Aug): ฿${sum.toLocaleString('en-US', { minimumFractionDigits: 2 })} (Historical Sum: 1,888,706.65)`);
   console.log(`📊 1.8M VAT Tracker Progress: ${((sum / 1800000) * 100).toFixed(2)}%`);
-  console.log(`⚠️ Remaining to 1.8M Threshold: ฿${Math.max(0, 1800000 - sum).toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+  if (sum >= 1800000) {
+    console.log(`🚨 EXCEEDED 1.8M VAT THRESHOLD BY: ฿${(sum - 1800000).toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+  } else {
+    console.log(`⚠️ Remaining to 1.8M Threshold: ฿${(1800000 - sum).toLocaleString('en-US', { minimumFractionDigits: 2 })}`);
+  }
 
   const { data: invs } = await supabase.from('tax_invoices').select('*').order('issued_at', { ascending: true });
   console.log('\n=== OFFICIAL TAX INVOICES IN SYSTEM ===');
