@@ -251,8 +251,7 @@ export default function AdminSettings() {
                 try {
                     await supabase.from('app_settings').upsert({
                         key: 'printer_config',
-                        value: JSON.stringify(autoUpdated),
-                        updated_at: new Date().toISOString()
+                        value: JSON.stringify(autoUpdated)
                     });
                 } catch (err) {
                     console.error("Auto printer routing save err:", err);
@@ -476,8 +475,7 @@ export default function AdminSettings() {
         try {
             await supabase.from('app_settings').upsert({
                 key: 'printer_config',
-                value: JSON.stringify(updatedConfig),
-                updated_at: new Date().toISOString()
+                value: JSON.stringify(updatedConfig)
             });
             toast.success("บันทึกการตั้งค่าหมวดหมู่และเครื่องพิมพ์ออนไลน์สำเร็จ");
         } catch (err) {
