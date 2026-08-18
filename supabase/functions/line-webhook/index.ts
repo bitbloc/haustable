@@ -1307,40 +1307,34 @@ Deno.serve(async (req) => {
           }
         }
 
-        // --- NEW: Active Orders Command (storder) ---
-        if (text === 'storder') {
-          console.log('Processing storder command...')
+        // --- NEW: Active Orders Command (storder) - All Tables Consolidated Summary ---
+        if (text === 'storder' || text === 'ออเดอร์' || text === 'orders') {
+          console.log('Processing storder (All Tables Consolidated) command...')
           try {
             const eighteenHoursAgo = new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString()
             const { data: bookings, error } = await supabaseAdmin
               .from('bookings')
-              .select('*, tables_layout(table_name), order_items(*, menu_items(name))')
+              .select(`
+                id, tracking_token, total_amount, total_price, status, booking_type, booking_time, created_at, pax,
+                pickup_contact_name, customer_note, staff_remark,
+                tables_layout ( table_name ),
+                order_items (
+                  id, quantity, price_at_time, selected_options,
+                  menu_items ( name, category_id )
+                )
+              `)
               .in('status', ['pending', 'confirmed', 'seated', 'ready'])
               .gte('booking_time', eighteenHoursAgo)
               .order('booking_time', { ascending: true })
 
             if (error) throw error
 
-            const translateType = (type: string) => {
-              if (type === 'pickup') return 'สั่งกลับบ้าน (TAKEAWAY)'
-              if (type === 'dine_in') return 'ทานที่ร้าน (DINE-IN)'
-              if (type === 'walk_in') return 'ลูกค้าวอล์กอิน (WALK-IN)'
-              if (type === 'steak') return 'โต๊ะสเต็ก (STEAK)'
-              return 'ทั่วไป (DINE-IN)'
-            }
-
             const translateStatus = (status: string) => {
-              if (status === 'pending') return 'รอรับออเดอร์ (PENDING)'
-              if (status === 'confirmed') return 'กำลังปรุง (CONFIRMED)'
-              if (status === 'seated') return 'นั่งที่โต๊ะ (SEATED)'
-              if (status === 'ready') return 'พร้อมเสิร์ฟ (READY)'
-              return status.toUpperCase()
-            }
-
-            const getStatusColor = (status: string) => {
-              if (status === 'pending') return '#E63946' // Red
-              if (status === 'ready') return '#2D804E' // Green
-              return '#F4A261' // Orange for seated/confirmed
+              if (status === 'pending') return { text: 'รอรับออเดอร์', color: '#E63946', emoji: '⏳' }
+              if (status === 'confirmed') return { text: 'กำลังปรุง', color: '#C85A32', emoji: '🍳' }
+              if (status === 'seated') return { text: 'นั่งที่โต๊ะ', color: '#4A6B3D', emoji: '🪑' }
+              if (status === 'ready') return { text: 'พร้อมเสิร์ฟ', color: '#2D804E', emoji: '🟢' }
+              return { text: status.toUpperCase(), color: '#78736A', emoji: '📌' }
             }
 
             const formatOptions = (options: any) => {
@@ -1354,170 +1348,267 @@ Deno.serve(async (req) => {
               return opts.length > 0 ? ` (${opts.join(', ')})` : ''
             }
 
-            let messages = []
-
             if (!bookings || bookings.length === 0) {
-              messages.push({
-                type: "flex",
-                altText: "📦 ออเดอร์ปัจจุบัน: ไม่มีออเดอร์ค้างอยู่",
-                contents: {
-                  type: "bubble",
-                  size: "mega",
-                  header: {
-                    type: "box",
-                    layout: "vertical",
-                    paddingAll: "20px",
-                    contents: [
-                      { type: "text", text: "ACTIVE ORDERS", weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: "ออเดอร์โต๊ะและสั่งกลับบ้าน", color: "#666666", size: "xs", margin: "xs" }
-                    ]
-                  },
-                  body: {
-                    type: "box",
-                    layout: "vertical",
-                    paddingAll: "20px",
-                    contents: [
-                      { type: "text", text: "ไม่มีออเดอร์ค้างอยู่ในขณะนี้ 🟢", color: "#2D804E", size: "sm", align: "center", weight: "bold" }
-                    ]
-                  },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
-                  }
+              await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                  replyToken: event.replyToken,
+                  messages: [{
+                    type: "flex",
+                    altText: "📦 ออเดอร์ปัจจุบัน: ไม่มีออเดอร์ค้างอยู่",
+                    contents: {
+                      type: "bubble",
+                      size: "mega",
+                      header: {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#F4F1EA",
+                        paddingAll: "20px",
+                        contents: [
+                          { type: "text", text: "ALL ACTIVE ORDERS", weight: "bold", color: "#C85A32", size: "xs" },
+                          { type: "text", text: "สรุปออเดอร์ทุกโต๊ะในร้าน", weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
+                        ]
+                      },
+                      body: {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#FBF9F5",
+                        paddingAll: "24px",
+                        contents: [
+                          { type: "text", text: "ไม่มีออเดอร์ค้างอยู่ในขณะนี้ 🟢", color: "#2D804E", size: "sm", align: "center", weight: "bold" },
+                          { type: "text", text: "ทุกโต๊ะเช็คบิลเรียบร้อย หรือยังไม่มีการเปิดบิลใหม่", color: "#78736A", size: "xs", align: "center", margin: "sm", wrap: true }
+                        ]
+                      }
+                    }
+                  }]
+                })
+              })
+              continue
+            }
+
+            // 1. Calculate Aggregate Metrics & Kitchen Queue
+            let totalUnpaidAmt = 0
+            let totalPax = 0
+            const kitchenQueueMap: { [itemName: string]: number } = {}
+
+            bookings.forEach(b => {
+              totalUnpaidAmt += Number(b.total_amount || b.total_price || 0)
+              totalPax += Number(b.pax || 1)
+
+              ;(b.order_items || []).forEach((it: any) => {
+                const name = it.menu_items?.name || 'Unknown Item'
+                const qty = Number(it.quantity || 0)
+                kitchenQueueMap[name] = (kitchenQueueMap[name] || 0) + qty
+              })
+            })
+
+            // 2. Build Table Summary Blocks
+            const tableBlocks: any[] = []
+
+            bookings.forEach((b: any, bIdx: number) => {
+              const isPickup = b.booking_type === 'pickup'
+              const tblName = isPickup
+                ? `🛍️ TAKEAWAY (${b.pickup_contact_name || b.customer_note || 'ลูกค้า'})`
+                : `🪑 ${b.tables_layout?.table_name || 'WALK-IN'}`
+              
+              const statusObj = translateStatus(b.status)
+              const bAmt = Number(b.total_amount || b.total_price || 0)
+
+              let orderTimeStr = ''
+              try {
+                const bTime = new Date(b.booking_time || b.created_at)
+                const thTime = new Date(bTime.getTime() + (7 * 60 * 60 * 1000))
+                orderTimeStr = thTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+              } catch {
+                orderTimeStr = ''
+              }
+
+              const itemsList = (b.order_items || []).map((it: any) => {
+                const name = it.menu_items?.name || 'Item'
+                const qty = it.quantity || 0
+                const price = it.price_at_time || 0
+                const optStr = formatOptions(it.selected_options)
+                return {
+                  type: "box",
+                  layout: "horizontal",
+                  margin: "xs",
+                  contents: [
+                    { type: "text", text: `${qty}x ${name}${optStr}`, size: "xs", color: "#1E1B18", flex: 7, wrap: true },
+                    { type: "text", text: `฿${(qty * price).toFixed(2)}`, size: "xs", color: "#78736A", align: "end", flex: 3 }
+                  ]
                 }
               })
-            } else {
-              const bubbles: any[] = []
 
-              for (const booking of bookings) {
-                const isPickup = booking.booking_type === 'pickup'
-                const displayName = isPickup 
-                  ? `🛍️ TAKEAWAY - ${booking.pickup_contact_name || booking.customer_note || 'ลูกค้า'}`
-                  : `🪑 ${booking.tables_layout?.table_name || 'TABLE'}`
-                
-                const typeText = translateType(booking.booking_type)
-                const statusText = translateStatus(booking.status)
-                const indicatorColor = getStatusColor(booking.status)
-
-                let orderTimeStr = ''
-                try {
-                  const bTime = new Date(booking.booking_time)
-                  const thTime = new Date(bTime.getTime() + (7 * 60 * 60 * 1000))
-                  orderTimeStr = thTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
-                } catch (e) {
-                  orderTimeStr = booking.booking_time ? booking.booking_time.substring(11, 16) : ''
-                }
-
-                const itemContents: any[] = []
-                let subtotal = 0
-
-                if (booking.order_items && booking.order_items.length > 0) {
-                  booking.order_items.forEach((item: any) => {
-                    const name = item.menu_items?.name || 'Unknown Item'
-                    const qty = item.quantity || 0
-                    const price = item.price_at_time || 0
-                    const itemTotal = qty * price
-                    subtotal += itemTotal
-
-                    const optionsStr = formatOptions(item.selected_options)
-
-                    itemContents.push({
-                      type: "box",
-                      layout: "horizontal",
-                      margin: "sm",
-                      contents: [
-                        { type: "text", text: `${qty} x`, weight: "bold", size: "sm", color: "#1A1A1A", flex: 2 },
-                        { type: "text", text: `${name}${optionsStr}`, size: "sm", color: "#1A1A1A", wrap: true, flex: 6 },
-                        { type: "text", text: `฿${itemTotal}`, size: "sm", color: "#1A1A1A", align: "end", flex: 2 }
-                      ]
-                    })
-                  })
-                } else {
-                  itemContents.push({
-                    type: "text",
-                    text: "ไม่มีรายการอาหาร",
-                    color: "#888888",
-                    size: "xs",
-                    align: "center",
-                    margin: "md"
-                  })
-                }
-
-                const bodyContents = [
+              tableBlocks.push({
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FBF9F5",
+                cornerRadius: "md",
+                paddingAll: "md",
+                margin: "md",
+                contents: [
                   {
                     type: "box",
                     layout: "horizontal",
                     contents: [
+                      { type: "text", text: tblName, weight: "bold", size: "sm", color: "#1E1B18", flex: 7, wrap: true },
+                      { type: "text", text: `฿${bAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#C85A32", align: "end", flex: 3 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    margin: "xs",
+                    contents: [
+                      { type: "text", text: `${statusObj.emoji} ${statusObj.text} · สั่งเมื่อ ${orderTimeStr}`, size: "xxs", weight: "bold", color: statusObj.color, flex: 8 },
+                      { type: "text", text: `${b.pax || 1} PAX`, size: "xxs", color: "#78736A", align: "end", flex: 2 }
+                    ]
+                  },
+                  { type: "separator", margin: "sm", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "sm",
+                    spacing: "xs",
+                    contents: itemsList.length > 0 ? itemsList : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xxs", color: "#888888" }]
+                  }
+                ]
+              })
+
+              if (bIdx < bookings.length - 1) {
+                tableBlocks.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+              }
+            })
+
+            // 3. Build Kitchen Preparation Queue Rows (Consolidated across all tables)
+            const sortedKitchenQueue = Object.entries(kitchenQueueMap).sort((a, b) => b[1] - a[1])
+            const kitchenRows = sortedKitchenQueue.slice(0, 10).map(([name, qty]) => ({
+              type: "box",
+              layout: "horizontal",
+              margin: "xs",
+              contents: [
+                { type: "text", text: `• ${name}`, size: "xs", color: "#1E1B18", flex: 8, wrap: true },
+                { type: "text", text: `${qty} ที่`, size: "xs", weight: "bold", color: "#C85A32", align: "end", flex: 2 }
+              ]
+            }))
+
+            // 4. Construct Bubbles
+            const bubbles: any[] = []
+
+            // Bubble 1: Table-by-Table Summary
+            bubbles.push({
+              type: "bubble",
+              size: "mega",
+              header: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F4F1EA",
+                paddingAll: "20px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "ALL ACTIVE TABLES", size: "xs", weight: "bold", color: "#C85A32", flex: 7 },
+                      { type: "text", text: "PAGE 1/2", size: "xxs", color: "#78736A", align: "end", flex: 3 }
+                    ]
+                  },
+                  { type: "text", text: `สรุปออเดอร์สด (${bookings.length} โต๊ะกำลังทาน)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs", wrap: true }
+                ]
+              },
+              body: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F4F1EA",
+                paddingAll: "16px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    backgroundColor: "#1E1B18",
+                    cornerRadius: "md",
+                    paddingAll: "12px",
+                    contents: [
                       {
                         type: "box",
                         layout: "vertical",
-                        width: "4px",
-                        backgroundColor: indicatorColor,
-                        cornerRadius: "sm",
-                        contents: []
+                        flex: 6,
+                        contents: [
+                          { type: "text", text: "ยอดรวมทุกโต๊ะ (ยังไม่เช็คบิล)", size: "xxs", color: "#A09B90" },
+                          { type: "text", text: `${bookings.length} โต๊ะ · รวม ${totalPax} ท่าน`, size: "xs", weight: "bold", color: "#FBF9F5", margin: "xs" }
+                        ]
                       },
                       {
-                        type: "box",
-                        layout: "vertical",
-                        margin: "md",
-                        contents: [
-                          { type: "text", text: statusText, color: indicatorColor, weight: "bold", size: "xs" },
-                          { type: "text", text: `ประเภท: ${typeText}`, color: "#666666", size: "xs", margin: "xs" },
-                          { type: "text", text: `เวลาสั่ง: ${orderTimeStr}`, color: "#666666", size: "xs", margin: "xs" }
-                        ]
+                        type: "text",
+                        text: `฿${totalUnpaidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`,
+                        size: "md",
+                        weight: "bold",
+                        color: "#C85A32",
+                        align: "end",
+                        flex: 4,
+                        gravity: "center"
                       }
                     ]
                   },
-                  { type: "separator", margin: "md", color: "#E2E2E0" },
-                  { type: "text", text: "รายการสั่งซื้อ", weight: "bold", size: "xs", color: "#888888", margin: "md" },
-                  ...itemContents,
-                  { type: "separator", margin: "md", color: "#E2E2E0" },
+                  { type: "separator", margin: "md", color: "#E6E1D6" },
+                  ...tableBlocks
+                ]
+              }
+            })
+
+            // Bubble 2: Kitchen Queue Matrix (Consolidated Items to Cook)
+            bubbles.push({
+              type: "bubble",
+              size: "mega",
+              header: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#1E1B18",
+                paddingAll: "20px",
+                contents: [
                   {
                     type: "box",
                     layout: "horizontal",
-                    margin: "md",
                     contents: [
-                      { type: "text", text: "ยอดรวมทั้งหมด", weight: "bold", size: "sm", color: "#1A1A1A", flex: 5 },
-                      { type: "text", text: `฿${subtotal.toLocaleString('th-TH')}`, weight: "bold", size: "sm", color: "#9E2D2D", align: "end", flex: 5 }
-                    ]
-                  }
-                ]
-
-                bubbles.push({
-                  type: "bubble",
-                  size: "mega",
-                  header: {
-                    type: "box",
-                    layout: "horizontal",
-                    paddingAll: "20px",
-                    contents: [
-                      { type: "text", text: displayName.toUpperCase(), weight: "bold", color: "#1A1A1A", size: "sm", flex: 8, wrap: true },
-                      { type: "text", text: booking.pax ? `👥 ${booking.pax} PAX` : (isPickup ? "🛍️ TAKEAWAY" : ""), color: "#666666", size: "xs", align: "end", flex: 4, gravity: "center" }
+                      { type: "text", text: "KITCHEN & BAR QUEUE", size: "xs", weight: "bold", color: "#C85A32", flex: 7 },
+                      { type: "text", text: "PAGE 2/2", size: "xxs", color: "#A09B90", align: "end", flex: 3 }
                     ]
                   },
-                  body: {
+                  { type: "text", text: "สรุปจำนวนจานที่ต้องเตรียมทั้งหมด", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs", wrap: true }
+                ]
+              },
+              body: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FBF9F5",
+                paddingAll: "20px",
+                contents: [
+                  { type: "text", text: "🍳 รวมจำนวนจานอาหารทุกโต๊ะในร้าน", size: "xxs", weight: "bold", color: "#78736A" },
+                  { type: "separator", margin: "sm", color: "#E6E1D6" },
+                  {
                     type: "box",
                     layout: "vertical",
-                    paddingAll: "20px",
-                    contents: bodyContents
+                    margin: "md",
+                    spacing: "xs",
+                    contents: kitchenRows.length > 0 ? kitchenRows : [{ type: "text", text: "ไม่มีรายการอาหาร", size: "xs", color: "#888888" }]
                   },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
-                  }
-                })
+                  { type: "separator", margin: "lg", color: "#E6E1D6" },
+                  { type: "text", text: `รวมเมนูที่ต้องทำทั้งหมด ${sortedKitchenQueue.reduce((s, [, q]) => s + q, 0)} ที่`, size: "xs", weight: "bold", color: "#1E1B18", align: "center", margin: "md" }
+                ]
               }
+            })
 
-              if (bubbles.length > 12) bubbles.length = 12;
-              let flexContent = bubbles.length === 1 ? bubbles[0] : { type: "carousel", contents: bubbles };
-              messages.push({
-                type: "flex",
-                altText: `📦 ออเดอร์ค้างในระบบ (${bookings.length} รายการ)`,
-                contents: flexContent
-              })
+            const flexPayload = {
+              type: "flex",
+              altText: `🍳 สรุปออเดอร์ทุกโต๊ะ (${bookings.length} โต๊ะ: ฿${totalUnpaidAmt.toLocaleString('th-TH')})`,
+              contents: {
+                type: "carousel",
+                contents: bubbles
+              }
             }
 
-            console.log('Sending storder reply...')
+            console.log('Sending storder consolidated reply...')
             const resp = await fetch('https://api.line.me/v2/bot/message/reply', {
               method: 'POST',
               headers: {
@@ -1526,11 +1617,13 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: messages
+                messages: [flexPayload]
               }),
             })
+
             if (!resp.ok) {
-              console.error('storder reply failed:', await resp.text())
+              const errTxt = await resp.text()
+              console.error('storder reply failed:', errTxt)
             }
           } catch (err: any) {
             console.error('storder Command Error:', err)
@@ -1539,7 +1632,7 @@ Deno.serve(async (req) => {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
               body: JSON.stringify({
                 replyToken: event.replyToken,
-                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการออเดอร์: ' + err.message }]
+                messages: [{ type: 'text', text: '❌ เกิดข้อผิดพลาดในการดึงรายการออเดอร์ทุกโต๊ะ: ' + err.message }]
               })
             })
           }
