@@ -51,21 +51,21 @@ export default function CasualDiningInsights({ data }) {
                 {/* Food vs Beverage Split (6 cols) */}
                 <div className="lg:col-span-6 bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-4 shadow-sm">
                     <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                        FOOD VS BEVERAGE MARGIN RATIO
+                        CATEGORY REVENUE SPLIT GAUGE
                     </h4>
 
                     {/* Progress Multi-Bar */}
                     <div className="w-full bg-gray-200 h-4 rounded-full overflow-hidden flex font-mono text-[10px]">
-                        <div className="bg-[oklch(52%_0.16_28)] h-4" style={{ width: `${categoryRatio.food.percent}%` }} />
-                        <div className="bg-emerald-600 h-4" style={{ width: `${categoryRatio.beverage.percent}%` }} />
-                        <div className="bg-indigo-600 h-4" style={{ width: `${categoryRatio.alcohol.percent}%` }} />
-                        <div className="bg-amber-500 h-4" style={{ width: `${categoryRatio.dessertCombo.percent}%` }} />
+                        <div className="bg-[oklch(52%_0.16_28)] h-4 transition-all duration-500" style={{ width: `${categoryRatio.food.percent}%` }} />
+                        <div className="bg-emerald-600 h-4 transition-all duration-500" style={{ width: `${categoryRatio.beverage.percent}%` }} />
+                        <div className="bg-indigo-600 h-4 transition-all duration-500" style={{ width: `${categoryRatio.alcohol.percent}%` }} />
+                        <div className="bg-amber-500 h-4 transition-all duration-500" style={{ width: `${categoryRatio.dessertCombo.percent}%` }} />
                     </div>
 
                     <div className="grid grid-cols-2 gap-2.5 md:gap-3 pt-1">
-                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                             <div className="flex items-center gap-1.5 text-xs font-black text-[oklch(18%_0.012_28)]">
-                                <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)]" />
+                                <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />
                                 <span>อาหาร (Food)</span>
                             </div>
                             <div className="font-mono text-base md:text-lg font-black text-[oklch(18%_0.012_28)]">
@@ -74,9 +74,9 @@ export default function CasualDiningInsights({ data }) {
                             <div className="font-mono text-[11px] text-[oklch(52%_0.16_28)] font-black">{categoryRatio.food.percent}% ({categoryRatio.food.margin})</div>
                         </div>
 
-                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                             <div className="flex items-center gap-1.5 text-xs font-black text-emerald-900">
-                                <span className="w-3 h-3 rounded-full bg-emerald-600" />
+                                <span className="w-3 h-3 rounded-full bg-emerald-600 shrink-0" />
                                 <span>เครื่องดื่ม (Beverage)</span>
                             </div>
                             <div className="font-mono text-base md:text-lg font-black text-emerald-800">
@@ -85,9 +85,9 @@ export default function CasualDiningInsights({ data }) {
                             <div className="font-mono text-[11px] text-emerald-700 font-black">{categoryRatio.beverage.percent}% ({categoryRatio.beverage.margin})</div>
                         </div>
 
-                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                             <div className="flex items-center gap-1.5 text-xs font-black text-indigo-900">
-                                <span className="w-3 h-3 rounded-full bg-indigo-600" />
+                                <span className="w-3 h-3 rounded-full bg-indigo-600 shrink-0" />
                                 <span>แอลกอฮอล์ (Alcohol)</span>
                             </div>
                             <div className="font-mono text-base md:text-lg font-black text-indigo-800">
@@ -96,9 +96,9 @@ export default function CasualDiningInsights({ data }) {
                             <div className="font-mono text-[11px] text-indigo-700 font-black">{categoryRatio.alcohol.percent}% ({categoryRatio.alcohol.margin})</div>
                         </div>
 
-                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                        <div className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                             <div className="flex items-center gap-1.5 text-xs font-black text-amber-900">
-                                <span className="w-3 h-3 rounded-full bg-amber-500" />
+                                <span className="w-3 h-3 rounded-full bg-amber-500 shrink-0" />
                                 <span>ของหวาน & เซต</span>
                             </div>
                             <div className="font-mono text-base md:text-lg font-black text-amber-800">
@@ -124,12 +124,12 @@ export default function CasualDiningInsights({ data }) {
                                         <span>{ps.size}</span>
                                     </div>
                                     <span className="font-mono text-xs font-black px-2 py-0.5 rounded-md bg-white border border-[oklch(85%_0.012_28)]">
-                                        {ps.share}% ({ps.count} โต๊ะ)
+                                        {ps.share}% ({ps.count} บิล)
                                     </span>
                                 </div>
 
                                 <div className="flex justify-between items-baseline text-xs font-mono pt-1">
-                                    <span className="text-[oklch(42%_0.010_28)] font-bold">ยอดเฉลี่ย/โต๊ะ: <strong className="text-[oklch(52%_0.16_28)] font-black">฿{ps.avgSpend.toLocaleString()}</strong></span>
+                                    <span className="text-[oklch(42%_0.010_28)] font-bold">ยอดเฉลี่ย/บิล: <strong className="text-[oklch(52%_0.16_28)] font-black">฿{ps.avgSpend.toLocaleString()}</strong></span>
                                     <span className="text-[oklch(42%_0.010_28)] font-bold">เวลานั่ง: <strong className="text-[oklch(18%_0.012_28)] font-black">{ps.turnTime} นาที</strong></span>
                                 </div>
                                 <div className="text-[11px] text-[oklch(42%_0.010_28)] font-semibold italic pt-0.5">

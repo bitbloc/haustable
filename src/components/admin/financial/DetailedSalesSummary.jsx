@@ -1,8 +1,25 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React from 'react'
-import { CreditCard, QrCode, Banknote, Wallet, UtensilsCrossed, ShoppingBag, ArrowUpRight, Percent, Receipt, ShieldCheck } from 'lucide-react'
+import React, { useState } from 'react'
+import { 
+    CreditCard, 
+    QrCode, 
+    Banknote, 
+    Wallet, 
+    UtensilsCrossed, 
+    ShoppingBag, 
+    ArrowUpRight, 
+    Percent, 
+    Receipt, 
+    ShieldCheck, 
+    TrendingUp, 
+    Flame, 
+    Layers,
+    BarChart3
+} from 'lucide-react'
 
 export default function DetailedSalesSummary({ data, timeRangeLabel }) {
+    const [hoveredHour, setHoveredHour] = useState(null)
+
     const paymentMethods = data?.paymentMethods || [
         { name: 'PromptPay QR', amount: 0, percent: 0, count: 0, icon: QrCode, color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
         { name: 'Credit / Debit Card', amount: 0, percent: 0, count: 0, icon: CreditCard, color: 'text-indigo-800 bg-indigo-100 border-indigo-300' },
@@ -10,7 +27,6 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
         { name: 'Member Wallet', amount: 0, percent: 0, count: 0, icon: Wallet, color: 'text-rose-800 bg-rose-100 border-rose-300' },
     ]
 
-    // Only 2 channels: Dine-in / Table Booking & Takeaway / Pickup
     const diningChannels = data?.diningChannels || [
         { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: 0, percent: 0, tables: 0, avgPerTable: 0, icon: UtensilsCrossed },
         { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: 0, percent: 0, orders: 0, avgPerOrder: 0, icon: ShoppingBag },
@@ -28,6 +44,10 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
     }
 
     const hourlyVelocity = data?.hourlyVelocity || []
+
+    // Calculate max hourly revenue for graph scaling
+    const maxHourlyGross = Math.max(...hourlyVelocity.map(h => h.gross || 0), 100)
+    const peakHourData = hourlyVelocity.reduce((max, h) => (h.gross > (max?.gross || 0) ? h : max), null)
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -47,6 +67,72 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] font-bold self-start sm:self-auto">
                     <ShieldCheck size={14} className="text-emerald-700" />
                     <span>AUDITED & BALANCED</span>
+                </div>
+            </div>
+
+            {/* Visual Hourly Velocity Chart (SVG Interactive Graph) */}
+            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                    <div className="flex items-center gap-2">
+                        <BarChart3 size={18} className="text-[oklch(52%_0.16_28)]" />
+                        <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
+                            HOURLY SALES VELOCITY VISUALIZER
+                        </h4>
+                    </div>
+                    {peakHourData && peakHourData.gross > 0 && (
+                        <span className="font-mono text-xs font-black text-emerald-900 bg-emerald-100 border border-emerald-300 px-2.5 py-0.5 rounded-md">
+                            ⚡ Peak: {peakHourData.hour} (฿{peakHourData.gross.toLocaleString()})
+                        </span>
+                    )}
+                </div>
+
+                {/* SVG Visual Bars */}
+                <div className="pt-2">
+                    <div className="grid grid-cols-12 md:grid-cols-14 gap-1.5 items-end h-40 pt-6 px-1">
+                        {hourlyVelocity.map((h, idx) => {
+                            const heightPct = Math.max(4, Math.round((h.gross / maxHourlyGross) * 100))
+                            const isPeak = peakHourData?.hour === h.hour && h.gross > 0
+                            const isHovered = hoveredHour === h.hour
+
+                            return (
+                                <div
+                                    key={idx}
+                                    onMouseEnter={() => setHoveredHour(h.hour)}
+                                    onMouseLeave={() => setHoveredHour(null)}
+                                    className="flex flex-col items-center h-full justify-end group relative cursor-pointer"
+                                >
+                                    {/* Tooltip on Hover / Peak */}
+                                    {isHovered && (
+                                        <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-20 bg-[oklch(18%_0.012_28)] text-white text-[10px] font-mono px-2 py-1 rounded-md shadow-xl whitespace-nowrap pointer-events-none border border-white/20 text-center">
+                                            <div className="font-black text-emerald-400">฿{h.gross.toLocaleString()}</div>
+                                            <div className="text-gray-300 text-[9px]">{h.bills} บิล | {h.hour}</div>
+                                        </div>
+                                    )}
+
+                                    {/* Bar Element */}
+                                    <div className="w-full flex justify-center items-end h-full">
+                                        <div
+                                            style={{ height: `${heightPct}%` }}
+                                            className={`w-full max-w-[28px] rounded-t-md transition-all duration-300 ${
+                                                isPeak
+                                                    ? 'bg-[oklch(52%_0.16_28)] shadow-md'
+                                                    : h.gross > 0
+                                                    ? 'bg-[oklch(80%_0.05_28)] group-hover:bg-[oklch(52%_0.16_28)]'
+                                                    : 'bg-[oklch(94%_0.010_28)]'
+                                            }`}
+                                        />
+                                    </div>
+
+                                    {/* Hour Label */}
+                                    <span className={`text-[10px] font-mono mt-1.5 font-bold truncate max-w-full ${
+                                        isPeak ? 'text-[oklch(52%_0.16_28)] font-black' : 'text-[oklch(42%_0.010_28)]'
+                                    }`}>
+                                        {h.hour?.split(':')[0] || idx}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
                 </div>
             </div>
 
@@ -94,8 +180,8 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </div>
 
                                     {/* Visual Bar */}
-                                    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                                        <div className="bg-[oklch(52%_0.16_28)] h-2 rounded-full" style={{ width: `${pm.percent || 0}%` }} />
+                                    <div className="w-full bg-[oklch(94%_0.010_28)] rounded-full h-2 overflow-hidden">
+                                        <div className="bg-[oklch(52%_0.16_28)] h-2 rounded-full transition-all duration-500" style={{ width: `${pm.percent || 0}%` }} />
                                     </div>
                                 </div>
                             )
@@ -192,7 +278,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                 <div className="lg:col-span-7 bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3">
                     <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
                         <span className="text-xs font-mono font-black uppercase text-[oklch(18%_0.012_28)] tracking-wider">
-                            HOURLY REVENUE VELOCITY
+                            HOURLY REVENUE AUDIT TABLE
                         </span>
                         <span className="font-mono text-xs font-black text-[oklch(52%_0.16_28)]">
                             Avg ฿{auditReconciliation.avgTicket}/บิล

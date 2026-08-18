@@ -7,10 +7,11 @@ import { toast } from 'sonner'
 import {
     TrendingUp, DollarSign, Calendar, Filter, Download, ArrowUpRight, ArrowDownRight,
     Users, Utensils, Receipt, Flame, Trophy, Sparkles, Layers, RefreshCw, BarChart2, ShieldCheck,
-    Smartphone, Database, AlertCircle
+    Smartphone, Database, AlertCircle, Clock, Zap
 } from 'lucide-react'
 
 // Sub-components
+import DatabaseVisualLedger from './financial/DatabaseVisualLedger'
 import DetailedSalesSummary from './financial/DetailedSalesSummary'
 import FinancialHeatmap from './financial/FinancialHeatmap'
 import TopMenuInfographic from './financial/TopMenuInfographic'
@@ -20,7 +21,9 @@ import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
 
 export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState('all') // 'all', 'slips', 'summary', 'heatmap', 'top_menu', 'crm', 'casual'
+    const [activeTab, setActiveTab] = useState('all') // 'all', 'ledger', 'summary', 'heatmap', 'top_menu', 'crm', 'casual'
+    const [dbLatencyMs, setDbLatencyMs] = useState(0)
+    const [dbRecordCount, setDbRecordCount] = useState(0)
     
     const getCurrentBangkokMonth = () => {
         const d = new Date();
@@ -46,16 +49,19 @@ export default function AdminFinancialDashboard() {
         avgBillSize: 0,
         tableTurnoverRate: 0,
         completedOrdersCount: 0,
-        growthVsPrevPeriod: 0,
+        growthVsPrevPeriod: '0.0',
+        prevPeriodGross: 0,
     })
 
     // Real Live Aggregated Datasets for sub-components
+    const [rawTransactionsData, setRawTransactionsData] = useState([])
     const [paymentMethodsData, setPaymentMethodsData] = useState([])
     const [diningChannelsData, setDiningChannelsData] = useState([])
     const [auditReconciliationData, setAuditReconciliationData] = useState(null)
     const [hourlyVelocityData, setHourlyVelocityData] = useState([])
     const [topMenuData, setTopMenuData] = useState([])
     const [heatmapMatrixData, setHeatmapMatrixData] = useState([])
+    const [shiftMetricsData, setShiftMetricsData] = useState(null)
     const [categoryRatioData, setCategoryRatioData] = useState(null)
     const [casualData, setCasualData] = useState(null)
     const [crmData, setCrmData] = useState(null)
@@ -79,26 +85,48 @@ export default function AdminFinancialDashboard() {
         return () => {
             supabase.removeChannel(channel)
         }
-    }, [filterMode, selectedDate, selectedMonth, selectedYear])
+    }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev])
 
     const fetchRealFinancialData = async () => {
         setLoading(true)
+        const startTime = performance.now()
         try {
             let startIso, endIso
+            let prevStartIso, prevEndIso
+
             if (filterMode === 'day') {
                 startIso = `${selectedDate}T00:00:00+07:00`
                 endIso = `${selectedDate}T23:59:59+07:00`
+
+                // Calculate previous day for comparison
+                const curD = new Date(selectedDate)
+                curD.setDate(curD.getDate() - 1)
+                const prevDateStr = curD.toISOString().split('T')[0]
+                prevStartIso = `${prevDateStr}T00:00:00+07:00`
+                prevEndIso = `${prevDateStr}T23:59:59+07:00`
             } else if (filterMode === 'month') {
                 startIso = `${selectedMonth}-01T00:00:00+07:00`
                 const [y, m] = selectedMonth.split('-')
                 const lastDay = String(new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate()).padStart(2, '0')
                 endIso = `${selectedMonth}-${lastDay}T23:59:59+07:00`
+
+                // Calculate previous month
+                const prevMDate = new Date(parseInt(y, 10), parseInt(m, 10) - 2, 1)
+                const prevY = prevMDate.getFullYear()
+                const prevM = String(prevMDate.getMonth() + 1).padStart(2, '0')
+                const prevLastDay = String(new Date(prevY, parseInt(prevM, 10), 0).getDate()).padStart(2, '0')
+                prevStartIso = `${prevY}-${prevM}-01T00:00:00+07:00`
+                prevEndIso = `${prevY}-${prevM}-${prevLastDay}T23:59:59+07:00`
             } else {
                 startIso = `${selectedYear}-01-01T00:00:00+07:00`
                 endIso = `${selectedYear}-12-31T23:59:59+07:00`
+
+                const prevY = parseInt(selectedYear, 10) - 1
+                prevStartIso = `${prevY}-01-01T00:00:00+07:00`
+                prevEndIso = `${prevY}-12-31T23:59:59+07:00`
             }
 
-            // Query live Supabase POS bookings & order_items
+            // 1. Query live Supabase POS bookings & order_items
             const { data: bookingsData, error: bErr } = await supabase
                 .from('bookings')
                 .select(`
@@ -106,6 +134,7 @@ export default function AdminFinancialDashboard() {
                     booking_time,
                     created_at,
                     total_amount,
+                    discount_amount,
                     status,
                     pax,
                     booking_type,
@@ -113,6 +142,10 @@ export default function AdminFinancialDashboard() {
                     staff_remark,
                     customer_note,
                     user_id,
+                    tables_layout (
+                        id,
+                        table_name
+                    ),
                     profiles (
                         id,
                         display_name,
@@ -139,8 +172,32 @@ export default function AdminFinancialDashboard() {
                 `)
                 .gte('booking_time', startIso)
                 .lte('booking_time', endIso)
+                .order('booking_time', { ascending: false })
 
             if (bErr) throw bErr
+
+            const elapsed = Math.round(performance.now() - startTime)
+            setDbLatencyMs(elapsed)
+            setDbRecordCount(bookingsData?.length || 0)
+
+            // 2. Query previous period if comparison enabled
+            let prevGross = 0
+            if (compareWithPrev) {
+                try {
+                    const { data: prevData } = await supabase
+                        .from('bookings')
+                        .select('total_amount, status')
+                        .gte('booking_time', prevStartIso)
+                        .lte('booking_time', prevEndIso)
+
+                    const prevValid = (prevData || []).filter(b => 
+                        ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
+                    )
+                    prevGross = prevValid.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0)
+                } catch (e) {
+                    console.warn('Could not query previous period:', e)
+                }
+            }
 
             // Filter for valid revenue-generating orders (completed / confirmed / paid)
             const validOrders = (bookingsData || []).filter(b => 
@@ -148,7 +205,7 @@ export default function AdminFinancialDashboard() {
             )
 
             if (!validOrders || validOrders.length === 0) {
-                // Real ZERO State (No hardcoded fake sample data!)
+                // Real ZERO State
                 setHasLiveData(false)
                 setLiveMetrics({
                     totalGrossRevenue: 0,
@@ -159,13 +216,16 @@ export default function AdminFinancialDashboard() {
                     avgBillSize: 0,
                     tableTurnoverRate: 0,
                     completedOrdersCount: 0,
-                    growthVsPrevPeriod: 0,
+                    growthVsPrevPeriod: '0.0',
+                    prevPeriodGross: prevGross,
                 })
+                setRawTransactionsData([])
                 setPaymentMethodsData([])
                 setDiningChannelsData([])
                 setHourlyVelocityData([])
                 setTopMenuData([])
                 setHeatmapMatrixData(Array(7).fill(0).map(() => Array(12).fill(0)))
+                setShiftMetricsData(null)
                 setCategoryRatioData(null)
                 setAuditReconciliationData(null)
                 setCasualData(null)
@@ -176,7 +236,7 @@ export default function AdminFinancialDashboard() {
 
             setHasLiveData(true)
 
-            // --- 1. Core KPIs Calculation ---
+            // --- 1. Core KPIs & Breakdown Aggregations ---
             let totalGross = 0
             let totalGuests = 0
             let promptpayAmt = 0, creditAmt = 0, cashAmt = 0, walletAmt = 0
@@ -191,6 +251,12 @@ export default function AdminFinancialDashboard() {
             let mediumCount = 0, mediumRev = 0
             let largeCount = 0, largeRev = 0
 
+            // Shift aggregations
+            let lunchSales = 0, lunchGuests = 0, lunchFood = 0, lunchDrink = 0
+            let afternoonSales = 0, afternoonGuests = 0, afternoonFood = 0, afternoonDrink = 0
+            let dinnerSales = 0, dinnerGuests = 0, dinnerFood = 0, dinnerDrink = 0
+            let lateSales = 0, lateGuests = 0, lateFood = 0, lateDrink = 0
+
             // CRM Member aggregations
             let memberSales = 0, nonMemberSales = 0
             let memberCount = 0, nonMemberCount = 0
@@ -202,9 +268,11 @@ export default function AdminFinancialDashboard() {
             const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, peakItem: '-' }))
             const dayHourAgg = Array(7).fill(0).map(() => Array(12).fill(0)) // 7 days x 12 intervals
 
+            // Raw Transactions for Visual Ledger
+            const formattedRawTx = []
+
             validOrders.forEach(b => {
                 const amount = parseFloat(b.total_amount || b.total_price || 0)
-                // Accurate POS pax extraction: b.pax
                 const guests = parseInt(b.pax || 1)
                 const remark = (b.staff_remark || '').toLowerCase()
                 const bTime = new Date(b.booking_time)
@@ -230,9 +298,14 @@ export default function AdminFinancialDashboard() {
                 const isRemarkQr = b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')
                 const isRemarkWallet = remark.includes('wallet')
 
+                let txPayMethod = 'Cash'
+                let txIsSplit = false
+
                 // Check split annotation
                 const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i)
                 if (splitMatch) {
+                    txIsSplit = true
+                    txPayMethod = 'Split'
                     const splitText = splitMatch[1]
                     let spCash = 0, spQr = 0, spCredit = 0
                     const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i)
@@ -246,39 +319,46 @@ export default function AdminFinancialDashboard() {
                     if (spQr > 0) { promptpayAmt += spQr; promptpayCount++ }
                     if (spCredit > 0) { creditAmt += spCredit; creditCount++ }
                 } else if (isRemarkCredit) {
+                    txPayMethod = 'Credit Card'
                     creditAmt += amount; creditCount++
                 } else if (isRemarkQr) {
+                    txPayMethod = 'PromptPay QR'
                     promptpayAmt += amount; promptpayCount++
                 } else if (isRemarkWallet) {
+                    txPayMethod = 'Member Wallet'
                     walletAmt += amount; walletCount++
                 } else {
+                    txPayMethod = 'Cash'
                     cashAmt += amount; cashCount++
                 }
 
                 // Dining Channel detection (Strictly 2 channels: Dine-In & Pickup)
                 const bType = (b.booking_type || 'dine_in').toLowerCase()
-                if (bType.includes('pickup') || bType.includes('takeaway')) {
+                const isTakeaway = bType.includes('pickup') || bType.includes('takeaway')
+                if (isTakeaway) {
                     takeawayAmt += amount; takeawayOrders++
                 } else {
                     dineInAmt += amount; dineInTables++
                 }
 
                 // CRM Member tracking
+                let memberName = null
+                let memberTier = null
                 if (b.user_id && b.profiles) {
                     memberSales += amount; memberCount++
-                    const name = b.profiles.display_name || b.profiles.nickname || 'Member'
-                    const tier = b.profiles.current_tier || 'Member'
+                    memberName = b.profiles.display_name || b.profiles.nickname || 'Member'
+                    memberTier = b.profiles.current_tier || 'Member'
                     if (!spenderMap[b.user_id]) {
-                        spenderMap[b.user_id] = { name, tier, totalLtv: 0, visits: 0 }
+                        spenderMap[b.user_id] = { name: memberName, tier: memberTier, totalLtv: 0, visits: 0 }
                     }
                     spenderMap[b.user_id].totalLtv += amount
                     spenderMap[b.user_id].visits += 1
 
-                    if (!tierMap[tier]) {
-                        tierMap[tier] = { name: tier, members: 0, totalSales: 0 }
+                    if (!tierMap[memberTier]) {
+                        tierMap[memberTier] = { name: memberTier, members: 0, totalSales: 0 }
                     }
-                    tierMap[tier].members += 1
-                    tierMap[tier].totalSales += amount
+                    tierMap[memberTier].members += 1
+                    tierMap[memberTier].totalSales += amount
                 } else {
                     nonMemberSales += amount; nonMemberCount++
                 }
@@ -295,8 +375,22 @@ export default function AdminFinancialDashboard() {
                     dayHourAgg[dayIdx][timeSlotIdx] += 1
                 }
 
+                // Shift assignment
+                if (hour >= 11 && hour < 14) {
+                    lunchSales += amount; lunchGuests += guests
+                } else if (hour >= 14 && hour < 17) {
+                    afternoonSales += amount; afternoonGuests += guests
+                } else if (hour >= 17 && hour < 21) {
+                    dinnerSales += amount; dinnerGuests += guests
+                } else if (hour >= 21 && hour < 24) {
+                    lateSales += amount; lateGuests += guests
+                }
+
                 // Order items processing
-                (b.order_items || []).forEach(item => {
+                const formattedItems = []
+                let orderFoodRev = 0, orderDrinkRev = 0
+
+                ;(b.order_items || []).forEach(item => {
                     const mItem = item.menu_items
                     const itemName = item.custom_name || mItem?.name || item.name || 'เมนูพิเศษ'
                     const qty = item.quantity || 1
@@ -304,14 +398,25 @@ export default function AdminFinancialDashboard() {
                     const itemRev = itemPrice * qty
                     const catName = (mItem?.menu_categories?.name || 'ทั่วไป').toLowerCase()
 
+                    formattedItems.push({
+                        name: itemName,
+                        quantity: qty,
+                        price: itemPrice,
+                        category: catName
+                    })
+
                     if (catName.includes('แอลกอฮอล์') || catName.includes('เบียร์') || catName.includes('เหล้า') || catName.includes('alcohol')) {
                         alcRev += itemRev
+                        orderDrinkRev += itemRev
                     } else if (catName.includes('เครื่องดื่ม') || catName.includes('ชา') || catName.includes('กาแฟ') || catName.includes('beverage')) {
                         bevRev += itemRev
+                        orderDrinkRev += itemRev
                     } else if (catName.includes('เซต') || catName.includes('ขนม') || catName.includes('ของหวาน') || catName.includes('combo') || catName.includes('dessert')) {
                         comboRev += itemRev
+                        orderFoodRev += itemRev
                     } else {
                         foodRev += itemRev
+                        orderFoodRev += itemRev
                     }
 
                     // Accumulate Item
@@ -322,6 +427,7 @@ export default function AdminFinancialDashboard() {
                             category: catName.includes('เครื่องดื่ม') ? 'drink' : catName.includes('แอลกอฮอล์') ? 'alcohol' : catName.includes('เซต') ? 'combo' : 'main',
                             units: 0,
                             revenue: 0,
+                            price: itemPrice
                         }
                     }
                     itemAgg[itemName].units += qty
@@ -331,12 +437,47 @@ export default function AdminFinancialDashboard() {
                     const categoryTitle = mItem?.menu_categories?.name || 'เมนูพิเศษ/ทั่วไป'
                     categoryAgg[categoryTitle] = (categoryAgg[categoryTitle] || 0) + itemRev
                 })
+
+                // Shift food/drink accumulation
+                if (hour >= 11 && hour < 14) { lunchFood += orderFoodRev; lunchDrink += orderDrinkRev }
+                else if (hour >= 14 && hour < 17) { afternoonFood += orderFoodRev; afternoonDrink += orderDrinkRev }
+                else if (hour >= 17 && hour < 21) { dinnerFood += orderFoodRev; dinnerDrink += orderDrinkRev }
+                else if (hour >= 21 && hour < 24) { lateFood += orderFoodRev; lateDrink += orderDrinkRev }
+
+                // Build Visual Ledger Transaction Object
+                formattedRawTx.push({
+                    id: b.id,
+                    booking_time: b.booking_time,
+                    booking_type: b.booking_type,
+                    tableName: b.tables_layout?.table_name || (isTakeaway ? 'PICKUP' : 'WALK-IN'),
+                    guestName: memberName || (isTakeaway ? 'ลูกค้าสั่งกลับบ้าน' : 'ลูกค้าหน้าร้าน'),
+                    memberTier: memberTier,
+                    pax: guests,
+                    paymentMethod: txPayMethod,
+                    paymentMethodLabel: txPayMethod,
+                    isSplit: txIsSplit,
+                    payment_slip_url: b.payment_slip_url,
+                    staff_remark: b.staff_remark,
+                    total_amount: amount,
+                    status: b.status,
+                    items: formattedItems
+                })
             })
+
+            setRawTransactionsData(formattedRawTx)
 
             const completedOrdersCount = validOrders.length
             const salesPerHead = totalGuests > 0 ? Math.round(totalGross / totalGuests) : 0
             const avgBillSize = completedOrdersCount > 0 ? Math.round(totalGross / completedOrdersCount) : 0
             const estProfit = Math.round(totalGross * 0.32) // ~32% est net margin
+
+            let growthPct = '0.0'
+            if (prevGross > 0) {
+                const diff = ((totalGross - prevGross) / prevGross) * 100
+                growthPct = (diff >= 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1))
+            } else if (totalGross > 0) {
+                growthPct = '+100.0'
+            }
 
             setLiveMetrics({
                 totalGrossRevenue: totalGross,
@@ -347,7 +488,8 @@ export default function AdminFinancialDashboard() {
                 avgBillSize,
                 tableTurnoverRate: Math.min(6, Math.max(1, (completedOrdersCount / 12).toFixed(1))),
                 completedOrdersCount,
-                growthVsPrevPeriod: +8.5,
+                growthVsPrevPeriod: growthPct,
+                prevPeriodGross: prevGross,
             })
 
             // Format Payment Methods
@@ -375,6 +517,7 @@ export default function AdminFinancialDashboard() {
                     categoryLabel: item.categoryName,
                     units: item.units,
                     revenue: item.revenue,
+                    price: item.price,
                     marginTier: 'Live POS Data',
                     peakTime: 'POS Realtime',
                     trend: '+Live',
@@ -414,6 +557,34 @@ export default function AdminFinancialDashboard() {
                 row.map(v => v === 0 ? 0 : Math.min(10, Math.ceil((v / maxVal) * 10)))
             )
             setHeatmapMatrixData(scaledMatrix)
+
+            // Dynamic Shift Metrics for Heatmap
+            const formatRatio = (f, d) => {
+                const total = f + d || 1
+                return `${Math.round((f / total) * 100)}% Food / ${Math.round((d / total) * 100)}% Drink`
+            }
+            setShiftMetricsData({
+                lunch: {
+                    sales: lunchSales,
+                    spendPerHead: lunchGuests > 0 ? Math.round(lunchSales / lunchGuests) : 0,
+                    ratio: formatRatio(lunchFood, lunchDrink)
+                },
+                afternoon: {
+                    sales: afternoonSales,
+                    spendPerHead: afternoonGuests > 0 ? Math.round(afternoonSales / afternoonGuests) : 0,
+                    ratio: formatRatio(afternoonFood, afternoonDrink)
+                },
+                dinner: {
+                    sales: dinnerSales,
+                    spendPerHead: dinnerGuests > 0 ? Math.round(dinnerSales / dinnerGuests) : 0,
+                    ratio: formatRatio(dinnerFood, dinnerDrink)
+                },
+                late: {
+                    sales: lateSales,
+                    spendPerHead: lateGuests > 0 ? Math.round(lateSales / lateGuests) : 0,
+                    ratio: formatRatio(lateFood, lateDrink)
+                }
+            })
 
             // Build Real Casual Dining Insights from POS data
             const totalOrdersCount = validOrders.length || 1
@@ -457,6 +628,13 @@ export default function AdminFinancialDashboard() {
                     avgSpendMember: memberCount > 0 ? Math.round(memberSales / memberCount) : 0,
                     avgSpendNonMember: nonMemberCount > 0 ? Math.round(nonMemberSales / nonMemberCount) : 0,
                 },
+                memberTiers: Object.values(tierMap).map(t => ({
+                    name: t.name,
+                    members: t.members,
+                    totalSales: t.totalSales,
+                    avgPerVisit: t.members > 0 ? Math.round(t.totalSales / t.members) : 0,
+                    color: 'bg-amber-50 border-amber-300 text-amber-950'
+                })),
                 topSpenders: Object.values(spenderMap)
                     .sort((a, b) => b.totalLtv - a.totalLtv)
                     .slice(0, 5)
@@ -471,18 +649,21 @@ export default function AdminFinancialDashboard() {
                     }))
             })
 
-            // Build Real Unmet Need & BCG Matrix from POS items
-            const stars = topList.slice(0, 2).map(i => i.name)
-            const plowhorses = topList.slice(2, 4).map(i => i.name)
-            const puzzles = topList.slice(4, 6).map(i => i.name)
-            const dogs = topList.slice(6, 8).map(i => i.name)
+            // Dynamic BCG Matrix calculation from live item list
+            const avgUnits = topList.length > 0 ? topList.reduce((s, i) => s + i.units, 0) / topList.length : 1
+            const avgPrice = topList.length > 0 ? topList.reduce((s, i) => s + (i.price || 0), 0) / topList.length : 1
+
+            const stars = topList.filter(i => i.units >= avgUnits && i.price >= avgPrice).slice(0, 3).map(i => i.name)
+            const plowhorses = topList.filter(i => i.units >= avgUnits && i.price < avgPrice).slice(0, 3).map(i => i.name)
+            const puzzles = topList.filter(i => i.units < avgUnits && i.price >= avgPrice).slice(0, 3).map(i => i.name)
+            const dogs = topList.filter(i => i.units < avgUnits && i.price < avgPrice).slice(0, 3).map(i => i.name)
 
             setUnmetNeedData({
                 yieldLeakage: {
-                    estimatedLostRevenue: 0,
+                    estimatedLostRevenue: soloCount * 120, // estimated ฿120 lost seat opportunity per solo in prime hour
                     soloInFourTopPct: soloCount > 0 ? Math.round((soloCount / totalOrdersCount) * 100) : 0,
-                    deadSeatCount: 0,
-                    recommendation: 'ระบบวิเคราะห์ข้อมูลจากออเดอร์ POS ตามเวลาจริง',
+                    deadSeatCount: soloCount * 2,
+                    recommendation: 'ระบบวิเคราะห์ข้อมูลจากออเดอร์ POS ตามเวลาจริง แนะนำจัดโซน 2-Top เพิ่ม',
                 },
                 menuMatrix: [
                     { quadrant: 'Stars (ดาวเด่น)', items: stars.length > 0 ? stars : ['-'], desc: 'ยอดขายและรายได้สูง', action: 'คงคุณภาพ & โฆษณาหลัก', bg: 'bg-emerald-50 border-2 border-emerald-300 text-emerald-950' },
@@ -534,6 +715,9 @@ export default function AdminFinancialDashboard() {
                                 </h1>
                                 <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold border border-emerald-300">
                                     <Database size={10} /> CONNECTED TO POS
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold border border-[oklch(85%_0.012_28)]">
+                                    <Clock size={10} /> {dbLatencyMs}ms ({dbRecordCount} rows)
                                 </span>
                             </div>
                             <p className="text-xs text-[oklch(42%_0.010_28)] font-mono font-bold mt-0.5">
@@ -706,9 +890,11 @@ export default function AdminFinancialDashboard() {
                         ยอดขายรวมจริง ({liveMetrics.completedOrdersCount} บิล)
                     </div>
                     {compareWithPrev && (
-                        <div className="flex items-center gap-0.5 font-mono text-xs text-emerald-700 font-black pt-0.5">
-                            <ArrowUpRight size={14} />
-                            <span>+{liveMetrics.growthVsPrevPeriod}%</span>
+                        <div className={`flex items-center gap-0.5 font-mono text-xs font-black pt-0.5 ${
+                            liveMetrics.growthVsPrevPeriod.startsWith('-') ? 'text-rose-700' : 'text-emerald-700'
+                        }`}>
+                            {liveMetrics.growthVsPrevPeriod.startsWith('-') ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                            <span>{liveMetrics.growthVsPrevPeriod}% เทียบช่วงก่อน (฿{liveMetrics.prevPeriodGross.toLocaleString()})</span>
                         </div>
                     )}
                 </div>
@@ -782,6 +968,17 @@ export default function AdminFinancialDashboard() {
                     <span>ทั้งหมด (Master)</span>
                 </button>
 
+                <button
+                    onClick={() => setActiveTab('ledger')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
+                        activeTab === 'ledger'
+                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
+                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
+                    }`}
+                >
+                    <Database size={16} />
+                    <span>Database Ledger ({rawTransactionsData.length})</span>
+                </button>
 
                 <button
                     onClick={() => setActiveTab('summary')}
@@ -847,6 +1044,14 @@ export default function AdminFinancialDashboard() {
             {/* Sub-Components Render Viewport with Live Data */}
             <div className="space-y-10">
 
+                {/* Database Visual Ledger Tab */}
+                {(activeTab === 'all' || activeTab === 'ledger') && (
+                    <DatabaseVisualLedger
+                        rawTransactions={rawTransactionsData}
+                        timeRangeLabel={getTimeRangeLabel()}
+                    />
+                )}
+
                 {(activeTab === 'all' || activeTab === 'summary') && (
                     <DetailedSalesSummary 
                         data={{
@@ -860,7 +1065,12 @@ export default function AdminFinancialDashboard() {
                 )}
 
                 {(activeTab === 'all' || activeTab === 'heatmap') && (
-                    <FinancialHeatmap data={{ heatmapMatrix: heatmapMatrixData }} />
+                    <FinancialHeatmap
+                        data={{
+                            heatmapMatrix: heatmapMatrixData,
+                            shiftMetrics: shiftMetricsData
+                        }}
+                    />
                 )}
 
                 {(activeTab === 'all' || activeTab === 'top_menu') && (

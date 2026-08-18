@@ -1,6 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react'
-import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Award, Sparkles, Inbox } from 'lucide-react'
+import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Award, Sparkles, Inbox, TrendingUp } from 'lucide-react'
 
 export default function TopMenuInfographic({ data }) {
     const [activeCategory, setActiveCategory] = useState('all')
@@ -8,10 +8,9 @@ export default function TopMenuInfographic({ data }) {
     const categories = [
         { id: 'all', label: 'ทั้งหมด (All)', icon: Trophy },
         { id: 'main', label: 'อาหารหลัก (Mains)', icon: Utensils },
-        { id: 'appetizer', label: 'ทานเล่น (Appetizers)', icon: Flame },
         { id: 'drink', label: 'เครื่องดื่ม (Beverages)', icon: GlassWater },
         { id: 'alcohol', label: 'แอลกอฮอล์ (Alcohol)', icon: Beer },
-        { id: 'combo', label: 'ชุดเซต (Combos)', icon: Layers },
+        { id: 'combo', label: 'ชุดเซต / ของหวาน', icon: Layers },
     ]
 
     const allTopItems = data?.topMenuData || []
@@ -21,6 +20,7 @@ export default function TopMenuInfographic({ data }) {
         : allTopItems.filter(item => item.category === activeCategory)
 
     const maxRevenue = allTopItems.length > 0 ? Math.max(...allTopItems.map(i => i.revenue || 0), 1) : 1
+    const totalMenuRevenue = allTopItems.reduce((s, i) => s + (i.revenue || 0), 0)
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -34,13 +34,13 @@ export default function TopMenuInfographic({ data }) {
                         </h3>
                     </div>
                     <p className="text-xs font-bold text-[oklch(42%_0.010_28)] mt-0.5">
-                        จัดอันดับเมนูขายดีจากข้อมูลออเดอร์ POS จริง
+                        จัดอันดับเมนูขายดีจากฐานข้อมูลออเดอร์ POS จริง
                     </p>
                 </div>
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] font-black self-start sm:self-auto">
                     <Sparkles size={14} className="text-amber-600" />
-                    <span>SORTED BY REVENUE</span>
+                    <span>SORTED BY REVENUE (฿{totalMenuRevenue.toLocaleString()})</span>
                 </div>
             </div>
 
@@ -78,15 +78,17 @@ export default function TopMenuInfographic({ data }) {
             {/* Top Menu Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4">
                 {filteredItems.map((item, idx) => {
-                    const pctOfMax = (item.revenue / maxRevenue) * 100
+                    const pctOfMax = Math.round((item.revenue / maxRevenue) * 100)
+                    const shareOfTotal = totalMenuRevenue > 0 ? ((item.revenue / totalMenuRevenue) * 100).toFixed(1) : 0
+
                     return (
                         <div
                             key={idx}
                             className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 space-y-3 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all relative overflow-hidden"
                         >
                             {item.isBestSeller && (
-                                <div className="absolute top-0 right-0 bg-amber-500 text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-bl-xl tracking-wider">
-                                    TOP SELLER
+                                <div className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-bl-xl tracking-wider">
+                                    TOP SELLER #1
                                 </div>
                             )}
 
@@ -106,6 +108,9 @@ export default function TopMenuInfographic({ data }) {
                                             <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)]">
                                                 {item.categoryLabel}
                                             </span>
+                                            <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
+                                                {shareOfTotal}% ของยอดรวม
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -119,19 +124,21 @@ export default function TopMenuInfographic({ data }) {
                                 </div>
                                 <div>
                                     <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold font-sans">จำนวนที่ขายได้</div>
-                                    <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">{item.units} จาน</div>
+                                    <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">{item.units} จาน/แก้ว</div>
                                 </div>
                                 <div className="col-span-2 sm:col-span-1">
-                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ที่มาจาก POS</div>
-                                    <div className="font-extrabold text-[11px] text-[oklch(45%_0.08_140)] pt-1">{item.marginTier}</div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ราคาเฉลี่ย/หน่วย</div>
+                                    <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">
+                                        ฿{item.units > 0 ? Math.round(item.revenue / item.units) : 0}
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Relative Progress Bar */}
                             <div className="space-y-1 pt-1">
                                 <div className="flex justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                                    <span>สัดส่วนความนิยมในหมวด</span>
-                                    <span className="font-black text-[oklch(52%_0.16_28)]">{Math.round(pctOfMax)}%</span>
+                                    <span>สัดส่วนความนิยมเทียบอันดับ 1</span>
+                                    <span className="font-black text-[oklch(52%_0.16_28)]">{pctOfMax}%</span>
                                 </div>
                                 <div className="w-full bg-[oklch(94%_0.010_28)] h-2.5 rounded-full overflow-hidden">
                                     <div 

@@ -57,19 +57,19 @@ export default function UnmetNeedAnalytics({ data }) {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                         <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">โต๊ะ 4 ท็อปนั่ง 1-2 ท่านช่วงพีค</div>
                         <div className="font-black text-xl text-[oklch(52%_0.16_28)]">{yieldLeakage.soloInFourTopPct}%</div>
                         <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">เกิดขยะพื้นที่ที่นั่งแฝง</div>
                     </div>
 
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                         <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">เก้าอี้ว่างสูญเปล่า (Dead Seats)</div>
                         <div className="font-black text-xl text-[oklch(18%_0.012_28)]">{yieldLeakage.deadSeatCount} ที่นั่ง/รอบพีค</div>
                         <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ในรอบ 18:00 - 20:00</div>
                     </div>
 
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
+                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
                         <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">โอกาสเพิ่มรายได้เมื่อปรับผัง</div>
                         <div className="font-black text-xl text-emerald-800">+฿{(yieldLeakage.estimatedLostRevenue * 30).toLocaleString()}</div>
                         <div className="text-[10px] text-emerald-700 font-bold">เมื่อจัดสรรโต๊ะ 2-top คล่องตัว</div>
@@ -108,7 +108,7 @@ export default function UnmetNeedAnalytics({ data }) {
                                 <div className="text-xs font-black font-mono">รายการเมนูในกลุ่มนี้:</div>
                                 <div className="flex flex-wrap gap-1.5">
                                     {q.items.map((it, iIdx) => (
-                                        <span key={iIdx} className="px-2 py-1 bg-white rounded-lg border-2 border-black/10 text-xs font-sans font-black shadow-sm">
+                                        <span key={iIdx} className="px-2.5 py-1 bg-white rounded-lg border-2 border-black/10 text-xs font-sans font-black shadow-sm">
                                             {it}
                                         </span>
                                     ))}
@@ -120,38 +120,6 @@ export default function UnmetNeedAnalytics({ data }) {
                             </div>
                         </div>
                     ))}
-                </div>
-            </div>
-
-            {/* Grid 3: Weather & Surge Sales Predictor */}
-            <div className="bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <CloudRain size={20} className="text-indigo-600 shrink-0" />
-                        <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                            WEATHER & PAYDAY SURGE PREDICTOR
-                        </h4>
-                    </div>
-                    <span className="font-mono text-xs font-black text-indigo-900 bg-indigo-100 px-3 py-1 rounded-lg border border-indigo-300 self-start sm:self-auto">
-                        {weatherPredictor.currentWeather}
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs pt-1">
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
-                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">ผลกระทบหน้าร้าน (Dine-in)</div>
-                        <div className="font-black text-base text-rose-800">{weatherPredictor.dineInImpact}</div>
-                    </div>
-
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
-                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">ผลกระทบรับกลับบ้าน (Pickup)</div>
-                        <div className="font-black text-base text-emerald-800">{weatherPredictor.pickupImpact}</div>
-                    </div>
-
-                    <div className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1">
-                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-bold">โบนัสรอบเงินเดือนออก (Payday)</div>
-                        <div className="font-black text-base text-[oklch(52%_0.16_28)]">{weatherPredictor.paydaySurgeBonus}</div>
-                    </div>
                 </div>
             </div>
         </div>

@@ -1,6 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React from 'react'
-import { Users, Crown, HeartHandshake, Sparkles, Repeat, Award, ArrowUpRight, UserCheck } from 'lucide-react'
+import { Users, Crown, HeartHandshake, Sparkles, Repeat, Award, ArrowUpRight, UserCheck, ShieldCheck } from 'lucide-react'
 
 export default function CRMFinancialSummary({ data }) {
     const memberShare = data?.memberShare || {
@@ -37,7 +37,7 @@ export default function CRMFinancialSummary({ data }) {
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] font-black self-start sm:self-auto">
                     <HeartHandshake size={14} className="text-[oklch(52%_0.16_28)]" />
-                    <span>RETENTION {memberShare.repeatCustomerRate}%</span>
+                    <span>MEMBERS ACTIVE ({memberShare.totalMembersCount} ท่าน)</span>
                 </div>
             </div>
 
@@ -57,26 +57,28 @@ export default function CRMFinancialSummary({ data }) {
                             </span>
                         </div>
                         <div className="w-full bg-[oklch(94%_0.010_28)] h-3.5 rounded-full overflow-hidden flex">
-                            <div className="bg-[oklch(52%_0.16_28)] h-3.5 rounded-l-full" style={{ width: `${memberShare.memberPercent}%` }} />
-                            <div className="bg-[oklch(85%_0.012_28)] h-3.5 rounded-r-full" style={{ width: `${memberShare.nonMemberPercent}%` }} />
+                            <div className="bg-[oklch(52%_0.16_28)] h-3.5 rounded-l-full transition-all duration-500" style={{ width: `${memberShare.memberPercent}%` }} />
+                            <div className="bg-[oklch(85%_0.012_28)] h-3.5 rounded-r-full transition-all duration-500" style={{ width: `${memberShare.nonMemberPercent}%` }} />
                         </div>
                         <div className="flex justify-between items-baseline text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                            <span>อัตราซื้อซ้ำสูง</span>
+                            <span>สมาชิก {memberShare.totalMembersCount} ราย</span>
                             <span>ทั่วไป: ฿{memberShare.nonMemberSales.toLocaleString()} ({memberShare.nonMemberPercent}%)</span>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 pt-1">
                         <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border-2 border-[oklch(85%_0.012_28)]">
-                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono font-bold">ยอดเฉลี่ย/หัว สมาชิก</div>
+                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono font-bold">ยอดเฉลี่ย/ท่าน สมาชิก</div>
                             <div className="font-mono text-lg md:text-xl font-black text-[oklch(52%_0.16_28)] mt-0.5">฿{memberShare.avgSpendMember}</div>
-                            <div className="text-[10px] text-emerald-700 font-mono font-bold mt-0.5">+51.8% สูงกว่าทั่วไป</div>
+                            <div className="text-[10px] text-emerald-700 font-mono font-bold mt-0.5">
+                                {memberShare.avgSpendMember > memberShare.avgSpendNonMember ? 'สูงกว่าลูกค้าทั่วไป' : 'สะสมแต้มต่อเนื่อง'}
+                            </div>
                         </div>
 
                         <div className="p-3 bg-[oklch(97%_0.008_28)] rounded-xl border-2 border-[oklch(85%_0.012_28)]">
-                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono font-bold">ยอดเฉลี่ย/หัว ทั่วไป</div>
+                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono font-bold">ยอดเฉลี่ย/ท่าน ทั่วไป</div>
                             <div className="font-mono text-lg md:text-xl font-black text-[oklch(18%_0.012_28)] mt-0.5">฿{memberShare.avgSpendNonMember}</div>
-                            <div className="text-[10px] text-[oklch(42%_0.010_28)] font-mono font-bold mt-0.5">ลูกค้า Walk-in</div>
+                            <div className="text-[10px] text-[oklch(42%_0.010_28)] font-mono font-bold mt-0.5">ลูกค้า Walk-in / ไม่ได้สะสมแต้ม</div>
                         </div>
                     </div>
                 </div>
@@ -88,91 +90,88 @@ export default function CRMFinancialSummary({ data }) {
                     </h4>
 
                     <div className="grid grid-cols-2 gap-2.5 md:gap-3">
-                        {memberTiers.map((tier, idx) => {
-                            const Icon = tier.icon || Crown
-                            return (
-                                <div key={idx} className={`p-3 rounded-xl border-2 ${tier.color || 'border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)]'} space-y-1 shadow-sm`}>
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1 font-black text-xs">
-                                            <Icon size={14} />
-                                            <span>{tier.name}</span>
+                        {memberTiers.length === 0 ? (
+                            <div className="col-span-2 p-6 bg-white rounded-xl border-2 border-[oklch(85%_0.012_28)] text-center text-xs text-[oklch(42%_0.010_28)] font-bold">
+                                ยังไม่มีสถิติยอดขายตาม Tier ในช่วงเวลานี้
+                            </div>
+                        ) : (
+                            memberTiers.map((tier, idx) => {
+                                const Icon = tier.icon || Crown
+                                return (
+                                    <div key={idx} className={`p-3 rounded-xl border-2 ${tier.color || 'border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)]'} space-y-1 shadow-sm`}>
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1 font-black text-xs">
+                                                <Icon size={14} />
+                                                <span>{tier.name}</span>
+                                            </div>
+                                            <span className="font-mono text-[10px] font-black">{tier.members || 0} คน</span>
                                         </div>
-                                        <span className="font-mono text-[10px] font-black">{tier.members || 0} คน</span>
-                                    </div>
 
-                                    <div className="pt-1">
-                                        <div className="font-mono text-base md:text-lg font-black">฿{(tier.totalSales || 0).toLocaleString()}</div>
-                                        <div className="font-mono text-[10px] font-bold opacity-80 mt-0.5">เฉลี่ย ฿{tier.avgPerVisit || 0}/ครั้ง</div>
+                                        <div className="pt-1">
+                                            <div className="font-mono text-base md:text-lg font-black">฿{(tier.totalSales || 0).toLocaleString()}</div>
+                                            <div className="font-mono text-[10px] font-bold opacity-80 mt-0.5">
+                                                เฉลี่ย ฿{tier.members > 0 ? Math.round(tier.totalSales / tier.members) : 0}/ท่าน
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Grid Row 2: RFM Segments & Top Spenders */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
-                {/* RFM Segments (6 cols) */}
-                <div className="lg:col-span-6 bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3">
-                    <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                        RFM CUSTOMER SEGMENTS
-                    </h4>
-
-                    <div className="space-y-2">
-                        {rfmSegments.map((rfm, idx) => (
-                            <div key={idx} className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1 shadow-sm">
-                                <div className="flex items-center justify-between text-xs font-black text-[oklch(18%_0.012_28)]">
-                                    <span>{rfm.title}</span>
-                                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(52%_0.16_28)]">
-                                        {rfm.count} คน ({rfm.sharePct}%)
-                                    </span>
-                                </div>
-                                <p className="text-xs text-[oklch(42%_0.010_28)] font-semibold">{rfm.desc}</p>
-                                <div className="text-[11px] font-mono text-emerald-800 font-bold pt-1 border-t border-[oklch(85%_0.012_28)]">
-                                    Action: {rfm.action}
-                                </div>
-                            </div>
-                        ))}
+            {/* Grid Row 2: Top VIP Spenders */}
+            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                    <div className="flex items-center gap-2">
+                        <Crown size={18} className="text-amber-500" />
+                        <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
+                            TOP VIP SPENDERS IN PERIOD
+                        </h4>
                     </div>
+                    <span className="font-mono text-xs font-black text-[oklch(52%_0.16_28)]">
+                        CRM LEADERBOARD
+                    </span>
                 </div>
 
-                {/* Top VIP Spenders Table (6 cols) */}
-                <div className="lg:col-span-6 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                        <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                            TOP 5 VIP SPENDERS
-                        </h4>
-                        <Crown size={18} className="text-amber-500" />
-                    </div>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left font-mono text-xs min-w-[340px]">
-                            <thead>
-                                <tr className="border-b-2 border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-black uppercase tracking-wider">
-                                    <th className="py-2 px-2">สมาชิก</th>
-                                    <th className="py-2 px-2 text-right">ยอดรวม (LTV)</th>
-                                    <th className="py-2 px-2 text-right">ครั้ง</th>
-                                    <th className="py-2 px-2 text-right">เฉลี่ย/บิล</th>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left font-mono text-xs min-w-[520px]">
+                        <thead>
+                            <tr className="border-b-2 border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] uppercase text-[11px] font-black bg-[oklch(97%_0.008_28)]">
+                                <th className="py-2.5 px-3">RANK</th>
+                                <th className="py-2.5 px-3">MEMBER NAME</th>
+                                <th className="py-2.5 px-3">TIER</th>
+                                <th className="py-2.5 px-3 text-right">VISITS</th>
+                                <th className="py-2.5 px-3 text-right">AVG TICKET</th>
+                                <th className="py-2.5 px-3 text-right">TOTAL SPENT</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[oklch(94%_0.010_28)]">
+                            {topSpenders.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="py-6 text-center text-gray-400 font-sans">
+                                        ไม่มีข้อมูลสมาชิกระบุตัวตนในช่วงเวลานี้ (ลูกค้าชำระเงินในโหมด Guest/Walk-in)
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]">
-                                {topSpenders.map((vip) => (
-                                    <tr key={vip.rank} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
-                                        <td className="py-2.5 px-2">
-                                            <div className="font-sans font-black text-[oklch(18%_0.012_28)]">{vip.name}</div>
-                                            <div className="text-[10px] text-purple-800 font-mono font-bold">{vip.tier}</div>
+                            ) : (
+                                topSpenders.map((sp, idx) => (
+                                    <tr key={idx} className="hover:bg-[oklch(97%_0.008_28)] transition-colors">
+                                        <td className="py-2.5 px-3 font-black text-[oklch(18%_0.012_28)]">#{sp.rank || idx + 1}</td>
+                                        <td className="py-2.5 px-3 font-black text-sm text-[oklch(18%_0.012_28)]">{sp.name}</td>
+                                        <td className="py-2.5 px-3">
+                                            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-black text-[10px]">
+                                                {sp.tier}
+                                            </span>
                                         </td>
-                                        <td className="py-2.5 px-2 text-right font-black text-[oklch(52%_0.16_28)] text-sm">
-                                            ฿{vip.totalLtv.toLocaleString()}
-                                        </td>
-                                        <td className="py-2.5 px-2 text-right font-bold">{vip.visits}</td>
-                                        <td className="py-2.5 px-2 text-right text-[oklch(42%_0.010_28)] font-bold">฿{vip.avgTicket}</td>
+                                        <td className="py-2.5 px-3 text-right font-bold">{sp.visits} ครั้ง</td>
+                                        <td className="py-2.5 px-3 text-right font-bold text-[oklch(42%_0.010_28)]">฿{sp.avgTicket?.toLocaleString()}</td>
+                                        <td className="py-2.5 px-3 text-right font-black text-sm text-[oklch(52%_0.16_28)]">฿{sp.totalLtv?.toLocaleString()}</td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

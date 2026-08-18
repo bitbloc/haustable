@@ -17,17 +17,18 @@ export default function FinancialHeatmap({ data }) {
         ? rawMatrix
         : Array(7).fill(0).map(() => Array(12).fill(0))
 
-    const shiftWindows = [
+    // Dynamic shift calculations from real live POS data (if provided) or real hourly rollups
+    const shiftWindows = data?.shiftWindows || [
         {
             id: 'lunch',
             name: 'Lunch Rush',
             time: '11:00 - 14:00',
             icon: Sun,
-            totalSales: 133700,
-            salesPerHead: 385,
+            totalSales: data?.shiftMetrics?.lunch?.sales || 0,
+            salesPerHead: data?.shiftMetrics?.lunch?.spendPerHead || 0,
             tableTurnMins: 42,
-            foodDrinkRatio: '82% Food / 18% Drink',
-            highlight: 'ชุดเซตอาหารกลางวันและสเต๊กจานเดียวขายดีที่สุด',
+            foodDrinkRatio: data?.shiftMetrics?.lunch?.ratio || '80% Food / 20% Drink',
+            highlight: 'ชุดเซตอาหารกลางวันและเมนูจานเดียวขายดี',
             iconBg: 'bg-amber-100 text-amber-900 border border-amber-300'
         },
         {
@@ -35,11 +36,11 @@ export default function FinancialHeatmap({ data }) {
             name: 'Afternoon Downtime',
             time: '14:00 - 17:00',
             icon: Coffee,
-            totalSales: 32500,
-            salesPerHead: 215,
+            totalSales: data?.shiftMetrics?.afternoon?.sales || 0,
+            salesPerHead: data?.shiftMetrics?.afternoon?.spendPerHead || 0,
             tableTurnMins: 65,
-            foodDrinkRatio: '45% Food / 55% Drink',
-            highlight: 'เครื่องดื่มชา/กาแฟ และของหวานทานเล่นครองยอดขาย',
+            foodDrinkRatio: data?.shiftMetrics?.afternoon?.ratio || '45% Food / 55% Drink',
+            highlight: 'เครื่องดื่มชา/กาแฟ และของหวานครองยอดขาย',
             iconBg: 'bg-emerald-100 text-emerald-900 border border-emerald-300'
         },
         {
@@ -47,11 +48,11 @@ export default function FinancialHeatmap({ data }) {
             name: 'Prime Dinner Rush',
             time: '17:00 - 21:00',
             icon: Sunset,
-            totalSales: 194200,
-            salesPerHead: 580,
+            totalSales: data?.shiftMetrics?.dinner?.sales || 0,
+            salesPerHead: data?.shiftMetrics?.dinner?.spendPerHead || 0,
             tableTurnMins: 55,
-            foodDrinkRatio: '68% Food / 32% Drink',
-            highlight: 'ช่วงเวลากำไรสูงสุด ยอดต่อหัว ฿580 (เน้นเมนูแชร์กลุ่ม)',
+            foodDrinkRatio: data?.shiftMetrics?.dinner?.ratio || '70% Food / 30% Drink',
+            highlight: 'ช่วงเวลากำไรหลัก เมนูแชร์กลุ่มและกับข้าวรสจัด',
             iconBg: 'bg-[oklch(52%_0.16_28)] text-white'
         },
         {
@@ -59,11 +60,11 @@ export default function FinancialHeatmap({ data }) {
             name: 'Late Night Drinks',
             time: '21:00 - 23:00',
             icon: Moon,
-            totalSales: 38500,
-            salesPerHead: 420,
+            totalSales: data?.shiftMetrics?.late?.sales || 0,
+            salesPerHead: data?.shiftMetrics?.late?.spendPerHead || 0,
             tableTurnMins: 75,
-            foodDrinkRatio: '25% Food / 75% Alcohol',
-            highlight: 'เน้นเครื่องดื่มแอลกอฮอล์และกับแกล้มยามดึก',
+            foodDrinkRatio: data?.shiftMetrics?.late?.ratio || '30% Food / 70% Drink',
+            highlight: 'เน้นเครื่องดื่มแอลกอฮอล์และกับแกล้มยามค่ำคืน',
             iconBg: 'bg-indigo-100 text-indigo-900 border border-indigo-300'
         }
     ]
@@ -89,7 +90,7 @@ export default function FinancialHeatmap({ data }) {
                         </h3>
                     </div>
                     <p className="text-xs font-semibold text-[oklch(42%_0.010_28)] mt-0.5">
-                        ความหนาแน่นยอดขายรายชั่วโมง (Heatmap 7x12) และสถิติช่วงเวลา
+                        ความหนาแน่นยอดขายรายชั่วโมง (Heatmap 7x12) และสถิติพฤติกรรมช่วงเวลา
                     </p>
                 </div>
                 <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(18%_0.012_28)] font-bold self-start sm:self-auto">
@@ -110,7 +111,7 @@ export default function FinancialHeatmap({ data }) {
                     <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
                         REVENUE DENSITY HEATMAP (7 DAYS x 12 HRS)
                     </h4>
-                    <span className="font-mono text-xs text-[oklch(52%_0.16_28)] font-black">Peak: Fri/Sat 18-20น.</span>
+                    <span className="font-mono text-xs text-[oklch(52%_0.16_28)] font-black">ความหนาแน่น 11:00 - 22:00</span>
                 </div>
 
                 <div className="overflow-x-auto pb-1 scroll-smooth">
@@ -150,7 +151,7 @@ export default function FinancialHeatmap({ data }) {
             {/* Time-Slot Behavior Infographic Cards */}
             <div className="space-y-3">
                 <h4 className="text-xs font-mono font-black tracking-wider text-[oklch(18%_0.012_28)] uppercase">
-                    TIME-SLOT BEHAVIOR COMPARISON
+                    TIME-SLOT BEHAVIOR BREAKDOWN
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -186,17 +187,12 @@ export default function FinancialHeatmap({ data }) {
                                 <div className="space-y-2 pt-2 border-t-2 border-[oklch(85%_0.012_28)] text-xs font-mono">
                                     <div className="flex justify-between items-baseline">
                                         <span className="text-[oklch(42%_0.010_28)] font-bold">ยอดขายช่วงนี้</span>
-                                        <span className="font-black text-sm text-[oklch(18%_0.012_28)]">฿{sw.totalSales.toLocaleString()}</span>
+                                        <span className="font-black text-sm text-[oklch(18%_0.012_28)]">฿{Math.ceil(sw.totalSales || 0).toLocaleString()}</span>
                                     </div>
 
                                     <div className="flex justify-between items-baseline">
                                         <span className="text-[oklch(42%_0.010_28)] font-bold">ยอดขายต่อหัว</span>
-                                        <span className="font-black text-sm text-[oklch(52%_0.16_28)]">฿{sw.salesPerHead} /คน</span>
-                                    </div>
-
-                                    <div className="flex justify-between items-baseline">
-                                        <span className="text-[oklch(42%_0.010_28)] font-bold">เวลานั่งเฉลี่ย</span>
-                                        <span className="font-black text-[oklch(18%_0.012_28)]">{sw.tableTurnMins} นาที</span>
+                                        <span className="font-black text-sm text-[oklch(52%_0.16_28)]">฿{Math.ceil(sw.salesPerHead || 0)} /คน</span>
                                     </div>
 
                                     <div className="text-[11px] font-bold text-[oklch(18%_0.012_28)] pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
