@@ -11,7 +11,7 @@ export default function BookingCheckout() {
     const {
         submitBooking, updateForm,
         contactName, contactPhone, specialRequest, isAgreed, slipFile,
-        cart, settings, pax, date, time, table // Add date, time, table as they were missing in destructuring
+        cart, settings, pax, date, time, selectedTable, table
     } = useBooking()
 
     // Localize form state to prevent global re-renders on keystrokes
@@ -114,7 +114,11 @@ export default function BookingCheckout() {
             updateForm('contactName', localName)
             updateForm('contactPhone', localPhone)
 
-            const result = await submitBooking(appliedPromo, depositAmount) 
+            const result = await submitBooking(appliedPromo, depositAmount, {
+                contactName: localName,
+                contactPhone: localPhone,
+                slipFile: slipFile
+            }) 
 
             if (result.success) {
                 const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
@@ -189,7 +193,7 @@ export default function BookingCheckout() {
                     </div>
                     <div className="flex justify-between">
                         <span className="text-subInk">{t('table')}</span>
-                        <span className="font-bold text-ink">{table?.table_name}</span>
+                        <span className="font-bold text-ink">{(selectedTable || table)?.table_name || 'Table'}</span>
                     </div>
                 </div>
                 {cart.length > 0 && (

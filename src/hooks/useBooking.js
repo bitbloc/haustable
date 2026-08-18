@@ -99,11 +99,16 @@ export function useBooking() {
     }
 
     // Submit Booking
-    const submitBooking = async (promotionData = null, depositAmount = 0) => { // Modified to accept promotion and deposit
+    const submitBooking = async (promotionData = null, depositAmount = 0, overrides = {}) => { // Modified to accept promotion, deposit, and overrides
         try {
-            if (!state.contactName || !state.contactPhone) throw new Error('กรุณากรอกข้อมูลให้ครบ')
+            const finalContactName = overrides.contactName || state.contactName
+            const finalContactPhone = overrides.contactPhone || state.contactPhone
+            const finalSlipFile = overrides.slipFile || state.slipFile
+
+            if (!finalContactName || !finalContactPhone) throw new Error('กรุณากรอกข้อมูลให้ครบ')
             if (!state.isAgreed) throw new Error('Please agree to terms')
-            if (!state.slipFile) throw new Error('Please upload payment slip')
+            if (!finalSlipFile) throw new Error('Please upload payment slip')
+            if (!state.selectedTable?.id) throw new Error('กรุณาเลือกโต๊ะที่ต้องการจอง')
 
             // Security Check: Blocked Date
             const { count: blockedCount } = await supabase
@@ -127,13 +132,7 @@ export function useBooking() {
             // Prepare Payload (Dine-in)
             const bookingDateTime = toThaiISO(state.date, state.time)
             
-            // Note: useOrderSubmission handles slip upload if file provided
-            // But here we might want to let useOrderSubmission do it.
-            // However, useBooking logic constructed fileName manually before.
-            // submitOrder generates its own fileName if we pass file.
-            // We can let submitOrder do it.
-
-            const customerNoteContent = `Booking ${state.selectedTable.table_name} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
+            const customerNoteContent = `Booking ${state.selectedTable?.table_name || ''} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
 
             const discountAmount = promotionData?.discountAmount || 0
             const finalTotal = Math.max(0, cartTotal - discountAmount)
@@ -145,8 +144,8 @@ export function useBooking() {
                 table_id: state.selectedTable.id,
                 total_amount: finalTotal,
                 payment_slip_url: null, // Will be handled by submitOrder
-                pickup_contact_name: state.contactName,
-                pickup_contact_phone: state.contactPhone,
+                pickup_contact_name: finalContactName,
+                pickup_contact_phone: finalContactPhone,
                 customer_note: customerNoteContent,
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
@@ -169,18 +168,9 @@ export function useBooking() {
             const result = await submitOrder({
                 bookingPayload,
                 orderItemsPayload,
-                slipFile: state.slipFile,
+                slipFile: finalSlipFile,
                 lineIdToken
             })
-
-            // Additional Check: Double Booking (Concurrency)
-            // Ideally should be done before submit or atomic.
-            // submitOrder doesn't check 'table_id' overlap. 
-            // We can keep the check here before calling submitOrder if we want.
-            // But for now, relying on Supabase constraint or previous check logic is fine.
-            // The previous logic had a check (lines 151-159).
-            // We should ideally keep it.
-            // But since submitOrder is generic, we can run the check HERE before calling it.
             
             if (!result.success) throw new Error(result.error)
 

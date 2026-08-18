@@ -6,6 +6,22 @@ export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState(null)
 
+    const registerSlipSafely = async (bookingId, fileName, amount) => {
+        if (!bookingId || !fileName) return
+        try {
+            const { error: slipErr } = await supabase.rpc('register_payment_slip', {
+                p_booking_id: bookingId,
+                p_file_name: fileName,
+                p_amount: amount || 0
+            })
+            if (slipErr) {
+                console.warn('Slips registry error:', slipErr)
+            }
+        } catch (err) {
+            console.warn('Slips registry exception:', err)
+        }
+    }
+
     const submitOrder = async ({
         bookingPayload,
         orderItemsPayload,
@@ -45,10 +61,6 @@ export function useOrderSubmission() {
             if (user) {
                 // --- AUTHENTICATED USER (Direct Insert) ---
                 console.log("Submitting as Authenticated User:", user.id)
-                
-                // Safety: Check availability if it's dine_in and has table (optional, but good practice if redundant with UI)
-                // We skip specific checks here and rely on DB constraints or UI checks passed in? 
-                // Let's assume UI did checks. But for concurrency, we might want to catch DB errors.
 
                 const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
                     ...finalBookingPayload,
@@ -60,11 +72,7 @@ export function useOrderSubmission() {
                 trackingToken = bookingData.tracking_token
 
                 if (finalSlipUrl) {
-                    supabase.rpc('register_payment_slip', {
-                        p_booking_id: bookingData.id,
-                        p_file_name: finalSlipUrl,
-                        p_amount: bookingData.total_amount || 0
-                    }).catch(err => console.warn('Slips registry error:', err));
+                    await registerSlipSafely(bookingData.id, finalSlipUrl, bookingData.total_amount)
                 }
 
                 if (orderItemsPayload && orderItemsPayload.length > 0) {
@@ -73,7 +81,7 @@ export function useOrderSubmission() {
                         ...item
                     }))
                     const { error: itemsError } = await supabase.from('order_items').insert(items)
-                    if (itemsError) throw itemsError // Rolling back would be ideal but simple throw is OK for now
+                    if (itemsError) throw itemsError
                 }
 
             } else if (lineIdToken) {
@@ -93,11 +101,7 @@ export function useOrderSubmission() {
                 trackingToken = resultData?.tracking_token || bookingPayload.tracking_token
 
                 if (finalSlipUrl && resultData?.id) {
-                    supabase.rpc('register_payment_slip', {
-                        p_booking_id: resultData.id,
-                        p_file_name: finalSlipUrl,
-                        p_amount: resultData.total_amount || 0
-                    }).catch(err => console.warn('Slips registry error:', err));
+                    await registerSlipSafely(resultData.id, finalSlipUrl, resultData.total_amount)
                 }
 
             } else {
@@ -113,11 +117,7 @@ export function useOrderSubmission() {
                 trackingToken = bookingData.tracking_token
 
                 if (finalSlipUrl) {
-                    supabase.rpc('register_payment_slip', {
-                        p_booking_id: bookingData.id,
-                        p_file_name: finalSlipUrl,
-                        p_amount: bookingData.total_amount || 0
-                    }).catch(err => console.warn('Slips registry error:', err));
+                    await registerSlipSafely(bookingData.id, finalSlipUrl, bookingData.total_amount)
                 }
 
                 if (orderItemsPayload && orderItemsPayload.length > 0) {
@@ -153,7 +153,7 @@ export function useOrderSubmission() {
                             ? orderItemsPayload.map(i => `${i.quantity}x ${i.name}`).join(', ') 
                             : 'No items'
 
-                        supabase.functions.invoke('send-booking-ticket', {
+                        await supabase.functions.invoke('send-booking-ticket', {
                             body: {
                                 lineUserId,
                                 bookingId: resultData.id,
@@ -166,7 +166,7 @@ export function useOrderSubmission() {
                                 shopLogoUrl,
                                 checkInUrl
                             }
-                        }).catch(err => console.error("Ticket Webhook Error:", err))
+                        })
                     }
                 } catch(e) {
                     console.error("Failed to trigger ticket:", e)
