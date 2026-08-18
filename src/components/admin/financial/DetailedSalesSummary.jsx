@@ -65,12 +65,16 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                     <div className="grid grid-cols-2 gap-2.5 md:gap-3">
                         {paymentMethods.map((pm, idx) => {
-                            const Icon = pm.icon
+                            const Icon = pm.icon || (
+                                pm.name?.toLowerCase().includes('qr') ? QrCode :
+                                pm.name?.toLowerCase().includes('card') || pm.name?.toLowerCase().includes('credit') ? CreditCard :
+                                pm.name?.toLowerCase().includes('wallet') ? Wallet : Banknote
+                            )
                             return (
                                 <div key={idx} className="p-3 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl space-y-1.5 shadow-sm">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">
-                                            <div className={`p-1 rounded-md ${pm.color}`}>
+                                            <div className={`p-1 rounded-md ${pm.color || 'text-amber-800 bg-amber-100 border-amber-300'}`}>
                                                 <Icon size={14} />
                                             </div>
                                             <span className="text-xs font-black text-[oklch(18%_0.012_28)] truncate">{pm.name}</span>
@@ -81,17 +85,17 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     </div>
 
                                     <div className="font-mono text-lg md:text-xl font-black text-[oklch(18%_0.012_28)] leading-none pt-1">
-                                        ฿{Math.ceil(pm.amount).toLocaleString()}
+                                        ฿{Math.ceil(pm.amount || 0).toLocaleString()}
                                     </div>
 
                                     <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                                        <span>{pm.count} รายการ</span>
+                                        <span>{pm.count || 0} รายการ</span>
                                         <span>เฉลี่ย ฿{pm.count > 0 ? Math.round(pm.amount/pm.count) : 0}</span>
                                     </div>
 
                                     {/* Visual Bar */}
                                     <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                                        <div className="bg-[oklch(52%_0.16_28)] h-2 rounded-full" style={{ width: `${pm.percent}%` }} />
+                                        <div className="bg-[oklch(52%_0.16_28)] h-2 rounded-full" style={{ width: `${pm.percent || 0}%` }} />
                                     </div>
                                 </div>
                             )
@@ -107,7 +111,9 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
 
                     <div className="space-y-2.5">
                         {diningChannels.map((ch, idx) => {
-                            const Icon = ch.icon
+                            const Icon = ch.icon || (
+                                ch.name?.toLowerCase().includes('dine') ? UtensilsCrossed : ShoppingBag
+                            )
                             return (
                                 <div key={idx} className="p-3.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl flex items-center justify-between shadow-sm">
                                     <div className="flex items-center gap-3">

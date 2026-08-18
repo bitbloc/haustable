@@ -80,8 +80,21 @@ export default function CustomerOrderLanding() {
         qr_gps_enabled: 'true',
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
-        qr_radius: '100'
+        qr_radius: '100',
+        qr_kitchen_close_time: '22:00',
+        qr_kitchen_cutoff_enabled: 'true',
+        qr_kitchen_mode: 'auto',
+        qr_kitchen_closed_categories: '[]'
     });
+    const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
+
+    // 30-second interval ticker to evaluate kitchen closing time in real-time
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTimeTick(Date.now());
+        }, 30000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Ref to prevent circular triggers in profile sync
     const currentMemberIdRef = useRef(null);
@@ -621,8 +634,85 @@ export default function CustomerOrderLanding() {
         }
     };
 
+    // Evaluate if kitchen is closed based on settings, cutoff time, and current clock
+    const checkIsKitchenClosed = (currentSettings) => {
+        if (!currentSettings) return false;
+        const mode = currentSettings.qr_kitchen_mode || 'auto';
+        if (mode === 'force_close') return true;
+        if (mode === 'force_open') return false;
+        if (currentSettings.qr_kitchen_cutoff_enabled === 'false') return false;
+
+        const closeTimeStr = currentSettings.qr_kitchen_close_time || '22:00';
+        const [closeHour, closeMin] = closeTimeStr.split(':').map(Number);
+
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTotalMins = currentHour * 60 + currentMinute;
+        const closeTotalMins = (closeHour || 22) * 60 + (closeMin || 0);
+
+        const openTimeStr = currentSettings.opening_time || '06:00';
+        const [openHour, openMin] = openTimeStr.split(':').map(Number);
+        const openTotalMins = (openHour || 6) * 60 + (openMin || 0);
+
+        if (closeTotalMins > openTotalMins) {
+            return currentTotalMins >= closeTotalMins || currentTotalMins < openTotalMins;
+        } else {
+            return currentTotalMins >= closeTotalMins && currentTotalMins < openTotalMins;
+        }
+    };
+
+    const isKitchenClosed = checkIsKitchenClosed(settings);
+
+    // Closed category IDs set
+    const closedCategoryIds = React.useMemo(() => {
+        const set = new Set();
+        if (settings?.qr_kitchen_closed_categories) {
+            try {
+                const parsed = typeof settings.qr_kitchen_closed_categories === 'string'
+                    ? JSON.parse(settings.qr_kitchen_closed_categories)
+                    : settings.qr_kitchen_closed_categories;
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(id => set.add(id));
+                }
+            } catch (e) {
+                console.warn('Error parsing qr_kitchen_closed_categories:', e);
+            }
+        }
+        if (categories && Array.isArray(categories)) {
+            categories.forEach(cat => {
+                if (cat.hide_on_kitchen_close === true) {
+                    set.add(cat.id);
+                }
+            });
+        }
+        return set;
+    }, [settings?.qr_kitchen_closed_categories, categories, currentTimeTick]);
+
+    // Filter categories & menu items based on kitchen cutoff
+    const visibleCategories = React.useMemo(() => {
+        if (!isKitchenClosed) return categories;
+        return categories.filter(cat => !closedCategoryIds.has(cat.id));
+    }, [categories, isKitchenClosed, closedCategoryIds]);
+
+    const visibleMenuItems = React.useMemo(() => {
+        if (!isKitchenClosed) return menuItems;
+        return menuItems.filter(item => !closedCategoryIds.has(item.category_id));
+    }, [menuItems, isKitchenClosed, closedCategoryIds]);
+
+    // Active Category auto-reset if selected category becomes closed
+    useEffect(() => {
+        if (isKitchenClosed && activeCategory !== 'all' && closedCategoryIds.has(activeCategory)) {
+            setActiveCategory('all');
+        }
+    }, [isKitchenClosed, activeCategory, closedCategoryIds]);
+
     // Cart Operations
     const handleAddToCart = (item) => {
+        if (isKitchenClosed && closedCategoryIds.has(item.category_id)) {
+            toast.error(`ขออภัยครับ ครัวปิดรับออเดอร์อาหารแล้ว (${settings.qr_kitchen_close_time || '22:00'} น.)`);
+            return;
+        }
         setSelectedItem(item);
     };
 
@@ -665,6 +755,17 @@ export default function CustomerOrderLanding() {
             toast.error('ไม่พบรหัสโต๊ะที่ถูกต้อง กรุณาสแกน QR Code ใหม่อีกครั้ง');
             setSubmitting(false);
             return;
+        }
+
+        // Cart validation against kitchen closed categories
+        if (isKitchenClosed) {
+            const invalidItems = cart.filter(item => closedCategoryIds.has(item.category_id));
+            if (invalidItems.length > 0) {
+                toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากครัวปิดแล้ว (${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
+                setCart(prev => prev.filter(item => !closedCategoryIds.has(item.category_id)));
+                setSubmitting(false);
+                return;
+            }
         }
 
         try {
@@ -773,7 +874,7 @@ export default function CustomerOrderLanding() {
     const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0);
 
-    const filteredItems = menuItems.filter(item => {
+    const filteredItems = visibleMenuItems.filter(item => {
         const matchesCat = activeCategory === 'all' || item.category_id === activeCategory;
         const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) || 
                               (item.description && item.description.toLowerCase().includes(search.toLowerCase()));
@@ -1011,6 +1112,32 @@ export default function CustomerOrderLanding() {
                     </Link>
                 </div>
 
+                {/* Kitchen Cutoff High-Contrast Rams Notice Banner */}
+                {isKitchenClosed && (
+                    <div className="p-3 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
+                        <div className="p-3 bg-[var(--color-ink)] text-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] flex items-center justify-between gap-3 shadow-sm">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/20 text-[var(--color-accent)] border border-[var(--color-accent)]/40 flex items-center justify-center font-bold shrink-0">
+                                    <Clock size={16} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-accent)]">
+                                            KITCHEN CLOSED · ครัวปิด {settings.qr_kitchen_close_time || '22:00'} น.
+                                        </span>
+                                        <span className="bg-[var(--color-paper)]/15 text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
+                                            DRINKS & BAR ONLY
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] text-[var(--color-paper)]/80 mt-0.5 block truncate">
+                                        ปิดรับออเดอร์อาหารแล้ว สามารถเลือกสั่งเครื่องดื่มและรายการบาร์ได้ตามปกติครับ
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Menu Search & Category Navigation */}
                 <div className="p-3 sticky top-[53px] bg-[var(--color-paper)]/95 backdrop-blur-md z-30 space-y-2.5 border-b border-[var(--color-rule)]">
                     <div className="relative">
@@ -1038,10 +1165,10 @@ export default function CustomerOrderLanding() {
                                     : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                             }`}
                         >
-                            ทั้งหมด ({menuItems.length})
+                            ทั้งหมด ({visibleMenuItems.length})
                         </button>
-                        {categories.map(cat => {
-                            const count = menuItems.filter(i => i.category_id === cat.id).length;
+                        {visibleCategories.map(cat => {
+                            const count = visibleMenuItems.filter(i => i.category_id === cat.id).length;
                             return (
                                 <button 
                                     key={cat.id} 

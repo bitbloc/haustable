@@ -16,7 +16,8 @@ export default function MenuCategoryList() {
     const [formData, setFormData] = useState({ 
         name: '', 
         display_order: 0,
-        is_drink_stamp_eligible: false 
+        is_drink_stamp_eligible: false,
+        hide_on_kitchen_close: false 
     })
 
     useEffect(() => {
@@ -59,7 +60,8 @@ export default function MenuCategoryList() {
         setFormData({ 
             name: '', 
             display_order: maxOrder + 1,
-            is_drink_stamp_eligible: false 
+            is_drink_stamp_eligible: false,
+            hide_on_kitchen_close: true 
         })
         setIsModalOpen(true)
     }
@@ -69,7 +71,8 @@ export default function MenuCategoryList() {
         setFormData({ 
             name: cat.name, 
             display_order: cat.display_order || 0,
-            is_drink_stamp_eligible: cat.is_drink_stamp_eligible === true
+            is_drink_stamp_eligible: cat.is_drink_stamp_eligible === true,
+            hide_on_kitchen_close: cat.hide_on_kitchen_close === true
         })
         setIsModalOpen(true)
     }
@@ -106,7 +109,8 @@ export default function MenuCategoryList() {
             const payload = {
                 name: trimmedName,
                 display_order: parseInt(formData.display_order) || 0,
-                is_drink_stamp_eligible: formData.is_drink_stamp_eligible === true
+                is_drink_stamp_eligible: formData.is_drink_stamp_eligible === true,
+                hide_on_kitchen_close: formData.hide_on_kitchen_close === true
             }
 
             if (editingCategory) {
@@ -154,6 +158,7 @@ export default function MenuCategoryList() {
                 id: cat.id,
                 name: cat.name,
                 is_drink_stamp_eligible: cat.is_drink_stamp_eligible,
+                hide_on_kitchen_close: cat.hide_on_kitchen_close,
                 display_order: index + 1
             }))
 
@@ -286,6 +291,29 @@ export default function MenuCategoryList() {
                                 />
                             </div>
 
+                            {/* Kitchen Cutoff 22:00 Toggle */}
+                            <div className="p-3.5 bg-white border border-[oklch(85%_0.012_28)] rounded-sm flex items-start justify-between gap-3">
+                                <div className="space-y-0.5">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded-sm">
+                                            KITCHEN CUTOFF
+                                        </span>
+                                        <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                            ซ่อนหมวดหมู่นี้เมื่อครัวปิด (22:00 น.)
+                                        </span>
+                                    </div>
+                                    <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-relaxed">
+                                        เมื่อถึงเวลาปิดรับออเดอร์ครัว จะซ่อนหมวดหมู่นี้และเมนูทั้งหมดในหมวดไม่ให้สั่งผ่าน QR
+                                    </p>
+                                </div>
+                                <input 
+                                    type="checkbox"
+                                    checked={formData.hide_on_kitchen_close}
+                                    onChange={e => setFormData({ ...formData, hide_on_kitchen_close: e.target.checked })}
+                                    className="w-5 h-5 accent-rose-600 cursor-pointer mt-1"
+                                />
+                            </div>
+
                             {/* Buttons */}
                             <div className="flex gap-2 pt-2">
                                 <button
@@ -341,7 +369,7 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                 </div>
 
                 <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)]">
                             #{index + 1}
                         </span>
@@ -351,6 +379,11 @@ function CategoryItem({ category, index, itemCount, onEdit, onDelete, onDragEnd 
                         {category.is_drink_stamp_eligible && (
                             <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-sm flex items-center gap-1">
                                 10 FREE 1
+                            </span>
+                        )}
+                        {category.hide_on_kitchen_close && (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-800 border border-rose-200 px-1.5 py-0.5 rounded-sm flex items-center gap-1">
+                                🍳 ปิดครัว 22:00
                             </span>
                         )}
                     </div>

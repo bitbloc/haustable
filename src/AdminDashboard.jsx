@@ -1,49 +1,53 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles } from 'lucide-react'
+import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
+import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
 
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
+import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
+import TaxInvoiceModal from './components/admin/tax/TaxInvoiceModal'
 
 export default function AdminDashboard() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
-    const [bookings, setBookings] = useState([]) // Stores Pending (All) + Today's Bookings
+    const [bookings, setBookings] = useState([]) // Stores Pending (All) + Selected Date Bookings
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('overview') // overview, dine_in, pickup
+    const [activeTab, setActiveTab] = useState('bills') // bills, inbox, schedule, floor, dine_in, pickup
+    const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
+    const [taxInvoiceBooking, setTaxInvoiceBooking] = useState(null)
     const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
 
     useEffect(() => {
         fetchData()
 
-        // Real-time: Refresh on any booking change
+        // Real-time: Refresh on any booking or order items change
         const subscription = supabase
             .channel('public:admin-dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchData)
             .subscribe()
 
         return () => {
             supabase.removeChannel(subscription)
         }
-    }, [])
+    }, [selectedDate])
 
     const fetchData = async () => {
         setLoading(true)
         try {
-            const today = getThaiDate() // YYYY-MM-DD
-
-            // 1. Fetch ALL Pending (Inbox)
+            // 1. Fetch ALL Pending (Inbox) across all dates
             const pendingReq = supabase
                 .from('bookings')
                 .select(`
@@ -51,40 +55,42 @@ export default function AdminDashboard() {
                     order_items (
                         quantity,
                         price_at_time,
-                        menu_items ( name, price )
+                        selected_options,
+                        menu_items ( name, price, category_id )
                     ),
-                    profiles ( display_name, phone_number ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
                 .eq('status', 'pending')
                 .order('booking_time', { ascending: true })
 
-            // 2. Fetch ALL Today's bookings (Schedule / Logs)
-            const todayReq = supabase
+            // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
+            const dateReq = supabase
                 .from('bookings')
                 .select(`
                     *,
                     order_items (
                         quantity,
                         price_at_time,
-                        menu_items ( name, price )
+                        selected_options,
+                        menu_items ( name, price, category_id )
                     ),
-                    profiles ( display_name, phone_number ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
-                .gte('booking_time', `${today}T00:00:00+07:00`)
-                .lte('booking_time', `${today}T23:59:59+07:00`)
-                .order('booking_time', { ascending: true })
+                .gte('booking_time', `${selectedDate}T00:00:00+07:00`)
+                .lte('booking_time', `${selectedDate}T23:59:59+07:00`)
+                .order('booking_time', { ascending: false })
 
-            const [pendingRes, todayRes] = await Promise.all([pendingReq, todayReq])
+            const [pendingRes, dateRes] = await Promise.all([pendingReq, dateReq])
 
             if (pendingRes.error) throw pendingRes.error
-            if (todayRes.error) throw todayRes.error
+            if (dateRes.error) throw dateRes.error
 
-            // Merge and Deduplicate (in case a pending booking is also today)
+            // Merge and Deduplicate
             const map = new Map()
             ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
-            ;(todayRes.data || []).forEach(b => map.set(b.id, b))
+            ;(dateRes.data || []).forEach(b => map.set(b.id, b))
 
             setBookings(Array.from(map.values()))
 
@@ -122,42 +128,60 @@ export default function AdminDashboard() {
     }
 
     // --- DERIVED STATE ---
-    // 1. Inbox: Pending (ALL dates)
+    // 1. All Daily Bookings (for the selected date, all statuses)
+    const dailyBookings = useMemo(() => {
+        return bookings.filter(b => {
+            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            return bDate === selectedDate
+        }).sort((a, b) => new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at))
+    }, [bookings, selectedDate])
+
+    // 2. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
         bookings.filter(b => b.status === 'pending').sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
         , [bookings])
 
-    // 2. Schedule: Confirmed Today
+    // 3. Schedule: Confirmed / Seated / Ready for selected date
     const scheduleBookings = useMemo(() => {
-        const todayStr = getThaiDate()
         return bookings.filter(b => {
-            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            const isToday = bDate === todayStr
+            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isDateMatch = bDate === selectedDate
             const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'
-            return isToday && isConfirmed
+            return isDateMatch && isConfirmed
         }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
-    }, [bookings])
+    }, [bookings, selectedDate])
 
-    // 3. Live Financial Metrics for Today
-    const { revenueToday, completedOrdersCount, dineInCount, pickupCount } = useMemo(() => {
-        const todayStr = getThaiDate()
+    // 4. Live Financial Metrics & Payment Breakdown for the selected date
+    const { revenueToday, completedOrdersCount, dineInCount, pickupCount, paymentBreakdown } = useMemo(() => {
         let rev = 0
         let paidCount = 0
         let dineIn = 0
         let pickup = 0
+        let cash = 0
+        let qr = 0
+        let credit = 0
 
-        bookings.forEach(b => {
-            const bDate = new Date(b.booking_time).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            if (bDate === todayStr && (b.status === 'confirmed' || b.status === 'completed' || b.status === 'paid' || b.status === 'seated')) {
-                const amount = Number(b.total_amount || b.total_price || 0)
+        dailyBookings.forEach(b => {
+            const amount = Number(b.total_amount || b.total_price || 0)
+            const isRevenueStatus = b.status === 'confirmed' || b.status === 'completed' || b.status === 'paid' || b.status === 'seated' || b.status === 'success'
+
+            if (isRevenueStatus) {
                 rev += amount
-                paidCount++
+                if (b.status === 'completed' || b.status === 'paid' || b.status === 'success') {
+                    paidCount++
+                }
 
                 if (b.booking_type === 'dine_in' || b.booking_type === 'walk_in') {
                     dineIn++
                 } else if (b.booking_type === 'pickup') {
                     pickup++
                 }
+
+                // Payment breakdown
+                const breakdown = getBookingPaymentBreakdown(b)
+                cash += breakdown.cash
+                qr += breakdown.qr
+                credit += breakdown.credit
             }
         })
 
@@ -165,11 +189,12 @@ export default function AdminDashboard() {
             revenueToday: rev,
             completedOrdersCount: paidCount,
             dineInCount: dineIn,
-            pickupCount: pickup
+            pickupCount: pickup,
+            paymentBreakdown: { cash, qr, credit }
         }
-    }, [bookings])
+    }, [dailyBookings])
 
-    // --- Sound Logic ---
+    // --- Sound Alert Logic ---
     const [soundUrl, setSoundUrl] = useState(null)
     const [soundMuted, setSoundMuted] = useState(false)
     const [audio] = useState(new Audio())
@@ -198,37 +223,87 @@ export default function AdminDashboard() {
         setSlipData({ booking, type })
     }
 
+    const getYesterdayDate = () => {
+        const d = new Date()
+        d.setDate(d.getDate() - 1)
+        return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+    }
+
     const getTabContent = () => {
-        if (activeTab === 'overview') {
+        if (activeTab === 'bills') {
+            return (
+                <AllDailyBillsHub
+                    bookings={dailyBookings}
+                    loading={loading}
+                    onPrintSlip={handlePrint}
+                    onViewSlip={setViewSlipUrl}
+                    onOpenTaxInvoice={setTaxInvoiceBooking}
+                    onUpdateStatus={updateStatus}
+                    selectedDate={selectedDate}
+                />
+            )
+        }
+
+        if (activeTab === 'inbox') {
+            return (
+                <InboxSection 
+                    bookings={pendingBookings} 
+                    onUpdateStatus={updateStatus}
+                    onViewSlip={setViewSlipUrl}
+                />
+            )
+        }
+
+        if (activeTab === 'schedule') {
+            return (
+                <ScheduleSection 
+                    bookings={scheduleBookings} 
+                    loading={loading} 
+                    onPrint={handlePrint}
+                    onViewSlip={setViewSlipUrl}
+                />
+            )
+        }
+
+        if (activeTab === 'floor') {
             return (
                 <div className="space-y-6">
-                    {/* ZERO INBOX */}
-                    <InboxSection 
-                        bookings={pendingBookings} 
-                        onUpdateStatus={updateStatus}
-                        onViewSlip={setViewSlipUrl}
-                    />
-
-                    {/* TODAY'S SCHEDULE */}
-                    <ScheduleSection 
-                        bookings={scheduleBookings} 
-                        loading={loading} 
-                        onPrint={handlePrint}
-                        onViewSlip={setViewSlipUrl}
-                    />
+                    <LiveFloorQuickStatus onOccupancyChange={setFloorOccupancy} />
                 </div>
             )
         }
 
-        const filtered = bookings.filter(b => b.booking_type === activeTab && (b.status === 'confirmed' || b.status === 'pending' || b.status === 'seated'))
-        return (
-            <ScheduleSection 
-                bookings={filtered} 
-                loading={loading} 
-                onPrint={handlePrint}
-                onViewSlip={setViewSlipUrl}
-            />
-        )
+        if (activeTab === 'dine_in') {
+            const filtered = dailyBookings.filter(b => b.booking_type === 'dine_in' || b.booking_type === 'walk_in')
+            return (
+                <AllDailyBillsHub
+                    bookings={filtered}
+                    loading={loading}
+                    onPrintSlip={handlePrint}
+                    onViewSlip={setViewSlipUrl}
+                    onOpenTaxInvoice={setTaxInvoiceBooking}
+                    onUpdateStatus={updateStatus}
+                    selectedDate={selectedDate}
+                />
+            )
+        }
+
+        if (activeTab === 'pickup') {
+            const filtered = dailyBookings.filter(b => b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway'))
+            return (
+                <AllDailyBillsHub
+                    bookings={filtered}
+                    loading={loading}
+                    onPrintSlip={handlePrint}
+                    onViewSlip={setViewSlipUrl}
+                    onOpenTaxInvoice={setTaxInvoiceBooking}
+                    onUpdateStatus={updateStatus}
+                    selectedDate={selectedDate}
+                />
+            )
+        }
+
+        return null
     }
 
     return (
@@ -246,12 +321,12 @@ export default function AdminDashboard() {
                 {/* Executive Header Bar */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-sm">
                                 SYSTEM COCKPIT // 2026
                             </span>
                             <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                                {getThaiDate()}
+                                BACKOFFICE OVERVIEW
                             </span>
                         </div>
                         <h1 className="font-mono text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-1">
@@ -259,7 +334,31 @@ export default function AdminDashboard() {
                         </h1>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    {/* Date Picker & Controls Ribbon */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Quick Date Switcher */}
+                        <div className="flex items-center gap-1 bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-1 font-mono text-xs font-bold">
+                            <Calendar size={14} className="text-[oklch(52%_0.16_28)] ml-1" />
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer"
+                            />
+                            <button
+                                onClick={() => setSelectedDate(getThaiDate())}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                            >
+                                วันนี้
+                            </button>
+                            <button
+                                onClick={() => setSelectedDate(getYesterdayDate())}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                            >
+                                เมื่อวาน
+                            </button>
+                        </div>
+
                         {/* Audio Alert Toggle */}
                         <button
                             type="button"
@@ -299,7 +398,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* 1. Live Pulse KPI Strip */}
+                {/* 1. Live Pulse KPI Strip & Payment Breakdown */}
                 <LivePulseMetrics 
                     revenueToday={revenueToday}
                     completedOrdersCount={completedOrdersCount}
@@ -309,45 +408,50 @@ export default function AdminDashboard() {
                     pendingInboxCount={pendingBookings.length}
                     dineInCount={dineInCount}
                     pickupCount={pickupCount}
+                    paymentBreakdown={paymentBreakdown}
                     loading={loading}
                 />
 
-                {/* 2. Interactive Live Floor & 1-Tap Table Block */}
+                {/* 2. Interactive Live Floor & 1-Tap Table Block (Shown always for quick overview) */}
                 <LiveFloorQuickStatus 
                     onOccupancyChange={setFloorOccupancy}
                 />
 
                 {/* 3. Segmented Filter Tabs */}
-                <div className="flex gap-2 border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs">
+                <div className="flex gap-1.5 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
                     {[
-                        { key: 'overview', label: `ALL SCHEDULE (${scheduleBookings.length + pendingBookings.length})` },
-                        { key: 'dine_in', label: 'DINE-IN ONLY' },
-                        { key: 'pickup', label: 'PICKUP ONLY' }
+                        { key: 'bills', label: `ALL BILLS (บิลทั้งหมด ${dailyBookings.length})`, icon: Receipt },
+                        { key: 'inbox', label: `INBOX (${pendingBookings.length})`, icon: Sparkles },
+                        { key: 'schedule', label: `SCHEDULE (${scheduleBookings.length})`, icon: Clock },
+                        { key: 'dine_in', label: `DINE-IN (${dineInCount})`, icon: Utensils },
+                        { key: 'pickup', label: `PICKUP (${pickupCount})`, icon: ShoppingBag }
                     ].map((tab) => {
                         const isActive = activeTab === tab.key
+                        const Icon = tab.icon
                         return (
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`pb-2.5 px-3 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[2px] ${
+                                className={`pb-2.5 px-3 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[2px] flex items-center gap-1.5 whitespace-nowrap ${
                                     isActive 
                                         ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
                                         : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-black'
                                 }`}
                             >
-                                {tab.label}
+                                <Icon size={14} />
+                                <span>{tab.label}</span>
                             </button>
                         )
                     })}
                 </div>
 
-                {/* 4. Tab Content: Priority Inbox & Schedule */}
+                {/* 4. Tab Content: Master Bills Hub / Inbox / Schedule */}
                 <div>
                     {getTabContent()}
                 </div>
             </div>
 
-            {/* Slip Modal */}
+            {/* Slip Modal (Receipt / Kitchen / Bar printing) */}
             {slipData && (
                 <SlipModal
                     booking={slipData.booking}
@@ -361,6 +465,19 @@ export default function AdminDashboard() {
                 <ViewSlipModal 
                     url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
                     onClose={() => setViewSlipUrl(null)} 
+                />
+            )}
+
+            {/* Tax Invoice Full Modal */}
+            {taxInvoiceBooking && (
+                <TaxInvoiceModal
+                    booking={taxInvoiceBooking}
+                    onClose={() => setTaxInvoiceBooking(null)}
+                    onSaveSuccess={() => {
+                        setTaxInvoiceBooking(null)
+                        fetchData()
+                        toast.success('บันทึกใบกำกับภาษีเรียบร้อยแล้ว')
+                    }}
                 />
             )}
         </PageTransition>

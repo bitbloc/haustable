@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy, Plus, Calculator, RotateCcw, CheckCircle2, Sparkles, Layers, ExternalLink, Edit3, Check } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy, Plus, Calculator, RotateCcw, CheckCircle2, Sparkles, Layers, ExternalLink, Edit3, Check, Clock, Utensils, CheckSquare, Square, Moon, Sun } from 'lucide-react'
 import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
 import DataPurgePanel from './components/admin/DataPurgePanel'
@@ -109,6 +109,10 @@ export default function AdminSettings() {
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
         qr_radius: '50',
+        qr_kitchen_close_time: '22:00',
+        qr_kitchen_cutoff_enabled: 'true',
+        qr_kitchen_mode: 'auto',
+        qr_kitchen_closed_categories: '[]',
         spotify_client_id: '',
         spotify_client_secret: '',
         link_og_image_url: '',
@@ -331,6 +335,105 @@ export default function AdminSettings() {
             bar_categories: newBar
         };
         handleSavePrinter(updated);
+    };
+
+    // Kitchen Cutoff Category Helpers & Live Status
+    const getKitchenClosedCategoryIds = () => {
+        try {
+            if (!settings.qr_kitchen_closed_categories) return [];
+            const parsed = typeof settings.qr_kitchen_closed_categories === 'string'
+                ? JSON.parse(settings.qr_kitchen_closed_categories)
+                : settings.qr_kitchen_closed_categories;
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        } catch (e) {
+            console.warn('Error parsing qr_kitchen_closed_categories:', e);
+        }
+
+        const fallbackIds = allCategories
+            .filter(c => c.hide_on_kitchen_close === true)
+            .map(c => c.id);
+        return fallbackIds;
+    };
+
+    const isKitchenCurrentlyClosed = () => {
+        const mode = settings.qr_kitchen_mode || 'auto';
+        if (mode === 'force_close') return true;
+        if (mode === 'force_open') return false;
+        if (settings.qr_kitchen_cutoff_enabled === 'false') return false;
+
+        const closeTimeStr = settings.qr_kitchen_close_time || '22:00';
+        const [closeH, closeM] = closeTimeStr.split(':').map(Number);
+        const openTimeStr = settings.opening_time || '06:00';
+        const [openH, openM] = openTimeStr.split(':').map(Number);
+
+        const now = new Date();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+        const closeMins = closeH * 60 + (closeM || 0);
+        const openMins = openH * 60 + (openM || 0);
+
+        if (closeMins > openMins) {
+            return currentMins >= closeMins || currentMins < openMins;
+        } else {
+            return currentMins >= closeMins && currentMins < openMins;
+        }
+    };
+
+    const handleToggleKitchenCutoffCategory = async (catId) => {
+        const currentList = getKitchenClosedCategoryIds();
+        const exists = currentList.includes(catId);
+        const nextList = exists ? currentList.filter(id => id !== catId) : [...currentList, catId];
+        const nextListStr = JSON.stringify(nextList);
+        
+        await handleSave('qr_kitchen_closed_categories', nextListStr);
+        
+        try {
+            await supabase.from('menu_categories').update({ hide_on_kitchen_close: !exists }).eq('id', catId);
+            setAllCategories(prev => prev.map(c => c.id === catId ? { ...c, hide_on_kitchen_close: !exists } : c));
+        } catch (err) {
+            console.warn('Sync hide_on_kitchen_close to menu_categories err:', err);
+        }
+    };
+
+    const handleSelectAllKitchenCategories = async () => {
+        const kitchenCatIds = allCategories
+            .filter(c => defaultRouteCategory(c) === 'kitchen')
+            .map(c => c.id);
+        const nextListStr = JSON.stringify(kitchenCatIds);
+        await handleSave('qr_kitchen_closed_categories', nextListStr);
+
+        try {
+            await supabase.from('menu_categories').update({ hide_on_kitchen_close: true }).in('id', kitchenCatIds);
+            const barCatIds = allCategories.filter(c => defaultRouteCategory(c) === 'bar').map(c => c.id);
+            if (barCatIds.length > 0) {
+                await supabase.from('menu_categories').update({ hide_on_kitchen_close: false }).in('id', barCatIds);
+            }
+            setAllCategories(prev => prev.map(c => ({
+                ...c,
+                hide_on_kitchen_close: kitchenCatIds.includes(c.id)
+            })));
+        } catch (err) {
+            console.warn('Sync hide_on_kitchen_close err:', err);
+        }
+    };
+
+    const handleSelectAllCategoriesForCutoff = async () => {
+        const allIds = allCategories.map(c => c.id);
+        await handleSave('qr_kitchen_closed_categories', JSON.stringify(allIds));
+        try {
+            await supabase.from('menu_categories').update({ hide_on_kitchen_close: true }).in('id', allIds);
+            setAllCategories(prev => prev.map(c => ({ ...c, hide_on_kitchen_close: true })));
+        } catch (e) {}
+    };
+
+    const handleClearAllCutoffCategories = async () => {
+        await handleSave('qr_kitchen_closed_categories', JSON.stringify([]));
+        try {
+            const allIds = allCategories.map(c => c.id);
+            if (allIds.length > 0) {
+                await supabase.from('menu_categories').update({ hide_on_kitchen_close: false }).in('id', allIds);
+            }
+            setAllCategories(prev => prev.map(c => ({ ...c, hide_on_kitchen_close: false })));
+        } catch (e) {}
     };
 
     useEffect(() => {
@@ -1797,6 +1900,197 @@ export default function AdminSettings() {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Kitchen Cutoff & QR Schedule Card */}
+                        <div className="bg-paper p-6 rounded-3xl border border-gray-200 shadow-sm space-y-6">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                                        <Clock size={20} className="text-amber-600" /> Kitchen Cutoff Schedule (ปิดครัว 4 ทุ่ม)
+                                    </h2>
+                                    <p className="text-xs text-subInk mt-1">
+                                        กำหนดเวลาปิดรับออเดอร์ครัว และเลือกหมวดหมู่ที่ต้องการซ่อนในหน้า QR ลูกค้า
+                                    </p>
+                                </div>
+
+                                {/* Live Status Pill */}
+                                {(() => {
+                                    const isClosed = isKitchenCurrentlyClosed();
+                                    const closedCount = getKitchenClosedCategoryIds().length;
+                                    return (
+                                        <div className={`px-3 py-1.5 rounded-xl border text-xs font-mono font-bold flex items-center gap-1.5 shrink-0 ${
+                                            isClosed 
+                                                ? 'bg-rose-50 border-rose-200 text-rose-700' 
+                                                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                                        }`}>
+                                            <span className={`w-2 h-2 rounded-full ${isClosed ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                                            <span>{isClosed ? `ครัวปิด (${closedCount} หมวดซ่อนอยู่)` : 'ครัวเปิดปกติ'}</span>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Cutoff Master Toggle */}
+                                <label className="flex items-center justify-between cursor-pointer">
+                                    <div>
+                                        <span className="block font-bold text-sm text-ink">เปิดใช้งานระบบตัดรอบเวลาปิดครัว</span>
+                                        <span className="text-[10px] text-subInk">เมื่อถึงเวลาปิดครัว จะซ่อนหมวดหมู่อาหารที่เลือกไว้โดยอัตโนมัติ</span>
+                                    </div>
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.qr_kitchen_cutoff_enabled !== 'false'}
+                                        onChange={(e) => handleSave('qr_kitchen_cutoff_enabled', e.target.checked ? 'true' : 'false')}
+                                        className="accent-brandDark w-4 h-4 cursor-pointer"
+                                    />
+                                </label>
+
+                                {/* Kitchen Mode Control */}
+                                <div className="space-y-2 pt-2 border-t border-gray-100">
+                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">
+                                        โหมดสถานะห้องครัว (Kitchen Status Mode)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            { mode: 'auto', label: `Auto (${settings.qr_kitchen_close_time || '22:00'})`, desc: 'ตามเวลาปิดครัว' },
+                                            { mode: 'force_close', label: 'Force Close', desc: 'ปิดครัวทันที' },
+                                            { mode: 'force_open', label: 'Force Open', desc: 'เปิดสั่งตลอด' }
+                                        ].map(({ mode, label, desc }) => (
+                                            <button
+                                                key={mode}
+                                                type="button"
+                                                onClick={() => handleSave('qr_kitchen_mode', mode)}
+                                                className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                    (settings.qr_kitchen_mode || 'auto') === mode
+                                                        ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm ring-2 ring-black/10'
+                                                        : 'bg-canvas border-gray-200 text-gray-700 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                <div className="leading-tight">{label}</div>
+                                                <div className={`text-[9px] mt-0.5 ${(settings.qr_kitchen_mode || 'auto') === mode ? 'text-gray-300' : 'text-subInk'}`}>{desc}</div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Kitchen Close Time Input & Presets */}
+                                <div className="space-y-2 pt-2 border-t border-gray-100">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                                            เวลาปิดครัว (Kitchen Closing Cutoff Time)
+                                        </label>
+                                        <span className="text-[10px] font-mono text-subInk">ค่าเริ่มต้น 22:00 น. (4 ทุ่ม)</span>
+                                    </div>
+
+                                    <div className="flex items-center gap-3">
+                                        <input 
+                                            type="time" 
+                                            value={settings.qr_kitchen_close_time || '22:00'} 
+                                            onChange={(e) => handleSave('qr_kitchen_close_time', e.target.value)} 
+                                            className="w-40 bg-white border border-gray-200 p-2.5 rounded-xl text-sm font-mono font-bold text-gray-900 outline-none focus:border-black shadow-xs" 
+                                        />
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {['21:00', '21:30', '22:00', '22:30', '23:00'].map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => handleSave('qr_kitchen_close_time', t)}
+                                                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-pointer transition-colors ${
+                                                        (settings.qr_kitchen_close_time || '22:00') === t
+                                                            ? 'bg-amber-600 text-white border-amber-600'
+                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                    }`}
+                                                >
+                                                    {t}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Category Selection for Kitchen Cutoff */}
+                                <div className="space-y-3 pt-3 border-t border-gray-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                        <div>
+                                            <span className="block font-bold text-xs text-ink uppercase tracking-wider">
+                                                หมวดหมู่ที่ต้องการซ่อนเมื่อครัวปิด (Cutoff Categories)
+                                            </span>
+                                            <span className="text-[10px] text-subInk">
+                                                ติ๊กเลือกหมวดหมู่ที่จะไม่แสดงใน QR เมื่อครัวปิด (เครื่องดื่ม/บาร์ ไม่ต้องติ๊กเพื่อให้สั่งได้ต่อ)
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectAllKitchenCategories}
+                                                className="px-2 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-[10px] font-bold hover:bg-amber-100 transition-colors cursor-pointer"
+                                                title="เลือกเฉพาะหมวดอาหารครัว ไม่รวมเครื่องดื่ม"
+                                            >
+                                                🍳 เฉพาะครัว
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSelectAllCategoriesForCutoff}
+                                                className="px-2 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-colors cursor-pointer"
+                                            >
+                                                เลือกทั้งหมด
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleClearAllCutoffCategories}
+                                                className="px-2 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg text-[10px] font-bold hover:bg-gray-200 transition-colors cursor-pointer"
+                                            >
+                                                ล้าง
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Category Grid Checklist */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 bg-canvas p-3 rounded-2xl border border-gray-100 max-h-60 overflow-y-auto custom-scrollbar">
+                                        {allCategories.map(cat => {
+                                            const closedIds = getKitchenClosedCategoryIds();
+                                            const isSelected = closedIds.includes(cat.id) || cat.hide_on_kitchen_close === true;
+                                            const isBar = defaultRouteCategory(cat) === 'bar';
+
+                                            return (
+                                                <div 
+                                                    key={cat.id}
+                                                    onClick={() => handleToggleKitchenCutoffCategory(cat.id)}
+                                                    className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 cursor-pointer transition-all ${
+                                                        isSelected 
+                                                            ? 'bg-rose-50/80 border-rose-200 text-rose-900 shadow-2xs' 
+                                                            : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                                                            isSelected ? 'bg-rose-600 border-rose-600 text-white' : 'border-gray-300 bg-white'
+                                                        }`}>
+                                                            {isSelected && <Check size={12} strokeWidth={3} />}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-xs truncate">{cat.name}</div>
+                                                            <div className="flex items-center gap-1 text-[9px] text-subInk font-mono">
+                                                                <span>{isBar ? '☕ Bar/Drink' : '🍳 Kitchen'}</span>
+                                                                {cat.is_drink_stamp_eligible && <span className="text-amber-700 font-bold">· 10F1</span>}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                                                        isSelected 
+                                                            ? 'bg-rose-600 text-white' 
+                                                            : 'bg-gray-100 text-gray-500'
+                                                    }`}>
+                                                        {isSelected ? 'ซ่อนเมื่อปิดครัว' : 'เปิดตลอด'}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

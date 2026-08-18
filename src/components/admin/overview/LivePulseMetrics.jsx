@@ -11,6 +11,7 @@ export default function LivePulseMetrics({
     pendingInboxCount = 0,
     dineInCount = 0,
     pickupCount = 0,
+    paymentBreakdown = null,
     loading = false
 }) {
     const occupancyRate = totalTables > 0 ? Math.round((occupiedTables / totalTables) * 100) : 0
@@ -129,6 +130,26 @@ export default function LivePulseMetrics({
                     <span className="font-bold">{pendingInboxCount > 0 ? 'URGENT' : 'READY'}</span>
                 </div>
             </div>
+
+            {/* Payment Method Quick Breakdown Strip */}
+            {paymentBreakdown && (
+                <div className="col-span-2 lg:col-span-4 bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2.5 rounded-sm flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                    <span className="text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider text-[10px]">
+                        PAYMENT METHOD BREAKDOWN:
+                    </span>
+                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
+                        <span className="text-amber-900 font-bold bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                            เงินสด: ฿{(paymentBreakdown.cash || 0).toLocaleString()}
+                        </span>
+                        <span className="text-emerald-900 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                            PromptPay QR: ฿{(paymentBreakdown.qr || 0).toLocaleString()}
+                        </span>
+                        <span className="text-indigo-900 font-bold bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300">
+                            บัตรเครดิต: ฿{(paymentBreakdown.credit || 0).toLocaleString()}
+                        </span>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

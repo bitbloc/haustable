@@ -89,20 +89,20 @@ export default function CRMFinancialSummary({ data }) {
 
                     <div className="grid grid-cols-2 gap-2.5 md:gap-3">
                         {memberTiers.map((tier, idx) => {
-                            const Icon = tier.icon
+                            const Icon = tier.icon || Crown
                             return (
-                                <div key={idx} className={`p-3 rounded-xl border-2 ${tier.color} space-y-1 shadow-sm`}>
+                                <div key={idx} className={`p-3 rounded-xl border-2 ${tier.color || 'border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)]'} space-y-1 shadow-sm`}>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1 font-black text-xs">
                                             <Icon size={14} />
                                             <span>{tier.name}</span>
                                         </div>
-                                        <span className="font-mono text-[10px] font-black">{tier.members} คน</span>
+                                        <span className="font-mono text-[10px] font-black">{tier.members || 0} คน</span>
                                     </div>
 
                                     <div className="pt-1">
-                                        <div className="font-mono text-base md:text-lg font-black">฿{tier.totalSales.toLocaleString()}</div>
-                                        <div className="font-mono text-[10px] font-bold opacity-80 mt-0.5">เฉลี่ย ฿{tier.avgPerVisit}/ครั้ง</div>
+                                        <div className="font-mono text-base md:text-lg font-black">฿{(tier.totalSales || 0).toLocaleString()}</div>
+                                        <div className="font-mono text-[10px] font-bold opacity-80 mt-0.5">เฉลี่ย ฿{tier.avgPerVisit || 0}/ครั้ง</div>
                                     </div>
                                 </div>
                             )

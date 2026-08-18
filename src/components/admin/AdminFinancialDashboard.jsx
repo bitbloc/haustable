@@ -64,6 +64,21 @@ export default function AdminFinancialDashboard() {
 
     useEffect(() => {
         fetchRealFinancialData()
+
+        // Realtime subscription for instant POS & backoffice financial updates
+        const channel = supabase
+            .channel('financial-dashboard-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchRealFinancialData()
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
+                fetchRealFinancialData()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [filterMode, selectedDate, selectedMonth, selectedYear])
 
     const fetchRealFinancialData = async () => {
@@ -76,7 +91,7 @@ export default function AdminFinancialDashboard() {
             } else if (filterMode === 'month') {
                 startIso = `${selectedMonth}-01T00:00:00+07:00`
                 const [y, m] = selectedMonth.split('-')
-                const lastDay = new Date(parseInt(y), parseInt(m), 0).getDate()
+                const lastDay = String(new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate()).padStart(2, '0')
                 endIso = `${selectedMonth}-${lastDay}T23:59:59+07:00`
             } else {
                 startIso = `${selectedYear}-01-01T00:00:00+07:00`
@@ -89,6 +104,7 @@ export default function AdminFinancialDashboard() {
                 .select(`
                     id,
                     booking_time,
+                    created_at,
                     total_price,
                     total_amount,
                     status,
@@ -97,12 +113,14 @@ export default function AdminFinancialDashboard() {
                     booking_type,
                     payment_slip_url,
                     staff_remark,
+                    customer_note,
                     user_id,
                     profiles (
                         id,
                         display_name,
-                        role,
-                        phone
+                        nickname,
+                        phone_number,
+                        current_tier
                     ),
                     order_items (
                         id,
@@ -125,9 +143,9 @@ export default function AdminFinancialDashboard() {
 
             if (bErr) throw bErr
 
-            // Filter for valid revenue-generating orders (completed / confirmed)
+            // Filter for valid revenue-generating orders (completed / confirmed / paid)
             const validOrders = (bookingsData || []).filter(b => 
-                ['completed', 'confirmed', 'paid', 'success'].includes(b.status)
+                ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
             )
 
             if (!validOrders || validOrders.length === 0) {
@@ -208,12 +226,31 @@ export default function AdminFinancialDashboard() {
                     largeCount++; largeRev += amount
                 }
 
-                // Payment Method detection
-                if (remark.includes('credit') || remark.includes('บัตร')) {
+                // Payment Method detection (using accurate split parsing & remark detection)
+                const isRemarkCredit = remark.includes('credit') || remark.includes('card') || remark.includes('บัตร')
+                const isRemarkQr = b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')
+                const isRemarkWallet = remark.includes('wallet')
+
+                // Check split annotation
+                const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i)
+                if (splitMatch) {
+                    const splitText = splitMatch[1]
+                    let spCash = 0, spQr = 0, spCredit = 0
+                    const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i)
+                    if (cashM) spCash = parseFloat(cashM[1]) || 0
+                    const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i)
+                    if (qrM) spQr = parseFloat(qrM[1]) || 0
+                    const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i)
+                    if (creditM) spCredit = parseFloat(creditM[1]) || 0
+
+                    if (spCash > 0) { cashAmt += spCash; cashCount++ }
+                    if (spQr > 0) { promptpayAmt += spQr; promptpayCount++ }
+                    if (spCredit > 0) { creditAmt += spCredit; creditCount++ }
+                } else if (isRemarkCredit) {
                     creditAmt += amount; creditCount++
-                } else if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+                } else if (isRemarkQr) {
                     promptpayAmt += amount; promptpayCount++
-                } else if (remark.includes('wallet')) {
+                } else if (isRemarkWallet) {
                     walletAmt += amount; walletCount++
                 } else {
                     cashAmt += amount; cashCount++
@@ -230,8 +267,8 @@ export default function AdminFinancialDashboard() {
                 // CRM Member tracking
                 if (b.user_id && b.profiles) {
                     memberSales += amount; memberCount++
-                    const name = b.profiles.display_name || 'Member'
-                    const tier = b.profiles.role || 'Member'
+                    const name = b.profiles.display_name || b.profiles.nickname || 'Member'
+                    const tier = b.profiles.current_tier || 'Member'
                     if (!spenderMap[b.user_id]) {
                         spenderMap[b.user_id] = { name, tier, totalLtv: 0, visits: 0 }
                     }
@@ -506,7 +543,20 @@ export default function AdminFinancialDashboard() {
                     </div>
 
                     {/* Export / Compare Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1 sm:pt-0">
+                    <div className="flex items-center gap-2 pt-1 sm:pt-0 flex-wrap">
+                        <button
+                            onClick={() => {
+                                fetchRealFinancialData()
+                                toast.success('อัพเดทข้อมูลการเงินล่าสุดแล้ว')
+                            }}
+                            disabled={loading}
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
+                            title="รีเฟรชข้อมูลการเงินจริง"
+                        >
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            <span>รีเฟรช</span>
+                        </button>
+
                         <button
                             onClick={() => setCompareWithPrev(!compareWithPrev)}
                             className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs transition-all border-2 min-h-[42px] ${
@@ -529,7 +579,7 @@ export default function AdminFinancialDashboard() {
 
                         <button
                             onClick={handleExportReport}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[oklch(18%_0.012_28)] text-white hover:bg-[oklch(52%_0.16_28)] rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
+                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border-2 border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-gray-50 rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
                         >
                             <Download size={16} />
                             <span>ส่งออก</span>
@@ -616,7 +666,7 @@ export default function AdminFinancialDashboard() {
                                 วันนี้
                             </button>
                             <button
-                                onClick={() => { setFilterMode('month'); setSelectedMonth('2026-07'); }}
+                                onClick={() => { setFilterMode('month'); setSelectedMonth(getCurrentBangkokMonth()); }}
                                 className="px-2.5 py-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-lg hover:bg-gray-50 active:bg-gray-100"
                             >
                                 เดือนนี้
