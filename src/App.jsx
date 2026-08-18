@@ -135,6 +135,9 @@ function App() {
 
             <Route path="/arcade" element={<ArcadeLobby />} />
             <Route path="/arcade/claim" element={<ArcadeClaim />} />
+            <Route path="/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
+            <Route path="/arcade/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
+            <Route path="/arcade/tai-pla" element={<Navigate to="/arcade?tab=tai_pla" replace />} />
 
             {/* Routes requiring Booking Context */}
             <Route element={<BookingProviderLayout />}>

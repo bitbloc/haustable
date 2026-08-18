@@ -25,7 +25,12 @@ export default function ArcadeLobby() {
   const [activeTableName, setActiveTableName] = useState('');
 
   const [leaderboard, setLeaderboard] = useState([]);
-  const [activeTab, setActiveTab] = useState('game'); // 'game' | 'sator_chill'
+  const queryTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (queryTab === 'lofi' || queryTab === 'chill') return 'lofi';
+    if (queryTab === 'tai_pla' || queryTab === 'sator_chill') return 'tai_pla';
+    return 'game';
+  });
   const [loading, setLoading] = useState(true);
 
   // Authentication & Claiming states
@@ -53,16 +58,23 @@ export default function ArcadeLobby() {
   const [guestName, setGuestName] = useState('');
   const [isSubmittingGuest, setIsSubmittingGuest] = useState(false);
 
-  // --- Sator Chill Audio & Headphone Guidance States ---
+  // --- Lo-Fi Lounge Audio & Sleep Timer States ---
   const [chillPlaying, setChillPlaying] = useState(false);
   const [chillVolume, setChillVolume] = useState(0.5);
-  const [chillPreset, setChillPreset] = useState('sunset'); // 'sunset' | 'rain' | 'riverside'
+  const [noiseVolume, setNoiseVolume] = useState(0.4);
+  const [chordVolume, setChordVolume] = useState(0.6);
+  const [chillPreset, setChillPreset] = useState('sunset'); // 'sunset' | 'rain' | 'cafe' | 'campfire'
   const [hasHeadphonesConfirmed, setHasHeadphonesConfirmed] = useState(false);
   const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
+  const [sleepMinutes, setSleepMinutes] = useState(0); // 0 = off, 15, 30, 45
+  const [sleepSecondsLeft, setSleepSecondsLeft] = useState(0);
 
   const audioCtxRef = useRef(null);
   const noiseNodeRef = useRef(null);
+  const chordGainRef = useRef(null);
   const synthIntervalRef = useRef(null);
+  const lofiCanvasRef = useRef(null);
+  const lofiAnimRef = useRef(null);
 
   const SHOP_LAT = 17.39008981227407;
   const SHOP_LNG = 104.79292770946343;
@@ -527,7 +539,62 @@ export default function ArcadeLobby() {
     }
   };
 
-  // --- Sator Chill Web Audio Synthesizer ---
+  // --- Lo-Fi Lounge Web Audio Synthesizer Presets ---
+  const CHILL_PRESETS = {
+    sunset: {
+      id: 'sunset',
+      name: 'ริมโขงนครพนม (Sunset)',
+      desc: 'เสียงคลื่นน้ำริมฝั่งโขง & คอร์ด Lo-Fi อบอุ่นยามเย็น',
+      filterFreq: 420,
+      noiseGain: 0.28,
+      chords: [
+        [261.63, 329.63, 392.00, 493.88], // Cmaj7
+        [220.00, 261.63, 329.63, 392.00], // Am7
+        [174.61, 220.00, 261.63, 329.63], // Fmaj7
+        [196.00, 246.94, 293.66, 349.23]  // G7
+      ]
+    },
+    rain: {
+      id: 'rain',
+      name: 'สายฝนริมหน้าต่าง (Rain)',
+      desc: 'เสียงหยาดฝนกระทบกระจก & เมโลดี้เปียโนแสนสงบ',
+      filterFreq: 1100,
+      noiseGain: 0.32,
+      chords: [
+        [293.66, 349.23, 440.00, 523.25], // Dm7
+        [329.63, 392.00, 493.88, 587.33], // Em7
+        [349.23, 440.00, 523.25, 659.25], // Fmaj7
+        [440.00, 523.25, 659.25, 783.99]  // Am7
+      ]
+    },
+    cafe: {
+      id: 'cafe',
+      name: 'คาเฟ่ในบ้าน (Cafe Vinyl)',
+      desc: 'บรรยากาศแผ่นเสียงไวนิล & คอร์ดแจ๊ส Neo-Soul',
+      filterFreq: 620,
+      noiseGain: 0.22,
+      chords: [
+        [329.63, 415.30, 493.88, 622.25], // Emaj7
+        [415.30, 493.88, 622.25, 739.99], // G#m7
+        [277.18, 329.63, 415.30, 493.88], // C#m7
+        [369.99, 440.00, 554.37, 659.25]  // F#m7
+      ]
+    },
+    campfire: {
+      id: 'campfire',
+      name: 'แคมป์ไฟริมหาด (Campfire)',
+      desc: 'เสียงลมโขงและสะเก็ดไฟ ผ่อนคลายคลายกังวล',
+      filterFreq: 340,
+      noiseGain: 0.26,
+      chords: [
+        [293.66, 369.99, 440.00, 587.33], // Dsus2
+        [220.00, 293.66, 329.63, 440.00], // Asus4
+        [196.00, 246.94, 293.66, 392.00], // Gsus2
+        [246.94, 293.66, 369.99, 440.00]  // Bm7
+      ]
+    }
+  };
+
   const handlePlayClick = () => {
     if (chillPlaying) {
       stopChillAudio();
@@ -557,6 +624,8 @@ export default function ArcadeLobby() {
         ctx.resume();
       }
 
+      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.sunset;
+
       // River / Ambient Pink Noise Buffer
       const bufferSize = ctx.sampleRate * 2;
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
@@ -580,10 +649,10 @@ export default function ArcadeLobby() {
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = chillPreset === 'rain' ? 1200 : 420;
+      filter.frequency.value = preset.filterFreq;
 
       const gain = ctx.createGain();
-      gain.gain.value = chillVolume * 0.32;
+      gain.gain.value = chillVolume * noiseVolume * preset.noiseGain;
 
       noise.connect(filter);
       filter.connect(gain);
@@ -593,24 +662,19 @@ export default function ArcadeLobby() {
       noiseNodeRef.current = { noise, gain, filter };
 
       // Chime / Mellow Lo-Fi Chords
-      const chords = [
-        [261.63, 329.63, 392.00, 493.88], // Cmaj7
-        [220.00, 261.63, 329.63, 392.00], // Am7
-        [174.61, 220.00, 261.63, 329.63], // Fmaj7
-        [196.00, 246.94, 293.66, 349.23]  // G7
-      ];
+      const chords = preset.chords;
       let chordIndex = 0;
 
       const playChordNote = (freq, delay = 0) => {
         if (!audioCtxRef.current) return;
         const osc = ctx.createOscillator();
         const noteGain = ctx.createGain();
-        osc.type = 'triangle';
+        osc.type = chillPreset === 'cafe' ? 'sine' : 'triangle';
         osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
 
         noteGain.gain.setValueAtTime(0, ctx.currentTime + delay);
-        noteGain.gain.linearRampToValueAtTime(chillVolume * 0.08, ctx.currentTime + delay + 0.1);
-        noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 2.8);
+        noteGain.gain.linearRampToValueAtTime(chillVolume * chordVolume * 0.10, ctx.currentTime + delay + 0.12);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 2.9);
 
         osc.connect(noteGain);
         noteGain.connect(ctx.destination);
@@ -647,6 +711,182 @@ export default function ArcadeLobby() {
     }
     setChillPlaying(false);
   };
+
+  // Sleep Timer countdown
+  useEffect(() => {
+    if (sleepMinutes <= 0) {
+      setSleepSecondsLeft(0);
+      return;
+    }
+    setSleepSecondsLeft(sleepMinutes * 60);
+  }, [sleepMinutes]);
+
+  useEffect(() => {
+    if (!chillPlaying || sleepSecondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setSleepSecondsLeft((prev) => {
+        if (prev <= 1) {
+          stopChillAudio();
+          setSleepMinutes(0);
+          toast.info('⏰ ตัวตั้งเวลา Lo-Fi สิ้นสุดแล้ว ขอให้ผ่อนคลายอย่างมีความสุขครับ');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [chillPlaying, sleepSecondsLeft]);
+
+  // Pixel Visualizer Canvas for Lo-Fi Lounge
+  useEffect(() => {
+    if (activeTab !== 'lofi') return;
+    const canvas = lofiCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let frame = 0;
+
+    const renderLofi = () => {
+      frame++;
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Sky Background gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+      if (chillPreset === 'rain') {
+        skyGrad.addColorStop(0, '#334155');
+        skyGrad.addColorStop(1, '#64748b');
+      } else if (chillPreset === 'campfire') {
+        skyGrad.addColorStop(0, '#1e1b4b');
+        skyGrad.addColorStop(1, '#431407');
+      } else if (chillPreset === 'cafe') {
+        skyGrad.addColorStop(0, '#78350f');
+        skyGrad.addColorStop(1, '#fed7aa');
+      } else {
+        skyGrad.addColorStop(0, '#ea580c');
+        skyGrad.addColorStop(0.6, '#f97316');
+        skyGrad.addColorStop(1, '#fde047');
+      }
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Distant Lao Mountains
+      ctx.fillStyle = chillPreset === 'rain' ? '#1e293b' : (chillPreset === 'campfire' ? '#172554' : '#7c2d12');
+      ctx.beginPath();
+      ctx.moveTo(0, h - 50);
+      for (let x = 0; x <= w; x += 15) {
+        const peak = Math.sin(x * 0.02) * 16 + Math.cos(x * 0.01) * 8;
+        ctx.lineTo(x, h - 55 - peak);
+      }
+      ctx.lineTo(w, h - 30);
+      ctx.lineTo(0, h - 30);
+      ctx.closePath();
+      ctx.fill();
+
+      // Mekong River Water
+      const riverGrad = ctx.createLinearGradient(0, h - 45, 0, h);
+      riverGrad.addColorStop(0, '#0284c7');
+      riverGrad.addColorStop(1, '#0369a1');
+      ctx.fillStyle = riverGrad;
+      ctx.fillRect(0, h - 45, w, 45);
+
+      // Water Shimmer ripples
+      ctx.fillStyle = '#bae6fd';
+      for (let i = 0; i < 6; i++) {
+        const rx = ((frame * (1 + i * 0.3) * 1.5) + i * 80) % (w + 40) - 20;
+        const ry = h - 38 + (i * 6);
+        ctx.fillRect(rx, ry, 28, 2);
+      }
+
+      // Wooden Balcony Deck
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(0, h - 22, w, 22);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(0, h - 20, w, 3);
+
+      // Balcony Railing
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(20, h - 38, w - 40, 3);
+      for (let bx = 30; bx < w - 30; bx += 35) {
+        ctx.fillRect(bx, h - 38, 3, 16);
+      }
+
+      // Relaxing Calico Cat Sitting at Wooden Table
+      const catX = w / 2 - 30;
+      const catY = h - 22;
+
+      // Table & Coffee Mug
+      ctx.fillStyle = '#9a3412';
+      ctx.fillRect(catX + 28, catY - 14, 26, 14);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(catX + 38, catY - 20, 6, 7);
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(catX + 39, catY - 19, 4, 2);
+
+      // Coffee Steam rising
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      const steamY = ((frame * 1.2) % 25);
+      ctx.fillRect(catX + 40 + Math.sin(frame * 0.1) * 2, catY - 22 - steamY, 2, 3);
+
+      // Relaxing Cat Body
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX, catY - 18, 22, 18);
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(catX + 2, catY - 16, 18, 16);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(catX + 4, catY - 16, 7, 7);
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX + 13, catY - 12, 5, 5);
+
+      // Cat Head & Ears
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX + 6, catY - 26, 14, 12);
+      ctx.fillRect(catX + 6, catY - 30, 4, 5);
+      ctx.fillRect(catX + 16, catY - 30, 4, 5);
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(catX + 8, catY - 24, 10, 9);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(catX + 7, catY - 29, 2, 3);
+
+      // Cat Closed Peaceful Eyes & Cheeks
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX + 10, catY - 21, 3, 1);
+      ctx.fillRect(catX + 15, catY - 21, 3, 1);
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(catX + 8, catY - 19, 2, 2);
+      ctx.fillRect(catX + 17, catY - 19, 2, 2);
+
+      // Floating Music Notes (when playing)
+      if (chillPlaying) {
+        ctx.fillStyle = '#facc15';
+        const note1Y = (frame * 1.5) % 80;
+        const note1X = catX + 15 + Math.sin(frame * 0.08) * 8;
+        ctx.font = '14px Space Mono, monospace';
+        ctx.fillText('♪', note1X, catY - 25 - note1Y);
+
+        const note2Y = ((frame * 1.5) + 40) % 80;
+        const note2X = catX + 35 + Math.cos(frame * 0.08) * 8;
+        ctx.fillText('♫', note2X, catY - 25 - note2Y);
+      }
+
+      // Rain animation if preset is rain
+      if (chillPreset === 'rain') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        for (let r = 0; r < 20; r++) {
+          const rx = (r * 25 + frame * 4) % w;
+          const ry = (r * 15 + frame * 8) % (h - 22);
+          ctx.fillRect(rx, ry, 1, 6);
+        }
+      }
+
+      lofiAnimRef.current = requestAnimationFrame(renderLofi);
+    };
+
+    lofiAnimRef.current = requestAnimationFrame(renderLofi);
+    return () => {
+      if (lofiAnimRef.current) cancelAnimationFrame(lofiAnimRef.current);
+    };
+  }, [activeTab, chillPlaying, chillPreset]);
 
   useEffect(() => {
     return () => {
@@ -741,7 +981,7 @@ export default function ArcadeLobby() {
         <div className="flex bg-[var(--color-paper-3)] p-0.5 rounded-[4px] border border-[var(--color-rule)] gap-1">
           <button
             onClick={() => setActiveTab('game')}
-            className={`btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer ${
+            className={`btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${
               activeTab === 'game' 
                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-sm' 
                 : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
@@ -752,15 +992,27 @@ export default function ArcadeLobby() {
           </button>
 
           <button
-            onClick={() => setActiveTab('sator_chill')}
-            className={`btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'sator_chill' 
+            onClick={() => setActiveTab('tai_pla')}
+            className={`btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${
+              activeTab === 'tai_pla' || activeTab === 'sator_chill'
                 ? 'bg-[oklch(52%_0.16_28)] text-white shadow-sm' 
                 : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
             }`}
           >
             <Sparkles className="w-3 h-3 text-amber-300" />
-            <span>TAI-PLA CHILL (น้องไตปลา)</span>
+            <span>TAI-PLA RUN (น้องไตปลา)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('lofi')}
+            className={`btn-tab px-3.5 py-1.5 rounded-[3px] text-[9px] font-bold font-mono uppercase tracking-wider flex items-center gap-1.5 cursor-pointer transition-all ${
+              activeTab === 'lofi'
+                ? 'bg-amber-700 text-white shadow-sm' 
+                : 'text-[var(--color-ink-2)] hover:text-[var(--color-ink)]'
+            }`}
+          >
+            <Headphones className="w-3 h-3 text-amber-200" />
+            <span>LO-FI LOUNGE (มุมริมโขง)</span>
           </button>
         </div>
 
@@ -787,7 +1039,7 @@ export default function ArcadeLobby() {
       <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 z-10 flex flex-col justify-center">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full items-start">
           
-          {/* Column 1: Game Cabinet / Sator Chill (Left Column, spans 7 on lg) */}
+          {/* Column 1: Game Cabinet / Sator Chill / Lo-Fi Lounge (Left Column, spans 7 on lg) */}
           <div className={`lg:col-span-7 flex flex-col bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg p-5 sm:p-6 relative shadow-sm transition-all duration-200 ${isGameFullscreen ? 'z-[999]' : 'overflow-hidden'}`}>
             
             {/* Mode 1: Flappy Cat Game */}
@@ -825,13 +1077,22 @@ export default function ArcadeLobby() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => setActiveTab('sator_chill')}
-                    className="flex items-center gap-1 text-[10px] text-[oklch(52%_0.16_28)] hover:underline font-mono font-bold cursor-pointer"
-                  >
-                    <span>ลอง TAI-PLA CHILL</span>
-                    <ChevronRight size={12} />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setActiveTab('tai_pla')}
+                      className="flex items-center gap-1 text-[10px] text-[oklch(52%_0.16_28)] hover:underline font-mono font-bold cursor-pointer"
+                    >
+                      <span>TAI-PLA RUN</span>
+                      <ChevronRight size={12} />
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('lofi')}
+                      className="flex items-center gap-1 text-[10px] text-amber-700 hover:underline font-mono font-bold cursor-pointer"
+                    >
+                      <span>LO-FI LOUNGE</span>
+                      <ChevronRight size={12} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-4 text-center text-[10px] text-[var(--color-ink-2)] font-mono leading-relaxed max-w-sm border-t border-dashed border-[var(--color-rule)] w-full pt-3">
@@ -840,11 +1101,11 @@ export default function ArcadeLobby() {
               </div>
             )}
 
-            {/* Mode 2: Sator & Tai-Pla Chill (Nakhon Phanom x Southern Thai Fusion) */}
-            {activeTab === 'sator_chill' && (
+            {/* Mode 2: Tai-Pla Run Mini Game */}
+            {(activeTab === 'tai_pla' || activeTab === 'sator_chill') && (
               <div className="w-full flex flex-col gap-6">
                 
-                {/* Header Lounge Banner (Clean Light Style) */}
+                {/* Header Lounge Banner */}
                 <div className="bg-white border border-[var(--color-rule)] p-5 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
                   <div>
                     <div className="flex items-center gap-2">
@@ -862,7 +1123,7 @@ export default function ArcadeLobby() {
                   </div>
                 </div>
 
-                {/* Playable Mini-Game Prototype (Clean & Fullscreen Capable) */}
+                {/* Playable Mini-Game */}
                 <TaiPlaMiniGame 
                   session={session}
                   onClaimScore={handleClaimScore}
@@ -875,74 +1136,7 @@ export default function ArcadeLobby() {
                   }}
                 />
 
-                {/* Headphone Recommended Banner */}
-                <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(82%_0.08_28)] rounded-md p-4 flex items-center justify-between gap-3 shadow-2xs">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] flex items-center justify-center shrink-0">
-                      <Headphones size={20} />
-                    </div>
-                    <div>
-                      <h4 className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
-                        🎧 แนะนำให้ใส่หูฟังเพื่อมิติเสียงที่ดีที่สุด
-                      </h4>
-                      <p className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
-                        ระบบเสียงสังเคราะห์ Binaural Ambient คลื่นน้ำริมฝั่งโขงและคอร์ด Lo-Fi ชิลล์ๆ
-                      </p>
-                    </div>
-                  </div>
-                  {hasHeadphonesConfirmed && (
-                    <span className="font-mono text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold shrink-0">
-                      HEADPHONES READY
-                    </span>
-                  )}
-                </div>
-
-                {/* Lo-Fi Ambient Synthesizer Box */}
-                <div className="bg-white border border-[var(--color-rule)] rounded-md p-5 flex flex-col gap-4 shadow-2xs">
-                  <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
-                    <div className="flex items-center gap-2">
-                      <Volume2 className="w-4 h-4 text-[oklch(52%_0.16_28)]" />
-                      <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                        Lo-Fi Ambient Sound Generator
-                      </span>
-                    </div>
-                    <span className="font-mono text-[10px] text-[var(--color-muted)] font-bold">
-                      {chillPlaying ? '● PLAYING LIVE' : '○ MUTED'}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <button
-                      onClick={handlePlayClick}
-                      className={`w-full sm:w-auto px-5 py-2.5 rounded-sm font-mono text-xs font-bold uppercase flex items-center justify-center gap-2 cursor-pointer shadow-sm transition-all ${
-                        chillPlaying 
-                          ? 'bg-[oklch(18%_0.012_28)] text-white' 
-                          : 'bg-[oklch(52%_0.16_28)] text-white hover:bg-[oklch(45%_0.16_28)]'
-                      }`}
-                    >
-                      {chillPlaying ? <Pause size={14} /> : <Play size={14} />}
-                      <span>{chillPlaying ? 'PAUSE AMBIENT' : 'PLAY LO-FI AMBIENT'}</span>
-                    </button>
-
-                    {/* Sound Preset Switcher */}
-                    <div className="flex bg-[var(--color-paper-2)] p-1 rounded-sm border border-[var(--color-rule)] font-mono text-[10px] gap-1 w-full sm:w-auto justify-center">
-                      <button
-                        onClick={() => { setChillPreset('sunset'); if (chillPlaying) { stopChillAudio(); setTimeout(startChillAudio, 50); } }}
-                        className={`px-3 py-1 rounded-sm font-bold uppercase transition-all ${chillPreset === 'sunset' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-zinc-500'}`}
-                      >
-                        ริมโขงนครพนม (Sunset)
-                      </button>
-                      <button
-                        onClick={() => { setChillPreset('rain'); if (chillPlaying) { stopChillAudio(); setTimeout(startChillAudio, 50); } }}
-                        className={`px-3 py-1 rounded-sm font-bold uppercase transition-all ${chillPreset === 'rain' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs' : 'text-zinc-500'}`}
-                      >
-                        สายฝนริมน้ำ (Rain)
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Storyline & Game Modes Plan (Clean Light Style) */}
+                {/* Storyline & Roadmap */}
                 <div className="bg-white border border-[var(--color-rule)] p-6 rounded-lg flex flex-col gap-4 shadow-2xs">
                   <div className="border-b border-[var(--color-rule)] pb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -991,6 +1185,187 @@ export default function ArcadeLobby() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+              </div>
+            )}
+
+            {/* Mode 3: Dedicated Lo-Fi Lounge & Soundscapes */}
+            {activeTab === 'lofi' && (
+              <div className="w-full flex flex-col gap-6">
+                
+                {/* Header Banner */}
+                <div className="bg-white border border-[var(--color-rule)] p-5 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[9px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-sm border border-amber-300">
+                        BINAURAL LO-FI SOUNDSCAPE
+                      </span>
+                      <span className={`w-2 h-2 rounded-full ${chillPlaying ? 'bg-emerald-500 animate-ping' : 'bg-neutral-300'}`}></span>
+                    </div>
+                    <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)] mt-1">
+                      HAUS LO-FI LOUNGE ริมฝั่งโขง
+                    </h2>
+                    <p className="text-xs text-[oklch(45%_0.010_28)] font-sans mt-0.5">
+                      มุมพักผ่อนฟังเสียงคลื่นน้ำริมแม่น้ำโขง คอร์ดเปียโน Lo-Fi และเสียงฝนตกชิลล์ๆ ระหว่างรออาหาร
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 font-mono text-xs">
+                    <span className="px-2.5 py-1 bg-amber-50 text-amber-900 border border-amber-200 rounded font-bold">
+                      {chillPlaying ? '● ON AIR' : '○ STANDBY'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Animated Pixel Visualizer */}
+                <div className="w-full bg-[#1b1c1e] p-2 rounded-lg border border-[#2d2e30] shadow-md overflow-hidden flex flex-col items-center">
+                  <div className="w-full max-w-[560px] aspect-[16/6] bg-black rounded overflow-hidden">
+                    <canvas 
+                      ref={lofiCanvasRef} 
+                      width={560} 
+                      height={210} 
+                      className="w-full h-full block" 
+                      style={{ imageRendering: 'pixelated' }} 
+                    />
+                  </div>
+                </div>
+
+                {/* Headphone Recommended Banner */}
+                <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(82%_0.08_28)] rounded-md p-4 flex items-center justify-between gap-3 shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] flex items-center justify-center shrink-0">
+                      <Headphones size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                        🎧 แนะนำให้ใส่หูฟังเพื่อมิติเสียงที่ดีที่สุด
+                      </h4>
+                      <p className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
+                        ระบบเสียงสังเคราะห์ Binaural Ambient คลื่นน้ำริมฝั่งโขงและคอร์ด Lo-Fi ชิลล์ๆ
+                      </p>
+                    </div>
+                  </div>
+                  {hasHeadphonesConfirmed && (
+                    <span className="font-mono text-[10px] text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded font-bold shrink-0">
+                      HEADPHONES READY
+                    </span>
+                  )}
+                </div>
+
+                {/* Lo-Fi Synthesizer Studio Deck */}
+                <div className="bg-white border border-[var(--color-rule)] rounded-md p-5 flex flex-col gap-5 shadow-2xs font-mono text-xs">
+                  
+                  {/* Master Play and Preset Switcher */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-b border-[var(--color-rule)] pb-4">
+                    <button
+                      onClick={handlePlayClick}
+                      className={`px-6 py-3 rounded-sm font-bold uppercase flex items-center justify-center gap-2.5 cursor-pointer shadow-sm transition-all active:scale-95 ${
+                        chillPlaying 
+                          ? 'bg-[oklch(18%_0.012_28)] text-white' 
+                          : 'bg-amber-600 hover:bg-amber-700 text-white'
+                      }`}
+                    >
+                      {chillPlaying ? <Pause size={16} /> : <Play size={16} />}
+                      <span>{chillPlaying ? 'PAUSE MUSIC / หยุดพัก' : 'PLAY LO-FI / เริ่มเปิดเพลง'}</span>
+                    </button>
+
+                    {/* Presets Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-[var(--color-paper-2)] p-1 rounded-sm border border-[var(--color-rule)] text-[10px]">
+                      {Object.values(CHILL_PRESETS).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { 
+                            setChillPreset(p.id); 
+                            if (chillPlaying) { 
+                              stopChillAudio(); 
+                              setTimeout(startChillAudio, 50); 
+                            } 
+                          }}
+                          className={`px-2.5 py-1.5 rounded-sm font-bold transition-all truncate text-center ${
+                            chillPreset === p.id 
+                              ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs border border-neutral-300' 
+                              : 'text-zinc-500 hover:text-zinc-800'
+                          }`}
+                          title={p.desc}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Volume Sliders & Sleep Timer */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Master / Ambient Volume */}
+                    <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
+                      <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
+                        <span>🌊 AMBIENT NOISE</span>
+                        <span>{Math.round(noiseVolume * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.05"
+                        value={noiseVolume}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setNoiseVolume(val);
+                          if (noiseNodeRef.current) {
+                            const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.sunset;
+                            noiseNodeRef.current.gain.gain.value = chillVolume * val * preset.noiseGain;
+                          }
+                        }}
+                        className="w-full accent-amber-600 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Lo-Fi Chords Volume */}
+                    <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
+                      <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
+                        <span>🎹 LO-FI CHORDS</span>
+                        <span>{Math.round(chordVolume * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.05"
+                        value={chordVolume}
+                        onChange={(e) => setChordVolume(parseFloat(e.target.value))}
+                        className="w-full accent-amber-600 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Sleep Timer */}
+                    <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
+                      <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
+                        <span>⏱️ SLEEP TIMER</span>
+                        <span>
+                          {sleepSecondsLeft > 0 
+                            ? `${Math.floor(sleepSecondsLeft / 60)}:${(sleepSecondsLeft % 60).toString().padStart(2, '0')}` 
+                            : 'OFF'}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 text-[9px]">
+                        {[0, 15, 30, 45].map((m) => (
+                          <button
+                            key={m}
+                            onClick={() => setSleepMinutes(m)}
+                            className={`flex-1 py-1 rounded text-center font-bold ${
+                              sleepMinutes === m 
+                                ? 'bg-amber-600 text-white shadow-2xs' 
+                                : 'bg-white text-zinc-600 border border-neutral-300 hover:bg-neutral-50'
+                            }`}
+                          >
+                            {m === 0 ? 'OFF' : `${m}m`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
 
               </div>

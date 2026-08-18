@@ -1,9 +1,55 @@
-/* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom x Satow God Mode & Flaming Sprinter */
+/* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom x Happiness Fever & Multi-Character */
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, Zap, Flame } from 'lucide-react';
+import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, Zap, Flame, Heart, ChevronRight, User, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
+const CHARACTERS = {
+  tai_pla: {
+    id: 'tai_pla',
+    name: 'น้องไตปลา',
+    title: 'แมวเปรอะริมโขง',
+    icon: '🐱',
+    desc: 'คล่องแคล่วว่องไว • มีสกิล Double Jump กระโดด 2 จังหวะ',
+    trait: 'DOUBLE JUMP (กระโดด 2 จังหวะ)',
+    badgeColor: 'bg-orange-100 text-orange-800 border-orange-300',
+    color: '#f97316',
+    maxJumps: 2,
+    godModeBonus: 0,
+    magnetRadius: 50,
+    jumpPower: -11.0
+  },
+  som_satow: {
+    id: 'som_satow',
+    name: 'พี่ส้มสตอ',
+    title: 'แมวส้มจอมพลัง',
+    icon: '🐈',
+    desc: 'สายพลังหรอยแรง • แปลงร่างเทพสะตอได้นาน 5 วินาที (+2s)',
+    trait: 'EXTENDED GOD MODE (เทพสะตอ 5 วิ)',
+    badgeColor: 'bg-amber-100 text-amber-800 border-amber-300',
+    color: '#ea580c',
+    maxJumps: 1,
+    godModeBonus: 2.0,
+    magnetRadius: 50,
+    jumpPower: -11.5
+  },
+  khao_lam: {
+    id: 'khao_lam',
+    name: 'เจ้าตูบข้าวหลาม',
+    title: 'หมาน้อยนครพนม',
+    icon: '🐶',
+    desc: 'อารมณ์ดีใจดี • รัศมีแม่เหล็กดูดวัตถุดิบกว้างพิเศษ (Super Magnet)',
+    trait: 'SUPER MAGNET (ดูดอาหารระยะไกล)',
+    badgeColor: 'bg-yellow-100 text-yellow-900 border-yellow-300',
+    color: '#854d0e',
+    maxJumps: 1,
+    godModeBonus: 0,
+    magnetRadius: 82,
+    jumpPower: -10.8
+  }
+};
+
 export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned }) {
+  const [selectedCharId, setSelectedCharId] = useState('tai_pla');
   const [gameState, setGameState] = useState('idle'); // 'idle' | 'playing' | 'gameover'
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(() => {
@@ -13,6 +59,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [completedPots, setCompletedPots] = useState(0);
   const [earnedXhaus, setEarnedXhaus] = useState(0);
   const [godModeRemaining, setGodModeRemaining] = useState(0);
+  const [happiness, setHappiness] = useState(0); // 0 to 100%
+  const [isFeverActive, setIsFeverActive] = useState(false);
+  const [feverRemaining, setFeverRemaining] = useState(0);
+  const [currentSpicyTier, setCurrentSpicyTier] = useState(1); // 1: เผ็ดอนุบาล, 2: เผ็ดปากเปิด, 3: เผ็ดหูดับตับไหม้
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -20,15 +70,23 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const animationFrameRef = useRef(null);
   const audioCtxRef = useRef(null);
 
+  const activeChar = CHARACTERS[selectedCharId] || CHARACTERS.tai_pla;
+
   // Smooth Game Physics & Engine References
   const gameRef = useRef({
+    charId: 'tai_pla',
     catX: 75,
     catY: 185,
     catVy: 0,
     isGrounded: true,
+    jumpCount: 0,
+    maxJumps: 2,
     coyoteTimer: 0,
     jumpBufferTimer: 0,
-    godModeTimer: 0, // 3 seconds invincibility upon collecting satow
+    godModeTimer: 0,
+    godModeDuration: 3.0,
+    feverTimer: 0,
+    happiness: 0,
     score: 0,
     distanceRun: 0,
     lastDistanceScore: 0,
@@ -41,7 +99,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     speed: 3.6,
     frame: 0,
     scaleX: 1.0,
-    scaleY: 1.0
+    scaleY: 1.0,
+    magnetRadius: 50,
+    spicyTier: 1
   });
 
   // 8-Bit / Retro Chiptune Synthesizer
@@ -67,6 +127,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
         osc.start(now);
         osc.stop(now + 0.13);
+      } else if (type === 'double_jump') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(520, now);
+        osc.frequency.exponentialRampToValueAtTime(1040, now + 0.14);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+        osc.start(now);
+        osc.stop(now + 0.15);
       } else if (type === 'collect') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(587.33, now); // D5
@@ -87,6 +155,18 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
         osc.start(now);
         osc.stop(now + 0.36);
+      } else if (type === 'fever_start') {
+        // Happy Fever Time Arpeggio
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
+        osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
+        osc.frequency.setValueAtTime(1318.51, now + 0.24); // E6
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+        osc.start(now);
+        osc.stop(now + 0.45);
       } else if (type === 'smash') {
         // Enemy smash hit in God Mode
         osc.type = 'sawtooth';
@@ -102,10 +182,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
         osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
         osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
-        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.setValueAtTime(0.14, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
         osc.start(now);
         osc.stop(now + 0.30);
+      } else if (type === 'meow') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(700, now);
+        osc.frequency.exponentialRampToValueAtTime(1100, now + 0.08);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.18);
+        gain.gain.setValueAtTime(0.10, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.22);
       } else if (type === 'hit') {
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(260, now);
@@ -119,20 +208,32 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   };
 
   const startGame = () => {
+    const char = CHARACTERS[selectedCharId] || CHARACTERS.tai_pla;
     setGameState('playing');
     setScore(0);
     setPotIngredients({ fish: 0, satow: 0, bamboo: 0 });
     setCompletedPots(0);
     setEarnedXhaus(0);
     setGodModeRemaining(0);
+    setHappiness(0);
+    setIsFeverActive(false);
+    setFeverRemaining(0);
+    setCurrentSpicyTier(1);
+
     gameRef.current = {
+      charId: char.id,
       catX: 75,
       catY: 185,
       catVy: 0,
       isGrounded: true,
+      jumpCount: 0,
+      maxJumps: char.maxJumps,
       coyoteTimer: 0,
       jumpBufferTimer: 0,
       godModeTimer: 0,
+      godModeDuration: 3.0 + (char.godModeBonus || 0),
+      feverTimer: 0,
+      happiness: 0,
       score: 0,
       distanceRun: 0,
       lastDistanceScore: 0,
@@ -145,11 +246,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       speed: 3.6,
       frame: 0,
       scaleX: 1.0,
-      scaleY: 1.0
+      scaleY: 1.0,
+      magnetRadius: char.magnetRadius,
+      spicyTier: 1
     };
+
+    playRetroSound('meow');
   };
 
-  // Ultra-Smooth Jump with Coyote Time & Jump Buffering
+  // Ultra-Smooth Jump with Double Jump & Coyote Time
   const handleJumpPress = () => {
     if (gameState !== 'playing') {
       if (gameState === 'idle' || gameState === 'gameover') {
@@ -159,24 +264,58 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     }
 
     const g = gameRef.current;
+    const char = CHARACTERS[g.charId] || CHARACTERS.tai_pla;
+
+    // Ground jump
     if (g.isGrounded || g.coyoteTimer > 0) {
-      g.catVy = -11.0;
+      g.catVy = char.jumpPower || -11.0;
       g.isGrounded = false;
+      g.jumpCount = 1;
       g.coyoteTimer = 0;
       g.scaleX = 0.85;
       g.scaleY = 1.25;
       playRetroSound('jump');
 
       // Sparkle / Dust particles on jump
-      for (let i = 0; i < 4; i++) {
+      for (let i = 0; i < 5; i++) {
         g.particles.push({
           x: g.catX + 14 + (Math.random() * 10 - 5),
           y: g.groundY + 2,
           vx: (Math.random() - 0.7) * 2,
           vy: -Math.random() * 2,
           size: Math.random() * 4 + 2,
-          color: g.godModeTimer > 0 ? '#eab308' : '#fbbf24',
+          color: g.feverTimer > 0 ? '#fde047' : (g.godModeTimer > 0 ? '#eab308' : '#fbbf24'),
           life: 0.7
+        });
+      }
+    } 
+    // Double jump in mid-air (if character supports maxJumps >= 2)
+    else if (g.jumpCount < g.maxJumps) {
+      g.catVy = -9.8;
+      g.jumpCount += 1;
+      g.scaleX = 0.8;
+      g.scaleY = 1.3;
+      playRetroSound('double_jump');
+
+      g.floatingTexts.push({
+        x: g.catX + 8,
+        y: g.catY - 26,
+        text: '✨ DOUBLE JUMP!',
+        color: '#38bdf8',
+        life: 0.9
+      });
+
+      // Ring of spin sparkles for mid-air flip
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * Math.PI * 2;
+        g.particles.push({
+          x: g.catX + 16 + Math.cos(angle) * 12,
+          y: g.catY - 10 + Math.sin(angle) * 12,
+          vx: Math.cos(angle) * 3,
+          vy: Math.sin(angle) * 3,
+          size: 3,
+          color: '#38bdf8',
+          life: 0.6
         });
       }
     } else {
@@ -195,7 +334,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, isFullscreen]);
+  }, [gameState, isFullscreen, selectedCharId]);
 
   // Main Canvas Render & Physics Loop
   useEffect(() => {
@@ -214,7 +353,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.frame++;
       g.distanceRun += g.speed * 1.0;
 
-      // 1. God Mode Timer (เทพสะตอ 3 วินาที)
+      // 1. God Mode Timer
       if (g.godModeTimer > 0) {
         g.godModeTimer = Math.max(0, g.godModeTimer - dt);
         setGodModeRemaining(Math.ceil(g.godModeTimer));
@@ -222,20 +361,80 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         setGodModeRemaining(0);
       }
 
-      // Distance Milestone Score (+1 point every 150px run)
-      if (g.distanceRun - g.lastDistanceScore >= 150) {
-        g.lastDistanceScore = g.distanceRun;
-        g.score += 1;
-        setScore(g.score);
+      // 2. Happy Fever Mode Timer (8 seconds of 2x Multiplier + Golden Joy)
+      if (g.feverTimer > 0) {
+        g.feverTimer = Math.max(0, g.feverTimer - dt);
+        setIsFeverActive(true);
+        setFeverRemaining(Math.ceil(g.feverTimer));
+      } else if (isFeverActive) {
+        setIsFeverActive(false);
+        setFeverRemaining(0);
       }
 
-      // 2. Progressive Difficulty Scaling
-      // Speed scales gently from 3.6 up to 6.8 max
-      g.speed = Math.min(6.8, 3.6 + Math.floor(g.score / 5) * 0.25);
+      // 3. Distance Milestone Score (+1 point every 140px run, 2x in Fever)
+      if (g.distanceRun - g.lastDistanceScore >= 140) {
+        g.lastDistanceScore = g.distanceRun;
+        const addPts = g.feverTimer > 0 ? 2 : 1;
+        g.score += addPts;
+        setScore(g.score);
 
-      // 3. Platformer Physics (Weighty Arc with Fall Gravity Multiplier)
+        // Slowly build happiness while running smoothly
+        g.happiness = Math.min(100, g.happiness + 1.5);
+        setHappiness(Math.floor(g.happiness));
+      }
+
+      // Check Happiness Meter Trigger for Happy Fever Mode
+      if (g.happiness >= 100 && g.feverTimer <= 0) {
+        g.happiness = 0;
+        g.feverTimer = 8.0;
+        setHappiness(0);
+        setIsFeverActive(true);
+        playRetroSound('fever_start');
+
+        confetti({
+          particleCount: 70,
+          spread: 60,
+          origin: { y: 0.5 },
+          colors: ['#fde047', '#f97316', '#22c55e', '#38bdf8']
+        });
+
+        g.floatingTexts.push({
+          x: g.catX + 10,
+          y: g.catY - 48,
+          text: '🎉 HAPPY FEVER! 2X PTS',
+          color: '#f59e0b',
+          life: 2.0
+        });
+      }
+
+      // 4. Progressive Difficulty & Spicy Tiers Scaling
+      let tier = 1;
+      if (g.score >= 25) {
+        tier = 3;
+        g.speed = Math.min(7.6, 5.8 + Math.floor((g.score - 25) / 6) * 0.3);
+      } else if (g.score >= 10) {
+        tier = 2;
+        g.speed = Math.min(5.6, 4.4 + Math.floor((g.score - 10) / 4) * 0.25);
+      } else {
+        tier = 1;
+        g.speed = Math.min(4.3, 3.6 + Math.floor(g.score / 3) * 0.2);
+      }
+      if (tier !== g.spicyTier) {
+        g.spicyTier = tier;
+        setCurrentSpicyTier(tier);
+        g.floatingTexts.push({
+          x: canvas.width / 2 - 60,
+          y: 60,
+          text: tier === 3 ? '🔥 เผ็ดหูดับตับไหม้! (TIER 3)' : (tier === 2 ? '🌶️ เผ็ดปากเปิด! (TIER 2)' : '🌱 เผ็ดอนุบาล'),
+          color: tier === 3 ? '#ef4444' : '#f97316',
+          life: 1.8
+        });
+      }
+
+      // 5. Platformer Physics
       if (g.isGrounded) {
         g.coyoteTimer = 0.08;
+        g.jumpCount = 0;
       } else {
         g.coyoteTimer = Math.max(0, g.coyoteTimer - dt);
       }
@@ -255,54 +454,56 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           g.scaleX = 1.25;
           g.scaleY = 0.75;
           if (g.jumpBufferTimer > 0) {
-            g.catVy = -11.0;
-            g.jumpBufferTimer = 0;
-            g.isGrounded = false;
-            g.scaleX = 0.85;
-            g.scaleY = 1.25;
-            playRetroSound('jump');
+            handleJumpPress();
           }
         }
         if (g.isGrounded || g.catVy >= 0) {
           g.catY = g.groundY;
           g.catVy = 0;
           g.isGrounded = true;
+          g.jumpCount = 0;
         }
       }
 
-      // 4. Spawn Items & Enemies (Progressive Variety: Hopping Chili + Charging Flaming Man)
+      // 6. Spawn Items & Enemies
       const nowMs = Date.now();
-      const spawnInterval = Math.max(880, 1500 - g.score * 18);
+      const spawnInterval = Math.max(750, 1450 - g.score * 20);
       if (nowMs - g.lastSpawn > spawnInterval) {
         g.lastSpawn = nowMs;
-        const isMonster = Math.random() > 0.45;
+        const isMonster = Math.random() > (g.feverTimer > 0 ? 0.65 : 0.42);
 
         if (isMonster) {
-          // As score increases, spawn "คนหัวร้อน" (Flaming Sprinter)
-          const allowFlamer = g.score >= 5;
           const r = Math.random();
           let monsterType = 'hop_chili';
 
-          if (allowFlamer && r > 0.6) {
-            monsterType = 'hot_runner'; // "คนหัวร้อน" วิ่งสวนมาเร็ว!
-          } else if (r > 0.3) {
-            monsterType = 'hop_chili';
+          if (g.spicyTier >= 2 && r > 0.7) {
+            monsterType = 'hawk'; // 🦅 Flying Hawk
+          } else if (g.spicyTier >= 2 && r > 0.45) {
+            monsterType = 'coconut'; // 🥥 Fast rolling coconut
+          } else if (g.score >= 5 && r > 0.25) {
+            monsterType = 'hot_runner'; // 🔥 Charging flaming man
+          } else if (r > 0.12) {
+            monsterType = 'hop_chili'; // 🌶️ Hopping chili
           } else {
             monsterType = 'run_chili';
           }
 
+          const monY = monsterType === 'hawk' ? g.groundY - 55 : g.groundY;
+          const monW = monsterType === 'hawk' ? 28 : (monsterType === 'hot_runner' ? 26 : (monsterType === 'coconut' ? 20 : 24));
+          const monH = monsterType === 'hawk' ? 20 : (monsterType === 'hot_runner' ? 34 : (monsterType === 'coconut' ? 20 : 28));
+          const speedMul = monsterType === 'hot_runner' ? 1.45 : (monsterType === 'coconut' ? 1.35 : (monsterType === 'hawk' ? 1.2 : 1.0));
+
           g.monsters.push({
             x: canvas.width + 30,
-            y: g.groundY,
+            y: monY,
             type: monsterType,
-            width: monsterType === 'hot_runner' ? 26 : 24,
-            height: monsterType === 'hot_runner' ? 34 : 28,
-            speedMultiplier: monsterType === 'hot_runner' ? 1.45 : 1.0,
+            width: monW,
+            height: monH,
+            speedMultiplier: speedMul,
             animPhase: Math.random() * Math.PI * 2
           });
         } else {
           const r = Math.random();
-          // Satow is special (gives God Mode!)
           const foodType = r > 0.65 ? 'satow' : (r > 0.3 ? 'fish' : 'bamboo');
           g.items.push({
             x: canvas.width + 20,
@@ -314,22 +515,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         }
       }
 
-      // 5. Update Collectible Items (With Magnetic Pull)
+      // 7. Update Collectible Items (With Magnetic Pull)
       g.items.forEach((item, idx) => {
         item.x -= g.speed;
         const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
         const currentItemY = item.y + bob;
 
-        // Magnetic pull toward Cat
         const distCatX = g.catX + 14 - (item.x + 11);
         const distCatY = g.catY - 14 - (currentItemY + 11);
         const dist = Math.hypot(distCatX, distCatY);
-        if (dist < 46) {
-          item.x += distCatX * 0.22;
-          item.y += distCatY * 0.22;
+        if (dist < g.magnetRadius) {
+          const pullSpeed = g.charId === 'khao_lam' ? 0.35 : 0.24;
+          item.x += distCatX * pullSpeed;
+          item.y += distCatY * pullSpeed;
         }
 
-        // Precise AABB Collision Check with Cat
         const catBox = { left: g.catX + 4, right: g.catX + 28, top: g.catY - 24, bottom: g.catY };
         const itemBox = { left: item.x, right: item.x + item.size, top: currentItemY, bottom: currentItemY + item.size };
 
@@ -341,20 +541,22 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ) {
           g.items.splice(idx, 1);
 
-          // Calibrated Flappy-Cat Balanced Points:
-          // Fish: +1 pt, Bamboo: +2 pts, Satow: +3 pts + 3s GOD MODE!
-          const pts = item.type === 'satow' ? 3 : (item.type === 'fish' ? 1 : 2);
+          const basePts = item.type === 'satow' ? 3 : (item.type === 'fish' ? 1 : 2);
+          const pts = g.feverTimer > 0 ? basePts * 2 : basePts;
           g.score += pts;
           setScore(g.score);
 
-          // Activate 3s God Mode if collecting Satow!
+          const happyAdd = item.type === 'satow' ? 25 : (item.type === 'fish' ? 12 : 16);
+          g.happiness = Math.min(100, g.happiness + happyAdd);
+          setHappiness(Math.floor(g.happiness));
+
           if (item.type === 'satow') {
-            g.godModeTimer = 3.0; // 3 seconds invincible
+            g.godModeTimer = g.godModeDuration;
             playRetroSound('god_mode');
             g.floatingTexts.push({
               x: g.catX + 10,
               y: g.catY - 42,
-              text: '⚡ เทพสะตอ! (GOD MODE)',
+              text: `⚡ เทพสะตอ! (${Math.round(g.godModeDuration)}s GOD MODE)`,
               color: '#16a34a',
               life: 1.5
             });
@@ -364,17 +566,23 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
           setPotIngredients(prev => {
             const next = { ...prev, [item.type]: prev[item.type] + 1 };
-            // Complete Pot (1 fish + 1 satow + 1 bamboo) = +5 Bonus PTS & +0.10 XH
             if (next.fish >= 1 && next.satow >= 1 && next.bamboo >= 1) {
               next.fish -= 1;
               next.satow -= 1;
               next.bamboo -= 1;
               setCompletedPots(cp => cp + 1);
-              g.score += 5;
+
+              const potBonus = g.feverTimer > 0 ? 10 : 6;
+              g.score += potBonus;
               setScore(g.score);
+
+              g.happiness = Math.min(100, g.happiness + 35);
+              setHappiness(Math.floor(g.happiness));
+
               setEarnedXhaus(ex => {
-                const updated = +(ex + 0.10).toFixed(2);
-                if (onCoinEarned) onCoinEarned(0.10);
+                const bonusCoin = g.feverTimer > 0 ? 0.15 : 0.10;
+                const updated = +(ex + bonusCoin).toFixed(2);
+                if (onCoinEarned) onCoinEarned(bonusCoin);
                 return updated;
               });
               playRetroSound('pot_complete');
@@ -382,15 +590,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               g.floatingTexts.push({
                 x: g.catX + 16,
                 y: g.catY - 32,
-                text: '+5 PTS // +0.10 XH 🥘',
+                text: `+${potBonus} PTS // +0.10 XH 🥘 หรอยจังฮู้!`,
                 color: '#ea580c',
-                life: 1.4
+                life: 1.5
               });
             }
             return next;
           });
 
-          // Sparkle particles
           for (let p = 0; p < 6; p++) {
             g.particles.push({
               x: item.x + 11,
@@ -406,7 +613,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
       g.items = g.items.filter(i => i.x > -40);
 
-      // 6. Update Enemies (Chili Demons & "คนหัวร้อน" Flaming Sprinter)
+      // 8. Update Enemies Physics & Collision
       for (let idx = g.monsters.length - 1; idx >= 0; idx--) {
         const mon = g.monsters[idx];
         mon.x -= g.speed * (mon.speedMultiplier || 1.0);
@@ -414,9 +621,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
           monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
+        } else if (mon.type === 'hawk') {
+          monY = mon.y + Math.sin(g.frame * 0.08 + mon.animPhase) * 8;
         }
 
-        // Ember smoke behind flaming sprinter
+        // Ember smoke behind flamer
         if (mon.type === 'hot_runner' && Math.random() > 0.5) {
           g.particles.push({
             x: mon.x + 18,
@@ -429,9 +638,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           });
         }
 
-        // Forgiving AABB collision box
         const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 20, bottom: g.catY - 2 };
-        const monBox = { left: mon.x + 5, right: mon.x + mon.width - 5, top: monY - mon.height + 4, bottom: monY };
+        const monBox = { 
+          left: mon.x + 4, 
+          right: mon.x + mon.width - 4, 
+          top: monY - mon.height + 4, 
+          bottom: monY 
+        };
 
         if (
           catBox.right > monBox.left &&
@@ -439,22 +652,22 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           catBox.bottom > monBox.top &&
           catBox.top < monBox.bottom
         ) {
-          // IF IN GOD MODE (เทพสะตอ): SMASH ENEMY!
+          // IF IN GOD MODE: SMASH ENEMY!
           if (g.godModeTimer > 0) {
             playRetroSound('smash');
             g.monsters.splice(idx, 1);
-            g.score += 2; // +2 bonus for smashing
+            const smashPts = g.feverTimer > 0 ? 4 : 2;
+            g.score += smashPts;
             setScore(g.score);
 
             g.floatingTexts.push({
               x: mon.x,
               y: monY - 30,
-              text: '💥 SMASH! +2',
+              text: `💥 SMASH! +${smashPts}`,
               color: '#facc15',
               life: 1.2
             });
 
-            // Explosion sparks
             for (let p = 0; p < 12; p++) {
               g.particles.push({
                 x: mon.x + 12,
@@ -483,7 +696,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       }
       g.monsters = g.monsters.filter(m => m.x > -50);
 
-      // 7. Update Particles & Floating Texts
+      // 9. Update Particles & Floating Texts
       g.particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
@@ -498,37 +711,56 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.floatingTexts = g.floatingTexts.filter(ft => ft.life > 0);
 
       // ============================================================
-      // 🎨 RETRO CHUNKY PIXEL ART RENDERING (PROPERLY GROUND-ANCHORED)
+      // 🎨 RETRO CHUNKY PIXEL ART RENDERING
       // ============================================================
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1. Warm Cream Sky (Ref 1 & 3 Palette)
-      // If in God Mode, sky has a subtle golden aura!
-      ctx.fillStyle = g.godModeTimer > 0 ? '#fefce8' : '#fef8e7';
+      // Sky Background according to Spicy Tier and Fever Mode
+      if (g.feverTimer > 0) {
+        ctx.fillStyle = '#fefce8';
+      } else if (g.spicyTier === 3) {
+        ctx.fillStyle = '#1e1b4b';
+      } else if (g.spicyTier === 2) {
+        ctx.fillStyle = '#fde68a';
+      } else {
+        ctx.fillStyle = '#fef8e7';
+      }
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Cute Smiling Sun
+      // Sun / Moon Display
       const sunX = canvas.width - 65;
       const sunY = 38;
-      ctx.fillStyle = '#f59e0b';
-      ctx.fillRect(sunX - 16, sunY - 4, 32, 8);
-      ctx.fillRect(sunX - 4, sunY - 16, 8, 32);
-      ctx.fillRect(sunX - 12, sunY - 12, 24, 24);
-      ctx.fillStyle = '#fde047';
-      ctx.fillRect(sunX - 10, sunY - 10, 20, 20);
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(sunX - 5, sunY - 3, 2, 4);
-      ctx.fillRect(sunX + 3, sunY - 3, 2, 4);
-      ctx.fillRect(sunX - 1, sunY + 2, 2, 2);
+      if (g.spicyTier === 3) {
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(sunX, sunY, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#1e1b4b';
+        ctx.beginPath();
+        ctx.arc(sunX + 6, sunY - 4, 12, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = g.spicyTier === 2 ? '#ea580c' : '#f59e0b';
+        ctx.fillRect(sunX - 16, sunY - 4, 32, 8);
+        ctx.fillRect(sunX - 4, sunY - 16, 8, 32);
+        ctx.fillRect(sunX - 12, sunY - 12, 24, 24);
+        ctx.fillStyle = g.spicyTier === 2 ? '#fbbf24' : '#fde047';
+        ctx.fillRect(sunX - 10, sunY - 10, 20, 20);
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(sunX - 5, sunY - 3, 2, 4);
+        ctx.fillRect(sunX + 3, sunY - 3, 2, 4);
+        ctx.fillRect(sunX - 1, sunY + 2, 2, 2);
+      }
 
-      // Cute Blushing Pixel Clouds
+      // Clouds
       const drawCuteCloud = (cx, cy) => {
+        const cloudTint = g.spicyTier === 3 ? '#4338ca' : (g.spicyTier === 2 ? '#fdba74' : '#93c5fd');
         ctx.fillStyle = '#1f1d24';
         ctx.fillRect(cx, cy + 6, 44, 16);
         ctx.fillRect(cx + 8, cy, 28, 24);
         ctx.fillRect(cx + 14, cy - 4, 16, 30);
 
-        ctx.fillStyle = '#93c5fd';
+        ctx.fillStyle = cloudTint;
         ctx.fillRect(cx + 2, cy + 8, 40, 12);
         ctx.fillRect(cx + 10, cy + 2, 24, 20);
         ctx.fillRect(cx + 16, cy - 2, 12, 24);
@@ -547,7 +779,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       drawCuteCloud(cloud2X, 46);
 
       // Distant Lao Mountains Silhouette
-      ctx.fillStyle = '#ebd5b3';
+      ctx.fillStyle = g.spicyTier === 3 ? '#312e81' : (g.spicyTier === 2 ? '#d97706' : '#ebd5b3');
       ctx.beginPath();
       ctx.moveTo(0, 145);
       for (let mx = 0; mx <= canvas.width; mx += 20) {
@@ -560,24 +792,22 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.fill();
 
       // Mekong River Shimmer Band
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = g.spicyTier === 3 ? '#0284c7' : '#38bdf8';
       ctx.fillRect(0, 146, canvas.width, 14);
-      ctx.fillStyle = '#bae6fd';
+      ctx.fillStyle = g.spicyTier === 3 ? '#38bdf8' : '#bae6fd';
       const waveShift = (g.frame * 2) % 28;
       for (let wx = -28; wx < canvas.width; wx += 28) {
         ctx.fillRect(wx + waveShift, 150, 14, 2);
       }
 
-      // ============================================================
-      // CONTINUOUS SCENERY & LANDMARKS (SEATED ON GROUND y=185)
-      // ============================================================
+      // Continuous Scenery & Landmarks
       const totalLoop = 1800;
       const getSceneX = (baseX) => {
         const scrolled = (baseX - (g.distanceRun * 0.85)) % totalLoop;
         return ((scrolled % totalLoop) + totalLoop) % totalLoop - 100;
       };
 
-      // 1. 🛕 วัดมหาธาตุ (Seated on Ground y=185)
+      // 1. วัดมหาธาตุ
       const watX = getSceneX(200);
       if (watX > -120 && watX < canvas.width + 80) {
         const gy = g.groundY;
@@ -597,7 +827,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.fillRect(watX + 20, gy - 108, 4, 22);
       }
 
-      // 2. 🍉 รถเข็นผลไม้ไทย & เก้าอี้แดง (Ref 2)
+      // 2. รถเข็นผลไม้ไทย
       const cartX = getSceneX(650);
       if (cartX > -120 && cartX < canvas.width + 80) {
         const gy = g.groundY;
@@ -626,42 +856,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.fillRect(cartX + 46, gy - 24, 18, 24);
         ctx.fillStyle = '#dc2626';
         ctx.fillRect(cartX + 48, gy - 22, 14, 22);
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(cartX + 52, gy - 32, 6, 8);
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillRect(cartX + 51, gy - 34, 8, 3);
       }
 
-      // 3. 🕰️ หอนาฬิกาเวียดนามอนุสรณ์
-      const clockX = getSceneX(1100);
-      if (clockX > -120 && clockX < canvas.width + 80) {
-        const gy = g.groundY;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX, gy - 80, 38, 80);
-        ctx.fillRect(clockX - 4, gy - 92, 46, 12);
-        ctx.fillRect(clockX + 5, gy - 106, 28, 14);
-
-        ctx.fillStyle = '#e11d48';
-        ctx.fillRect(clockX + 3, gy - 77, 32, 77);
-        ctx.fillStyle = '#881337';
-        ctx.fillRect(clockX - 2, gy - 90, 42, 8);
-        ctx.fillRect(clockX + 7, gy - 104, 24, 12);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.beginPath();
-        ctx.arc(clockX + 19, gy - 60, 11, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(clockX + 19, gy - 60, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(clockX + 18, gy - 65, 2, 6);
-        ctx.fillRect(clockX + 18, gy - 60, 5, 2);
-      }
-
-      // 4. 🐉 พญาศรีสัตตนาคราช 7 เศียร
-      const nagaX = getSceneX(1550);
+      // 3. พญาศรีสัตตนาคราช
+      const nagaX = getSceneX(1450);
       if (nagaX > -120 && nagaX < canvas.width + 80) {
         const gy = g.groundY;
         ctx.fillStyle = '#1f1d24';
@@ -688,91 +886,87 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.fillRect(nagaX - 8 - waterSpurt, gy - 80 + waterSpurt * 1.5, 4, 4);
       }
 
-      // ============================================================
-      // TREES & CHECKERBOARD GROUND
-      // ============================================================
-      const drawCuteTree = (tx, isPink = false) => {
-        const gy = g.groundY;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(tx + 8, gy - 30, 10, 30);
-        ctx.fillStyle = '#78350f';
-        ctx.fillRect(tx + 10, gy - 28, 6, 28);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.beginPath();
-        ctx.arc(tx + 13, gy - 46, 20, 0, Math.PI * 2);
-        ctx.arc(tx + 2, gy - 38, 12, 0, Math.PI * 2);
-        ctx.arc(tx + 24, gy - 38, 12, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = isPink ? '#f472b6' : '#22c55e';
-        ctx.beginPath();
-        ctx.arc(tx + 13, gy - 46, 17, 0, Math.PI * 2);
-        ctx.arc(tx + 2, gy - 38, 9, 0, Math.PI * 2);
-        ctx.arc(tx + 24, gy - 38, 9, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = isPink ? '#fbcfe8' : '#86efac';
-        ctx.fillRect(tx + 8, gy - 56, 8, 5);
-      };
-
-      const tree1X = getSceneX(420);
-      const tree2X = getSceneX(880);
-      const tree3X = getSceneX(1340);
-      if (tree1X > -60 && tree1X < canvas.width + 40) drawCuteTree(tree1X, false);
-      if (tree2X > -60 && tree2X < canvas.width + 40) drawCuteTree(tree2X, true);
-      if (tree3X > -60 && tree3X < canvas.width + 40) drawCuteTree(tree3X, false);
-
       // Solid Ground Line & Checkered Grass
       ctx.fillStyle = '#1f1d24';
       ctx.fillRect(0, g.groundY, canvas.width, 3);
-      ctx.fillStyle = '#65a30d';
+      ctx.fillStyle = g.spicyTier === 3 ? '#166534' : '#65a30d';
       ctx.fillRect(0, g.groundY + 3, canvas.width, canvas.height - (g.groundY + 3));
 
-      ctx.fillStyle = '#4d7c0f';
+      ctx.fillStyle = g.spicyTier === 3 ? '#14532d' : '#4d7c0f';
       const tileShift = (g.distanceRun * 2.4) % 24;
       for (let tx = -24; tx < canvas.width; tx += 24) {
         ctx.fillRect(tx + tileShift, g.groundY + 3, 12, 10);
         ctx.fillRect(tx + tileShift + 12, g.groundY + 13, 12, 18);
       }
 
-      // Little Flowers along Grass
-      const drawFlower = (fx, color) => {
-        ctx.fillStyle = color;
-        ctx.fillRect(fx + 2, g.groundY - 6, 4, 4);
-        ctx.fillRect(fx - 2, g.groundY - 4, 4, 4);
-        ctx.fillRect(fx + 6, g.groundY - 4, 4, 4);
-        ctx.fillRect(fx + 2, g.groundY - 2, 4, 4);
-        ctx.fillStyle = '#fde047';
-        ctx.fillRect(fx + 2, g.groundY - 4, 4, 4);
-      };
-      drawFlower(50 - (g.distanceRun * 2.4) % 220, '#f43f5e');
-      drawFlower(140 - (g.distanceRun * 2.4) % 220, '#38bdf8');
-      drawFlower(210 - (g.distanceRun * 2.4) % 220, '#e879f9');
-
       // ============================================================
-      // 🌶️ & 🔥 ENEMIES: "ปีศาจพริก" & "คนหัวร้อน" (FLAMING SPRINTER)
+      // 🌶️ 🔥 🦅 🥥 DRAW ENEMIES
       // ============================================================
       g.monsters.forEach(mon => {
         ctx.save();
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
           monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
+        } else if (mon.type === 'hawk') {
+          monY = mon.y + Math.sin(g.frame * 0.08 + mon.animPhase) * 8;
         }
 
         const mx = mon.x;
 
-        // Shadow on ground
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-        ctx.beginPath();
-        ctx.ellipse(mx + (mon.type === 'hot_runner' ? 13 : 12), mon.y + 2, 10, 3, 0, 0, Math.PI * 2);
-        ctx.fill();
+        if (mon.type !== 'hawk') {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+          ctx.beginPath();
+          ctx.ellipse(mx + (mon.type === 'hot_runner' ? 13 : 10), g.groundY + 2, 10, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
-        if (mon.type === 'hot_runner') {
-          // --- 🏃 "คนหัวร้อน" (CHARGING FLAMING SPRINTER) ---
+        if (mon.type === 'hawk') {
+          // 🦅 Flying Hawk
+          const flap = Math.sin(g.frame * 0.25) * 6;
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 6, monY - 14, 16, 12);
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(mx + 8, monY - 12, 12, 8);
+
+          ctx.fillStyle = '#1f1d24';
+          ctx.fillRect(mx + 2, monY - 16, 8, 8);
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(mx - 2, monY - 14, 5, 4);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(mx + 3, monY - 14, 3, 3);
+          ctx.fillStyle = '#ef4444';
+          ctx.fillRect(mx + 4, monY - 13, 2, 2);
+
+          ctx.fillStyle = '#451a03';
+          ctx.beginPath();
+          ctx.moveTo(mx + 8, monY - 10);
+          ctx.lineTo(mx + 16, monY - 22 - flap);
+          ctx.lineTo(mx + 22, monY - 8);
+          ctx.closePath();
+          ctx.fill();
+        } else if (mon.type === 'coconut') {
+          // 🥥 Rolling Coconut
+          const rot = g.frame * 0.2;
+          ctx.save();
+          ctx.translate(mx + 10, monY - 10);
+          ctx.rotate(rot);
+          ctx.fillStyle = '#1f1d24';
+          ctx.beginPath();
+          ctx.arc(0, 0, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.arc(0, 0, 8, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#451a03';
+          ctx.fillRect(-3, -4, 2, 2);
+          ctx.fillRect(2, -4, 2, 2);
+          ctx.fillRect(0, 2, 3, 2);
+          ctx.restore();
+        } else if (mon.type === 'hot_runner') {
+          // 🔥 Hot Runner
           const runCycle = Math.floor((g.frame / 4) % 4);
-
-          // Fiery Hair Flame (Animated)
           const flamePulse = Math.sin(g.frame * 0.3) * 3;
           ctx.fillStyle = '#f97316';
           ctx.beginPath();
@@ -781,52 +975,36 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           ctx.lineTo(mx + 20, monY - 26);
           ctx.closePath();
           ctx.fill();
-          ctx.fillStyle = '#fde047'; // Inner Yellow Fire
+          ctx.fillStyle = '#fde047';
           ctx.fillRect(mx + 10, monY - 34 - flamePulse * 0.6, 6, 8);
 
-          // Head (Angry Red Face)
-          ctx.fillStyle = '#1f1d24'; // Outline
+          ctx.fillStyle = '#1f1d24';
           ctx.fillRect(mx + 4, monY - 28, 18, 16);
-          ctx.fillStyle = '#ef4444'; // Red face
+          ctx.fillStyle = '#ef4444';
           ctx.fillRect(mx + 6, monY - 26, 14, 12);
 
-          // Angry Eyes (Slanted `< >`)
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(mx + 7, monY - 22, 3, 3);
           ctx.fillRect(mx + 15, monY - 22, 3, 3);
-          ctx.fillStyle = '#1f1d24'; // Slanted Brow
-          ctx.fillRect(mx + 6, monY - 24, 5, 2);
-          ctx.fillRect(mx + 14, monY - 24, 5, 2);
+          ctx.fillStyle = '#1f1d24';
           ctx.fillRect(mx + 8, monY - 21, 2, 2);
           ctx.fillRect(mx + 15, monY - 21, 2, 2);
 
-          // Gritted Teeth
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(mx + 9, monY - 17, 7, 2);
-
-          // Body (Shirt with bold outline)
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(mx + 6, monY - 12, 14, 10);
-          ctx.fillStyle = '#b91c1c'; // Dark Red Shirt
+          ctx.fillStyle = '#b91c1c';
           ctx.fillRect(mx + 8, monY - 10, 10, 8);
 
-          // Fast Sprinting Legs (4 frames)
           ctx.fillStyle = '#1f1d24';
           if (runCycle === 0) {
             ctx.fillRect(mx + 4, monY - 2, 5, 4);
             ctx.fillRect(mx + 16, monY - 2, 5, 4);
-          } else if (runCycle === 1) {
+          } else {
             ctx.fillRect(mx + 8, monY - 2, 5, 4);
             ctx.fillRect(mx + 12, monY - 2, 5, 4);
-          } else if (runCycle === 2) {
-            ctx.fillRect(mx + 2, monY - 2, 5, 4);
-            ctx.fillRect(mx + 18, monY - 2, 5, 4);
-          } else {
-            ctx.fillRect(mx + 10, monY - 2, 5, 4);
-            ctx.fillRect(mx + 14, monY - 2, 5, 4);
           }
         } else {
-          // --- 🌶️ "ปีศาจพริกแกง" (CHILI DEMON) ---
+          // 🌶️ Chili Demon
           ctx.fillStyle = '#1f1d24';
           ctx.fillRect(mx + 3, monY - 24, 18, 22);
           ctx.fillRect(mx + 6, monY - 28, 12, 26);
@@ -839,7 +1017,6 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
           ctx.fillStyle = '#22c55e';
           ctx.fillRect(mx + 10, monY - 30, 4, 4);
-          ctx.fillRect(mx + 12, monY - 33, 3, 3);
 
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(mx + 6, monY - 16, 4, 4);
@@ -858,7 +1035,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       // ============================================================
-      // 🐟 🌿 🎋 CUTE PIXEL COLLECTIBLE INGREDIENTS
+      // 🐟 🌿 🎋 DRAW INGREDIENTS
       // ============================================================
       g.items.forEach(item => {
         ctx.save();
@@ -867,7 +1044,6 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         const iy = item.y + bob;
 
         if (item.type === 'satow') {
-          // 🌿 Satow Pod (Glows with Super Star Aura!)
           const satowGlow = Math.sin(g.frame * 0.2) * 2;
           ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
           ctx.beginPath();
@@ -901,7 +1077,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       // ============================================================
-      // 🐱 "น้องไตปลา" (CUTE CALICO CAT + เทพสะตอ GOD MODE AURA)
+      // 🐱 🐕 DRAW HERO SPRITES
       // ============================================================
       ctx.save();
       const catX = g.catX;
@@ -915,93 +1091,156 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       ctx.ellipse(catX + 16, g.groundY + 2, 13 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // GOD MODE AURA (Golden Super Saiyan Sparkles)
-      if (g.godModeTimer > 0) {
+      // GOD MODE / FEVER AURA
+      if (g.feverTimer > 0) {
+        const auraPulse = Math.sin(g.frame * 0.35) * 5;
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
+        ctx.beginPath();
+        ctx.arc(catX + 16, catY - 14, 26 + auraPulse, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (Math.random() > 0.4) {
+          g.particles.push({
+            x: catX + (Math.random() * 24 - 4),
+            y: catY - (Math.random() * 28 + 4),
+            vx: (Math.random() - 0.5) * 1.5,
+            vy: -Math.random() * 2.5,
+            size: Math.random() * 4 + 2,
+            color: Math.random() > 0.5 ? '#f43f5e' : '#facc15',
+            life: 0.7
+          });
+        }
+      } else if (g.godModeTimer > 0) {
         const auraPulse = Math.sin(g.frame * 0.3) * 4;
         ctx.fillStyle = 'rgba(234, 179, 8, 0.35)';
         ctx.beginPath();
         ctx.arc(catX + 16, catY - 14, 24 + auraPulse, 0, Math.PI * 2);
         ctx.fill();
-
-        // Trail sparkles
-        if (Math.random() > 0.4) {
-          g.particles.push({
-            x: catX + (Math.random() * 24 - 4),
-            y: catY - (Math.random() * 24 + 4),
-            vx: -Math.random() * 2 - 1,
-            vy: (Math.random() - 0.5) * 2,
-            size: Math.random() * 3 + 2,
-            color: Math.random() > 0.5 ? '#fde047' : '#22c55e',
-            life: 0.5
-          });
-        }
       }
 
-      // Apply Spring Squash & Stretch
       ctx.translate(catX + 16, catY);
       ctx.scale(g.scaleX, g.scaleY);
       ctx.translate(-(catX + 16), -catY);
 
-      // Tail
+      if (g.charId === 'som_satow') {
+        // พี่ส้มสตอ
+        const tailWag = Math.sin(g.frame * 0.2) * 3;
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
+        ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
+
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 4, catY - 22, 24, 18);
+        ctx.fillRect(catX + 8, catY - 26, 16, 22);
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(catX + 6, catY - 20, 20, 14);
+
+        ctx.fillStyle = '#c2410c';
+        ctx.fillRect(catX + 10, catY - 20, 3, 10);
+        ctx.fillRect(catX + 16, catY - 20, 3, 10);
+
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(catX + 18, catY - 14, 5, 8);
+        ctx.fillStyle = '#22c55e';
+        ctx.fillRect(catX + 19, catY - 12, 3, 6);
+
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 18, catY - 28, 16, 16);
+        ctx.fillRect(catX + 20, catY - 34, 4, 6);
+        ctx.fillRect(catX + 28, catY - 34, 4, 6);
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(catX + 20, catY - 26, 12, 12);
+      } else if (g.charId === 'khao_lam') {
+        // เจ้าตูบข้าวหลาม
+        const tailWag = Math.sin(g.frame * 0.3) * 4;
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 1 + tailWag, catY - 18, 5, 5);
+        ctx.fillStyle = '#854d0e';
+        ctx.fillRect(catX + 2 + tailWag, catY - 17, 3, 3);
+
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 4, catY - 22, 24, 18);
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(catX + 6, catY - 20, 20, 14);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(catX + 10, catY - 12, 10, 6);
+
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(catX + 18, catY - 14, 4, 5);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(catX + 19, catY - 10, 2, 2);
+
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 18, catY - 28, 16, 16);
+        ctx.fillRect(catX + 18, catY - 32, 5, 6);
+        ctx.fillRect(catX + 29, catY - 32, 5, 6);
+        ctx.fillStyle = '#b45309';
+        ctx.fillRect(catX + 19, catY - 31, 3, 4);
+        ctx.fillRect(catX + 30, catY - 31, 3, 4);
+
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(catX + 20, catY - 26, 12, 12);
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(catX + 26, catY - 20, 6, 6);
+      } else {
+        // น้องไตปลา
+        const tailWag = Math.sin(g.frame * 0.2) * 3;
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
+        ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
+
+        ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
+        ctx.fillRect(catX + 4, catY - 22, 24, 18);
+        ctx.fillRect(catX + 8, catY - 26, 16, 22);
+
+        ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
+        ctx.fillRect(catX + 6, catY - 20, 20, 14);
+
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(catX + 8, catY - 20, 8, 8);
+        ctx.fillRect(catX + 18, catY - 14, 6, 6);
+        ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
+        ctx.fillRect(catX + 18, catY - 20, 6, 6);
+
+        ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
+        ctx.fillRect(catX + 18, catY - 28, 16, 16);
+        ctx.fillRect(catX + 20, catY - 34, 4, 6);
+        ctx.fillRect(catX + 28, catY - 34, 4, 6);
+        ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
+        ctx.fillRect(catX + 20, catY - 26, 12, 12);
+        ctx.fillStyle = '#f97316';
+        ctx.fillRect(catX + 21, catY - 32, 2, 4);
+        ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
+        ctx.fillRect(catX + 29, catY - 32, 2, 4);
+      }
+
+      // Eyes
+      if (g.feverTimer > 0) {
+        ctx.fillStyle = '#1f1d24';
+        ctx.fillRect(catX + 27, catY - 23, 4, 2);
+        ctx.fillRect(catX + 26, catY - 22, 2, 2);
+        ctx.fillRect(catX + 30, catY - 22, 2, 2);
+
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(catX + 24, catY - 18, 4, 3);
+        ctx.fillRect(catX + 31, catY - 18, 3, 3);
+      } else {
+        ctx.fillStyle = g.godModeTimer > 0 ? '#b45309' : '#1f1d24';
+        ctx.fillRect(catX + 28, catY - 22, 3, 4);
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(catX + 31, catY - 19, 2, 2);
+        ctx.fillRect(catX + 24, catY - 18, 3, 2);
+      }
+
+      // Running Paws
       ctx.fillStyle = '#1f1d24';
-      const tailWag = Math.sin(g.frame * 0.2) * 3;
-      ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
-      ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
-      ctx.fillRect(catX + 2 + tailWag, catY - 22, 4, 4);
-
-      // Body Outline
-      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
-      ctx.fillRect(catX + 4, catY - 22, 24, 18);
-      ctx.fillRect(catX + 8, catY - 26, 16, 22);
-
-      // Body Fill
-      ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
-      ctx.fillRect(catX + 6, catY - 20, 20, 14);
-
-      // Calico Patches
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(catX + 8, catY - 20, 8, 8);
-      ctx.fillRect(catX + 18, catY - 14, 6, 6);
-
-      ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
-      ctx.fillRect(catX + 18, catY - 20, 6, 6);
-      ctx.fillRect(catX + 8, catY - 12, 6, 4);
-
-      // Head
-      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
-      ctx.fillRect(catX + 18, catY - 28, 16, 16);
-      ctx.fillRect(catX + 20, catY - 34, 4, 6);
-      ctx.fillRect(catX + 28, catY - 34, 4, 6);
-
-      ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
-      ctx.fillRect(catX + 20, catY - 26, 12, 12);
-      ctx.fillStyle = '#f97316';
-      ctx.fillRect(catX + 21, catY - 32, 2, 4);
-      ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
-      ctx.fillRect(catX + 29, catY - 32, 2, 4);
-
-      // Eyes & Pink Cheeks
-      ctx.fillStyle = g.godModeTimer > 0 ? '#b45309' : '#1f1d24';
-      ctx.fillRect(catX + 28, catY - 22, 3, 4);
-      ctx.fillStyle = '#f43f5e';
-      ctx.fillRect(catX + 31, catY - 19, 2, 2);
-      ctx.fillRect(catX + 24, catY - 18, 3, 2);
-
-      // Animated Running Paws
-      ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
       if (g.isGrounded) {
         if (legRun === 0) {
           ctx.fillRect(catX + 8, catY - 3, 4, 4);
           ctx.fillRect(catX + 20, catY - 3, 4, 4);
-        } else if (legRun === 1) {
+        } else {
           ctx.fillRect(catX + 12, catY - 3, 4, 4);
           ctx.fillRect(catX + 16, catY - 3, 4, 4);
-        } else if (legRun === 2) {
-          ctx.fillRect(catX + 6, catY - 3, 4, 4);
-          ctx.fillRect(catX + 22, catY - 3, 4, 4);
-        } else {
-          ctx.fillRect(catX + 10, catY - 3, 4, 4);
-          ctx.fillRect(catX + 18, catY - 3, 4, 4);
         }
       } else {
         ctx.fillRect(catX + 10, catY - 5, 4, 4);
@@ -1019,7 +1258,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       });
 
       g.floatingTexts.forEach(ft => {
-        ctx.font = 'bold 13px Space Mono, monospace';
+        ctx.font = 'bold 12px Space Mono, monospace';
         ctx.fillStyle = '#1f1d24';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
@@ -1034,7 +1273,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     return () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     };
-  }, [gameState, soundEnabled, highScore]);
+  }, [gameState, soundEnabled, highScore, selectedCharId]);
 
   const handleClaim = () => {
     const finalScore = gameRef.current.score || score;
@@ -1050,51 +1289,54 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         : 'w-full bg-white rounded-lg border border-[var(--color-rule)] p-5 sm:p-6 shadow-sm flex flex-col gap-5'
     }`}>
       
-      {/* Clean Control Bar */}
+      {/* Clean Header Bar & Character Selector */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded bg-[#fef3c7] text-[#f97316] flex items-center justify-center font-bold text-base border border-[#fde68a]">
-            🐱
+          <div className="w-10 h-10 rounded bg-[#fef3c7] text-2xl flex items-center justify-center border border-[#fde68a] shrink-0">
+            {activeChar.icon}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                TAI-PLA RUN // นครพนม x ปักษ์ใต้
+                {activeChar.name} // {activeChar.title}
               </h3>
-              <span className="text-[9px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono font-bold border border-amber-300">
-                P2E XHAUS
+              <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold border ${activeChar.badgeColor}`}>
+                {activeChar.trait}
               </span>
             </div>
             <p className="text-[11px] text-[oklch(45%_0.010_28)] font-sans">
-              เก็บสะตอแปลงร่างเป็น <strong>เทพสะตอ 3 วิ</strong> ชนทะลุ & สะสมเหรียญ xhaus
+              {activeChar.desc}
             </p>
           </div>
         </div>
 
         {/* Status Score & LCD Coins Deck */}
-        <div className="flex items-center gap-2.5 font-mono text-xs self-end sm:self-auto">
+        <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto">
           {/* God Mode Active Banner */}
           {godModeRemaining > 0 && (
-            <div className="bg-amber-400 text-black px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[11px]">
-              <Zap size={13} className="text-black fill-black" />
+            <div className="bg-amber-400 text-black px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[10px]">
+              <Zap size={12} className="text-black fill-black" />
               <span>เทพสะตอ {godModeRemaining}s</span>
             </div>
           )}
 
+          {/* Happy Fever Mode Active Banner */}
+          {isFeverActive && (
+            <div className="bg-yellow-300 text-amber-950 px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-bounce border border-yellow-400 shadow-sm text-[10px]">
+              <Heart size={12} className="text-red-500 fill-red-500" />
+              <span>FEVER 2X ({feverRemaining}s)</span>
+            </div>
+          )}
+
           {/* Earned xhaus Coin display */}
-          <div className="bg-[#fef9c3] border border-[#fde047] px-3 py-1.5 rounded-[4px] flex items-center gap-1.5 text-amber-950 shadow-2xs">
-            <Coins size={14} className="text-amber-600" />
+          <div className="bg-[#fef9c3] border border-[#fde047] px-2.5 py-1.5 rounded-[4px] flex items-center gap-1 text-amber-950 shadow-2xs text-[11px]">
+            <Coins size={13} className="text-amber-600" />
             <span className="font-bold">+{earnedXhaus.toFixed(2)} XH</span>
           </div>
 
-          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-3 py-1.5 rounded-[4px] text-[oklch(18%_0.012_28)]">
-            <span className="text-[9px] text-[oklch(45%_0.010_28)] block">SCORE</span>
-            <span className="font-bold">{score}</span>
-          </div>
-
-          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-3 py-1.5 rounded-[4px] text-emerald-700">
-            <span className="text-[9px] text-[oklch(45%_0.010_28)] block">BEST</span>
-            <span className="font-bold">{highScore}</span>
+          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-[4px] text-[oklch(18%_0.012_28)]">
+            <span className="text-[8px] text-[oklch(45%_0.010_28)] block">SCORE</span>
+            <span className="font-bold text-sm">{score}</span>
           </div>
 
           {/* Sound Mute Toggle */}
@@ -1103,17 +1345,79 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             className="p-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[oklch(18%_0.012_28)]"
             title={soundEnabled ? 'ปิดเสียง' : 'เปิดเสียง'}
           >
-            {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} className="text-neutral-400" />}
+            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} className="text-neutral-400" />}
           </button>
 
           {/* Fullscreen Toggle */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[oklch(18%_0.012_28)] flex items-center gap-1 text-[10px] font-bold"
+            className="p-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[oklch(18%_0.012_28)]"
             title={isFullscreen ? 'ออกจากเต็มจอ' : 'เล่นเต็มจอ'}
           >
-            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
+        </div>
+      </div>
+
+      {/* Character Switcher Selector Tabs (Available in Idle / Game Over) */}
+      {gameState !== 'playing' && (
+        <div className="flex flex-col gap-2">
+          <span className="text-[10px] font-mono font-bold uppercase text-[oklch(45%_0.010_28)] flex items-center gap-1">
+            <User size={12} className="text-[oklch(52%_0.16_28)]" />
+            <span>เลือกตัวละครของคุณ (SELECT CHARACTER):</span>
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
+            {Object.values(CHARACTERS).map((char) => (
+              <button
+                key={char.id}
+                onClick={() => setSelectedCharId(char.id)}
+                className={`p-3 rounded-md border text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                  selectedCharId === char.id
+                    ? 'bg-amber-50/80 border-[oklch(52%_0.16_28)] shadow-2xs ring-1 ring-[oklch(52%_0.16_28)]'
+                    : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] hover:bg-white'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{char.icon}</span>
+                    <strong className="text-[oklch(18%_0.012_28)]">{char.name}</strong>
+                  </div>
+                  {selectedCharId === char.id && (
+                    <span className="text-[9px] bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded font-bold">
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-zinc-600 font-sans leading-tight mt-0.5">
+                  {char.trait}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Happiness (Happy Vibes) Meter */}
+      <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded-md">
+        <div className="flex justify-between items-center text-[10px] font-mono">
+          <div className="flex items-center gap-1.5 font-bold text-[oklch(18%_0.012_28)]">
+            <Heart size={12} className={isFeverActive ? 'text-red-500 fill-red-500 animate-ping' : 'text-amber-600'} />
+            <span>ความสุขริมโขง (HAPPY VIBES):</span>
+            <span className="text-amber-700">{happiness}%</span>
+          </div>
+          <span className="text-[9px] text-[oklch(45%_0.010_28)]">
+            {isFeverActive ? '🌟 HAPPY FEVER 2X ACTIVE!' : 'สะสมครบ 100% ปลดล็อค FEVER 2X'}
+          </span>
+        </div>
+        <div className="w-full h-2.5 bg-neutral-200 rounded-full overflow-hidden p-0.5 border border-neutral-300">
+          <div 
+            className={`h-full rounded-full transition-all duration-300 ${
+              isFeverActive 
+                ? 'bg-gradient-to-r from-amber-400 via-rose-400 to-amber-300 animate-pulse' 
+                : 'bg-gradient-to-r from-amber-500 to-emerald-500'
+            }`}
+            style={{ width: `${isFeverActive ? 100 : happiness}%` }}
+          />
         </div>
       </div>
 
@@ -1130,22 +1434,33 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           style={{ imageRendering: 'pixelated' }}
         />
 
+        {/* Spicy Tier Indicator Overlay */}
+        {gameState === 'playing' && (
+          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-black/60 text-white px-2 py-0.5 rounded backdrop-blur-[2px]">
+            <Flame size={11} className={currentSpicyTier === 3 ? 'text-red-400' : 'text-amber-400'} />
+            <span>
+              {currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด 🌶️' : 'เผ็ดอนุบาล 🌱')}
+            </span>
+          </div>
+        )}
+
         {/* Start Overlay */}
         {gameState === 'idle' && (
-          <div className="absolute inset-0 bg-[#fef8e7]/85 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2.5 text-center p-5">
-            <span className="text-4xl animate-bounce">🐱</span>
+          <div className="absolute inset-0 bg-[#fef8e7]/90 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5">
+            <span className="text-4xl animate-bounce">{activeChar.icon}</span>
             <h4 className="font-mono text-base font-bold text-[#1f1d24] uppercase tracking-widest">
-              น้องไตปลา แมวเปรอะผจญภัย
+              {activeChar.name} ตะลุยเมืองนครพนม
             </h4>
             <p className="text-xs text-[#4b5563] font-sans max-w-sm leading-relaxed">
-              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก & คนหัวร้อน 🔥</strong><br/>
-              เก็บ <strong>🌿 สะตอ</strong> เพื่อแปลงเป็น <strong>เทพสะตอ 3 วินาที</strong> ชนทะลุทุกอย่าง!
+              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวน้ำโขง 🦅, มะพร้าว 🥥 และคนหัวร้อน 🔥</strong><br/>
+              เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเป็น <strong>เทพสะตอ</strong> และสะสม <strong>หลอดความสุข</strong> รับ 2X Fever!
             </p>
             <button
               onClick={startGame}
-              className="btn-action mt-2 px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all"
+              className="btn-action mt-2 px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
-              เริ่มวิ่ง (START RUN)
+              <Sparkles size={13} />
+              <span>เริ่มวิ่ง ({activeChar.name})</span>
             </button>
           </div>
         )}
@@ -1197,14 +1512,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       {/* Clean Ingredients & Guidelines Dashboard */}
       <div className="flex flex-col sm:flex-row items-center justify-between bg-[#fef8e7] border border-[#fde68a] p-3.5 rounded-[4px] text-xs font-mono gap-2">
         <div className="flex items-center gap-2 text-[#451a03]">
-          <span className="font-bold">🥘 สะสมวัตถุดิบ (ครบ 3 อย่าง = +5 PTS & +0.10 XH):</span>
+          <span className="font-bold">🥘 สะสมวัตถุดิบ (ครบ 3 อย่าง = +6 PTS & +0.10 XH):</span>
         </div>
-        <div className="flex items-center gap-4 text-[11px] font-bold">
+        <div className="flex items-center gap-3 text-[11px] font-bold">
           <span className="text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
             🐟 ปลาทู (+1 pt): {potIngredients.fish}/1
           </span>
           <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            🌿 สะตอ (เทพ 3s & +3 pts): {potIngredients.satow}/1
+            🌿 สะตอ (เทพ 3-5s & +3 pts): {potIngredients.satow}/1
           </span>
           <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
             🎋 หน่อไม้ (+2 pts): {potIngredients.bamboo}/1

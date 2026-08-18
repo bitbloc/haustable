@@ -174,6 +174,14 @@ export default class PlayScene extends Phaser.Scene {
       }
     });
 
+    // Check pipe scoring by X position (100% reliable Flappy Bird scoring pattern)
+    this.satowGroup.getChildren().forEach((child) => {
+      if (child && child.isTopPipe && !child.hasScored && child.x <= this.player.x) {
+        child.hasScored = true;
+        this.addScore();
+      }
+    });
+
     // Clean up offscreen kitchen knives
     if (this.knifeGroup) {
       this.knifeGroup.getChildren().forEach((knife) => {
@@ -368,6 +376,10 @@ export default class PlayScene extends Phaser.Scene {
     // Stretch graphic height to fit
     topSatow.setDisplaySize(64, gapY);
 
+    // Set scoring metadata for 100% reliable crossing check
+    topSatow.isTopPipe = true;
+    topSatow.hasScored = false;
+
     // Set movement coordinates
     topSatow.initialY = gapY;
     topSatow.moving = this.score >= 15;
@@ -430,13 +442,13 @@ export default class PlayScene extends Phaser.Scene {
     }
   }
 
-  handleScoreSensor(player, sensor) {
+  addScore() {
     if (this.isGameOver) return;
-    if (!sensor || !sensor.active) return;
-    sensor.destroy();
 
     this.score += 1;
-    this.scoreText.setText(this.score.toString());
+    if (this.scoreText) {
+      this.scoreText.setText(this.score.toString());
+    }
 
     // Play score sound
     try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
@@ -468,8 +480,10 @@ export default class PlayScene extends Phaser.Scene {
     }
     
     // Scale spawn delay to maintain horizontal obstacle gaps
-    const newDelay = 1800 / this.speedMultiplier;
-    this.spawnTimer.delay = newDelay;
+    if (this.spawnTimer) {
+      const newDelay = 1800 / this.speedMultiplier;
+      this.spawnTimer.delay = newDelay;
+    }
     
     // Dynamically shorten knife spawn delay (make hazards more frequent as score goes up)
     if (this.knifeTimer) {
@@ -479,14 +493,14 @@ export default class PlayScene extends Phaser.Scene {
     // Instantly accelerate active obstacles
     const currentSpeed = this.baseSpeed * this.speedMultiplier;
     this.satowGroup.getChildren().forEach((child) => {
-      if (child.body) {
+      if (child && child.body) {
         child.body.setVelocityX(currentSpeed);
       }
     });
     
     if (this.beanGroup) {
       this.beanGroup.getChildren().forEach((bean) => {
-        if (bean.body) {
+        if (bean && bean.body) {
           bean.body.setVelocityX(currentSpeed);
         }
       });
@@ -494,7 +508,7 @@ export default class PlayScene extends Phaser.Scene {
     
     if (this.knifeGroup) {
       this.knifeGroup.getChildren().forEach((knife) => {
-        if (knife.body) {
+        if (knife && knife.body) {
           knife.body.setVelocityX(currentSpeed * 1.5);
         }
       });
@@ -502,20 +516,29 @@ export default class PlayScene extends Phaser.Scene {
 
     if (this.scoreSensors) {
       this.scoreSensors.getChildren().forEach((s) => {
-        if (s.body) {
+        if (s && s.body) {
           s.body.setVelocityX(currentSpeed);
         }
       });
     }
 
     // Pulse score text
-    this.tweens.add({
-      targets: this.scoreText,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 100,
-      yoyo: true
-    });
+    if (this.scoreText) {
+      this.tweens.add({
+        targets: this.scoreText,
+        scaleX: 1.3,
+        scaleY: 1.3,
+        duration: 100,
+        yoyo: true
+      });
+    }
+  }
+
+  handleScoreSensor(player, sensor) {
+    if (this.isGameOver) return;
+    if (sensor && sensor.active) {
+      sensor.destroy();
+    }
   }
 
   triggerKnifeHazard() {
