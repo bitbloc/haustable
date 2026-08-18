@@ -8,6 +8,8 @@ const CACHE_TABLES = 'pos_cache_tables_layout';
 const CACHE_BOOKINGS = 'pos_cache_active_bookings';
 
 const CACHE_PROFILES = 'pos_cache_customer_profiles';
+const CACHE_KDS_LIVE = 'kds_cache_live_orders';
+const CACHE_KDS_SCHEDULE = 'kds_cache_schedule_orders';
 
 // Helper to check if network is available
 export function isOnline() {
@@ -98,6 +100,13 @@ export const posCache = {
 
     getProfiles: () => getCachedData(CACHE_PROFILES) || [],
     setProfiles: (data) => cacheData(CACHE_PROFILES, data)
+};
+
+export const kdsCache = {
+    getLiveOrders: () => getCachedData(CACHE_KDS_LIVE) || [],
+    setLiveOrders: (data) => cacheData(CACHE_KDS_LIVE, data),
+    getScheduleOrders: () => getCachedData(CACHE_KDS_SCHEDULE) || [],
+    setScheduleOrders: (data) => cacheData(CACHE_KDS_SCHEDULE, data)
 };
 
 // 3. Sync offline queue to Supabase
@@ -545,6 +554,32 @@ export async function syncOfflineQueue(isManual = false) {
                     .update({ status: 'void', staff_remark: 'Merged offline' })
                     .eq('id', sourceBookingId);
                 if (voidErr) throw voidErr;
+            }
+
+            else if (action.type === 'toggle_item_check') {
+                const { itemId, isChecked } = action.payload;
+                const { error } = await supabase
+                    .from('order_items')
+                    .update({ is_checked: isChecked })
+                    .eq('id', itemId);
+                if (error) throw error;
+            }
+
+            else if (action.type === 'update_order_status') {
+                let { bookingId, status, staffRemark } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
+                    throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
+                }
+                const updatePayload = { status };
+                if (staffRemark) updatePayload.staff_remark = staffRemark;
+                const { error } = await supabase
+                    .from('bookings')
+                    .update(updatePayload)
+                    .eq('id', bookingId);
+                if (error) throw error;
             }
             
         } catch (err) {

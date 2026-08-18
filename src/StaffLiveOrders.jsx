@@ -37,14 +37,14 @@ function StaffLiveOrdersContent() {
     
     // Global State
     const { 
-        orders, scheduleOrders, historyOrders, loading, isConnected, soundUrl, kdsSoundUrl,
-        fetchLiveOrders, fetchScheduleOrders, fetchHistoryOrders, subscribeRealtime, updateStatus
+        orders, scheduleOrders, historyOrders, loading, connectionState, isConnected, soundUrl, kdsSoundUrl,
+        fetchLiveOrders, fetchScheduleOrders, fetchHistoryOrders, subscribeRealtime, reconnect, updateStatus
     } = useOrderContext()
 
     // Local State
     const [activeTab, setActiveTab] = useState('kds')
     const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0])
-    const [systemReady, setSystemReady] = useState(false) // Replaces isSoundChecked
+    const [systemReady, setSystemReady] = useState(false)
     const [hiddenKdsOrders, setHiddenKdsOrders] = useState(() => {
         try {
             return JSON.parse(localStorage.getItem('kds_hidden_orders') || '[]')
@@ -54,7 +54,7 @@ function StaffLiveOrdersContent() {
     // Modals
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
     const [printModal, setPrintModal] = useState({ isOpen: false, booking: null })
-    const [verifyingOrder, setVerifyingOrder] = useState(null) // Replaces viewSlipUrl
+    const [verifyingOrder, setVerifyingOrder] = useState(null)
     const [notification, setNotification] = useState({ visible: false, title: '', message: '', price: null })
 
     // Hooks
@@ -92,11 +92,11 @@ function StaffLiveOrdersContent() {
         }
         else if (tab === 'history') {
             navigate('/staff/history')
-            setActiveTab('history') // Force update
+            setActiveTab('history')
         }
         else if (tab === 'tables') {
             navigate('/staff/checkin')
-            setActiveTab('tables') // Force update
+            setActiveTab('tables')
         }
         else setActiveTab(tab)
     }
@@ -108,51 +108,38 @@ function StaffLiveOrdersContent() {
         }
     }, [activeTab, historyDate, fetchHistoryOrders])
 
-    // --- System Init ---
-    // Combined "Sound Check" and "Start"
-    const startSystem = useCallback(async () => {
+    // --- Realtime Alert Callback (Stable Ref) ---
+    const handleNewOrderAlert = useCallback((newOrder) => {
+        play()
+        triggerNotification('New Order', { body: `Table ${newOrder.tables_layout?.table_name || 'Pickup'}` })
+        setNotification({
+            visible: true,
+            title: `New Order: ${newOrder.tables_layout?.table_name || 'Pickup'}`,
+            message: 'New items sent to kitchen',
+            price: newOrder.total_amount,
+            orderId: newOrder.id
+        })
+    }, [play, triggerNotification])
+
+    // --- System Init on Mount ---
+    useEffect(() => {
         setSystemReady(true)
-        if (activeSoundUrl) {
-             const audio = new Audio(activeSoundUrl)
-             audio.play().catch(() => {}) // Pre-load interaction
-        }
-        await requestPush()
-        request() // Wake Lock
-        
-        // Start Fetching
+        request() // Keep screen awake
+        requestPush().catch(() => {})
+
+        // Initial Data Fetch
         fetchLiveOrders()
         fetchScheduleOrders()
-        
-        // Subscribe
-        const channel = subscribeRealtime((newOrder) => {
-            play()
-            triggerNotification('New Order', { body: `Table ${newOrder.tables_layout?.table_name || '?'}` })
-            setNotification({
-                visible: true,
-                title: `New Order: ${newOrder.tables_layout?.table_name || 'Pickup'}`,
-                message: 'New items sent to kitchen',
-                price: newOrder.total_amount,
-                orderId: newOrder.id
-            })
-        })
+
+        // Subscribe Realtime
+        const cleanup = subscribeRealtime(handleNewOrderAlert)
 
         return () => {
-            supabase.removeChannel(channel)
+            if (typeof cleanup === 'function') cleanup()
             release()
             stop()
         }
-
-    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, request, release, play, stop, activeSoundUrl, requestPush, triggerNotification])
-
-    // Auto-start system on mount without requiring tap
-    useEffect(() => {
-        const cleanup = startSystem();
-        return () => {
-            cleanup.then(clean => {
-                if (typeof clean === 'function') clean();
-            });
-        };
-    }, [startSystem]);
+    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, handleNewOrderAlert, request, release, stop, requestPush])
 
     // --- Update Handler Wrapper ---
     const handleUpdateStatus = (id, newStatus) => {
@@ -289,19 +276,38 @@ function StaffLiveOrdersContent() {
                         </button>
                         <h1 className="text-2xl font-bold tracking-tight text-[var(--color-ink)] uppercase font-mono">Kitchen Display</h1>
                     </div>
-                    <div className="flex items-center gap-4">
-                        {isConnected ? (
-                            <span className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                    <div className="flex items-center gap-3">
+                        {connectionState === 'live' && (
+                            <span className="flex items-center gap-2 text-xs font-bold text-green-700 bg-green-50 px-3 py-1.5 rounded-full border border-green-200 font-mono uppercase tracking-wide">
                                 <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" /> LIVE
                             </span>
-                        ) : (
-                            <span className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">
-                                <span className="w-2 h-2 rounded-full bg-red-500" /> OFFLINE
+                        )}
+                        {connectionState === 'polling' && (
+                            <span className="flex items-center gap-2 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200 font-mono uppercase tracking-wide" title="ระบบสำรอง (Polling) ทำงานอยู่ ไม่พลาดออเดอร์">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" /> POLLING
                             </span>
+                        )}
+                        {connectionState === 'reconnecting' && (
+                            <span className="flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-200 font-mono uppercase tracking-wide">
+                                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" /> CONNECTING...
+                            </span>
+                        )}
+                        {connectionState === 'offline' && (
+                            <div className="flex items-center gap-2">
+                                <span className="flex items-center gap-2 text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200 font-mono uppercase tracking-wide">
+                                    <span className="w-2 h-2 rounded-full bg-red-500" /> OFFLINE (CACHED)
+                                </span>
+                                <button 
+                                    onClick={reconnect}
+                                    className="text-xs font-bold font-mono text-[var(--color-ink)] bg-white hover:bg-gray-100 px-3 py-1.5 rounded-full border border-gray-300 active:scale-95 transition-transform"
+                                >
+                                    🔄 RECONNECT
+                                </button>
+                            </div>
                         )}
                         <button 
                             onClick={() => switchTab('schedule')} 
-                            className="text-xs font-bold text-gray-500 hover:text-[#1A1A1A] underline underline-offset-4"
+                            className="text-xs font-bold text-gray-500 hover:text-[#1A1A1A] underline underline-offset-4 font-mono uppercase"
                         >
                             Exit KDS Viewer
                         </button>
