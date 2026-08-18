@@ -2434,7 +2434,8 @@ Deno.serve(async (req) => {
 
             const billRows: any[] = []
             bills.forEach((b: any, idx: number) => {
-              const billNo = b.tracking_token || (String(b.id).length > 8 ? String(b.id).substring(0, 8) : b.id)
+              const rawId = String(b.id || '').replace(/-/g, '')
+              const billNo = b.tracking_token ? b.tracking_token.toUpperCase() : `#${rawId.substring(0, 6).toUpperCase()}`
               const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? '🛍️ TAKEAWAY' : '🪑 WALK-IN')
               
               let timeStr = ''
@@ -2468,7 +2469,7 @@ Deno.serve(async (req) => {
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: `#${billNo}`, weight: "bold", size: "sm", color: "#1E1B18", flex: 6 },
+                      { type: "text", text: billNo, weight: "bold", size: "sm", color: "#1E1B18", flex: 6 },
                       { type: "text", text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#C85A32", align: "end", flex: 4 }
                     ]
                   },
@@ -2510,7 +2511,7 @@ Deno.serve(async (req) => {
                   paddingAll: "20px",
                   contents: [
                     { type: "text", text: "RECENT COMPLETED BILLS", size: "xs", weight: "bold", color: "#C85A32" },
-                    { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" }
+                    { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs", wrap: true }
                   ]
                 },
                 body: {
