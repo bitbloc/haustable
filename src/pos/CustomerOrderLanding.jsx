@@ -81,6 +81,7 @@ export default function CustomerOrderLanding() {
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
         qr_radius: '100',
+        qr_kitchen_open_time: '10:00',
         qr_kitchen_close_time: '22:00',
         qr_kitchen_cutoff_enabled: 'true',
         qr_kitchen_mode: 'auto',
@@ -642,23 +643,24 @@ export default function CustomerOrderLanding() {
         if (mode === 'force_open') return false;
         if (currentSettings.qr_kitchen_cutoff_enabled === 'false') return false;
 
+        const openTimeStr = currentSettings.qr_kitchen_open_time || currentSettings.opening_time || '10:00';
+        const [openHour, openMin] = openTimeStr.split(':').map(Number);
+        const openTotalMins = (openHour ?? 10) * 60 + (openMin || 0);
+
         const closeTimeStr = currentSettings.qr_kitchen_close_time || '22:00';
         const [closeHour, closeMin] = closeTimeStr.split(':').map(Number);
+        const closeTotalMins = (closeHour ?? 22) * 60 + (closeMin || 0);
 
         const now = new Date();
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
         const currentTotalMins = currentHour * 60 + currentMinute;
-        const closeTotalMins = (closeHour || 22) * 60 + (closeMin || 0);
-
-        const openTimeStr = currentSettings.opening_time || '06:00';
-        const [openHour, openMin] = openTimeStr.split(':').map(Number);
-        const openTotalMins = (openHour || 6) * 60 + (openMin || 0);
 
         if (closeTotalMins > openTotalMins) {
-            return currentTotalMins >= closeTotalMins || currentTotalMins < openTotalMins;
+            // e.g. Open 10:00 - 22:00 -> Closed before 10:00 AM or after 22:00 PM
+            return currentTotalMins < openTotalMins || currentTotalMins >= closeTotalMins;
         } else {
-            return currentTotalMins >= closeTotalMins && currentTotalMins < openTotalMins;
+            return currentTotalMins < openTotalMins && currentTotalMins >= closeTotalMins;
         }
     };
 
@@ -710,7 +712,7 @@ export default function CustomerOrderLanding() {
     // Cart Operations
     const handleAddToCart = (item) => {
         if (isKitchenClosed && closedCategoryIds.has(item.category_id)) {
-            toast.error(`ขออภัยครับ ครัวปิดรับออเดอร์อาหารแล้ว (${settings.qr_kitchen_close_time || '22:00'} น.)`);
+            toast.error(`ขออภัยครับ อยู่นอกเวลาสั่งอาหาร (ครัวเปิดรับ ${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.)`);
             return;
         }
         setSelectedItem(item);
@@ -761,7 +763,7 @@ export default function CustomerOrderLanding() {
         if (isKitchenClosed) {
             const invalidItems = cart.filter(item => closedCategoryIds.has(item.category_id));
             if (invalidItems.length > 0) {
-                toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากครัวปิดแล้ว (${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
+                toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากอยู่นอกเวลาครัว (${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
                 setCart(prev => prev.filter(item => !closedCategoryIds.has(item.category_id)));
                 setSubmitting(false);
                 return;
@@ -1123,14 +1125,14 @@ export default function CustomerOrderLanding() {
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-accent)]">
-                                            KITCHEN CLOSED · ครัวปิด {settings.qr_kitchen_close_time || '22:00'} น.
+                                            KITCHEN CLOSED · ครัวเปิดรับ {settings.qr_kitchen_open_time || '10:00'} - {settings.qr_kitchen_close_time || '22:00'} น.
                                         </span>
                                         <span className="bg-[var(--color-paper)]/15 text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
                                             DRINKS & BAR ONLY
                                         </span>
                                     </div>
                                     <span className="text-[10px] text-[var(--color-paper)]/80 mt-0.5 block truncate">
-                                        ปิดรับออเดอร์อาหารแล้ว สามารถเลือกสั่งเครื่องดื่มและรายการบาร์ได้ตามปกติครับ
+                                        ขณะนี้อยู่นอกเวลาสั่งอาหาร สามารถเลือกสั่งเครื่องดื่มและรายการบาร์ได้ตามปกติครับ
                                     </span>
                                 </div>
                             </div>

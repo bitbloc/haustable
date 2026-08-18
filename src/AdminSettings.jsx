@@ -109,6 +109,7 @@ export default function AdminSettings() {
         qr_latitude: '17.40722',
         qr_longitude: '104.78028',
         qr_radius: '50',
+        qr_kitchen_open_time: '10:00',
         qr_kitchen_close_time: '22:00',
         qr_kitchen_cutoff_enabled: 'true',
         qr_kitchen_mode: 'auto',
@@ -360,20 +361,21 @@ export default function AdminSettings() {
         if (mode === 'force_open') return false;
         if (settings.qr_kitchen_cutoff_enabled === 'false') return false;
 
+        const openTimeStr = settings.qr_kitchen_open_time || settings.opening_time || '10:00';
+        const [openH, openM] = openTimeStr.split(':').map(Number);
         const closeTimeStr = settings.qr_kitchen_close_time || '22:00';
         const [closeH, closeM] = closeTimeStr.split(':').map(Number);
-        const openTimeStr = settings.opening_time || '06:00';
-        const [openH, openM] = openTimeStr.split(':').map(Number);
 
         const now = new Date();
         const currentMins = now.getHours() * 60 + now.getMinutes();
-        const closeMins = closeH * 60 + (closeM || 0);
-        const openMins = openH * 60 + (openM || 0);
+        const openMins = (openH ?? 10) * 60 + (openM || 0);
+        const closeMins = (closeH ?? 22) * 60 + (closeM || 0);
 
         if (closeMins > openMins) {
-            return currentMins >= closeMins || currentMins < openMins;
+            // e.g. Open 10:00 - 22:00 -> Closed before 10:00 AM or after 22:00 PM
+            return currentMins < openMins || currentMins >= closeMins;
         } else {
-            return currentMins >= closeMins && currentMins < openMins;
+            return currentMins < openMins && currentMins >= closeMins;
         }
     };
 
@@ -1952,7 +1954,7 @@ export default function AdminSettings() {
                                     </label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {[
-                                            { mode: 'auto', label: `Auto (${settings.qr_kitchen_close_time || '22:00'})`, desc: 'ตามเวลาปิดครัว' },
+                                            { mode: 'auto', label: `Auto (${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'})`, desc: 'เปิด 10:00 / ปิด 22:00' },
                                             { mode: 'force_close', label: 'Force Close', desc: 'ปิดครัวทันที' },
                                             { mode: 'force_open', label: 'Force Open', desc: 'เปิดสั่งตลอด' }
                                         ].map(({ mode, label, desc }) => (
@@ -1973,37 +1975,73 @@ export default function AdminSettings() {
                                     </div>
                                 </div>
 
-                                {/* Kitchen Close Time Input & Presets */}
-                                <div className="space-y-2 pt-2 border-t border-gray-100">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                                            เวลาปิดครัว (Kitchen Closing Cutoff Time)
-                                        </label>
-                                        <span className="text-[10px] font-mono text-subInk">ค่าเริ่มต้น 22:00 น. (4 ทุ่ม)</span>
+                                {/* Kitchen Operating Hours: Open & Close Times */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-gray-100">
+                                    {/* Kitchen Open Time (ตอนเช้า) */}
+                                    <div className="space-y-2 bg-canvas p-3 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <Sun size={14} className="text-amber-500" /> เวลาเปิดครัวตอนเช้า (Open)
+                                            </label>
+                                            <span className="text-[10px] font-mono text-subInk">10:00 น.</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="time" 
+                                                value={settings.qr_kitchen_open_time || '10:00'} 
+                                                onChange={(e) => handleSave('qr_kitchen_open_time', e.target.value)} 
+                                                className="w-32 bg-white border border-gray-200 p-2 rounded-xl text-xs font-mono font-bold text-gray-900 outline-none focus:border-black shadow-xs" 
+                                            />
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                                {['08:00', '09:00', '09:30', '10:00', '10:30', '11:00'].map(t => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => handleSave('qr_kitchen_open_time', t)}
+                                                        className={`px-2 py-1 rounded-md border text-[10px] font-mono font-bold cursor-pointer transition-colors ${
+                                                            (settings.qr_kitchen_open_time || '10:00') === t
+                                                                ? 'bg-amber-600 text-white border-amber-600'
+                                                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                        }`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <input 
-                                            type="time" 
-                                            value={settings.qr_kitchen_close_time || '22:00'} 
-                                            onChange={(e) => handleSave('qr_kitchen_close_time', e.target.value)} 
-                                            className="w-40 bg-white border border-gray-200 p-2.5 rounded-xl text-sm font-mono font-bold text-gray-900 outline-none focus:border-black shadow-xs" 
-                                        />
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            {['21:00', '21:30', '22:00', '22:30', '23:00'].map(t => (
-                                                <button
-                                                    key={t}
-                                                    type="button"
-                                                    onClick={() => handleSave('qr_kitchen_close_time', t)}
-                                                    className={`px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold cursor-pointer transition-colors ${
-                                                        (settings.qr_kitchen_close_time || '22:00') === t
-                                                            ? 'bg-amber-600 text-white border-amber-600'
-                                                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
-                                                    }`}
-                                                >
-                                                    {t}
-                                                </button>
-                                            ))}
+                                    {/* Kitchen Close Time (ตอนค่ำ) */}
+                                    <div className="space-y-2 bg-canvas p-3 rounded-2xl border border-gray-100">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <Moon size={14} className="text-indigo-500" /> เวลาปิดครัวตอนค่ำ (Cutoff)
+                                            </label>
+                                            <span className="text-[10px] font-mono text-subInk">22:00 น.</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <input 
+                                                type="time" 
+                                                value={settings.qr_kitchen_close_time || '22:00'} 
+                                                onChange={(e) => handleSave('qr_kitchen_close_time', e.target.value)} 
+                                                className="w-32 bg-white border border-gray-200 p-2 rounded-xl text-xs font-mono font-bold text-gray-900 outline-none focus:border-black shadow-xs" 
+                                            />
+                                            <div className="flex items-center gap-1 flex-wrap">
+                                                {['21:00', '21:30', '22:00', '22:30', '23:00'].map(t => (
+                                                    <button
+                                                        key={t}
+                                                        type="button"
+                                                        onClick={() => handleSave('qr_kitchen_close_time', t)}
+                                                        className={`px-2 py-1 rounded-md border text-[10px] font-mono font-bold cursor-pointer transition-colors ${
+                                                            (settings.qr_kitchen_close_time || '22:00') === t
+                                                                ? 'bg-indigo-600 text-white border-indigo-600'
+                                                                : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                                                        }`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

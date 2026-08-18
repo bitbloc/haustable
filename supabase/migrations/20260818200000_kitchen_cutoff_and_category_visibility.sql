@@ -27,9 +27,11 @@ WHERE LOWER(name) NOT LIKE '%coffee%'
 -- 3. Insert default app_settings for QR Kitchen Cutoff
 INSERT INTO public.app_settings (key, value)
 VALUES 
+    ('qr_kitchen_open_time', '10:00'),
     ('qr_kitchen_close_time', '22:00'),
     ('qr_kitchen_cutoff_enabled', 'true'),
     ('qr_kitchen_mode', 'auto'),
     ('qr_kitchen_closed_categories', '[]')
 ON CONFLICT (key) DO NOTHING;
+
 
