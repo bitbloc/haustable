@@ -223,8 +223,12 @@ export function OrderProvider({ children }) {
                 })
             }
 
-            if (isNew && triggerAlertCallback) {
-                triggerAlertCallback(fullOrder)
+            if (isNew) {
+                // Synchronously add to known IDs to prevent polling race condition
+                knownOrderIdsRef.current.add(fullOrder.id)
+                if (triggerAlertCallback) {
+                    triggerAlertCallback(fullOrder)
+                }
             }
         } catch (err) {
             console.error('fetchAndAddOrder error:', err)
@@ -296,6 +300,8 @@ export function OrderProvider({ children }) {
                 async (payload) => {
                     const { eventType, new: newRecord } = payload
                     if (eventType === 'INSERT') {
+                        // Immediately register ID to prevent polling race
+                        knownOrderIdsRef.current.add(newRecord.id)
                         if (fetchDebounceRef.current[newRecord.id]) clearTimeout(fetchDebounceRef.current[newRecord.id].timeout)
                         fetchDebounceRef.current[newRecord.id] = {
                             isNew: true,

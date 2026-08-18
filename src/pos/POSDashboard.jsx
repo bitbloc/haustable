@@ -817,21 +817,21 @@ export default function POSDashboard() {
     useEffect(() => {
         if (!hasPendingOrders) return;
 
-        // Play alert immediately
-        playSystemAlertSoundUtil(alertSoundUrl);
+        // Play alert
+        playSystemAlertSoundUtil(alertSoundUrl, 2500, 'pending_orders_loop');
 
-        // Repeat every 6 seconds
+        // Repeat every 7 seconds
         const soundInterval = setInterval(() => {
-            playSystemAlertSoundUtil(alertSoundUrl);
-        }, 6000);
+            playSystemAlertSoundUtil(alertSoundUrl, 2500, 'pending_orders_loop');
+        }, 7000);
 
         return () => {
             clearInterval(soundInterval);
         };
     }, [hasPendingOrders, alertSoundUrl]);
 
-    const playSystemAlertSound = () => {
-        playSystemAlertSoundUtil(alertSoundUrl);
+    const playSystemAlertSound = (eventKey = null) => {
+        playSystemAlertSoundUtil(alertSoundUrl, 2500, eventKey);
     };
 
     const playQRAlertSound = () => {
@@ -858,12 +858,12 @@ export default function POSDashboard() {
             }, async (payload) => {
                 checkPendingOrders();
                 setRefreshKey(prev => prev + 1);
-                const { eventType, new: newRow } = payload;
-                const tableId = newRow?.table_id || payload.old?.table_id;
+                const { eventType, new: newRow, old: oldRow } = payload;
+                const tableId = newRow?.table_id || oldRow?.table_id;
                 if (!tableId) return;
 
                 const tableName = tablesMap[tableId] || `Table #${tableId}`;
-                const bookingId = newRow?.id || payload.old?.id;
+                const bookingId = newRow?.id || oldRow?.id;
                 if (!bookingId) return;
 
                 const callBillKey = `${bookingId}_CALL_BILL`;
@@ -896,12 +896,14 @@ export default function POSDashboard() {
                                 </div>
                             ), { id: pendingOrderKey, duration: 10000 });
                             pushNotifHistory('ORDER', 'New Order', `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
-                            playSystemAlertSound();
+                            playSystemAlertSound(pendingOrderKey);
                         }
                     }
                 } else if (eventType === 'UPDATE') {
                     const newRemark = newRow?.staff_remark || '';
+                    const oldRemark = oldRow?.staff_remark || '';
                     const newSlip = newRow?.payment_slip_url || '';
+                    const oldSlip = oldRow?.payment_slip_url || '';
 
                     // 1. Pending Order Alert (New / Additional)
                     if (newRow?.status === 'pending') {
@@ -922,15 +924,15 @@ export default function POSDashboard() {
                                 </div>
                             ), { id: pendingOrderKey, duration: 10000 });
                             pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
-                            playSystemAlertSound();
+                            playSystemAlertSound(pendingOrderKey);
                         }
                     } else {
                         // Clear pending status flag once order is accepted
                         activeNotificationsRef.current.delete(pendingOrderKey);
                     }
 
-                    // 2. Call Bill Alert
-                    if (newRemark.includes('[CALL_BILL]')) {
+                    // 2. Call Bill Alert (Strict diffing: only fire if newly added)
+                    if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {
                         if (!activeNotificationsRef.current.has(callBillKey)) {
                             activeNotificationsRef.current.add(callBillKey);
                             toast.custom((t) => (
@@ -948,16 +950,16 @@ export default function POSDashboard() {
                                 </div>
                             ), { id: callBillKey, duration: 10000 });
                             pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tableName} เรียกเช็คบิล`, tableId);
-                            playSystemAlertSound();
+                            playSystemAlertSound(callBillKey);
                         }
-                    } else {
+                    } else if (!newRemark.includes('[CALL_BILL]')) {
                         // Clear notification key if [CALL_BILL] is removed
                         activeNotificationsRef.current.delete(callBillKey);
                     }
 
                     // 3. Cancellation Alert
                     const cancelKey = `${bookingId}_CANCELLED`;
-                    if (newRow?.status === 'cancelled' && payload.old?.status !== 'cancelled') {
+                    if (newRow?.status === 'cancelled' && oldRow?.status !== 'cancelled') {
                         if (!activeNotificationsRef.current.has(cancelKey)) {
                             activeNotificationsRef.current.add(cancelKey);
                             toast.custom((t) => (
@@ -969,13 +971,13 @@ export default function POSDashboard() {
                                     <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้ายกเลิกการจอง: โต๊ะ {tableName}</div>
                                 </div>
                             ), { id: cancelKey, duration: 15000 });
-                            playSystemAlertSound();
+                            playSystemAlertSound(cancelKey);
                         }
                     }
 
                     // 4. Customer Arrived Alert (Check-in)
                     const arrivedKey = `${bookingId}_ARRIVED`;
-                    if (newRemark.includes('[CUSTOMER_ARRIVED]')) {
+                    if (newRemark.includes('[CUSTOMER_ARRIVED]') && !oldRemark.includes('[CUSTOMER_ARRIVED]')) {
                         if (!activeNotificationsRef.current.has(arrivedKey)) {
                             activeNotificationsRef.current.add(arrivedKey);
                             const customerName = newRow?.pickup_contact_name || newRow?.customer_name || 'ลูกค้า';
@@ -988,12 +990,12 @@ export default function POSDashboard() {
                                     <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้า {customerName} มาถึงหน้าร้านแล้ว</div>
                                 </div>
                             ), { id: arrivedKey, duration: 15000 });
-                            playSystemAlertSound();
+                            playSystemAlertSound(arrivedKey);
                         }
                     }
 
-                    // 3. Call Staff Alert
-                    if (newRemark.includes('[CALL_STAFF]')) {
+                    // 5. Call Staff Alert (Strict diffing: only fire if newly added)
+                    if (newRemark.includes('[CALL_STAFF]') && !oldRemark.includes('[CALL_STAFF]')) {
                         if (!activeNotificationsRef.current.has(callStaffKey)) {
                             activeNotificationsRef.current.add(callStaffKey);
                             toast.custom((t) => (
@@ -1011,15 +1013,15 @@ export default function POSDashboard() {
                                 </div>
                             ), { id: callStaffKey, duration: 10000 });
                             pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
-                            playSystemAlertSound();
+                            playSystemAlertSound(callStaffKey);
                         }
-                    } else {
+                    } else if (!newRemark.includes('[CALL_STAFF]')) {
                         // Clear notification key if [CALL_STAFF] is removed
                         activeNotificationsRef.current.delete(callStaffKey);
                     }
 
-                    // 4. Payment Slip Alert
-                    if (newSlip) {
+                    // 6. Payment Slip Alert (Strict diffing: only fire if new slip URL was uploaded)
+                    if (newSlip && newSlip !== oldSlip) {
                         if (!activeNotificationsRef.current.has(slipReceivedKey)) {
                             activeNotificationsRef.current.add(slipReceivedKey);
                             toast.custom((t) => (
@@ -1037,9 +1039,9 @@ export default function POSDashboard() {
                                 </div>
                             ), { id: slipReceivedKey, duration: 10000 });
                             pushNotifHistory('SLIP', 'Payment Uploaded', `โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว`, tableId);
-                            playSystemAlertSound();
+                            playSystemAlertSound(slipReceivedKey);
                         }
-                    } else {
+                    } else if (!newSlip) {
                         activeNotificationsRef.current.delete(slipReceivedKey);
                     }
                 }

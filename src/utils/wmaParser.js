@@ -97,6 +97,11 @@ function countThaiChars(str) {
  * @param {string} rawText 
  * @returns {object} structured order
  */
+/**
+ * Parses raw text extracted from WMA print stream into structured order object
+ * @param {string} rawText 
+ * @returns {object} structured order
+ */
 export function parseWmaOrderText(rawText) {
     if (!rawText || typeof rawText !== 'string') return null;
 
@@ -123,12 +128,19 @@ export function parseWmaOrderText(rawText) {
     let currentItem = null;
 
     // Regex matchers
-    const orderIdRegex = /(?:#|ORDER|ID|ออเดอร์|รหัสออเดอร์)[:\s]*([#A-Z0-9-]{4,})/i;
-    const phoneRegex = /(?:โทร|เบอร์โทร|Phone|Tel)[:\s]*([0-9-]{9,12})/i;
-    const customerRegex = /(?:ลูกค้า|Customer|คุณ)[:\s]*(.+)/i;
-    const riderRegex = /(?:ไรเดอร์|Rider|คนขับ)[:\s]*(.+)/i;
-    const noteRegex = /(?:หมายเหตุ|Note|ข้อความถึงร้าน)[:\s]*(.+)/i;
-    const totalRegex = /(?:ยอดรวม|รวมทั้งสิ้น|รวมสุทธิ|Total|Grand\s*Total|ยอดชำระ)[:\s]*([0-9,]+\.?[0-9]*)/i;
+    const orderIdRegex = /(?:#|ORDER|ID|ออเดอร์|รหัสออเดอร์|หมายเลขออเดอร์|คำสั่งซื้อ|เลขออเดอร์|Order\s*No)[:\s.]*([#A-Z0-9-]{3,})/i;
+    const phoneRegex = /(?:โทร|เบอร์โทร|เบอร์|Phone|Tel)[:\s]*([0-9-]{9,12})/i;
+    const customerRegex = /(?:ลูกค้า|Customer|คุณ|ชื่อลูกค้า)[:\s]*(.+)/i;
+    const riderRegex = /(?:ไรเดอร์|Rider|คนขับ|พนักงานส่ง|คนส่ง)[:\s]*(.+)/i;
+    const noteRegex = /(?:หมายเหตุ|Note|ข้อความถึงร้าน|หมายเหตุจากลูกค้า)[:\s]*(.+)/i;
+    const totalRegex = /(?:ยอดรวม|รวมทั้งสิ้น|รวมสุทธิ|Total|Grand\s*Total|ยอดชำระ|ยอดเงินรวม|รวม)[:\s]*([0-9,]+\.?[0-9]*)/i;
+
+    const isExcludedLine = (l) => {
+        const lower = l.toLowerCase();
+        return lower.includes('line man delivery') || lower.includes('wongnai') || lower.includes('merchant app') ||
+               lower.includes('ใบรับออเดอร์') || lower.includes('ใบเสร็จ') || lower.includes('สถานะ:') ||
+               lower.includes('เวลาสั่ง') || lower.includes('ชำระแล้ว') || lower.includes('paid');
+    };
 
     for (let idx = 0; idx < lines.length; idx++) {
         const line = lines[idx];
@@ -136,22 +148,24 @@ export function parseWmaOrderText(rawText) {
         // 1. Order ID
         if (!order.order_id) {
             const idMatch = line.match(orderIdRegex);
-            if (idMatch && (idMatch[1].includes('LM') || idMatch[1].includes('-') || idMatch[1].length >= 4)) {
+            if (idMatch && (idMatch[1].toUpperCase().includes('LM') || idMatch[1].includes('-') || idMatch[1].length >= 3)) {
                 order.order_id = idMatch[1].trim();
                 order.short_id = order.order_id.replace(/^#?LM-?/i, '').slice(-4).toUpperCase();
-            } else if (line.toUpperCase().includes('LM-') || line.toUpperCase().includes('LINEMAN-')) {
-                const match = line.match(/(?:LM|LINEMAN)-[A-Z0-9]+/i);
+            } else if (line.toUpperCase().includes('LM-') || line.toUpperCase().includes('LINEMAN-') || line.toUpperCase().includes('#LM')) {
+                const match = line.match(/(?:LM|LINEMAN)-?[A-Z0-9]+/i);
                 if (match) {
                     order.order_id = match[0].trim();
-                    order.short_id = order.order_id.slice(-4).toUpperCase();
+                    order.short_id = order.order_id.replace(/^#?LM-?/i, '').slice(-4).toUpperCase();
                 }
             }
         }
 
         // 2. Customer Name & Phone
-        if (customerRegex.test(line)) {
+        if (customerRegex.test(line) && !line.includes('LINE MAN Delivery')) {
             const cMatch = line.match(customerRegex);
-            if (cMatch && cMatch[1]) order.customer_name = cMatch[1].trim();
+            if (cMatch && cMatch[1] && !cMatch[1].includes('โทร') && !cMatch[1].includes('Tel')) {
+                order.customer_name = cMatch[1].trim();
+            }
         }
 
         if (phoneRegex.test(line)) {
@@ -172,7 +186,7 @@ export function parseWmaOrderText(rawText) {
         }
 
         // 5. Total Amount
-        if (totalRegex.test(line)) {
+        if (totalRegex.test(line) && !line.startsWith('-') && !line.startsWith('+')) {
             const tMatch = line.match(totalRegex);
             if (tMatch && tMatch[1]) {
                 const parsedTotal = parseFloat(tMatch[1].replace(/,/g, ''));
@@ -182,7 +196,7 @@ export function parseWmaOrderText(rawText) {
             }
         }
 
-        // 6. Section divider / Items Detection
+        // 6. Section divider
         const isDivider = /^[-=_*#]{3,}$/.test(line);
         if (isDivider) {
             if (currentItem) {
@@ -192,18 +206,44 @@ export function parseWmaOrderText(rawText) {
             continue;
         }
 
-        // Check if line represents an item line
-        const itemLineRegex = /^(\d+)\s*(?:x|X|\*|\s)\s*(.+?)(?:\s+([\d,]+\.?\d*)\s*(?:บาท|.-|฿)?)?$/;
-        const itemMatch = line.match(itemLineRegex);
+        if (isExcludedLine(line) || customerRegex.test(line) || phoneRegex.test(line) || noteRegex.test(line) || riderRegex.test(line) || totalRegex.test(line)) {
+            continue;
+        }
 
-        if (itemMatch && !totalRegex.test(line) && !customerRegex.test(line) && !phoneRegex.test(line) && !noteRegex.test(line)) {
+        // Check if line represents an item line (supports 1. Item, 1x Item, 1 x Item, [1] Item, Item x 1)
+        let itemMatch = null;
+        let qty = 1;
+        let name = '';
+        let price = 0;
+
+        // Pattern A: "1x Name 60.00" / "1. Name 60" / "1 Name 60" / "1) Name 60"
+        const patternA = /^(\d+)[\.\s*xX\)]+\s*(.+?)(?:\s+([\d,]+\.?\d*)\s*(?:บาท|.-|฿)?)?$/;
+        // Pattern B: "[1] Name 60.00"
+        const patternB = /^\[(\d+)\]\s*(.+?)(?:\s+([\d,]+\.?\d*)\s*(?:บาท|.-|฿)?)?$/;
+        // Pattern C: "Name x 1 60.00" / "Name x1 60"
+        const patternC = /^(.+?)\s+[xX\*]\s*(\d+)(?:\s+([\d,]+\.?\d*)\s*(?:บาท|.-|฿)?)?$/;
+
+        if (patternA.test(line)) {
+            itemMatch = line.match(patternA);
+            qty = parseInt(itemMatch[1], 10) || 1;
+            name = itemMatch[2].trim();
+            price = itemMatch[3] ? parseFloat(itemMatch[3].replace(/,/g, '')) : 0;
+        } else if (patternB.test(line)) {
+            itemMatch = line.match(patternB);
+            qty = parseInt(itemMatch[1], 10) || 1;
+            name = itemMatch[2].trim();
+            price = itemMatch[3] ? parseFloat(itemMatch[3].replace(/,/g, '')) : 0;
+        } else if (patternC.test(line)) {
+            itemMatch = line.match(patternC);
+            name = itemMatch[1].trim();
+            qty = parseInt(itemMatch[2], 10) || 1;
+            price = itemMatch[3] ? parseFloat(itemMatch[3].replace(/,/g, '')) : 0;
+        }
+
+        if (itemMatch && name) {
             if (currentItem) {
                 order.items.push(currentItem);
             }
-
-            const qty = parseInt(itemMatch[1], 10) || 1;
-            const name = itemMatch[2].trim();
-            const price = itemMatch[3] ? parseFloat(itemMatch[3].replace(/,/g, '')) : 0;
 
             currentItem = {
                 name: name,
@@ -220,10 +260,12 @@ export function parseWmaOrderText(rawText) {
         if (currentItem) {
             const isOptionLine = line.startsWith('-') || line.startsWith('+') || line.startsWith('*') || line.startsWith('•') || line.startsWith('[') || line.startsWith('(');
             if (isOptionLine) {
-                const optText = line.replace(/^[-+*•\s]+/, '').trim();
-                currentItem.selected_options.push({ name: optText });
+                const optText = line.replace(/^[-+*•\s]+/, '').replace(/[\[\]\(\)]/g, '').trim();
+                if (optText) {
+                    currentItem.selected_options.push({ name: optText });
+                }
                 continue;
-            } else if (!totalRegex.test(line) && !customerRegex.test(line) && !phoneRegex.test(line) && !noteRegex.test(line)) {
+            } else {
                 if (!currentItem.special_instructions) {
                     currentItem.special_instructions = line;
                 } else {
@@ -247,6 +289,53 @@ export function parseWmaOrderText(rawText) {
     }
 
     return order;
+}
+
+/**
+ * Parses Android notification title & text from WMA/LINE MAN into structured order object
+ * @param {string} title 
+ * @param {string} text 
+ * @returns {object}
+ */
+export function parseWmaNotification(title = '', text = '') {
+    const combined = `${title || ''} ${text || ''}`.trim();
+    if (!combined) return null;
+
+    const orderIdMatch = combined.match(/(?:#?LM-[A-Z0-9]+|#([A-Z0-9]{4,})|ออเดอร์\s*#?([A-Z0-9-]+)|คำสั่งซื้อ\s*#?([A-Z0-9-]+))/i);
+    const orderId = orderIdMatch ? (orderIdMatch[0].startsWith('#') ? orderIdMatch[0] : `#${orderIdMatch[0]}`) : `#LM-${Date.now().toString().slice(-4)}`;
+    const shortId = orderId.replace(/^#?LM-?/i, '').slice(-4).toUpperCase();
+
+    const priceMatch = combined.match(/(?:฿|บาท|ยอดรวม|รวม)\s*([0-9,]+\.?[0-9]*)|([0-9,]+\.?[0-9]*)\s*(?:บาท|฿)/i);
+    const totalAmount = priceMatch ? parseFloat((priceMatch[1] || priceMatch[2]).replace(/,/g, '')) : 0;
+
+    const custMatch = combined.match(/(?:จาก|ลูกค้า|คุณ)\s+([^฿0-9\n,()]+)/i);
+    const customerName = custMatch && custMatch[1] ? custMatch[1].trim() : `LINE MAN #${shortId}`;
+
+    return {
+        source: 'lineman',
+        order_id: orderId,
+        short_id: shortId,
+        created_at: new Date().toISOString(),
+        customer_name: customerName,
+        customer_phone: '',
+        customer_note: text || '',
+        rider_name: '',
+        items: [
+            {
+                name: `LINE MAN Order #${shortId}`,
+                quantity: 1,
+                price: totalAmount,
+                price_at_time: totalAmount,
+                selected_options: [{ name: 'LINE MAN Delivery (Notification Intercept)' }],
+                special_instructions: text || ''
+            }
+        ],
+        total_amount: totalAmount,
+        subtotal: totalAmount,
+        delivery_discount: 0,
+        payment_method: 'LINEMAN_PREPAID',
+        raw_text: `[NOTIFICATION] Title: ${title} | Body: ${text}`
+    };
 }
 
 /**

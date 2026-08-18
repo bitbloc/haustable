@@ -24,9 +24,41 @@ public class MainActivity extends BridgeActivity {
     private ServerSocket wmaServerSocket;
     private Thread wmaServerThread;
 
+    private static MainActivity instance;
+
+    public static MainActivity getInstance() {
+        return instance;
+    }
+
+    public static void dispatchWmaNotification(final String title, final String text, final String pkg) {
+        if (instance != null) {
+            instance.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        WebView webView = instance.getBridge() != null ? instance.getBridge().getWebView() : null;
+                        if (webView != null) {
+                            org.json.JSONObject obj = new org.json.JSONObject();
+                            obj.put("title", title != null ? title : "");
+                            obj.put("text", text != null ? text : "");
+                            obj.put("package", pkg != null ? pkg : "");
+                            obj.put("timestamp", System.currentTimeMillis());
+                            String jsonStr = obj.toString().replace("'", "\\'");
+                            String js = "if (window.onWmaNotificationOrder) { window.onWmaNotificationOrder(JSON.parse('" + jsonStr + "')); } else { window.dispatchEvent(new CustomEvent('wma_notification_order', { detail: JSON.parse('" + jsonStr + "') })); }";
+                            webView.evaluateJavascript(js, null);
+                        }
+                    } catch (Exception e) {
+                        Log.e("WmaBridge", "Error dispatching notification to WebView: " + e.getMessage());
+                    }
+                }
+            });
+        }
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        instance = this;
         
         try {
             WebView webView = getBridge().getWebView();
@@ -66,8 +98,11 @@ public class MainActivity extends BridgeActivity {
             @Override
             public void run() {
                 try {
-                    wmaServerSocket = new ServerSocket(9100);
+                    wmaServerSocket = new ServerSocket();
+                    wmaServerSocket.setReuseAddress(true);
+                    wmaServerSocket.bind(new java.net.InetSocketAddress(9100));
                     Log.i("WmaBridge", "🚀 WMA Virtual Printer Bridge listening on Port 9100");
+                    
                     while (!Thread.currentThread().isInterrupted() && wmaServerSocket != null && !wmaServerSocket.isClosed()) {
                         try {
                             final Socket clientSocket = wmaServerSocket.accept();
@@ -93,38 +128,50 @@ public class MainActivity extends BridgeActivity {
 
     private void handleWmaClientSocket(Socket socket) {
         try {
-            socket.setSoTimeout(600); // Wait for all print stream packets
+            // Initial timeout: wait up to 5000ms for the client to start sending print data
+            socket.setSoTimeout(5000);
             InputStream in = socket.getInputStream();
             ByteArrayOutputStream buffer = new ByteArrayOutputStream();
             byte[] temp = new byte[1024];
             int read;
+            
             try {
-                while ((read = in.read(temp)) != -1) {
+                read = in.read(temp);
+                if (read != -1) {
                     buffer.write(temp, 0, read);
+                    // Once print stream starts, set 1200ms inter-packet timeout to capture all chunks
+                    socket.setSoTimeout(1200);
+                    while ((read = in.read(temp)) != -1) {
+                        buffer.write(temp, 0, read);
+                    }
                 }
             } catch (SocketTimeoutException ste) {
-                // Stream read timeout - packet completed
+                // Stream packet completed
             }
 
             final byte[] rawBytes = buffer.toByteArray();
+            Log.i("WmaBridge", "📥 Received WMA print stream payload: " + rawBytes.length + " bytes");
+            
             if (rawBytes.length > 0) {
                 final String base64Data = Base64.encodeToString(rawBytes, Base64.NO_WRAP);
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         try {
-                            WebView webView = getBridge().getWebView();
+                            WebView webView = getBridge() != null ? getBridge().getWebView() : null;
                             if (webView != null) {
                                 String js = "if (window.onWmaRawPrintStream) { window.onWmaRawPrintStream('" + base64Data + "'); } else { window.dispatchEvent(new CustomEvent('wma_raw_print_stream', { detail: '" + base64Data + "' })); }";
                                 webView.evaluateJavascript(js, null);
                             }
                         } catch (Exception e) {
-                            Log.e("WmaBridge", "Error dispatching to WebView: " + e.getMessage());
+                            Log.e("WmaBridge", "Error dispatching raw print stream to WebView: " + e.getMessage());
                         }
                     }
                 });
             }
-            socket.close();
+            try {
+                socket.close();
+            } catch (Exception ignored) {}
         } catch (Exception e) {
             Log.w("WmaBridge", "Client handling error: " + e.getMessage());
         }
@@ -132,6 +179,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     public void onDestroy() {
+        if (instance == this) {
+            instance = null;
+        }
         try {
             if (wmaServerSocket != null) {
                 wmaServerSocket.close();

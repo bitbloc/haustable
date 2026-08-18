@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { Wifi, WifiOff, Volume2, VolumeX, Bell, AlertTriangle } from 'lucide-react'
+import { playSynthChime, playUrgentTone } from '../../utils/audioHelper'
 
 export default function BookingMonitor() {
     const [isOnline, setIsOnline] = useState(true)
@@ -9,17 +10,7 @@ export default function BookingMonitor() {
     const [wakeLock, setWakeLock] = useState(null)
 
     // Audio Refs
-    const audioContextRef = useRef(null)
-    const oscillatorRef = useRef(null)
     const intervalRef = useRef(null)
-
-    // --- 1. Audio System (Web Audio API & HTML5 Audio) ---
-    // We keep Web Audio for generated fallbacks, but add an Audio element for custom files.
-
-    // Fetch custom sound URL from context or passed via props? 
-    // Ideally BookingMonitor should context-aware or fetch settings.
-    // For simplicity, let's fetch settings directly since it's mounting in layout.
-
     const [customSoundUrl, setCustomSoundUrl] = useState(null)
     const customAudioRef = useRef(new Audio())
 
@@ -31,45 +22,26 @@ export default function BookingMonitor() {
                 setCustomSoundUrl(data.value)
                 customAudioRef.current.src = data.value
                 customAudioRef.current.loop = true
+                customAudioRef.current.volume = 1.0
             }
         }
-        // Also subscribe to settings changes if needed, but for now simple fetch is enough
         fetchSettings()
     }, [])
 
-    const initAudio = () => {
-        if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)()
-        }
-    }
-
-    const playTone = (freq = 440, type = 'square') => {
-        // Fallback tone logic
-        if (!audioContextRef.current) return
-        const osc = audioContextRef.current.createOscillator()
-        const gain = audioContextRef.current.createGain()
-        osc.type = type
-        osc.frequency.setValueAtTime(freq, audioContextRef.current.currentTime)
-        osc.connect(gain)
-        gain.connect(audioContextRef.current.destination)
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.00001, audioContextRef.current.currentTime + 0.5)
-        osc.stop(audioContextRef.current.currentTime + 0.5)
-    }
-
     const startAlarm = () => {
         if (customSoundUrl) {
-            // Play Custom File
-            // Check if audio context is running to allow play? HTML5 Audio is separate but often needs user gesture too.
-            // However "Open System" button handles the gesture context.
-            customAudioRef.current.play().catch(e => console.error("Play failed", e))
+            customAudioRef.current.volume = 1.0
+            customAudioRef.current.play().catch(e => {
+                console.warn("Play failed, fallback to synth chime:", e)
+                playSynthChime()
+            })
         } else {
-            // Play Beep Fallback
+            // Play High-Impact Kitchen Chime Fallback
+            playSynthChime()
             if (intervalRef.current) return
             intervalRef.current = setInterval(() => {
-                playTone(880, 'square')
-                setTimeout(() => playTone(600, 'square'), 300)
-            }, 1000)
+                playSynthChime()
+            }, 3500)
         }
     }
 

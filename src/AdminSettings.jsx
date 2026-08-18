@@ -5,12 +5,14 @@ import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
 import DataPurgePanel from './components/admin/DataPurgePanel'
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from './utils/printerHelper'
+import { simulateWmaOrder } from './utils/wmaNativeBridge'
 import { DEFAULT_CRM_SETTINGS, DEFAULT_CRM_TIERS, parseTiersConfig, calculateMemberTier, calculateCoinsEarned, calculateCoinsDiscount, getTierVisualTheme } from './utils/crmHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { logger } from './utils/logger'
 import { getAppOrigin, safeTimestampUrl } from './utils/urlHelper'
+import { playSynthChime, playDoorbellChime } from './utils/audioHelper'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -1293,9 +1295,29 @@ export default function AdminSettings() {
 
                     {/* Sound Alert Settings */}
                     <div className="bg-paper p-8 rounded-3xl border border-gray-200 space-y-6 shadow-sm">
-                        <h2 className="text-xl font-bold text-ink flex items-center gap-2">
-                            <Volume2 className="text-brandDark" /> Sound Alert (Loop)
-                        </h2>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-ink flex items-center gap-2">
+                                <Volume2 className="text-brandDark" /> Sound Alert Settings
+                            </h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => playSynthChime()}
+                                    className="px-3 py-1.5 bg-brand text-ink text-xs font-bold rounded-lg border border-brandDark/20 hover:bg-brand/80 transition-colors flex items-center gap-1.5"
+                                    title="ทดสอบเสียงแจ้งเตือนระบบมาตรฐาน (Kitchen Chime)"
+                                >
+                                    <Volume2 size={14} /> ทดสอบเสียง POS
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => playDoorbellChime()}
+                                    className="px-3 py-1.5 bg-canvas text-ink text-xs font-bold rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors flex items-center gap-1.5"
+                                    title="ทดสอบเสียงกริ่งประตู / QR Alert (Doorbell)"
+                                >
+                                    <Bell size={14} /> ทดสอบกริ่ง
+                                </button>
+                            </div>
+                        </div>
                         <div className="flex items-center gap-4">
                             <div className="flex-1 bg-canvas rounded-xl p-4 flex items-center justify-between border border-gray-200">
                                 <div className="flex items-center gap-3">
@@ -1303,9 +1325,9 @@ export default function AdminSettings() {
                                         <Bell size={20} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-bold text-ink">Current Alert Sound</p>
+                                        <p className="text-sm font-bold text-ink">Current POS Alert Sound</p>
                                         <p className="text-xs text-subInk">
-                                            {settings.alert_sound_url ? 'Custom File Uploaded' : 'System Default (Beep)'}
+                                            {settings.alert_sound_url ? 'Custom File Uploaded' : 'System Default (High-Impact Kitchen Chime)'}
                                         </p>
                                     </div>
                                 </div>
@@ -1317,7 +1339,7 @@ export default function AdminSettings() {
 
                         <div>
                             <label className="block text-xs font-bold text-subInk uppercase mb-2">
-                                Upload New Sound (Max 1MB, .mp3/.wav)
+                                Upload New POS Sound (Max 1MB, .mp3/.wav)
                             </label>
                             <input
                                 type="file"
@@ -1343,7 +1365,7 @@ export default function AdminSettings() {
                         
                         {/* KDS Sound Alert Settings */}
                         <div className="pt-4 border-t border-gray-100">
-                            <div className="flex items-center gap-4 mb-4">
+                            <div className="flex items-center justify-between mb-4">
                                 <div className="flex-1 bg-canvas rounded-xl p-4 flex items-center justify-between border border-gray-200">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600">
@@ -1352,13 +1374,22 @@ export default function AdminSettings() {
                                         <div>
                                             <p className="text-sm font-bold text-ink">KDS Alert Sound</p>
                                             <p className="text-xs text-subInk">
-                                                {settings.kds_alert_sound_url ? 'Custom File Uploaded' : 'System Default (Same as POS)'}
+                                                {settings.kds_alert_sound_url ? 'Custom File Uploaded' : 'System Default (High-Impact Kitchen Chime)'}
                                             </p>
                                         </div>
                                     </div>
-                                    {settings.kds_alert_sound_url && (
-                                        <audio controls src={settings.kds_alert_sound_url} className="h-8 w-32" />
-                                    )}
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => playSynthChime()}
+                                            className="px-3 py-1.5 bg-orange-100 text-orange-700 text-xs font-bold rounded-lg border border-orange-200 hover:bg-orange-200 transition-colors flex items-center gap-1.5"
+                                        >
+                                            <Volume2 size={14} /> ทดสอบเสียง KDS
+                                        </button>
+                                        {settings.kds_alert_sound_url && (
+                                            <audio controls src={settings.kds_alert_sound_url} className="h-8 w-32" />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -2052,6 +2083,67 @@ export default function AdminSettings() {
                                         )}
                                     </div>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Wongnai Merchant App (WMA) Virtual ESC/POS Printer Bridge Card */}
+                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-5 rounded-xl shadow-sm space-y-4 col-span-1 sm:col-span-2">
+                            <div className="flex flex-wrap justify-between items-center border-b border-[#D1D1CD] pb-3 gap-2">
+                                <div>
+                                    <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-2">
+                                        <span>🛵</span> Wongnai Merchant App (WMA) ESC/POS Bridge & Interceptor
+                                    </h2>
+                                    <p className="text-[10px] text-[#767673] mt-0.5">
+                                        พอร์ตจำลองเครื่องพิมพ์เสมือน (Port 9100) และระบบดักจับการแจ้งเตือน Android เพื่อดูดออเดอร์ LINE MAN เข้า POS อัตโนมัติ
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                                        PORT 9100 LISTENING
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                                <div className="space-y-2 bg-white p-4 rounded-xl border border-[#D1D1CD]">
+                                    <h3 className="font-mono font-bold uppercase text-[11px] text-[#1A1A1A] flex items-center gap-1.5">
+                                        <span>⚙️</span> การตั้งค่าในแอป Wongnai Merchant App (WMA)
+                                    </h3>
+                                    <ol className="space-y-1.5 text-[11px] text-[#555] list-decimal list-inside leading-relaxed">
+                                        <li>เปิดแอป <strong>WMA</strong> &gt; ไปที่ <strong>ตั้งค่า</strong> &gt; <strong>เครื่องพิมพ์</strong></li>
+                                        <li>กด <strong>เพิ่มเครื่องพิมพ์</strong> &gt; เลือก <strong>LAN / Wi-Fi (IP Printer)</strong></li>
+                                        <li>ใส่ IP: <strong className="font-mono text-[#1A1A1A]">127.0.0.1</strong> และ Port: <strong className="font-mono text-[#1A1A1A]">9100</strong></li>
+                                        <li>เลือกรุ่น <strong>ทั่วไป / ESC/POS (80mm)</strong></li>
+                                        <li>เปิด <strong>"พิมพ์อัตโนมัติเมื่อมีออเดอร์ใหม่"</strong> แล้วกดบันทึก</li>
+                                    </ol>
+                                </div>
+
+                                <div className="space-y-2 bg-white p-4 rounded-xl border border-[#D1D1CD] flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="font-mono font-bold uppercase text-[11px] text-[#1A1A1A] flex items-center gap-1.5">
+                                            <span>🧪</span> ตรวจสอบและทดสอบการรับออเดอร์ (Diagnostic Test)
+                                        </h3>
+                                        <p className="text-[11px] text-[#767673] mt-1 leading-relaxed">
+                                            กดปุ่มด้านล่างเพื่อจำลองส่งออเดอร์ LINE MAN เข้าสู่ระบบ POS เพื่อทดสอบเสียงเตือน การบันทึก และการแสดงผลบนหน้าจอ
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            try {
+                                                await simulateWmaOrder();
+                                                alert('✅ ยิงออเดอร์จำลอง LINE MAN สำเร็จ! ระบบได้บันทึกและส่งเสียงแจ้งเตือนเรียบร้อย');
+                                            } catch (e) {
+                                                alert('❌ ทดสอบไม่สำเร็จ: ' + (e.message || 'Error'));
+                                            }
+                                        }}
+                                        className="w-full py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm active:scale-98 flex items-center justify-center gap-1.5"
+                                    >
+                                        <span>🧪 ทดสอบยิงออเดอร์จำลอง LINE MAN (Simulate Test)</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
