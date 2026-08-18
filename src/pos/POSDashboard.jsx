@@ -1136,8 +1136,20 @@ export default function POSDashboard() {
 
         // Construct cart fallback items from currentOrder.items in case order_items from DB is missing or empty
         const cartFallbackOrderItems = (currentOrder.items || []).map((ci, idx) => {
-            const resolvedName = ci.custom_name || ci.name || 'Item';
-            const resolvedDest = ci.destination || (ci.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen');
+            const isCustom = Boolean(ci.is_custom || (ci.menu_item_id == null && !String(ci.id).startsWith('db_') && ci.custom_name) || String(ci.id).startsWith('custom_') || (ci.menu_item_id == null && ci.custom_name));
+            const resolvedName = ci.custom_name || ci.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+            const catId = ci.category_id || '';
+            const DEFAULT_BAR_CATS = [
+                '7524bb8a-4698-45c6-aa17-d8ccc296f667',
+                '912683ef-fdc3-40a3-8dd8-b09507791240',
+                'b441665e-2f23-4df3-a11d-63485e1690dc',
+                'a2c783fc-975b-4779-b9eb-67391eeafd1f',
+                '1983955d-5787-4351-b729-51b95761f125',
+                '1407d869-4eed-489e-aeeb-ba7ef19f57bd',
+                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'
+            ];
+            let resolvedDest = DEFAULT_BAR_CATS.includes(catId) || ci.destination === 'bar' ? 'bar' : (ci.destination === 'other' ? 'other' : 'kitchen');
+
             return {
                 id: ci.db_id || ci.id || `cart_item_${idx}`,
                 booking_id: bookingId,
@@ -1148,12 +1160,12 @@ export default function POSDashboard() {
                 selected_options: ci.selected_options || [],
                 item_note: ci.item_note || '',
                 name: resolvedName,
-                custom_name: ci.custom_name || (ci.is_custom ? resolvedName : null),
+                custom_name: isCustom ? (ci.custom_name || resolvedName) : null,
                 destination: resolvedDest,
-                is_custom: ci.is_custom || false,
-                is_emergency: ci.is_emergency || false,
+                is_custom: isCustom,
+                is_emergency: isCustom,
                 category_id: ci.category_id || '',
-                category_name: ci.category_name || '',
+                category_name: ci.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                 menu_items: {
                     name: resolvedName,
                     category_id: ci.category_id || '',
@@ -1187,21 +1199,44 @@ export default function POSDashboard() {
             setActiveBooking(targetBooking);
             // Update currentOrder item db_ids so they don't get re-submitted
             const updatedItems = (targetBooking.order_items || []).map(oi => {
-                const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || 'Item';
-                const resolvedDest = oi.destination 
-                    || (oi.selected_options?.find(o => o.destination)?.destination)
-                    || (oi.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
+                const isCustom = Boolean(oi.is_custom || (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || String(oi.id).startsWith('custom_') || (oi.menu_item_id == null && oi.custom_name));
+                const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                
+                const catId = oi.menu_items?.category_id || oi.category_id || '';
+                const DEFAULT_BAR_CATS = [
+                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+                ];
+                let resolvedDest = 'kitchen';
+                if (DEFAULT_BAR_CATS.includes(catId)) {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'other') {
+                    resolvedDest = 'other';
+                } else if (oi.selected_options?.some(o => {
+                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+                })) {
+                    resolvedDest = 'bar';
+                }
+
                 return {
                     id: oi.menu_item_id || oi.id,
                     name: resolvedName,
-                    custom_name: oi.custom_name || (oi.is_custom ? resolvedName : null),
+                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
                     price: oi.price_at_time ?? oi.price,
                     quantity: oi.quantity,
                     db_id: oi.id,
                     selected_options: oi.selected_options || [],
                     destination: resolvedDest,
-                    is_custom: oi.is_custom || !oi.menu_item_id,
-                    is_emergency: oi.is_emergency || oi.is_custom || !oi.menu_item_id,
+                    is_custom: isCustom,
+                    is_emergency: isCustom,
                     category_id: oi.category_id || oi.menu_items?.category_id || '',
                     category_name: oi.category_name || oi.menu_items?.menu_categories?.name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร')
                 };
@@ -1269,21 +1304,48 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             setSelectedTable(null);
             const existingItems = (booking.order_items || []).map(oi => {
+                const isCustom = Boolean(
+                    oi.is_custom || 
+                    (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
+                    String(oi.id).startsWith('custom_') || 
+                    (oi.menu_item_id == null && oi.custom_name)
+                );
                 const resolvedName = oi.custom_name 
                     || oi.menu_items?.name 
                     || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
                     || oi.name 
-                    || 'เมนูเพิ่มเติม';
-                const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
-                const resolvedDest = oi.destination 
-                    || (oi.selected_options?.find(o => o.destination)?.destination)
-                    || (oi.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
+                    || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                
+                const catId = oi.menu_items?.category_id || oi.category_id || '';
+                const DEFAULT_BAR_CATS = [
+                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+                ];
+                let resolvedDest = 'kitchen';
+                if (DEFAULT_BAR_CATS.includes(catId)) {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'other') {
+                    resolvedDest = 'other';
+                } else if (oi.selected_options?.some(o => {
+                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+                })) {
+                    resolvedDest = 'bar';
+                }
+
                 return {
                     id: `db_${oi.id}`,
                     menu_item_id: oi.menu_item_id,
                     name: resolvedName,
-                    custom_name: resolvedName,
-                    price: parseFloat(oi.price_at_time) || 0,
+                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+                    price: parseFloat(oi.price_at_time ?? oi.price) || 0,
                     quantity: oi.quantity,
                     db_id: oi.id,
                     selected_options: oi.selected_options || [],
@@ -1331,21 +1393,48 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             // Load existing items with unique cart-level IDs
             const existingItems = (booking.order_items || []).map(oi => {
+                const isCustom = Boolean(
+                    oi.is_custom || 
+                    (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
+                    String(oi.id).startsWith('custom_') || 
+                    (oi.menu_item_id == null && oi.custom_name)
+                );
                 const resolvedName = oi.custom_name 
                     || oi.menu_items?.name 
                     || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
                     || oi.name 
-                    || 'เมนูเพิ่มเติม';
-                const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
-                const resolvedDest = oi.destination 
-                    || (oi.selected_options?.find(o => o.destination)?.destination)
-                    || (oi.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
+                    || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                
+                const catId = oi.menu_items?.category_id || oi.category_id || '';
+                const DEFAULT_BAR_CATS = [
+                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+                ];
+                let resolvedDest = 'kitchen';
+                if (DEFAULT_BAR_CATS.includes(catId)) {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                    resolvedDest = 'bar';
+                } else if (oi.destination === 'other') {
+                    resolvedDest = 'other';
+                } else if (oi.selected_options?.some(o => {
+                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+                })) {
+                    resolvedDest = 'bar';
+                }
+
                 return {
                     id: `db_${oi.id}`,
                     menu_item_id: oi.menu_item_id,
                     name: resolvedName,
-                    custom_name: resolvedName,
-                    price: parseFloat(oi.price_at_time) || 0,
+                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+                    price: parseFloat(oi.price_at_time ?? oi.price) || 0,
                     quantity: oi.quantity,
                     db_id: oi.id,
                     selected_options: oi.selected_options || [],
@@ -1433,24 +1522,49 @@ export default function POSDashboard() {
         }
         
         const existingItems = (booking.order_items || []).map(oi => {
+            const isCustom = Boolean(
+                oi.is_custom || 
+                (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
+                String(oi.id).startsWith('custom_') || 
+                (oi.menu_item_id == null && oi.custom_name)
+            );
             const resolvedName = oi.custom_name 
                 || oi.menu_items?.name 
                 || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
                 || oi.name 
-                || 'เมนูเพิ่มเติม';
-            const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
+                || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+            
+            const catId = oi.menu_items?.category_id || oi.category_id || '';
+            const DEFAULT_BAR_CATS = [
+                '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+            ];
+            let resolvedDest = 'kitchen';
+            if (DEFAULT_BAR_CATS.includes(catId)) {
+                resolvedDest = 'bar';
+            } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                resolvedDest = 'bar';
+            } else if (oi.destination === 'other') {
+                resolvedDest = 'other';
+            }
+
             return {
                 id: `db_${oi.id}`,
                 menu_item_id: oi.menu_item_id,
                 name: resolvedName,
-                custom_name: resolvedName,
-                price: parseFloat(oi.price_at_time) || 0,
+                custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+                price: parseFloat(oi.price_at_time ?? oi.price) || 0,
                 quantity: oi.quantity,
                 db_id: oi.id,
                 selected_options: oi.selected_options || [],
                 category_id: oi.menu_items?.category_id || oi.category_id || '',
-                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (oi.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                destination: oi.destination || (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'),
+                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                destination: resolvedDest,
                 is_custom: isCustom,
                 is_emergency: isCustom,
                 is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
@@ -2420,7 +2534,6 @@ export default function POSDashboard() {
                         <div className={view === 'tables' ? 'h-full' : 'hidden'}>
                             <POSTableGrid 
                                 onSelectTable={handleSelectTable} 
-                                onNewWalkInPickup={handleNewWalkInPickup}
                                 hasPendingOrders={hasPendingOrders} 
                                 refreshKey={refreshKey}
                                 onOpenNotifDrawer={() => {

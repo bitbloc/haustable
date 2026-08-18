@@ -454,26 +454,38 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
-                const resolvedName = item.custom_name || item.name || 'เมนูเพิ่มเติม';
-                const isCustom = item.is_custom || item.is_emergency || !item.menu_item_id || String(item.id).startsWith('custom_');
+                const isCustom = Boolean(item.is_custom || item.is_emergency || (!item.menu_item_id && !item.id && item.custom_name) || String(item.id).startsWith('custom_'));
+                const resolvedName = item.custom_name || item.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                const catId = item.category_id || '';
+                const DEFAULT_BAR_CATS = [
+                    '7524bb8a-4698-45c6-aa17-d8ccc296f667',
+                    '912683ef-fdc3-40a3-8dd8-b09507791240',
+                    'b441665e-2f23-4df3-a11d-63485e1690dc',
+                    'a2c783fc-975b-4779-b9eb-67391eeafd1f',
+                    '1983955d-5787-4351-b729-51b95761f125',
+                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd',
+                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'
+                ];
+                let resolvedDest = DEFAULT_BAR_CATS.includes(catId) || item.destination === 'bar' ? 'bar' : (item.destination === 'other' ? 'other' : 'kitchen');
+
                 return {
                     id: `local_item_${Date.now()}_${i}`,
                     booking_id: bookingId,
-                    menu_item_id: item.id || item.menu_item_id,
+                    menu_item_id: resolveMenuItemId(item),
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts,
                     name: resolvedName,
-                    custom_name: isCustom ? resolvedName : null,
+                    custom_name: isCustom ? (item.custom_name || resolvedName) : null,
                     is_custom: isCustom,
-                    destination: item.destination || 'kitchen',
+                    destination: resolvedDest,
                     category_id: item.category_id || '',
-                    category_name: item.category_name || '',
+                    category_name: item.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                     item_note: item.item_note || '',
                     menu_items: { 
                         name: resolvedName, 
                         category_id: item.category_id || '',
-                        menu_categories: { name: item.category_name || (item.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
+                        menu_categories: { name: item.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                     }
                 };
             });

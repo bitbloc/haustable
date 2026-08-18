@@ -421,36 +421,7 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
 export const classifyItem = (item, receiptConfig = {}) => {
     if (!item) return 'kitchen';
 
-    // 1. Direct explicit destination
-    const directDest = String(item.destination || '').toLowerCase().trim();
-    if (directDest === 'bar' || directDest === 'drinks' || directDest === 'drink' || directDest === 'beverage') return 'bar';
-    if (directDest === 'other') return 'other';
-    
-    // 2. Check selected_options array for destination objects, badges, and textual markers
-    if (item.selected_options && Array.isArray(item.selected_options)) {
-        for (const opt of item.selected_options) {
-            if (typeof opt === 'object' && opt !== null) {
-                const optDest = String(opt.destination || '').toLowerCase().trim();
-                if (optDest === 'bar' || optDest === 'drinks' || optDest === 'drink') return 'bar';
-                if (optDest === 'other') return 'other';
-                if (optDest === 'kitchen' || optDest === 'food') return 'kitchen';
-
-                const optName = String(opt.name || opt.custom_item_name || '');
-                if (optName.includes('(บาร์)') || optName.includes('(Bar)') || optName.includes('เครื่องดื่ม')) return 'bar';
-                if (optName.includes('(ทั่วไป)') || optName.includes('(Other)')) return 'other';
-                if (optName.includes('(ครัว)') || optName.includes('(Kitchen)')) return 'kitchen';
-            } else if (typeof opt === 'string') {
-                if (opt.includes('(บาร์)') || opt.includes('(Bar)') || opt.includes('เครื่องดื่ม')) return 'bar';
-                if (opt.includes('(ทั่วไป)') || opt.includes('(Other)')) return 'other';
-                if (opt.includes('(ครัว)') || opt.includes('(Kitchen)')) return 'kitchen';
-            }
-        }
-    }
-
-    // 3. If direct destination was explicitly 'kitchen' or 'food' and no option override found
-    if (directDest === 'kitchen' || directDest === 'food') return 'kitchen';
-
-    // 4. Check category IDs and printer category configurations
+    // 1. Check Category IDs (Catalog classification takes highest priority)
     const getItemCatId = (i) => i.menu_items?.category_id || i.category_id || i.category || '';
     const catId = getItemCatId(item);
 
@@ -471,9 +442,10 @@ export const classifyItem = (item, receiptConfig = {}) => {
     if (barCatIds.length > 0 && barCatIds.includes(catId)) return 'bar';
     if (kitchenCatIds.length > 0 && kitchenCatIds.includes(catId)) return 'kitchen';
 
+    // Standard UUIDs for Bar items (Coffee, Soft Drinks/Water/Ice/Soda, Beer, Alcohol, Cocktails)
     const DEFAULT_BAR_CATS = [
         '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink (Soda, Water, Ice, Coke)
         'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
         'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
         '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
@@ -482,9 +454,38 @@ export const classifyItem = (item, receiptConfig = {}) => {
     ];
     if (DEFAULT_BAR_CATS.includes(catId)) return 'bar';
 
-    // 5. Category Name heuristic check (for custom items or catalog items)
+    // 2. Check explicit Bar / Other destinations on custom or configured items
+    const directDest = String(item.destination || '').toLowerCase().trim();
+    if (directDest === 'bar' || directDest === 'drinks' || directDest === 'drink' || directDest === 'beverage') return 'bar';
+    if (directDest === 'other') return 'other';
+
+    // 3. Check selected_options array for destination objects, badges, and textual markers
+    if (item.selected_options && Array.isArray(item.selected_options)) {
+        for (const opt of item.selected_options) {
+            if (typeof opt === 'object' && opt !== null) {
+                const optDest = String(opt.destination || '').toLowerCase().trim();
+                if (optDest === 'bar' || optDest === 'drinks' || optDest === 'drink') return 'bar';
+                if (optDest === 'other') return 'other';
+
+                const optName = String(opt.name || opt.custom_item_name || '');
+                if (optName.includes('(บาร์)') || optName.includes('(Bar)') || optName.includes('เครื่องดื่ม')) return 'bar';
+                if (optName.includes('(ทั่วไป)') || optName.includes('(Other)')) return 'other';
+            } else if (typeof opt === 'string') {
+                if (opt.includes('(บาร์)') || opt.includes('(Bar)') || opt.includes('เครื่องดื่ม')) return 'bar';
+                if (opt.includes('(ทั่วไป)') || opt.includes('(Other)')) return 'other';
+            }
+        }
+    }
+
+    // 4. Category Name heuristic check (for custom items or catalog items)
     const catName = String(item.category_name || item.menu_items?.menu_categories?.name || item.menu_items?.category_name || '').toLowerCase();
     if (catName.includes('เครื่องดื่ม') || catName.includes('bar') || catName.includes('drink') || catName.includes('coffee') || catName.includes('beer') || catName.includes('alcohol')) {
+        return 'bar';
+    }
+
+    // 5. Item Name heuristic check for common bar items (Soda, Ice, Mineral water, etc.)
+    const itemName = String(item.name || item.custom_name || item.menu_items?.name || '').toLowerCase();
+    if (itemName.includes('โซดา') || itemName.includes('น้ำแข็ง') || itemName.includes('น้ำแร่') || itemName.includes('น้ำเปล่า') || itemName.includes('soda') || itemName.includes('water') || itemName.includes('beer') || itemName.includes('เบียร์')) {
         return 'bar';
     }
 

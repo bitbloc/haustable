@@ -2014,7 +2014,7 @@ export default POSOrderPanel;
 
 const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onUpdateItemNote }) {
     const isRewardItem = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
-    const isCustomEmergency = item.is_custom || item.is_emergency || !item.menu_item_id || String(item.id).startsWith('custom_');
+    const isCustomEmergency = Boolean(item.is_custom || item.is_emergency || String(item.id).startsWith('custom_') || (item.menu_item_id == null && !String(item.id).startsWith('db_') && item.custom_name));
 
     return (
         <div 

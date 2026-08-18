@@ -253,17 +253,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             รอรับออเดอร์
                         </button>
                     </div>
-
-                    {onNewWalkInPickup && (
-                        <button 
-                            type="button"
-                            onClick={onNewWalkInPickup}
-                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] border border-[oklch(45%_0.16_28)] transition-all cursor-pointer font-mono text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 touch-manipulation"
-                            title="เปิดบิลสั่งกลับบ้านหน้าร้าน (Walk-in Pickup)"
-                        >
-                            + สั่งกลับบ้าน
-                        </button>
-                    )}
                 </div>
 
                 {/* Layout Mode Toggle */}
