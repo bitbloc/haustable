@@ -912,7 +912,6 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 
                 encoder.bold(true).size(1, 1);
                 kitchenItemLines.forEach(l => encoder.line(l));
-                encoder.size(0, 0).bold(false);
                 
                 if (item.selected_options || item.item_note) {
                     let optionsList = [];
@@ -944,11 +943,12 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
                     optionsList.forEach(opt => {
                         const optLine = `> ${String(opt).toUpperCase()}`;
-                        wrapTextByWords(optLine, maxCols - 2).forEach(l => {
-                            encoder.bold(true).line(`  ${l}`).bold(false);
+                        wrapTextByWords(optLine, maxDoubleCols).forEach(l => {
+                            encoder.line(l);
                         });
                     });
                 }
+                encoder.size(0, 0).bold(false);
                 encoder.line(divider);
             });
         };
@@ -1113,14 +1113,27 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (cleanStaffNote) combinedNotes.push(`พนักงาน: ${cleanStaffNote}`);
 
     if (combinedNotes.length > 0) {
-        encoder.align('left')
-               .bold(true)
-               .line('หมายเหตุ:')
-               .bold(false);
-        combinedNotes.forEach(noteLine => {
-            const lines = wrapTextByWords(noteLine, maxCols - 2);
-            lines.forEach(l => encoder.line(l));
-        });
+        if (isKitchenTab) {
+            const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
+            encoder.align('left')
+                   .bold(true)
+                   .size(1, 1)
+                   .line('หมายเหตุ:');
+            combinedNotes.forEach(noteLine => {
+                const lines = wrapTextByWords(noteLine, maxDoubleCols);
+                lines.forEach(l => encoder.line(l));
+            });
+            encoder.size(0, 0).bold(false);
+        } else {
+            encoder.align('left')
+                   .bold(true)
+                   .line('หมายเหตุ:')
+                   .bold(false);
+            combinedNotes.forEach(noteLine => {
+                const lines = wrapTextByWords(noteLine, maxCols - 2);
+                lines.forEach(l => encoder.line(l));
+            });
+        }
         encoder.line(divider);
     }
 

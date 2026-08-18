@@ -60,7 +60,7 @@ const renderOptions = (item) => {
     
     if (opts.length === 0) return null
     return (
-        <div className="mt-1 text-xs text-[oklch(55%_0.010_28)] font-mono space-y-0.5 ml-6">
+        <div className="mt-1 text-sm font-semibold text-[oklch(18%_0.012_28)] font-mono space-y-0.5 ml-6">
             {opts.map((o, i) => <div key={i}>— {o}</div>)}
         </div>
     )

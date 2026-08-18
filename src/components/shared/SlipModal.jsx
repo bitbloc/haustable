@@ -446,7 +446,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 }
 
                 if (optionsList.length > 0) {
-                    optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; padding-left: 12px;">▶ ${opt}</div>`).join('')
+                    optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; ${isKitchen ? 'font-size: 15px; margin-top: 3px;' : 'font-size: 10px;'} padding-left: 12px;">▶ ${opt}</div>`).join('')
                 }
             }
 
@@ -460,7 +460,7 @@ export default function SlipModal({ booking, type, onClose }) {
                             <span class="qty" style="font-size: 16px; background: black; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 8px; flex-shrink: 0;">${item.quantity}x</span>
                             <span class="name" style="flex-grow: 1; text-transform: uppercase;">${name}</span>
                         </div>
-                        ${optsHtml ? `<div class="opts" style="font-size: 11px; margin-left: 35px; font-weight: bold; color: black;">${optsHtml}</div>` : ''}
+                        ${optsHtml ? `<div class="opts" style="font-size: 15px; margin-left: 35px; font-weight: 900; color: black; line-height: 1.3;">${optsHtml}</div>` : ''}
                     </div>
                 `
             }
@@ -528,9 +528,9 @@ export default function SlipModal({ booking, type, onClose }) {
         if (cleanStaffNote) combinedNotes.push(`<strong>พนักงาน:</strong> ${cleanStaffNote}`);
 
         const noteHtml = (combinedNotes.length > 0) ? `
-            <div class="kitchen-note-box">
-                <div class="kitchen-note-label">หมายเหตุ / NOTES</div>
-                ${combinedNotes.map(n => `<div style="margin-top: 2px;">${n}</div>`).join('')}
+            <div class="kitchen-note-box" style="${isKitchen ? 'font-size: 14px; padding: 10px;' : ''}">
+                <div class="kitchen-note-label" style="${isKitchen ? 'font-size: 11px; margin-bottom: 6px;' : ''}">หมายเหตุ / NOTES</div>
+                ${combinedNotes.map(n => `<div style="margin-top: 3px; ${isKitchen ? 'font-size: 14px; font-weight: bold; line-height: 1.3;' : ''}">${n}</div>`).join('')}
             </div>
         ` : ''
 
@@ -1241,7 +1241,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                             )}
                                         </div>
                                         {optionsList.length > 0 && (
-                                            <div className="pl-6 space-y-0.5 text-[10px] text-black font-bold border-l-2 border-black ml-1 pl-2.5">
+                                            <div className={`pl-6 space-y-1 ${isKitchenTab ? 'text-[13px] font-bold text-black border-l-2 border-black ml-1 pl-2.5 my-1 leading-snug' : 'text-[10px] text-black font-bold border-l-2 border-black ml-1 pl-2.5'}`}>
                                                 {optionsList.map((opt, i) => <div key={i}>▶ {opt}</div>)}
                                             </div>
                                         )}
@@ -1346,8 +1346,8 @@ export default function SlipModal({ booking, type, onClose }) {
 
                         {/* Note for Kitchen & Staff (Always show if present) */}
                         {(booking.customer_note || booking.staff_remark) && (
-                            <div className="bg-black text-white p-3 font-mono text-[10px] relative mt-4">
-                                <div className="absolute -top-2 left-2 bg-black px-1 text-[8px] font-bold uppercase tracking-wider">Note for Staff / Kitchen</div>
+                            <div className={`bg-black text-white p-3 font-mono ${isKitchenTab ? 'text-xs font-bold' : 'text-[10px]'} relative mt-4`}>
+                                <div className={`absolute -top-2 left-2 bg-black px-1 ${isKitchenTab ? 'text-[9px]' : 'text-[8px]'} font-bold uppercase tracking-wider`}>Note for Staff / Kitchen</div>
                                 {booking.customer_note && <div><strong>ลูกค้า:</strong> {booking.customer_note}</div>}
                                 {booking.staff_remark && <div><strong>พนักงาน:</strong> {booking.staff_remark}</div>}
                             </div>
