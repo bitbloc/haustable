@@ -23,6 +23,7 @@ export default function BookingCheckout() {
 
     // Member CRM state
     const [memberProfile, setMemberProfile] = useState(null)
+    const [crmBaseSpendAmount, setCrmBaseSpendAmount] = useState(100)
     const [tierDetails, setTierDetails] = useState({
         current_tier: 'Haus Common',
         multiplier: 1.00,
@@ -32,6 +33,16 @@ export default function BookingCheckout() {
     useEffect(() => {
         const loadMemberProfile = async () => {
             try {
+                // Fetch CRM base spend amount setting
+                const { data: settingData } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'crm_base_spend_amount')
+                    .maybeSingle();
+                if (settingData?.value) {
+                    setCrmBaseSpendAmount(parseFloat(settingData.value) || 100);
+                }
+
                 const { data: { user } } = await supabase.auth.getUser()
                 if (user) {
                     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -74,7 +85,7 @@ export default function BookingCheckout() {
     const depositAmount = Math.ceil(finalTotal * 0.5)
 
     // Estimated points earned
-    const estimatedPointsEarned = Math.floor((finalTotal / 100) * (tierDetails.multiplier || 1.0))
+    const estimatedPointsEarned = Math.floor((finalTotal / (crmBaseSpendAmount || 100)) * (tierDetails.multiplier || 1.0))
 
     // Revalidate when cartTotal changes
     useEffect(() => {

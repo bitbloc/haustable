@@ -251,7 +251,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const [crmSettings, setCrmSettings] = React.useState({
         crm_redeem_rate_xhaus: 1.0,
-        crm_min_redeem_xhaus: 10.0
+        crm_min_redeem_xhaus: 10.0,
+        crm_base_spend_amount: 100.0,
+        crm_max_redeem_percent: 100
     });
 
 
@@ -275,7 +277,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 const { data } = await supabase
                     .from('app_settings')
                     .select('key, value')
-                    .in('key', ['crm_redeem_rate_xhaus', 'crm_min_redeem_xhaus']);
+                    .in('key', [
+                        'crm_redeem_rate_xhaus',
+                        'crm_min_redeem_xhaus',
+                        'crm_base_spend_amount',
+                        'crm_max_redeem_percent'
+                    ]);
                 if (data) {
                     const settingsObj = {};
                     data.forEach(item => {
@@ -432,7 +439,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const tierDiscountRate = 0.00; // 0% member bill discount
     const memberDiscount = 0;
     const discountLabel = '';
-    const estimatedPointsEarned = currentMemberForDisc ? (Math.floor((subtotal / 100) * tierMultiplier * 100) / 100) : 0;
+    const baseSpendUnit = parseFloat(crmSettings.crm_base_spend_amount) || 100;
+    const estimatedPointsEarned = currentMemberForDisc ? (Math.floor((subtotal / baseSpendUnit) * tierMultiplier * 100) / 100) : 0;
         
     // 2. Promotion Code Discount Calculation
     const getPromoDiscount = () => {
@@ -460,8 +468,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     };
     const manualDiscount = getManualDiscount();
 
-    // 4. xhaus Coins Discount Calculation
-    const xhausDiscount = xhausToRedeem * (crmSettings.crm_redeem_rate_xhaus || 1.0);
+    // 4. xhaus Coins Discount Calculation (Respecting configured max percentage cap)
+    const rawXhausDiscount = xhausToRedeem * (parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0);
+    const maxAllowedDiscountBaht = (subtotal * (parseFloat(crmSettings.crm_max_redeem_percent) || 100)) / 100;
+    const xhausDiscount = Math.min(rawXhausDiscount, maxAllowedDiscountBaht);
     
     // 5. Drink 10 Free 1 Discount Calculation
     const isItemDrinkStampEligible = React.useCallback((item) => {
@@ -494,7 +504,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         ? parseFloat(currentMemberForPoints.multiplier) 
         : (currentMemberForPoints?.current_tier === 'Inner Haus' ? 1.50 : (currentMemberForPoints?.current_tier === 'Haus People' ? 1.25 : 1.00));
     const finalMultiplier = isNaN(pointsMultiplier) ? 1.0 : pointsMultiplier;
-    const pointsEarned = Math.floor((total / 100) * finalMultiplier * 100) / 100;
+    const pointsEarned = Math.floor((total / baseSpendUnit) * finalMultiplier * 100) / 100;
     
     // CFD Broadcast Channel (BroadcastChannel + Supabase Realtime for cross-origin)
     const cfdChannel = React.useRef(null);

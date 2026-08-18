@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy } from 'lucide-react'
+import { Save, Power, Upload, Calendar, Trash2, Volume2, Bell, MessageSquare, QrCode, RefreshCw, Download, Cake, Heart, TrendingUp, Coins, Award, Users, ShieldCheck, Gift, Terminal, AlertTriangle, FileText, Copy, Plus, Calculator, RotateCcw, CheckCircle2, Sparkles, Layers, ExternalLink, Edit3, Check } from 'lucide-react'
 import QRCode from 'qrcode'
 import CheckinManager from './components/admin/CheckinManager'
 import DataPurgePanel from './components/admin/DataPurgePanel'
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from './utils/printerHelper'
+import { DEFAULT_CRM_SETTINGS, DEFAULT_CRM_TIERS, parseTiersConfig, calculateMemberTier, calculateCoinsEarned, calculateCoinsDiscount, getTierVisualTheme } from './utils/crmHelper'
 import { BleClient } from '@capacitor-community/bluetooth-le'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
@@ -112,6 +113,11 @@ export default function AdminSettings() {
         crm_welcome_xhaus: '10.00',
         crm_redeem_rate_xhaus: '1.00',
         crm_min_redeem_xhaus: '10.00',
+        crm_base_spend_amount: '100.00',
+        crm_max_redeem_percent: '100',
+        crm_tier_eval_months: '12',
+        crm_grace_period_days: '30',
+        crm_tiers_config: JSON.stringify(DEFAULT_CRM_TIERS),
         receipt_shop_name: 'IN THE HAUS',
         receipt_shop_address: '',
         receipt_shop_phone: '',
@@ -128,6 +134,13 @@ export default function AdminSettings() {
     const [uploadingHomeBg, setUploadingHomeBg] = useState(false)
     const [uploadingLogo, setUploadingLogo] = useState(false)
     const [crmQrUrl, setCrmQrUrl] = useState('')
+
+    // Dynamic Relationship Tiers Management & Simulation State
+    const [editableTiers, setEditableTiers] = useState(DEFAULT_CRM_TIERS)
+    const [isTiersSaving, setIsTiersSaving] = useState(false)
+    const [simSpendAmount, setSimSpendAmount] = useState('500')
+    const [simAccumSpent, setSimAccumSpent] = useState('4500')
+    const [simGracePeriod, setSimGracePeriod] = useState(false)
 
     useEffect(() => {
         const url = `${getAppOrigin()}/member-card`;
@@ -632,12 +645,76 @@ export default function AdminSettings() {
             const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
             // Merge กับค่า default เพื่อป้องกัน undefined
             setSettings(prev => ({ ...prev, ...map }))
+            if (map.crm_tiers_config) {
+                setEditableTiers(parseTiersConfig(map.crm_tiers_config))
+            }
         }
 
         // Fetch Blocked Dates
         const { data: bd } = await supabase.from('blocked_dates').select('*').order('blocked_date', { ascending: true })
         setBlockedList(bd || [])
     }
+
+    // Dynamic Tiers Management Handlers
+    const handleTierFieldChange = (index, field, value) => {
+        setEditableTiers(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], [field]: value };
+            return updated;
+        });
+    };
+
+    const handleAddTier = () => {
+        setEditableTiers(prev => {
+            const lastTier = prev[prev.length - 1];
+            const nextMinSpend = lastTier ? (parseFloat(lastTier.min_spend) || 0) + 4000 : 0;
+            const nextMultiplier = lastTier ? (parseFloat(lastTier.multiplier) || 1.0) + 0.25 : 1.0;
+            const nextLevel = String(prev.length + 1).padStart(2, '0');
+            const themeOptions = ['bronze', 'silver', 'gold', 'emerald'];
+            const nextTheme = themeOptions[prev.length % themeOptions.length];
+            const newTier = {
+                id: `tier_${Date.now()}`,
+                level_code: nextLevel,
+                name: `Tier ${prev.length + 1}`,
+                min_spend: nextMinSpend,
+                multiplier: nextMultiplier,
+                tagline: 'ระดับสมาชิกใหม่',
+                condition_text: `มียอดจ่ายสะสมสุทธิครบ ${nextMinSpend.toLocaleString()} บาทภายใน ${settings.crm_tier_eval_months || 12} เดือน`,
+                badge_theme: nextTheme
+            };
+            return [...prev, newTier];
+        });
+    };
+
+    const handleDeleteTier = (index) => {
+        if (editableTiers.length <= 1) {
+            alert('ต้องมีระดับความสัมพันธ์อย่างน้อย 1 ระดับในระบบ');
+            return;
+        }
+        if (!confirm(`ต้องการลบระดับ "${editableTiers[index].name}" หรือไม่?`)) return;
+        setEditableTiers(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleResetTiers = () => {
+        if (!confirm('ต้องการคืนค่าระดับความสัมพันธ์ทั้งหมดกลับเป็นค่าเริ่มต้นระบบหรือไม่?')) return;
+        setEditableTiers([...DEFAULT_CRM_TIERS]);
+    };
+
+    const handleSaveTiers = async () => {
+        setIsTiersSaving(true);
+        try {
+            const normalized = parseTiersConfig(editableTiers);
+            setEditableTiers(normalized);
+            const jsonStr = JSON.stringify(normalized);
+            await handleSave('crm_tiers_config', jsonStr);
+            alert('✅ บันทึกการตั้งค่าระดับความสัมพันธ์ (Relationship Tiers) สำเร็จ!');
+        } catch (err) {
+            console.error("Save tiers error:", err);
+            alert('❌ บันทึกระดับสมาชิกล้มเหลว: ' + (err.message || err));
+        } finally {
+            setIsTiersSaving(false);
+        }
+    };
 
     // Save Function (แก้ใหม่ให้ลื่นขึ้น)
     const handleSave = async (key, value) => {
@@ -2548,19 +2625,31 @@ export default function AdminSettings() {
 
                 {/* TAB 5: CRM Settings */}
                 {activeSettingsTab === 'crm' && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in font-sans text-[#1A1A1A] mb-8">
-                        {/* Column 1: Config Rules */}
-                        <div className="md:col-span-2 space-y-6">
-                            {/* Coins Settings Card */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in font-sans text-[#1A1A1A] mb-8">
+                        {/* Left & Center: Config Rules & Relationship Levels */}
+                        <div className="lg:col-span-2 space-y-6">
+                            
+                            {/* 1. Coins Settings Card */}
                             <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
-                                    <Coins className="text-[#FFAA00]" size={20} />
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
-                                        xhaus Coins Configuration (เงื่อนไขเงินเหรียญ)
-                                    </h2>
+                                <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Coins className="text-[#FFAA00]" size={20} />
+                                        <div>
+                                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                                xhaus Coins Configuration (เงื่อนไขและกติกาเงินเหรียญ)
+                                            </h2>
+                                            <p className="text-[8.5px] text-[#767673] font-sans">
+                                                กำหนดอัตราแลกเปลี่ยน โบนัสต้อนรับ และเงื่อนไขการสะสมเหรียญของระบบ
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <span className="px-2 py-0.5 bg-amber-500/10 text-amber-800 border border-amber-500/20 text-[9px] font-mono font-bold rounded">
+                                        SYNCED REAL-TIME
+                                    </span>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-1">
+                                    {/* 1. Welcome Coins */}
                                     <div>
                                         <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
                                             Welcome Coins (เหรียญต้อนรับ)
@@ -2576,9 +2665,10 @@ export default function AdminSettings() {
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">xhaus</span>
                                         </div>
-                                        <p className="text-[8px] text-[#767673] mt-1">จำนวนเหรียญที่สมาชิกใหม่ได้รับฟรีทันทีหลังสมัคร</p>
+                                        <p className="text-[8px] text-[#767673] mt-1">รับฟรีทันทีเมื่อสมัครสมาชิก</p>
                                     </div>
 
+                                    {/* 2. Redeem Rate */}
                                     <div>
                                         <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
                                             Redeem Rate (อัตราแลกส่วนลด)
@@ -2592,14 +2682,15 @@ export default function AdminSettings() {
                                                 onBlur={(e) => handleSave('crm_redeem_rate_xhaus', e.target.value)}
                                                 className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
                                             />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">Baht</span>
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">Baht/coin</span>
                                         </div>
-                                        <p className="text-[8px] text-[#767673] mt-1">มูลค่าเงินบาทที่ได้รับต่อการแลก 1 xhaus (1:1)</p>
+                                        <p className="text-[8px] text-[#767673] mt-1">มูลค่าเงินบาทต่อการแลก 1 xhaus</p>
                                     </div>
 
+                                    {/* 3. Min Redeem Limit */}
                                     <div>
                                         <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
-                                            Min Redeem Limit (แลกใช้ขั้นต่ำ)
+                                            Min Redeem (แลกใช้ขั้นต่ำ)
                                         </label>
                                         <div className="relative">
                                             <input 
@@ -2612,104 +2703,424 @@ export default function AdminSettings() {
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">xhaus</span>
                                         </div>
-                                        <p className="text-[8px] text-[#767673] mt-1">จำนวนเหรียญขั้นต่ำที่ต้องมีจึงจะทำรายการแลกได้</p>
+                                        <p className="text-[8px] text-[#767673] mt-1">เหรียญขั้นต่ำที่ต้องมีจึงจะแลกได้</p>
+                                    </div>
+
+                                    {/* 4. Base Spend Unit */}
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Base Spend Unit (ยอดคิดเหรียญ)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                step="1"
+                                                value={settings.crm_base_spend_amount || '100'} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_base_spend_amount: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_base_spend_amount', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673] uppercase">Baht</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">ทุกๆ X บาท = ตัวคูณ xhaus</p>
+                                    </div>
+                                </div>
+
+                                {/* Granular Advanced Limits */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-[#D1D1CD]/60">
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Max Redeem Per Bill (% ยอดบิล)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                min="1"
+                                                max="100"
+                                                value={settings.crm_max_redeem_percent || '100'} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_max_redeem_percent: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_max_redeem_percent', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673]">%</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">จำกัดส่วนลดเหรียญไม่เกิน X% ของบิล (100 = ไม่จำกัด)</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Evaluation Period (รอบประเมิน)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                min="1"
+                                                max="36"
+                                                value={settings.crm_tier_eval_months || '12'} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_tier_eval_months: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_tier_eval_months', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673]">Months</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">รอบคำนวณยอดสะสมเพื่อจัดระดับ (เช่น 12 เดือน)</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                            Grace Period (ระยะผ่อนผันใจ)
+                                        </label>
+                                        <div className="relative">
+                                            <input 
+                                                type="number"
+                                                min="0"
+                                                max="180"
+                                                value={settings.crm_grace_period_days || '30'} 
+                                                onChange={(e) => setSettings(prev => ({ ...prev, crm_grace_period_days: e.target.value }))}
+                                                onBlur={(e) => handleSave('crm_grace_period_days', e.target.value)}
+                                                className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]" 
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-[#767673]">Days</span>
+                                        </div>
+                                        <p className="text-[8px] text-[#767673] mt-1">ผ่อนผันตรึงระดับสมาชิกรักษาใจต่ออีก X วัน</p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Relationship Levels Card */}
+                            {/* 2. Dynamic Relationship Levels Card */}
                             <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
-                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
-                                    <Award className="text-zinc-800" size={20} />
-                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
-                                        Relationship Levels (ระดับความสัมพันธ์ของคนในบ้าน)
-                                    </h2>
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <div className="flex items-center gap-2">
+                                        <Award className="text-zinc-800" size={20} />
+                                        <div>
+                                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                                Relationship Levels Manager (จัดการระดับความสัมพันธ์ของคนในบ้าน)
+                                            </h2>
+                                            <p className="text-[8.5px] text-[#767673]">
+                                                ปรับแต่งชื่อระดับ ยอดสะสมขั้นต่ำ ตัวคูณสะสมแต้ม และคำโปรยได้อิสระ
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2 font-mono">
+                                        <button
+                                            type="button"
+                                            onClick={handleResetTiers}
+                                            className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                                            title="คืนค่าระดับเริ่มต้น"
+                                        >
+                                            <RotateCcw size={11} /> Reset
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleAddTier}
+                                            className="px-2.5 py-1.5 bg-white hover:bg-zinc-100 border border-[#D1D1CD] text-[#1A1A1A] rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer"
+                                        >
+                                            <Plus size={12} /> Add Tier
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSaveTiers}
+                                            disabled={isTiersSaving}
+                                            className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-[#333330] text-white rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-sm"
+                                        >
+                                            <Save size={12} /> {isTiersSaving ? 'Saving...' : 'Save Tiers'}
+                                        </button>
+                                    </div>
                                 </div>
 
-                                <div className="space-y-4">
-                                    {/* Level 1: Common */}
-                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-2 py-0.5 bg-amber-700/10 text-amber-800 border border-amber-700/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 01</span>
-                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Haus Common</h3>
+                                {/* List of Editable Tier Cards */}
+                                <div className="space-y-4 pt-1">
+                                    {editableTiers.map((tier, idx) => {
+                                        const theme = getTierVisualTheme(tier.name, tier.badge_theme);
+                                        const baseSpend = parseFloat(settings.crm_base_spend_amount) || 100;
+                                        const mult = parseFloat(tier.multiplier) || 1.0;
+                                        const coinsPerBase = ((baseSpend / baseSpend) * mult).toFixed(2);
+                                        const returnPct = ((mult / baseSpend) * 100).toFixed(2);
+
+                                        return (
+                                            <div 
+                                                key={tier.id || idx} 
+                                                className="bg-white border border-[#D1D1CD] rounded-xl p-4 space-y-3 hover:shadow-md transition-all relative group"
+                                            >
+                                                {/* Card Header Row */}
+                                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 pb-2.5">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`px-2 py-0.5 border text-[9px] font-mono font-bold rounded uppercase tracking-wider ${theme.pillBg}`}>
+                                                            LEVEL {tier.level_code || String(idx + 1).padStart(2, '0')}
+                                                        </span>
+                                                        <input 
+                                                            type="text" 
+                                                            value={tier.name} 
+                                                            onChange={(e) => handleTierFieldChange(idx, 'name', e.target.value)}
+                                                            className="text-xs font-bold text-[#1A1A1A] bg-transparent border-b border-transparent hover:border-zinc-300 focus:border-[#FF5500] px-1 py-0.5 outline-none font-sans"
+                                                            placeholder="ชื่อระดับ เช่น Haus Common"
+                                                        />
+                                                    </div>
+
+                                                    <div className="flex items-center gap-3">
+                                                        {/* Badge Theme selector */}
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="text-[8px] font-mono uppercase text-zinc-400">Theme:</span>
+                                                            <select 
+                                                                value={tier.badge_theme || 'bronze'}
+                                                                onChange={(e) => handleTierFieldChange(idx, 'badge_theme', e.target.value)}
+                                                                className="text-[9px] font-mono font-bold bg-neutral-50 border border-zinc-200 rounded px-2 py-1 outline-none cursor-pointer"
+                                                            >
+                                                                <option value="bronze">Clay / Bronze</option>
+                                                                <option value="silver">Silver / Slate</option>
+                                                                <option value="gold">Gold / VIP</option>
+                                                                <option value="emerald">Emerald / Green</option>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* Delete Button */}
+                                                        {editableTiers.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDeleteTier(idx)}
+                                                                className="text-zinc-350 hover:text-rose-600 p-1 rounded transition-colors cursor-pointer"
+                                                                title="ลบระดับนี้"
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Card Parameters Grid */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                    {/* Min Spent Threshold */}
+                                                    <div>
+                                                        <label className="block text-[8.5px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                                            Min Spend (ยอดสะสมขั้นต่ำ)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <input 
+                                                                type="number"
+                                                                step="100"
+                                                                value={tier.min_spend}
+                                                                onChange={(e) => handleTierFieldChange(idx, 'min_spend', e.target.value)}
+                                                                className="w-full px-2.5 py-1.5 bg-neutral-50 border border-[#D1D1CD] rounded text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]"
+                                                            />
+                                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] font-mono font-bold text-zinc-400">THB</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Multiplier */}
+                                                    <div>
+                                                        <label className="block text-[8.5px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                                            Earn Multiplier (ตัวคูณแต้ม)
+                                                        </label>
+                                                        <div className="relative">
+                                                            <input 
+                                                                type="number"
+                                                                step="0.05"
+                                                                min="0.1"
+                                                                value={tier.multiplier}
+                                                                onChange={(e) => handleTierFieldChange(idx, 'multiplier', e.target.value)}
+                                                                className="w-full px-2.5 py-1.5 bg-neutral-50 border border-[#D1D1CD] rounded text-xs font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#FF5500]"
+                                                            />
+                                                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[8px] font-mono font-bold text-zinc-400">x</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Calculated Return Display */}
+                                                    <div className="bg-[#FAF9F5] border border-zinc-200 rounded p-2 flex flex-col justify-center text-right font-mono">
+                                                        <p className="text-[9px] font-bold text-[#1A1A1A]">
+                                                            ทุก {baseSpend} บ. = {coinsPerBase} xhaus
+                                                        </p>
+                                                        <p className="text-[8px] text-[#00CC44] font-bold uppercase mt-0.5">
+                                                            มูลค่าคืน {returnPct}%
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Tagline & Condition Texts */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                                    <div>
+                                                        <label className="block text-[8px] font-mono uppercase text-zinc-400 mb-0.5">
+                                                            Tagline (คำโปรยระดับสมาชิก)
+                                                        </label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={tier.tagline || ''} 
+                                                            onChange={(e) => handleTierFieldChange(idx, 'tagline', e.target.value)}
+                                                            placeholder="เช่น พื้นที่ที่เราเริ่มรู้จักกัน"
+                                                            className="w-full px-2.5 py-1.5 bg-white border border-zinc-200 rounded text-[9.5px] text-zinc-700 outline-none focus:border-[#FF5500]"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="block text-[8px] font-mono uppercase text-zinc-400 mb-0.5">
+                                                            Condition Note (คำอธิบายเงื่อนไข)
+                                                        </label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={tier.condition_text || ''} 
+                                                            onChange={(e) => handleTierFieldChange(idx, 'condition_text', e.target.value)}
+                                                            placeholder="เช่น มียอดใช้จ่ายสะสม 12 เดือนแรกเริ่ม"
+                                                            className="w-full px-2.5 py-1.5 bg-white border border-zinc-200 rounded text-[9.5px] text-zinc-700 outline-none focus:border-[#FF5500]"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <p className="text-[9px] text-[#767673]">"พื้นที่ที่เราเริ่มรู้จักกัน" — ทุกคนเริ่มต้นจากพื้นที่เดียวกัน</p>
-                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: สมัครสมาชิกและมียอดใช้จ่ายสะสม 12 เดือนแรกเริ่ม (0 – 3,999 บาท)</p>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 3. Live Simulation & Sandbox Tool */}
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm space-y-4">
+                                <div className="flex items-center gap-2 border-b border-[#D1D1CD] pb-3">
+                                    <Calculator className="text-zinc-800" size={20} />
+                                    <div>
+                                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                            Tier & Coins Live Simulator (เครื่องมือจำลองคำนวณ)
+                                        </h2>
+                                        <p className="text-[8.5px] text-[#767673]">
+                                            ทดสอบกรอกยอดสะสมและยอดบิลเพื่อตรวจสอบระดับสมาชิกและจำนวนเหรียญที่จะได้รับ
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                                Test 12M Accumulated Spend (ยอดสะสมย้อนหลัง)
+                                            </label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="number"
+                                                    value={simAccumSpent}
+                                                    onChange={(e) => setSimAccumSpent(e.target.value)}
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono outline-none"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-zinc-400">THB</span>
+                                            </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1 xhaus</p>
-                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.00%</p>
+
+                                        <div>
+                                            <label className="block text-[9px] font-mono font-bold uppercase tracking-wider text-[#767673] mb-1">
+                                                Test Current Bill Total (ยอดบิลมื้อนี้)
+                                            </label>
+                                            <div className="relative">
+                                                <input 
+                                                    type="number"
+                                                    value={simSpendAmount}
+                                                    onChange={(e) => setSimSpendAmount(e.target.value)}
+                                                    className="w-full px-3 py-2 bg-white border border-[#D1D1CD] rounded-lg text-xs font-bold font-mono outline-none"
+                                                />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold text-zinc-400">THB</span>
+                                            </div>
                                         </div>
+
+                                        <label className="flex items-center gap-2 cursor-pointer pt-1">
+                                            <input 
+                                                type="checkbox"
+                                                checked={simGracePeriod}
+                                                onChange={(e) => setSimGracePeriod(e.target.checked)}
+                                                className="accent-[#FF5500] w-3.5 h-3.5 rounded"
+                                            />
+                                            <span className="text-[9px] text-[#1A1A1A] font-medium">จำลองสถานะอยู่ในช่วงผ่อนผันรักษาระดับ (Grace Period)</span>
+                                        </label>
                                     </div>
 
-                                    {/* Level 2: People */}
-                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-2 py-0.5 bg-slate-400/10 text-slate-800 border border-slate-300/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 02</span>
-                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Haus People</h3>
-                                            </div>
-                                            <p className="text-[9px] text-[#767673]">"คนที่กลับมาเจอกันบ่อยขึ้น" — ไม่ได้แค่มาเยือนแต่กลับมาเจอกันเรื่อยๆ</p>
-                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: มียอดจ่ายสะสมสุทธิครบ 4,000 บาทภายใน 12 เดือน</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1.25 xhaus</p>
-                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.25%</p>
-                                        </div>
-                                    </div>
+                                    {/* Simulation Result Preview */}
+                                    {(() => {
+                                        const spendVal = parseFloat(simSpendAmount) || 0;
+                                        const accumVal = parseFloat(simAccumSpent) || 0;
+                                        const graceVal = simGracePeriod ? accumVal + 1000 : accumVal;
+                                        const parsedTiers = parseTiersConfig(editableTiers);
+                                        const res = calculateMemberTier(accumVal, graceVal, parsedTiers);
+                                        const baseUnit = parseFloat(settings.crm_base_spend_amount) || 100;
+                                        const coinsEarned = calculateCoinsEarned(spendVal, res.multiplier, baseUnit);
+                                        const rate = parseFloat(settings.crm_redeem_rate_xhaus) || 1.0;
+                                        const maxPct = parseFloat(settings.crm_max_redeem_percent) || 100;
+                                        const discRes = calculateCoinsDiscount(coinsEarned * 10, rate, maxPct, spendVal, parseFloat(settings.crm_min_redeem_xhaus) || 10);
+                                        const theme = getTierVisualTheme(res.current_tier, res.tier_obj?.badge_theme);
 
-                                    {/* Level 3: Inner */}
-                                    <div className="flex items-center justify-between p-4 bg-white border border-[#D1D1CD] rounded-xl hover:shadow-md transition-all">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="px-2 py-0.5 bg-amber-500/10 text-amber-700 border border-amber-500/20 text-[9px] font-mono font-bold rounded uppercase tracking-wider">Level 03</span>
-                                                <h3 className="text-xs font-bold text-[#1A1A1A]">Inner Haus</h3>
+                                        return (
+                                            <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 flex flex-col justify-between space-y-3 font-mono text-[10px]">
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center border-b border-zinc-100 pb-2">
+                                                        <span className="text-[8px] uppercase tracking-wider text-zinc-400">Calculated Tier:</span>
+                                                        <span className={`px-2 py-0.5 border text-[9px] font-bold rounded uppercase ${theme.pillBg}`}>
+                                                            {res.current_tier} ({res.multiplier}x)
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center text-[9px]">
+                                                        <span className="text-zinc-500">Coins Earned (เหรียญที่ได้รอบนี้):</span>
+                                                        <span className="font-bold text-emerald-600">+{coinsEarned.toFixed(2)} xhaus</span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center text-[9px]">
+                                                        <span className="text-zinc-500">Next Tier Target (สู่ระดับถัดไป):</span>
+                                                        <span className="font-bold text-zinc-700">
+                                                            {res.next_tier ? `อีก ${res.amount_to_next_tier.toLocaleString()} บ. (${res.progress_pct}%)` : 'สูงสุดแล้ว'}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex justify-between items-center text-[9px]">
+                                                        <span className="text-zinc-500">Max Discount from Coins (เพดานส่วนลด):</span>
+                                                        <span className="font-bold text-amber-700">{((spendVal * maxPct) / 100).toLocaleString()} Baht</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="bg-neutral-50 p-2 rounded border border-zinc-200 text-[8px] text-zinc-500">
+                                                    💡 คำนวณตามสูตร: (ยอดบิล {spendVal} / {baseUnit}) × {res.multiplier}x = {coinsEarned.toFixed(2)} xhaus
+                                                </div>
                                             </div>
-                                            <p className="text-[9px] text-[#767673]">"คนในบ้าน" — เข้ามาสัมผัสพื้นที่ข้างในบ้านอย่างอบอุ่นแล้ว</p>
-                                            <p className="text-[8px] text-zinc-400 font-mono">เงื่อนไข: มียอดจ่ายสะสมสุทธิครบ 12,000 บาทภายใน 12 เดือน</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-xs font-mono font-bold text-[#1A1A1A]">ทุก 100 บาท = 1.50 xhaus</p>
-                                            <p className="text-[8px] text-[#00CC44] font-bold uppercase font-mono mt-0.5">มูลค่าคืน 1.50%</p>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Column 2: QR Code Registration Card */}
-                        <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm flex flex-col items-center text-center space-y-4 h-fit">
-                            <div className="w-full flex items-center gap-2 border-b border-[#D1D1CD] pb-3 text-left">
-                                <QrCode className="text-zinc-800" size={20} />
-                                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
-                                    Registration QR Code
-                                </h2>
-                            </div>
+                        {/* Column 2: QR Code Registration Card & Quick Links */}
+                        <div className="space-y-6 h-fit">
+                            <div className="bg-[#F5F5F2] border border-[#D1D1CD] p-6 rounded-2xl shadow-sm flex flex-col items-center text-center space-y-4">
+                                <div className="w-full flex items-center gap-2 border-b border-[#D1D1CD] pb-3 text-left">
+                                    <QrCode className="text-zinc-800" size={20} />
+                                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A]">
+                                        Registration QR Code
+                                    </h2>
+                                </div>
 
-                            <p className="text-[9px] text-[#767673] font-medium leading-relaxed">
-                                พิมพ์ภาพหรือตั้งคิวอาร์โค้ดนี้ไว้ที่โต๊ะอาหาร เพื่อให้ลูกค้าสแกนสมัครสมาชิกด่วนผ่านมือถือได้ทันที
-                            </p>
-
-                            <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl shadow-inner flex items-center justify-center">
-                                {crmQrUrl ? (
-                                    <img src={crmQrUrl} alt="CRM Member Card Registration QR" className="w-48 h-48" />
-                                ) : (
-                                    <div className="w-48 h-48 flex items-center justify-center text-zinc-400 font-mono text-[9px]">Generating QR...</div>
-                                )}
-                            </div>
-
-                            <div className="w-full pt-4 space-y-2">
-                                <a 
-                                    href={crmQrUrl} 
-                                    download="crm-member-registration-qr.png"
-                                    className="w-full bg-[#1A1A1A] hover:bg-[#333330] text-white py-2.5 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
-                                >
-                                    <Download size={12} /> Download QR Code Image
-                                </a>
-                                <p className="text-[8px] text-[#767673] font-mono select-all">
-                                    Target: {getAppOrigin()}/member-card
+                                <p className="text-[9px] text-[#767673] font-medium leading-relaxed">
+                                    พิมพ์ภาพหรือตั้งคิวอาร์โค้ดนี้ไว้ที่โต๊ะอาหาร เพื่อให้ลูกค้าสแกนสมัครสมาชิกด่วนผ่านมือถือได้ทันที
                                 </p>
+
+                                <div className="bg-white border border-[#D1D1CD] p-4 rounded-xl shadow-inner flex items-center justify-center">
+                                    {crmQrUrl ? (
+                                        <img src={crmQrUrl} alt="CRM Member Card Registration QR" className="w-44 h-44" />
+                                    ) : (
+                                        <div className="w-44 h-44 flex items-center justify-center text-zinc-400 font-mono text-[9px]">Generating QR...</div>
+                                    )}
+                                </div>
+
+                                <div className="w-full pt-2 space-y-2">
+                                    <a 
+                                        href={crmQrUrl} 
+                                        download="crm-member-registration-qr.png"
+                                        className="w-full bg-[#1A1A1A] hover:bg-[#333330] text-white py-2.5 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+                                    >
+                                        <Download size={12} /> Download QR Code Image
+                                    </a>
+                                    <a
+                                        href={`${getAppOrigin()}/member-card`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="w-full bg-white hover:bg-neutral-50 border border-[#D1D1CD] text-[#1A1A1A] py-2 rounded-lg font-mono text-[9px] font-bold uppercase tracking-wider active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                    >
+                                        <ExternalLink size={11} /> Open Member Portal ↗
+                                    </a>
+                                    <p className="text-[8px] text-[#767673] font-mono select-all">
+                                        Target: {getAppOrigin()}/member-card
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>

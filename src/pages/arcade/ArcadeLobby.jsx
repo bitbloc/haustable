@@ -60,16 +60,18 @@ export default function ArcadeLobby() {
 
   // --- Lo-Fi Lounge Audio & Sleep Timer States ---
   const [chillPlaying, setChillPlaying] = useState(false);
-  const [chillVolume, setChillVolume] = useState(0.5);
-  const [noiseVolume, setNoiseVolume] = useState(0.4);
-  const [chordVolume, setChordVolume] = useState(0.6);
-  const [chillPreset, setChillPreset] = useState('sunset'); // 'sunset' | 'rain' | 'cafe' | 'campfire'
+  const [chillVolume, setChillVolume] = useState(0.85); // High dynamic range
+  const [noiseVolume, setNoiseVolume] = useState(0.60);
+  const [chordVolume, setChordVolume] = useState(0.85);
+  const [chillPreset, setChillPreset] = useState('jazz'); // 'jazz' | 'cafe_jazz' | 'sunset' | 'rain' | 'campfire'
   const [hasHeadphonesConfirmed, setHasHeadphonesConfirmed] = useState(false);
   const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(0); // 0 = off, 15, 30, 45
   const [sleepSecondsLeft, setSleepSecondsLeft] = useState(0);
 
   const audioCtxRef = useRef(null);
+  const masterGainRef = useRef(null);
+  const compressorRef = useRef(null);
   const noiseNodeRef = useRef(null);
   const chordGainRef = useRef(null);
   const synthIntervalRef = useRef(null);
@@ -539,58 +541,83 @@ export default function ArcadeLobby() {
     }
   };
 
-  // --- Lo-Fi Lounge Web Audio Synthesizer Presets ---
+  // --- Lo-Fi & Jazz Lounge Web Audio Synthesizer Presets ---
   const CHILL_PRESETS = {
+    jazz: {
+      id: 'jazz',
+      name: 'แจ๊สริมโขง (Mekong Jazz)',
+      icon: '🎷',
+      desc: 'ดนตรีแจ๊สเปียโน & คอร์ด 9th/13th นุ่มลึก ริมฝั่งโขงยามค่ำคืน',
+      filterFreq: 850,
+      noiseGain: 0.35,
+      type: 'jazz',
+      chords: [
+        [146.83, 293.66, 349.23, 440.00, 493.88, 659.25], // Dm9 (D3 bass + D4 F4 A4 B4 E5)
+        [98.00, 246.94, 329.63, 349.23, 440.00, 587.33],  // G13 (G2 bass + B3 E4 F4 A4 D5)
+        [130.81, 261.63, 329.63, 392.00, 493.88, 587.33], // Cmaj9 (C3 bass + C4 E4 G4 B4 D5)
+        [110.00, 220.00, 277.18, 349.23, 415.30, 523.25]  // A7alt (A2 bass + A3 C#4 F4 G#4 C5)
+      ]
+    },
+    cafe_jazz: {
+      id: 'cafe_jazz',
+      name: 'คาเฟ่แจ๊สในบ้าน (Haus Bossa)',
+      icon: '☕',
+      desc: 'บรรยากาศกาแฟสด & คอร์ดแจ๊ส Neo-Soul อบอุ่นสไตล์ Bossa Nova',
+      filterFreq: 680,
+      noiseGain: 0.30,
+      type: 'bossa',
+      chords: [
+        [174.61, 261.63, 329.63, 392.00, 440.00, 523.25], // Fmaj9
+        [164.81, 246.94, 293.66, 349.23, 392.00],         // Em7b5
+        [110.00, 220.00, 277.18, 349.23, 466.16, 554.37], // A7b9
+        [146.83, 293.66, 349.23, 440.00, 523.25, 659.25], // Dm9
+        [98.00, 246.94, 349.23, 369.99, 440.00],          // G7#11
+        [130.81, 261.63, 329.63, 369.99, 493.88, 587.33]  // Cmaj7#11
+      ]
+    },
     sunset: {
       id: 'sunset',
-      name: 'ริมโขงนครพนม (Sunset)',
+      name: 'ริมโขงนครพนม (Sunset Lo-Fi)',
+      icon: '🌅',
       desc: 'เสียงคลื่นน้ำริมฝั่งโขง & คอร์ด Lo-Fi อบอุ่นยามเย็น',
-      filterFreq: 420,
-      noiseGain: 0.28,
+      filterFreq: 450,
+      noiseGain: 0.38,
+      type: 'lofi',
       chords: [
-        [261.63, 329.63, 392.00, 493.88], // Cmaj7
-        [220.00, 261.63, 329.63, 392.00], // Am7
-        [174.61, 220.00, 261.63, 329.63], // Fmaj7
-        [196.00, 246.94, 293.66, 349.23]  // G7
+        [130.81, 261.63, 329.63, 392.00, 493.88], // Cmaj7 with C3 bass
+        [110.00, 220.00, 261.63, 329.63, 392.00], // Am7 with A2 bass
+        [87.31, 174.61, 220.00, 261.63, 329.63],  // Fmaj7 with F2 bass
+        [98.00, 196.00, 246.94, 293.66, 349.23]   // G7 with G2 bass
       ]
     },
     rain: {
       id: 'rain',
-      name: 'สายฝนริมหน้าต่าง (Rain)',
+      name: 'สายฝนริมหน้าต่าง (Rainy Piano)',
+      icon: '🌧️',
       desc: 'เสียงหยาดฝนกระทบกระจก & เมโลดี้เปียโนแสนสงบ',
       filterFreq: 1100,
-      noiseGain: 0.32,
+      noiseGain: 0.45,
+      type: 'piano',
       chords: [
-        [293.66, 349.23, 440.00, 523.25], // Dm7
-        [329.63, 392.00, 493.88, 587.33], // Em7
-        [349.23, 440.00, 523.25, 659.25], // Fmaj7
-        [440.00, 523.25, 659.25, 783.99]  // Am7
-      ]
-    },
-    cafe: {
-      id: 'cafe',
-      name: 'คาเฟ่ในบ้าน (Cafe Vinyl)',
-      desc: 'บรรยากาศแผ่นเสียงไวนิล & คอร์ดแจ๊ส Neo-Soul',
-      filterFreq: 620,
-      noiseGain: 0.22,
-      chords: [
-        [329.63, 415.30, 493.88, 622.25], // Emaj7
-        [415.30, 493.88, 622.25, 739.99], // G#m7
-        [277.18, 329.63, 415.30, 493.88], // C#m7
-        [369.99, 440.00, 554.37, 659.25]  // F#m7
+        [146.83, 293.66, 349.23, 440.00, 523.25], // Dm7
+        [164.81, 329.63, 392.00, 493.88, 587.33], // Em7
+        [174.61, 349.23, 440.00, 523.25, 659.25], // Fmaj7
+        [220.00, 440.00, 523.25, 659.25, 783.99]  // Am7
       ]
     },
     campfire: {
       id: 'campfire',
       name: 'แคมป์ไฟริมหาด (Campfire)',
+      icon: '🔥',
       desc: 'เสียงลมโขงและสะเก็ดไฟ ผ่อนคลายคลายกังวล',
-      filterFreq: 340,
-      noiseGain: 0.26,
+      filterFreq: 360,
+      noiseGain: 0.35,
+      type: 'ambient',
       chords: [
-        [293.66, 369.99, 440.00, 587.33], // Dsus2
-        [220.00, 293.66, 329.63, 440.00], // Asus4
-        [196.00, 246.94, 293.66, 392.00], // Gsus2
-        [246.94, 293.66, 369.99, 440.00]  // Bm7
+        [146.83, 293.66, 369.99, 440.00, 587.33], // Dsus2
+        [110.00, 220.00, 293.66, 329.63, 440.00], // Asus4
+        [98.00, 196.00, 246.94, 293.66, 392.00],  // Gsus2
+        [123.47, 246.94, 293.66, 369.99, 440.00]  // Bm7
       ]
     }
   };
@@ -624,9 +651,26 @@ export default function ArcadeLobby() {
         ctx.resume();
       }
 
-      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.sunset;
+      // Master Compressor & Master Output Limiter to avoid clipping while keeping volume high & warm
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-14, ctx.currentTime);
+      compressor.knee.setValueAtTime(24, ctx.currentTime);
+      compressor.ratio.setValueAtTime(8, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.release.setValueAtTime(0.22, ctx.currentTime);
 
-      // River / Ambient Pink Noise Buffer
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(chillVolume * 1.45, ctx.currentTime);
+
+      masterGain.connect(compressor);
+      compressor.connect(ctx.destination);
+
+      masterGainRef.current = masterGain;
+      compressorRef.current = compressor;
+
+      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+
+      // Ambient / Noise Buffer (River Pink Noise + Rain + Vinyl crackle)
       const bufferSize = ctx.sampleRate * 2;
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
@@ -639,7 +683,7 @@ export default function ArcadeLobby() {
         b3 = 0.86650 * b3 + white * 0.3104856;
         b4 = 0.55000 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.0168980;
-        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.04;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.06;
         b6 = white * 0.115926;
       }
 
@@ -652,44 +696,55 @@ export default function ArcadeLobby() {
       filter.frequency.value = preset.filterFreq;
 
       const gain = ctx.createGain();
-      gain.gain.value = chillVolume * noiseVolume * preset.noiseGain;
+      gain.gain.value = noiseVolume * preset.noiseGain;
 
       noise.connect(filter);
       filter.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(masterGain);
       noise.start();
 
       noiseNodeRef.current = { noise, gain, filter };
 
-      // Chime / Mellow Lo-Fi Chords
+      // Chime / Mellow Jazz & Lo-Fi Chords
       const chords = preset.chords;
       let chordIndex = 0;
 
-      const playChordNote = (freq, delay = 0) => {
+      const playChordNote = (freq, delay = 0, isBass = false) => {
         if (!audioCtxRef.current) return;
         const osc = ctx.createOscillator();
         const noteGain = ctx.createGain();
-        osc.type = chillPreset === 'cafe' ? 'sine' : 'triangle';
+
+        // Jazz & Rhodes piano tone synthesis (warm sine with triangle overtone)
+        if (preset.type === 'jazz' || preset.type === 'bossa') {
+          osc.type = isBass ? 'triangle' : 'sine';
+        } else {
+          osc.type = 'triangle';
+        }
         osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
 
+        const targetNoteVol = isBass 
+          ? chordVolume * 0.42 
+          : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
+
         noteGain.gain.setValueAtTime(0, ctx.currentTime + delay);
-        noteGain.gain.linearRampToValueAtTime(chillVolume * chordVolume * 0.10, ctx.currentTime + delay + 0.12);
-        noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + 2.9);
+        noteGain.gain.linearRampToValueAtTime(targetNoteVol, ctx.currentTime + delay + (isBass ? 0.06 : 0.14));
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.4));
 
         osc.connect(noteGain);
-        noteGain.connect(ctx.destination);
+        noteGain.connect(masterGain);
 
         osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 3.0);
+        osc.stop(ctx.currentTime + delay + 3.6);
       };
 
       synthIntervalRef.current = setInterval(() => {
         const currentChord = chords[chordIndex % chords.length];
         currentChord.forEach((freq, idx) => {
-          playChordNote(freq, idx * 0.18);
+          const delay = idx === 0 ? 0 : (idx * 0.14);
+          playChordNote(freq, delay, idx === 0);
         });
         chordIndex++;
-      }, 3600);
+      }, preset.type === 'jazz' ? 3200 : 3600);
 
       setChillPlaying(true);
     } catch (e) {
@@ -737,7 +792,7 @@ export default function ArcadeLobby() {
     return () => clearInterval(interval);
   }, [chillPlaying, sleepSecondsLeft]);
 
-  // Pixel Visualizer Canvas for Lo-Fi Lounge
+  // Pixel Visualizer Canvas for Lo-Fi & Jazz Lounge
   useEffect(() => {
     if (activeTab !== 'lofi') return;
     const canvas = lofiCanvasRef.current;
@@ -753,15 +808,20 @@ export default function ArcadeLobby() {
 
       // Sky Background gradient
       const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
-      if (chillPreset === 'rain') {
-        skyGrad.addColorStop(0, '#334155');
-        skyGrad.addColorStop(1, '#64748b');
+      if (chillPreset === 'jazz') {
+        skyGrad.addColorStop(0, '#0b132b');
+        skyGrad.addColorStop(0.7, '#1c2541');
+        skyGrad.addColorStop(1, '#3a506b');
+      } else if (chillPreset === 'cafe_jazz') {
+        skyGrad.addColorStop(0, '#451a03');
+        skyGrad.addColorStop(0.6, '#78350f');
+        skyGrad.addColorStop(1, '#fde68a');
+      } else if (chillPreset === 'rain') {
+        skyGrad.addColorStop(0, '#1e293b');
+        skyGrad.addColorStop(1, '#475569');
       } else if (chillPreset === 'campfire') {
         skyGrad.addColorStop(0, '#1e1b4b');
         skyGrad.addColorStop(1, '#431407');
-      } else if (chillPreset === 'cafe') {
-        skyGrad.addColorStop(0, '#78350f');
-        skyGrad.addColorStop(1, '#fed7aa');
       } else {
         skyGrad.addColorStop(0, '#ea580c');
         skyGrad.addColorStop(0.6, '#f97316');
@@ -770,8 +830,21 @@ export default function ArcadeLobby() {
       ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, w, h);
 
+      // Stars in night mode (Jazz & Campfire)
+      if (chillPreset === 'jazz' || chillPreset === 'campfire') {
+        ctx.fillStyle = '#ffffff';
+        for (let s = 0; s < 18; s++) {
+          const sx = (s * 37 + 15) % w;
+          const sy = (s * 19 + 10) % (h - 70);
+          const starAlpha = Math.sin(frame * 0.05 + s) * 0.4 + 0.6;
+          ctx.globalAlpha = starAlpha;
+          ctx.fillRect(sx, sy, 2, 2);
+        }
+        ctx.globalAlpha = 1.0;
+      }
+
       // Distant Lao Mountains
-      ctx.fillStyle = chillPreset === 'rain' ? '#1e293b' : (chillPreset === 'campfire' ? '#172554' : '#7c2d12');
+      ctx.fillStyle = chillPreset === 'jazz' ? '#0f172a' : (chillPreset === 'rain' ? '#0f172a' : (chillPreset === 'campfire' ? '#172554' : '#7c2d12'));
       ctx.beginPath();
       ctx.moveTo(0, h - 50);
       for (let x = 0; x <= w; x += 15) {
@@ -785,13 +858,18 @@ export default function ArcadeLobby() {
 
       // Mekong River Water
       const riverGrad = ctx.createLinearGradient(0, h - 45, 0, h);
-      riverGrad.addColorStop(0, '#0284c7');
-      riverGrad.addColorStop(1, '#0369a1');
+      if (chillPreset === 'jazz') {
+        riverGrad.addColorStop(0, '#1e3a8a');
+        riverGrad.addColorStop(1, '#0f172a');
+      } else {
+        riverGrad.addColorStop(0, '#0284c7');
+        riverGrad.addColorStop(1, '#0369a1');
+      }
       ctx.fillStyle = riverGrad;
       ctx.fillRect(0, h - 45, w, 45);
 
       // Water Shimmer ripples
-      ctx.fillStyle = '#bae6fd';
+      ctx.fillStyle = chillPreset === 'jazz' ? '#93c5fd' : '#bae6fd';
       for (let i = 0; i < 6; i++) {
         const rx = ((frame * (1 + i * 0.3) * 1.5) + i * 80) % (w + 40) - 20;
         const ry = h - 38 + (i * 6);
@@ -856,13 +934,13 @@ export default function ArcadeLobby() {
       ctx.fillRect(catX + 8, catY - 19, 2, 2);
       ctx.fillRect(catX + 17, catY - 19, 2, 2);
 
-      // Floating Music Notes (when playing)
+      // Floating Jazz / Music Notes (when playing)
       if (chillPlaying) {
-        ctx.fillStyle = '#facc15';
+        ctx.fillStyle = chillPreset === 'jazz' ? '#38bdf8' : '#facc15';
         const note1Y = (frame * 1.5) % 80;
         const note1X = catX + 15 + Math.sin(frame * 0.08) * 8;
         ctx.font = '14px Space Mono, monospace';
-        ctx.fillText('♪', note1X, catY - 25 - note1Y);
+        ctx.fillText(chillPreset === 'jazz' ? '🎷' : '♪', note1X, catY - 25 - note1Y);
 
         const note2Y = ((frame * 1.5) + 40) % 80;
         const note2X = catX + 35 + Math.cos(frame * 0.08) * 8;
@@ -1271,7 +1349,7 @@ export default function ArcadeLobby() {
                     </button>
 
                     {/* Presets Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-[var(--color-paper-2)] p-1 rounded-sm border border-[var(--color-rule)] text-[10px]">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-[var(--color-paper-2)] p-1 rounded-sm border border-[var(--color-rule)] text-[10px]">
                       {Object.values(CHILL_PRESETS).map((p) => (
                         <button
                           key={p.id}
@@ -1282,22 +1360,46 @@ export default function ArcadeLobby() {
                               setTimeout(startChillAudio, 50); 
                             } 
                           }}
-                          className={`px-2.5 py-1.5 rounded-sm font-bold transition-all truncate text-center ${
+                          className={`px-2 py-1.5 rounded-sm font-bold transition-all truncate text-center flex items-center justify-center gap-1 ${
                             chillPreset === p.id 
                               ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs border border-neutral-300' 
                               : 'text-zinc-500 hover:text-zinc-800'
                           }`}
                           title={p.desc}
                         >
-                          {p.name}
+                          <span>{p.icon}</span>
+                          <span className="truncate">{p.name.split(' ')[0]}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {/* Volume Sliders & Sleep Timer */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {/* Master / Ambient Volume */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {/* Master Volume */}
+                    <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
+                      <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
+                        <span>🔊 MASTER VOL</span>
+                        <span>{Math.round(chillVolume * 100)}%</span>
+                      </div>
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="1" 
+                        step="0.05"
+                        value={chillVolume}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          setChillVolume(val);
+                          if (masterGainRef.current && audioCtxRef.current) {
+                            masterGainRef.current.gain.setValueAtTime(val * 1.45, audioCtxRef.current.currentTime);
+                          }
+                        }}
+                        className="w-full accent-amber-600 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Ambient / River Volume */}
                     <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
                       <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
                         <span>🌊 AMBIENT NOISE</span>
@@ -1312,19 +1414,19 @@ export default function ArcadeLobby() {
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           setNoiseVolume(val);
-                          if (noiseNodeRef.current) {
-                            const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.sunset;
-                            noiseNodeRef.current.gain.gain.value = chillVolume * val * preset.noiseGain;
+                          if (noiseNodeRef.current && audioCtxRef.current) {
+                            const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+                            noiseNodeRef.current.gain.gain.setValueAtTime(val * preset.noiseGain, audioCtxRef.current.currentTime);
                           }
                         }}
                         className="w-full accent-amber-600 cursor-pointer"
                       />
                     </div>
 
-                    {/* Lo-Fi Chords Volume */}
+                    {/* Jazz / Lo-Fi Chords Volume */}
                     <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] p-3 rounded border border-[var(--color-rule)]">
                       <div className="flex justify-between text-[10px] text-zinc-600 font-bold">
-                        <span>🎹 LO-FI CHORDS</span>
+                        <span>🎷 JAZZ CHORDS</span>
                         <span>{Math.round(chordVolume * 100)}%</span>
                       </div>
                       <input 

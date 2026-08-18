@@ -8,13 +8,16 @@ import { supabase } from '../lib/supabaseClient'
 import { useBookingContext } from '../context/BookingContext'
 import AuthModal from '../components/AuthModal'
 import QRCode from 'qrcode'
-import { LogOut, QrCode, Coins, Award, Clock, ChevronRight, User, Phone, LogIn, Sparkles, ShieldCheck, Edit2, Check, X, Calendar, UserCheck, Gift } from 'lucide-react'
+import { LogOut, QrCode, Coins, Award, Clock, ChevronRight, User, Phone, LogIn, Sparkles, ShieldCheck, Edit2, Check, X, Calendar, UserCheck, Gift, ArrowUpRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { DEFAULT_CRM_SETTINGS, DEFAULT_CRM_TIERS, parseTiersConfig, getTierVisualTheme, calculateMemberTier } from '../utils/crmHelper'
 
 export default function MemberCard() {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
+    const [crmSettings, setCrmSettings] = useState(DEFAULT_CRM_SETTINGS)
+    const [configuredTiers, setConfiguredTiers] = useState(DEFAULT_CRM_TIERS)
     const [tierDetails, setTierDetails] = useState({
         accumulated_spent_12m: 0,
         accumulated_spent_13m: 0,
@@ -56,6 +59,40 @@ export default function MemberCard() {
         }
     }, [activeSubTab, user])
     const { loginWithLine, logoutLine } = useBookingContext()
+
+    // Load CRM settings & dynamic tiers from app_settings
+    useEffect(() => {
+        const loadSettings = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', [
+                        'crm_welcome_xhaus',
+                        'crm_redeem_rate_xhaus',
+                        'crm_min_redeem_xhaus',
+                        'crm_base_spend_amount',
+                        'crm_max_redeem_percent',
+                        'crm_tier_eval_months',
+                        'crm_grace_period_days',
+                        'crm_tiers_config'
+                    ]);
+                if (data && data.length > 0) {
+                    const settingsMap = {};
+                    data.forEach(item => {
+                        settingsMap[item.key] = item.value;
+                    });
+                    setCrmSettings(prev => ({ ...prev, ...settingsMap }));
+                    if (settingsMap.crm_tiers_config) {
+                        setConfiguredTiers(parseTiersConfig(settingsMap.crm_tiers_config));
+                    }
+                }
+            } catch (err) {
+                console.warn("Failed to load CRM settings in MemberCard:", err);
+            }
+        };
+        loadSettings();
+    }, []);
 
     // Inline Profile Edit States
     const [isEditing, setIsEditing] = useState(false)
@@ -440,35 +477,8 @@ export default function MemberCard() {
 
     // Tier specific card design styling configuration - Dieter Rams Industrial look
     const getCardStyle = (tier) => {
-        switch (tier) {
-            case 'Inner Haus':
-                return {
-                    bg: 'bg-[#12141a] border-[#D4AF37] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_20px_rgba(0,0,0,0.3)]',
-                    badge: 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/35',
-                    accentColor: 'text-[#D4AF37]',
-                    labelColor: 'text-[#D4AF37]/80',
-                    dotColor: 'bg-[#D4AF37]',
-                    glow: 'shadow-[0_0_10px_#D4AF37]'
-                }
-            case 'Haus People':
-                return {
-                    bg: 'bg-[#2E3138] border-[#A0AEC0] text-slate-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_8px_20px_rgba(0,0,0,0.2)]',
-                    badge: 'bg-slate-700/50 text-slate-200 border-slate-500/30',
-                    accentColor: 'text-slate-200',
-                    labelColor: 'text-slate-400',
-                    dotColor: 'bg-[#00E5FF]',
-                    glow: 'shadow-[0_0_10px_#00E5FF]'
-                }
-            default: // Haus Common
-                return {
-                    bg: 'bg-[#F2F2EC] border-[#B8B8B2] text-[#1A1A1A] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_8px_20px_rgba(0,0,0,0.08)]',
-                    badge: 'bg-zinc-200/60 text-zinc-700 border-zinc-300',
-                    accentColor: 'text-[#1A1A1A]',
-                    labelColor: 'text-zinc-500',
-                    dotColor: 'bg-[#FF5500]',
-                    glow: 'shadow-[0_0_10px_#FF5500]'
-                }
-        }
+        const matchingTierObj = configuredTiers.find(t => t.name === tier);
+        return getTierVisualTheme(tier, matchingTierObj?.badge_theme);
     }
 
     const card = getCardStyle(tierDetails.current_tier)
@@ -543,7 +553,9 @@ export default function MemberCard() {
                                 </div>
                                 <div className="space-y-0.5">
                                     <h4 className="text-[11px] font-bold text-amber-900">โบนัสต้อนรับสมาชิกใหม่!</h4>
-                                    <p className="text-[9px] text-amber-800/80 font-medium">สมัครสมาชิกวันนี้ รับฟรีทันที 10 xhaus สมัครด่วนใน 10 วินาที</p>
+                                    <p className="text-[9px] text-amber-800/80 font-medium">
+                                        สมัครสมาชิกวันนี้ รับฟรีทันที {parseFloat(crmSettings.crm_welcome_xhaus || 10).toFixed(0)} xhaus สมัครด่วนใน 10 วินาที
+                                    </p>
                                 </div>
                             </div>
 
@@ -553,11 +565,11 @@ export default function MemberCard() {
                                 <ul className="space-y-2 text-[10px]">
                                     <li className="flex items-start gap-2">
                                         <span className="text-emerald-500 font-bold">✓</span>
-                                        <span><strong>สะสมเหรียญ xhaus</strong> ในทุกๆ ยอดชำระเงินตามระดับสมาชิก</span>
+                                        <span><strong>สะสมเหรียญ xhaus</strong> ในทุกๆ ยอดชำระเงินตามระดับสมาชิก (ทุก {parseFloat(crmSettings.crm_base_spend_amount || 100).toFixed(0)} บาท)</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-emerald-500 font-bold">✓</span>
-                                        <span><strong>ใช้แลกส่วนลดและของพิเศษ</strong> แลกส่วนลดแทนเงินสด (1 xhaus = 1 บาท) หรือแลกรับของรางวัลพรีเมียมเฉพาะคนในบ้าน</span>
+                                        <span><strong>ใช้แลกส่วนลดและของพิเศษ</strong> แลกส่วนลดแทนเงินสด (1 xhaus = {parseFloat(crmSettings.crm_redeem_rate_xhaus || 1).toFixed(2).replace(/\.00$/, '')} บาท) หรือแลกรับของรางวัลพรีเมียมเฉพาะคนในบ้าน</span>
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-emerald-500 font-bold">✓</span>
@@ -565,7 +577,7 @@ export default function MemberCard() {
                                     </li>
                                     <li className="flex items-start gap-2">
                                         <span className="text-emerald-500 font-bold">✓</span>
-                                        <span><strong>เพิ่มสิทธิ์คูณแต้ม</strong> ขยับระดับความสัมพันธ์เพื่อคูณแต้มแต้มสูงสุดถึง 1.5 เท่า</span>
+                                        <span><strong>เพิ่มสิทธิ์คูณแต้ม</strong> ขยับระดับความสัมพันธ์เพื่อคูณแต้มสูงสุดถึง {Math.max(...configuredTiers.map(t => parseFloat(t.multiplier) || 1)).toFixed(2).replace(/\.00$/, '')} เท่า</span>
                                     </li>
                                 </ul>
                             </div>
@@ -912,30 +924,80 @@ export default function MemberCard() {
 
                                     {/* Tiers Multiplier Info Card */}
                                     <div className="bg-white border border-[var(--color-hallmark-rule)] p-5 rounded-[8px] shadow-sm space-y-3.5">
-                                        <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5 border-b border-[var(--color-hallmark-rule)] pb-2.5">
-                                            <Award size={14} /> สิทธิประโยชน์ระดับสมาชิก (สะสมแต้มตามยอดใช้จ่าย)
-                                        </h3>
-
-                                        <div className="grid grid-cols-3 gap-2 text-center text-[9px]">
-                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus Common' ? 'bg-[#F2F2EC] border-[#B8B8B2] font-bold text-neutral-900' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 01</span>
-                                                <span className="block text-[10px] font-bold leading-tight">Common</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.0x (100฿ = 1 xhaus)</span>
-                                            </div>
-                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Haus People' ? 'bg-[#2E3138] border-[#A0AEC0] text-slate-100 font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 02</span>
-                                                <span className="block text-[10px] font-bold leading-tight">People</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.25x (100฿ = 1.25 xhaus)</span>
-                                            </div>
-                                            <div className={`p-2 rounded-[6px] border ${tierDetails.current_tier === 'Inner Haus' ? 'bg-[#12141a] border-[#D4AF37] text-white font-bold' : 'bg-neutral-50/50 border-transparent opacity-50'}`}>
-                                                <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5">Tier 03</span>
-                                                <span className="block text-[10px] font-bold leading-tight">Inner Haus</span>
-                                                <span className="block text-[7px] font-mono mt-0.5">1.5x (100฿ = 1.5 xhaus)</span>
-                                            </div>
+                                        <div className="flex justify-between items-center border-b border-[var(--color-hallmark-rule)] pb-2.5">
+                                            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] flex items-center gap-1.5">
+                                                <Award size={14} /> สิทธิประโยชน์ระดับสมาชิก (สะสมแต้มตามยอดใช้จ่าย)
+                                            </h3>
+                                            <span className="font-mono text-[8px] uppercase tracking-wider px-2 py-0.5 bg-neutral-100 border border-neutral-300 rounded font-bold">
+                                                {configuredTiers.length} TIERS
+                                            </span>
                                         </div>
+
+                                        <div className={`grid grid-cols-${Math.min(configuredTiers.length, 3)} gap-2 text-center text-[9px]`}>
+                                            {configuredTiers.map((t, idx) => {
+                                                const isActive = tierDetails.current_tier === t.name;
+                                                const theme = getTierVisualTheme(t.name, t.badge_theme);
+                                                const baseUnit = parseFloat(crmSettings.crm_base_spend_amount || 100).toFixed(0);
+
+                                                return (
+                                                    <div 
+                                                        key={t.id || idx} 
+                                                        className={`p-2.5 rounded-[6px] border transition-all ${
+                                                            isActive 
+                                                                ? `${theme.bg} font-bold scale-[1.02] shadow-sm` 
+                                                                : 'bg-neutral-50/50 border-neutral-200 text-neutral-600 opacity-60'
+                                                        }`}
+                                                    >
+                                                        <span className="block text-[7px] font-mono font-bold uppercase tracking-wider mb-0.5 opacity-80">
+                                                            Tier {t.level_code || String(idx + 1).padStart(2, '0')}
+                                                        </span>
+                                                        <span className="block text-[10.5px] font-bold leading-tight truncate">
+                                                            {t.name}
+                                                        </span>
+                                                        <span className="block text-[7.5px] font-mono mt-1 font-bold">
+                                                            {parseFloat(t.multiplier).toFixed(2).replace(/\.00$/, '')}x ({baseUnit}฿ = {parseFloat(t.multiplier).toFixed(2).replace(/\.00$/, '')} xhaus)
+                                                        </span>
+                                                        {t.min_spend > 0 && (
+                                                            <span className="block text-[6.5px] font-mono opacity-70 mt-0.5">
+                                                                ยอด {Number(t.min_spend).toLocaleString()}฿+
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Next tier progress preview */}
+                                        {(() => {
+                                            const memberCalc = calculateMemberTier(
+                                                tierDetails.accumulated_spent_12m || 0,
+                                                tierDetails.accumulated_spent_13m || 0,
+                                                configuredTiers
+                                            );
+                                            if (memberCalc.next_tier) {
+                                                return (
+                                                    <div className="bg-[#FAF9F5] border border-amber-200/70 rounded-[6px] p-2.5 space-y-1.5">
+                                                        <div className="flex justify-between text-[8px] font-mono font-bold">
+                                                            <span className="text-zinc-600">สู่ระดับ {memberCalc.next_tier}:</span>
+                                                            <span className="text-amber-800">
+                                                                ขาดอีก {memberCalc.amount_to_next_tier.toLocaleString()} บาท ({memberCalc.progress_pct}%)
+                                                            </span>
+                                                        </div>
+                                                        <div className="w-full h-1.5 bg-neutral-200 rounded-full overflow-hidden">
+                                                            <div 
+                                                                className="h-full bg-amber-500 rounded-full transition-all duration-500" 
+                                                                style={{ width: `${memberCalc.progress_pct}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
+
                                         <div className="text-[9px] text-[var(--color-hallmark-ink-muted)] space-y-1 border-t border-[var(--color-hallmark-rule)] pt-2.5 text-center">
-                                            <p>ยอดใช้จ่ายสะสมย้อนหลัง 12 เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m).toLocaleString()} บาท</strong></p>
-                                            <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tight">* ทุก 100 บาท รับ 1 xhaus ขึ้นตามระดับสมาชิก (ไม่มีส่วนลดเปอร์เซ็นต์ท้ายบิล)</p>
+                                            <p>ยอดใช้จ่ายสะสมย้อนหลัง {crmSettings.crm_tier_eval_months || 12} เดือนของคุณ: <strong className="text-[var(--color-hallmark-ink)] font-mono">{parseFloat(tierDetails.accumulated_spent_12m || 0).toLocaleString()} บาท</strong></p>
+                                            <p className="text-[8px] font-mono text-zinc-500 uppercase tracking-tight">* ทุก {parseFloat(crmSettings.crm_base_spend_amount || 100).toFixed(0)} บาท รับ xhaus ตามระดับสมาชิก (1 xhaus = {parseFloat(crmSettings.crm_redeem_rate_xhaus || 1).toFixed(2).replace(/\.00$/, '')} บาท)</p>
                                         </div>
                                     </div>
 

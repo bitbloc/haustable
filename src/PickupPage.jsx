@@ -53,6 +53,7 @@ export default function PickupPage() {
     const [pickupDate, setPickupDate] = useState('today') // 'today' | 'tomorrow'
     const [openingTime, setOpeningTime] = useState('10:00')
     const [closingTime, setClosingTime] = useState('20:00')
+    const [crmBaseSpendAmount, setCrmBaseSpendAmount] = useState(100)
 
     // --- Hooks ---
     const { menuItems: allMenuItems, categories, loading: menuLoading } = useMenuData()
@@ -77,6 +78,7 @@ export default function PickupPage() {
                 if (map.pickup_min_advance_hours) setMinAdvanceHours(Number(map.pickup_min_advance_hours))
                 if (map.opening_time) setOpeningTime(map.opening_time)
                 if (map.closing_time) setClosingTime(map.closing_time)
+                if (map.crm_base_spend_amount) setCrmBaseSpendAmount(parseFloat(map.crm_base_spend_amount) || 100)
             }
 
             // 3. User
@@ -430,7 +432,7 @@ export default function PickupPage() {
                                             </div>
                                             <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
                                                 <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Earn Points</span>
-                                                <span className="text-xs font-bold text-emerald-700">+{Math.floor((finalTotal / 100) * (tierDetails.multiplier || 1.0))} xhaus</span>
+                                                <span className="text-xs font-bold text-emerald-700">+{Math.floor((finalTotal / (crmBaseSpendAmount || 100)) * (tierDetails.multiplier || 1.0))} xhaus</span>
                                             </div>
                                         </div>
                                     </div>
