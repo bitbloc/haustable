@@ -1328,7 +1328,7 @@ Deno.serve(async (req) => {
             const { data: bookings, error } = await supabaseAdmin
               .from('bookings')
               .select(`
-                id, tracking_token, total_amount, total_price, status, booking_type, booking_time, created_at, pax,
+                id, tracking_token, total_amount, status, booking_type, booking_time, created_at, pax,
                 pickup_contact_name, customer_note, staff_remark,
                 tables_layout ( table_name ),
                 order_items (

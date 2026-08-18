@@ -207,7 +207,7 @@ export default function SlipAuditManager({
             const { data: rangeData, error: rangeErr } = await supabase
                 .from('bookings')
                 .select(`
-                    id, tracking_token, booking_time, total_amount, total_price, discount_amount,
+                    id, tracking_token, booking_time, total_amount, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
                     customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),
@@ -224,7 +224,7 @@ export default function SlipAuditManager({
             const { data: openBillsData, error: openErr } = await supabase
                 .from('bookings')
                 .select(`
-                    id, tracking_token, booking_time, total_amount, total_price, discount_amount,
+                    id, tracking_token, booking_time, total_amount, discount_amount,
                     status, pax, number_of_guests, booking_type, payment_slip_url, staff_remark,
                     customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),

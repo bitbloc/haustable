@@ -105,7 +105,6 @@ export default function AdminFinancialDashboard() {
                     id,
                     booking_time,
                     created_at,
-                    total_price,
                     total_amount,
                     status,
                     pax,
