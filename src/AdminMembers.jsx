@@ -4,7 +4,8 @@ import { supabase } from './lib/supabaseClient'
 import { 
     Search, Shield, User, Phone, Edit2, X, Clock, Trash2, 
     Key, RefreshCw, Eye, EyeOff, Plus, Minus, Coins,
-    Calendar, ArrowUpDown, CheckCircle2, ChevronRight
+    Calendar, ArrowUpDown, CheckCircle2, ChevronRight,
+    Coffee, Award, Gift
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
@@ -21,7 +22,7 @@ export default function AdminMembers() {
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [roleTab, setRoleTab] = useState('all') // 'all' | 'staff' | 'customer'
-    const [sortBy, setSortBy] = useState('newest') // 'newest' | 'name' | 'xhaus' | 'bookings'
+    const [sortBy, setSortBy] = useState('newest') // 'newest' | 'name' | 'xhaus' | 'bookings' | 'stamps'
     const [visiblePins, setVisiblePins] = useState({})
 
     // History Modal State
@@ -40,7 +41,9 @@ export default function AdminMembers() {
         birth_day: '',
         birth_month: '',
         gender: '',
-        pin: ''
+        pin: '',
+        drink_stamp_count: 0,
+        free_drink_quota: 0
     })
 
     // Coin Adjuster Modal State
@@ -49,6 +52,12 @@ export default function AdminMembers() {
     const [adjustReason, setAdjustReason] = useState('')
     const [adjustType, setAdjustType] = useState('add') // 'add' | 'deduct'
     const [isAdjusting, setIsAdjusting] = useState(false)
+
+    // Stamp & Free Drink Adjuster Modal State
+    const [adjustingStampMember, setAdjustingStampMember] = useState(null)
+    const [stampCountInput, setStampCountInput] = useState(0)
+    const [freeQuotaInput, setFreeQuotaInput] = useState(0)
+    const [isAdjustingStamps, setIsAdjustingStamps] = useState(false)
 
     // Fetch Members Data
     const fetchMembers = async () => {
@@ -105,6 +114,20 @@ export default function AdminMembers() {
 
     useEffect(() => {
         fetchMembers()
+
+        const channel = supabase
+            .channel('admin_members_realtime_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                fetchMembers()
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchMembers()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [])
 
     // View Member Service / Booking History
@@ -202,7 +225,9 @@ export default function AdminMembers() {
             birth_day: member.birth_day || '',
             birth_month: member.birth_month || '',
             gender: member.gender || '',
-            pin: member.pin || ''
+            pin: member.pin || '',
+            drink_stamp_count: member.drink_stamp_count || 0,
+            free_drink_quota: member.free_drink_quota || 0
         })
     }
 
@@ -222,7 +247,9 @@ export default function AdminMembers() {
                 birth_day: editForm.birth_day ? parseInt(editForm.birth_day, 10) : null,
                 birth_month: editForm.birth_month ? parseInt(editForm.birth_month, 10) : null,
                 gender: editForm.gender || null,
-                pin: cleanPin
+                pin: cleanPin,
+                drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
+                free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10))
             }
 
             const { error } = await supabase
@@ -243,6 +270,49 @@ export default function AdminMembers() {
         } catch (err) {
             console.error('Failed to save profile:', err)
             toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + err.message)
+        }
+    }
+
+    // Handle Manual Drink Stamps & Free Drink Adjustment
+    const handleAdjustStamps = async (e) => {
+        if (e) e.preventDefault()
+        if (!adjustingStampMember) return
+
+        const countNum = parseInt(stampCountInput, 10)
+        const quotaNum = parseInt(freeQuotaInput, 10)
+
+        if (isNaN(countNum) || countNum < 0 || countNum > 9) {
+            return toast.error('จำนวนแก้วสะสมต้องอยู่ระหว่าง 0 - 9 แก้ว')
+        }
+        if (isNaN(quotaNum) || quotaNum < 0) {
+            return toast.error('โควต้าเครื่องดื่มฟรีต้องมากกว่าหรือเท่ากับ 0')
+        }
+
+        setIsAdjustingStamps(true)
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    drink_stamp_count: countNum,
+                    free_drink_quota: quotaNum
+                })
+                .eq('id', adjustingStampMember.id)
+
+            if (error) throw error
+
+            setMembers(prev => prev.map(m => m.id === adjustingStampMember.id ? { 
+                ...m, 
+                drink_stamp_count: countNum, 
+                free_drink_quota: quotaNum 
+            } : m))
+
+            toast.success(`อัปเดตสแตมป์แก้วของ ${adjustingStampMember.display_name} เรียบร้อย (${countNum}/10 แก้ว, ฟรี ${quotaNum} แก้ว)`)
+            setAdjustingStampMember(null)
+        } catch (err) {
+            console.error('Adjust stamps error:', err)
+            toast.error('ปรับสแตมป์ไม่สำเร็จ: ' + err.message)
+        } finally {
+            setIsAdjustingStamps(false)
         }
     }
 
@@ -334,6 +404,11 @@ export default function AdminMembers() {
             if (sortBy === 'xhaus') {
                 return (Number(b.xhaus_balance) || 0) - (Number(a.xhaus_balance) || 0)
             }
+            if (sortBy === 'stamps') {
+                const bTotalStamps = (Number(b.drink_stamp_count) || 0) + ((Number(b.free_drink_quota) || 0) * 10)
+                const aTotalStamps = (Number(a.drink_stamp_count) || 0) + ((Number(a.free_drink_quota) || 0) * 10)
+                return bTotalStamps - aTotalStamps
+            }
             if (sortBy === 'bookings') {
                 return (b.total_bookings || 0) - (a.total_bookings || 0)
             }
@@ -410,6 +485,7 @@ export default function AdminMembers() {
                             <option value="newest">สมัครล่าสุด</option>
                             <option value="name">ชื่อ (A-Z / ก-ฮ)</option>
                             <option value="xhaus">แต้ม xhaus สูงสุด</option>
+                            <option value="stamps">สะสมแก้วสูงสุด (Stamps)</option>
                             <option value="bookings">ยอดการจอง/ออเดอร์</option>
                         </select>
                     </div>
@@ -493,6 +569,11 @@ export default function AdminMembers() {
                                             }`}>
                                                 {member.role || 'customer'}
                                             </span>
+                                            {member.current_tier && (
+                                                <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 rounded-xs uppercase">
+                                                    {member.current_tier}
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Secondary Meta Tags */}
@@ -548,13 +629,43 @@ export default function AdminMembers() {
                                     </div>
                                 </div>
 
-                                {/* Middle Section: Stats & Points */}
-                                <div className="flex items-center gap-6 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-between md:justify-end">
+                                {/* Middle Section: Stats, Stamps & Points */}
+                                <div className="flex flex-wrap items-center gap-4 sm:gap-6 border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] pt-3 md:pt-0 md:pl-6 w-full md:w-auto justify-between md:justify-end">
                                     <div className="text-center font-mono">
                                         <p className="text-base font-bold text-[oklch(18%_0.012_28)]">{member.total_bookings || 0}</p>
                                         <p className="text-[9px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">Bookings</p>
                                     </div>
 
+                                    {/* Drink Stamps (10 Free 1) */}
+                                    <div className="text-center font-mono">
+                                        <div className="flex items-center justify-center gap-1">
+                                            <p className="text-base font-bold text-[oklch(18%_0.012_28)]">
+                                                ☕ {member.drink_stamp_count || 0}<span className="text-[10px] text-[oklch(55%_0.010_28)] font-normal">/10</span>
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setAdjustingStampMember(member)
+                                                    setStampCountInput(member.drink_stamp_count || 0)
+                                                    setFreeQuotaInput(member.free_drink_quota || 0)
+                                                }}
+                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors cursor-pointer"
+                                                title="ปรับจำนวนแก้วสะสม / สิทธิ์เครื่องดื่มฟรี"
+                                            >
+                                                <Edit2 size={11} />
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-center gap-1 mt-0.5">
+                                            <p className="text-[9px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">Stamps</p>
+                                            {(member.free_drink_quota || 0) > 0 && (
+                                                <span className="text-[8px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1 py-0.2 rounded-xs">
+                                                    🎁 ฟรี {member.free_drink_quota}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* xHAUS Points */}
                                     <div className="text-center font-mono">
                                         <div className="flex items-center justify-center gap-1">
                                             <p className="text-base font-bold text-[oklch(52%_0.16_28)]">
@@ -568,7 +679,7 @@ export default function AdminMembers() {
                                                     setAdjustReason('')
                                                     setAdjustType('add')
                                                 }}
-                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors"
+                                                className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors cursor-pointer"
                                                 title="ปรับเพิ่ม/ลดเหรียญ xhaus"
                                             >
                                                 <Coins size={13} />
@@ -762,6 +873,41 @@ export default function AdminMembers() {
                                     <p className="text-[10px] text-[oklch(55%_0.010_28)]">ใช้สำหรับปลดล็อกหน้าจอ POS และเปิด/ปิดกะพนักงาน</p>
                                 </div>
 
+                                {/* Drink Stamps & Quota */}
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">
+                                    <label className="text-[10px] font-bold uppercase text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                        <Coffee size={12} className="text-[oklch(52%_0.16_28)]" />
+                                        <span>Drink Stamps & Free Drink Quota (สะสมแก้ว 10 แถม 1)</span>
+                                    </label>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="block text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                                แก้วสะสมปัจจุบัน (0-9 แก้ว)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="9"
+                                                value={editForm.drink_stamp_count}
+                                                onChange={e => setEditForm({ ...editForm, drink_stamp_count: e.target.value })}
+                                                className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[9px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                                สิทธิ์เครื่องดื่มฟรี (แก้ว)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={editForm.free_drink_quota}
+                                                onChange={e => setEditForm({ ...editForm, free_drink_quota: e.target.value })}
+                                                className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-emerald-800 outline-none focus:border-black"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                         LINE User ID
@@ -906,6 +1052,127 @@ export default function AdminMembers() {
                                         className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm disabled:opacity-50"
                                     >
                                         {isAdjusting ? 'กำลังบันทึก...' : 'ยืนยันการปรับแต้ม'}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Drink Stamps Adjuster Modal */}
+            <AnimatePresence>
+                {adjustingStampMember && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.98 }}
+                            className="bg-white w-full max-w-sm rounded-sm border border-[oklch(85%_0.012_28)] shadow-xl overflow-hidden font-mono"
+                        >
+                            <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex justify-between items-center bg-[oklch(97%_0.008_28)]">
+                                <div>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">DRINK STAMP CARD (10 FREE 1)</span>
+                                    <h3 className="text-sm font-bold uppercase text-[oklch(18%_0.012_28)]">
+                                        ปรับสแตมป์: {adjustingStampMember.display_name || 'สมาชิก'}
+                                    </h3>
+                                </div>
+                                <button onClick={() => setAdjustingStampMember(null)} className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded-sm cursor-pointer">
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleAdjustStamps} className="p-5 space-y-4">
+                                <div className="grid grid-cols-2 gap-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-sm text-center">
+                                    <div>
+                                        <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)]">สแตมป์ปัจจุบัน</span>
+                                        <p className="text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                            ☕ {adjustingStampMember.drink_stamp_count || 0}/10
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)]">สิทธิ์เครื่องดื่มฟรี</span>
+                                        <p className="text-xl font-bold text-emerald-700">
+                                            🎁 {adjustingStampMember.free_drink_quota || 0} แก้ว
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        จำนวนแก้วสะสมใหม่ (0 - 9 แก้ว)
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setStampCountInput(prev => Math.max(0, parseInt(prev || 0) - 1))}
+                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-neutral-200 cursor-pointer"
+                                        >
+                                            -1
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="9"
+                                            required
+                                            value={stampCountInput}
+                                            onChange={e => setStampCountInput(Math.min(9, Math.max(0, parseInt(e.target.value || 0))))}
+                                            className="w-full text-center bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-base font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setStampCountInput(prev => Math.min(9, parseInt(prev || 0) + 1))}
+                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-neutral-200 cursor-pointer"
+                                        >
+                                            +1
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
+                                        สิทธิ์เครื่องดื่มฟรีใหม่ (แก้ว)
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFreeQuotaInput(prev => Math.max(0, parseInt(prev || 0) - 1))}
+                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-neutral-200 cursor-pointer"
+                                        >
+                                            -1
+                                        </button>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            required
+                                            value={freeQuotaInput}
+                                            onChange={e => setFreeQuotaInput(Math.max(0, parseInt(e.target.value || 0)))}
+                                            className="w-full text-center bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-base font-bold text-emerald-800 outline-none focus:border-black"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setFreeQuotaInput(prev => parseInt(prev || 0) + 1)}
+                                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-sm rounded-sm hover:bg-neutral-200 cursor-pointer"
+                                        >
+                                            +1
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex justify-end gap-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAdjustingStampMember(null)}
+                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-sm border border-[oklch(85%_0.012_28)] text-xs cursor-pointer"
+                                    >
+                                        ยกเลิก
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isAdjustingStamps}
+                                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold rounded-sm text-xs cursor-pointer shadow-sm disabled:opacity-50"
+                                    >
+                                        {isAdjustingStamps ? 'กำลังบันทึก...' : 'บันทึกสแตมป์'}
                                     </button>
                                 </div>
                             </form>

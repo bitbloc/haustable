@@ -85,7 +85,10 @@ export default function CustomerOrderLanding() {
 
     // Fetch Tier details dynamically when memberProfile changes
     useEffect(() => {
-        if (!memberProfile?.id) return;
+        if (!memberProfile?.id) {
+            setTierDetails({ current_tier: 'Haus Common', multiplier: 1.00 });
+            return;
+        }
         const fetchTier = async () => {
             try {
                 const { data } = await supabase.rpc('get_member_tier_details', { p_user_id: memberProfile.id });
@@ -98,6 +101,77 @@ export default function CustomerOrderLanding() {
         };
         fetchTier();
     }, [memberProfile?.id]);
+
+    // Live Realtime listener for member profile changes (points, drink stamps, free quota)
+    useEffect(() => {
+        if (!memberProfile?.id) return;
+
+        const channel = supabase
+            .channel(`realtime_landing_profile_${memberProfile.id}`)
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'profiles',
+                filter: `id=eq.${memberProfile.id}`
+            }, (payload) => {
+                if (payload.new) {
+                    setMemberProfile(prev => ({ ...prev, ...payload.new }));
+                    localStorage.setItem('customer_member_profile', JSON.stringify(payload.new));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [memberProfile?.id]);
+
+    // Cross-tab and window storage sync
+    useEffect(() => {
+        const handleProfileSync = () => {
+            const saved = localStorage.getItem('customer_member_profile');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed?.id && parsed.id !== memberProfile?.id) {
+                        fetchFreshProfile(parsed.id);
+                    }
+                } catch (err) {
+                    console.warn('Storage sync parse error:', err);
+                }
+            } else if (memberProfile) {
+                setMemberProfile(null);
+            }
+        };
+
+        window.addEventListener('storage', handleProfileSync);
+        window.addEventListener('customer_profile_updated', handleProfileSync);
+        return () => {
+            window.removeEventListener('storage', handleProfileSync);
+            window.removeEventListener('customer_profile_updated', handleProfileSync);
+        };
+    }, [memberProfile?.id]);
+
+    const fetchFreshProfile = async (userId) => {
+        if (!userId) return null;
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+
+            if (!error && data) {
+                setMemberProfile(data);
+                localStorage.setItem('customer_member_profile', JSON.stringify(data));
+                window.dispatchEvent(new Event('customer_profile_updated'));
+                return data;
+            }
+        } catch (err) {
+            console.warn('Failed to fetch fresh profile:', err);
+        }
+        return null;
+    };
 
     const refreshActiveBooking = async (resolvedId) => {
         const targetId = resolvedId || table?.id || tableId;
@@ -226,29 +300,30 @@ export default function CustomerOrderLanding() {
                 .limit(1)
                 .maybeSingle();
 
-            if (bookingData) {
-                // Auto-link member profile in background if customer is logged in on their device
-                const { data: { session } } = await supabase.auth.getSession();
-                let effectiveUserId = bookingData.user_id;
+            // Resolve effective member profile (Auth session > LocalStorage profile > Table booking user_id)
+            const { data: { session } } = await supabase.auth.getSession();
+            let effectiveUserId = null;
 
-                if (session?.user) {
-                    effectiveUserId = session.user.id;
-                    const { data: authProf } = await supabase.from('profiles').select('*').eq('id', session.user.id).maybeSingle();
-                    if (authProf) {
-                        setMemberProfile(authProf);
-                        localStorage.setItem('customer_member_profile', JSON.stringify(authProf));
-                    }
-                } else if (!effectiveUserId && loadedMember?.id) {
-                    effectiveUserId = loadedMember.id;
-                }
+            if (session?.user?.id) {
+                effectiveUserId = session.user.id;
+            } else if (loadedMember?.id) {
+                effectiveUserId = loadedMember.id;
+            } else if (bookingData?.user_id) {
+                effectiveUserId = bookingData.user_id;
+            }
 
-                if (effectiveUserId && bookingData.user_id !== effectiveUserId) {
+            if (effectiveUserId) {
+                const freshProf = await fetchFreshProfile(effectiveUserId);
+                if (freshProf && bookingData && bookingData.user_id !== effectiveUserId) {
                     await supabase
                         .from('bookings')
                         .update({ user_id: effectiveUserId })
                         .eq('id', bookingData.id);
                     bookingData.user_id = effectiveUserId;
                 }
+            }
+
+            if (bookingData) {
                 setActiveBooking(bookingData);
                 if (bookingData.pax) setPaxCount(bookingData.pax);
             } else {
@@ -316,6 +391,7 @@ export default function CustomerOrderLanding() {
             if (data) {
                 setMemberProfile(data);
                 localStorage.setItem('customer_member_profile', JSON.stringify(data));
+                window.dispatchEvent(new Event('customer_profile_updated'));
                 if (activeBooking) {
                     await supabase.from('bookings').update({ user_id: data.id }).eq('id', activeBooking.id);
                     setActiveBooking(prev => prev ? { ...prev, user_id: data.id } : null);
@@ -350,7 +426,9 @@ export default function CustomerOrderLanding() {
                 display_name: newMemberForm.display_name.trim(),
                 phone_number: newMemberForm.phone_number.trim(),
                 role: 'customer',
-                xhaus_balance: 0
+                xhaus_balance: 0,
+                drink_stamp_count: 0,
+                free_drink_quota: 0
             };
 
             const { data, error } = await supabase
@@ -364,6 +442,7 @@ export default function CustomerOrderLanding() {
             const savedProfile = data || newPayload;
             setMemberProfile(savedProfile);
             localStorage.setItem('customer_member_profile', JSON.stringify(savedProfile));
+            window.dispatchEvent(new Event('customer_profile_updated'));
             if (activeBooking) {
                 await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id);
                 setActiveBooking(prev => prev ? { ...prev, user_id: savedProfile.id } : null);
@@ -382,6 +461,7 @@ export default function CustomerOrderLanding() {
     const handleUnlinkMember = () => {
         setMemberProfile(null);
         localStorage.removeItem('customer_member_profile');
+        window.dispatchEvent(new Event('customer_profile_updated'));
         toast.info('ยกเลิกการเชื่อมต่อสมาชิกเรียบร้อยแล้ว');
     };
 
@@ -820,13 +900,18 @@ export default function CustomerOrderLanding() {
                                 <Crown size={16} />
                             </div>
                             <div>
-                                <div className="flex items-center gap-1.5 font-bold text-[var(--color-ink)]">
-                                    <span>คุณ {memberProfile.display_name || 'สมาชิก'}</span>
+                                <div className="flex items-center gap-1.5 font-bold text-[var(--color-ink)] flex-wrap">
+                                    <span>คุณ {memberProfile.display_name || memberProfile.nickname || 'สมาชิก'}</span>
                                     <span className="px-1.5 py-0.2 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold rounded-sm uppercase">
                                         {tierDetails.current_tier || 'Haus Common'} ({tierDetails.multiplier || '1.0'}x)
                                     </span>
+                                    {(memberProfile.free_drink_quota || 0) > 0 && (
+                                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase">
+                                            🎉 ฟรี {memberProfile.free_drink_quota} แก้ว
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-2 text-[10px] font-mono font-bold mt-0.5">
+                                <div className="flex items-center gap-2 text-[10px] font-mono font-bold mt-0.5 flex-wrap">
                                     <span className="text-[var(--color-accent)]">🪙 {parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} xhaus</span>
                                     <span className="text-[var(--color-rule)]">|</span>
                                     <span className="text-[var(--color-ink)]">☕ {memberProfile.drink_stamp_count || 0}/10 แก้ว</span>
@@ -840,24 +925,36 @@ export default function CustomerOrderLanding() {
                             </div>
                             <div>
                                 <span className="font-bold text-[var(--color-ink)] block text-xs">สมาชิกสะสมแต้ม HAUS</span>
-                                <span className="text-[10px] text-[var(--color-neutral)]">ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus ทุกยอดสั่ง</span>
+                                <span className="text-[10px] text-[var(--color-neutral)]">ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 10 แถม 1</span>
                             </div>
                         </div>
                     )}
 
-                    <button
-                        onClick={() => setShowMemberModal(true)}
-                        className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-                    >
-                        {memberProfile ? (
-                            <span>สลับสมาชิก</span>
-                        ) : (
-                            <>
-                                <UserPlus size={13} className="text-[var(--color-accent)]" />
-                                <span>เข้าสู่ระบบ / สมัคร</span>
-                            </>
+                    <div className="flex items-center gap-1.5">
+                        {memberProfile && (
+                            <Link
+                                to="/member-card"
+                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-1.5 rounded-sm text-[10px] font-mono font-bold flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                                title="เปิดบัตรสมาชิกดิจิทัล"
+                            >
+                                <Crown size={12} className="text-[var(--color-accent)]" />
+                                <span>บัตร</span>
+                            </Link>
                         )}
-                    </button>
+                        <button
+                            onClick={() => setShowMemberModal(true)}
+                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                        >
+                            {memberProfile ? (
+                                <span>สลับ</span>
+                            ) : (
+                                <>
+                                    <UserPlus size={13} className="text-[var(--color-accent)]" />
+                                    <span>เข้าสู่ระบบ / สมัคร</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Entertainment & Arcade Playground Banner */}

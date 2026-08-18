@@ -106,54 +106,129 @@ export default function MemberCard() {
         gender: ''
     })
 
-    // Listen for Auth session changes
+    // Phone Lookup & Guest states
+    const [phoneLookupInput, setPhoneLookupInput] = useState('')
+    const [phoneLookupLoading, setPhoneLookupLoading] = useState(false)
+
+    // Listen for Auth session changes and localStorage profile
     useEffect(() => {
-        const getSession = async () => {
+        const initMemberCard = async () => {
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
                 setUser(session.user)
                 fetchMemberData(session.user.id)
             } else {
+                const savedMemberStr = localStorage.getItem('customer_member_profile')
+                if (savedMemberStr) {
+                    try {
+                        const parsed = JSON.parse(savedMemberStr)
+                        if (parsed?.id) {
+                            setUser({ id: parsed.id, is_guest_member: true })
+                            fetchMemberData(parsed.id)
+                            return
+                        }
+                    } catch (e) {
+                        console.warn("Failed to parse saved member profile:", e)
+                    }
+                }
                 setLoading(false)
             }
         }
-        getSession()
+        initMemberCard()
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 setUser(session.user)
                 fetchMemberData(session.user.id)
-            } else {
-                setUser(null)
-                setProfile(null)
-                setQrUrl('')
-                setHistory([])
-                setLoading(false)
-                setIsEditing(false)
+            } else if (event === 'SIGNED_OUT') {
+                const saved = localStorage.getItem('customer_member_profile')
+                if (!saved) {
+                    setUser(null)
+                    setProfile(null)
+                    setQrUrl('')
+                    setHistory([])
+                    setLoading(false)
+                    setIsEditing(false)
+                }
             }
         })
 
-        return () => subscription.unsubscribe()
+        const handleProfileSync = () => {
+            const saved = localStorage.getItem('customer_member_profile')
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved)
+                    if (parsed?.id && (!profile?.id || parsed.id !== profile.id)) {
+                        setUser({ id: parsed.id, is_guest_member: true })
+                        fetchMemberData(parsed.id)
+                    }
+                } catch (e) {}
+            }
+        }
+        window.addEventListener('storage', handleProfileSync)
+        window.addEventListener('customer_profile_updated', handleProfileSync)
+
+        return () => {
+            subscription.unsubscribe()
+            window.removeEventListener('storage', handleProfileSync)
+            window.removeEventListener('customer_profile_updated', handleProfileSync)
+        }
     }, [])
 
     // Realtime live update subscription for member profile and bookings
     useEffect(() => {
-        if (!user?.id) return;
+        const targetId = user?.id || profile?.id;
+        if (!targetId) return;
 
         const channel = supabase
-            .channel(`member_card_realtime_${user.id}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` }, () => {
-                fetchMemberData(user.id);
+            .channel(`member_card_realtime_${targetId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, () => {
+                fetchMemberData(targetId);
             })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${user.id}` }, () => {
-                fetchMemberData(user.id);
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${targetId}` }, () => {
+                fetchMemberData(targetId);
             })
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.id])
+    }, [user?.id, profile?.id])
+
+    // Quick Phone Lookup Handler
+    const handlePhoneLookup = async (e) => {
+        if (e) e.preventDefault()
+        const cleanPhone = phoneLookupInput.replace(/\D/g, '')
+        if (cleanPhone.length < 9) {
+            return toast.error('กรุณากรอกเบอร์โทรศัพท์อย่างน้อย 9-10 หลัก')
+        }
+        setPhoneLookupLoading(true)
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('phone_number', cleanPhone)
+                .limit(1)
+                .maybeSingle()
+
+            if (error) throw error
+            if (data) {
+                setUser({ id: data.id, is_guest_member: true })
+                setProfile(data)
+                localStorage.setItem('customer_member_profile', JSON.stringify(data))
+                window.dispatchEvent(new Event('customer_profile_updated'))
+                fetchMemberData(data.id)
+                toast.success(`ยินดีต้อนรับคุณ ${data.display_name || 'สมาชิก In The Haus'}`)
+            } else {
+                toast.info('ไม่พบข้อมูลสมาชิกเบอร์นี้ สามารถสมัครสมาชิกผ่าน LINE ได้ทันที')
+            }
+        } catch (err) {
+            console.error('Phone lookup error:', err)
+            toast.error('ค้นหาสมาชิกล้มเหลว: ' + err.message)
+        } finally {
+            setPhoneLookupLoading(false)
+        }
+    }
 
     const fetchMemberData = async (userId) => {
         setLoading(true)
@@ -167,6 +242,8 @@ export default function MemberCard() {
 
             if (profErr) throw profErr
             setProfile(prof)
+            localStorage.setItem('customer_member_profile', JSON.stringify(prof))
+            window.dispatchEvent(new Event('customer_profile_updated'))
             setEditForm({
                 display_name: prof.display_name || '',
                 nickname: prof.nickname || '',
@@ -469,6 +546,12 @@ export default function MemberCard() {
         try {
             await logoutLine()
             await supabase.auth.signOut()
+            setUser(null)
+            setProfile(null)
+            setQrUrl('')
+            setHistory([])
+            localStorage.removeItem('customer_member_profile')
+            window.dispatchEvent(new Event('customer_profile_updated'))
             toast.success("ออกจากระบบเรียบร้อยแล้ว")
         } catch (err) {
             toast.error("ล้มเหลวในการออกจากระบบ")
@@ -545,6 +628,32 @@ export default function MemberCard() {
                                     "ยิ่งกลับมา บ้านยิ่งจำคุณได้ ทุกการใช้จ่ายจะพาคุณเข้าใกล้ความเป็นคนในบ้านมากขึ้น"
                                 </p>
                             </div>
+
+                            {/* Quick Phone Search / Open Card Box */}
+                            <form onSubmit={handlePhoneLookup} className="bg-neutral-50 border border-[var(--color-hallmark-rule)] p-4 rounded-[6px] space-y-2.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] block">
+                                    🔍 มีบัญชีสมาชิกอยู่แล้ว? เปิดบัตรทันทีด้วยเบอร์โทร
+                                </span>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <Phone size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-400" />
+                                        <input
+                                            type="tel"
+                                            placeholder="08X-XXX-XXXX"
+                                            value={phoneLookupInput}
+                                            onChange={(e) => setPhoneLookupInput(e.target.value)}
+                                            className="w-full bg-white border border-[var(--color-hallmark-rule)] rounded-[4px] py-2 pl-8 pr-2.5 text-xs font-mono font-bold text-[var(--color-hallmark-ink)] focus:outline-none focus:border-[var(--color-hallmark-ink)]"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={phoneLookupLoading}
+                                        className="bg-[var(--color-hallmark-ink)] hover:bg-black text-[var(--color-hallmark-paper)] px-3.5 py-2 rounded-[4px] font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap shrink-0"
+                                    >
+                                        {phoneLookupLoading ? '...' : 'เปิดบัตร'}
+                                    </button>
+                                </div>
+                            </form>
 
                             {/* Welcome Perk Card */}
                             <div className="bg-[#FFFDF5] border border-amber-300 rounded-[6px] p-4 flex items-center gap-4">
