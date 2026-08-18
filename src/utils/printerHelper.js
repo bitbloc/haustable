@@ -419,6 +419,14 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
 export const classifyItem = (item, receiptConfig = {}) => {
+    if (item.destination === 'bar' || item.destination === 'drinks') return 'bar';
+    if (item.destination === 'other') return 'other';
+    if (item.destination === 'kitchen' || item.destination === 'food') return 'kitchen';
+    if (item.selected_options && Array.isArray(item.selected_options)) {
+        const destOpt = item.selected_options.find(o => o.destination);
+        if (destOpt) return destOpt.destination;
+    }
+
     const getItemCatId = (i) => i.menu_items?.category_id || i.category_id || i.category || '';
     const catId = getItemCatId(item);
 
@@ -964,7 +972,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             groupItems.forEach((item) => {
                 const qtyColWidth = 3;
                 const qtyStr = padEndPrinter(`${item.quantity}x`, qtyColWidth);
-                const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
+                const name = (item.custom_name || item.menu_items?.name || item.name || 'Item').toUpperCase();
                 
                 const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
@@ -1024,7 +1032,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     } else {
         const renderReceiptGroup = (groupItems) => {
             groupItems.forEach(item => {
-                const name = (item.menu_items?.name || item.name || 'Item').toUpperCase();
+                const name = (item.custom_name || item.menu_items?.name || item.name || 'Item').toUpperCase();
                 const unitPriceNum = Number(item.price_at_time ?? item.price ?? 0);
                 const qtyNum = Number(item.quantity) || 1;
                 const unitPriceStr = formatReceiptMoney(unitPriceNum);
@@ -1512,8 +1520,8 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     completedBookings.forEach(b => {
         (b.order_items || []).filter(isSaleItem).forEach(item => {
             const catId = item.menu_items?.category_id || item.category_id || 'other';
-            const catName = categoryMap[catId] || 'อื่นๆ / Uncategorized';
-            const itemName = (item.menu_items?.name || item.name || 'Unknown Item').toUpperCase();
+            const catName = categoryMap[catId] || (item.destination === 'bar' ? 'เครื่องดื่ม' : item.destination === 'kitchen' ? 'อาหาร' : 'อื่นๆ / Uncategorized');
+            const itemName = (item.custom_name || item.menu_items?.name || item.name || 'Unknown Item').toUpperCase();
             const qty = Number(item.quantity) || 0;
             const price = Number(item.price_at_time ?? item.price ?? 0);
             const amt = qty * price;

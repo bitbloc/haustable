@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Search, Plus, Layers, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
+import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getAllCachedImages, syncAllMenuImages } from '../utils/imageStore';
 
 const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
@@ -12,6 +13,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedItemForModal, setSelectedItemForModal] = useState(null);
+    const [showEmergencyModal, setShowEmergencyModal] = useState(false);
     const [localImageMap, setLocalImageMap] = useState({});
     const [isSyncing, setIsSyncing] = useState(false);
     const [syncProgress, setSyncProgress] = useState({ completed: 0, total: 0 });
@@ -222,6 +224,15 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                     </div>
 
                     <button
+                        type="button"
+                        onClick={() => setShowEmergencyModal(true)}
+                        className="h-[46px] px-3.5 bg-[oklch(18%_0.012_28)] hover:bg-black active:scale-[0.97] text-[oklch(97%_0.008_28)] rounded-xl flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-sm"
+                    >
+                        <Plus size={16} className="shrink-0" />
+                        <span>+ เมนูเพิ่มเติม</span>
+                    </button>
+
+                    <button
                         onClick={handleManualSync}
                         disabled={isSyncing}
                         title="อัพเดทรายการเมนูและรูปภาพจากฐานข้อมูลลงเครื่อง"
@@ -259,6 +270,37 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+                    {/* Quick Emergency / Custom Item Card */}
+                    <button
+                        type="button"
+                        onClick={() => setShowEmergencyModal(true)}
+                        className="bg-[oklch(94%_0.010_28)] rounded-xl border-2 border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] p-3 flex flex-col gap-3 text-left group active:scale-[0.97] transition-all duration-75 cursor-pointer shadow-2xs relative select-none touch-manipulation"
+                    >
+                        <div className="aspect-square rounded-lg bg-white overflow-hidden relative border border-[oklch(85%_0.012_28)] shrink-0 flex flex-col items-center justify-center p-2 text-center">
+                            <span className="text-[10px] font-mono font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase block mb-1">
+                                [CUSTOM PRICE]
+                            </span>
+                            <span className="text-xl font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                + ฿?.??
+                            </span>
+                            <div className="absolute bottom-2 right-2 w-8 h-8 rounded-lg bg-[oklch(18%_0.012_28)] text-white flex items-center justify-center shadow-xs group-hover:bg-[oklch(52%_0.16_28)] transition-colors">
+                                <Plus size={16} />
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-col flex-1 min-h-[64px]">
+                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">
+                                + เมนูเพิ่มเติม
+                            </h4>
+                            <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)] leading-tight">
+                                กำหนดชื่อและราคาเอง
+                            </p>
+                            <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-xs font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                <span>ON-THE-FLY</span>
+                            </div>
+                        </div>
+                    </button>
+
                     {filteredItems.map(item => {
                         const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
                         const displayImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
@@ -312,6 +354,16 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                     }}
                 />
             )}
+
+            {/* Emergency / Custom Item Modal */}
+            <POSEmergencyItemModal
+                isOpen={showEmergencyModal}
+                onClose={() => setShowEmergencyModal(false)}
+                onConfirm={(customItem) => {
+                    onAddItem(customItem);
+                    toast.success(`เพิ่มเมนูเพิ่มเติม: ${customItem.name} (฿${customItem.price})`);
+                }}
+            />
         </div>
     );
 });

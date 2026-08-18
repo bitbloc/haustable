@@ -402,7 +402,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 <div key={idx} className="flex justify-between items-center text-[#1A1A1A] text-xs">
                                                     <span className="truncate pr-2 font-medium">
                                                         <strong className="font-mono text-[11px] mr-1">{item.quantity}x</strong>
-                                                        {item.menu_items?.name || item.name || 'Item'}
+                                                        {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
                                                     </span>
                                                     <span className="font-mono text-[10px] text-[#767673] shrink-0">
                                                         ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}

@@ -1250,15 +1250,29 @@ export default function POSDashboard() {
         } else {
             setActiveBooking(booking);
             setSelectedTable(null);
-            const existingItems = (booking.order_items || []).map(oi => ({
-                id: oi.menu_item_id,
-                name: oi.menu_items?.name || oi.name || 'Item',
-                price: oi.price_at_time,
-                quantity: oi.quantity,
-                db_id: oi.id,
-                selected_options: oi.selected_options,
-                category_id: oi.menu_items?.category_id || oi.category_id
-            }));
+            const existingItems = (booking.order_items || []).map(oi => {
+                const resolvedName = oi.custom_name 
+                    || oi.menu_items?.name 
+                    || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+                    || oi.name 
+                    || 'เมนูเพิ่มเติม';
+                const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
+                return {
+                    id: `db_${oi.id}`,
+                    menu_item_id: oi.menu_item_id,
+                    name: resolvedName,
+                    custom_name: resolvedName,
+                    price: parseFloat(oi.price_at_time) || 0,
+                    quantity: oi.quantity,
+                    db_id: oi.id,
+                    selected_options: oi.selected_options || [],
+                    category_id: oi.menu_items?.category_id || oi.category_id || '',
+                    category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (oi.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                    destination: oi.destination || (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'),
+                    is_custom: isCustom,
+                    is_emergency: isCustom
+                };
+            });
             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
             const customerName = booking.profiles?.display_name 
                 || (booking.customer_name && !defaultWalkIns.includes(booking.customer_name.toLowerCase().trim()) ? booking.customer_name : null)
@@ -1295,18 +1309,30 @@ export default function POSDashboard() {
         if (booking) {
             setActiveBooking(booking);
             // Load existing items with unique cart-level IDs
-            const existingItems = (booking.order_items || []).map(oi => ({
-                id: `db_${oi.id}`,
-                menu_item_id: oi.menu_item_id,
-                name: oi.menu_items?.name || oi.name || 'Item',
-                price: parseFloat(oi.price_at_time) || 0,
-                quantity: oi.quantity,
-                db_id: oi.id,
-                selected_options: oi.selected_options || [],
-                category_id: oi.menu_items?.category_id || oi.category_id || '',
-                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || '',
-                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
-            }));
+            const existingItems = (booking.order_items || []).map(oi => {
+                const resolvedName = oi.custom_name 
+                    || oi.menu_items?.name 
+                    || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+                    || oi.name 
+                    || 'เมนูเพิ่มเติม';
+                const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
+                return {
+                    id: `db_${oi.id}`,
+                    menu_item_id: oi.menu_item_id,
+                    name: resolvedName,
+                    custom_name: resolvedName,
+                    price: parseFloat(oi.price_at_time) || 0,
+                    quantity: oi.quantity,
+                    db_id: oi.id,
+                    selected_options: oi.selected_options || [],
+                    category_id: oi.menu_items?.category_id || oi.category_id || '',
+                    category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (oi.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                    destination: oi.destination || (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'),
+                    is_custom: isCustom,
+                    is_emergency: isCustom,
+                    is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+                };
+            });
             setCurrentOrder({
                 items: existingItems,
                 customer: booking.customer_name || 'Customer',
@@ -1382,18 +1408,30 @@ export default function POSDashboard() {
             }
         }
         
-        const existingItems = (booking.order_items || []).map(oi => ({
-            id: `db_${oi.id}`,
-            menu_item_id: oi.menu_item_id,
-            name: oi.menu_items?.name || oi.name || 'Item',
-            price: parseFloat(oi.price_at_time) || 0,
-            quantity: oi.quantity,
-            db_id: oi.id,
-            selected_options: oi.selected_options || [],
-            category_id: oi.menu_items?.category_id || oi.category_id || '',
-            category_name: oi.menu_items?.menu_categories?.name || oi.category_name || '',
-            is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
-        }));
+        const existingItems = (booking.order_items || []).map(oi => {
+            const resolvedName = oi.custom_name 
+                || oi.menu_items?.name 
+                || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+                || oi.name 
+                || 'เมนูเพิ่มเติม';
+            const isCustom = oi.is_custom || !oi.menu_item_id || !oi.menu_items?.name;
+            return {
+                id: `db_${oi.id}`,
+                menu_item_id: oi.menu_item_id,
+                name: resolvedName,
+                custom_name: resolvedName,
+                price: parseFloat(oi.price_at_time) || 0,
+                quantity: oi.quantity,
+                db_id: oi.id,
+                selected_options: oi.selected_options || [],
+                category_id: oi.menu_items?.category_id || oi.category_id || '',
+                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (oi.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                destination: oi.destination || (oi.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'),
+                is_custom: isCustom,
+                is_emergency: isCustom,
+                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+            };
+        });
         setCurrentOrder({
             items: existingItems,
             customer: booking.pickup_contact_name || booking.customer_name || booking.customer_note || 'Walk-in Pick-up',
@@ -1468,11 +1506,16 @@ export default function POSDashboard() {
             const itemOpts = item.selected_options || item.optionsSummary || [];
             const itemNote = item.item_note || item.itemNote || '';
             const optsStr = JSON.stringify(itemOpts);
-            const targetMenuItemId = item.menu_item_id || item.id;
+            const targetMenuItemId = item.menu_item_id || (!item.is_custom && typeof item.id === 'string' && !item.id.startsWith('custom_') && !item.id.startsWith('draft_') ? item.id : null);
+            const isCustom = item.is_custom || item.is_emergency || !targetMenuItemId || String(item.id).startsWith('custom_');
+            const itemName = item.name || item.custom_name || 'เมนูเพิ่มเติม';
 
             // Match only against NEW draft items (no db_id) so we never mutate items already stored in DB!
             const existingIndex = prev.items.findIndex(i => {
                 if (i.db_id) return false;
+                if (isCustom || i.is_custom) {
+                    return (i.is_custom || !i.menu_item_id) && i.name === itemName && Number(i.price) === Number(item.price);
+                }
                 const iTargetId = i.menu_item_id || i.id;
                 if (iTargetId !== targetMenuItemId) return false;
                 const existingOptsStr = JSON.stringify(i.selected_options || i.optionsSummary || []);
@@ -1490,7 +1533,10 @@ export default function POSDashboard() {
                 return { ...prev, items: updatedItems };
             }
 
-            const uniqueDraftId = `draft_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+            const uniqueDraftId = isCustom 
+                ? (item.id || `custom_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`) 
+                : `draft_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
             return {
                 ...prev,
                 items: [
@@ -1498,13 +1544,17 @@ export default function POSDashboard() {
                     {
                         id: uniqueDraftId,
                         menu_item_id: targetMenuItemId,
-                        name: item.name,
+                        name: itemName,
+                        custom_name: itemName,
                         price: parseFloat(item.price) || 0,
                         quantity: addQty,
                         selected_options: itemOpts,
                         item_note: itemNote,
                         category_id: item.category_id || '',
                         category_name: item.category?.name || item.category_name || '',
+                        destination: item.destination || (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'),
+                        is_custom: isCustom,
+                        is_emergency: item.is_emergency || isCustom,
                         is_drink_stamp_eligible: item.is_drink_stamp_eligible || false
                     }
                 ]
@@ -2386,6 +2436,7 @@ export default function POSDashboard() {
                             onCheckout={handleCheckout}
                             onInjectRewardItem={handleInjectRewardItem}
                             onRemoveRewardItem={handleRemoveRewardItem}
+                            onAddEmergencyItem={handleAddToOrder}
                             onAcceptOrder={async () => {
                                 if (isSubmittingOrder) return;
                                 setIsSubmittingOrder(true);
@@ -2812,7 +2863,7 @@ export default function POSDashboard() {
                                                 <div className="space-y-0.5 text-xs text-[oklch(18%_0.012_28)]">
                                                     {item.order_items.map((oi, i) => (
                                                         <div key={i} className="flex justify-between font-mono text-[11px]">
-                                                            <span>{oi.quantity}x {oi.menu_items?.name || oi.name || 'รายการอาหาร'}</span>
+                                                            <span>{oi.quantity}x {oi.custom_name || oi.menu_items?.name || oi.name || 'รายการอาหาร'}</span>
                                                             <span className="font-bold">฿{(oi.price_at_time || oi.price || 0) * oi.quantity}</span>
                                                         </div>
                                                     ))}

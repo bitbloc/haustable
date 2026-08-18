@@ -273,12 +273,17 @@ export async function syncOfflineQueue(isManual = false) {
                     if (item.item_note) {
                         finalOpts.push({ name: `Note: ${item.item_note}` });
                     }
+                    const customName = item.custom_name || item.name || null;
+                    const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
                     return {
                         booking_id: bookingId,
                         menu_item_id: resolveMenuItemId(item),
                         quantity: item.quantity,
                         price_at_time: item.price,
-                        selected_options: finalOpts
+                        selected_options: finalOpts,
+                        custom_name: isCustom ? customName : null,
+                        is_custom: isCustom,
+                        destination: item.destination || 'kitchen'
                     };
                 });
 

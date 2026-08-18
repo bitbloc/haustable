@@ -442,7 +442,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                     <div className="flex justify-between items-center">
                                         <span className="truncate pr-2 font-medium">
                                             <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
-                                            {item.menu_items?.name || item.name || 'Item'}
+                                            {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
                                         </span>
                                         <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
                                             ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}

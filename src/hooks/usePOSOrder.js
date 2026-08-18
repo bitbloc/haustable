@@ -326,9 +326,9 @@ export function usePOSOrder() {
             // Save order items inside booking cache for local UI consistency
             const resolveMenuItemId = (item) => {
                 if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
-                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
+                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_') && !item.menu_item_id.startsWith('custom_')) return item.menu_item_id;
                 if (item.id && typeof item.id !== 'string') return item.id;
-                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
+                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_') && !item.id.startsWith('custom_')) return item.id;
                 return null;
             };
 
@@ -337,6 +337,8 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
+                const resolvedName = item.custom_name || item.name || 'เมนูเพิ่มเติม';
+                const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
                 return {
                     id: `local_item_${Date.now()}_${i}`,
                     booking_id: bookingId,
@@ -344,14 +346,17 @@ export function usePOSOrder() {
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts,
-                    name: item.name || 'Item',
+                    name: resolvedName,
+                    custom_name: isCustom ? resolvedName : null,
+                    is_custom: isCustom,
+                    destination: item.destination || 'kitchen',
                     category_id: item.category_id || '',
                     category_name: item.category_name || '',
                     item_note: item.item_note || '',
                     menu_items: { 
-                        name: item.name || 'Item',
+                        name: resolvedName,
                         category_id: item.category_id || '',
-                        menu_categories: { name: item.category_name || '' }
+                        menu_categories: { name: item.category_name || (item.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                     }
                 };
             });
@@ -372,9 +377,9 @@ export function usePOSOrder() {
         try {
             const resolveMenuItemId = (item) => {
                 if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
-                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
+                if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_') && !item.menu_item_id.startsWith('custom_')) return item.menu_item_id;
                 if (item.id && typeof item.id !== 'string') return item.id;
-                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
+                if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_') && !item.id.startsWith('custom_')) return item.id;
                 return null;
             };
 
@@ -383,12 +388,17 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
+                const customName = item.custom_name || item.name || null;
+                const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
                 return {
                     booking_id: bookingId,
                     menu_item_id: resolveMenuItemId(item),
                     quantity: item.quantity,
                     price_at_time: item.price,
-                    selected_options: finalOpts
+                    selected_options: finalOpts,
+                    custom_name: isCustom ? customName : null,
+                    is_custom: isCustom,
+                    destination: item.destination || 'kitchen'
                 };
             });
 
@@ -401,18 +411,22 @@ export function usePOSOrder() {
             const enrichedInserted = (insertedData || []).map((row, index) => {
                 const sourceItem = items[index] || {};
                 const menuItemsObj = row.menu_items || {
-                    name: sourceItem.name || 'Item',
+                    name: row.custom_name || sourceItem.name || 'เมนูเพิ่มเติม',
                     category_id: sourceItem.category_id || '',
-                    menu_categories: { name: sourceItem.category_name || '' }
+                    menu_categories: { name: sourceItem.category_name || (row.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                 };
+                const finalName = row.custom_name || row.name || menuItemsObj.name || sourceItem.name || 'เมนูเพิ่มเติม';
                 return {
                     ...row,
-                    name: row.name || menuItemsObj.name || sourceItem.name || 'Item',
+                    name: finalName,
+                    custom_name: row.custom_name || finalName,
                     category_id: row.category_id || menuItemsObj.category_id || sourceItem.category_id || '',
-                    category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || '',
+                    category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || (row.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                     menu_items: menuItemsObj,
                     selected_options: row.selected_options || sourceItem.selected_options || [],
-                    item_note: sourceItem.item_note || ''
+                    item_note: sourceItem.item_note || '',
+                    destination: row.destination || sourceItem.destination || 'kitchen',
+                    is_custom: row.is_custom || sourceItem.is_custom || false
                 };
             });
 
@@ -425,6 +439,8 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
+                const resolvedName = item.custom_name || item.name || 'เมนูเพิ่มเติม';
+                const isCustom = item.is_custom || item.is_emergency || !item.menu_item_id || String(item.id).startsWith('custom_');
                 return {
                     id: `local_item_${Date.now()}_${i}`,
                     booking_id: bookingId,
@@ -432,14 +448,17 @@ export function usePOSOrder() {
                     quantity: item.quantity,
                     price_at_time: item.price,
                     selected_options: finalOpts,
-                    name: item.name || 'Item',
+                    name: resolvedName,
+                    custom_name: isCustom ? resolvedName : null,
+                    is_custom: isCustom,
+                    destination: item.destination || 'kitchen',
                     category_id: item.category_id || '',
                     category_name: item.category_name || '',
                     item_note: item.item_note || '',
                     menu_items: { 
-                        name: item.name || 'Item', 
+                        name: resolvedName, 
                         category_id: item.category_id || '',
-                        menu_categories: { name: item.category_name || '' }
+                        menu_categories: { name: item.category_name || (item.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                     }
                 };
             });

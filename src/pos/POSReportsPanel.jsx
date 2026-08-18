@@ -175,8 +175,7 @@ export default function POSReportsPanel() {
                 const itemCounts = {};
                 data.forEach(b => {
                     b.order_items?.forEach(item => {
-                        if (!item.menu_items) return;
-                        const name = item.menu_items.name;
+                        const name = item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม';
                         const qty = item.quantity || 0;
                         itemCounts[name] = (itemCounts[name] || 0) + qty;
                     });
@@ -241,6 +240,7 @@ export default function POSReportsPanel() {
                         status,
                         order_items (
                             quantity,
+                            custom_name,
                             menu_items (
                                 name
                             )
@@ -255,8 +255,7 @@ export default function POSReportsPanel() {
                 const itemCounts = {};
                 (data || []).forEach(b => {
                     b.order_items?.forEach(item => {
-                        if (!item.menu_items) return;
-                        const name = item.menu_items.name;
+                        const name = item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม';
                         const qty = item.quantity || 0;
                         itemCounts[name] = (itemCounts[name] || 0) + qty;
                     });
@@ -408,8 +407,8 @@ export default function POSReportsPanel() {
         const categorySales = {};
         filteredForBreakdown.forEach(b => {
             b.order_items?.forEach(item => {
-                const catId = item.menu_items?.category_id || 'uncategorized';
-                const catName = categoryMap[catId] || 'Uncategorized';
+                const catId = item.menu_items?.category_id || item.category_id || (item.destination === 'bar' ? 'bar' : 'kitchen');
+                const catName = categoryMap[catId] || (item.destination === 'bar' ? 'เครื่องดื่ม' : item.destination === 'kitchen' ? 'อาหาร' : 'อื่นๆ / Uncategorized');
                 const itemTotal = (item.price_at_time || 0) * (item.quantity || 0);
                 
                 if (!categorySales[catId]) {

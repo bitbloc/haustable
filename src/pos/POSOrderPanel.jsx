@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
+import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
 
 const POSOrderPanel = React.memo(function POSOrderPanel({ 
@@ -26,9 +27,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     onUpdateCustomerProfile,
     onUpdateGuestCount,
     onInjectRewardItem,
-    onRemoveRewardItem
+    onRemoveRewardItem,
+    onAddEmergencyItem
 }) {
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
+    const [showEmergencyModal, setShowEmergencyModal] = React.useState(false);
     const [editPaxInput, setEditPaxInput] = React.useState('1');
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
@@ -717,12 +720,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </div>
                     )}
                 </div>
-                <button 
-                    onClick={onClear}
-                    className="p-1.5 text-[#767673] hover:text-red-600 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 rounded-lg transition-all cursor-pointer"
-                >
-                    <Trash2 size={14} />
-                </button>
+                <div className="flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setShowEmergencyModal(true)}
+                        className="text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
+                        title="เพิ่มเมนูพิเศษและกำหนดราคาเอง"
+                    >
+                        <Plus size={12} />
+                        <span>+ เมนูเพิ่มเติม</span>
+                    </button>
+                    <button 
+                        onClick={onClear}
+                        title="เคลียร์บิล / ยกเลิก"
+                        className="p-1.5 text-[#767673] hover:text-red-600 hover:bg-red-500/10 border border-transparent hover:border-red-500/20 rounded-lg transition-all cursor-pointer"
+                    >
+                        <Trash2 size={14} />
+                    </button>
+                </div>
             </div>
 
             {/* Pending Order Alert */}
@@ -1979,6 +1994,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 url={viewSlipModalUrl} 
                 onClose={() => setViewSlipModalUrl(null)} 
             />
+
+            {/* Emergency / Custom Item Modal */}
+            <POSEmergencyItemModal
+                isOpen={showEmergencyModal}
+                onClose={() => setShowEmergencyModal(false)}
+                onConfirm={(customItem) => {
+                    if (onAddEmergencyItem) {
+                        onAddEmergencyItem(customItem);
+                    }
+                    toast.success(`เพิ่มเมนูเพิ่มเติม: ${customItem.name} (฿${customItem.price})`);
+                }}
+            />
         </aside>
     );
 });
@@ -1987,13 +2014,21 @@ export default POSOrderPanel;
 
 const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, onUpdateItemNote }) {
     const isRewardItem = item.is_reward || !!item.claim_code || (item.name || '').includes('แลกสิทธิ');
+    const isCustomEmergency = item.is_custom || item.is_emergency || !item.menu_item_id || String(item.id).startsWith('custom_');
 
     return (
         <div 
             className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
         >
             <div className="flex-1 min-w-0 mr-3">
-                <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <h5 className="font-bold text-sm leading-tight text-[oklch(18%_0.012_28)] uppercase truncate">{item.name}</h5>
+                    {isCustomEmergency && (
+                        <span className="text-[9px] font-mono font-bold bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 px-1 py-0.2 rounded shrink-0">
+                            [เมนูเพิ่มเติม]
+                        </span>
+                    )}
+                </div>
                 
                 {/* Display existing options/notes if any */}
                 {item.selected_options && item.selected_options.length > 0 && (
