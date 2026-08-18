@@ -52,6 +52,34 @@ function parseBookingPayment(b: any) {
   return { cash: total, qr: 0, credit: 0, methodLabel: 'CASH' };
 }
 
+function getShortBookingId(booking: any): string {
+  if (!booking) return '0000';
+  if (typeof booking === 'string') {
+    const raw = booking.trim();
+    if (raw.startsWith('local')) {
+      const digits = raw.replace(/[^0-9]/g, '');
+      return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
+    }
+    const clean = raw.replace(/[^a-zA-Z0-9]/g, '');
+    return clean.length >= 4 ? clean.slice(-4).toUpperCase() : (clean.toUpperCase() || '0000');
+  }
+  if (booking.short_id) {
+    return String(booking.short_id).toUpperCase();
+  }
+  const token = booking.tracking_token || booking.trackingToken;
+  if (token) {
+    const cleanToken = String(token).replace(/[^a-zA-Z0-9]/g, '');
+    return cleanToken.length >= 4 ? cleanToken.slice(-4).toUpperCase() : cleanToken.toUpperCase();
+  }
+  const rawId = String(booking.id || booking.booking_id || booking.order_id || '');
+  if (rawId.startsWith('local')) {
+    const digits = rawId.replace(/[^0-9]/g, '');
+    return digits.length >= 4 ? digits.slice(-4) : (digits || '0000');
+  }
+  const cleanUuid = rawId.replace(/[^a-zA-Z0-9]/g, '');
+  return cleanUuid ? cleanUuid.slice(-4).toUpperCase() : '0000';
+}
+
 async function verifySignature(body: string, signature: string, secret: string) {
   const encoder = new TextEncoder()
   const keyBuffer = encoder.encode(secret)
@@ -306,8 +334,8 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
       layout: "horizontal",
       margin: "sm",
       contents: [
-        { type: "text", text: "เลขผู้เสียภาษี", color: "#666666", size: "xs", flex: 3 },
-        { type: "text", text: expense.vendor_tax_id, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
+        { type: "text", text: "เลขผู้เสียภาษี", color: "#78736A", size: "xs", flex: 3 },
+        { type: "text", text: expense.vendor_tax_id, color: "#1E1B18", size: "xs", weight: "bold", align: "end", flex: 5 }
       ]
     });
   }
@@ -323,8 +351,8 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
       layout: "horizontal",
       margin: "sm",
       contents: [
-        { type: "text", text: "วิธีชำระเงิน", color: "#666666", size: "xs", flex: 3 },
-        { type: "text", text: payMap[expense.payment_method] || expense.payment_method, color: "#1A1A1A", size: "xs", weight: "bold", align: "end", flex: 5 }
+        { type: "text", text: "วิธีชำระเงิน", color: "#78736A", size: "xs", flex: 3 },
+        { type: "text", text: payMap[expense.payment_method] || expense.payment_method, color: "#1E1B18", size: "xs", weight: "bold", align: "end", flex: 5 }
       ]
     });
   }
@@ -334,12 +362,12 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
       type: "box",
       layout: "vertical",
       margin: "md",
-      backgroundColor: "#F9F9F8",
+      backgroundColor: "#F4F1EA",
       cornerRadius: "sm",
       paddingAll: "sm",
       contents: [
-        { type: "text", text: "รายการสินค้า / หมายเหตุ:", color: "#888888", size: "xxs", weight: "bold" },
-        { type: "text", text: expense.notes, color: "#1A1A1A", size: "xs", wrap: true, margin: "xs" }
+        { type: "text", text: "รายการสินค้า / หมายเหตุ:", color: "#78736A", size: "xxs", weight: "bold" },
+        { type: "text", text: expense.notes, color: "#1E1B18", size: "xs", wrap: true, margin: "xs" }
       ]
     });
   }
@@ -350,15 +378,17 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
     header: {
       type: "box",
       layout: "vertical",
+      backgroundColor: "#F4F1EA",
       paddingAll: "20px",
       contents: [
-        { type: "text", text: headerTitle, weight: "bold", color: "#1A1A1A", size: "sm" },
-        { type: "text", text: headerSubtitle, color: "#666666", size: "xs", margin: "xs" }
+        { type: "text", text: headerTitle, weight: "bold", color: "#1E1B18", size: "sm" },
+        { type: "text", text: headerSubtitle, color: "#78736A", size: "xs", margin: "xs" }
       ]
     },
     body: {
       type: "box",
       layout: "vertical",
+      backgroundColor: "#FBF9F5",
       paddingAll: "20px",
       contents: [
         // Status indicator
@@ -370,7 +400,7 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
               type: "box",
               layout: "vertical",
               width: "4px",
-              backgroundColor: "#2D804E",
+              backgroundColor: "#4A6B3D",
               cornerRadius: "sm",
               contents: []
             },
@@ -379,50 +409,40 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
               layout: "vertical",
               margin: "md",
               contents: [
-                { type: "text", text: pageCount > 1 ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#2D804E", weight: "bold", size: "xs" },
-                { type: "text", text: vendorDisplay, weight: "bold", color: "#1A1A1A", size: "sm", margin: "xs", wrap: true },
-                { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#666666", size: "xs", margin: "xs", wrap: true }
+                { type: "text", text: pageCount > 1 ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#4A6B3D", weight: "bold", size: "xs" },
+                { type: "text", text: vendorDisplay, weight: "bold", color: "#1E1B18", size: "sm", margin: "xs", wrap: true },
+                { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#78736A", size: "xs", margin: "xs", wrap: true }
               ]
             }
           ]
         },
-        { type: "separator", margin: "md", color: "#E2E2E0" },
+        { type: "separator", margin: "md", color: "#E6E1D6" },
         // Total Amount stark box
         {
           type: "box",
           layout: "horizontal",
           margin: "md",
-          backgroundColor: "#F9F9F8",
+          backgroundColor: "#F4F1EA",
           cornerRadius: "md",
           paddingAll: "md",
           contents: [
-            { type: "text", text: "ยอดสุทธิ", weight: "bold", size: "sm", color: "#1A1A1A", gravity: "center", flex: 4 },
-            { type: "text", text: amountStr, weight: "bold", size: "lg", color: "#9E2D2D", align: "end", gravity: "center", flex: 6 }
+            { type: "text", text: "ยอดสุทธิ", weight: "bold", size: "sm", color: "#1E1B18", gravity: "center", flex: 4 },
+            { type: "text", text: amountStr, weight: "bold", size: "lg", color: "#C85A32", align: "end", gravity: "center", flex: 6 }
           ]
         },
-        { type: "separator", margin: "md", color: "#E2E2E0" },
+        { type: "separator", margin: "md", color: "#E6E1D6" },
         ...detailRows,
-        { type: "separator", margin: "md", color: "#E2E2E0" },
+        { type: "separator", margin: "md", color: "#E6E1D6" },
         {
           type: "text",
           text: "ตรวจสอบและดูภาพสลิปต้นฉบับได้ที่เมนู บัญชีและภาษี (Admin Tax Hub)",
-          color: "#888888",
+          color: "#A09B90",
           size: "xxs",
           align: "center",
           margin: "md",
           wrap: true
         }
       ]
-    },
-    styles: {
-      header: {
-        backgroundColor: "#F4F4F3",
-        separator: true,
-        separatorColor: "#E2E2E0"
-      },
-      body: {
-        backgroundColor: "#FFFFFF"
-      }
     }
   };
 }
@@ -1242,26 +1262,19 @@ Deno.serve(async (req) => {
                     header: {
                         type: "box",
                         layout: "vertical",
+                        backgroundColor: "#F4F1EA",
+                        paddingAll: "20px",
                         contents: [
-                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1A1A1A", size: "sm" },
-                            { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                            { type: "text", text: "ATTENDANCE SUMMARY", weight: "bold", color: "#1E1B18", size: "sm" },
+                            { type: "text", text: titleDateStr.toUpperCase(), color: "#78736A", size: "xs", margin: "xs" }
                         ]
                     },
                     body: {
                         type: "box",
                         layout: "vertical",
+                        backgroundColor: "#FBF9F5",
                         paddingAll: "20px",
                         contents: flexContents
-                    },
-                    styles: {
-                        header: {
-                            backgroundColor: "#F4F4F3",
-                            separator: true,
-                            separatorColor: "#E2E2E0"
-                        },
-                        body: {
-                            backgroundColor: "#FFFFFF"
-                        }
                     }
                 }
             }];
@@ -1704,23 +1717,21 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#F4F1EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#C85A32", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#FBF9F5",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "ยังไม่มีรายการสั่งอาหารในวันนี้ 📭", color: "#888888", size: "sm", align: "center", weight: "bold" }
+                      { type: "text", text: "ยังไม่มีรายการสั่งอาหารในวันนี้ 📭", color: "#78736A", size: "sm", align: "center", weight: "bold" }
                     ]
-                  },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
                   }
                 }
               })
@@ -1730,8 +1741,8 @@ Deno.serve(async (req) => {
 
               sortedItems.forEach((item, index) => {
                 const percent = maxQty > 0 ? Math.round((item.quantity / maxQty) * 100) : 0
-                const rankColors = ["#E63946", "#F4A261", "#2D804E", "#888888", "#aaaaaa"]
-                const rankColor = rankColors[index] || "#888888"
+                const rankColors = ["#C85A32", "#D97B54", "#4A6B3D", "#78736A", "#A09B90"]
+                const rankColor = rankColors[index] || "#78736A"
 
                 flexContents.push({
                   type: "box",
@@ -1745,12 +1756,12 @@ Deno.serve(async (req) => {
                         {
                           type: "box",
                           layout: "vertical",
-                          width: "20px",
-                          height: "20px",
+                          width: "22px",
+                          height: "22px",
                           backgroundColor: rankColor,
                           cornerRadius: "4px",
                           contents: [
-                            { type: "text", text: String(index + 1), color: "#FFFFFF", size: "xs", weight: "bold", align: "center", gravity: "center" }
+                            { type: "text", text: String(index + 1), color: "#FBF9F5", size: "xs", weight: "bold", align: "center", gravity: "center" }
                           ]
                         },
                         {
@@ -1758,7 +1769,7 @@ Deno.serve(async (req) => {
                           text: item.name.toUpperCase(),
                           weight: "bold",
                           size: "sm",
-                          color: "#1A1A1A",
+                          color: "#1E1B18",
                           margin: "md",
                           gravity: "center",
                           flex: 7
@@ -1768,7 +1779,7 @@ Deno.serve(async (req) => {
                           text: `${item.quantity} ที่`,
                           weight: "bold",
                           size: "sm",
-                          color: "#1A1A1A",
+                          color: "#C85A32",
                           align: "end",
                           gravity: "center",
                           flex: 3
@@ -1779,15 +1790,15 @@ Deno.serve(async (req) => {
                       type: "box",
                       layout: "horizontal",
                       margin: "sm",
-                      height: "8px",
-                      backgroundColor: "#F0F0EE",
+                      height: "6px",
+                      backgroundColor: "#E6E1D6",
                       cornerRadius: "sm",
                       contents: [
                         {
                           type: "box",
                           layout: "vertical",
                           width: `${percent}%`,
-                          backgroundColor: "#1A1A1A",
+                          backgroundColor: rankColor,
                           cornerRadius: "sm",
                           contents: []
                         }
@@ -1797,7 +1808,7 @@ Deno.serve(async (req) => {
                 })
 
                 if (index < sortedItems.length - 1) {
-                  flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                  flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
                 }
               })
 
@@ -1810,21 +1821,19 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#F4F1EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "5 อันดับเมนูฮิตวันนี้ 🏆", weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: `ยอดขายสะสม ณ วันที่ ${titleDateStr}`, color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: "HERO MENU (TODAY)", weight: "bold", color: "#C85A32", size: "xs" },
+                      { type: "text", text: `5 อันดับเมนูขายดีประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#FBF9F5",
                     paddingAll: "20px",
                     contents: flexContents
-                  },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
                   }
                 }
               })
@@ -2135,24 +2144,22 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#F4F1EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#C85A32", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#FBF9F5",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "ยังไม่มีการบันทึกค่าใช้จ่ายในวันนี้ 📭", color: "#888888", size: "sm", align: "center", weight: "bold" },
-                      { type: "text", text: "ส่งภาพสลิป/ใบเสร็จเข้ามาในกลุ่มเพื่อบันทึกอัตโนมัติได้ทันที", color: "#aaaaaa", size: "xs", align: "center", margin: "sm", wrap: true }
+                      { type: "text", text: "ยังไม่มีการบันทึกค่าใช้จ่ายในวันนี้ 📭", color: "#78736A", size: "sm", align: "center", weight: "bold" },
+                      { type: "text", text: "ส่งภาพสลิป/ใบเสร็จเข้ามาในกลุ่มเพื่อบันทึกอัตโนมัติได้ทันที", color: "#A09B90", size: "xs", align: "center", margin: "sm", wrap: true }
                     ]
-                  },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
                   }
                 }
               })
@@ -2174,8 +2181,8 @@ Deno.serve(async (req) => {
                       layout: "vertical",
                       flex: 7,
                       contents: [
-                        { type: "text", text: vendor.toUpperCase(), weight: "bold", size: "xs", color: "#1A1A1A", wrap: true },
-                        { type: "text", text: title, size: "xxs", color: "#666666", wrap: true, margin: "xs" }
+                        { type: "text", text: vendor.toUpperCase(), weight: "bold", size: "xs", color: "#1E1B18", wrap: true },
+                        { type: "text", text: title, size: "xxs", color: "#78736A", wrap: true, margin: "xs" }
                       ]
                     },
                     {
@@ -2183,7 +2190,7 @@ Deno.serve(async (req) => {
                       text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                       weight: "bold",
                       size: "sm",
-                      color: "#9E2D2D",
+                      color: "#C85A32",
                       align: "end",
                       gravity: "center",
                       flex: 3
@@ -2192,16 +2199,16 @@ Deno.serve(async (req) => {
                 })
 
                 if (index < Math.min(expenses.length, 8) - 1) {
-                  flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                  flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
                 }
               })
 
               if (expenses.length > 8) {
-                flexContents.push({ type: "separator", margin: "md", color: "#E2E2E0" })
+                flexContents.push({ type: "separator", margin: "md", color: "#E6E1D6" })
                 flexContents.push({
                   type: "text",
                   text: `...แสดง 8 จากทั้งหมด ${expenses.length} รายการ`,
-                  color: "#888888",
+                  color: "#A09B90",
                   size: "xxs",
                   align: "center",
                   margin: "sm"
@@ -2217,21 +2224,23 @@ Deno.serve(async (req) => {
                   header: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#F4F1EA",
                     paddingAll: "20px",
                     contents: [
-                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#1A1A1A", size: "sm" },
-                      { type: "text", text: titleDateStr.toUpperCase(), color: "#666666", size: "xs", margin: "xs" }
+                      { type: "text", text: "DAILY EXPENSES", weight: "bold", color: "#C85A32", size: "xs" },
+                      { type: "text", text: `รายงานค่าใช้จ่ายประจำวัน · ${titleDateStr}`, weight: "bold", color: "#1E1B18", size: "md", margin: "xs" }
                     ]
                   },
                   body: {
                     type: "box",
                     layout: "vertical",
+                    backgroundColor: "#FBF9F5",
                     paddingAll: "20px",
                     contents: [
                       {
                         type: "box",
                         layout: "horizontal",
-                        backgroundColor: "#F9F9F8",
+                        backgroundColor: "#F4F1EA",
                         cornerRadius: "md",
                         paddingAll: "md",
                         contents: [
@@ -2240,8 +2249,8 @@ Deno.serve(async (req) => {
                             layout: "vertical",
                             flex: 5,
                             contents: [
-                              { type: "text", text: "ยอดรวมค่าใช้จ่ายวันนี้", weight: "bold", size: "xs", color: "#1A1A1A" },
-                              { type: "text", text: `(${expenses.length} รายการ)`, color: "#666666", size: "xxs", margin: "xs" }
+                              { type: "text", text: "ยอดรวมค่าใช้จ่ายวันนี้", weight: "bold", size: "xs", color: "#1E1B18" },
+                              { type: "text", text: `(${expenses.length} รายการ)`, color: "#78736A", size: "xxs", margin: "xs" }
                             ]
                           },
                           {
@@ -2249,21 +2258,17 @@ Deno.serve(async (req) => {
                             text: `฿${totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
                             weight: "bold",
                             size: "lg",
-                            color: "#9E2D2D",
+                            color: "#C85A32",
                             align: "end",
                             gravity: "center",
                             flex: 5
                           }
                         ]
                       },
-                      { type: "separator", margin: "md", color: "#E2E2E0" },
-                      { type: "text", text: "รายการที่บันทึกวันนี้", weight: "bold", size: "xs", color: "#888888", margin: "md" },
+                      { type: "separator", margin: "md", color: "#E6E1D6" },
+                      { type: "text", text: "รายการที่บันทึกวันนี้", weight: "bold", size: "xs", color: "#78736A", margin: "md" },
                       ...flexContents
                     ]
-                  },
-                  styles: {
-                    header: { backgroundColor: "#F4F4F3", separator: true, separatorColor: "#E2E2E0" },
-                    body: { backgroundColor: "#FFFFFF" }
                   }
                 }
               })
@@ -2527,8 +2532,7 @@ Deno.serve(async (req) => {
 
             const billRows: any[] = []
             bills.forEach((b: any, idx: number) => {
-              const rawId = String(b.id || '').replace(/-/g, '')
-              const billNo = b.tracking_token ? b.tracking_token.toUpperCase() : `#${rawId.substring(0, 6).toUpperCase()}`
+              const billNo = `#${getShortBookingId(b)}`
               const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? '🛍️ TAKEAWAY' : '🪑 WALK-IN')
               
               let timeStr = ''
@@ -3028,7 +3032,7 @@ Deno.serve(async (req) => {
             voidedData.forEach((b: any, idx: number) => {
               const amt = Number(b.total_amount) || 0
               totalVoidAmt += amt
-              const billNo = b.tracking_token || String(b.id).substring(0, 8)
+              const billNo = getShortBookingId(b)
               const tbl = b.tables_layout?.table_name || 'WALK-IN'
               const reason = b.staff_remark || b.customer_note || 'ไม่ระบุเหตุผล'
 
@@ -3036,7 +3040,7 @@ Deno.serve(async (req) => {
                 type: "box",
                 layout: "vertical",
                 margin: "md",
-                backgroundColor: "#FFF5F5",
+                backgroundColor: "#F4F1EA",
                 cornerRadius: "md",
                 paddingAll: "md",
                 contents: [
@@ -3064,7 +3068,7 @@ Deno.serve(async (req) => {
                 header: {
                   type: "box",
                   layout: "vertical",
-                  backgroundColor: "#FDF2F2",
+                  backgroundColor: "#F4F1EA",
                   paddingAll: "20px",
                   contents: [
                     { type: "text", text: "VOID BILLS AUDIT", size: "xs", weight: "bold", color: "#9E2D2D" },
