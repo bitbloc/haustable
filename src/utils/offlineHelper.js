@@ -275,6 +275,9 @@ export async function syncOfflineQueue(isManual = false) {
                     }
                     const customName = item.custom_name || item.name || null;
                     const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
+                    const resolvedDest = item.destination 
+                        || (item.selected_options?.find(o => o.destination)?.destination)
+                        || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
                     return {
                         booking_id: bookingId,
                         menu_item_id: resolveMenuItemId(item),
@@ -283,7 +286,7 @@ export async function syncOfflineQueue(isManual = false) {
                         selected_options: finalOpts,
                         custom_name: isCustom ? customName : null,
                         is_custom: isCustom,
-                        destination: item.destination || 'kitchen'
+                        destination: resolvedDest
                     };
                 });
 

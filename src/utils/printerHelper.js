@@ -419,14 +419,38 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
 
 // Classifier helper to categorize menu items into kitchen, bar, or other
 export const classifyItem = (item, receiptConfig = {}) => {
-    if (item.destination === 'bar' || item.destination === 'drinks') return 'bar';
-    if (item.destination === 'other') return 'other';
-    if (item.destination === 'kitchen' || item.destination === 'food') return 'kitchen';
+    if (!item) return 'kitchen';
+
+    // 1. Direct explicit destination
+    const directDest = String(item.destination || '').toLowerCase().trim();
+    if (directDest === 'bar' || directDest === 'drinks' || directDest === 'drink' || directDest === 'beverage') return 'bar';
+    if (directDest === 'other') return 'other';
+    
+    // 2. Check selected_options array for destination objects, badges, and textual markers
     if (item.selected_options && Array.isArray(item.selected_options)) {
-        const destOpt = item.selected_options.find(o => o.destination);
-        if (destOpt) return destOpt.destination;
+        for (const opt of item.selected_options) {
+            if (typeof opt === 'object' && opt !== null) {
+                const optDest = String(opt.destination || '').toLowerCase().trim();
+                if (optDest === 'bar' || optDest === 'drinks' || optDest === 'drink') return 'bar';
+                if (optDest === 'other') return 'other';
+                if (optDest === 'kitchen' || optDest === 'food') return 'kitchen';
+
+                const optName = String(opt.name || opt.custom_item_name || '');
+                if (optName.includes('(บาร์)') || optName.includes('(Bar)') || optName.includes('เครื่องดื่ม')) return 'bar';
+                if (optName.includes('(ทั่วไป)') || optName.includes('(Other)')) return 'other';
+                if (optName.includes('(ครัว)') || optName.includes('(Kitchen)')) return 'kitchen';
+            } else if (typeof opt === 'string') {
+                if (opt.includes('(บาร์)') || opt.includes('(Bar)') || opt.includes('เครื่องดื่ม')) return 'bar';
+                if (opt.includes('(ทั่วไป)') || opt.includes('(Other)')) return 'other';
+                if (opt.includes('(ครัว)') || opt.includes('(Kitchen)')) return 'kitchen';
+            }
+        }
     }
 
+    // 3. If direct destination was explicitly 'kitchen' or 'food' and no option override found
+    if (directDest === 'kitchen' || directDest === 'food') return 'kitchen';
+
+    // 4. Check category IDs and printer category configurations
     const getItemCatId = (i) => i.menu_items?.category_id || i.category_id || i.category || '';
     const catId = getItemCatId(item);
 
@@ -458,8 +482,11 @@ export const classifyItem = (item, receiptConfig = {}) => {
     ];
     if (DEFAULT_BAR_CATS.includes(catId)) return 'bar';
 
-    // Rely purely on backend configuration or exact UUID matching, no string heuristics
-
+    // 5. Category Name heuristic check (for custom items or catalog items)
+    const catName = String(item.category_name || item.menu_items?.menu_categories?.name || item.menu_items?.category_name || '').toLowerCase();
+    if (catName.includes('เครื่องดื่ม') || catName.includes('bar') || catName.includes('drink') || catName.includes('coffee') || catName.includes('beer') || catName.includes('alcohol')) {
+        return 'bar';
+    }
 
     return 'kitchen';
 };
@@ -665,8 +692,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             const catA = a.menu_items?.category_id || a.category_id || a.category || '';
             const catB = b.menu_items?.category_id || b.category_id || b.category || '';
             if (catA !== catB) return catA.localeCompare(catB);
-            const nameA = a.menu_items?.name || a.name || '';
-            const nameB = b.menu_items?.name || b.name || '';
+            const nameA = a.custom_name || a.menu_items?.name || a.name || '';
+            const nameB = b.custom_name || b.menu_items?.name || b.name || '';
             return nameA.localeCompare(nameB);
         });
     }
@@ -2384,25 +2411,46 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
             }
             return printed;
         } else if (printerType === 'rawbt') {
-            let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-            let targetTab = isSeparateBarPrinterEnabled ? 'kitchen' : 'kitchen_all';
-            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-            if (rawBytes) {
-                await printToRawBTWebSocket(rawBytes);
+            let printedAny = false;
+            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+            if (kitchenBytes) {
+                await printToRawBTWebSocket(kitchenBytes);
+                printedAny = true;
             }
-            if (isSeparateBarPrinterEnabled) {
-                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                if (barBytes) await printToRawBTWebSocket(barBytes);
+            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+            if (barBytes) {
+                await printToRawBTWebSocket(barBytes);
+                printedAny = true;
             }
-            return true;
+            if (!printedAny) {
+                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+                if (allBytes) {
+                    await printToRawBTWebSocket(allBytes);
+                    printedAny = true;
+                }
+            }
+            return printedAny;
         } else if (printerType === 'bluetooth') {
             const btDeviceName = config.bluetooth_device_name;
-            let targetTab = 'kitchen_all';
-            const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-            if (rawBytes) {
-                await printToBluetoothDirect(btDeviceName, rawBytes);
+            let printedAny = false;
+            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+            if (kitchenBytes) {
+                await printToBluetoothDirect(btDeviceName, kitchenBytes);
+                printedAny = true;
             }
-            return true;
+            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+            if (barBytes) {
+                await printToBluetoothDirect(btDeviceName, barBytes);
+                printedAny = true;
+            }
+            if (!printedAny) {
+                const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+                if (allBytes) {
+                    await printToBluetoothDirect(btDeviceName, allBytes);
+                    printedAny = true;
+                }
+            }
+            return printedAny;
         }
     } catch (err) {
         console.error("Auto print QR order failed:", err);
@@ -2412,6 +2460,7 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
 
 /**
  * Generic silent print for ANY slip type (kitchen, receipt, billing).
+ */
 /**
  * Clean & normalize Thai PromptPay identifier (Phone 10 digits, Tax/National ID 13 digits, e-Wallet 15 digits)
  */
@@ -2582,18 +2631,15 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
         } else if (printerType === 'rawbt') {
             if (slipType === 'kitchen') {
                 let printedAny = false;
-                let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-                if (isSeparateBarPrinterEnabled) {
-                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                    if (kitchenBytes) {
-                        await printToRawBTWebSocket(kitchenBytes);
-                        printedAny = true;
-                    }
-                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
-                    if (barBytes) {
-                        await printToRawBTWebSocket(barBytes);
-                        printedAny = true;
-                    }
+                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+                if (kitchenBytes) {
+                    await printToRawBTWebSocket(kitchenBytes);
+                    printedAny = true;
+                }
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
+                if (barBytes) {
+                    await printToRawBTWebSocket(barBytes);
+                    printedAny = true;
                 }
                 if (!printedAny) {
                     const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'rawbt');
@@ -2614,23 +2660,21 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
         } else if (printerType === 'bluetooth') {
             if (slipType === 'kitchen') {
                 let printedAny = false;
-                let isSeparateBarPrinterEnabled = !!(config.separate_bar_printer || config.bar_printer_ip);
-                if (isSeparateBarPrinterEnabled) {
-                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                    if (kitchenBytes) {
-                        await printToBluetoothDirect(config.bluetooth_device_name || '', kitchenBytes);
-                        printedAny = true;
-                    }
-                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
-                    if (barBytes) {
-                        await printToBluetoothDirect(config.bluetooth_device_name || '', barBytes);
-                        printedAny = true;
-                    }
+                const btDeviceName = config.bluetooth_device_name || '';
+                const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+                if (kitchenBytes) {
+                    await printToBluetoothDirect(btDeviceName, kitchenBytes);
+                    printedAny = true;
+                }
+                const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
+                if (barBytes) {
+                    await printToBluetoothDirect(btDeviceName, barBytes);
+                    printedAny = true;
                 }
                 if (!printedAny) {
                     const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, activePaperSize, config, 'bluetooth');
                     if (allBytes) {
-                        await printToBluetoothDirect(config.bluetooth_device_name || '', allBytes);
+                        await printToBluetoothDirect(btDeviceName, allBytes);
                         printedAny = true;
                     }
                 }

@@ -316,18 +316,15 @@ export default function SlipModal({ booking, type, onClose }) {
                     let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
                     if (activeTab === 'kitchen') {
                         let printedAny = false;
-                        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                        if (isSeparateBarPrinterEnabled) {
-                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
-                            if (kitchenBytes) {
-                                await printToRawBTWebSocket(kitchenBytes);
-                                printedAny = true;
-                            }
-                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
-                            if (barBytes) {
-                                await printToRawBTWebSocket(barBytes);
-                                printedAny = true;
-                            }
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                        if (kitchenBytes) {
+                            await printToRawBTWebSocket(kitchenBytes);
+                            printedAny = true;
+                        }
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
+                        if (barBytes) {
+                            await printToRawBTWebSocket(barBytes);
+                            printedAny = true;
                         }
                         if (!printedAny) {
                             const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'rawbt');
@@ -352,31 +349,29 @@ export default function SlipModal({ booking, type, onClose }) {
                 setIsAutoPrinting(true);
                 try {
                     let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                    const btDeviceName = printerConfig.bluetooth_device_name || '';
                     if (activeTab === 'kitchen') {
                         let printedAny = false;
-                        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                        if (isSeparateBarPrinterEnabled) {
-                            const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
-                            if (kitchenBytes) {
-                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', kitchenBytes);
-                                printedAny = true;
-                            }
-                            const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
-                            if (barBytes) {
-                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', barBytes);
-                                printedAny = true;
-                            }
+                        const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                        if (kitchenBytes) {
+                            await printToBluetoothDirect(btDeviceName, kitchenBytes);
+                            printedAny = true;
+                        }
+                        const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
+                        if (barBytes) {
+                            await printToBluetoothDirect(btDeviceName, barBytes);
+                            printedAny = true;
                         }
                         if (!printedAny) {
                             const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
                             if (allBytes) {
-                                await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', allBytes);
+                                await printToBluetoothDirect(btDeviceName, allBytes);
                             }
                         }
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'bluetooth');
                         if (rawBytes) {
-                            await printToBluetoothDirect(printerConfig.bluetooth_device_name || '', rawBytes);
+                            await printToBluetoothDirect(btDeviceName, rawBytes);
                         }
                     }
                     onClose();
@@ -417,18 +412,18 @@ export default function SlipModal({ booking, type, onClose }) {
         // Sort items for kitchen, bar, and other to group by category first, then alphabetically by name
         if (isKitchen) {
             filteredItems = [...filteredItems].sort((a, b) => {
-                const catA = a.menu_items?.category_id || '';
-                const catB = b.menu_items?.category_id || '';
+                const catA = a.menu_items?.category_id || a.category_id || '';
+                const catB = b.menu_items?.category_id || b.category_id || '';
                 if (catA !== catB) return catA.localeCompare(catB);
-                const nameA = a.menu_items?.name || '';
-                const nameB = b.menu_items?.name || '';
+                const nameA = a.custom_name || a.name || a.menu_items?.name || '';
+                const nameB = b.custom_name || b.name || b.menu_items?.name || '';
                 return nameA.localeCompare(nameB);
             });
         }
 
         // Items HTML
         const itemsHtml = filteredItems.map(item => {
-            const name = item.menu_items?.name || 'Item'
+            const name = item.custom_name || item.name || item.menu_items?.name || 'Item'
             let optsHtml = ''
             
             if (item.selected_options || item.item_note) {
@@ -958,15 +953,36 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'rawbt') {
             try {
-                let targetTab = activeTab;
                 if (activeTab === 'kitchen') {
-                    let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                    if (!isSeparateBarPrinterEnabled) {
-                        targetTab = 'kitchen_all';
+                    let printedAny = false;
+                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
+                    if (kitchenBytes) {
+                        await printToRawBTWebSocket(kitchenBytes);
+                        printedAny = true;
+                    }
+                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
+                    if (barBytes) {
+                        await printToRawBTWebSocket(barBytes);
+                        printedAny = true;
+                    }
+                    if (!printedAny) {
+                        const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
+                        if (allBytes) {
+                            await printToRawBTWebSocket(allBytes);
+                            printedAny = true;
+                        }
+                    }
+                    if (!printedAny) {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    }
+                } else {
+                    const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
+                    if (rawBytes) {
+                        await printToRawBTWebSocket(rawBytes);
+                    } else {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                     }
                 }
-                const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, paperSize, receiptConfig, 'rawbt');
-                await printToRawBTWebSocket(rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("RawBT print failed, falling back to standard dialog:", err);
@@ -974,15 +990,36 @@ export default function SlipModal({ booking, type, onClose }) {
             }
         } else if (printerType === 'bluetooth') {
             try {
-                let targetTab = activeTab;
                 if (activeTab === 'kitchen') {
-                    let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
-                    if (!isSeparateBarPrinterEnabled) {
-                        targetTab = 'kitchen_all';
+                    let printedAny = false;
+                    const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
+                    if (kitchenBytes) {
+                        await printToBluetoothDirect(btDeviceName, kitchenBytes);
+                        printedAny = true;
+                    }
+                    const barBytes = encodeReceiptData(booking, 'bar', paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
+                    if (barBytes) {
+                        await printToBluetoothDirect(btDeviceName, barBytes);
+                        printedAny = true;
+                    }
+                    if (!printedAny) {
+                        const allBytes = encodeReceiptData(booking, 'kitchen_all', paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
+                        if (allBytes) {
+                            await printToBluetoothDirect(btDeviceName, allBytes);
+                            printedAny = true;
+                        }
+                    }
+                    if (!printedAny) {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
+                    }
+                } else {
+                    const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
+                    if (rawBytes) {
+                        await printToBluetoothDirect(btDeviceName, rawBytes);
+                    } else {
+                        toast.error("ไม่มีรายการสินค้าในหมวดหมู่นี้");
                     }
                 }
-                const rawBytes = encodeReceiptData(booking, targetTab, paymentMethod, optionMap, paperSize, receiptConfig, 'bluetooth');
-                await printToBluetoothDirect(btDeviceName, rawBytes);
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("Direct bluetooth print failed, falling back to standard dialog:", err);
@@ -1289,7 +1326,7 @@ export default function SlipModal({ booking, type, onClose }) {
                                     <div key={idx} className="text-xs">
                                         <div className="flex justify-between font-bold items-baseline gap-2 mb-0.5">
                                             <span className="w-6 shrink-0 text-sm font-black">{item.quantity}x</span>
-                                            <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.menu_items?.name || 'Item'}</span>
+                                            <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.custom_name || item.name || item.menu_items?.name || 'Item'}</span>
                                             {activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && (
                                                 <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
                                             )}

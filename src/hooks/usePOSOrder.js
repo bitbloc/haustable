@@ -343,6 +343,9 @@ export function usePOSOrder() {
                 }
                 const resolvedName = item.custom_name || item.name || 'เมนูเพิ่มเติม';
                 const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
+                const resolvedDest = item.destination 
+                    || (item.selected_options?.find(o => o.destination)?.destination)
+                    || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
                 return {
                     id: `local_item_${Date.now()}_${i}`,
                     booking_id: bookingId,
@@ -353,14 +356,14 @@ export function usePOSOrder() {
                     name: resolvedName,
                     custom_name: isCustom ? resolvedName : null,
                     is_custom: isCustom,
-                    destination: item.destination || 'kitchen',
+                    destination: resolvedDest,
                     category_id: item.category_id || '',
-                    category_name: item.category_name || '',
+                    category_name: item.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                     item_note: item.item_note || '',
                     menu_items: { 
                         name: resolvedName,
                         category_id: item.category_id || '',
-                        menu_categories: { name: item.category_name || (item.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
+                        menu_categories: { name: item.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                     }
                 };
             });
@@ -394,6 +397,9 @@ export function usePOSOrder() {
                 }
                 const customName = item.custom_name || item.name || null;
                 const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
+                const resolvedDest = item.destination 
+                    || (item.selected_options?.find(o => o.destination)?.destination)
+                    || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
                 return {
                     booking_id: bookingId,
                     menu_item_id: resolveMenuItemId(item),
@@ -402,7 +408,7 @@ export function usePOSOrder() {
                     selected_options: finalOpts,
                     custom_name: isCustom ? customName : null,
                     is_custom: isCustom,
-                    destination: item.destination || 'kitchen'
+                    destination: resolvedDest
                 };
             });
 
@@ -414,10 +420,15 @@ export function usePOSOrder() {
 
             const enrichedInserted = (insertedData || []).map((row, index) => {
                 const sourceItem = items[index] || {};
+                const resolvedDest = row.destination 
+                    || sourceItem.destination 
+                    || (sourceItem.selected_options?.find(o => o.destination)?.destination) 
+                    || (row.selected_options?.find(o => o.destination)?.destination) 
+                    || (sourceItem.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen');
                 const menuItemsObj = row.menu_items || {
                     name: row.custom_name || sourceItem.name || 'เมนูเพิ่มเติม',
                     category_id: sourceItem.category_id || '',
-                    menu_categories: { name: sourceItem.category_name || (row.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
+                    menu_categories: { name: sourceItem.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                 };
                 const finalName = row.custom_name || row.name || menuItemsObj.name || sourceItem.name || 'เมนูเพิ่มเติม';
                 return {
@@ -425,11 +436,11 @@ export function usePOSOrder() {
                     name: finalName,
                     custom_name: row.custom_name || finalName,
                     category_id: row.category_id || menuItemsObj.category_id || sourceItem.category_id || '',
-                    category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || (row.destination === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                    category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                     menu_items: menuItemsObj,
                     selected_options: row.selected_options || sourceItem.selected_options || [],
                     item_note: sourceItem.item_note || '',
-                    destination: row.destination || sourceItem.destination || 'kitchen',
+                    destination: resolvedDest,
                     is_custom: row.is_custom || sourceItem.is_custom || false
                 };
             });
