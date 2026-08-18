@@ -88,6 +88,8 @@ export default function AdminSettings() {
         closing_time: '20:00',
         floorplan_url: '',
         payment_qr_url: '',
+        promptpay_id: '',
+        promptpay_name: '',
         booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00',
         is_menu_system_enabled: 'true',
         alert_sound_url: null,
@@ -1410,6 +1412,34 @@ export default function AdminSettings() {
                                     <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e.target.files[0], 'payment_qr_url', setUploadingQr)} />
                                 </label>
                                 <p className="text-[9px] text-gray-400 mt-2 text-center">Square (1:1), Max 500KB</p>
+
+                                <div className="mt-3 pt-3 border-t border-gray-150 space-y-2.5">
+                                    <div>
+                                        <label className="block text-[10px] font-mono font-bold uppercase text-subInk mb-1">
+                                            ชื่อบัญชีพร้อมเพย์ (Account Name)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings.promptpay_name || ''}
+                                            onChange={(e) => handleSave('promptpay_name', e.target.value)}
+                                            className="w-full px-3 py-2 bg-canvas border border-gray-200 rounded-xl text-xs font-bold text-ink outline-none focus:border-brand"
+                                            placeholder="เช่น อิน เดอะ เฮ้าส์ หรือ นาย สมชาย ใจดี"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-mono font-bold uppercase text-subInk mb-1">
+                                            เบอร์พร้อมเพย์รับเงิน (PromptPay ID)
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={settings.promptpay_id || ''}
+                                            onChange={(e) => handleSave('promptpay_id', e.target.value)}
+                                            className="w-full px-3 py-2 bg-canvas border border-gray-200 rounded-xl text-xs font-bold text-ink outline-none focus:border-brand"
+                                            placeholder="เช่น 0985284217 หรือ เลขประจำตัวผู้เสียภาษี 13 หลัก"
+                                        />
+                                    </div>
+                                    <p className="text-[9px] text-gray-400">ใช้แสดงชื่อบัญชี เบอร์โทร และสร้าง Dynamic QR บนหน้าจอลูกค้า (CDS) และสลิป</p>
+                                </div>
                             </div>
                         </div>
 
@@ -2305,7 +2335,39 @@ export default function AdminSettings() {
                                                     placeholder="123 ถนนโชคชัย นครพนม 48000"
                                                 />
                                             </div>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                                                <div>
+                                                    <label className="block text-[10px] font-mono font-bold uppercase text-[#767673] mb-1">
+                                                        ชื่อบัญชีพร้อมเพย์ (Account Name)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.promptpay_name || ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            handleSave('promptpay_name', val);
+                                                            handleSavePrinter({ ...printerConfig, promptpay_name: val });
+                                                        }}
+                                                        className="w-full px-3 py-2 bg-[#F9F9F8] border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#ff0000]"
+                                                        placeholder="อิน เดอะ เฮ้าส์"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-mono font-bold uppercase text-[#767673] mb-1">
+                                                        เบอร์พร้อมเพย์ (PromptPay ID)
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.promptpay_id || ''}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            handleSave('promptpay_id', val);
+                                                            handleSavePrinter({ ...printerConfig, promptpay_id: val });
+                                                        }}
+                                                        className="w-full px-3 py-2 bg-[#F9F9F8] border border-[#D1D1CD] rounded-lg text-xs font-bold text-[#1A1A1A] outline-none focus:border-[#ff0000]"
+                                                        placeholder="0985284217"
+                                                    />
+                                                </div>
                                                 <div>
                                                     <label className="block text-[10px] font-mono font-bold uppercase text-[#767673] mb-1">
                                                         เบอร์โทรศัพท์ (Phone)

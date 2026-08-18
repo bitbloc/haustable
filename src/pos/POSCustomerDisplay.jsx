@@ -4,6 +4,7 @@ import { Utensils, CheckCircle2, Smartphone, QrCode, Sparkles, Receipt, ShieldCh
 import { AnimatePresence, motion } from 'framer-motion';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
+import { normalizePromptPayId, getStorePromptpayId, formatPromptpayDisplay } from '../utils/printerHelper';
 
 const LINE_LIFF_MEMBER_URL = "https://liff.line.me/2008674756-hTEWodVj";
 
@@ -27,7 +28,8 @@ export default function POSCustomerDisplay() {
     const [slideshowImages, setSlideshowImages] = useState([]);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [shopLogoUrl, setShopLogoUrl] = useState(null);
-    const [storePromptpayId, setStorePromptpayId] = useState('0812345678');
+    const [storePromptpayId, setStorePromptpayId] = useState('0985284217');
+    const [storePromptpayName, setStorePromptpayName] = useState('IN THE HAUS');
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
 
     // Fetch shop logo & PromptPay settings from app_settings
@@ -37,9 +39,34 @@ export default function POSCustomerDisplay() {
                 const { data } = await supabase
                     .from('app_settings')
                     .select('key, value')
-                    .in('key', ['receipt_shop_logo_url', 'shop_logo_url', 'payment_qr_url', 'promptpay_id', 'phone_number']);
+                    .in('key', [
+                        'receipt_shop_logo_url', 
+                        'shop_logo_url', 
+                        'payment_qr_url', 
+                        'promptpay_id', 
+                        'promptpay_name',
+                        'receipt_promptpay_name',
+                        'receipt_shop_phone', 
+                        'contact_phone', 
+                        'admin_phone_contact', 
+                        'phone_number', 
+                        'printer_config'
+                    ]);
                 
                 if (data && data.length > 0) {
+                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    let parsedPrinterConfig = {};
+                    if (settingsMap.printer_config) {
+                        try { parsedPrinterConfig = JSON.parse(settingsMap.printer_config); } catch (e) {}
+                    }
+                    const resolvedPpId = getStorePromptpayId(settingsMap, parsedPrinterConfig);
+                    setStorePromptpayId(resolvedPpId);
+
+                    const nameVal = settingsMap.promptpay_name || settingsMap.receipt_promptpay_name || parsedPrinterConfig.promptpay_name || '';
+                    if (nameVal) {
+                        setStorePromptpayName(nameVal);
+                    }
+
                     const logoObj = data.find(i => (i.key === 'receipt_shop_logo_url' || i.key === 'shop_logo_url') && i.value);
                     if (logoObj && logoObj.value) {
                         setShopLogoUrl(logoObj.value);
@@ -47,10 +74,6 @@ export default function POSCustomerDisplay() {
                     const qrObj = data.find(i => i.key === 'payment_qr_url' && i.value);
                     if (qrObj && qrObj.value) {
                         setPaymentQrUrl(qrObj.value);
-                    }
-                    const ppObj = data.find(i => (i.key === 'promptpay_id' || i.key === 'phone_number') && i.value);
-                    if (ppObj && ppObj.value) {
-                        setStorePromptpayId(ppObj.value);
                     }
                 }
             } catch (err) {
@@ -64,14 +87,18 @@ export default function POSCustomerDisplay() {
             .channel('cfd_logo_updates')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
                 if (payload.new) {
-                    if (payload.new.key === 'receipt_shop_logo_url' || payload.new.key === 'shop_logo_url') {
-                        if (payload.new.value) setShopLogoUrl(payload.new.value);
+                    const { key, value } = payload.new;
+                    if (key === 'receipt_shop_logo_url' || key === 'shop_logo_url') {
+                        if (value) setShopLogoUrl(value);
                     }
-                    if (payload.new.key === 'payment_qr_url' && payload.new.value) {
-                        setPaymentQrUrl(payload.new.value);
+                    if (key === 'payment_qr_url') {
+                        setPaymentQrUrl(value || null);
                     }
-                    if ((payload.new.key === 'promptpay_id' || payload.new.key === 'phone_number') && payload.new.value) {
-                        setStorePromptpayId(payload.new.value);
+                    if (['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number'].includes(key) && value) {
+                        setStorePromptpayId(normalizePromptPayId(value));
+                    }
+                    if (['promptpay_name', 'receipt_promptpay_name'].includes(key) && value) {
+                        setStorePromptpayName(value);
                     }
                 }
             })
@@ -193,7 +220,7 @@ export default function POSCustomerDisplay() {
                     
                     // Generate PromptPay QR if total exists
                     const totalAmt = parseFloat(payload.total || payload.orderData?.total || 0);
-                    const promptpayId = payload.promptpayId || storePromptpayId || '0812345678';
+                    const promptpayId = normalizePromptPayId(payload.promptpayId || storePromptpayId);
                     if (totalAmt > 0) {
                         try {
                             const qr = generatePayload(promptpayId, { amount: totalAmt });
@@ -209,11 +236,13 @@ export default function POSCustomerDisplay() {
                     if (payload) {
                         setOrderData(prev => ({ ...prev, ...payload }));
                     }
+                    const splitAmt = parseFloat(payload?.splitTotal || 0);
+                    const splitPromptpayId = normalizePromptPayId(payload?.promptpayId || storePromptpayId);
                     if (payload?.qrPayload) {
                         setQrPayload(payload.qrPayload);
-                    } else if (payload?.splitTotal > 0) {
+                    } else if (splitAmt > 0) {
                         try {
-                            const splitQr = generatePayload(payload.promptpayId || storePromptpayId || '0812345678', { amount: payload.splitTotal });
+                            const splitQr = generatePayload(splitPromptpayId, { amount: splitAmt });
                             setQrPayload(splitQr);
                         } catch (e) {
                             console.error("Split QR Generation error:", e);
@@ -351,7 +380,7 @@ export default function POSCustomerDisplay() {
                 {/* Footer Brand Line */}
                 <div className="flex items-center justify-between text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest border-t border-[oklch(42%_0.010_28)]/20 pt-2">
                     <span>ONHAUS SYSTEM</span>
-                    <span>DIETER RAMS + THAI MODERN</span>
+                    <span className="font-bold text-[oklch(97%_0.008_28)] tracking-wider">IN THE HAUS จริตจัดรสชัดเจน</span>
                 </div>
             </div>
 
@@ -687,28 +716,40 @@ export default function POSCustomerDisplay() {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-4 rounded-2xl w-full max-w-[260px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
-                        <VenueLogo className="h-7 max-w-[120px] object-contain mb-2" />
+                    <div className="bg-white text-[oklch(18%_0.012_28)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                        <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
-                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2.5 flex items-center justify-center gap-1.5 rounded-md">
+                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
                             <QrCode size={14} />
                             <span>PROMPTPAY QR PAYMENT</span>
                         </div>
 
-                        <div className="p-2 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-2">
+                        <div className="p-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-1.5">
                             {qrPayload ? (
-                                <QRCodeSVG value={qrPayload} size={150} level="M" />
+                                <QRCodeSVG value={qrPayload} size={140} level="M" />
                             ) : paymentQrUrl || orderData.paymentQrUrl ? (
-                                <img src={paymentQrUrl || orderData.paymentQrUrl} alt="PromptPay QR" className="w-[150px] h-[150px] object-contain" />
+                                <img src={paymentQrUrl || orderData.paymentQrUrl} alt="PromptPay QR" className="w-[140px] h-[140px] object-contain" />
                             ) : (
-                                <div className="w-[150px] h-[150px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
+                                <div className="w-[140px] h-[140px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
                                     Generating PromptPay QR...
                                 </div>
                             )}
                         </div>
 
-                        <div className="space-y-0.5">
-                            <span className="text-[8px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest">
+                        {/* PromptPay Account Name & Phone/Tax ID */}
+                        <div className="w-full text-center space-y-0.5 border-t border-[oklch(85%_0.012_28)]/60 pt-1.5 mb-1.5">
+                            {storePromptpayName && (
+                                <div className="text-[10px] font-bold text-[oklch(18%_0.012_28)] truncate px-1">
+                                    ชื่อบัญชี: {storePromptpayName}
+                                </div>
+                            )}
+                            <div className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] tracking-wide">
+                                พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
+                            </div>
+                        </div>
+
+                        <div className="space-y-0.5 text-center">
+                            <span className="text-[7.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest block">
                                 SCAN WITH MOBILE BANKING APP
                             </span>
                             <p className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">
@@ -853,26 +894,38 @@ export default function POSCustomerDisplay() {
                         </div>
                     </div>
                 ) : (
-                    <div className="bg-white text-[oklch(18%_0.012_28)] p-4 rounded-2xl w-full max-w-[260px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
-                        <VenueLogo className="h-7 max-w-[120px] object-contain mb-2" />
+                    <div className="bg-white text-[oklch(18%_0.012_28)] p-3.5 rounded-2xl w-full max-w-[270px] flex flex-col items-center shadow-xl relative overflow-hidden border border-white/20">
+                        <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
-                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2.5 flex items-center justify-center gap-1.5 rounded-md">
+                        <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
                             <QrCode size={14} />
                             <span>SPLIT PROMPTPAY QR</span>
                         </div>
 
-                        <div className="p-2 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-2">
+                        <div className="p-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl shadow-inner mb-1.5">
                             {qrPayload ? (
-                                <QRCodeSVG value={qrPayload} size={150} level="M" />
+                                <QRCodeSVG value={qrPayload} size={140} level="M" />
                             ) : (
-                                <div className="w-[150px] h-[150px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
+                                <div className="w-[140px] h-[140px] bg-gray-100 flex items-center justify-center text-[10px] font-mono text-gray-400">
                                     Generating PromptPay QR...
                                 </div>
                             )}
                         </div>
 
-                        <div className="space-y-0.5">
-                            <span className="text-[8px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest">
+                        {/* PromptPay Account Name & Phone/Tax ID */}
+                        <div className="w-full text-center space-y-0.5 border-t border-[oklch(85%_0.012_28)]/60 pt-1.5 mb-1.5">
+                            {storePromptpayName && (
+                                <div className="text-[10px] font-bold text-[oklch(18%_0.012_28)] truncate px-1">
+                                    ชื่อบัญชี: {storePromptpayName}
+                                </div>
+                            )}
+                            <div className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] tracking-wide">
+                                พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId)}
+                            </div>
+                        </div>
+
+                        <div className="space-y-0.5 text-center">
+                            <span className="text-[7.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest block">
                                 SCAN TO PAY THIS PORTION
                             </span>
                             <p className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">

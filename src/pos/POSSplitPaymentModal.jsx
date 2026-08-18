@@ -14,12 +14,13 @@ import { toast } from 'sonner';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
+import { normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
 
 export default function POSSplitPaymentModal({
     order,
     activeBooking,
     includeTax = true,
-    storePromptpayId = '0812345678',
+    storePromptpayId: propPromptpayId,
     onClose,
     onConfirmSplit
 }) {
@@ -41,8 +42,33 @@ export default function POSSplitPaymentModal({
     const [paymentMethod, setPaymentMethod] = useState('qr'); // 'qr' | 'cash' | 'credit'
     const [cashReceived, setCashReceived] = useState('');
     
-    // Member Loyalty Attachment for this specific split payer
-    const [memberPhone, setMemberPhone] = useState('');
+    // PromptPay settings resolution
+    const [storePromptpayId, setStorePromptpayId] = useState(() => normalizePromptPayId(propPromptpayId || '0985284217'));
+
+    useEffect(() => {
+        if (propPromptpayId) {
+            setStorePromptpayId(normalizePromptPayId(propPromptpayId));
+            return;
+        }
+        const loadSettings = async () => {
+            try {
+                const { data } = await supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'printer_config']);
+                if (data && data.length > 0) {
+                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    let parsedCfg = {};
+                    if (settingsMap.printer_config) {
+                        try { parsedCfg = JSON.parse(settingsMap.printer_config); } catch (e) {}
+                    }
+                    const resolved = getStorePromptpayId(settingsMap, parsedCfg);
+                    setStorePromptpayId(resolved);
+                }
+            } catch (e) {}
+        };
+        loadSettings();
+    }, [propPromptpayId]);
     const [searchingMember, setSearchingMember] = useState(false);
     const [attachedSplitMember, setAttachedSplitMember] = useState(null);
     const [showMemberAttach, setShowMemberAttach] = useState(false);
@@ -121,7 +147,7 @@ export default function POSSplitPaymentModal({
     const splitQrPayload = useMemo(() => {
         if (currentSplitAmount <= 0) return null;
         try {
-            return generatePayload(storePromptpayId || '0812345678', { amount: currentSplitAmount });
+            return generatePayload(normalizePromptPayId(storePromptpayId), { amount: currentSplitAmount });
         } catch (e) {
             console.error("Split PromptPay QR generation error:", e);
             return null;

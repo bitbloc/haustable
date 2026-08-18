@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -179,6 +179,17 @@ export default function SlipModal({ booking, type, onClose }) {
 
 
     const hasAutoPrintedRef = useRef(false);
+
+    // Keep dynamic PromptPay QR code in sync whenever activeTab is billing or booking total updates
+    useEffect(() => {
+        if (activeTab === 'billing' && booking) {
+            resolveBillingQrCode(booking, printerConfig).then(qr => {
+                if (qr) setQrCodeUrl(qr);
+            }).catch(err => {
+                console.error("Error refreshing billing QR:", err);
+            });
+        }
+    }, [activeTab, booking?.id, booking?.total_amount, booking?.deposit_amount]);
 
     // Fetch Options mapping, QR settings, and execute SUNMI Auto Print
     useEffect(() => {

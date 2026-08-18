@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
-import { getShortBookingId } from '../utils/printerHelper';
+import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
 
 const POSOrderPanel = React.memo(function POSOrderPanel({ 
     order, 
@@ -65,7 +65,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [editDisplayName, setEditDisplayName] = React.useState('');
     const [editPhone, setEditPhone] = React.useState('');
     const [editEmail, setEditEmail] = React.useState('');
-    const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+    const [isMenuDrawerOpen, setIsMenuDrawerOpen] = React.useState(false);
+    const [storePromptpayId, setStorePromptpayId] = React.useState('0985284217');
 
     const startEditingProfile = (profile) => {
         setEditingProfile(profile);
@@ -281,17 +282,34 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         'crm_redeem_rate_xhaus',
                         'crm_min_redeem_xhaus',
                         'crm_base_spend_amount',
-                        'crm_max_redeem_percent'
+                        'crm_max_redeem_percent',
+                        'promptpay_id',
+                        'receipt_shop_phone',
+                        'contact_phone',
+                        'admin_phone_contact',
+                        'phone_number',
+                        'printer_config'
                     ]);
                 if (data) {
                     const settingsObj = {};
                     data.forEach(item => {
-                        settingsObj[item.key] = parseFloat(item.value);
+                        settingsObj[item.key] = item.value;
                     });
-                    setCrmSettings(prev => ({ ...prev, ...settingsObj }));
+                    let parsedCfg = {};
+                    if (settingsObj.printer_config) {
+                        try { parsedCfg = JSON.parse(settingsObj.printer_config); } catch (e) {}
+                    }
+                    const resolvedPpId = getStorePromptpayId(settingsObj, parsedCfg);
+                    setStorePromptpayId(resolvedPpId);
+                    
+                    const numObj = {};
+                    ['crm_redeem_rate_xhaus', 'crm_min_redeem_xhaus', 'crm_base_spend_amount', 'crm_max_redeem_percent'].forEach(k => {
+                        if (settingsObj[k] !== undefined) numObj[k] = parseFloat(settingsObj[k]);
+                    });
+                    setCrmSettings(prev => ({ ...prev, ...numObj }));
                 }
             } catch (err) {
-                console.error("Error loading CRM settings:", err);
+                console.error("Error loading CRM/PromptPay settings:", err);
             }
         };
         const fetchActivePromotions = async () => {
@@ -537,7 +555,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
                         memberProfile: currentMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
-                        paymentMethod: 'qr'
+                        paymentMethod: 'qr',
+                        promptpayId: storePromptpayId
                     }
                 };
             } else {
@@ -555,7 +574,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'cash',
                         cashReceived: received,
-                        changeDue: Math.max(0, received - total)
+                        changeDue: Math.max(0, received - total),
+                        promptpayId: storePromptpayId
                     }
                 };
             }
@@ -576,7 +596,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         } else {
             return { type: 'IDLE' };
         }
-    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput]);
+    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput, storePromptpayId]);
 
     const lastBroadcastMsgRef = React.useRef('');
 

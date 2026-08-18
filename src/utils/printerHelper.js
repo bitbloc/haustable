@@ -2342,50 +2342,103 @@ export async function autoPrintQROrder(booking, optionMap = {}) {
 
 /**
  * Generic silent print for ANY slip type (kitchen, receipt, billing).
+/**
+ * Clean & normalize Thai PromptPay identifier (Phone 10 digits, Tax/National ID 13 digits, e-Wallet 15 digits)
+ */
+export function normalizePromptPayId(rawId) {
+    if (!rawId) return '0985284217';
+    let clean = String(rawId).replace(/[^0-9]/g, '');
+    if (clean.startsWith('66') && clean.length === 11) {
+        clean = '0' + clean.slice(2);
+    }
+    return clean || '0985284217';
+}
+
+/**
+ * Format PromptPay ID for user-friendly display (e.g. 098-528-4217 or 0-1055-60000-00-0)
+ */
+export function formatPromptpayDisplay(id) {
+    if (!id) return '';
+    const clean = String(id).replace(/\D/g, '');
+    if (clean.length === 10) {
+        return `${clean.slice(0, 3)}-${clean.slice(3, 6)}-${clean.slice(6)}`;
+    }
+    if (clean.length === 13) {
+        return `${clean.slice(0, 1)}-${clean.slice(1, 5)}-${clean.slice(5, 10)}-${clean.slice(10, 12)}-${clean.slice(12)}`;
+    }
+    return id;
+}
+
+/**
+ * Resolve store PromptPay ID from multiple setting sources in priority order:
+ * 1. promptpay_id
+ * 2. printerConfig.promptpay_id
+ * 3. receipt_shop_phone
+ * 4. contact_phone / admin_phone_contact / phone_number
+ * 5. Default: '0985284217' (IN THE HAUS actual phone)
+ */
+export function getStorePromptpayId(settingsMap = {}, printerConfig = {}) {
+    const raw = settingsMap.promptpay_id 
+        || printerConfig.promptpay_id 
+        || (typeof window !== 'undefined' ? localStorage.getItem('promptpay_id') : null)
+        || settingsMap.receipt_shop_phone 
+        || (typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_phone') : null)
+        || settingsMap.contact_phone 
+        || settingsMap.admin_phone_contact 
+        || settingsMap.phone_number 
+        || '0985284217';
+    return normalizePromptPayId(raw);
+}
+
+/**
+ * Generic silent print for ANY slip type (kitchen, receipt, billing).
  * Returns true if successfully printed silently (so the caller doesn't need to show a modal).
  * Returns false if it fails or if the printer type doesn't support silent printing (e.g. browser).
  */
 export async function resolveBillingQrCode(booking, config = {}) {
     if (!booking) return null;
-    let qrUrl = config.payment_qr_url || config.paymentQrUrl;
-    if (!qrUrl && typeof window !== 'undefined') {
-        qrUrl = localStorage.getItem('payment_qr_url') || localStorage.getItem('receipt_payment_qr_url');
-    }
-    
-    if (qrUrl) return qrUrl;
+
+    // Calculate exact outstanding bill balance (deduct deposit if already paid)
+    const depositAmt = Number(booking.deposit_amount) || 0;
+    const items = booking.order_items || booking.items || [];
+    const totalAmt = booking.total_amount ? parseFloat(booking.total_amount) : items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
+    const balanceDue = Math.max(0, totalAmt - depositAmt);
+    const amountToPay = balanceDue > 0 ? balanceDue : totalAmt;
 
     try {
-        const { supabase } = await import('../lib/supabaseClient');
-        const { data } = await supabase
-            .from('app_settings')
-            .select('key, value')
-            .in('key', ['payment_qr_url', 'promptpay_id', 'phone_number']);
+        let promptpayId = '0985284217';
+        
+        // 1. If config already has promptpay_id or promptpayId
+        if (config.promptpay_id || config.promptpayId) {
+            promptpayId = normalizePromptPayId(config.promptpay_id || config.promptpayId);
+        } else {
+            // 2. Fetch fresh settings from DB to get the most accurate promptpay ID
+            const { supabase } = await import('../lib/supabaseClient');
+            const { data } = await supabase
+                .from('app_settings')
+                .select('key, value')
+                .in('key', ['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'payment_qr_url']);
             
-        let promptpayId = '0812345678';
-        if (data && data.length > 0) {
-            const qrObj = data.find(i => i.key === 'payment_qr_url' && i.value);
-            if (qrObj && qrObj.value) {
-                return qrObj.value;
-            }
-            const ppObj = data.find(i => (i.key === 'promptpay_id' || i.key === 'phone_number') && i.value);
-            if (ppObj && ppObj.value) {
-                promptpayId = ppObj.value;
-            }
+            const settingsMap = (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+            promptpayId = getStorePromptpayId(settingsMap, config);
         }
 
-        // Generate dynamic PromptPay QR code Data URL for this booking total
+        // 3. Generate dynamic EMVCo PromptPay payload with exact bill total
         const generatePayload = (await import('promptpay-qr')).default;
         const QRCode = (await import('qrcode')).default;
 
-        const items = booking.order_items || booking.items || [];
-        const total = booking.total_amount ? parseFloat(booking.total_amount) : items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
-
-        const payload = generatePayload(promptpayId, { amount: total > 0 ? total : undefined });
-        const dataUrl = await QRCode.toDataURL(payload, { width: 250, margin: 1 });
+        const payload = generatePayload(promptpayId, { amount: amountToPay > 0 ? amountToPay : undefined });
+        const dataUrl = await QRCode.toDataURL(payload, { width: 300, margin: 1 });
         return dataUrl;
     } catch (err) {
-        console.error('[PrinterHelper] Failed to resolve billing QR code:', err);
-        return null;
+        console.error('[PrinterHelper] Failed to generate dynamic PromptPay QR code:', err);
+        
+        // Fallback to static uploaded image if dynamic generation fails
+        let fallbackQr = config.payment_qr_url || config.paymentQrUrl;
+        if (!fallbackQr && typeof window !== 'undefined') {
+            fallbackQr = localStorage.getItem('payment_qr_url') || localStorage.getItem('receipt_payment_qr_url');
+        }
+        return fallbackQr || null;
     }
 }
 
