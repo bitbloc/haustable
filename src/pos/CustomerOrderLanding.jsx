@@ -83,6 +83,12 @@ export default function CustomerOrderLanding() {
         qr_radius: '100'
     });
 
+    // Ref to prevent circular triggers in profile sync
+    const currentMemberIdRef = useRef(null);
+    useEffect(() => {
+        currentMemberIdRef.current = memberProfile?.id || null;
+    }, [memberProfile?.id]);
+
     // Fetch Tier details dynamically when memberProfile changes
     useEffect(() => {
         if (!memberProfile?.id) {
@@ -133,24 +139,22 @@ export default function CustomerOrderLanding() {
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    if (parsed?.id && parsed.id !== memberProfile?.id) {
+                    if (parsed?.id && parsed.id !== currentMemberIdRef.current) {
                         fetchFreshProfile(parsed.id);
                     }
                 } catch (err) {
                     console.warn('Storage sync parse error:', err);
                 }
-            } else if (memberProfile) {
+            } else if (currentMemberIdRef.current) {
                 setMemberProfile(null);
             }
         };
 
         window.addEventListener('storage', handleProfileSync);
-        window.addEventListener('customer_profile_updated', handleProfileSync);
         return () => {
             window.removeEventListener('storage', handleProfileSync);
-            window.removeEventListener('customer_profile_updated', handleProfileSync);
         };
-    }, [memberProfile?.id]);
+    }, []);
 
     const fetchFreshProfile = async (userId) => {
         if (!userId) return null;
@@ -163,8 +167,8 @@ export default function CustomerOrderLanding() {
 
             if (!error && data) {
                 setMemberProfile(data);
+                currentMemberIdRef.current = data.id;
                 localStorage.setItem('customer_member_profile', JSON.stringify(data));
-                window.dispatchEvent(new Event('customer_profile_updated'));
                 return data;
             }
         } catch (err) {

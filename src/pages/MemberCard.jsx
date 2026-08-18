@@ -3,7 +3,7 @@
  * contrast: pass (APCA / WCAG compliant)
  */
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useBookingContext } from '../context/BookingContext'
 import AuthModal from '../components/AuthModal'
@@ -107,6 +107,13 @@ export default function MemberCard() {
     })
 
     // Phone Lookup & Guest states
+    // Ref to prevent stale closures and infinite loop re-entries
+    const currentUserIdRef = useRef(null)
+    useEffect(() => {
+        currentUserIdRef.current = user?.id || profile?.id || null
+    }, [user?.id, profile?.id])
+
+    // Phone Lookup & Guest states
     const [phoneLookupInput, setPhoneLookupInput] = useState('')
     const [phoneLookupLoading, setPhoneLookupLoading] = useState(false)
 
@@ -116,7 +123,8 @@ export default function MemberCard() {
             const { data: { session } } = await supabase.auth.getSession()
             if (session?.user) {
                 setUser(session.user)
-                fetchMemberData(session.user.id)
+                currentUserIdRef.current = session.user.id
+                fetchMemberData(session.user.id, true)
             } else {
                 const savedMemberStr = localStorage.getItem('customer_member_profile')
                 if (savedMemberStr) {
@@ -124,7 +132,8 @@ export default function MemberCard() {
                         const parsed = JSON.parse(savedMemberStr)
                         if (parsed?.id) {
                             setUser({ id: parsed.id, is_guest_member: true })
-                            fetchMemberData(parsed.id)
+                            currentUserIdRef.current = parsed.id
+                            fetchMemberData(parsed.id, true)
                             return
                         }
                     } catch (e) {
@@ -139,12 +148,14 @@ export default function MemberCard() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
                 setUser(session.user)
-                fetchMemberData(session.user.id)
+                currentUserIdRef.current = session.user.id
+                fetchMemberData(session.user.id, false)
             } else if (event === 'SIGNED_OUT') {
                 const saved = localStorage.getItem('customer_member_profile')
                 if (!saved) {
                     setUser(null)
                     setProfile(null)
+                    currentUserIdRef.current = null
                     setQrUrl('')
                     setHistory([])
                     setLoading(false)
@@ -158,24 +169,23 @@ export default function MemberCard() {
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved)
-                    if (parsed?.id && (!profile?.id || parsed.id !== profile.id)) {
+                    if (parsed?.id && parsed.id !== currentUserIdRef.current) {
                         setUser({ id: parsed.id, is_guest_member: true })
-                        fetchMemberData(parsed.id)
+                        currentUserIdRef.current = parsed.id
+                        fetchMemberData(parsed.id, false)
                     }
                 } catch (e) {}
             }
         }
         window.addEventListener('storage', handleProfileSync)
-        window.addEventListener('customer_profile_updated', handleProfileSync)
 
         return () => {
             subscription.unsubscribe()
             window.removeEventListener('storage', handleProfileSync)
-            window.removeEventListener('customer_profile_updated', handleProfileSync)
         }
     }, [])
 
-    // Realtime live update subscription for member profile and bookings
+    // Realtime live update subscription for member profile and bookings (silent refresh without full-page spinner)
     useEffect(() => {
         const targetId = user?.id || profile?.id;
         if (!targetId) return;
@@ -183,10 +193,10 @@ export default function MemberCard() {
         const channel = supabase
             .channel(`member_card_realtime_${targetId}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${targetId}` }, () => {
-                fetchMemberData(targetId);
+                fetchMemberData(targetId, false);
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `user_id=eq.${targetId}` }, () => {
-                fetchMemberData(targetId);
+                fetchMemberData(targetId, false);
             })
             .subscribe();
 
@@ -215,9 +225,9 @@ export default function MemberCard() {
             if (data) {
                 setUser({ id: data.id, is_guest_member: true })
                 setProfile(data)
+                currentUserIdRef.current = data.id
                 localStorage.setItem('customer_member_profile', JSON.stringify(data))
-                window.dispatchEvent(new Event('customer_profile_updated'))
-                fetchMemberData(data.id)
+                fetchMemberData(data.id, false)
                 toast.success(`ยินดีต้อนรับคุณ ${data.display_name || 'สมาชิก In The Haus'}`)
             } else {
                 toast.info('ไม่พบข้อมูลสมาชิกเบอร์นี้ สามารถสมัครสมาชิกผ่าน LINE ได้ทันที')
@@ -230,8 +240,14 @@ export default function MemberCard() {
         }
     }
 
-    const fetchMemberData = async (userId) => {
-        setLoading(true)
+    const fetchMemberData = async (userId, showSpinner = false) => {
+        if (!userId) {
+            setLoading(false)
+            return
+        }
+        if (showSpinner) {
+            setLoading(true)
+        }
         try {
             // 1. Fetch Profile info
             const { data: prof, error: profErr } = await supabase
@@ -242,8 +258,8 @@ export default function MemberCard() {
 
             if (profErr) throw profErr
             setProfile(prof)
+            currentUserIdRef.current = prof.id
             localStorage.setItem('customer_member_profile', JSON.stringify(prof))
-            window.dispatchEvent(new Event('customer_profile_updated'))
             setEditForm({
                 display_name: prof.display_name || '',
                 nickname: prof.nickname || '',
