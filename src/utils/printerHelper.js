@@ -2143,20 +2143,10 @@ async function getCachedResizedImage(url, targetWidth) {
         return imageBase64Cache[cacheKey];
     }
     
-    try {
-        const stored = localStorage.getItem(cacheKey);
-        if (stored) {
-            imageBase64Cache[cacheKey] = stored;
-            return stored;
-        }
-    } catch (e) {}
-    
     const base64 = await downloadAndResizeLogoToBase64(url, targetWidth);
-    
-    imageBase64Cache[cacheKey] = base64;
-    try {
-        localStorage.setItem(cacheKey, base64);
-    } catch (e) {}
+    if (base64) {
+        imageBase64Cache[cacheKey] = base64;
+    }
     
     return base64;
 }

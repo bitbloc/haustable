@@ -2,6 +2,7 @@
 /**
  * Local IndexedDB Image Caching Utility for POS System
  * Stores menu image Blobs locally to bypass browser HTTP fetch latency and 5MB localStorage limits.
+ * Features leak-free ObjectURL lifecycle management and reuse to protect Android WebView RAM.
  */
 
 const DB_NAME = 'pos_image_cache_db';
@@ -10,9 +11,12 @@ const STORE_NAME = 'menu_images';
 
 let dbPromise = null;
 
+// Module-level Singleton Blob URL registry: { [remoteUrl]: activeBlobUrl }
+const activeBlobUrlMap = new Map();
+
 function initDB() {
     if (!dbPromise) {
-        dbPromise = new Promise((resolve, reject) => {
+        dbPromise = new Promise((resolve) => {
             if (typeof window === 'undefined' || !window.indexedDB) {
                 resolve(null);
                 return;
@@ -35,12 +39,18 @@ function initDB() {
 }
 
 /**
- * Retrieve cached blob URL for a specific image URL
+ * Retrieve cached blob URL for a specific image URL with In-Memory ObjectURL reuse
  * @param {string} url - Original remote image URL
  * @returns {Promise<string|null>} Blob Object URL or null
  */
 export async function getCachedImage(url) {
     if (!url || typeof url !== 'string') return null;
+
+    // Fast path: Reuse existing active Object URL from memory (0ms, 0 byte allocation)
+    if (activeBlobUrlMap.has(url)) {
+        return activeBlobUrlMap.get(url);
+    }
+
     try {
         const db = await initDB();
         if (!db) return null;
@@ -53,6 +63,7 @@ export async function getCachedImage(url) {
                 if (record && record.blob) {
                     try {
                         const blobUrl = URL.createObjectURL(record.blob);
+                        activeBlobUrlMap.set(url, blobUrl);
                         resolve(blobUrl);
                     } catch {
                         resolve(null);
@@ -70,7 +81,7 @@ export async function getCachedImage(url) {
 }
 
 /**
- * Fetch and store remote image in IndexedDB
+ * Fetch and store remote image in IndexedDB with memory-safe ObjectURL replacement
  * @param {string} url - Original remote image URL
  * @returns {Promise<string|null>} Blob Object URL if successfully cached
  */
@@ -92,7 +103,16 @@ export async function cacheImage(url) {
             req.onerror = (e) => reject(e.target.error);
         });
 
-        return URL.createObjectURL(blob);
+        // Revoke old URL if existed
+        if (activeBlobUrlMap.has(url)) {
+            try {
+                URL.revokeObjectURL(activeBlobUrlMap.get(url));
+            } catch (e) {}
+        }
+
+        const newBlobUrl = URL.createObjectURL(blob);
+        activeBlobUrlMap.set(url, newBlobUrl);
+        return newBlobUrl;
     } catch (e) {
         console.warn(`[ImageCacheDB] Failed to download/cache image from ${url}:`, e);
         return null;
@@ -101,6 +121,7 @@ export async function cacheImage(url) {
 
 /**
  * Get map of all locally cached images in IndexedDB: { [remoteUrl]: blobUrl }
+ * Uses existing active Object URLs without recreating duplicates.
  * @returns {Promise<Record<string, string>>}
  */
 export async function getAllCachedImages() {
@@ -118,10 +139,16 @@ export async function getAllCachedImages() {
                     const url = cursor.key;
                     const record = cursor.value;
                     if (record && record.blob) {
-                        try {
-                            map[url] = URL.createObjectURL(record.blob);
-                        } catch (err) {
-                            console.warn('[ImageCacheDB] ObjectURL creation failed:', err);
+                        if (activeBlobUrlMap.has(url)) {
+                            map[url] = activeBlobUrlMap.get(url);
+                        } else {
+                            try {
+                                const blobUrl = URL.createObjectURL(record.blob);
+                                activeBlobUrlMap.set(url, blobUrl);
+                                map[url] = blobUrl;
+                            } catch (err) {
+                                console.warn('[ImageCacheDB] ObjectURL creation failed:', err);
+                            }
                         }
                     }
                     cursor.continue();
@@ -138,7 +165,8 @@ export async function getAllCachedImages() {
 }
 
 /**
- * Sync and cache all menu item images into IndexedDB with a progress callback
+ * Sync and cache all menu item images into IndexedDB with a progress callback.
+ * Avoids duplicate Object URL creation.
  * @param {Array<{image_url?: string, name?: string}>} menuItems 
  * @param {Function} [onProgress] - (completed, total, currentName) => void
  * @returns {Promise<{cachedCount: number, map: Record<string, string>}>}
@@ -156,11 +184,18 @@ export async function syncAllMenuImages(menuItems, onProgress) {
 
     for (const item of itemsWithImages) {
         const url = item.image_url;
-        let localUrl = await getCachedImage(url);
-        if (!localUrl) {
-            localUrl = await cacheImage(url);
-            if (localUrl) newCachedCount++;
+        let localUrl = null;
+
+        if (activeBlobUrlMap.has(url)) {
+            localUrl = activeBlobUrlMap.get(url);
+        } else {
+            localUrl = await getCachedImage(url);
+            if (!localUrl) {
+                localUrl = await cacheImage(url);
+                if (localUrl) newCachedCount++;
+            }
         }
+
         if (localUrl) {
             resultMap[url] = localUrl;
         }
@@ -174,9 +209,17 @@ export async function syncAllMenuImages(menuItems, onProgress) {
 }
 
 /**
- * Clear all cached images from IndexedDB
+ * Clear all cached images from IndexedDB and revoke all active Blob URLs in memory
  */
 export async function clearImageCache() {
+    // Revoke all active Object URLs from memory to prevent leaks
+    for (const blobUrl of activeBlobUrlMap.values()) {
+        try {
+            URL.revokeObjectURL(blobUrl);
+        } catch (e) {}
+    }
+    activeBlobUrlMap.clear();
+
     try {
         const db = await initDB();
         if (!db) return;

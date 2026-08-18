@@ -2174,6 +2174,901 @@ Deno.serve(async (req) => {
           }
           continue
         }
+
+        // --- NEW: Live POS Daily Sales Summary (stsales / ยอดขาย / sttoday) ---
+        if (text === 'stsales' || text === 'ยอดขาย' || text === 'sttoday' || text === 'stsales today') {
+          console.log('Processing stsales command...')
+          try {
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            const todayStr = thNow.toISOString().split('T')[0]
+            const dbStart = `${todayStr}T00:00:00+07:00`
+            const dbEnd = `${todayStr}T23:59:59+07:00`
+
+            let titleDateStr = ''
+            try {
+              titleDateStr = thNow.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' })
+            } catch {
+              titleDateStr = todayStr
+            }
+
+            const { data: bookingsData, error: bookingsErr } = await supabaseAdmin
+              .from('bookings')
+              .select('id, total_amount, discount_amount, payment_method, status, booking_type, booking_time')
+              .gte('booking_time', dbStart)
+              .lte('booking_time', dbEnd)
+
+            if (bookingsErr) throw bookingsErr
+
+            const allBookings = bookingsData || []
+            const completed = allBookings.filter(b => b.status === 'completed')
+            const activeUnpaid = allBookings.filter(b => ['seated', 'confirmed', 'ready', 'pending'].includes(b.status))
+            const voided = allBookings.filter(b => ['void', 'cancelled'].includes(b.status))
+
+            let totalSales = 0
+            let totalDiscounts = 0
+            let cashSales = 0
+            let qrSales = 0
+            let creditSales = 0
+
+            completed.forEach(b => {
+              const amt = Number(b.total_amount) || 0
+              const disc = Number(b.discount_amount) || 0
+              totalSales += amt
+              totalDiscounts += disc
+
+              const method = (b.payment_method || '').toLowerCase()
+              if (method.includes('cash') || method.includes('เงินสด')) {
+                cashSales += amt
+              } else if (method.includes('credit') || method.includes('card') || method.includes('บัตร')) {
+                creditSales += amt
+              } else {
+                qrSales += amt // Default PromptPay / Transfer
+              }
+            })
+
+            const activeUnpaidAmount = activeUnpaid.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0)
+            const avgTicket = completed.length > 0 ? (totalSales / completed.length) : 0
+
+            const salesFlex = {
+              type: "flex",
+              altText: `📊 สรุปยอดขายวันนี้ (${titleDateStr}): ฿${totalSales.toLocaleString('th-TH')}`,
+              contents: {
+                type: "bubble",
+                size: "mega",
+                header: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#F4F1EA",
+                  paddingAll: "20px",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      contents: [
+                        { type: "text", text: "HAUS POS", weight: "bold", size: "md", color: "#1E1B18", flex: 6 },
+                        { type: "text", text: "LIVE SALES", weight: "bold", size: "xxs", color: "#C85A32", align: "end", flex: 4, gravity: "center" }
+                      ]
+                    },
+                    { type: "text", text: `รายงานยอดขายประจำวัน · ${titleDateStr}`, size: "xxs", color: "#78736A", margin: "xs" }
+                  ]
+                },
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FBF9F5",
+                  paddingAll: "20px",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      backgroundColor: "#F4F1EA",
+                      cornerRadius: "md",
+                      paddingAll: "14px",
+                      contents: [
+                        {
+                          type: "box",
+                          layout: "vertical",
+                          flex: 5,
+                          contents: [
+                            { type: "text", text: "ยอดขายสุทธิทั้งหมด", size: "xs", color: "#78736A" },
+                            { type: "text", text: `${completed.length} บิลชำระแล้ว (เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล)`, size: "xxs", color: "#4A6B3D", margin: "xs" }
+                          ]
+                        },
+                        {
+                          type: "text",
+                          text: `฿${totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                          size: "xl",
+                          weight: "bold",
+                          color: "#1E1B18",
+                          align: "end",
+                          flex: 5,
+                          gravity: "center"
+                        }
+                      ]
+                    },
+                    { type: "separator", margin: "lg", color: "#E6E1D6" },
+                    { type: "text", text: "BREAKDOWN ช่องทางชำระเงิน", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "sm",
+                      spacing: "xs",
+                      contents: [
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "📱 PromptPay / QR / โอน", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${qrSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        },
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "💵 เงินสด Cash", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${cashSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        },
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "💳 บัตรเครดิต Credit Card", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${creditSales.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        }
+                      ]
+                    },
+                    ...(totalDiscounts > 0 ? [
+                      { type: "separator", margin: "md", color: "#E6E1D6" },
+                      {
+                        type: "box",
+                        layout: "horizontal",
+                        margin: "sm",
+                        contents: [
+                          { type: "text", text: "🏷️ ยอดส่วนลดโปรโมชั่น/แต้ม", size: "xs", color: "#78736A", flex: 7 },
+                          { type: "text", text: `-฿${totalDiscounts.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#9E2D2D", align: "end", flex: 3 }
+                        ]
+                      }
+                    ] : []),
+                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      contents: [
+                        { type: "text", text: `🪑 ยอดค้างในร้าน (${activeUnpaid.length} โต๊ะ)`, size: "xs", color: "#78736A", flex: 7 },
+                        { type: "text", text: `฿${activeUnpaidAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xs", weight: "bold", color: "#C85A32", align: "end", flex: 3 }
+                      ]
+                    },
+                    ...(voided.length > 0 ? [
+                      {
+                        type: "box",
+                        layout: "horizontal",
+                        margin: "xs",
+                        contents: [
+                          { type: "text", text: `⚠️ บิลยกเลิก Void (${voided.length} รายการ)`, size: "xxs", color: "#888888", flex: 7 },
+                          { type: "text", text: "ตรวจสอบพิมพ์: stvoid", size: "xxs", color: "#888888", align: "end", flex: 5 }
+                        ]
+                      }
+                    ] : [])
+                  ]
+                }
+              }
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [salesFlex]
+              })
+            })
+          } catch (err: any) {
+            console.error('stsales Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงยอดขายได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: Recent Bills List (stbill / stbills / บิลล่าสุด / บิล) ---
+        if (text === 'stbill' || text === 'stbills' || text === 'บิลล่าสุด' || text === 'บิล') {
+          console.log('Processing stbill command...')
+          try {
+            const { data: bills, error: billsErr } = await supabaseAdmin
+              .from('bookings')
+              .select(`
+                id, tracking_token, total_amount, discount_amount, payment_method, status, booking_type, booking_time, created_at,
+                pickup_contact_name, customer_note, tables_layout ( table_name ),
+                order_items ( quantity, price_at_time, menu_items(name) )
+              `)
+              .eq('status', 'completed')
+              .order('created_at', { ascending: false })
+              .limit(6)
+
+            if (billsErr) throw billsErr
+
+            if (!bills || bills.length === 0) {
+              await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                  replyToken: event.replyToken,
+                  messages: [{ type: 'text', text: '📭 ยังไม่มีรายการบิลที่ชำระเงินสำเร็จในระบบ' }]
+                })
+              })
+              continue
+            }
+
+            const billRows: any[] = []
+            bills.forEach((b: any, idx: number) => {
+              const billNo = b.tracking_token || (String(b.id).length > 8 ? String(b.id).substring(0, 8) : b.id)
+              const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? '🛍️ TAKEAWAY' : '🪑 WALK-IN')
+              
+              let timeStr = ''
+              try {
+                const dateObj = new Date(b.created_at || b.booking_time)
+                const thDate = new Date(dateObj.getTime() + (7 * 60 * 60 * 1000))
+                timeStr = thDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+              } catch {
+                timeStr = ''
+              }
+
+              const itemsBrief = (b.order_items || [])
+                .slice(0, 3)
+                .map((it: any) => `${it.quantity}x ${it.menu_items?.name || 'Item'}`)
+                .join(', ')
+              const moreItems = (b.order_items || []).length > 3 ? ` +อีก ${(b.order_items || []).length - 3} รายการ` : ''
+
+              const payMethod = (b.payment_method || 'PROMPTPAY').toUpperCase()
+              const amt = Number(b.total_amount) || 0
+
+              billRows.push({
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FBF9F5",
+                cornerRadius: "md",
+                paddingAll: "md",
+                margin: "md",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: `#${billNo}`, weight: "bold", size: "sm", color: "#1E1B18", flex: 6 },
+                      { type: "text", text: `฿${amt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, weight: "bold", size: "sm", color: "#C85A32", align: "end", flex: 4 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    margin: "xs",
+                    contents: [
+                      { type: "text", text: `${tableName} · ${timeStr}`, size: "xxs", color: "#78736A", flex: 7 },
+                      { type: "text", text: payMethod, size: "xxs", weight: "bold", color: "#4A6B3D", align: "end", flex: 3 }
+                    ]
+                  },
+                  {
+                    type: "text",
+                    text: `${itemsBrief}${moreItems}` || 'ไม่มีรายละเอียดสินค้า',
+                    size: "xxs",
+                    color: "#A09B90",
+                    margin: "xs",
+                    wrap: true
+                  }
+                ]
+              })
+
+              if (idx < bills.length - 1) {
+                billRows.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+              }
+            })
+
+            const billsFlex = {
+              type: "flex",
+              altText: `🧾 รายการบิลล่าสุด ${bills.length} รายการ`,
+              contents: {
+                type: "bubble",
+                size: "mega",
+                header: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#F4F1EA",
+                  paddingAll: "20px",
+                  contents: [
+                    { type: "text", text: "RECENT COMPLETED BILLS", size: "xs", weight: "bold", color: "#C85A32" },
+                    { type: "text", text: `รายการบิลล่าสุดในระบบ (${bills.length} บิลล่าสุด)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" }
+                  ]
+                },
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#F4F1EA",
+                  paddingAll: "16px",
+                  contents: billRows
+                }
+              }
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [billsFlex]
+              })
+            })
+          } catch (err: any) {
+            console.error('stbill Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงรายการบิลล่าสุดได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: Table Status & Running Bill (sttable / sttables / โต๊ะ / โต๊ะ [เลข]) ---
+        if (text === 'sttable' || text === 'sttables' || text === 'โต๊ะ' || text.startsWith('sttable ') || text.startsWith('โต๊ะ ')) {
+          console.log('Processing sttable command...')
+          try {
+            const isSpecific = text.startsWith('sttable ') || text.startsWith('โต๊ะ ')
+            const targetTableKeyword = isSpecific ? text.replace(/^(sttable|โต๊ะ)\s+/, '').trim().toLowerCase() : ''
+
+            const { data: tablesData, error: tblErr } = await supabaseAdmin
+              .from('tables_layout')
+              .select('*')
+              .order('table_name')
+
+            if (tblErr) throw tblErr
+
+            const eighteenHoursAgo = new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString()
+            const { data: activeBookings, error: bkgErr } = await supabaseAdmin
+              .from('bookings')
+              .select(`
+                id, table_id, pax, total_amount, status, booking_time, booking_type, pickup_contact_name,
+                order_items ( quantity, price_at_time, menu_items(name) )
+              `)
+              .in('status', ['seated', 'confirmed', 'pending', 'ready'])
+              .gte('booking_time', eighteenHoursAgo)
+
+            if (bkgErr) throw bkgErr
+
+            const tableMap = new Map()
+            ;(activeBookings || []).forEach(b => {
+              if (b.table_id) tableMap.set(b.table_id, b)
+            })
+
+            if (isSpecific && targetTableKeyword) {
+              const matchedTable = (tablesData || []).find((t: any) => 
+                (t.table_name || '').toLowerCase().includes(targetTableKeyword) ||
+                String(t.table_number || '').toLowerCase() === targetTableKeyword
+              )
+
+              if (!matchedTable) {
+                await fetch('https://api.line.me/v2/bot/message/reply', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                  body: JSON.stringify({
+                    replyToken: event.replyToken,
+                    messages: [{ type: 'text', text: `❌ ไม่พบข้อมูลโต๊ะ "${targetTableKeyword}" ในระบบร้าน` }]
+                  })
+                })
+                continue
+              }
+
+              const activeBkg = tableMap.get(matchedTable.id)
+              const isOccupied = !!activeBkg
+              const totalAmt = Number(activeBkg?.total_amount) || 0
+
+              let itemRows: any[] = []
+              if (isOccupied && activeBkg.order_items?.length > 0) {
+                itemRows = activeBkg.order_items.map((it: any) => ({
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: `${it.quantity}x ${it.menu_items?.name || 'Item'}`, size: "xs", color: "#1E1B18", flex: 7, wrap: true },
+                    { type: "text", text: `฿${(it.quantity * it.price_at_time).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                  ]
+                }))
+              }
+
+              const singleTableFlex = {
+                type: "flex",
+                altText: `🪑 สถานะ ${matchedTable.table_name}: ${isOccupied ? `มีลูกค้านั่ง (฿${totalAmt.toLocaleString('th-TH')})` : 'โต๊ะว่าง 🟢'}`,
+                contents: {
+                  type: "bubble",
+                  size: "mega",
+                  header: {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: isOccupied ? "#F4F1EA" : "#EAF4EC",
+                    paddingAll: "20px",
+                    contents: [
+                      { type: "text", text: "TABLE STATUS", size: "xs", weight: "bold", color: isOccupied ? "#C85A32" : "#2D804E" },
+                      { type: "text", text: matchedTable.table_name.toUpperCase(), size: "lg", weight: "bold", color: "#1E1B18", margin: "xs" },
+                      { type: "text", text: isOccupied ? `สถานะ: มีลูกค้านั่ง (${activeBkg.pax || 1} ท่าน)` : "สถานะ: โต๊ะว่างพร้อมให้บริการ 🟢", size: "xs", color: isOccupied ? "#78736A" : "#2D804E", margin: "xs" }
+                    ]
+                  },
+                  body: {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FBF9F5",
+                    paddingAll: "20px",
+                    contents: isOccupied ? [
+                      {
+                        type: "box",
+                        layout: "horizontal",
+                        contents: [
+                          { type: "text", text: "ยอดบิลปัจจุบัน", size: "sm", weight: "bold", color: "#1E1B18", flex: 6 },
+                          { type: "text", text: `฿${totalAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#C85A32", align: "end", flex: 4 }
+                        ]
+                      },
+                      { type: "separator", margin: "md", color: "#E6E1D6" },
+                      { type: "text", text: "รายการที่สั่ง", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        margin: "sm",
+                        spacing: "xs",
+                        contents: itemRows.length > 0 ? itemRows : [{ type: "text", text: "ยังไม่มีรายการอาหาร", size: "xs", color: "#888888" }]
+                      }
+                    ] : [
+                      { type: "text", text: "โต๊ะนี้พร้อมเปิดบิลใหม่ได้ทันทีผ่านหน้าจอ POS หรือลูกค้าสแกน QR Code ประจำโต๊ะ", size: "xs", color: "#78736A", wrap: true }
+                    ]
+                  }
+                }
+              }
+
+              await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                  replyToken: event.replyToken,
+                  messages: [singleTableFlex]
+                })
+              })
+              continue
+            }
+
+            // General tables summary (sttables)
+            const allTbls = tablesData || []
+            const occupiedCount = allTbls.filter((t: any) => tableMap.has(t.id)).length
+            const totalTblAmt = (activeBookings || []).reduce((sum: number, b: any) => sum + (Number(b.total_amount) || 0), 0)
+
+            const tableRows = allTbls.slice(0, 12).map((t: any) => {
+              const bkg = tableMap.get(t.id)
+              const occ = !!bkg
+              const amt = Number(bkg?.total_amount) || 0
+              return {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: `${occ ? '🪑' : '🟢'} ${t.table_name}`, size: "xs", weight: "bold", color: occ ? "#1E1B18" : "#4A6B3D", flex: 6 },
+                  { type: "text", text: occ ? `฿${amt.toFixed(0)} (${bkg.pax || 1}P)` : 'ว่าง', size: "xs", weight: "bold", color: occ ? "#C85A32" : "#78736A", align: "end", flex: 4 }
+                ]
+              }
+            })
+
+            const allTablesFlex = {
+              type: "flex",
+              altText: `🪑 สรุปโต๊ะอาหาร (${occupiedCount}/${allTbls.length} โต๊ะที่นั่ง)`,
+              contents: {
+                type: "bubble",
+                size: "mega",
+                header: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#F4F1EA",
+                  paddingAll: "20px",
+                  contents: [
+                    { type: "text", text: "ALL TABLES OVERVIEW", size: "xs", weight: "bold", color: "#C85A32" },
+                    { type: "text", text: `ภาพรวมโต๊ะอาหาร (${occupiedCount} จาก ${allTbls.length} โต๊ะมีลูกค้า)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" },
+                    { type: "text", text: `ยอดบิลที่ยังไม่เช็คบิลรวม: ฿${totalTblAmt.toLocaleString('th-TH')}`, size: "xxs", color: "#78736A", margin: "xs" }
+                  ]
+                },
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FBF9F5",
+                  paddingAll: "20px",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      spacing: "sm",
+                      contents: tableRows
+                    },
+                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    { type: "text", text: "💡 ดูเฉพาะโต๊ะพิมพ์: โต๊ะ [ชื่อโต๊ะ] เช่น โต๊ะ 3", size: "xxs", color: "#888888", align: "center", margin: "md" }
+                  ]
+                }
+              }
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [allTablesFlex]
+              })
+            })
+          } catch (err: any) {
+            console.error('sttable Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงสถานะโต๊ะได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: POS Shift Status (stshift / กะ / ยอดกะ) ---
+        if (text === 'stshift' || text === 'กะ' || text === 'ยอดกะ') {
+          console.log('Processing stshift command...')
+          try {
+            const { data: shifts, error: shiftErr } = await supabaseAdmin
+              .from('pos_shifts')
+              .select('*')
+              .order('opened_at', { ascending: false })
+              .limit(1)
+
+            if (shiftErr) throw shiftErr
+
+            if (!shifts || shifts.length === 0) {
+              await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                  replyToken: event.replyToken,
+                  messages: [{ type: 'text', text: '📭 ยังไม่มีประวัติการเปิดกะในระบบ POS' }]
+                })
+              })
+              continue
+            }
+
+            const currentShift = shifts[0]
+            const isOpen = currentShift.status === 'open'
+
+            let openTimeStr = ''
+            try {
+              const thDate = new Date(new Date(currentShift.opened_at).getTime() + (7 * 60 * 60 * 1000))
+              openTimeStr = thDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+            } catch {
+              openTimeStr = ''
+            }
+
+            const shiftFlex = {
+              type: "flex",
+              altText: `📊 ข้อมูลกะ POS ล่าสุด (${isOpen ? 'กะกำลังเปิดอยู่ 🟢' : 'ปิดกะแล้ว 🔒'})`,
+              contents: {
+                type: "bubble",
+                size: "mega",
+                header: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: isOpen ? "#1E1B18" : "#333333",
+                  paddingAll: "20px",
+                  contents: [
+                    { type: "text", text: "POS SHIFT STATUS", size: "xs", weight: "bold", color: "#C85A32" },
+                    { type: "text", text: isOpen ? "กะที่กำลังทำงานอยู่ (ACTIVE 🟢)" : "กะล่าสุด (CLOSED 🔒)", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" },
+                    { type: "text", text: `พนักงาน: ${currentShift.staff_name || 'Staff'} · เปิดเมื่อ: ${openTimeStr}`, size: "xxs", color: "#A09B90", margin: "xs" }
+                  ]
+                },
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FBF9F5",
+                  paddingAll: "20px",
+                  contents: [
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      backgroundColor: "#F4F1EA",
+                      cornerRadius: "md",
+                      paddingAll: "14px",
+                      contents: [
+                        { type: "text", text: "ยอดขายรวมในกะ", size: "xs", color: "#78736A", flex: 5, gravity: "center" },
+                        { type: "text", text: `฿${Number(currentShift.total_sales || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "lg", weight: "bold", color: "#1E1B18", align: "end", flex: 5 }
+                      ]
+                    },
+                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    {
+                      type: "box",
+                      layout: "vertical",
+                      margin: "sm",
+                      spacing: "xs",
+                      contents: [
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "💵 เงินสด Cash", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${Number(currentShift.cash_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        },
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "📱 PromptPay / โอน", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${Number(currentShift.qr_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        },
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "💳 บัตรเครดิต Credit", size: "xs", color: "#1E1B18", flex: 7 },
+                            { type: "text", text: `฿${Number(currentShift.credit_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                          ]
+                        }
+                      ]
+                    },
+                    { type: "separator", margin: "md", color: "#E6E1D6" },
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "sm",
+                      contents: [
+                        { type: "text", text: "เงินทอนตั้งต้น (Float)", size: "xs", color: "#78736A", flex: 6 },
+                        { type: "text", text: `฿${Number(currentShift.opening_float || 0).toFixed(2)}`, size: "xs", color: "#1E1B18", align: "end", flex: 4 }
+                      ]
+                    },
+                    {
+                      type: "box",
+                      layout: "horizontal",
+                      margin: "xs",
+                      contents: [
+                        { type: "text", text: "เงินสดที่คาดว่ามีในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
+                        { type: "text", text: `฿${(Number(currentShift.opening_float || 0) + Number(currentShift.cash_sales || 0)).toFixed(2)}`, size: "xs", weight: "bold", color: "#4A6B3D", align: "end", flex: 4 }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [shiftFlex]
+              })
+            })
+          } catch (err: any) {
+            console.error('stshift Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงข้อมูลกะ POS ได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: Void & Cancelled Bills Audit (stvoid / บิลยกเลิก / ยกเลิก) ---
+        if (text === 'stvoid' || text === 'บิลยกเลิก' || text === 'ยกเลิก') {
+          console.log('Processing stvoid command...')
+          try {
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            const todayStr = thNow.toISOString().split('T')[0]
+            const dbStart = `${todayStr}T00:00:00+07:00`
+            const dbEnd = `${todayStr}T23:59:59+07:00`
+
+            const { data: voidedData, error: voidErr } = await supabaseAdmin
+              .from('bookings')
+              .select(`
+                id, tracking_token, total_amount, status, staff_remark, customer_note, booking_time, created_at,
+                pickup_contact_name, tables_layout ( table_name )
+              `)
+              .in('status', ['void', 'cancelled'])
+              .gte('booking_time', dbStart)
+              .lte('booking_time', dbEnd)
+              .order('created_at', { ascending: false })
+
+            if (voidErr) throw voidErr
+
+            if (!voidedData || voidedData.length === 0) {
+              await fetch('https://api.line.me/v2/bot/message/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+                body: JSON.stringify({
+                  replyToken: event.replyToken,
+                  messages: [{ type: 'text', text: '✅ วันนี้ไม่มีรายการบิลที่ถูกยกเลิก (No Void Bills Today)' }]
+                })
+              })
+              continue
+            }
+
+            const voidRows: any[] = []
+            let totalVoidAmt = 0
+
+            voidedData.forEach((b: any, idx: number) => {
+              const amt = Number(b.total_amount) || 0
+              totalVoidAmt += amt
+              const billNo = b.tracking_token || String(b.id).substring(0, 8)
+              const tbl = b.tables_layout?.table_name || 'WALK-IN'
+              const reason = b.staff_remark || b.customer_note || 'ไม่ระบุเหตุผล'
+
+              voidRows.push({
+                type: "box",
+                layout: "vertical",
+                margin: "md",
+                backgroundColor: "#FFF5F5",
+                cornerRadius: "md",
+                paddingAll: "md",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: `#${billNo} · ${tbl}`, weight: "bold", size: "xs", color: "#1E1B18", flex: 7 },
+                      { type: "text", text: `฿${amt.toFixed(2)}`, weight: "bold", size: "xs", color: "#9E2D2D", align: "end", flex: 3 }
+                    ]
+                  },
+                  { type: "text", text: `เหตุผล: ${reason}`, size: "xxs", color: "#78736A", margin: "xs", wrap: true }
+                ]
+              })
+
+              if (idx < voidedData.length - 1) voidRows.push({ type: "separator", margin: "sm", color: "#E6E1D6" })
+            })
+
+            const voidFlex = {
+              type: "flex",
+              altText: `⚠️ บิลยกเลิกวันนี้ (${voidedData.length} บิล: ฿${totalVoidAmt.toFixed(2)})`,
+              contents: {
+                type: "bubble",
+                size: "mega",
+                header: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FDF2F2",
+                  paddingAll: "20px",
+                  contents: [
+                    { type: "text", text: "VOID BILLS AUDIT", size: "xs", weight: "bold", color: "#9E2D2D" },
+                    { type: "text", text: `รายงานบิลยกเลิกประจำวัน (${voidedData.length} รายการ)`, size: "md", weight: "bold", color: "#1E1B18", margin: "xs" },
+                    { type: "text", text: `ยอดเงินที่ยกเลิกรวม: ฿${totalVoidAmt.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`, size: "xxs", color: "#78736A", margin: "xs" }
+                  ]
+                },
+                body: {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FBF9F5",
+                  paddingAll: "16px",
+                  contents: voidRows
+                }
+              }
+            }
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [voidFlex]
+              })
+            })
+          } catch (err: any) {
+            console.error('stvoid Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถดึงรายงานบิลยกเลิกได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
+        // --- NEW: Command Help Menu (sthelp / คำสั่ง / คู่มือ / help) ---
+        if (text === 'sthelp' || text === 'คำสั่ง' || text === 'คู่มือ' || text === 'help') {
+          const helpFlex = {
+            type: "flex",
+            altText: "📖 คู่มือคำสั่งบอท IN THE HAUS",
+            contents: {
+              type: "bubble",
+              size: "mega",
+              header: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#1E1B18",
+                paddingAll: "20px",
+                contents: [
+                  { type: "text", text: "IN THE HAUS · COMMAND MANUAL", size: "xs", weight: "bold", color: "#C85A32" },
+                  { type: "text", text: "สารบัญคำสั่งบอทสั่งงาน", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" }
+                ]
+              },
+              body: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FBF9F5",
+                paddingAll: "20px",
+                contents: [
+                  { type: "text", text: "🍽️ หมวด POS & ออเดอร์หน้าร้าน", size: "xxs", weight: "bold", color: "#C85A32" },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "xs",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "• stsales หรือ ยอดขาย : สรุปยอดขายหน้าร้านวันนี้", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stbill หรือ บิลล่าสุด : ดู 6 บิลที่ชำระเงินล่าสุด", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• storder : ดูออเดอร์สดที่กำลังทำในครัว", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• sttable หรือ โต๊ะ 3 : ดูสถานะโต๊ะและยอดค้าง", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stshift หรือ กะ : ดูสถานะกะ POS และเงินในลิ้นชัก", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• sthero : 5 อันดับเมนูขายดีประจำวัน", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stvoid : ตรวจสอบบิลที่ถูกยกเลิกในวันนี้", size: "xs", color: "#1E1B18" }
+                    ]
+                  },
+                  { type: "separator", margin: "md", color: "#E6E1D6" },
+                  { type: "text", text: "📦 หมวดสต็อก & ค่าใช้จ่าย", size: "xxs", weight: "bold", color: "#4A6B3D", margin: "md" },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "xs",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "• stbuy : รายการสินค้าที่ต้องซื้อ/ของหมด", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stday : ประวัติการตัดสต็อกวันนี้", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stexp : สรุปรายจ่ายร้านวันนี้", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• ราคา [ชื่อสินค้า] : ค้นหาราคากลางของสินค้า", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• ส่งภาพสลิป/บิล : สแกนบันทึกบัญชี AI อัตโนมัติ", size: "xs", color: "#1E1B18" }
+                    ]
+                  },
+                  { type: "separator", margin: "md", color: "#E6E1D6" },
+                  { type: "text", text: "🧑‍💼 หมวดพนักงาน & ระบบ", size: "xxs", weight: "bold", color: "#78736A", margin: "md" },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "xs",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "• staff : สรุปเวลาเข้า-ออกงานและการลา", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• ping : เช็คสถานะการเชื่อมต่อบอท", size: "xs", color: "#1E1B18" }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+
+          await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+            body: JSON.stringify({
+              replyToken: event.replyToken,
+              messages: [helpFlex]
+            })
+          })
+          continue
+        }
       }
 
     // --- Image Message Handler for Receipt OCR & Auto Expense Recording (Supports Multi-Page Batches) ---

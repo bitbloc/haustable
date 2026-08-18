@@ -362,6 +362,20 @@ export async function syncOfflineQueue(isManual = false) {
                 }
             }
 
+            else if (action.type === 'void_booking') {
+                let { bookingId } = action.payload;
+                if (idMapping[bookingId]) {
+                    bookingId = idMapping[bookingId];
+                }
+                if (typeof bookingId !== 'string' || !bookingId.startsWith('local_')) {
+                    const { error } = await supabase
+                        .from('bookings')
+                        .update({ status: 'void', staff_remark: 'Voided by Staff (Offline Sync)' })
+                        .eq('id', bookingId);
+                    if (error) console.warn('[Offline Sync] Failed to void booking:', error);
+                }
+            }
+
             else if (action.type === 'drink_stamp_update') {
                 const { profileId, eligibleDrinkCount, useFreeDrinkQuota } = action.payload;
                 try {

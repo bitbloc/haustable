@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 
-const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
+const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -70,10 +70,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                 }
             });
 
-        // 5-second polling fallback to keep grid fresh if realtime fails
+        // 20-second polling fallback to keep grid fresh if realtime fails
         const pollInterval = setInterval(() => {
             fetchTables();
-        }, 5000);
+        }, 20000);
 
         return () => {
             supabase.removeChannel(bookingsSub);
@@ -253,6 +253,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, hasPendingOrder
                             รอรับออเดอร์
                         </button>
                     </div>
+
+                    {onNewWalkInPickup && (
+                        <button 
+                            type="button"
+                            onClick={onNewWalkInPickup}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] border border-[oklch(45%_0.16_28)] transition-all cursor-pointer font-mono text-xs font-bold uppercase tracking-wider shadow-sm active:scale-95 touch-manipulation"
+                            title="เปิดบิลสั่งกลับบ้านหน้าร้าน (Walk-in Pickup)"
+                        >
+                            + สั่งกลับบ้าน
+                        </button>
+                    )}
                 </div>
 
                 {/* Layout Mode Toggle */}

@@ -578,7 +578,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         }
     }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput]);
 
+    const lastBroadcastMsgRef = React.useRef('');
+
     const broadcastCFD = React.useCallback((msg) => {
+        if (!msg) return;
+        const msgStr = JSON.stringify(msg);
+        if (msgStr === lastBroadcastMsgRef.current) return;
+        lastBroadcastMsgRef.current = msgStr;
+
         if (cfdChannel.current) {
             try { cfdChannel.current.postMessage(msg); } catch (e) {}
         }
@@ -590,9 +597,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             }).catch(() => {});
         }
         try {
-            localStorage.setItem('pos_cfd_last_event', JSON.stringify(msg));
+            localStorage.setItem('pos_cfd_last_event', msgStr);
         } catch (e) {}
     }, []);
+
+    const computeCurrentCFDPayloadRef = React.useRef(computeCurrentCFDPayload);
+    computeCurrentCFDPayloadRef.current = computeCurrentCFDPayload;
+
+    const broadcastCFDRef = React.useRef(broadcastCFD);
+    broadcastCFDRef.current = broadcastCFD;
 
     React.useEffect(() => {
         cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
@@ -600,22 +613,22 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         // Handle incoming handshake requests from CFD
         cfdChannel.current.onmessage = (event) => {
             if (event.data?.type === 'REQUEST_CFD_STATE') {
-                const currentMsg = computeCurrentCFDPayload();
-                broadcastCFD(currentMsg);
+                const currentMsg = computeCurrentCFDPayloadRef.current ? computeCurrentCFDPayloadRef.current() : null;
+                if (currentMsg) broadcastCFDRef.current?.(currentMsg);
             }
         };
 
         supabaseCfdRef.current = supabase.channel('pos_cfd_room');
         supabaseCfdRef.current.on('broadcast', { event: 'cfd_handshake' }, () => {
-            const currentMsg = computeCurrentCFDPayload();
-            broadcastCFD(currentMsg);
+            const currentMsg = computeCurrentCFDPayloadRef.current ? computeCurrentCFDPayloadRef.current() : null;
+            if (currentMsg) broadcastCFDRef.current?.(currentMsg);
         }).subscribe();
 
         return () => {
             if (cfdChannel.current) cfdChannel.current.close();
             if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
         };
-    }, [computeCurrentCFDPayload, broadcastCFD]);
+    }, []);
 
     React.useEffect(() => {
         const handleCfdCustomEvent = (e) => {

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
+import { playBeepChime } from '../utils/audioHelper';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey }) {
     const [orders, setOrders] = useState([]);
@@ -53,25 +54,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         if (!soundEnabled) return;
         if (audioRef.current) {
             audioRef.current.play().catch(() => {
-                try {
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                    const playBeep = () => {
-                        const osc = ctx.createOscillator();
-                        const gainNode = ctx.createGain();
-                        osc.connect(gainNode);
-                        gainNode.connect(ctx.destination);
-                        osc.type = 'sine';
-                        osc.frequency.value = 800;
-                        gainNode.gain.setValueAtTime(0, ctx.currentTime);
-                        gainNode.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
-                        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-                        osc.start(ctx.currentTime);
-                        osc.stop(ctx.currentTime + 0.5);
-                    };
-                    playBeep();
-                    alertIntervalRef.current = setInterval(playBeep, 2500);
-                } catch (err) {}
+                playBeepChime();
+                if (!alertIntervalRef.current) {
+                    alertIntervalRef.current = setInterval(playBeepChime, 2500);
+                }
             });
+        } else {
+            playBeepChime();
+            if (!alertIntervalRef.current) {
+                alertIntervalRef.current = setInterval(playBeepChime, 2500);
+            }
         }
     };
 

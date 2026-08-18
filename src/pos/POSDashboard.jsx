@@ -18,6 +18,7 @@ import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRe
 import { isOnline, addToOfflineQueue } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
+import { playSynthChime, playDoorbellChime, playSystemAlertSound as playSystemAlertSoundUtil } from '../utils/audioHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 export default function POSDashboard() {
@@ -77,7 +78,6 @@ export default function POSDashboard() {
     const [availableTables, setAvailableTables] = useState([]);
 
     const [alertSoundUrl, setAlertSoundUrl] = useState(null);
-    const [audioContext, setAudioContext] = useState(null);
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
     const prevHasPendingOrdersRef = useRef(false);
 
@@ -734,25 +734,43 @@ export default function POSDashboard() {
         fetchSound();
         checkPendingOrders();
 
-        // Poll pending orders every 4 seconds
-        const pollInterval = setInterval(checkPendingOrders, 4000);
+        // Poll pending orders every 20 seconds as fallback to Supabase Realtime
+        const pollInterval = setInterval(checkPendingOrders, 20000);
 
-        // Auto initialize audio context for APK
-        try {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (AudioContext) {
-                const ctx = new AudioContext();
-                if (ctx.state === 'suspended') {
-                    ctx.resume();
-                }
-                setAudioContext(ctx);
-            }
-        } catch (err) {
-            console.error("Failed to init audio context:", err);
-        }
+        // Realtime sync: Auto-update draft cart item prices when menu items change
+        const handlePosMenuUpdated = (e) => {
+            const updatedMenuItems = e.detail?.items || [];
+            if (!updatedMenuItems || updatedMenuItems.length === 0) return;
+            
+            const priceMap = new Map();
+            updatedMenuItems.forEach(item => {
+                priceMap.set(item.id, parseFloat(item.price) || 0);
+            });
+
+            setCurrentOrder(prev => {
+                if (!prev?.items || prev.items.length === 0) return prev;
+                let hasChanges = false;
+                const newItems = prev.items.map(cartItem => {
+                    // Only update unsubmitted draft items without db_id or is_reward
+                    if (cartItem.db_id || cartItem.is_reward) return cartItem;
+                    const lookupId = cartItem.menu_item_id || cartItem.id;
+                    if (priceMap.has(lookupId)) {
+                        const newPrice = priceMap.get(lookupId);
+                        if (cartItem.price !== newPrice) {
+                            hasChanges = true;
+                            return { ...cartItem, price: newPrice };
+                        }
+                    }
+                    return cartItem;
+                });
+                return hasChanges ? { ...prev, items: newItems } : prev;
+            });
+        };
+        window.addEventListener('pos-menu-updated', handlePosMenuUpdated);
 
         return () => {
             clearInterval(pollInterval);
+            window.removeEventListener('pos-menu-updated', handlePosMenuUpdated);
             if (cleanupPrinterSync) cleanupPrinterSync();
         };
     }, []);
@@ -795,18 +813,16 @@ export default function POSDashboard() {
         fetchAttachedMemberCrm();
     }, [activeBooking]);
 
-    const activeAudioElementRef = useRef(null);
-
     // Repeating Sound Alert when pending orders exist
     useEffect(() => {
         if (!hasPendingOrders) return;
 
         // Play alert immediately
-        playSystemAlertSound();
+        playSystemAlertSoundUtil(alertSoundUrl);
 
         // Repeat every 6 seconds
         const soundInterval = setInterval(() => {
-            playSystemAlertSound();
+            playSystemAlertSoundUtil(alertSoundUrl);
         }, 6000);
 
         return () => {
@@ -815,92 +831,11 @@ export default function POSDashboard() {
     }, [hasPendingOrders, alertSoundUrl]);
 
     const playSystemAlertSound = () => {
-        const now = Date.now();
-        if (now - lastPlayedSoundTimeRef.current < 3500) {
-            console.log("Sound alert play throttled to prevent overlap.");
-            return;
-        }
-        lastPlayedSoundTimeRef.current = now;
-
-        if (alertSoundUrl) {
-            try {
-                if (!activeAudioElementRef.current || activeAudioElementRef.current.src !== alertSoundUrl) {
-                    activeAudioElementRef.current = new Audio(alertSoundUrl);
-                } else {
-                    activeAudioElementRef.current.currentTime = 0;
-                }
-                activeAudioElementRef.current.play().catch(e => {
-                    console.warn("Failed to play custom sound, playing synth chime:", e);
-                    playSynthChime();
-                });
-                return;
-            } catch (e) {
-                console.warn("Custom sound play error:", e);
-            }
-        }
-        playSynthChime();
-    };
-
-    const playSynthChime = () => {
-        try {
-            const ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
-            if (ctx.state === 'suspended') {
-                ctx.resume();
-            }
-            
-            const osc1 = ctx.createOscillator();
-            const gain1 = ctx.createGain();
-            osc1.connect(gain1);
-            gain1.connect(ctx.destination);
-            osc1.frequency.value = 880;
-            gain1.gain.setValueAtTime(0.3, ctx.currentTime);
-            gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-            osc1.start(ctx.currentTime);
-            osc1.stop(ctx.currentTime + 0.15);
-            
-            const delay = 0.12;
-            const osc2 = ctx.createOscillator();
-            const gain2 = ctx.createGain();
-            osc2.connect(gain2);
-            gain2.connect(ctx.destination);
-            osc2.frequency.value = 1100;
-            gain2.gain.setValueAtTime(0.3, ctx.currentTime + delay);
-            gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.25);
-            osc2.start(ctx.currentTime + delay);
-            osc2.stop(ctx.currentTime + delay + 0.25);
-        } catch (err) {
-            console.error("Web Audio API failed:", err);
-        }
+        playSystemAlertSoundUtil(alertSoundUrl);
     };
 
     const playQRAlertSound = () => {
-        try {
-            const ctx = audioContext || new (window.AudioContext || window.webkitAudioContext)();
-            if (ctx.state === 'suspended') {
-                ctx.resume();
-            }
-            
-            const playNote = (freq, startTime, duration) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.type = 'sine'; // Smooth doorbell sound
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.frequency.value = freq;
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.4, startTime + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-                osc.start(startTime);
-                osc.stop(startTime + duration);
-            };
-
-            // Distinct Doorbell Sound (Ding-Dong: E5 -> C5)
-            const now = ctx.currentTime;
-            playNote(659.25, now, 0.4);       // Ding (E5)
-            playNote(523.25, now + 0.35, 0.6); // Dong (C5) - overlaps slightly for smoothness
-        } catch (err) {
-            console.error("Web Audio API failed for QR sound:", err);
-        }
+        playDoorbellChime();
     };
 
     useEffect(() => {
@@ -1357,14 +1292,15 @@ export default function POSDashboard() {
         
         if (booking) {
             setActiveBooking(booking);
-            // Load existing items if any
-            const existingItems = booking.order_items.map(oi => ({
-                id: oi.menu_item_id,
+            // Load existing items with unique cart-level IDs
+            const existingItems = (booking.order_items || []).map(oi => ({
+                id: `db_${oi.id}`,
+                menu_item_id: oi.menu_item_id,
                 name: oi.menu_items?.name || oi.name || 'Item',
-                price: oi.price_at_time,
+                price: parseFloat(oi.price_at_time) || 0,
                 quantity: oi.quantity,
                 db_id: oi.id,
-                selected_options: oi.selected_options,
+                selected_options: oi.selected_options || [],
                 category_id: oi.menu_items?.category_id || oi.category_id || '',
                 category_name: oi.menu_items?.menu_categories?.name || oi.category_name || '',
                 is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
@@ -1444,16 +1380,18 @@ export default function POSDashboard() {
             }
         }
         
-        const existingItems = booking.order_items ? booking.order_items.map(oi => ({
-            id: oi.menu_item_id,
+        const existingItems = (booking.order_items || []).map(oi => ({
+            id: `db_${oi.id}`,
+            menu_item_id: oi.menu_item_id,
             name: oi.menu_items?.name || oi.name || 'Item',
-            price: oi.price_at_time,
+            price: parseFloat(oi.price_at_time) || 0,
             quantity: oi.quantity,
             db_id: oi.id,
-            selected_options: oi.selected_options,
-            category_id: oi.menu_items?.category_id || oi.category_id,
-            category_name: oi.menu_items?.menu_categories?.name || oi.category_name
-        })) : [];
+            selected_options: oi.selected_options || [],
+            category_id: oi.menu_items?.category_id || oi.category_id || '',
+            category_name: oi.menu_items?.menu_categories?.name || oi.category_name || '',
+            is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+        }));
         setCurrentOrder({
             items: existingItems,
             customer: booking.pickup_contact_name || booking.customer_name || booking.customer_note || 'Walk-in Pick-up',
@@ -1462,8 +1400,15 @@ export default function POSDashboard() {
         setView('menu');
     };
 
-    const handleNewWalkInPickup = async () => {
-        const note = prompt("กรุณาระบุชื่อลูกค้า หรือรายละเอียดออเดอร์ (Optional):", "Walk-in Pick-up") || "Walk-in Pick-up";
+    const handleNewWalkInPickup = () => {
+        setPickupNoteInput('');
+        setShowPickupModal(true);
+    };
+
+    const confirmNewWalkInPickup = async () => {
+        const note = pickupNoteInput.trim() || 'Walk-in Pick-up';
+        setShowPickupModal(false);
+        setPickupNoteInput('');
         const newBooking = await createWalkInPickup(note);
         if (newBooking) {
             handleSelectPickupOrder(newBooking);
@@ -1521,9 +1466,13 @@ export default function POSDashboard() {
             const itemOpts = item.selected_options || item.optionsSummary || [];
             const itemNote = item.item_note || item.itemNote || '';
             const optsStr = JSON.stringify(itemOpts);
+            const targetMenuItemId = item.menu_item_id || item.id;
 
+            // Match only against NEW draft items (no db_id) so we never mutate items already stored in DB!
             const existingIndex = prev.items.findIndex(i => {
-                if (i.id !== item.id) return false;
+                if (i.db_id) return false;
+                const iTargetId = i.menu_item_id || i.id;
+                if (iTargetId !== targetMenuItemId) return false;
                 const existingOptsStr = JSON.stringify(i.selected_options || i.optionsSummary || []);
                 const existingNote = i.item_note || i.itemNote || '';
                 return existingOptsStr === optsStr && existingNote === itemNote;
@@ -1533,19 +1482,30 @@ export default function POSDashboard() {
                 const updatedItems = [...prev.items];
                 updatedItems[existingIndex] = {
                     ...updatedItems[existingIndex],
-                    quantity: updatedItems[existingIndex].quantity + addQty
+                    quantity: updatedItems[existingIndex].quantity + addQty,
+                    price: parseFloat(item.price) || updatedItems[existingIndex].price
                 };
                 return { ...prev, items: updatedItems };
             }
 
+            const uniqueDraftId = `draft_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
             return {
                 ...prev,
-                items: [...prev.items, {
-                    ...item,
-                    quantity: addQty,
-                    selected_options: itemOpts,
-                    item_note: itemNote
-                }]
+                items: [
+                    ...prev.items,
+                    {
+                        id: uniqueDraftId,
+                        menu_item_id: targetMenuItemId,
+                        name: item.name,
+                        price: parseFloat(item.price) || 0,
+                        quantity: addQty,
+                        selected_options: itemOpts,
+                        item_note: itemNote,
+                        category_id: item.category_id || '',
+                        category_name: item.category?.name || item.category_name || '',
+                        is_drink_stamp_eligible: item.is_drink_stamp_eligible || false
+                    }
+                ]
             };
         });
     }, []);
@@ -1586,37 +1546,58 @@ export default function POSDashboard() {
             if (isConfirmed) {
                 const toastId = toast.loading('กำลังยกเลิกบิลและเคลียร์โต๊ะ...');
                 try {
-                    const { error } = await supabase
-                        .from('bookings')
-                        .update({ status: 'void' })
-                        .eq('id', activeBooking.id);
-                    
-                    if (error) throw error;
+                    const bookingId = activeBooking.id;
+                    const isLocal = typeof bookingId === 'string' && bookingId.startsWith('local_');
+
+                    if (!isLocal && isOnline()) {
+                        const { error } = await supabase
+                            .from('bookings')
+                            .update({ status: 'void' })
+                            .eq('id', bookingId);
+                        if (error) console.warn("Supabase void error:", error);
+                    } else {
+                        addToOfflineQueue('void_booking', { bookingId });
+                    }
                     
                     // Void in active shift transactions if present
-                    voidShiftTransaction(activeBooking.id);
+                    voidShiftTransaction(bookingId);
+
+                    // Update posCache active bookings
+                    try {
+                        const cached = posCache.getBookings().filter(b => b.id !== bookingId);
+                        posCache.setBookings(cached);
+                    } catch (e) {}
+
+                    // Update localStorage pos_cache_active_bookings
+                    try {
+                        const cached = JSON.parse(localStorage.getItem('pos_cache_active_bookings') || '[]').filter(b => b.id !== bookingId);
+                        localStorage.setItem('pos_cache_active_bookings', JSON.stringify(cached));
+                    } catch (e) {}
                     
                     toast.success('ยกเลิกบิลและเคลียร์โต๊ะสำเร็จแล้ว', { id: toastId });
-                    
-                    // Clear states
-                    localStorage.removeItem('pos_active_table_id');
-                    setCurrentOrder({ items: [], customer: null, table: selectedTable });
-                    setActiveBooking(null);
-                    setAttachedMemberCrm(null);
-                    setRefreshKey(prev => prev + 1);
-                    
-                    // Back to tables grid
-                    setView('tables');
-                    setSelectedTable(null);
                 } catch (err) {
                     console.error("Failed to clear booking:", err);
-                    toast.error('ไม่สามารถยกเลิกบิลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง', { id: toastId });
+                    toast.error('เคลียร์ข้อมูลในเครื่องเรียบร้อยแล้ว', { id: toastId });
+                } finally {
+                    // Always clear states regardless of network errors so user is NEVER stuck
+                    localStorage.removeItem('pos_active_table_id');
+                    setCurrentOrder({ items: [], customer: null, table: null });
+                    setActiveBooking(null);
+                    setSelectedTable(null);
+                    setAttachedMemberCrm(null);
+                    setRefreshKey(prev => prev + 1);
+                    setView('tables');
                 }
             }
         } else {
-            // Cart has unsaved items only, no active booking in DB
-            setCurrentOrder({ items: [], customer: null, table: selectedTable });
+            // Cart has unsaved items only, no active booking in DB -> completely reset table state
+            localStorage.removeItem('pos_active_table_id');
+            setCurrentOrder({ items: [], customer: null, table: null });
+            setSelectedTable(null);
+            setActiveBooking(null);
             setAttachedMemberCrm(null);
+            setView('tables');
+            toast.info('เคลียร์รายการและคืนสถานะเรียบร้อยแล้ว');
         }
     };
 
@@ -2342,6 +2323,7 @@ export default function POSDashboard() {
                         <div className={view === 'tables' ? 'h-full' : 'hidden'}>
                             <POSTableGrid 
                                 onSelectTable={handleSelectTable} 
+                                onNewWalkInPickup={handleNewWalkInPickup}
                                 hasPendingOrders={hasPendingOrders} 
                                 refreshKey={refreshKey}
                                 onOpenNotifDrawer={() => {

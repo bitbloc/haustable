@@ -39,9 +39,34 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         }
 
         fetchData();
+
+        let debounceTimer = null;
+        const triggerDebouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchData(false);
+            }, 300);
+        };
+
+        // Realtime Subscription: Listen for immediate updates to menu items, options & categories
+        const menuChangesSub = supabase.channel('pos-menu-realtime-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, triggerDebouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, triggerDebouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, triggerDebouncedFetch)
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime POS Menu] Channel status: ${status}`, err || '');
+                }
+            });
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(menuChangesSub);
+        };
     }, []);
 
-    const fetchData = async () => {
+    const fetchData = async (showLoading = true) => {
+        if (showLoading && menuItems.length === 0) setLoading(true);
         try {
             const [catRes, itemRes] = await Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
@@ -57,14 +82,17 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
             localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
 
+            // Broadcast menu update event so POS active carts can auto-sync prices immediately
+            window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));
+
             setActiveCategory(prev => prev || cats[0]?.id || 'all');
 
-            // Background sync images to IndexedDB on initial online fetch
+            // Background sync images to IndexedDB on initial online fetch (non-blocking)
             syncAllMenuImages(items).then(result => {
                 if (result.map && Object.keys(result.map).length > 0) {
                     setLocalImageMap(prev => ({ ...prev, ...result.map }));
                 }
-            });
+            }).catch(() => {});
         } catch (err) {
             console.warn('[Offline Mode] Failed to fetch menu items online, keeping existing cache state:', err);
         } finally {
@@ -100,6 +128,9 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             setMenuItems(items);
             localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
             localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+
+            // Broadcast menu update event to POSDashboard
+            window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));
 
             // Sync images locally into IndexedDB with progress callback
             const { map } = await syncAllMenuImages(items, (completed, total) => {
