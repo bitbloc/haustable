@@ -108,7 +108,6 @@ export default function AdminFinancialDashboard() {
                     total_amount,
                     status,
                     pax,
-                    number_of_guests,
                     booking_type,
                     payment_slip_url,
                     staff_remark,
@@ -125,6 +124,7 @@ export default function AdminFinancialDashboard() {
                         id,
                         quantity,
                         price_at_time,
+                        custom_name,
                         menu_items (
                             id,
                             name,
@@ -204,8 +204,8 @@ export default function AdminFinancialDashboard() {
 
             validOrders.forEach(b => {
                 const amount = parseFloat(b.total_amount || b.total_price || 0)
-                // Accurate POS pax extraction: b.pax fallback to b.number_of_guests
-                const guests = parseInt(b.pax || b.number_of_guests || 1)
+                // Accurate POS pax extraction: b.pax
+                const guests = parseInt(b.pax || 1)
                 const remark = (b.staff_remark || '').toLowerCase()
                 const bTime = new Date(b.booking_time)
                 const hour = bTime.getHours()
@@ -298,11 +298,11 @@ export default function AdminFinancialDashboard() {
                 // Order items processing
                 (b.order_items || []).forEach(item => {
                     const mItem = item.menu_items
-                    if (!mItem) return
+                    const itemName = item.custom_name || mItem?.name || item.name || 'เมนูพิเศษ'
                     const qty = item.quantity || 1
-                    const itemPrice = parseFloat(item.price_at_time || mItem.price || 0)
+                    const itemPrice = parseFloat(item.price_at_time || mItem?.price || 0)
                     const itemRev = itemPrice * qty
-                    const catName = (mItem.menu_categories?.name || '').toLowerCase()
+                    const catName = (mItem?.menu_categories?.name || 'ทั่วไป').toLowerCase()
 
                     if (catName.includes('แอลกอฮอล์') || catName.includes('เบียร์') || catName.includes('เหล้า') || catName.includes('alcohol')) {
                         alcRev += itemRev
@@ -315,20 +315,21 @@ export default function AdminFinancialDashboard() {
                     }
 
                     // Accumulate Item
-                    if (!itemAgg[mItem.name]) {
-                        itemAgg[mItem.name] = {
-                            name: mItem.name,
-                            categoryName: mItem.menu_categories?.name || 'ทั่วไป',
+                    if (!itemAgg[itemName]) {
+                        itemAgg[itemName] = {
+                            name: itemName,
+                            categoryName: mItem?.menu_categories?.name || 'เมนูพิเศษ/ทั่วไป',
                             category: catName.includes('เครื่องดื่ม') ? 'drink' : catName.includes('แอลกอฮอล์') ? 'alcohol' : catName.includes('เซต') ? 'combo' : 'main',
                             units: 0,
                             revenue: 0,
                         }
                     }
-                    itemAgg[mItem.name].units += qty
-                    itemAgg[mItem.name].revenue += itemRev
+                    itemAgg[itemName].units += qty
+                    itemAgg[itemName].revenue += itemRev
 
                     // Accumulate Category
-                    categoryAgg[mItem.menu_categories?.name || 'ทั่วไป'] = (categoryAgg[mItem.menu_categories?.name || 'ทั่วไป'] || 0) + itemRev
+                    const categoryTitle = mItem?.menu_categories?.name || 'เมนูพิเศษ/ทั่วไป'
+                    categoryAgg[categoryTitle] = (categoryAgg[categoryTitle] || 0) + itemRev
                 })
             })
 

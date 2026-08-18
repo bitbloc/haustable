@@ -741,7 +741,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const lines = str.split('\n');
         const processedLines = lines.map(line => {
             let processedLine = line;
-            const width = getPrinterCellWidth(processedLine, true);
+            const width = getPrinterCellWidth(processedLine, false);
             if (currentSizeW === 1) {
                 const targetCols = Math.floor(maxCols / 2);
                 const halfOffset = Math.floor(offset / 2);
@@ -1304,9 +1304,8 @@ function splitPrinterGraphemes(str) {
     return clusters;
 }
 
-// Measure string cell width for ESC/POS printing (TIS-620 byte length / character cells)
-// CRITICAL (Rule 3): In ESC/POS text mode, every byte in str.length consumes 1 physical character cell.
-export function getPrinterCellWidth(str, useByteLength = true) {
+// Measure string cell width for ESC/POS printing (Visual Thai character cells on thermal printhead)
+export function getPrinterCellWidth(str, useByteLength = false) {
     if (str === null || str === undefined) return 0;
     if (useByteLength) return String(str).length;
     const clusters = splitPrinterGraphemes(str);
@@ -1315,28 +1314,26 @@ export function getPrinterCellWidth(str, useByteLength = true) {
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    // ALWAYS calculate padding based on exact str.length (byte count) per Rule 3!
-    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    // ALWAYS calculate padding based on exact str.length (byte count) per Rule 3!
-    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
 
-// Slice by printer-byte width without orphaning Thai combining marks
+// Slice by printer-cell width without orphaning Thai combining marks
 export function sliceThai(str, maxPrinterWidth) {
     const clusters = splitPrinterGraphemes(str);
     let currentWidth = 0;
     let result = '';
 
     for (const cluster of clusters) {
-        const clusterWidth = getPrinterCellWidth(cluster, true); // ALWAYS use byte length to prevent hardware wrap!
+        const clusterWidth = 1; // Each grapheme cluster consumes exactly 1 printhead cell
         if (result && currentWidth + clusterWidth > maxPrinterWidth) break;
         if (!result && clusterWidth > maxPrinterWidth) return cluster;
         result += cluster;
@@ -1346,25 +1343,19 @@ export function sliceThai(str, maxPrinterWidth) {
     return result;
 }
 
-// Word/phrase-aware text wrapping using actual TIS-620 byte cell width
+// Word/phrase-aware text wrapping using actual visual character cell width
 export function wrapTextByWords(str, maxColWidth) {
     if (!str) return [];
     const width = Math.max(1, Number(maxColWidth) || 1);
     const paragraphs = String(str).replace(/\r/g, '').split('\n');
     const output = [];
 
-    let segmenter;
-    try {
-        segmenter = new Intl.Segmenter('th', { granularity: 'word' });
-    } catch(e) {}
-
     paragraphs.forEach((paragraph, paragraphIndex) => {
         if (!paragraph) {
             output.push('');
             return;
         }
-        // ALWAYS use byte length to prevent hardware wrap
-        if (getPrinterCellWidth(paragraph, true) <= width) {
+        if (getPrinterCellWidth(paragraph, false) <= width) {
             output.push(paragraph);
             return;
         }
@@ -1372,11 +1363,26 @@ export function wrapTextByWords(str, maxColWidth) {
         const match = paragraph.match(/^(\s+)/);
         const leadingSpace = match ? match[1] : '';
         
-        let words = [];
-        if (segmenter) {
-            words = Array.from(segmenter.segment(paragraph)).map(s => s.segment);
-        } else {
-            words = paragraph.split(/(\s+)/).filter(Boolean);
+        let rawTokens = [];
+        try {
+            const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
+            rawTokens = Array.from(segmenter.segment(paragraph)).map(s => s.segment);
+        } catch(e) {
+            rawTokens = paragraph.split(/(\s+)/).filter(Boolean);
+        }
+
+        // Glue punctuation like '(' to next word and ')' to previous word to prevent orphaned parentheses
+        const words = [];
+        for (let i = 0; i < rawTokens.length; i++) {
+            let t = rawTokens[i];
+            if (t === '(' && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
+                words.push('(' + rawTokens[i+1]);
+                i++;
+            } else if (t === ')' && words.length > 0 && !words[words.length - 1].endsWith(')')) {
+                words[words.length - 1] += ')';
+            } else {
+                words.push(t);
+            }
         }
 
         let currentLine = '';
@@ -1391,40 +1397,54 @@ export function wrapTextByWords(str, maxColWidth) {
             }
         };
 
-        words.forEach(word => {
+        for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+
+            // If word starts with '(' and currentLine has content, check if parenthesized phrase fits
+            if (word.startsWith('(') && currentLine.trim() !== '') {
+                let parenPhrase = word;
+                let j = i + 1;
+                while (j < words.length && !parenPhrase.includes(')')) {
+                    parenPhrase += words[j];
+                    j++;
+                }
+                if (getPrinterCellWidth(currentLine + ' ' + parenPhrase, false) > width) {
+                    output.push(currentLine.trimEnd());
+                    currentLine = leadingSpace + word;
+                    continue;
+                }
+            }
+
             if (!currentLine) {
                 currentLine = leadingSpace;
-                if (getPrinterCellWidth(currentLine + word, true) <= width) {
+                if (getPrinterCellWidth(currentLine + word, false) <= width) {
                     currentLine += word;
                 } else {
                     flushLongWord(currentLine + word);
                     currentLine = '';
                 }
-                return;
+                continue;
             }
 
             const candidate = currentLine + word;
-            if (getPrinterCellWidth(candidate, true) <= width) {
+            if (getPrinterCellWidth(candidate, false) <= width) {
                 currentLine = candidate;
-                return;
+                continue;
             }
 
-            if (word.trim() === '') {
-                // Ignore trailing spaces when wrapping to a new line
-                return;
-            }
+            if (word.trim() === '') continue;
 
-            output.push(currentLine);
+            output.push(currentLine.trimEnd());
             currentLine = leadingSpace;
-            if (getPrinterCellWidth(currentLine + word, true) <= width) {
+            if (getPrinterCellWidth(currentLine + word, false) <= width) {
                 currentLine += word;
             } else {
                 flushLongWord(currentLine + word);
                 currentLine = '';
             }
-        });
+        }
 
-        if (currentLine) output.push(currentLine);
+        if (currentLine) output.push(currentLine.trimEnd());
         if (paragraphIndex < paragraphs.length - 1 && output[output.length - 1] !== '') {
             output.push('');
         }
@@ -1448,11 +1468,11 @@ function formatItemLine(calculationText, name, priceStr, maxCols) {
 
     const left = String(calculationText ?? '');
     const right = String(priceStr ?? '');
-    const priceColWidth = Math.max(totalWidth <= 28 ? 8 : 10, getPrinterCellWidth(right, true));
+    const priceColWidth = Math.max(totalWidth <= 28 ? 8 : 10, getPrinterCellWidth(right, false));
     const leftWidth = Math.max(1, totalWidth - priceColWidth - 1);
 
     let numericRow;
-    if (getPrinterCellWidth(left, true) <= leftWidth) {
+    if (getPrinterCellWidth(left, false) <= leftWidth) {
         numericRow = padEndPrinter(left, leftWidth) + ' ' + padStartPrinter(right, priceColWidth);
     } else {
         numericRow = padStartPrinter(right, totalWidth);
@@ -1472,8 +1492,8 @@ function formatThreeCols(left, mid, right, maxCols, customMidWidth = null, custo
     const defaultMidWidth = customMidWidth ?? (isSmall ? 4 : 6);
     const defaultRightWidth = customRightWidth ?? (isSmall ? 8 : 11);
 
-    const midWidth = Math.max(getPrinterCellWidth(midStr, true), defaultMidWidth);
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), defaultRightWidth);
+    const midWidth = Math.max(getPrinterCellWidth(midStr, false), defaultMidWidth);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, false), defaultRightWidth);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (midWidth + rightWidth + 2 + minLeftWidth > totalWidth) {
@@ -1503,7 +1523,7 @@ function formatTwoCols(left, right, maxCols) {
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
     const rightStr = String(right ?? '');
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), isSmall ? 8 : 10);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, false), isSmall ? 8 : 11);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (rightWidth + 1 + minLeftWidth > totalWidth) {
@@ -1831,7 +1851,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         const lines = str.split('\n');
         const processedLines = lines.map(line => {
             let processedLine = line;
-            const width = getPrinterCellWidth(processedLine, true);
+            const width = getPrinterCellWidth(processedLine, false);
             if (currentSizeW === 1) {
                 const targetCols = Math.floor(maxCols / 2);
                 const halfOffset = Math.floor(offset / 2);
@@ -1880,6 +1900,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     // Header info
     const shopName = reportData.shopName || 'ร้านในบ้าน นครพนม';
     const shopAddress = reportData.shopAddress || 'นครพนม';
+    const cleanStaff = String(reportData.staffName || 'STAFF').replace(/^[,\s]+|[,\s]+$/g, '').trim() || 'STAFF';
 
     encoder.align('center')
            .bold(true)
@@ -1890,16 +1911,16 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
            .line(divider)
            .bold(true)
            .size(0, 1)
-           .line('รายงานยอดการขาย')
+           .line('รายงานยอดขาย')
            .size(0, 0)
            .bold(false)
-           .line(wrapTextByWords(`รหัส: ${reportData.shiftId || reportData.staffName || ''}`, maxCols))
+           .line(wrapTextByWords(`รหัส: ${reportData.shiftId || cleanStaff}`, maxCols))
            .line(wrapTextByWords(shopName, maxCols))
            .line(wrapTextByWords(shopAddress, maxCols))
            .line('')
            .align('left')
-           .line(wrapTextByWords(`เปิดรอบ: ${formatDateTime(reportData.openedAt)} (${reportData.staffName || 'STAFF'})`, maxCols))
-           .line(wrapTextByWords(`ปิดรอบ: ${reportData.closedAt ? formatDateTime(reportData.closedAt) : 'ยังไม่ปิดรอบ'} (${reportData.staffName || 'STAFF'})`, maxCols))
+           .line(wrapTextByWords(`เปิดรอบ: ${formatDateTime(reportData.openedAt)} (${cleanStaff})`, maxCols))
+           .line(wrapTextByWords(`ปิดรอบ: ${reportData.closedAt ? formatDateTime(reportData.closedAt) : 'ยังไม่ปิดรอบ'} (${cleanStaff})`, maxCols))
            .line(divider);
 
     // Section 1: ยอดขายตามหมวดหมู่

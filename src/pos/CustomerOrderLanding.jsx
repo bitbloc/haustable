@@ -606,9 +606,13 @@ export default function CustomerOrderLanding() {
                 const userLat = position.coords.latitude;
                 const userLon = position.coords.longitude;
                 
-                const shopLat = parseFloat(loadedSettings.qr_latitude);
-                const shopLon = parseFloat(loadedSettings.qr_longitude);
-                const allowedRadius = parseFloat(loadedSettings.qr_radius || 100);
+                const rawLat = loadedSettings?.qr_latitude;
+                const rawLon = loadedSettings?.qr_longitude;
+                const rawRadius = loadedSettings?.qr_radius;
+
+                const shopLat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 17.40722;
+                const shopLon = !isNaN(parseFloat(rawLon)) ? parseFloat(rawLon) : 104.78028;
+                const allowedRadius = !isNaN(parseFloat(rawRadius)) ? parseFloat(rawRadius) : 100;
 
                 const distance = getDistance(userLat, userLon, shopLat, shopLon);
                 setGpsDistance(distance);
@@ -625,7 +629,13 @@ export default function CustomerOrderLanding() {
                 console.error('GPS error:', error);
                 setGpsStatus('failed');
                 let errMsg = 'กรุณาอนุญาตการเข้าถึงตำแหน่ง GPS เพื่อสั่งอาหารจากโต๊ะของคุณ';
-                if (error.code === error.TIMEOUT) errMsg = 'ค้นหาพิกัด GPS ล้มเหลว (Timeout)';
+                if (error.code === error.PERMISSION_DENIED) {
+                    errMsg = 'การเข้าถึงตำแหน่งถูกปฏิเสธ กรุณาเปิดใช้งานสิทธิ์พิกัด (GPS Location) ในการตั้งค่าเบราว์เซอร์เพื่อสั่งอาหาร';
+                } else if (error.code === error.POSITION_UNAVAILABLE) {
+                    errMsg = 'ไม่สามารถระบุตำแหน่งพิกัดของอุปกรณ์ได้ กรุณาลองใหม่อีกครั้ง';
+                } else if (error.code === error.TIMEOUT) {
+                    errMsg = 'ค้นหาพิกัด GPS ล้มเหลว (การเชื่อมต่อหมดเวลา)';
+                }
                 setGpsError(errMsg);
                 setGpsChecking(false);
             },
