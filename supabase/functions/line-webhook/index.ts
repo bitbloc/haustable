@@ -26,6 +26,32 @@ function formatStockQty(qty: number, unit: string): string {
   }
 }
 
+function parseBookingPayment(b: any) {
+  const total = Number(b.total_amount || b.total_price || 0);
+  const remark = String(b.staff_remark || b.customer_note || '').toLowerCase();
+  
+  const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
+  if (splitMatch) {
+    const splitText = splitMatch[1];
+    let cash = 0, qr = 0, credit = 0;
+    const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
+    if (cashM) cash = parseFloat(cashM[1]) || 0;
+    const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
+    if (qrM) qr = parseFloat(qrM[1]) || 0;
+    const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
+    if (creditM) credit = parseFloat(creditM[1]) || 0;
+    return { cash, qr, credit, methodLabel: 'SPLIT' };
+  }
+  
+  if (remark.includes('credit') || remark.includes('card') || remark.includes('บัตร')) {
+    return { cash: 0, qr: 0, credit: total, methodLabel: 'CREDIT' };
+  }
+  if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+    return { cash: 0, qr: total, credit: 0, methodLabel: 'PROMPTPAY' };
+  }
+  return { cash: total, qr: 0, credit: 0, methodLabel: 'CASH' };
+}
+
 async function verifySignature(body: string, signature: string, secret: string) {
   const encoder = new TextEncoder()
   const keyBuffer = encoder.encode(secret)
@@ -2194,7 +2220,7 @@ Deno.serve(async (req) => {
 
             const { data: bookingsData, error: bookingsErr } = await supabaseAdmin
               .from('bookings')
-              .select('id, total_amount, discount_amount, payment_method, status, booking_type, booking_time')
+              .select('id, total_amount, discount_amount, staff_remark, payment_slip_url, status, booking_type, booking_time')
               .gte('booking_time', dbStart)
               .lte('booking_time', dbEnd)
 
@@ -2217,14 +2243,10 @@ Deno.serve(async (req) => {
               totalSales += amt
               totalDiscounts += disc
 
-              const method = (b.payment_method || '').toLowerCase()
-              if (method.includes('cash') || method.includes('เงินสด')) {
-                cashSales += amt
-              } else if (method.includes('credit') || method.includes('card') || method.includes('บัตร')) {
-                creditSales += amt
-              } else {
-                qrSales += amt // Default PromptPay / Transfer
-              }
+              const breakdown = parseBookingPayment(b)
+              cashSales += breakdown.cash
+              qrSales += breakdown.qr
+              creditSales += breakdown.credit
             })
 
             const activeUnpaidAmount = activeUnpaid.reduce((sum, b) => sum + (Number(b.total_amount) || 0), 0)
@@ -2388,7 +2410,7 @@ Deno.serve(async (req) => {
             const { data: bills, error: billsErr } = await supabaseAdmin
               .from('bookings')
               .select(`
-                id, tracking_token, total_amount, discount_amount, payment_method, status, booking_type, booking_time, created_at,
+                id, tracking_token, total_amount, discount_amount, staff_remark, payment_slip_url, status, booking_type, booking_time, created_at,
                 pickup_contact_name, customer_note, tables_layout ( table_name ),
                 order_items ( quantity, price_at_time, menu_items(name) )
               `)
@@ -2430,7 +2452,8 @@ Deno.serve(async (req) => {
                 .join(', ')
               const moreItems = (b.order_items || []).length > 3 ? ` +อีก ${(b.order_items || []).length - 3} รายการ` : ''
 
-              const payMethod = (b.payment_method || 'PROMPTPAY').toUpperCase()
+              const payBreakdown = parseBookingPayment(b)
+              const payMethod = payBreakdown.methodLabel
               const amt = Number(b.total_amount) || 0
 
               billRows.push({
