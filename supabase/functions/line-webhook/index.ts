@@ -2381,29 +2381,35 @@ Deno.serve(async (req) => {
                   contents: [
                     {
                       type: "box",
-                      layout: "horizontal",
+                      layout: "vertical",
                       backgroundColor: "#F4F1EA",
                       cornerRadius: "md",
                       paddingAll: "14px",
                       contents: [
                         {
                           type: "box",
-                          layout: "vertical",
-                          flex: 5,
+                          layout: "horizontal",
                           contents: [
-                            { type: "text", text: "ยอดขายสุทธิทั้งหมด", size: "xs", color: "#78736A" },
-                            { type: "text", text: `${completed.length} บิลชำระแล้ว (เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล)`, size: "xxs", color: "#4A6B3D", margin: "xs" }
+                            { type: "text", text: "ยอดขายสุทธิ (ไม่รวมเงินทอน)", size: "xs", color: "#78736A", flex: 6, gravity: "center" },
+                            {
+                              type: "text",
+                              text: `฿${totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                              size: "lg",
+                              weight: "bold",
+                              color: "#1E1B18",
+                              align: "end",
+                              flex: 6,
+                              gravity: "center"
+                            }
                           ]
                         },
                         {
-                          type: "text",
-                          text: `฿${totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-                          size: "xl",
-                          weight: "bold",
-                          color: "#1E1B18",
-                          align: "end",
-                          flex: 5,
-                          gravity: "center"
+                          type: "box",
+                          layout: "horizontal",
+                          margin: "xs",
+                          contents: [
+                            { type: "text", text: `${completed.length} บิลชำระแล้ว · เฉลี่ย ฿${avgTicket.toFixed(0)}/บิล`, size: "xxs", color: "#4A6B3D", flex: 1 }
+                          ]
                         }
                       ]
                     },
