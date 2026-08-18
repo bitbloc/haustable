@@ -1136,7 +1136,7 @@ export default function POSDashboard() {
 
         // Construct cart fallback items from currentOrder.items in case order_items from DB is missing or empty
         const cartFallbackOrderItems = (currentOrder.items || []).map((ci, idx) => {
-            const isCustom = Boolean(ci.is_custom || (ci.menu_item_id == null && !String(ci.id).startsWith('db_') && ci.custom_name) || String(ci.id).startsWith('custom_') || (ci.menu_item_id == null && ci.custom_name));
+            const isCustom = Boolean(ci.is_custom === true || ci.is_emergency === true || String(ci.id).startsWith('custom_'));
             const resolvedName = ci.custom_name || ci.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
             const catId = ci.category_id || '';
             const DEFAULT_BAR_CATS = [
@@ -1199,7 +1199,7 @@ export default function POSDashboard() {
             setActiveBooking(targetBooking);
             // Update currentOrder item db_ids so they don't get re-submitted
             const updatedItems = (targetBooking.order_items || []).map(oi => {
-                const isCustom = Boolean(oi.is_custom || (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || String(oi.id).startsWith('custom_') || (oi.menu_item_id == null && oi.custom_name));
+                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
                 const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
                 
                 const catId = oi.menu_items?.category_id || oi.category_id || '';
@@ -1304,12 +1304,7 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             setSelectedTable(null);
             const existingItems = (booking.order_items || []).map(oi => {
-                const isCustom = Boolean(
-                    oi.is_custom || 
-                    (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
-                    String(oi.id).startsWith('custom_') || 
-                    (oi.menu_item_id == null && oi.custom_name)
-                );
+                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
                 const resolvedName = oi.custom_name 
                     || oi.menu_items?.name 
                     || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
@@ -1393,12 +1388,7 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             // Load existing items with unique cart-level IDs
             const existingItems = (booking.order_items || []).map(oi => {
-                const isCustom = Boolean(
-                    oi.is_custom || 
-                    (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
-                    String(oi.id).startsWith('custom_') || 
-                    (oi.menu_item_id == null && oi.custom_name)
-                );
+                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
                 const resolvedName = oi.custom_name 
                     || oi.menu_items?.name 
                     || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
@@ -1522,12 +1512,7 @@ export default function POSDashboard() {
         }
         
         const existingItems = (booking.order_items || []).map(oi => {
-            const isCustom = Boolean(
-                oi.is_custom || 
-                (oi.menu_item_id == null && !String(oi.id).startsWith('db_') && oi.custom_name) || 
-                String(oi.id).startsWith('custom_') || 
-                (oi.menu_item_id == null && oi.custom_name)
-            );
+            const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
             const resolvedName = oi.custom_name 
                 || oi.menu_items?.name 
                 || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
@@ -1644,9 +1629,9 @@ export default function POSDashboard() {
             const itemOpts = item.selected_options || item.optionsSummary || [];
             const itemNote = item.item_note || item.itemNote || '';
             const optsStr = JSON.stringify(itemOpts);
-            const targetMenuItemId = item.menu_item_id || (!item.is_custom && typeof item.id === 'string' && !item.id.startsWith('custom_') && !item.id.startsWith('draft_') ? item.id : null);
-            const isCustom = item.is_custom || item.is_emergency || !targetMenuItemId || String(item.id).startsWith('custom_');
-            const itemName = item.name || item.custom_name || 'เมนูเพิ่มเติม';
+            const isCustom = Boolean(item.is_custom === true || item.is_emergency === true || String(item.id).startsWith('custom_'));
+            const targetMenuItemId = isCustom ? null : (item.menu_item_id || item.id);
+            const itemName = item.name || item.custom_name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
 
             // Match only against NEW draft items (no db_id) so we never mutate items already stored in DB!
             const existingIndex = prev.items.findIndex(i => {
@@ -1661,9 +1646,29 @@ export default function POSDashboard() {
                 return existingOptsStr === optsStr && existingNote === itemNote;
             });
 
-            const resolvedDest = item.destination 
-                || (item.selected_options?.find(o => o.destination)?.destination)
-                || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
+            const catId = item.category_id || '';
+            const DEFAULT_BAR_CATS = [
+                '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+            ];
+            let resolvedDest = 'kitchen';
+            if (DEFAULT_BAR_CATS.includes(catId)) {
+                resolvedDest = 'bar';
+            } else if (item.destination === 'bar' || item.destination === 'drinks') {
+                resolvedDest = 'bar';
+            } else if (item.destination === 'other') {
+                resolvedDest = 'other';
+            } else if (itemOpts.some(o => {
+                const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+            })) {
+                resolvedDest = 'bar';
+            }
 
             if (existingIndex !== -1) {
                 const updatedItems = [...prev.items];
@@ -1688,16 +1693,16 @@ export default function POSDashboard() {
                         id: uniqueDraftId,
                         menu_item_id: targetMenuItemId,
                         name: itemName,
-                        custom_name: itemName,
+                        custom_name: isCustom ? (item.custom_name || itemName) : null,
                         price: parseFloat(item.price) || 0,
                         quantity: addQty,
                         selected_options: itemOpts,
                         item_note: itemNote,
-                        category_id: item.category_id || '',
+                        category_id: catId,
                         category_name: item.category?.name || item.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                         destination: resolvedDest,
                         is_custom: isCustom,
-                        is_emergency: item.is_emergency || isCustom,
+                        is_emergency: isCustom,
                         is_drink_stamp_eligible: item.is_drink_stamp_eligible || false
                     }
                 ]

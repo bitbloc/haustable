@@ -1,13 +1,15 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 /**
- * Singleton Audio & Notification Engine for POS & Kitchen Display System (KDS)
+ * Singleton High-Output Audio & Notification Engine for POS & Kitchen Display System (KDS)
  * 
  * Features:
- * - High-Gain Dynamics Compressor (Loud, punchy, distortion-free kitchen-grade acoustics)
- * - Multi-harmonic synthesized chimes (Cuts through ambient restaurant & hood fan noise)
- * - Centralized sliding-window event deduplicator (Prevents duplicate rings across tabs & events)
+ * - High-Gain Staging with Dynamics Compressor & Make-up Gain (+12dB Boost)
+ * - Industrial Multi-Harmonic Chimes (Cuts through noisy hood fans & ambient bar sound)
+ * - 2-Burst High-Impact Alert Rhythm
+ * - Device Hardware Volume Synchronized (Scales cleanly with Android/iOS system volume rockers)
+ * - Web Audio MediaElement Source Boost for custom audio URLs
+ * - Centralized sliding-window event deduplicator
  * - Mobile / WebView AudioContext auto-unlocker
- * - HTML5 Audio fallback cascading with volume locking (1.0)
  */
 
 let sharedAudioContext = null;
@@ -49,11 +51,13 @@ export function initAudioUnlocker() {
         window.removeEventListener('pointerdown', unlock);
         window.removeEventListener('touchstart', unlock);
         window.removeEventListener('keydown', unlock);
+        window.removeEventListener('click', unlock);
     };
 
     window.addEventListener('pointerdown', unlock, { once: true });
     window.addEventListener('touchstart', unlock, { once: true });
     window.addEventListener('keydown', unlock, { once: true });
+    window.addEventListener('click', unlock, { once: true });
 }
 
 // Auto-run unlocker setup on module import in browser
@@ -62,18 +66,27 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Create a master compressor node to maximize perceived loudness without clipping
+ * Master High-Gain Chain: Compressor -> High-Output Make-up Gain -> Destination
+ * Maximizes perceived loudness and clarity while preventing digital distortion.
  */
-function createMasterCompressor(ctx) {
+function createMasterOutputChain(ctx, boostFactor = 2.5) {
     try {
-        const compressor = ctx.createDynamicsCompressor();
         const now = ctx.currentTime;
-        compressor.threshold.setValueAtTime(-16, now);
-        compressor.knee.setValueAtTime(8, now);
-        compressor.ratio.setValueAtTime(10, now);
-        compressor.attack.setValueAtTime(0.002, now);
-        compressor.release.setValueAtTime(0.2, now);
-        compressor.connect(ctx.destination);
+        
+        // 1. Dynamics Compressor (Tight peak control)
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-12, now);
+        compressor.knee.setValueAtTime(6, now);
+        compressor.ratio.setValueAtTime(6, now);
+        compressor.attack.setValueAtTime(0.001, now);
+        compressor.release.setValueAtTime(0.12, now);
+
+        // 2. High-Output Make-up Gain (+8dB to +12dB punch)
+        const masterGain = ctx.createGain();
+        masterGain.gain.setValueAtTime(boostFactor, now);
+
+        compressor.connect(masterGain);
+        masterGain.connect(ctx.destination);
         return compressor;
     } catch (e) {
         return ctx.destination;
@@ -107,71 +120,100 @@ export function checkEventDeduplication(eventKey, cooldownMs = 6000) {
 }
 
 /**
- * Play high-impact, 3-stage kitchen chime (Harmonic Triangle + Sine blend)
- * Designed specifically to cut through noisy kitchen exhaust fans & bar ambiance
+ * Play Ultra-High Output Kitchen / Order Chime (2-Burst Multi-Harmonic Pentatonic Triad)
+ * Cuts through loud kitchen extractors, chatter, and background music.
  */
 export function playSynthChime() {
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
 
         const now = ctx.currentTime;
-        const masterOut = createMasterCompressor(ctx);
+        const masterOut = createMasterOutputChain(ctx, 2.5);
 
-        const playHarmonicTone = (freq, startTime, duration, gainLevel = 0.85) => {
-            // Fundamental Tone (Triangle for rich overtones)
+        const playPunchyHarmonicNote = (freq, startTime, duration, gainLevel = 1.0) => {
+            // 1. Fundamental Body (Triangle Wave - rich in low-mid warmth)
             const osc1 = ctx.createOscillator();
             const gain1 = ctx.createGain();
             osc1.type = 'triangle';
             osc1.frequency.setValueAtTime(freq, startTime);
             gain1.gain.setValueAtTime(0, startTime);
-            gain1.gain.linearRampToValueAtTime(gainLevel * 0.7, startTime + 0.02);
+            gain1.gain.linearRampToValueAtTime(gainLevel * 0.85, startTime + 0.015);
             gain1.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
             osc1.connect(gain1);
             gain1.connect(masterOut);
             osc1.start(startTime);
             osc1.stop(startTime + duration);
 
-            // 2nd Harmonic (Sine for body & piercing presence)
+            // 2. High-Frequency Bell Piercing Ring (Sine Wave at 2nd Harmonic 2x freq)
             const osc2 = ctx.createOscillator();
             const gain2 = ctx.createGain();
             osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(freq * 1.5, startTime); // Fifth overtone
+            osc2.frequency.setValueAtTime(freq * 2, startTime);
             gain2.gain.setValueAtTime(0, startTime);
-            gain2.gain.linearRampToValueAtTime(gainLevel * 0.35, startTime + 0.015);
-            gain2.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.8);
+            gain2.gain.linearRampToValueAtTime(gainLevel * 0.50, startTime + 0.012);
+            gain2.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.75);
             osc2.connect(gain2);
             gain2.connect(masterOut);
             osc2.start(startTime);
-            osc2.stop(startTime + duration * 0.8);
+            osc2.stop(startTime + duration * 0.75);
+
+            // 3. Transient Click / Attack Edge (Lowpass filtered square for snappy transient)
+            const osc3 = ctx.createOscillator();
+            const filter3 = ctx.createBiquadFilter();
+            const gain3 = ctx.createGain();
+            osc3.type = 'square';
+            osc3.frequency.setValueAtTime(freq * 0.5, startTime);
+            filter3.type = 'lowpass';
+            filter3.frequency.setValueAtTime(2400, startTime);
+            gain3.gain.setValueAtTime(0, startTime);
+            gain3.gain.linearRampToValueAtTime(gainLevel * 0.35, startTime + 0.008);
+            gain3.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
+            osc3.connect(filter3);
+            filter3.connect(gain3);
+            gain3.connect(masterOut);
+            osc3.start(startTime);
+            osc3.stop(startTime + 0.08);
         };
 
-        // 3-Tone Ascending Kitchen Triad (A5: 880Hz -> C#6: 1108Hz -> E6: 1318Hz)
-        playHarmonicTone(880.00, now, 0.28, 0.90);
-        playHarmonicTone(1108.73, now + 0.12, 0.28, 0.90);
-        playHarmonicTone(1318.51, now + 0.24, 0.50, 0.95);
+        // Burst 1: Ascending High Triad (A5: 880Hz -> C#6: 1108Hz -> E6: 1318Hz)
+        playPunchyHarmonicNote(880.00, now, 0.22, 1.0);
+        playPunchyHarmonicNote(1108.73, now + 0.10, 0.22, 1.0);
+        playPunchyHarmonicNote(1318.51, now + 0.20, 0.45, 1.15);
+
+        // Burst 2: Climax Ring after short pause (C#6: 1108Hz -> A6: 1760Hz)
+        playPunchyHarmonicNote(1108.73, now + 0.38, 0.18, 0.95);
+        playPunchyHarmonicNote(1760.00, now + 0.48, 0.65, 1.25);
     } catch (err) {
         console.warn('[AudioHelper] playSynthChime error:', err);
     }
 }
 
 /**
- * Play high-clarity Doorbell Chime (Ding-Dong: E5 659.25Hz -> C5 523.25Hz)
+ * Play Ultra-Clear Doorbell Chime (Ding-Dong: E5 659.25Hz -> C5 523.25Hz with rich harmonics)
  */
 export function playDoorbellChime() {
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
 
-        const masterOut = createMasterCompressor(ctx);
-        const playBellNote = (freq, startTime, duration) => {
+        const now = ctx.currentTime;
+        const masterOut = createMasterOutputChain(ctx, 2.5);
+
+        const playBellNote = (freq, startTime, duration, gainLevel = 1.0) => {
             // Main bell tone
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.type = 'sine';
+            osc.type = 'triangle';
             osc.frequency.setValueAtTime(freq, startTime);
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.85, startTime + 0.03);
+            gain.gain.linearRampToValueAtTime(gainLevel * 0.95, startTime + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
             osc.connect(gain);
             gain.connect(masterOut);
@@ -181,20 +223,19 @@ export function playDoorbellChime() {
             // Shimmer overtone (Bell harmonic 2.76x)
             const oscOvertone = ctx.createOscillator();
             const gainOvertone = ctx.createGain();
-            oscOvertone.type = 'triangle';
+            oscOvertone.type = 'sine';
             oscOvertone.frequency.setValueAtTime(freq * 2.76, startTime);
             gainOvertone.gain.setValueAtTime(0, startTime);
-            gainOvertone.gain.linearRampToValueAtTime(0.25, startTime + 0.015);
-            gainOvertone.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.4);
+            gainOvertone.gain.linearRampToValueAtTime(gainLevel * 0.45, startTime + 0.015);
+            gainOvertone.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.6);
             oscOvertone.connect(gainOvertone);
             gainOvertone.connect(masterOut);
             oscOvertone.start(startTime);
-            oscOvertone.stop(startTime + duration * 0.4);
+            oscOvertone.stop(startTime + duration * 0.6);
         };
 
-        const now = ctx.currentTime;
-        playBellNote(659.25, now, 0.55);        // Ding (E5)
-        playBellNote(523.25, now + 0.38, 0.85); // Dong (C5)
+        playBellNote(659.25, now, 0.55, 1.0);        // Ding (E5)
+        playBellNote(523.25, now + 0.35, 0.95, 1.15); // Dong (C5)
     } catch (err) {
         console.warn('[AudioHelper] playDoorbellChime error:', err);
     }
@@ -207,16 +248,19 @@ export function playBeepChime() {
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
 
         const now = ctx.currentTime;
-        const masterOut = createMasterCompressor(ctx);
+        const masterOut = createMasterOutputChain(ctx, 2.5);
 
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(960, now);
+        osc.frequency.setValueAtTime(1050, now);
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.85, now + 0.02);
+        gain.gain.linearRampToValueAtTime(1.1, now + 0.015);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
         osc.connect(gain);
         gain.connect(masterOut);
@@ -234,17 +278,20 @@ export function playUrgentTone() {
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
 
         const now = ctx.currentTime;
-        const masterOut = createMasterCompressor(ctx);
+        const masterOut = createMasterOutputChain(ctx, 2.5);
 
-        const playPulse = (freq, startTime, duration) => {
+        const playPulse = (freq, startTime, duration, gainLevel = 1.0) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sawtooth';
             osc.frequency.setValueAtTime(freq, startTime);
             gain.gain.setValueAtTime(0, startTime);
-            gain.gain.linearRampToValueAtTime(0.65, startTime + 0.015);
+            gain.gain.linearRampToValueAtTime(gainLevel * 0.85, startTime + 0.015);
             gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
             osc.connect(gain);
             gain.connect(masterOut);
@@ -252,8 +299,10 @@ export function playUrgentTone() {
             osc.stop(startTime + duration);
         };
 
-        playPulse(920, now, 0.18);
-        playPulse(1150, now + 0.12, 0.22);
+        playPulse(950, now, 0.16, 1.0);
+        playPulse(1250, now + 0.10, 0.20, 1.1);
+        playPulse(950, now + 0.26, 0.16, 1.0);
+        playPulse(1250, now + 0.36, 0.28, 1.2);
     } catch (err) {
         console.warn('[AudioHelper] playUrgentTone error:', err);
     }
@@ -285,6 +334,7 @@ export function playSystemAlertSound(customUrl = null, throttleMs = 2500, eventK
         try {
             if (!customAudioElement || customAudioElement.src !== customUrl) {
                 customAudioElement = new Audio(customUrl);
+                customAudioElement.crossOrigin = 'anonymous';
             } else {
                 customAudioElement.currentTime = 0;
             }

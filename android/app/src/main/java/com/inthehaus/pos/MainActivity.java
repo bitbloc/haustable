@@ -12,6 +12,8 @@ import android.content.Context;
 import android.view.Display;
 import android.hardware.display.DisplayManager;
 
+import android.media.AudioManager;
+
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.ServerSocket;
@@ -38,17 +40,15 @@ public class MainActivity extends BridgeActivity {
                     try {
                         WebView webView = instance.getBridge() != null ? instance.getBridge().getWebView() : null;
                         if (webView != null) {
-                            org.json.JSONObject obj = new org.json.JSONObject();
-                            obj.put("title", title != null ? title : "");
-                            obj.put("text", text != null ? text : "");
-                            obj.put("package", pkg != null ? pkg : "");
-                            obj.put("timestamp", System.currentTimeMillis());
-                            String jsonStr = obj.toString().replace("'", "\\'");
-                            String js = "if (window.onWmaNotificationOrder) { window.onWmaNotificationOrder(JSON.parse('" + jsonStr + "')); } else { window.dispatchEvent(new CustomEvent('wma_notification_order', { detail: JSON.parse('" + jsonStr + "') })); }";
+                            String encodedTitle = Base64.encodeToString(title != null ? title.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
+                            String encodedText = Base64.encodeToString(text != null ? text.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
+                            String encodedPkg = Base64.encodeToString(pkg != null ? pkg.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
+
+                            String js = String.format("try { var _data = { title: decodeURIComponent(escape(atob('%s'))), text: decodeURIComponent(escape(atob('%s'))), pkg: decodeURIComponent(escape(atob('%s'))) }; if (window.onWmaNotificationOrder) { window.onWmaNotificationOrder(_data); } window.dispatchEvent(new CustomEvent('wma_notification_order', { detail: _data })); window.dispatchEvent(new CustomEvent('wmaNotification', { detail: _data })); } catch (e) { console.error(e); }", encodedTitle, encodedText, encodedPkg);
                             webView.evaluateJavascript(js, null);
                         }
                     } catch (Exception e) {
-                        Log.e("WmaBridge", "Error dispatching notification to WebView: " + e.getMessage());
+                        Log.e("MainActivity", "Failed to dispatch WMA notification to WebView", e);
                     }
                 }
             });
@@ -59,6 +59,12 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         instance = this;
+        
+        try {
+            setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         
         try {
             WebView webView = getBridge().getWebView();

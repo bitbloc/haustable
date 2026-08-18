@@ -341,8 +341,8 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
-                const resolvedName = item.custom_name || item.name || 'เมนูเพิ่มเติม';
-                const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
+                const isCustom = Boolean(item.is_custom === true || item.is_emergency === true || String(item.id).startsWith('custom_'));
+                const resolvedName = item.custom_name || item.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
                 const resolvedDest = item.destination 
                     || (item.selected_options?.find(o => o.destination)?.destination)
                     || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
@@ -395,8 +395,8 @@ export function usePOSOrder() {
                 if (item.item_note) {
                     finalOpts.push({ name: `Note: ${item.item_note}` });
                 }
+                const isCustom = Boolean(item.is_custom === true || item.is_emergency === true || String(item.id).startsWith('custom_'));
                 const customName = item.custom_name || item.name || null;
-                const isCustom = item.is_custom || item.is_emergency || !resolveMenuItemId(item) || String(item.id).startsWith('custom_');
                 const resolvedDest = item.destination 
                     || (item.selected_options?.find(o => o.destination)?.destination)
                     || (item.selected_options?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์')) ? 'bar' : (item.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen'));
@@ -420,28 +420,29 @@ export function usePOSOrder() {
 
             const enrichedInserted = (insertedData || []).map((row, index) => {
                 const sourceItem = items[index] || {};
+                const isItemCustom = Boolean(row.is_custom === true || sourceItem.is_custom === true || sourceItem.is_emergency === true || String(sourceItem.id).startsWith('custom_'));
                 const resolvedDest = row.destination 
                     || sourceItem.destination 
                     || (sourceItem.selected_options?.find(o => o.destination)?.destination) 
                     || (row.selected_options?.find(o => o.destination)?.destination) 
                     || (sourceItem.category_id === '7524bb8a-4698-45c6-aa17-d8ccc296f667' ? 'bar' : 'kitchen');
                 const menuItemsObj = row.menu_items || {
-                    name: row.custom_name || sourceItem.name || 'เมนูเพิ่มเติม',
+                    name: row.custom_name || sourceItem.name || (isItemCustom ? 'เมนูเพิ่มเติม' : 'Item'),
                     category_id: sourceItem.category_id || '',
                     menu_categories: { name: sourceItem.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
                 };
-                const finalName = row.custom_name || row.name || menuItemsObj.name || sourceItem.name || 'เมนูเพิ่มเติม';
+                const finalName = row.custom_name || row.name || menuItemsObj.name || sourceItem.name || (isItemCustom ? 'เมนูเพิ่มเติม' : 'Item');
                 return {
                     ...row,
                     name: finalName,
-                    custom_name: row.custom_name || finalName,
+                    custom_name: isItemCustom ? (row.custom_name || finalName) : null,
                     category_id: row.category_id || menuItemsObj.category_id || sourceItem.category_id || '',
                     category_name: row.category_name || menuItemsObj.menu_categories?.name || sourceItem.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
                     menu_items: menuItemsObj,
                     selected_options: row.selected_options || sourceItem.selected_options || [],
                     item_note: sourceItem.item_note || '',
                     destination: resolvedDest,
-                    is_custom: row.is_custom || sourceItem.is_custom || false
+                    is_custom: isItemCustom
                 };
             });
 
