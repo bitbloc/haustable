@@ -1164,15 +1164,8 @@ export default function CustomerOrderLanding() {
                         </div>
                     </div>
 
-                    {/* Quick Nav Links (Arcade, Member) */}
-                    <div className="flex items-center divide-x divide-[var(--color-rule)]">
-                        <Link 
-                            to={`/arcade?tableId=${encodeURIComponent(table?.table_name || tableId)}`} 
-                            className="p-3 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
-                            title="Haus Arcade"
-                        >
-                            <Gamepad2 size={16} />
-                        </Link>
+                    {/* Quick Nav Links (Member) */}
+                    <div className="flex items-center">
                         <Link 
                             to="/member-card" 
                             className="p-3 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
@@ -1280,33 +1273,6 @@ export default function CustomerOrderLanding() {
                             )}
                         </button>
                     </div>
-                </div>
-
-                {/* Entertainment & Arcade Playground Banner */}
-                <div className="p-3 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
-                    <Link
-                        to={`/arcade?tableId=${encodeURIComponent(table?.table_name || tableId)}`}
-                        className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] rounded-sm flex items-center justify-between group transition-all"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] border border-[var(--color-ink)] flex items-center justify-center font-mono font-black text-xs shrink-0">
-                                P2E
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <span className="font-mono font-bold text-xs text-[var(--color-ink)] uppercase">HAUS ARCADE PLAYGROUND</span>
-                                    <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">REWARDS</span>
-                                </div>
-                                <span className="text-[10px] text-[var(--color-neutral)] mt-0.5 block">
-                                    เล่นเกม Flappy Cat / TaiPla สะสมแต้ม xhaus ระหว่างรอห้องครัวปรุงอาหาร
-                                </span>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-1 text-[var(--color-ink)] font-mono text-xs font-bold uppercase tracking-wider shrink-0">
-                            <span>PLAY</span>
-                            <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
-                        </div>
-                    </Link>
                 </div>
 
                 {/* Kitchen Cutoff High-Contrast Rams Notice Banner */}
