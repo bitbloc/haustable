@@ -972,7 +972,7 @@ export default function CustomerOrderLanding() {
                     pax: paxCount || table?.capacity || 2,
                     staff_remark: remarkStr,
                     tracking_token: trackingToken,
-                    total_amount: cartSubtotal,
+                    total_amount: 0,
                     user_id: memberProfile?.id || null
                 };
 
@@ -1039,10 +1039,19 @@ export default function CustomerOrderLanding() {
                 updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
             }
 
-            const newTotalAmount = (Number(currentBooking.total_amount) || 0) + cartSubtotal;
+            // Recalculate true total_amount from all items belonging to this booking
+            const { data: allBookingItems } = await supabase
+                .from('order_items')
+                .select('price_at_time, quantity')
+                .eq('booking_id', currentBooking.id);
+
+            const recalculatedTotal = (allBookingItems && allBookingItems.length > 0)
+                ? allBookingItems.reduce((sum, i) => sum + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0)
+                : cartSubtotal;
+
             const updateData = {
                 status: 'seated',
-                total_amount: newTotalAmount,
+                total_amount: recalculatedTotal,
                 staff_remark: updatedRemark
             };
             if (memberProfile?.id && !currentBooking.user_id) {

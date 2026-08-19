@@ -444,6 +444,21 @@ export function usePOSOrder() {
                 };
             });
 
+            if (isOnline() && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
+                try {
+                    const { data: allItems } = await supabase
+                        .from('order_items')
+                        .select('price_at_time, quantity')
+                        .eq('booking_id', bookingId);
+                    if (allItems && allItems.length > 0) {
+                        const newTotal = allItems.reduce((s, i) => s + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0);
+                        await supabase.from('bookings').update({ total_amount: newTotal }).eq('id', bookingId);
+                    }
+                } catch (tErr) {
+                    console.warn('[submitOrderItems] Total recalculate error:', tErr);
+                }
+            }
+
             return { bookingId, insertedItems: enrichedInserted };
         } catch (err) {
             console.error('Failed to submit items online, fallback to offline queue:', err);
@@ -820,12 +835,22 @@ export function usePOSOrder() {
                     .delete()
                     .eq('id', orderItemId);
                 if (error) console.warn("Supabase deleteOrderItem error:", error);
+
+                if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
+                    const { data: allItems } = await supabase
+                        .from('order_items')
+                        .select('price_at_time, quantity')
+                        .eq('booking_id', bookingId);
+                    const newTotal = (allItems || []).reduce((s, i) => s + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0);
+                    await supabase.from('bookings').update({ total_amount: newTotal }).eq('id', bookingId);
+                }
             }
             if (bookingId) {
                 const bookings = posCache.getBookings();
                 const booking = bookings.find(b => b.id === bookingId);
                 if (booking && booking.order_items) {
                     booking.order_items = booking.order_items.filter(i => i.id !== orderItemId);
+                    booking.total_amount = booking.order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                     posCache.setBookings(bookings);
                 }
             }
@@ -846,6 +871,15 @@ export function usePOSOrder() {
                     .update({ quantity: newQty })
                     .eq('id', orderItemId);
                 if (error) console.warn("Supabase updateOrderItemDbQty error:", error);
+
+                if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
+                    const { data: allItems } = await supabase
+                        .from('order_items')
+                        .select('price_at_time, quantity')
+                        .eq('booking_id', bookingId);
+                    const newTotal = (allItems || []).reduce((s, i) => s + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0);
+                    await supabase.from('bookings').update({ total_amount: newTotal }).eq('id', bookingId);
+                }
             }
             if (bookingId) {
                 const bookings = posCache.getBookings();
@@ -853,6 +887,7 @@ export function usePOSOrder() {
                 if (booking && booking.order_items) {
                     const item = booking.order_items.find(i => i.id === orderItemId);
                     if (item) item.quantity = newQty;
+                    booking.total_amount = booking.order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                     posCache.setBookings(bookings);
                 }
             }

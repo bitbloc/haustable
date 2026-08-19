@@ -617,17 +617,24 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
         ? Math.round(Number(booking.total_amount) * 100)
         : totalCents;
 
-    const adjustmentCents = bookedTotalCents - totalCents;
+    // If discount was applied (discountCents > 0) and bookedTotalCents was still at the pre-discount subtotal level,
+    // ensure bookedTotalCents reflects the discounted net total!
+    let finalBookedTotalCents = bookedTotalCents;
+    if (discountCents > 0 && Math.abs(bookedTotalCents - subtotalCents) < 50) {
+        finalBookedTotalCents = totalCents;
+    }
+
+    const adjustmentCents = finalBookedTotalCents - totalCents;
 
     return {
         subtotal: subtotalCents / 100,
         discount: discountCents / 100,
         netAfterDiscount: netAfterDiscountCents / 100,
         vat: vatCents / 100,
-        total: bookedTotalCents / 100,
+        total: finalBookedTotalCents / 100,
         calculatedTotal: totalCents / 100,
         adjustmentCents,
-        hasAdjustment: adjustmentCents !== 0,
+        hasAdjustment: Math.abs(adjustmentCents) >= 50,
         vatMode
     };
 }
@@ -2542,7 +2549,20 @@ export async function resolveBillingQrCode(booking, config = {}) {
     // Calculate exact outstanding bill balance (deduct deposit if already paid)
     const depositAmt = Number(booking.deposit_amount) || 0;
     const items = booking.order_items || booking.items || [];
-    const totalAmt = booking.total_amount ? parseFloat(booking.total_amount) : items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
+    const subtotalAmt = items.reduce((sum, i) => sum + ((Number(i.price_at_time ?? i.price) || 0) * (Number(i.quantity) || 1)), 0);
+    const discountAmt = Number(booking.discount_amount) || 0;
+
+    let totalAmt = 0;
+    if (booking.total_amount != null && Number.isFinite(Number(booking.total_amount)) && Number(booking.total_amount) > 0) {
+        // If discount was applied but booking.total_amount is still at pre-discount subtotal level, deduct discountAmt
+        if (discountAmt > 0 && Math.abs(Number(booking.total_amount) - subtotalAmt) < 1) {
+            totalAmt = Math.max(0, subtotalAmt - discountAmt);
+        } else {
+            totalAmt = parseFloat(booking.total_amount);
+        }
+    } else {
+        totalAmt = Math.max(0, subtotalAmt - discountAmt);
+    }
     const balanceDue = Math.max(0, totalAmt - depositAmt);
     const amountToPay = balanceDue > 0 ? balanceDue : totalAmt;
 

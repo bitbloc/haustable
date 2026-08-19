@@ -528,7 +528,7 @@ export default function SlipModal({ booking, type, onClose }) {
                 <div style="text-align: center; margin: 4px 0;">${generateDivider(printerConfig.divider_style || 'dashed', 32)}</div>
                 <div class="row total-row" style="font-size: 15px; padding-top: 2px;">
                     <span>ยอดรวมทั้งสิ้น (TOTAL)</span>
-                    <span>${Math.ceil(booking.total_amount || netAfterDiscount).toLocaleString()}</span>
+                    <span>${Math.ceil(discountVal > 0 ? (netAfterDiscount + vatVal) : (booking.total_amount || netAfterDiscount)).toLocaleString()}</span>
                 </div>
             </div>
         ` : ''
@@ -1137,7 +1137,9 @@ export default function SlipModal({ booking, type, onClose }) {
     
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
     const discountAmount = Number(booking.discount_amount) || 0;
-    const displayTotalAmount = booking.total_amount || Math.max(0, subtotal - discountAmount);
+    const displayTotalAmount = (discountAmount > 0 && Math.abs(Number(booking.total_amount) - subtotal) < 1)
+        ? Math.max(0, subtotal - discountAmount)
+        : (booking.total_amount || Math.max(0, subtotal - discountAmount));
 
     if (isAutoPrinting) {
         return null;

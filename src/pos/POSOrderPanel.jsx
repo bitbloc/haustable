@@ -1854,7 +1854,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             type="button"
                                             onClick={() => {
                                                 if (onOpenSlip) {
-                                                    onOpenSlip('billing');
+                                                    const totalDiscountVal = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
+                                                    onOpenSlip('billing', {
+                                                        discount_amount: totalDiscountVal,
+                                                        total_amount: total,
+                                                        xhaus_discount: xhausDiscount,
+                                                        manual_discount: manualDiscount,
+                                                        promo_discount: promoDiscount,
+                                                        member_discount: memberDiscount,
+                                                        include_tax: includeTax
+                                                    });
                                                 }
                                             }}
                                             className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] font-mono font-bold text-sm uppercase tracking-wider cursor-pointer"

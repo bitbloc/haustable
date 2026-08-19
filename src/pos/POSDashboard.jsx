@@ -1076,7 +1076,7 @@ export default function POSDashboard() {
         };
     }, []);
 
-    const handleSaveAndOpenSlip = async (type) => {
+    const handleSaveAndOpenSlip = async (type, checkoutMeta = null) => {
         if (submittingOrderRef.current || isSubmittingOrder) return;
         submittingOrderRef.current = true;
         setIsSubmittingOrder(true);
@@ -1201,7 +1201,16 @@ export default function POSDashboard() {
             targetBooking = {
                 ...(targetBooking || {}),
                 id: bookingId,
-                order_items: finalOrderItems
+                order_items: finalOrderItems,
+                ...(checkoutMeta ? {
+                    discount_amount: checkoutMeta.discount_amount ?? checkoutMeta.discountAmount ?? targetBooking?.discount_amount ?? 0,
+                    xhaus_discount: checkoutMeta.xhaus_discount ?? checkoutMeta.xhausDiscount ?? targetBooking?.xhaus_discount ?? 0,
+                    total_amount: checkoutMeta.total_amount ?? checkoutMeta.total ?? targetBooking?.total_amount,
+                    manual_discount: checkoutMeta.manual_discount,
+                    promo_discount: checkoutMeta.promo_discount,
+                    member_discount: checkoutMeta.member_discount,
+                    include_tax: checkoutMeta.include_tax
+                } : {})
             };
 
             if (targetBooking) {
