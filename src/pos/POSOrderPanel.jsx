@@ -545,6 +545,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     })();
 
     const computeCurrentCFDPayload = React.useCallback(() => {
+        const totalDiscountValue = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
         if (activeModal === 'checkout') {
             if (paymentMethod === 'qr') {
                 return {
@@ -552,7 +553,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     payload: {
                         items: order.items,
                         subtotal,
-                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                        discount: totalDiscountValue,
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
@@ -569,7 +570,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     payload: {
                         items: order.items,
                         subtotal,
-                        discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                        discount: totalDiscountValue,
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
@@ -588,7 +589,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 payload: {
                     items: order.items,
                     subtotal,
-                    discount: memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount,
+                    discount: totalDiscountValue,
                     tax,
                     total,
                     customer: order.customer || booking?.customer_name || 'Walk-in Guest',
@@ -599,7 +600,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         } else {
             return { type: 'IDLE' };
         }
-    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput, storePromptpayId]);
+    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput, storePromptpayId]);
 
     const lastBroadcastMsgRef = React.useRef('');
 
