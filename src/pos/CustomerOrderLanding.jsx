@@ -17,6 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
+import { sendPOSBroadcast } from '../utils/realtimeNotifier';
 
 // Haversine Distance Formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -697,6 +698,13 @@ export default function CustomerOrderLanding() {
                 });
             }
 
+            // Instant Realtime Broadcast to POS (< 50ms)
+            sendPOSBroadcast('call_staff', {
+                table_id: effectiveNumericTableId,
+                table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId}`,
+                booking_id: currentBooking?.id
+            });
+
             toast.success('แจ้งเรียกพนักงานเรียบร้อยแล้ว กรุณารอสักครู่ครับ');
         } catch (err) {
             console.error("Failed to call staff:", err);
@@ -708,6 +716,7 @@ export default function CustomerOrderLanding() {
 
     const handleRequestBill = async () => {
         if (!activeBooking || requestingBill) return;
+        const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
         setRequestingBill(true);
         try {
             const currentRemark = activeBooking.staff_remark || '';
@@ -721,6 +730,13 @@ export default function CustomerOrderLanding() {
                 .eq('id', activeBooking.id);
 
             if (error) throw error;
+
+            // Instant Realtime Broadcast to POS (< 50ms)
+            sendPOSBroadcast('call_bill', {
+                table_id: effectiveNumericTableId || activeBooking.table_id,
+                table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId || activeBooking.table_id}`,
+                booking_id: activeBooking.id
+            });
 
             toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
             refreshActiveBooking();
@@ -943,50 +959,6 @@ export default function CustomerOrderLanding() {
         }
 
         try {
-            // Fetch latest active table session to prevent session duplication
-            const { data: latestTableSession } = await supabase
-                .from('bookings')
-                .select('*')
-                .eq('table_id', effectiveNumericTableId)
-                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .order('booking_time', { ascending: false })
-                .limit(1)
-                .maybeSingle();
-
-            let currentBooking = (latestTableSession && isBookingActiveAndFresh(latestTableSession)) 
-                ? latestTableSession 
-                : (activeBooking && isBookingActiveAndFresh(activeBooking) ? activeBooking : null);
-
-            let remarkStr = 'QR Walk-in Guest';
-            if (tableRemarkInput.trim()) {
-                remarkStr += ` [NOTE: ${tableRemarkInput.trim()}]`;
-            }
-
-            if (!currentBooking) {
-                const trackingToken = crypto.randomUUID();
-                const newBookingPayload = {
-                    table_id: effectiveNumericTableId,
-                    status: 'seated',
-                    booking_type: 'walk_in',
-                    booking_time: new Date().toISOString(),
-                    pax: paxCount || table?.capacity || 2,
-                    staff_remark: remarkStr,
-                    tracking_token: trackingToken,
-                    total_amount: 0,
-                    user_id: memberProfile?.id || null
-                };
-
-                const { data: newBooking, error: createError } = await supabase
-                    .from('bookings')
-                    .insert(newBookingPayload)
-                    .select()
-                    .single();
-
-                if (createError) throw createError;
-                currentBooking = newBooking;
-            }
-
-            // Insert new items into order_items with destination & price
             const DEFAULT_BAR_CATS = [
                 '7524bb8a-4698-45c6-aa17-d8ccc296f667',
                 '912683ef-fdc3-40a3-8dd8-b09507791240',
@@ -1012,7 +984,6 @@ export default function CustomerOrderLanding() {
                 }
 
                 return {
-                    booking_id: currentBooking.id,
                     menu_item_id: isCustom ? null : item.id,
                     quantity: item.qty,
                     price_at_time: item.totalPricePerUnit,
@@ -1025,45 +996,140 @@ export default function CustomerOrderLanding() {
                 };
             });
 
-            const { error: itemsError } = await supabase
-                .from('order_items')
-                .insert(itemsToInsert);
+            let finalBookingId = null;
+            let finalTrackingToken = null;
+            let finalTotalAmount = cartSubtotal;
+            let rpcSucceeded = false;
 
-            if (itemsError) throw itemsError;
+            // 1. Primary Ultra-Fast Path: Atomic PostgreSQL RPC
+            try {
+                const existingToken = activeBooking?.tracking_token || localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${effectiveNumericTableId}_token`);
+                const { data: rpcResult, error: rpcError } = await supabase.rpc('submit_customer_qr_order', {
+                    p_table_id: effectiveNumericTableId,
+                    p_items: itemsToInsert,
+                    p_user_id: memberProfile?.id || null,
+                    p_pax: paxCount || table?.capacity || 2,
+                    p_customer_note: tableRemarkInput.trim(),
+                    p_tracking_token: existingToken || null
+                });
 
-            let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
-            if (!updatedRemark.toLowerCase().includes('qr')) {
-                updatedRemark = `[QR] ${updatedRemark}`;
-            }
-            if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
-                updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
-            }
-
-            // Recalculate true total_amount from all items belonging to this booking
-            const { data: allBookingItems } = await supabase
-                .from('order_items')
-                .select('price_at_time, quantity')
-                .eq('booking_id', currentBooking.id);
-
-            const recalculatedTotal = (allBookingItems && allBookingItems.length > 0)
-                ? allBookingItems.reduce((sum, i) => sum + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0)
-                : cartSubtotal;
-
-            const updateData = {
-                status: 'seated',
-                total_amount: recalculatedTotal,
-                staff_remark: updatedRemark
-            };
-            if (memberProfile?.id && !currentBooking.user_id) {
-                updateData.user_id = memberProfile.id;
+                if (!rpcError && rpcResult?.success) {
+                    finalBookingId = rpcResult.booking_id;
+                    finalTrackingToken = rpcResult.tracking_token;
+                    finalTotalAmount = rpcResult.total_amount;
+                    rpcSucceeded = true;
+                } else if (rpcError && rpcError.code !== 'PGRST202') {
+                    console.warn('[Checkout] RPC execution warning:', rpcError);
+                }
+            } catch (rpcEx) {
+                console.warn('[Checkout] RPC not available, falling back to direct batch operations:', rpcEx);
             }
 
-            const { error: bookingUpdateError } = await supabase
-                .from('bookings')
-                .update(updateData)
-                .eq('id', currentBooking.id);
+            // 2. Resilient Fallback: Optimized Direct Queries
+            if (!rpcSucceeded) {
+                const { data: latestTableSession } = await supabase
+                    .from('bookings')
+                    .select('*')
+                    .eq('table_id', effectiveNumericTableId)
+                    .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                    .order('booking_time', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-            if (bookingUpdateError) throw bookingUpdateError;
+                let currentBooking = (latestTableSession && isBookingActiveAndFresh(latestTableSession)) 
+                    ? latestTableSession 
+                    : (activeBooking && isBookingActiveAndFresh(activeBooking) ? activeBooking : null);
+
+                let remarkStr = 'QR Walk-in Guest';
+                if (tableRemarkInput.trim()) {
+                    remarkStr += ` [NOTE: ${tableRemarkInput.trim()}]`;
+                }
+
+                if (!currentBooking) {
+                    const trackingToken = crypto.randomUUID();
+                    const newBookingPayload = {
+                        table_id: effectiveNumericTableId,
+                        status: 'seated',
+                        booking_type: 'walk_in',
+                        booking_time: new Date().toISOString(),
+                        pax: paxCount || table?.capacity || 2,
+                        staff_remark: remarkStr,
+                        tracking_token: trackingToken,
+                        total_amount: 0,
+                        source: 'qr',
+                        user_id: memberProfile?.id || null
+                    };
+
+                    const { data: newBooking, error: createError } = await supabase
+                        .from('bookings')
+                        .insert(newBookingPayload)
+                        .select()
+                        .single();
+
+                    if (createError) throw createError;
+                    currentBooking = newBooking;
+                }
+
+                const dbItemsToInsert = itemsToInsert.map(item => ({
+                    ...item,
+                    booking_id: currentBooking.id
+                }));
+
+                const { error: itemsError } = await supabase
+                    .from('order_items')
+                    .insert(dbItemsToInsert);
+
+                if (itemsError) throw itemsError;
+
+                let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
+                if (!updatedRemark.toLowerCase().includes('qr')) {
+                    updatedRemark = `[QR] ${updatedRemark}`;
+                }
+                if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
+                    updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
+                }
+
+                const { data: allBookingItems } = await supabase
+                    .from('order_items')
+                    .select('price_at_time, quantity')
+                    .eq('booking_id', currentBooking.id);
+
+                const recalculatedTotal = (allBookingItems && allBookingItems.length > 0)
+                    ? allBookingItems.reduce((sum, i) => sum + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0)
+                    : cartSubtotal;
+
+                const updateData = {
+                    status: 'seated',
+                    source: 'qr',
+                    total_amount: recalculatedTotal,
+                    staff_remark: updatedRemark
+                };
+                if (memberProfile?.id && !currentBooking.user_id) {
+                    updateData.user_id = memberProfile.id;
+                }
+
+                const { error: bookingUpdateError } = await supabase
+                    .from('bookings')
+                    .update(updateData)
+                    .eq('id', currentBooking.id);
+
+                if (bookingUpdateError) throw bookingUpdateError;
+
+                finalBookingId = currentBooking.id;
+                finalTrackingToken = currentBooking.tracking_token;
+                finalTotalAmount = recalculatedTotal;
+            }
+
+            // 3. Instant Realtime WebSocket Broadcast to POS (< 50ms)
+            const displayTableName = table?.table_name || `โต๊ะ #${effectiveNumericTableId}`;
+            sendPOSBroadcast('qr_order_created', {
+                booking_id: finalBookingId,
+                table_id: effectiveNumericTableId,
+                table_name: displayTableName,
+                items_count: cartCount,
+                total_amount: finalTotalAmount,
+                source: 'qr'
+            });
 
             toast.success('ออเดอร์ถูกส่งไปยังห้องครัวแล้ว!');
             setCart([]);
@@ -1071,9 +1137,12 @@ export default function CustomerOrderLanding() {
             setTableRemarkInput('');
             
             // Save active tracking token to local storage
-            localStorage.setItem(`table_${tableId}_token`, currentBooking.tracking_token);
+            if (finalTrackingToken) {
+                if (tableId) localStorage.setItem(`table_${tableId}_token`, finalTrackingToken);
+                localStorage.setItem(`table_${effectiveNumericTableId}_token`, finalTrackingToken);
+            }
 
-            // Redirect to status page
+            // Redirect to status page immediately
             navigate(`/table/${encodeURIComponent(table?.table_name || tableId)}/status`);
 
         } catch (err) {

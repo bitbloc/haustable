@@ -14,6 +14,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
+import { sendPOSBroadcast } from '../utils/realtimeNotifier';
 
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
@@ -244,6 +245,14 @@ export default function CustomerOrderStatus() {
                 .eq('id', booking.id);
 
             if (error) throw error;
+
+            // Instant Realtime Broadcast to POS (< 50ms)
+            const tableDisplayName = resolvedTableInfo?.table_name || booking.tables_layout?.table_name || `โต๊ะ #${booking.table_id || tableId}`;
+            sendPOSBroadcast('call_bill', {
+                table_id: booking.table_id || resolvedTableInfo?.id,
+                table_name: tableDisplayName,
+                booking_id: booking.id
+            });
 
             toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
             fetchActiveOrder(true);

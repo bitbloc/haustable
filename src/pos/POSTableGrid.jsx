@@ -77,7 +77,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         fetchTables();
         fetchFloorplan();
 
-        const bookingsSub = supabase.channel('pos-tables-bookings')
+        const bookingsSub = supabase.channel('pos-realtime-notifications')
+            .on('broadcast', { event: 'qr_order_created' }, fetchTables)
+            .on('broadcast', { event: 'call_staff' }, fetchTables)
+            .on('broadcast', { event: 'call_bill' }, fetchTables)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchTables)
             .subscribe((status, err) => {
@@ -94,10 +97,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // 20-second polling fallback to keep grid fresh if realtime fails
+        // 6-second polling fallback to keep grid fresh if realtime fails
         const pollInterval = setInterval(() => {
             fetchTables();
-        }, 20000);
+        }, 6000);
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {

@@ -871,8 +871,8 @@ export default function POSDashboard() {
         window.addEventListener('pageshow', handleForegroundWakeup);
         window.addEventListener('online', handleOnlineStatus);
 
-        // Poll pending orders every 20 seconds as fallback to Supabase Realtime
-        const pollInterval = setInterval(checkPendingOrders, 20000);
+        // Poll pending orders every 6 seconds as fallback to Supabase Realtime
+        const pollInterval = setInterval(checkPendingOrders, 6000);
 
         // Realtime sync: Auto-update draft cart item prices when menu items change
         const handlePosMenuUpdated = (e) => {
@@ -992,6 +992,112 @@ export default function POSDashboard() {
         loadTablesMap();
 
         const notifyChannel = supabase.channel('pos-realtime-notifications')
+            .on('broadcast', { event: 'qr_order_created' }, async ({ payload }) => {
+                console.log('⚡ [Realtime POS] Instant broadcast qr_order_created received:', payload);
+                const bId = payload?.booking_id;
+                const tId = payload?.table_id;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const qrItemAlertKey = `order_items_${bId || tId}`;
+
+                if (checkEventDeduplication(qrItemAlertKey, 4500)) {
+                    console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}`);
+                    playOrderAlert(qrItemAlertKey, 600, 3.4);
+                    toast.custom((t) => (
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
+                            toast.dismiss(t);
+                            if (tId) {
+                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                    if (data) handleSelectTable(data);
+                                });
+                            }
+                        }}>
+                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">QR Order · ออเดอร์เข้าใหม่</span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            </div>
+                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว</div>
+                        </div>
+                    ), { id: qrItemAlertKey, duration: 10000 });
+                    pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                }
+
+                if (bId) {
+                    if (window.autoPrintDebounceTimer) {
+                        clearTimeout(window.autoPrintDebounceTimer);
+                    }
+                    window.autoPrintDebounceTimer = setTimeout(() => {
+                        handleAutoPrintQROrder(bId, tName);
+                    }, 400);
+                }
+
+                // If currently viewing this table, sync order items immediately
+                if (activeBookingRef.current?.id === bId) {
+                    refreshActiveBookingItems(bId);
+                }
+
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            })
+            .on('broadcast', { event: 'call_staff' }, async ({ payload }) => {
+                console.log('⚡ [Realtime POS] Instant broadcast call_staff received:', payload);
+                const tId = payload?.table_id;
+                const bId = payload?.booking_id || tId;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const callStaffKey = `${bId}_CALL_STAFF`;
+
+                if (checkEventDeduplication(callStaffKey, 5000)) {
+                    toast.custom((t) => (
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                            toast.dismiss(t);
+                            if (tId) {
+                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                    if (data) handleSelectTable(data);
+                                });
+                            }
+                        }}>
+                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Staff · เรียกพนักงาน</span>
+                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                            </div>
+                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} เรียกพนักงาน</div>
+                        </div>
+                    ), { id: callStaffKey, duration: 10000 });
+                    pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
+                    playStaffCallAlert(callStaffKey);
+                }
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            })
+            .on('broadcast', { event: 'call_bill' }, async ({ payload }) => {
+                console.log('⚡ [Realtime POS] Instant broadcast call_bill received:', payload);
+                const tId = payload?.table_id;
+                const bId = payload?.booking_id || tId;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const callBillKey = `${bId}_CALL_BILL`;
+
+                if (checkEventDeduplication(callBillKey, 5000)) {
+                    toast.custom((t) => (
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                            toast.dismiss(t);
+                            if (tId) {
+                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                    if (data) handleSelectTable(data);
+                                });
+                            }
+                        }}>
+                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Bill · เรียกเช็คบิล</span>
+                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                            </div>
+                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} เรียกเช็คบิล</div>
+                        </div>
+                    ), { id: callBillKey, duration: 10000 });
+                    pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
+                    playBillAlert(callBillKey);
+                }
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            })
             .on('postgres_changes', { 
                 event: '*', 
                 schema: 'public', 
