@@ -447,7 +447,9 @@ export default function CustomerOrderStatus() {
                                 <div className="flex gap-2">
                                     <span className="font-bold font-mono text-[var(--color-accent)]">{item.quantity}x</span>
                                     <div>
-                                        <span className="font-bold text-[var(--color-ink)] block leading-tight">{item.menu_items?.name}</span>
+                                        <span className="font-bold text-[var(--color-ink)] block leading-tight">
+                                            {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
+                                        </span>
                                         {item.selected_options && (
                                             <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono space-y-0.5">
                                                 {Array.isArray(item.selected_options) ? (

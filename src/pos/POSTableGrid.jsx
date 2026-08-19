@@ -114,11 +114,11 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             try {
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Fetch active seated and confirmed bookings for store floorplan display
+                // Fetch active pending, seated, confirmed, ready bookings for store floorplan display
                 const { data: activeBookings } = await supabase
                     .from('bookings')
                     .select('*')
-                    .in('status', ['seated', 'confirmed', 'ready']);
+                    .in('status', ['pending', 'seated', 'confirmed', 'ready']);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -129,11 +129,11 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                 const merged = currentTables.map(t => {
                     // Seated/active floorplan bookings bind to physical table cards
-                    const activeBooking = currentBookings.find(b => b.table_id === t.id && ['seated', 'confirmed', 'ready'].includes(b.status));
+                    const activeBooking = currentBookings.find(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
 
                     return {
                         ...t,
-                        status: activeBooking ? 'occupied' : 'free',
+                        status: activeBooking ? (activeBooking.status === 'pending' ? 'pending' : 'occupied') : 'free',
                         booking: activeBooking || null,
                         upcomingConflict: null
                     };
