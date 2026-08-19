@@ -1619,34 +1619,13 @@ export default function POSDashboard() {
             setView('online_hub');
         };
 
-        const autoRestoreActiveTable = async () => {
-            try {
-                const activeTableId = localStorage.getItem('pos_active_table_id');
-                if (activeTableId) {
-                    const { data: tableData } = await supabase
-                        .from('tables_layout')
-                        .select('*')
-                        .eq('id', activeTableId)
-                        .maybeSingle();
-                    if (tableData) {
-                        const booking = await getActiveBooking(tableData.id);
-                        if (booking) {
-                            handleSelectTable(tableData);
-                            return;
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Auto restore active table failed:", err);
-            }
-        };
-
         const params = new URLSearchParams(window.location.search);
         if (params.get('autoSelect') === 'pending') {
             autoSelectPending();
             window.history.replaceState({}, document.title, window.location.pathname);
         } else {
-            autoRestoreActiveTable();
+            // Clean initial state: Always start on Tables view
+            localStorage.removeItem('pos_active_table_id');
         }
     }, []);
 
