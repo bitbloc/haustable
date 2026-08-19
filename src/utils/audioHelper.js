@@ -293,9 +293,9 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
 }
 
 /**
- * Play decoded AudioBuffer through the High-Gain Web Audio Mastering Chain
+ * Play decoded AudioBuffer cleanly with amplification directly to speakers
  */
-function playAudioBufferDirectly(buffer, boostFactor = 3.2) {
+function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return false;
@@ -305,8 +305,10 @@ function playAudioBufferDirectly(buffer, boostFactor = 3.2) {
 
         const source = ctx.createBufferSource();
         source.buffer = buffer;
-        const masterInput = createMasterOutputChain(ctx, boostFactor);
-        source.connect(masterInput);
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(boostFactor, ctx.currentTime);
+        source.connect(gainNode);
+        gainNode.connect(ctx.destination);
         source.start(0);
         return true;
     } catch (err) {
@@ -542,11 +544,7 @@ export function playSlipAlert(eventKey = null) {
  * Customer Arrival / Check-in Alert
  */
 export function playDoorbellAlert(eventKey = null) {
-    if (eventKey && !checkEventDeduplication(`doorbell_${eventKey}`, 4500)) {
-        return false;
-    }
-    playDoorbellChime();
-    return true;
+    return playOrderAlert(eventKey ? `doorbell_${eventKey}` : null, 1000, 3.2);
 }
 
 /**

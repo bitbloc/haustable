@@ -28,7 +28,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     onUpdateGuestCount,
     onInjectRewardItem,
     onRemoveRewardItem,
-    onAddEmergencyItem
+    onAddEmergencyItem,
+    onOpenMenu
 }) {
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
     const [showEmergencyModal, setShowEmergencyModal] = React.useState(false);
@@ -705,7 +706,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         )}
                     </div>
                     {booking && order.table && (
-                        <div className="flex gap-1.5 mt-1.5">
+                        <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                            {onOpenMenu && (
+                                <button 
+                                    onClick={onOpenMenu}
+                                    className="text-[8px] font-bold bg-[#1A1A1A] hover:bg-black text-white px-2 py-0.5 rounded cursor-pointer transition-all active:scale-95 flex items-center gap-1 font-mono uppercase shadow-2xs"
+                                    title="เปิดเมนูเพื่อเพิ่มรายการอาหารให้โต๊ะนี้"
+                                >
+                                    <span>+ สั่งอาหาร (Menu)</span>
+                                </button>
+                            )}
                             <button 
                                 onClick={() => onMoveTable?.()}
                                 className="text-[8px] font-bold bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded cursor-pointer transition-all active:scale-95"

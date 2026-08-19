@@ -1489,7 +1489,13 @@ export default function POSDashboard() {
             customer: customerName,
             table: tableObj
         });
-        setView('menu');
+        
+        // Table orders stay on 'tables' view; Direct / Pickup orders open in 'menu' view
+        if (tableObj) {
+            setView('tables');
+        } else {
+            setView('menu');
+        }
     };
 
     const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount, deleteOrderItem, updateOrderItemDbQty } = usePOSOrder();
@@ -1520,7 +1526,8 @@ export default function POSDashboard() {
                 customer: booking.customer_name || 'Customer',
                 table: table
             });
-            setView('menu');
+            // Keep on 'tables' view so the floorplan remains visible
+            setView('tables');
         } else {
             // Table is empty -> Show Open Table Modal to mandate entering guest count!
             setActiveBooking(null);
@@ -1549,7 +1556,8 @@ export default function POSDashboard() {
                 setActiveBooking(newBooking);
                 toast.success(`เปิดโต๊ะ ${openTableModalData.table.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
                 setOpenTableModalData(null);
-                setView('menu');
+                // Keep on 'tables' view so staff sees the open table on the floorplan
+                setView('tables');
             } else {
                 toast.error('ไม่สามารถเปิดโต๊ะได้', { id: toastId });
             }
@@ -2648,6 +2656,7 @@ export default function POSDashboard() {
                             onUpdateItemNote={handleUpdateItemNote}
                             onClear={handleClearOrderOrTable}
                             onCheckout={handleCheckout}
+                            onOpenMenu={() => setView('menu')}
                             onInjectRewardItem={handleInjectRewardItem}
                             onRemoveRewardItem={handleRemoveRewardItem}
                             onAddEmergencyItem={handleAddToOrder}
