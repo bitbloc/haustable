@@ -828,12 +828,13 @@ export function usePOSOrder() {
     const deleteOrderItem = async (orderItemId, bookingId = null) => {
         if (!orderItemId) return true;
         try {
-            const isLocal = typeof orderItemId === 'string' && orderItemId.startsWith('local_');
+            const cleanId = String(orderItemId).replace(/^db_/, '');
+            const isLocal = typeof cleanId === 'string' && cleanId.startsWith('local_');
             if (isOnline() && !isLocal) {
                 const { error } = await supabase
                     .from('order_items')
                     .delete()
-                    .eq('id', orderItemId);
+                    .eq('id', cleanId);
                 if (error) console.warn("Supabase deleteOrderItem error:", error);
 
                 if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
@@ -849,7 +850,7 @@ export function usePOSOrder() {
                 const bookings = posCache.getBookings();
                 const booking = bookings.find(b => b.id === bookingId);
                 if (booking && booking.order_items) {
-                    booking.order_items = booking.order_items.filter(i => i.id !== orderItemId);
+                    booking.order_items = booking.order_items.filter(i => String(i.id).replace(/^db_/, '') !== cleanId);
                     booking.total_amount = booking.order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                     posCache.setBookings(bookings);
                 }
@@ -864,12 +865,13 @@ export function usePOSOrder() {
     const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null) => {
         if (!orderItemId || newQty <= 0) return true;
         try {
-            const isLocal = typeof orderItemId === 'string' && orderItemId.startsWith('local_');
+            const cleanId = String(orderItemId).replace(/^db_/, '');
+            const isLocal = typeof cleanId === 'string' && cleanId.startsWith('local_');
             if (isOnline() && !isLocal) {
                 const { error } = await supabase
                     .from('order_items')
                     .update({ quantity: newQty })
-                    .eq('id', orderItemId);
+                    .eq('id', cleanId);
                 if (error) console.warn("Supabase updateOrderItemDbQty error:", error);
 
                 if (bookingId && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
@@ -885,7 +887,7 @@ export function usePOSOrder() {
                 const bookings = posCache.getBookings();
                 const booking = bookings.find(b => b.id === bookingId);
                 if (booking && booking.order_items) {
-                    const item = booking.order_items.find(i => i.id === orderItemId);
+                    const item = booking.order_items.find(i => String(i.id).replace(/^db_/, '') === cleanId);
                     if (item) item.quantity = newQty;
                     booking.total_amount = booking.order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                     posCache.setBookings(bookings);

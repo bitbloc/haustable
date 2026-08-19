@@ -21,10 +21,70 @@ import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportDa
 import { playSynthChime, playDoorbellChime, playSystemAlertSound as playSystemAlertSoundUtil } from '../utils/audioHelper';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
+const DEFAULT_BAR_CATS = [
+    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+];
+
+function formatDbOrderItemToCart(oi) {
+    if (!oi) return null;
+    const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
+    const resolvedName = oi.custom_name 
+        || oi.menu_items?.name 
+        || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+        || oi.name 
+        || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+    
+    const catId = oi.menu_items?.category_id || oi.category_id || '';
+    let resolvedDest = 'kitchen';
+    if (DEFAULT_BAR_CATS.includes(catId)) {
+        resolvedDest = 'bar';
+    } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+        resolvedDest = 'bar';
+    } else if (oi.destination === 'other') {
+        resolvedDest = 'other';
+    } else if (oi.selected_options?.some(o => {
+        const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+        return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+    })) {
+        resolvedDest = 'bar';
+    }
+
+    const rawId = oi.id || `item_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const cleanDbId = typeof rawId === 'string' && rawId.startsWith('db_') ? rawId.replace(/^db_/, '') : rawId;
+
+    return {
+        id: String(rawId).startsWith('db_') ? rawId : `db_${rawId}`,
+        menu_item_id: oi.menu_item_id,
+        name: resolvedName,
+        custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+        price: parseFloat(oi.price_at_time ?? oi.price) || 0,
+        quantity: oi.quantity || 1,
+        db_id: cleanDbId,
+        selected_options: oi.selected_options || [],
+        category_id: oi.menu_items?.category_id || oi.category_id || '',
+        category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+        destination: resolvedDest,
+        is_custom: isCustom,
+        is_emergency: isCustom,
+        is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+    };
+}
+
 export default function POSDashboard() {
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
     const [selectedTable, setSelectedTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
+    const activeBookingRef = useRef(activeBooking);
+    useEffect(() => {
+        activeBookingRef.current = activeBooking;
+    }, [activeBooking]);
+
     const [currentOrder, setCurrentOrder] = useState({
         items: [],
         note: ''
@@ -685,6 +745,37 @@ export default function POSDashboard() {
         }
     };
 
+    const refreshActiveBookingItems = async (bookingId) => {
+        if (!bookingId) return;
+        if (activeBookingRef.current?.id !== bookingId) return;
+        try {
+            const { data: latestBooking, error } = await supabase
+                .from('bookings')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                .eq('id', bookingId)
+                .maybeSingle();
+
+            if (error || !latestBooking) return;
+
+            if (activeBookingRef.current?.id === bookingId) {
+                setActiveBooking(latestBooking);
+
+                const dbItems = (latestBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+
+                // Preserve local draft items currently being entered by staff
+                setCurrentOrder(prev => {
+                    const localDraftItems = (prev.items || []).filter(i => !i.db_id);
+                    return {
+                        ...prev,
+                        items: [...dbItems, ...localDraftItems]
+                    };
+                });
+            }
+        } catch (err) {
+            console.warn('[refreshActiveBookingItems] Failed to sync latest items:', err);
+        }
+    };
+
     const checkPendingOrders = async () => {
         try {
             const today = new Date().toISOString().split('T')[0];
@@ -1055,18 +1146,30 @@ export default function POSDashboard() {
                 }
             })
             .on('postgres_changes', {
-                event: 'INSERT',
+                event: '*',
                 schema: 'public',
                 table: 'order_items'
             }, (payload) => {
-                const bookingId = payload.new?.booking_id;
+                const bookingId = payload.new?.booking_id || payload.old?.booking_id;
                 if (bookingId) {
-                    if (window.autoPrintDebounceTimer) {
-                        clearTimeout(window.autoPrintDebounceTimer);
+                    if (payload.eventType === 'INSERT') {
+                        if (window.autoPrintDebounceTimer) {
+                            clearTimeout(window.autoPrintDebounceTimer);
+                        }
+                        window.autoPrintDebounceTimer = setTimeout(() => {
+                            handleAutoPrintQROrder(bookingId);
+                        }, 800); // Debounce bulk inserts
                     }
-                    window.autoPrintDebounceTimer = setTimeout(() => {
-                        handleAutoPrintQROrder(bookingId);
-                    }, 800); // Debounce bulk inserts
+
+                    // If staff currently has this booking open on screen, auto-refresh the order items in real-time
+                    if (activeBookingRef.current?.id === bookingId) {
+                        if (window.activeBookingSyncDebounceTimer) {
+                            clearTimeout(window.activeBookingSyncDebounceTimer);
+                        }
+                        window.activeBookingSyncDebounceTimer = setTimeout(() => {
+                            refreshActiveBookingItems(bookingId);
+                        }, 500);
+                    }
                 }
             })
             .subscribe();
@@ -1216,50 +1319,7 @@ export default function POSDashboard() {
             if (targetBooking) {
                 setActiveBooking(targetBooking);
                 // Update currentOrder item db_ids with guaranteed unique IDs
-                const updatedItems = (targetBooking.order_items || []).map(oi => {
-                    const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-                    const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-                    
-                    const catId = oi.menu_items?.category_id || oi.category_id || '';
-                    const DEFAULT_BAR_CATS = [
-                        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-                    ];
-                    let resolvedDest = 'kitchen';
-                    if (DEFAULT_BAR_CATS.includes(catId)) {
-                        resolvedDest = 'bar';
-                    } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                        resolvedDest = 'bar';
-                    } else if (oi.destination === 'other') {
-                        resolvedDest = 'other';
-                    } else if (oi.selected_options?.some(o => {
-                        const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                        return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
-                    })) {
-                        resolvedDest = 'bar';
-                    }
-
-                    return {
-                        id: `db_${oi.id}`,
-                        menu_item_id: oi.menu_item_id,
-                        name: resolvedName,
-                        custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                        price: oi.price_at_time ?? oi.price,
-                        quantity: oi.quantity,
-                        db_id: oi.id,
-                        selected_options: oi.selected_options || [],
-                        destination: resolvedDest,
-                        is_custom: isCustom,
-                        is_emergency: isCustom,
-                        category_id: oi.category_id || oi.menu_items?.category_id || '',
-                        category_name: oi.category_name || oi.menu_items?.menu_categories?.name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร')
-                    };
-                });
+                const updatedItems = (targetBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
                 setCurrentOrder(prev => ({
                     ...prev,
                     items: updatedItems
@@ -1311,8 +1371,8 @@ export default function POSDashboard() {
         if (!booking) return;
 
         let fullBooking = booking;
-        // If booking doesn't have order_items or full relations loaded, fetch directly by booking.id
-        if (!fullBooking.order_items || fullBooking.order_items.length === 0 || !fullBooking.tables_layout) {
+        // ALWAYS fetch fresh booking details with complete relations from database if online
+        if (isOnline() && typeof booking.id === 'string' && !booking.id.startsWith('local_')) {
             try {
                 const { data } = await supabase
                     .from('bookings')
@@ -1342,55 +1402,7 @@ export default function POSDashboard() {
 
         setActiveBooking(fullBooking);
 
-        const existingItems = (fullBooking.order_items || []).map(oi => {
-            const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-            const resolvedName = oi.custom_name 
-                || oi.menu_items?.name 
-                || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
-                || oi.name 
-                || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-            
-            const catId = oi.menu_items?.category_id || oi.category_id || '';
-            const DEFAULT_BAR_CATS = [
-                '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-            ];
-            let resolvedDest = 'kitchen';
-            if (DEFAULT_BAR_CATS.includes(catId)) {
-                resolvedDest = 'bar';
-            } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                resolvedDest = 'bar';
-            } else if (oi.destination === 'other') {
-                resolvedDest = 'other';
-            } else if (oi.selected_options?.some(o => {
-                const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
-            })) {
-                resolvedDest = 'bar';
-            }
-
-            return {
-                id: `db_${oi.id}`,
-                menu_item_id: oi.menu_item_id,
-                name: resolvedName,
-                custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                price: parseFloat(oi.price_at_time ?? oi.price) || 0,
-                quantity: oi.quantity,
-                db_id: oi.id,
-                selected_options: oi.selected_options || [],
-                category_id: oi.menu_items?.category_id || oi.category_id || '',
-                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                destination: resolvedDest,
-                is_custom: isCustom,
-                is_emergency: isCustom,
-                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
-            };
-        });
+        const existingItems = (fullBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
 
         const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
         const customerName = fullBooking.profiles?.display_name 
@@ -1428,55 +1440,7 @@ export default function POSDashboard() {
         if (booking) {
             setActiveBooking(booking);
             // Load existing items with unique cart-level IDs
-            const existingItems = (booking.order_items || []).map(oi => {
-                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-                const resolvedName = oi.custom_name 
-                    || oi.menu_items?.name 
-                    || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
-                    || oi.name 
-                    || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-                
-                const catId = oi.menu_items?.category_id || oi.category_id || '';
-                const DEFAULT_BAR_CATS = [
-                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-                ];
-                let resolvedDest = 'kitchen';
-                if (DEFAULT_BAR_CATS.includes(catId)) {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'other') {
-                    resolvedDest = 'other';
-                } else if (oi.selected_options?.some(o => {
-                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
-                })) {
-                    resolvedDest = 'bar';
-                }
-
-                return {
-                    id: `db_${oi.id}`,
-                    menu_item_id: oi.menu_item_id,
-                    name: resolvedName,
-                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                    price: parseFloat(oi.price_at_time ?? oi.price) || 0,
-                    quantity: oi.quantity,
-                    db_id: oi.id,
-                    selected_options: oi.selected_options || [],
-                    category_id: oi.menu_items?.category_id || oi.category_id || '',
-                    category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                    destination: resolvedDest,
-                    is_custom: isCustom,
-                    is_emergency: isCustom,
-                    is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
-                };
-            });
+            const existingItems = (booking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
             setCurrentOrder({
                 items: existingItems,
                 customer: booking.customer_name || 'Customer',
@@ -1552,50 +1516,7 @@ export default function POSDashboard() {
             }
         }
         
-        const existingItems = (booking.order_items || []).map(oi => {
-            const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-            const resolvedName = oi.custom_name 
-                || oi.menu_items?.name 
-                || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
-                || oi.name 
-                || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-            
-            const catId = oi.menu_items?.category_id || oi.category_id || '';
-            const DEFAULT_BAR_CATS = [
-                '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-            ];
-            let resolvedDest = 'kitchen';
-            if (DEFAULT_BAR_CATS.includes(catId)) {
-                resolvedDest = 'bar';
-            } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                resolvedDest = 'bar';
-            } else if (oi.destination === 'other') {
-                resolvedDest = 'other';
-            }
-
-            return {
-                id: `db_${oi.id}`,
-                menu_item_id: oi.menu_item_id,
-                name: resolvedName,
-                custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                price: parseFloat(oi.price_at_time ?? oi.price) || 0,
-                quantity: oi.quantity,
-                db_id: oi.id,
-                selected_options: oi.selected_options || [],
-                category_id: oi.menu_items?.category_id || oi.category_id || '',
-                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                destination: resolvedDest,
-                is_custom: isCustom,
-                is_emergency: isCustom,
-                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
-            };
-        });
+        const existingItems = (booking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
         setCurrentOrder({
             items: existingItems,
             customer: booking.pickup_contact_name || booking.customer_name || booking.customer_note || 'Walk-in Pick-up',
@@ -1752,6 +1673,9 @@ export default function POSDashboard() {
     }, []);
 
     const handleUpdateQuantity = useCallback((itemId, delta) => {
+        let currentTargetItem = null;
+        let nextQty = 0;
+
         setCurrentOrder(prev => {
             const targetItem = prev.items.find(i => i.id === itemId);
             if (!targetItem) return prev;
@@ -1763,15 +1687,8 @@ export default function POSDashboard() {
             }
 
             const newQty = Math.max(0, targetItem.quantity + delta);
-
-            // If item is saved in database (has db_id) and quantity reaches 0, delete it from order_items in Supabase!
-            if (targetItem.db_id) {
-                if (newQty === 0) {
-                    deleteOrderItem(targetItem.db_id, activeBooking?.id);
-                } else {
-                    updateOrderItemDbQty(targetItem.db_id, newQty, activeBooking?.id);
-                }
-            }
+            currentTargetItem = targetItem;
+            nextQty = newQty;
 
             return {
                 ...prev,
@@ -1783,7 +1700,33 @@ export default function POSDashboard() {
                 }).filter(item => item.quantity > 0)
             };
         });
-    }, [activeBooking, deleteOrderItem, updateOrderItemDbQty]);
+
+        // Perform asynchronous DB sync outside the state updater function
+        if (currentTargetItem && currentTargetItem.db_id) {
+            const currentBookingId = activeBookingRef.current?.id;
+            const cleanDbId = String(currentTargetItem.db_id).replace(/^db_/, '');
+
+            if (nextQty === 0) {
+                deleteOrderItem(cleanDbId, currentBookingId);
+                // Also update activeBooking state in memory
+                setActiveBooking(prev => {
+                    if (!prev || !prev.order_items) return prev;
+                    const updatedOrderItems = prev.order_items.filter(i => String(i.id).replace(/^db_/, '') !== cleanDbId);
+                    const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
+                    return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
+                });
+            } else {
+                updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                // Also update activeBooking state in memory
+                setActiveBooking(prev => {
+                    if (!prev || !prev.order_items) return prev;
+                    const updatedOrderItems = prev.order_items.map(i => String(i.id).replace(/^db_/, '') === cleanDbId ? { ...i, quantity: nextQty } : i);
+                    const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
+                    return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
+                });
+            }
+        }
+    }, [deleteOrderItem, updateOrderItemDbQty]);
 
     const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({
