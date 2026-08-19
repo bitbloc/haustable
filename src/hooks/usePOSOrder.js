@@ -815,7 +815,8 @@ export function usePOSOrder() {
     const deleteOrderItem = async (orderItemId, bookingId = null) => {
         if (!orderItemId) return true;
         try {
-            if (isOnline() && typeof orderItemId === 'string' && !orderItemId.startsWith('local_')) {
+            const isLocal = typeof orderItemId === 'string' && orderItemId.startsWith('local_');
+            if (isOnline() && !isLocal) {
                 const { error } = await supabase
                     .from('order_items')
                     .delete()
@@ -840,7 +841,8 @@ export function usePOSOrder() {
     const updateOrderItemDbQty = async (orderItemId, newQty, bookingId = null) => {
         if (!orderItemId || newQty <= 0) return true;
         try {
-            if (isOnline() && typeof orderItemId === 'string' && !orderItemId.startsWith('local_')) {
+            const isLocal = typeof orderItemId === 'string' && orderItemId.startsWith('local_');
+            if (isOnline() && !isLocal) {
                 const { error } = await supabase
                     .from('order_items')
                     .update({ quantity: newQty })

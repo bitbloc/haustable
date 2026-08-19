@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getAppOrigin } from '../utils/urlHelper'
 
 export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const submittingRef = useRef(false)
     const [error, setError] = useState(null)
 
     const registerSlipSafely = async (bookingId, fileName, amount) => {
@@ -29,6 +30,8 @@ export function useOrderSubmission() {
         lineIdToken = null,
         onSuccess
     }) => {
+        if (submittingRef.current || isSubmitting) return { success: false, error: 'In progress' }
+        submittingRef.current = true
         setIsSubmitting(true)
         setError(null)
         try {
@@ -181,6 +184,7 @@ export function useOrderSubmission() {
             setError(err.message)
             return { success: false, error: err.message }
         } finally {
+            submittingRef.current = false
             setIsSubmitting(false)
         }
     }

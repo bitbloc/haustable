@@ -350,7 +350,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                 <motion.div
                                     key={order.id}
                                     whileHover={{ scale: 1.01 }}
-                                    className={`border rounded-2xl p-4 transition-all shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden ${
+                                    onClick={() => onSelectOrder && onSelectOrder(order)}
+                                    className={`border rounded-2xl p-4 transition-all shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer ${
                                         isVoid 
                                         ? 'bg-red-50/50 border-red-200 hover:border-red-400 opacity-90' 
                                         : 'bg-white border-[#D1D1CD] hover:border-[#1A1A1A]'
@@ -444,7 +445,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     <div className={`grid ${order.payment_slip_url ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 pt-1 font-mono text-[9px] font-bold uppercase tracking-wider`}>
                                         <button
                                             type="button"
-                                            onClick={() => onOpenSlip && onOpenSlip(order, 'kitchen')}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onOpenSlip && onOpenSlip(order, 'kitchen');
+                                            }}
                                             className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
                                         >
                                             <ReceiptText size={10} /> SLIP
@@ -453,7 +457,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                         {order.payment_slip_url && (
                                             <button
                                                 type="button"
-                                                onClick={() => setViewSlipUrl(order.payment_slip_url)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setViewSlipUrl(order.payment_slip_url);
+                                                }}
                                                 className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
                                                 title="ดูสลิปหลักฐานโอนเงิน"
                                             >
@@ -463,7 +470,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
                                         <button
                                             type="button"
-                                            onClick={() => onSelectOrder && onSelectOrder(order)}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSelectOrder && onSelectOrder(order);
+                                            }}
                                             className={`w-full py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate ${
                                                 isVoid 
                                                 ? 'bg-red-100 hover:bg-red-200 border border-red-300 text-red-800' 

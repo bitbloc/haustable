@@ -159,6 +159,8 @@ export default function POSDashboard() {
     const [crmMembers, setCrmMembers] = useState([]);
     const [crmLoading, setCrmLoading] = useState(false);
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+    const submittingOrderRef = useRef(false);
+    const processingQrPrintRef = useRef(new Set());
 
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
@@ -616,6 +618,8 @@ export default function POSDashboard() {
 
     const handleAutoPrintQROrder = async (bookingId, tableNameHint = 'TABLE') => {
         if (!bookingId) return;
+        if (processingQrPrintRef.current.has(bookingId)) return;
+        processingQrPrintRef.current.add(bookingId);
         try {
             const { data: fullBooking } = await supabase
                 .from('bookings')
@@ -674,6 +678,10 @@ export default function POSDashboard() {
             }
         } catch (err) {
             console.error("Auto print QR order error:", err);
+        } finally {
+            setTimeout(() => {
+                processingQrPrintRef.current.delete(bookingId);
+            }, 1000);
         }
     };
 
@@ -1069,195 +1077,208 @@ export default function POSDashboard() {
     }, []);
 
     const handleSaveAndOpenSlip = async (type) => {
-        if (isSubmittingOrder) return;
+        if (submittingOrderRef.current || isSubmittingOrder) return;
+        submittingOrderRef.current = true;
         setIsSubmittingOrder(true);
         try {
             if (currentOrder.items.length === 0 && !activeBooking) {
-            toast.error("No items in order to print");
-            return;
-        }
-
-        let bookingId = activeBooking?.id;
-        let currentBooking = activeBooking;
-
-        // 1. Create walk-in if no active booking
-        if (!bookingId) {
-            const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
-            const newBooking = selectedTable 
-                ? await createWalkIn(selectedTable, null, memberIdToPass)
-                : await createWalkInPickup('Walk-in Customer', memberIdToPass);
-            if (!newBooking) return;
-            bookingId = newBooking.id;
-            currentBooking = newBooking;
-        }
-
-        // Attach CRM member if attached in local draft state
-        const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
-        if (memberToAttach?.id && bookingId && (!currentBooking?.user_id || currentBooking.user_id !== memberToAttach.id)) {
-            await attachCustomerToBooking(bookingId, memberToAttach.id);
-            currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
-        }
-
-        // 2. Submit items
-        const newItems = currentOrder.items.filter(i => !i.db_id);
-        let newlyInsertedRows = [];
-        if (newItems.length > 0) {
-            const result = await submitOrderItems(bookingId, newItems);
-            if (!result) return;
-            if (typeof result === 'object' && result.bookingId) {
-                bookingId = result.bookingId;
-                newlyInsertedRows = result.insertedItems || [];
-            } else if (typeof result === 'string') {
-                bookingId = result;
+                toast.error("No items in order to print");
+                return;
             }
-        }
 
-        // 3. Reload the booking to get updated order_items and references
-        let updatedBooking = null;
-        if (selectedTable?.id) {
-            updatedBooking = await getActiveBooking(selectedTable.id);
-        }
+            let bookingId = activeBooking?.id;
+            let currentBooking = activeBooking;
 
-        if (!updatedBooking && bookingId) {
-            if (isOnline()) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, menu_categories(name)))')
-                    .eq('id', bookingId)
-                    .maybeSingle();
-                updatedBooking = data;
-            } else {
-                const cached = posCache.getBookings();
-                updatedBooking = cached.find(b => b.id === bookingId);
+            // 1. Create walk-in if no active booking
+            if (!bookingId) {
+                const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
+                const newBooking = selectedTable 
+                    ? await createWalkIn(selectedTable, null, memberIdToPass)
+                    : await createWalkInPickup('Walk-in Customer', memberIdToPass);
+                if (!newBooking) return;
+                bookingId = newBooking.id;
+                currentBooking = newBooking;
             }
-        }
 
-        let targetBooking = updatedBooking || currentBooking;
+            // Attach CRM member if attached in local draft state
+            const memberToAttach = attachedMemberCrm || activeBooking?.profiles;
+            if (memberToAttach?.id && bookingId && (!currentBooking?.user_id || currentBooking.user_id !== memberToAttach.id)) {
+                await attachCustomerToBooking(bookingId, memberToAttach.id);
+                currentBooking = { ...currentBooking, user_id: memberToAttach.id, profiles: memberToAttach };
+            }
 
-        // Construct cart fallback items from currentOrder.items in case order_items from DB is missing or empty
-        const cartFallbackOrderItems = (currentOrder.items || []).map((ci, idx) => {
-            const isCustom = Boolean(ci.is_custom === true || ci.is_emergency === true || String(ci.id).startsWith('custom_'));
-            const resolvedName = ci.custom_name || ci.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-            const catId = ci.category_id || '';
-            const DEFAULT_BAR_CATS = [
-                '7524bb8a-4698-45c6-aa17-d8ccc296f667',
-                '912683ef-fdc3-40a3-8dd8-b09507791240',
-                'b441665e-2f23-4df3-a11d-63485e1690dc',
-                'a2c783fc-975b-4779-b9eb-67391eeafd1f',
-                '1983955d-5787-4351-b729-51b95761f125',
-                '1407d869-4eed-489e-aeeb-ba7ef19f57bd',
-                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'
-            ];
-            let resolvedDest = DEFAULT_BAR_CATS.includes(catId) || ci.destination === 'bar' ? 'bar' : (ci.destination === 'other' ? 'other' : 'kitchen');
-
-            return {
-                id: ci.db_id || ci.id || `cart_item_${idx}`,
-                booking_id: bookingId,
-                menu_item_id: ci.id || ci.menu_item_id,
-                quantity: Number(ci.quantity) || 1,
-                price_at_time: Number(ci.price) || 0,
-                price: Number(ci.price) || 0,
-                selected_options: ci.selected_options || [],
-                item_note: ci.item_note || '',
-                name: resolvedName,
-                custom_name: isCustom ? (ci.custom_name || resolvedName) : null,
-                destination: resolvedDest,
-                is_custom: isCustom,
-                is_emergency: isCustom,
-                category_id: ci.category_id || '',
-                category_name: ci.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                menu_items: {
-                    name: resolvedName,
-                    category_id: ci.category_id || '',
-                    menu_categories: { name: ci.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
+            // 2. Submit items
+            const newItems = currentOrder.items.filter(i => !i.db_id);
+            let newlyInsertedRows = [];
+            if (newItems.length > 0) {
+                const result = await submitOrderItems(bookingId, newItems);
+                if (!result) return;
+                if (typeof result === 'object' && result.bookingId) {
+                    bookingId = result.bookingId;
+                    newlyInsertedRows = result.insertedItems || [];
+                } else if (typeof result === 'string') {
+                    bookingId = result;
                 }
-            };
-        });
-
-        const existingOrderItems = targetBooking?.order_items || [];
-        const existingIds = new Set(existingOrderItems.map(i => i.id || i.menu_item_id));
-        const mergedItems = [...existingOrderItems];
-
-        newlyInsertedRows.forEach(row => {
-            const rowKey = row.id || row.menu_item_id;
-            if (!existingIds.has(rowKey)) {
-                mergedItems.push(row);
-                existingIds.add(rowKey);
             }
-        });
 
-        // Ensure order_items is never empty if cart has items
-        const finalOrderItems = mergedItems.length > 0 ? mergedItems : cartFallbackOrderItems;
+            // 3. Reload the booking to get updated order_items and references
+            let updatedBooking = null;
+            if (selectedTable?.id) {
+                updatedBooking = await getActiveBooking(selectedTable.id);
+            }
 
-        targetBooking = {
-            ...(targetBooking || {}),
-            id: bookingId,
-            order_items: finalOrderItems
-        };
+            if (!updatedBooking && bookingId) {
+                if (isOnline()) {
+                    const { data } = await supabase
+                        .from('bookings')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, menu_categories(name)))')
+                        .eq('id', bookingId)
+                        .maybeSingle();
+                    updatedBooking = data;
+                } else {
+                    const cached = posCache.getBookings();
+                    updatedBooking = cached.find(b => b.id === bookingId);
+                }
+            }
 
-        if (targetBooking) {
-            setActiveBooking(targetBooking);
-            // Update currentOrder item db_ids so they don't get re-submitted
-            const updatedItems = (targetBooking.order_items || []).map(oi => {
-                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-                const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-                
-                const catId = oi.menu_items?.category_id || oi.category_id || '';
+            let targetBooking = updatedBooking || currentBooking;
+
+            // Construct cart fallback items from currentOrder.items in case order_items from DB is missing or empty
+            const cartFallbackOrderItems = (currentOrder.items || []).map((ci, idx) => {
+                const isCustom = Boolean(ci.is_custom === true || ci.is_emergency === true || String(ci.id).startsWith('custom_'));
+                const resolvedName = ci.custom_name || ci.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                const catId = ci.category_id || '';
                 const DEFAULT_BAR_CATS = [
-                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+                    '7524bb8a-4698-45c6-aa17-d8ccc296f667',
+                    '912683ef-fdc3-40a3-8dd8-b09507791240',
+                    'b441665e-2f23-4df3-a11d-63485e1690dc',
+                    'a2c783fc-975b-4779-b9eb-67391eeafd1f',
+                    '1983955d-5787-4351-b729-51b95761f125',
+                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd',
+                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'
                 ];
-                let resolvedDest = 'kitchen';
-                if (DEFAULT_BAR_CATS.includes(catId)) {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'other') {
-                    resolvedDest = 'other';
-                } else if (oi.selected_options?.some(o => {
-                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
-                })) {
-                    resolvedDest = 'bar';
-                }
+                let resolvedDest = DEFAULT_BAR_CATS.includes(catId) || ci.destination === 'bar' ? 'bar' : (ci.destination === 'other' ? 'other' : 'kitchen');
 
                 return {
-                    id: oi.menu_item_id || oi.id,
+                    id: ci.db_id || ci.id || `cart_item_${idx}`,
+                    booking_id: bookingId,
+                    menu_item_id: ci.id || ci.menu_item_id,
+                    quantity: Number(ci.quantity) || 1,
+                    price_at_time: Number(ci.price) || 0,
+                    price: Number(ci.price) || 0,
+                    selected_options: ci.selected_options || [],
+                    item_note: ci.item_note || '',
                     name: resolvedName,
-                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                    price: oi.price_at_time ?? oi.price,
-                    quantity: oi.quantity,
-                    db_id: oi.id,
-                    selected_options: oi.selected_options || [],
+                    custom_name: isCustom ? (ci.custom_name || resolvedName) : null,
                     destination: resolvedDest,
                     is_custom: isCustom,
                     is_emergency: isCustom,
-                    category_id: oi.category_id || oi.menu_items?.category_id || '',
-                    category_name: oi.category_name || oi.menu_items?.menu_categories?.name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร')
+                    category_id: ci.category_id || '',
+                    category_name: ci.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                    menu_items: {
+                        name: resolvedName,
+                        category_id: ci.category_id || '',
+                        menu_categories: { name: ci.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร') }
+                    }
                 };
             });
-            setCurrentOrder(prev => ({
-                ...prev,
-                items: updatedItems
-            }));
-            
-            if (newItems.length > 0) {
-                toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+
+            const existingOrderItems = targetBooking?.order_items || [];
+            const existingIds = new Set(existingOrderItems.map(i => i.id || i.menu_item_id));
+            const mergedItems = [...existingOrderItems];
+
+            newlyInsertedRows.forEach(row => {
+                const rowKey = row.id || row.menu_item_id;
+                if (!existingIds.has(rowKey)) {
+                    mergedItems.push(row);
+                    existingIds.add(rowKey);
+                }
+            });
+
+            // Ensure order_items is never empty if cart has items
+            const finalOrderItems = mergedItems.length > 0 ? mergedItems : cartFallbackOrderItems;
+
+            targetBooking = {
+                ...(targetBooking || {}),
+                id: bookingId,
+                order_items: finalOrderItems
+            };
+
+            if (targetBooking) {
+                setActiveBooking(targetBooking);
+                // Update currentOrder item db_ids with guaranteed unique IDs
+                const updatedItems = (targetBooking.order_items || []).map(oi => {
+                    const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
+                    const resolvedName = oi.custom_name || oi.name || oi.menu_items?.name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+                    
+                    const catId = oi.menu_items?.category_id || oi.category_id || '';
+                    const DEFAULT_BAR_CATS = [
+                        '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                        '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                        'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                        'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                        '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                        '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                        '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+                    ];
+                    let resolvedDest = 'kitchen';
+                    if (DEFAULT_BAR_CATS.includes(catId)) {
+                        resolvedDest = 'bar';
+                    } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                        resolvedDest = 'bar';
+                    } else if (oi.destination === 'other') {
+                        resolvedDest = 'other';
+                    } else if (oi.selected_options?.some(o => {
+                        const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                        return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+                    })) {
+                        resolvedDest = 'bar';
+                    }
+
+                    return {
+                        id: `db_${oi.id}`,
+                        menu_item_id: oi.menu_item_id,
+                        name: resolvedName,
+                        custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+                        price: oi.price_at_time ?? oi.price,
+                        quantity: oi.quantity,
+                        db_id: oi.id,
+                        selected_options: oi.selected_options || [],
+                        destination: resolvedDest,
+                        is_custom: isCustom,
+                        is_emergency: isCustom,
+                        category_id: oi.category_id || oi.menu_items?.category_id || '',
+                        category_name: oi.category_name || oi.menu_items?.menu_categories?.name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร')
+                    };
+                });
+                setCurrentOrder(prev => ({
+                    ...prev,
+                    items: updatedItems
+                }));
+                
+                if (newItems.length > 0) {
+                    toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+                }
+                
+                // Track newly printed items in QR tracker so realtime listener doesn't double print
+                if (newlyInsertedRows.length > 0 && bookingId) {
+                    const storageKey = `qr_printed_items_${bookingId}`;
+                    try {
+                        const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                        const combined = [...printed, ...newlyInsertedRows.map(r => r.id)];
+                        localStorage.setItem(storageKey, JSON.stringify(combined));
+                    } catch (e) {}
+                }
+
+                // For kitchen slips, ONLY print the newly inserted items if they exist
+                let printBooking = targetBooking;
+                if (type === 'kitchen' && newlyInsertedRows.length > 0) {
+                    printBooking = { ...targetBooking, order_items: newlyInsertedRows };
+                }
+                openSlipOrSilentPrint(printBooking, type);
             }
-            
-            // For kitchen slips, ONLY print the newly inserted items if they exist
-            let printBooking = targetBooking;
-            if (type === 'kitchen' && newlyInsertedRows.length > 0) {
-                printBooking = { ...targetBooking, order_items: newlyInsertedRows };
-            }
-            openSlipOrSilentPrint(printBooking, type);
-        }
         } finally {
+            submittingOrderRef.current = false;
             setIsSubmittingOrder(false);
         }
     };
@@ -1277,92 +1298,103 @@ export default function POSDashboard() {
         }
     };
 
-
     const handleSelectOpenBill = async (booking) => {
         if (!booking) return;
 
-        if (booking.table_id && booking.tables_layout) {
-            handleSelectTable(booking.tables_layout);
-        } else if (booking.table_id) {
+        let fullBooking = booking;
+        // If booking doesn't have order_items or full relations loaded, fetch directly by booking.id
+        if (!fullBooking.order_items || fullBooking.order_items.length === 0 || !fullBooking.tables_layout) {
             try {
-                const { data: tableData } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .eq('id', booking.table_id)
+                const { data } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                    .eq('id', booking.id)
                     .maybeSingle();
-                if (tableData) {
-                    handleSelectTable(tableData);
-                } else {
-                    handleSelectPickupOrder(booking);
-                }
+                if (data) fullBooking = data;
             } catch (e) {
-                handleSelectPickupOrder(booking);
+                console.warn('Could not fetch full booking details for open bill:', e);
             }
-        } else if (booking.booking_type === 'pickup') {
-            handleSelectPickupOrder(booking);
-        } else {
-            setActiveBooking(booking);
-            setSelectedTable(null);
-            const existingItems = (booking.order_items || []).map(oi => {
-                const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
-                const resolvedName = oi.custom_name 
-                    || oi.menu_items?.name 
-                    || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
-                    || oi.name 
-                    || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
-                
-                const catId = oi.menu_items?.category_id || oi.category_id || '';
-                const DEFAULT_BAR_CATS = [
-                    '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
-                    '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
-                    'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
-                    'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
-                    '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
-                    '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
-                    '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
-                ];
-                let resolvedDest = 'kitchen';
-                if (DEFAULT_BAR_CATS.includes(catId)) {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
-                    resolvedDest = 'bar';
-                } else if (oi.destination === 'other') {
-                    resolvedDest = 'other';
-                } else if (oi.selected_options?.some(o => {
-                    const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                    return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
-                })) {
-                    resolvedDest = 'bar';
-                }
-
-                return {
-                    id: `db_${oi.id}`,
-                    menu_item_id: oi.menu_item_id,
-                    name: resolvedName,
-                    custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
-                    price: parseFloat(oi.price_at_time ?? oi.price) || 0,
-                    quantity: oi.quantity,
-                    db_id: oi.id,
-                    selected_options: oi.selected_options || [],
-                    category_id: oi.menu_items?.category_id || oi.category_id || '',
-                    category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
-                    destination: resolvedDest,
-                    is_custom: isCustom,
-                    is_emergency: isCustom
-                };
-            });
-            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
-            const customerName = booking.profiles?.display_name 
-                || (booking.customer_name && !defaultWalkIns.includes(booking.customer_name.toLowerCase().trim()) ? booking.customer_name : null)
-                || (booking.pickup_contact_name && !defaultWalkIns.includes(booking.pickup_contact_name.toLowerCase().trim()) ? booking.pickup_contact_name : null)
-                || 'Guest';
-            setCurrentOrder({
-                items: existingItems,
-                customer: customerName,
-                table: null
-            });
-            setView('menu');
         }
+
+        const tableObj = fullBooking.tables_layout || null;
+        if (tableObj?.id) {
+            setSelectedTable(tableObj);
+            localStorage.setItem('pos_active_table_id', tableObj.id);
+        } else {
+            setSelectedTable(null);
+            localStorage.removeItem('pos_active_table_id');
+        }
+
+        if (fullBooking.profiles) {
+            setAttachedMemberCrm(fullBooking.profiles);
+        } else {
+            setAttachedMemberCrm(null);
+        }
+
+        setActiveBooking(fullBooking);
+
+        const existingItems = (fullBooking.order_items || []).map(oi => {
+            const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
+            const resolvedName = oi.custom_name 
+                || oi.menu_items?.name 
+                || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+                || oi.name 
+                || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
+            
+            const catId = oi.menu_items?.category_id || oi.category_id || '';
+            const DEFAULT_BAR_CATS = [
+                '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
+                '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
+                'b441665e-2f23-4df3-a11d-63485e1690dc', // Beer
+                'a2c783fc-975b-4779-b9eb-67391eeafd1f', // Alcohol
+                '1983955d-5787-4351-b729-51b95761f125', // Mocktail & Cocktail
+                '1407d869-4eed-489e-aeeb-ba7ef19f57bd', // Bottled
+                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
+            ];
+            let resolvedDest = 'kitchen';
+            if (DEFAULT_BAR_CATS.includes(catId)) {
+                resolvedDest = 'bar';
+            } else if (oi.destination === 'bar' || oi.destination === 'drinks') {
+                resolvedDest = 'bar';
+            } else if (oi.destination === 'other') {
+                resolvedDest = 'other';
+            } else if (oi.selected_options?.some(o => {
+                const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
+                return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+            })) {
+                resolvedDest = 'bar';
+            }
+
+            return {
+                id: `db_${oi.id}`,
+                menu_item_id: oi.menu_item_id,
+                name: resolvedName,
+                custom_name: isCustom ? (oi.custom_name || resolvedName) : null,
+                price: parseFloat(oi.price_at_time ?? oi.price) || 0,
+                quantity: oi.quantity,
+                db_id: oi.id,
+                selected_options: oi.selected_options || [],
+                category_id: oi.menu_items?.category_id || oi.category_id || '',
+                category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
+                destination: resolvedDest,
+                is_custom: isCustom,
+                is_emergency: isCustom,
+                is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+            };
+        });
+
+        const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+        const customerName = fullBooking.profiles?.display_name 
+            || (fullBooking.customer_name && !defaultWalkIns.includes(fullBooking.customer_name.toLowerCase().trim()) ? fullBooking.customer_name : null)
+            || (fullBooking.pickup_contact_name && !defaultWalkIns.includes(fullBooking.pickup_contact_name.toLowerCase().trim()) ? fullBooking.pickup_contact_name : null)
+            || (tableObj ? `Table ${tableObj.table_name}` : 'Walk-in Guest');
+
+        setCurrentOrder({
+            items: existingItems,
+            customer: customerName,
+            table: tableObj
+        });
+        setView('menu');
     };
 
     const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount, deleteOrderItem, updateOrderItemDbQty } = usePOSOrder();
@@ -1875,8 +1907,9 @@ export default function POSDashboard() {
         rewardId = null,
         useFreeDrinkQuota = false
     ) => {
-        if (isSubmittingOrder) return;
+        if (submittingOrderRef.current || isSubmittingOrder) return;
         if (currentOrder.items.length === 0) return;
+        submittingOrderRef.current = true;
         setIsSubmittingOrder(true);
         try {
             let bookingId = activeBooking?.id;
@@ -2109,6 +2142,7 @@ export default function POSDashboard() {
             setView('tables');
         }
         } finally {
+            submittingOrderRef.current = false;
             setIsSubmittingOrder(false);
         }
     };

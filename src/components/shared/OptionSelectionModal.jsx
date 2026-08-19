@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, Plus, Minus } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
@@ -7,6 +7,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
     const [quantity, setQuantity] = useState(1)
     const [selectedOptions, setSelectedOptions] = useState({})
     const [itemNote, setItemNote] = useState('')
+    const confirmingRef = useRef(false)
 
     // Preselect single-choice options on load (only available choices)
     useEffect(() => {
@@ -106,7 +107,9 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
     }
 
     const handleConfirm = () => {
+        if (confirmingRef.current) return;
         if (validateSelections()) {
+            confirmingRef.current = true;
             // Prepare options summary for cart and slips
             const optionsSummary = []
             if (item.menu_item_options) {
@@ -149,7 +152,10 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 item_note: itemNote.trim(),
                 itemNote: itemNote.trim(),
                 totalPricePerUnit: unitPrice
-            })
+            });
+            setTimeout(() => {
+                confirmingRef.current = false;
+            }, 300);
         }
     }
 

@@ -56,6 +56,7 @@ export default function CustomerOrderLanding() {
     // UI States
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const submittingRef = useRef(false);
     const [search, setSearch] = useState('');
     const [activeCategory, setActiveCategory] = useState('all');
     const [cartOpen, setCartOpen] = useState(false);
@@ -917,12 +918,14 @@ export default function CustomerOrderLanding() {
     };
 
     const handleCheckout = async () => {
-        if (cart.length === 0 || submitting) return;
+        if (cart.length === 0 || submittingRef.current || submitting) return;
+        submittingRef.current = true;
         setSubmitting(true);
 
         const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
         if (!effectiveNumericTableId) {
             toast.error('ไม่พบรหัสโต๊ะที่ถูกต้อง กรุณาสแกน QR Code ใหม่อีกครั้ง');
+            submittingRef.current = false;
             setSubmitting(false);
             return;
         }
@@ -933,6 +936,7 @@ export default function CustomerOrderLanding() {
             if (invalidItems.length > 0) {
                 toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากอยู่นอกเวลาครัว (${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
                 setCart(prev => prev.filter(item => !isItemKitchenClosed(item)));
+                submittingRef.current = false;
                 setSubmitting(false);
                 return;
             }
@@ -964,6 +968,7 @@ export default function CustomerOrderLanding() {
                     table_id: effectiveNumericTableId,
                     status: 'seated',
                     booking_type: 'walk_in',
+                    source: 'qr',
                     booking_time: new Date().toISOString(),
                     pax: paxCount || table?.capacity || 2,
                     staff_remark: remarkStr,
@@ -982,16 +987,45 @@ export default function CustomerOrderLanding() {
                 currentBooking = newBooking;
             }
 
-            // Insert new items into order_items
-            const itemsToInsert = cart.map(item => ({
-                booking_id: currentBooking.id,
-                menu_item_id: item.id,
-                quantity: item.qty,
-                price_at_time: item.totalPricePerUnit,
-                selected_options: (item.optionsSummary && item.optionsSummary.length > 0) 
-                    ? item.optionsSummary 
-                    : item.selectedOptions || {}
-            }));
+            // Insert new items into order_items with destination & price
+            const DEFAULT_BAR_CATS = [
+                '7524bb8a-4698-45c6-aa17-d8ccc296f667',
+                '912683ef-fdc3-40a3-8dd8-b09507791240',
+                'b441665e-2f23-4df3-a11d-63485e1690dc',
+                'a2c783fc-975b-4779-b9eb-67391eeafd1f',
+                '1983955d-5787-4351-b729-51b95761f125',
+                '1407d869-4eed-489e-aeeb-ba7ef19f57bd',
+                '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'
+            ];
+
+            const itemsToInsert = cart.map(item => {
+                const isCustom = Boolean(item.is_custom === true || item.is_emergency === true || String(item.id).startsWith('custom_'));
+                const catId = item.category_id || '';
+                let resolvedDest = 'kitchen';
+                if (DEFAULT_BAR_CATS.includes(catId)) {
+                    resolvedDest = 'bar';
+                } else if (item.destination === 'bar' || item.destination === 'drinks') {
+                    resolvedDest = 'bar';
+                } else if (item.destination === 'other') {
+                    resolvedDest = 'other';
+                } else if (item.optionsSummary?.some(o => (typeof o === 'string' ? o : o.name || '').includes('บาร์') || o.destination === 'bar')) {
+                    resolvedDest = 'bar';
+                }
+
+                return {
+                    booking_id: currentBooking.id,
+                    menu_item_id: isCustom ? null : item.id,
+                    quantity: item.qty,
+                    price_at_time: item.totalPricePerUnit,
+                    price: item.totalPricePerUnit,
+                    destination: resolvedDest,
+                    custom_name: isCustom ? (item.custom_name || item.name) : null,
+                    is_custom: isCustom,
+                    selected_options: (item.optionsSummary && item.optionsSummary.length > 0) 
+                        ? item.optionsSummary 
+                        : item.selectedOptions || {}
+                };
+            });
 
             const { error: itemsError } = await supabase
                 .from('order_items')
@@ -1039,6 +1073,7 @@ export default function CustomerOrderLanding() {
             console.error('Checkout error:', err);
             toast.error('Failed to submit order: ' + err.message);
         } finally {
+            submittingRef.current = false;
             setSubmitting(false);
         }
     };
