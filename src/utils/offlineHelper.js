@@ -422,7 +422,6 @@ export async function syncOfflineQueue(isManual = false) {
                     table_id: bookingMetadata?.table_id || null,
                     status: 'completed',
                     booking_type: bookingMetadata?.booking_type || 'walk_in',
-                    source: bookingMetadata?.source || 'pos',
                     booking_time: new Date().toISOString(),
                     pax: bookingMetadata?.pax || 0,
                     user_id: bookingMetadata?.user_id || null,

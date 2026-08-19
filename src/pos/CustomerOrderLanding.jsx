@@ -968,7 +968,6 @@ export default function CustomerOrderLanding() {
                     table_id: effectiveNumericTableId,
                     status: 'seated',
                     booking_type: 'walk_in',
-                    source: 'qr',
                     booking_time: new Date().toISOString(),
                     pax: paxCount || table?.capacity || 2,
                     staff_remark: remarkStr,

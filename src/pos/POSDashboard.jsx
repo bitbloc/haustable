@@ -2422,7 +2422,6 @@ export default function POSDashboard() {
                 bookingMetadata: {
                     table_id: activeBooking.table_id || selectedTable?.id || null,
                     booking_type: activeBooking.booking_type || 'walk_in',
-                    source: activeBooking.source || 'pos',
                     pax: activeBooking.pax || 0,
                     user_id: attachedMember?.id || activeBooking.user_id || null
                 }
@@ -2449,7 +2448,6 @@ export default function POSDashboard() {
                 table_id: activeBooking.table_id || selectedTable?.id || null,
                 status: 'completed',
                 booking_type: activeBooking.booking_type || 'walk_in',
-                source: activeBooking.source || 'pos',
                 booking_time: new Date().toISOString(),
                 pax: activeBooking.pax || 0,
                 user_id: attachedMember?.id || activeBooking.user_id || null,
