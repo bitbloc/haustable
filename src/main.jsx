@@ -31,15 +31,53 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-// Auto-recover from stale chunks after new deployments
+// Auto-recover from stale chunks / MIME type errors after new deployments
 if (typeof window !== 'undefined') {
-  window.addEventListener('vite:preloadError', (event) => {
-    console.warn('[Vite] Dynamic import preload error detected. Reloading page for new deployment...', event);
-    const lastReload = sessionStorage.getItem('vite_chunk_reload_ts');
+  const triggerAutoReload = (reason) => {
+    console.warn('[Vite/App] Chunk / MIME load error detected:', reason);
+    const lastReload = sessionStorage.getItem('chunk_reload_retry_ts');
     const now = Date.now();
+    // Guard against reload loops: allow max 1 auto-reload every 10 seconds
     if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
-      sessionStorage.setItem('vite_chunk_reload_ts', now.toString());
-      window.location.reload();
+      sessionStorage.setItem('chunk_reload_retry_ts', now.toString());
+      if ('caches' in window) {
+        caches.keys().then((keys) => {
+          return Promise.all(keys.map((k) => caches.delete(k)));
+        }).finally(() => {
+          window.location.reload();
+        });
+      } else {
+        window.location.reload();
+      }
+    }
+  };
+
+  window.addEventListener('vite:preloadError', (event) => {
+    triggerAutoReload('vite:preloadError');
+  });
+
+  window.addEventListener('error', (event) => {
+    const msg = event?.message || '';
+    if (
+      msg.includes('text/html') ||
+      msg.includes('is not a valid JavaScript MIME type') ||
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('error loading dynamically imported module')
+    ) {
+      triggerAutoReload(msg);
+    }
+  });
+
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event?.reason?.message || event?.reason || '';
+    const reasonStr = typeof reason === 'string' ? reason : JSON.stringify(reason);
+    if (
+      reasonStr.includes('text/html') ||
+      reasonStr.includes('is not a valid JavaScript MIME type') ||
+      reasonStr.includes('Failed to fetch dynamically imported module') ||
+      reasonStr.includes('error loading dynamically imported module')
+    ) {
+      triggerAutoReload(reasonStr);
     }
   });
 }
@@ -49,6 +87,8 @@ if (!Capacitor.isNativePlatform() && 'serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
       .then(registration => {
         console.log('SW registered: ', registration);
+        // Check for updates periodically
+        registration.update().catch(() => {});
       })
       .catch(registrationError => {
         console.log('SW registration failed: ', registrationError);

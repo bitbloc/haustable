@@ -13,6 +13,7 @@ import POSDashboard from './pos/POSDashboard'
 import LoginPage from './LoginPage'
 import Home from './Home'
 import RequireAuthLayout from './components/layout/RequireAuthLayout'
+import ErrorBoundary from './components/staff/ErrorBoundary'
 
 // Lazy load non-critical and heavy sub-pages for maximum launch speed
 const QnAPage = lazy(() => import('./QnAPage'))
@@ -123,86 +124,88 @@ function App() {
     <div className="app-container">
       <Toaster position="top-center" maxToasts={3} visibleToasts={3} closeButton />
       <Router>
-        <Suspense fallback={<FallbackLoader />}>
-          <Routes>
-            {/* Standalone Pages (Fast Eager / Dynamic Routes) */}
-            <Route path="/link" element={<AdsLandingPage />} />
-            <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
-            <Route path="/qa" element={<QnAPage />} />
-            <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
-            <Route path="/pos" element={<POSDashboard />} />
-            <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
+        <ErrorBoundary>
+          <Suspense fallback={<FallbackLoader />}>
+            <Routes>
+              {/* Standalone Pages (Fast Eager / Dynamic Routes) */}
+              <Route path="/link" element={<AdsLandingPage />} />
+              <Route path="/link/hauscheckin" element={<HausCheckinPage />} />
+              <Route path="/qa" element={<QnAPage />} />
+              <Route path="/pos/cfd" element={<POSCustomerDisplay />} />
+              <Route path="/pos" element={<POSDashboard />} />
+              <Route path="/index.html" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Navigate to="/" replace />} />
 
-            <Route path="/arcade" element={<ArcadeLobby />} />
-            <Route path="/arcade/claim" element={<ArcadeClaim />} />
-            <Route path="/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
-            <Route path="/arcade/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
-            <Route path="/arcade/tai-pla" element={<Navigate to="/arcade?tab=tai_pla" replace />} />
+              <Route path="/arcade" element={<ArcadeLobby />} />
+              <Route path="/arcade/claim" element={<ArcadeClaim />} />
+              <Route path="/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
+              <Route path="/arcade/lofi" element={<Navigate to="/arcade?tab=lofi" replace />} />
+              <Route path="/arcade/tai-pla" element={<Navigate to="/arcade?tab=tai_pla" replace />} />
 
-            {/* Routes requiring Booking Context */}
-            <Route element={<BookingProviderLayout />}>
-              {/* Home & Auth */}
-              <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Home session={session} />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/staff/login" element={<LoginPage />} />
+              {/* Routes requiring Booking Context */}
+              <Route element={<BookingProviderLayout />}>
+                {/* Home & Auth */}
+                <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/pos" replace /> : <Home session={session} />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/staff/login" element={<LoginPage />} />
 
-              {/* Song Request (Login Required) */}
-              <Route element={<RequireAuthLayout />}>
-                <Route path="/songs" element={<SongRequestPage />} />
-                <Route path="/song" element={<SongRequestPage />} />
+                {/* Song Request (Login Required) */}
+                <Route element={<RequireAuthLayout />}>
+                  <Route path="/songs" element={<SongRequestPage />} />
+                  <Route path="/song" element={<SongRequestPage />} />
+                </Route>
+
+                {/* Public Routes */}
+                <Route element={<PublicLayout session={session} />}>
+                  <Route path="/booking" element={<BookingPage />} />
+                  <Route path="/pickup" element={<PickupPage />} />
+                  <Route path="/hausmade" element={<HausmadeShopPage />} />
+                  <Route path="/shop" element={<HausmadeShopPage />} />
+                  <Route path="/tracking/:token" element={<TrackingPage />} />
+                  <Route path="/t/:token" element={<TrackingPage />} />
+                </Route>
+
+                {/* Admin Routes - Streamlined 7 Core Hubs */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboard />} />
+                  <Route path="financial" element={<AdminFinancialDashboard />} />
+                  <Route path="tax" element={<AdminTaxHub />} />
+                  <Route path="bookings" element={<AdminBookings />} />
+                  <Route path="tables" element={<AdminTableManager defaultTab="live" />} />
+                  <Route path="editor" element={<AdminTableManager defaultTab="editor" />} />
+                  <Route path="menu" element={<AdminMenu defaultTab="items" />} />
+                  <Route path="costing" element={<AdminMenu defaultTab="costing" />} />
+                  <Route path="lab" element={<AdminMenu defaultTab="lab" />} />
+                  <Route path="sop" element={<AdminMenu defaultTab="sop" />} />
+                  <Route path="marketing" element={<AdminMarketingPage defaultTab="members" />} />
+                  <Route path="members" element={<AdminMarketingPage defaultTab="members" />} />
+                  <Route path="promotions" element={<AdminMarketingPage defaultTab="promotions" />} />
+                  <Route path="rewards" element={<AdminMarketingPage defaultTab="rewards" />} />
+                  <Route path="stamps" element={<AdminMarketingPage defaultTab="stamps" />} />
+                  <Route path="arcade" element={<AdminMarketingPage defaultTab="arcade" />} />
+                  <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
+                  <Route path="hausmade" element={<HausmadeAdminPage />} />
+                  <Route path="settings" element={<AdminSettings />} />
+                </Route>
+
+                {/* Customer Table Ordering */}
+                <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
+                <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
+                <Route path="/member-card" element={<MemberCard />} />
+                
+                {/* Staff/Kitchen Route */}
+                <Route element={<StaffAuthLayout />}>
+                  <Route path="/staff" element={<StaffDashboard />} />
+                  <Route path="/staff/orders" element={<StaffLiveOrders />} />
+                  <Route path="/staff/history" element={<StaffLiveOrders />} />
+                  <Route path="/staff/checkin" element={<StaffLiveOrders />} />
+                  <Route path="/staff/stock" element={<StockPage />} />
+                  <Route path="/staff/sop" element={<BarSOPPage />} />
+                </Route>
               </Route>
 
-              {/* Public Routes */}
-              <Route element={<PublicLayout session={session} />}>
-                <Route path="/booking" element={<BookingPage />} />
-                <Route path="/pickup" element={<PickupPage />} />
-                <Route path="/hausmade" element={<HausmadeShopPage />} />
-                <Route path="/shop" element={<HausmadeShopPage />} />
-                <Route path="/tracking/:token" element={<TrackingPage />} />
-                <Route path="/t/:token" element={<TrackingPage />} />
-              </Route>
-
-              {/* Admin Routes - Streamlined 7 Core Hubs */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="financial" element={<AdminFinancialDashboard />} />
-                <Route path="tax" element={<AdminTaxHub />} />
-                <Route path="bookings" element={<AdminBookings />} />
-                <Route path="tables" element={<AdminTableManager defaultTab="live" />} />
-                <Route path="editor" element={<AdminTableManager defaultTab="editor" />} />
-                <Route path="menu" element={<AdminMenu defaultTab="items" />} />
-                <Route path="costing" element={<AdminMenu defaultTab="costing" />} />
-                <Route path="lab" element={<AdminMenu defaultTab="lab" />} />
-                <Route path="sop" element={<AdminMenu defaultTab="sop" />} />
-                <Route path="marketing" element={<AdminMarketingPage defaultTab="members" />} />
-                <Route path="members" element={<AdminMarketingPage defaultTab="members" />} />
-                <Route path="promotions" element={<AdminMarketingPage defaultTab="promotions" />} />
-                <Route path="rewards" element={<AdminMarketingPage defaultTab="rewards" />} />
-                <Route path="stamps" element={<AdminMarketingPage defaultTab="stamps" />} />
-                <Route path="arcade" element={<AdminMarketingPage defaultTab="arcade" />} />
-                <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
-                <Route path="hausmade" element={<HausmadeAdminPage />} />
-                <Route path="settings" element={<AdminSettings />} />
-              </Route>
-
-              {/* Customer Table Ordering */}
-              <Route path="/table/:tableId" element={<CustomerOrderLanding />} />
-              <Route path="/table/:tableId/status" element={<CustomerOrderStatus />} />
-              <Route path="/member-card" element={<MemberCard />} />
-              
-              {/* Staff/Kitchen Route */}
-              <Route element={<StaffAuthLayout />}>
-                <Route path="/staff" element={<StaffDashboard />} />
-                <Route path="/staff/orders" element={<StaffLiveOrders />} />
-                <Route path="/staff/history" element={<StaffLiveOrders />} />
-                <Route path="/staff/checkin" element={<StaffLiveOrders />} />
-                <Route path="/staff/stock" element={<StockPage />} />
-                <Route path="/staff/sop" element={<BarSOPPage />} />
-              </Route>
-            </Route>
-
-          </Routes>
-        </Suspense>
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </Router>
     </div>
   )

@@ -1,5 +1,5 @@
 // Enhanced Service Worker for PWA (Network First for HTML & Runtime Cache for Assets)
-const CACHE_NAME = 'haus-table-v4';
+const CACHE_NAME = 'haus-table-v5';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -71,19 +71,43 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Vite Hashed Assets (/assets/): Cache-First + Runtime Caching
+  // Vite Hashed Assets (/assets/): Cache-First + Runtime Caching with MIME Protection
   if (event.request.url.includes('/assets/')) {
     event.respondWith(
       caches.match(event.request).then(cachedResponse => {
         if (cachedResponse) {
-          return cachedResponse;
+          const contentType = cachedResponse.headers.get('content-type') || '';
+          // Ensure cached response is not corrupt HTML
+          if (!contentType.includes('text/html')) {
+            return cachedResponse;
+          }
+          // Corrupt cache entry detected (HTML stored under asset URL) -> delete it
+          caches.open(CACHE_NAME).then(cache => cache.delete(event.request));
         }
+
         return fetch(event.request).then(networkResponse => {
           if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+            const contentType = networkResponse.headers.get('content-type') || '';
+            // Only cache valid asset MIME types, NEVER text/html (which is SPA rewrite fallback)
+            if (!contentType.includes('text/html')) {
+              const responseClone = networkResponse.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+              return networkResponse;
+            }
           }
-          return networkResponse;
+          // If server returned text/html for an asset file (due to SPA rewrite 404 fallback) or 404,
+          // do NOT serve HTML as JS! Return a 404 response so Vite / browser triggers chunk reload.
+          return new Response('Asset not found', {
+            status: 404,
+            statusText: 'Not Found',
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }).catch(() => {
+          return new Response('Network error loading asset', {
+            status: 408,
+            statusText: 'Request Timeout',
+            headers: { 'Content-Type': 'text/plain' }
+          });
         });
       })
     );
