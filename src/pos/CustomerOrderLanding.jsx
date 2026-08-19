@@ -1016,7 +1016,6 @@ export default function CustomerOrderLanding() {
                     menu_item_id: isCustom ? null : item.id,
                     quantity: item.qty,
                     price_at_time: item.totalPricePerUnit,
-                    price: item.totalPricePerUnit,
                     destination: resolvedDest,
                     custom_name: isCustom ? (item.custom_name || item.name) : null,
                     is_custom: isCustom,

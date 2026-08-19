@@ -78,7 +78,6 @@ export async function saveWmaOrderToSupabase(order, rawBytes = null) {
     const bookingPayload = {
         table_id: null,
         status: 'confirmed',
-        source: 'lineman',
         booking_type: 'pickup',
         booking_time: new Date().toISOString(),
         pax: 1,
