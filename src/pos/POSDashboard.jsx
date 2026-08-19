@@ -2656,7 +2656,6 @@ export default function POSDashboard() {
                             onUpdateItemNote={handleUpdateItemNote}
                             onClear={handleClearOrderOrTable}
                             onCheckout={handleCheckout}
-                            onOpenMenu={() => setView('menu')}
                             onInjectRewardItem={handleInjectRewardItem}
                             onRemoveRewardItem={handleRemoveRewardItem}
                             onAddEmergencyItem={handleAddToOrder}
