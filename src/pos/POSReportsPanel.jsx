@@ -140,26 +140,59 @@ export default function POSReportsPanel() {
                 });
             }
 
-            // Fetch bookings completed during the active shift (using both booking_time and updated_at)
-            const { data, error } = await supabase
-                .from('bookings')
-                .select(`
-                    id, 
-                    status, 
-                    total_amount, 
-                    staff_remark, 
-                    payment_slip_url,
-                    booking_time,
-                    updated_at,
-                    order_items (
-                        quantity,
-                        menu_items (
-                            name
+            // Fetch bookings completed during the active shift (using updated_at with booking_time fallback)
+            let data = null;
+            let error = null;
+            
+            try {
+                const res = await supabase
+                    .from('bookings')
+                    .select(`
+                        id, 
+                        status, 
+                        total_amount, 
+                        staff_remark, 
+                        payment_slip_url,
+                        booking_time,
+                        updated_at,
+                        order_items (
+                            quantity,
+                            menu_items (
+                                name
+                            )
                         )
-                    )
-                `)
-                .eq('status', 'completed')
-                .gte('updated_at', current.openedAt);
+                    `)
+                    .eq('status', 'completed')
+                    .gte('updated_at', current.openedAt);
+                data = res.data;
+                error = res.error;
+            } catch (e) {
+                error = e;
+            }
+
+            // Fallback if updated_at column is not yet migrated in database
+            if (error) {
+                const fallbackRes = await supabase
+                    .from('bookings')
+                    .select(`
+                        id, 
+                        status, 
+                        total_amount, 
+                        staff_remark, 
+                        payment_slip_url,
+                        booking_time,
+                        order_items (
+                            quantity,
+                            menu_items (
+                                name
+                            )
+                        )
+                    `)
+                    .eq('status', 'completed')
+                    .gte('booking_time', current.openedAt);
+                data = fallbackRes.data;
+                error = fallbackRes.error;
+            }
 
             if (!error && data) {
                 if (txs.length === 0) {
