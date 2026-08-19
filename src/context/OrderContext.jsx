@@ -102,22 +102,6 @@ export function OrderProvider({ children }) {
         knownOrderIdsRef.current = currentIds
     }, [state])
 
-    // Init Sound URLs
-    useEffect(() => {
-        const init = async () => {
-            try {
-                const { data } = await supabase.from('app_settings').select('key, value').in('key', ['alert_sound_url', 'kds_alert_sound_url'])
-                if (data) {
-                    const posSound = data.find(d => d.key === 'alert_sound_url')?.value
-                    const kdsSound = data.find(d => d.key === 'kds_alert_sound_url')?.value
-                    dispatch({ type: 'SET_SOUND_URL', payload: { pos: posSound, kds: kdsSound } })
-                }
-            } catch (err) {
-                console.warn('Failed to load alert sounds:', err)
-            }
-        }
-        init()
-    }, [])
 
     // --- Actions ---
     const fetchLiveOrders = useCallback(async (silent = false) => {

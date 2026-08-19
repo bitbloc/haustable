@@ -137,7 +137,6 @@ export default function POSDashboard() {
     const [splitIncludeTax, setSplitIncludeTax] = useState(true);
     const [availableTables, setAvailableTables] = useState([]);
 
-    const [alertSoundUrl, setAlertSoundUrl] = useState(null);
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
     const prevHasPendingOrdersRef = useRef(false);
 
@@ -819,18 +818,6 @@ export default function POSDashboard() {
         // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
         const cleanupPrinterSync = initPrinterConfigSync();
 
-        // Fetch sound setting once at mount
-        const fetchSound = async () => {
-            const { data } = await supabase
-                .from('app_settings')
-                .select('value')
-                .eq('key', 'alert_sound_url')
-                .maybeSingle();
-            if (data?.value) {
-                setAlertSoundUrl(data.value);
-            }
-        };
-        fetchSound();
         checkPendingOrders();
 
         // Poll pending orders every 20 seconds as fallback to Supabase Realtime
@@ -916,21 +903,21 @@ export default function POSDashboard() {
     useEffect(() => {
         if (!hasPendingOrders) return;
 
-        // Play alert
-        playSystemAlertSoundUtil(alertSoundUrl, 2500, 'pending_orders_loop');
+        // Play high-impact alert chime
+        playSystemAlertSoundUtil(null, 2500, 'pending_orders_loop');
 
         // Repeat every 7 seconds
         const soundInterval = setInterval(() => {
-            playSystemAlertSoundUtil(alertSoundUrl, 2500, 'pending_orders_loop');
+            playSystemAlertSoundUtil(null, 2500, 'pending_orders_loop');
         }, 7000);
 
         return () => {
             clearInterval(soundInterval);
         };
-    }, [hasPendingOrders, alertSoundUrl]);
+    }, [hasPendingOrders]);
 
     const playSystemAlertSound = (eventKey = null) => {
-        playSystemAlertSoundUtil(alertSoundUrl, 2500, eventKey);
+        playSystemAlertSoundUtil(null, 2500, eventKey);
     };
 
     const playQRAlertSound = () => {
