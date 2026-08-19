@@ -12,6 +12,8 @@
  * - Centralized Sliding-Window Event Deduplicator (4.5s window) & Global Throttle (800ms)
  */
 
+import noti1SoundUrl from '../assets/noti1.mp3';
+
 let sharedAudioContext = null;
 let noti1AudioBuffer = null;
 let isPreloadingNoti1 = false;
@@ -58,7 +60,7 @@ export function getSharedAudioContext() {
 }
 
 /**
- * Preload and decode /noti1.mp3 into memory for instant, non-blocking playback on Android APK
+ * Preload and decode noti1.mp3 into memory for instant, non-blocking playback on Android APK
  */
 export async function preloadNotificationAudio() {
     if (typeof window === 'undefined' || noti1AudioBuffer || isPreloadingNoti1) return;
@@ -71,10 +73,28 @@ export async function preloadNotificationAudio() {
             return;
         }
 
-        const response = await fetch('/noti1.mp3', { cache: 'force-cache' });
-        if (!response.ok) throw new Error(`HTTP ${response.status} loading noti1.mp3`);
-        
-        const arrayBuffer = await response.arrayBuffer();
+        const urlsToTry = [noti1SoundUrl, '/noti1.mp3', './noti1.mp3'].filter(Boolean);
+        let arrayBuffer = null;
+
+        for (const soundUrl of urlsToTry) {
+            try {
+                const response = await fetch(soundUrl, { cache: 'force-cache' });
+                if (response.ok) {
+                    const ab = await response.arrayBuffer();
+                    if (ab && ab.byteLength > 0) {
+                        arrayBuffer = ab;
+                        break;
+                    }
+                }
+            } catch (e) {
+                // Try next url
+            }
+        }
+
+        if (!arrayBuffer) {
+            throw new Error('Could not fetch noti1.mp3 from any URL');
+        }
+
         ctx.decodeAudioData(
             arrayBuffer,
             (decoded) => {
@@ -91,6 +111,13 @@ export async function preloadNotificationAudio() {
         console.warn('[AudioEngine] Preload noti1.mp3 fetch failed:', err);
         isPreloadingNoti1 = false;
     }
+}
+
+// Auto-trigger preload immediately upon script execution
+if (typeof window !== 'undefined') {
+    setTimeout(() => {
+        preloadNotificationAudio();
+    }, 100);
 }
 
 /**
@@ -447,7 +474,7 @@ export function playUrgentTone() {
  * @param {number} boostLevel - Output gain multiplier (default: 3.2x / +14dB)
  * @returns {boolean} - Whether audio playback was triggered
  */
-export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.2) {
+export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.4) {
     const now = Date.now();
 
     // 1. Check Event Deduplication Key
@@ -461,34 +488,32 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
     }
     lastAlertPlayedTime = now;
 
-    // 3. Primary Playback: Decoded noti1.mp3 buffer
+    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio Mastering Chain
     if (noti1AudioBuffer) {
         const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
         if (played) return true;
     }
 
-    // If buffer is still loading, try triggering preload and fallback immediately
+    // If buffer is still loading, trigger preload
     if (!noti1AudioBuffer && !isPreloadingNoti1) {
         preloadNotificationAudio();
     }
 
-    // 4. Secondary Fallback: HTML5 Audio Element
+    // 4. Secondary Playback: HTML5 Audio with bundled noti1.mp3
     try {
-        const audio = new Audio('/noti1.mp3');
+        const soundSrc = noti1SoundUrl || '/noti1.mp3';
+        const audio = new Audio(soundSrc);
         audio.volume = 1.0;
         const promise = audio.play();
         if (promise !== undefined) {
             promise.catch((e) => {
-                // If autoplay blocked, trigger synthesized chime
-                console.warn('[AudioEngine] HTML5 Audio play prevented, falling back to synth chime:', e);
-                playSynthChime();
+                console.warn('[AudioEngine] HTML5 Audio play prevented:', e);
             });
         }
         return true;
     } catch (e) {
-        // 5. Tertiary Fallback: Synthesized Chime
-        playSynthChime();
-        return true;
+        console.warn('[AudioEngine] HTML5 Audio error:', e);
+        return false;
     }
 }
 

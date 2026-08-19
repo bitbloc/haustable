@@ -2586,7 +2586,21 @@ export default function POSDashboard() {
             
             <POSLayout 
                 activeView={view} 
-                onViewChange={setView}
+                onViewChange={(v) => {
+                    if (v === 'tables') {
+                        handleBackToTables();
+                    } else if (v === 'menu' && view === 'tables') {
+                        // Clicking Menu directly from Tables sidebar starts a clean Direct/Pickup order
+                        setSelectedTable(null);
+                        setActiveBooking(null);
+                        setCurrentOrder({ items: [], customer: 'Walk-in Pick-up', table: null });
+                        setAttachedMemberCrm(null);
+                        localStorage.removeItem('pos_active_table_id');
+                        setView('menu');
+                    } else {
+                        setView(v);
+                    }
+                }}
                 selectedTable={selectedTable}
                 onBack={handleBackToTables}
             >

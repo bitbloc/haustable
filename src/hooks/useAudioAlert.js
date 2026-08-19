@@ -34,13 +34,9 @@ export const useAudioAlert = (customSoundUrl = null) => {
         try {
             setIsPlaying(true)
             setError(null)
-            const played = playOrderAlert(eventKey, 600, 3.4)
-            if (!played) {
-                playSynthChime()
-            }
+            playOrderAlert(eventKey, 600, 3.4)
         } catch (err) {
-            console.warn('[useAudioAlert] Play failed, falling back to synth chime:', err)
-            playSynthChime()
+            console.warn('[useAudioAlert] Play failed:', err)
             setError(err.message)
         }
     }, [])
