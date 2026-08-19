@@ -1,5 +1,5 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, Bell } from 'lucide-react'
 import { useEffect } from 'react'
 
 export function OrderNotificationToast({ 
@@ -23,53 +23,50 @@ export function OrderNotificationToast({
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ y: -100, opacity: 0, scale: 0.9 }}
+          initial={{ y: -100, opacity: 0, scale: 0.96 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: -100, opacity: 0, scale: 0.9 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          exit={{ y: -100, opacity: 0, scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 350, damping: 28 }}
           className="fixed top-4 left-4 right-4 z-[9999] md:max-w-md md:left-1/2 md:-translate-x-1/2"
         >
-          <div className="bg-[#1A1A1A] text-white p-4 rounded-2xl shadow-2xl border border-gray-800 flex flex-col gap-3 relative overflow-hidden">
-            {/* Gloss Effect */}
-            <div className="absolute top-0 left-0 right-0 h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
-
-            <div className="flex items-start justify-between relative z-10">
+          <div className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] p-4 rounded-xl shadow-2xl border border-[oklch(85%_0.012_28)] flex flex-col gap-3 font-sans relative">
+            <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                 <div className="w-10 h-10 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-yellow-500/20">
-                    <Bell className="w-5 h-5 text-black" fill="currentColor" />
+                 <div className="w-8 h-8 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                  </div>
                  <div>
-                    <h3 className="font-bold text-lg leading-tight">{title}</h3>
-                    <p className="text-gray-400 text-sm mt-0.5">{message}</p>
+                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">Kitchen Ticket Alert</div>
+                    <h3 className="font-bold text-base leading-tight text-[oklch(18%_0.012_28)] mt-0.5">{title}</h3>
+                    <p className="text-[oklch(55%_0.010_28)] text-xs mt-0.5">{message}</p>
                  </div>
               </div>
               <button 
                   onClick={onClose}
-                  className="p-1 hover:bg-white/10 rounded-full text-gray-400"
+                  className="px-2 py-1 text-xs font-mono text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded transition-colors"
               >
-                  <X className="w-5 h-5" />
+                  ESC
               </button>
             </div>
 
             {price && (
-                <div className="bg-gray-800/50 rounded-lg p-2 px-3 self-start text-xs font-mono text-yellow-500 border border-yellow-500/20">
-                    Total: {price}.-
+                <div className="bg-[oklch(94%_0.010_28)] rounded-md px-2.5 py-1 self-start text-xs font-mono font-bold text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
+                    ฿{price}.-
                 </div>
             )}
 
-            <div className="flex gap-2 mt-1 relative z-10 pt-2 border-t border-white/10">
+            <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
                 <button
                     onClick={onAccept}
-                    className="flex-1 bg-white text-black font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 hover:bg-gray-100 active:scale-95 transition-transform"
+                    className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold py-2.5 rounded-lg text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-98 transition-all"
                 >
-                    <Check className="w-4 h-4" />
-                    Accept Order
+                    รับออเดอร์ (Accept)
                 </button>
                 <button
                     onClick={onClose}
-                    className="flex-1 bg-transparent border border-white/20 text-white font-bold py-2.5 rounded-xl text-sm hover:bg-white/5 active:scale-95 transition-transform"
+                    className="px-4 bg-transparent border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] font-bold py-2.5 rounded-lg text-sm hover:bg-[oklch(94%_0.010_28)] active:scale-98 transition-all"
                 >
-                    Dismiss
+                    ปิด
                 </button>
             </div>
           </div>

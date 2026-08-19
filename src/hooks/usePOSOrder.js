@@ -8,26 +8,51 @@ export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
 
     const getActiveBooking = useCallback(async (tableId) => {
+        const now = new Date();
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
         if (!isOnline()) {
             console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
             const bookings = posCache.getBookings();
-            const booking = bookings.find(b => b.table_id === tableId && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
+            const booking = bookings.find(b => {
+                if (b.table_id !== tableId) return false;
+                if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+                if (b.status === 'seated') return true;
+                const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+                return isToday && isWalkInOrQR;
+            });
             return booking || null;
         }
 
         try {
-            const { data, error } = await supabase
+            const { data: candidates, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .order('booking_time', { ascending: false })
-                .limit(1)
-                .maybeSingle();
+                .order('booking_time', { ascending: false });
 
             if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching active booking:', error);
             }
+
+            // Find the booking actively occupying this table in-store
+            const data = (candidates || []).find(b => {
+                if (b.status === 'seated') return true;
+                const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+                if (isWalkInOrQR && isToday) return true;
+                if (isToday && ['seated', 'ready'].includes(b.status)) return true;
+                if (isToday && b.status === 'confirmed') {
+                    const bTime = new Date(b.booking_time);
+                    const diffMins = (bTime.getTime() - now.getTime()) / 60000;
+                    if (diffMins <= 30 && diffMins >= -120) return true;
+                }
+                return false;
+            }) || null;
 
             if (data) {
                 // Update local bookings cache

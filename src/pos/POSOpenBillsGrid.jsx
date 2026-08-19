@@ -60,21 +60,43 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         }
     };
 
+    const fetchDebounceRef = useRef(null);
+
+    const triggerDebouncedFetch = useCallback(() => {
+        if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+        fetchDebounceRef.current = setTimeout(() => {
+            fetchOpenBills();
+        }, 200);
+    }, []);
+
     useEffect(() => {
         fetchOpenBills();
 
         const openBillsSub = supabase.channel('pos-open-bills-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchOpenBills();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
-                fetchOpenBills();
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, triggerDebouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, triggerDebouncedFetch)
             .subscribe();
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchOpenBills();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('online', fetchOpenBills);
+
         return () => {
+            if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('online', fetchOpenBills);
             supabase.removeChannel(openBillsSub);
         };
+    }, [triggerDebouncedFetch]);
+
+    useEffect(() => {
+        if (refreshKey > 0) {
+            fetchOpenBills();
+        }
     }, [refreshKey]);
 
     // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills)
@@ -375,6 +397,19 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             ) : (
                                                 <span className="bg-slate-700 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                                                     DIRECT BILL
+                                                </span>
+                                            )}
+
+                                            {/* Advance Booking / Online indicator */}
+                                            {new Date(order.booking_time) > new Date(Date.now() + 2 * 3600 * 1000) && !isVoid && (
+                                                <span className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                    จองล่วงหน้า
+                                                </span>
+                                            )}
+
+                                            {(order.staff_remark?.includes('[ONLINE]') || order.source === 'online') && !isVoid && (
+                                                <span className="bg-blue-50 text-blue-700 border border-blue-200 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                    ONLINE
                                                 </span>
                                             )}
 

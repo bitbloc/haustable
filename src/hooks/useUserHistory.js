@@ -34,8 +34,9 @@ export function useUserHistory(session) {
                             id,
                             quantity,
                             price_at_time,
-                            price,
-                            menu_items (id, name)
+                            custom_name,
+                            selected_options,
+                            menu_items (id, name, price)
                         )
                     `)
                     .eq('user_id', session.user.id)

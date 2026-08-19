@@ -13,12 +13,35 @@ import {
     Map,
     Search,
     RefreshCw,
-    ArrowRightLeft
+    ArrowRightLeft,
+    Phone,
+    CheckCircle,
+    X,
+    Calendar
 } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
+
+const formatUpcomingResTime = (timeStr) => {
+    if (!timeStr) return '';
+    try {
+        const d = new Date(timeStr);
+        const today = new Date();
+        const isToday = d.toDateString() === today.toDateString();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const isTomorrow = d.toDateString() === tomorrow.toDateString();
+
+        const timeOnly = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (isToday) return `${timeOnly}`;
+        if (isTomorrow) return `พรุ่งนี้ ${timeOnly}`;
+        return `${d.getDate()}/${d.getMonth() + 1} ${timeOnly}`;
+    } catch {
+        return timeStr;
+    }
+};
 
 const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
@@ -75,10 +98,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             fetchTables();
         }, 20000);
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchTables();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('online', fetchTables);
+
         return () => {
             supabase.removeChannel(bookingsSub);
             supabase.removeChannel(tablesSub);
             clearInterval(pollInterval);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('online', fetchTables);
         };
     }, []);
 
@@ -93,7 +126,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             const { data: settingsData } = await supabase
                 .from('app_settings')
                 .select('value')
-                .eq('key', 'floorplan_url')
+                .eq('key', 'floorplan_image_url')
                 .single();
             if (settingsData?.value) {
                 setFloorplanUrl(safeTimestampUrl(settingsData.value));
@@ -127,15 +160,48 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 localStorage.setItem('pos_cache_tables_layout', JSON.stringify(currentTables));
                 localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
 
+                const now = new Date();
+                const today = new Date();
+                const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+                const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
                 const merged = currentTables.map(t => {
-                    // Seated/active floorplan bookings bind to physical table cards
-                    const activeBooking = currentBookings.find(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
+                    const tableBookings = currentBookings.filter(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
+
+                    // 1. Actively occupying in-store dining booking
+                    const activeBooking = tableBookings.find(b => {
+                        if (b.status === 'seated') return true;
+                        const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+                        if (isWalkInOrQR && isToday) return true;
+                        if (isToday && ['seated', 'ready'].includes(b.status)) return true;
+                        if (isToday && b.status === 'confirmed') {
+                            const bTime = new Date(b.booking_time);
+                            const diffMins = (bTime.getTime() - now.getTime()) / 60000;
+                            if (diffMins <= 30 && diffMins >= -120) return true;
+                        }
+                        if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
+                        return false;
+                    });
+
+                    // 2. Upcoming advance reservation (scheduled for later today or future dates)
+                    const upcomingRes = tableBookings.find(b => {
+                        if (b.id === activeBooking?.id) return false;
+                        const bTime = new Date(b.booking_time);
+                        return bTime.getTime() > now.getTime() - 15 * 60000;
+                    });
+
+                    let status = 'free';
+                    if (activeBooking) {
+                        status = activeBooking.status === 'pending' ? 'pending' : 'occupied';
+                    }
 
                     return {
                         ...t,
-                        status: activeBooking ? (activeBooking.status === 'pending' ? 'pending' : 'occupied') : 'free',
+                        status: status,
                         booking: activeBooking || null,
-                        upcomingConflict: null
+                        upcomingReservation: upcomingRes || null,
+                        upcomingConflict: (activeBooking && upcomingRes) ? upcomingRes : null
                     };
                 });
 
@@ -145,13 +211,23 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 try {
                     const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
                     const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                    const today = new Date();
+                    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+                    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                     
                     const merged = cachedTables.map(t => {
-                        const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
+                        const booking = cachedBookings.find(b => {
+                            if (b.table_id !== t.id) return false;
+                            if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+                            if (b.status === 'seated') return true;
+                            const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                            const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+                            return isToday && isWalkInOrQR;
+                        });
                         return {
                             ...t,
                             status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                            booking: booking
+                            booking: booking || null
                         };
                     });
                     setTables(merged);
@@ -449,6 +525,13 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                                             <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
                                                                 {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
                                                             </span>
+
+                                                            {/* Upcoming Advance Reservation on Free Table */}
+                                                            {table.upcomingReservation && !isOccupied && !isPending && (
+                                                                <span className="mt-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight">
+                                                                    🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                                                                </span>
+                                                            )}
                                                             
                                                             {/* Booking / Seated time & Dwell Counter */}
                                                             {table.booking?.booking_time && (isOccupied || isPending) && (() => {
@@ -570,10 +653,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                             {/* Bottom row: Capacity / Timing */}
                                             <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
                                                  <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAPACITY: ${table.capacity}P`}</span>
-                                                {(isOccupied || isPending) && (
+                                                {(isOccupied || isPending) ? (
                                                     <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
                                                         <Clock size={10} />
                                                         <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+                                                    </div>
+                                                ) : table.upcomingReservation && (
+                                                    <div className="flex items-center gap-0.5 text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold">
+                                                        <Clock size={9} />
+                                                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({table.upcomingReservation.pax || 2}p)</span>
                                                     </div>
                                                 )}
                                             </div>

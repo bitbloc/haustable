@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
-import { playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
+import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey }) {
@@ -41,11 +41,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     const playAlert = (eventKey = null) => {
         if (!soundEnabled) return;
-        playSystemAlertSound(null, 2500, eventKey);
+        playOrderAlert(eventKey, 600, 3.4);
         if (!alertIntervalRef.current) {
             alertIntervalRef.current = setInterval(() => {
-                playSystemAlertSound(null, 4000);
-            }, 5000);
+                playOrderAlert('online_hub_repeat', 1000, 3.4);
+            }, 12000);
         }
     };
 

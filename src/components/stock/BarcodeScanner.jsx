@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { X, Camera, Zap, PackageSearch, ScanLine, SwitchCamera, Type } from 'lucide-react';
 import { toast } from 'sonner';
+import { playSynthChime } from '../../utils/audioHelper';
 
 // Real OpenFoodFacts API Lookup
 const fetchThaiProductData = async (barcode) => {
@@ -285,9 +286,7 @@ export default function SmartBarcodeScanner({ onScan, onClose }) {
         if(scannerRef.current) await scannerRef.current.pause();
 
         if (navigator.vibrate) navigator.vibrate(200);
-        const audio = new Audio('https://cdn.freesound.org/previews/242/242501_4414128-lq.mp3');
-        audio.volume = 0.5;
-        audio.play().catch(() => {});
+        playSynthChime();
 
         setIsLoadingData(true);
         try {

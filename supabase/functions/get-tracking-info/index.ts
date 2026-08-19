@@ -52,6 +52,7 @@ serve(async (req) => {
         order_items (
           quantity,
           price_at_time,
+          custom_name,
           selected_options,
           menu_items ( name, image_url )
         )
@@ -67,30 +68,33 @@ serve(async (req) => {
       });
     }
 
-    // 2. Validate Expiry
-    const now = new Date();
-    const expiresAt = new Date(booking.token_expires_at);
+    // 2. Validate Expiry (Only if token_expires_at is set and valid)
+    if (booking.token_expires_at) {
+      const now = new Date();
+      const expiresAt = new Date(booking.token_expires_at);
 
-    if (now > expiresAt) {
-      console.warn(`[Tracking] Token expired for ID: ${booking.id}`);
-      return new Response(JSON.stringify({ error: "ลิงก์นี้หมดอายุแล้ว (Link Expired)", code: "TOKEN_EXPIRED" }), {
-        status: 410, // Gone
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      if (!isNaN(expiresAt.getTime()) && now > expiresAt) {
+        console.warn(`[Tracking] Token expired for ID: ${booking.id}`);
+        return new Response(JSON.stringify({ error: "ลิงก์นี้หมดอายุแล้ว (Link Expired)", code: "TOKEN_EXPIRED" }), {
+          status: 410, // Gone
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // 3. Data Masking & Safe Response Construction
-    const fullName = booking.customer_name || "Guest";
+    const fullName = booking.pickup_contact_name || booking.profiles?.display_name || booking.customer_name || "Guest";
     const safeName = fullName.split(" ")[0]; // Only show first name
 
     // Mask Phone: 081-234-5678 -> 081-xxx-5678
     let maskedPhone = "";
-    if (booking.phone) {
-      const p = booking.phone.replace(/[^0-9]/g, ""); 
+    const rawPhone = booking.pickup_contact_phone || booking.phone || booking.profiles?.phone_number || "";
+    if (rawPhone) {
+      const p = rawPhone.replace(/[^0-9]/g, ""); 
       if (p.length >= 10) {
         maskedPhone = `${p.substring(0, 3)}-xxx-${p.substring(p.length - 4)}`;
       } else {
-        maskedPhone = "xxx-xxxx";
+        maskedPhone = rawPhone;
       }
     }
 
@@ -99,7 +103,7 @@ serve(async (req) => {
 
     // Simplify Items
     const items = booking.order_items?.map((item: any) => ({
-      name: item.menu_items?.name || "Unknown Item",
+      name: item.custom_name || item.menu_items?.name || "Unknown Item",
       quantity: item.quantity,
       price: item.price_at_time,
       options: item.selected_options

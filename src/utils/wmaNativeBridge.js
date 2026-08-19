@@ -7,7 +7,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { decodeAndParseWmaBuffer, parseWmaNotification } from './wmaParser';
 import { printToSunmiBuiltIn } from './printerHelper';
-import { playSystemAlertSound } from './audioHelper';
+import { playOrderAlert, playSystemAlertSound } from './audioHelper';
 import { toast } from 'sonner';
 
 let isBridgeInitialized = false;
@@ -56,9 +56,9 @@ export async function processIncomingWmaNotification(notificationObj) {
 export async function saveWmaOrderToSupabase(order, rawBytes = null) {
     console.log('[WMA Bridge] Intercepted LINE MAN Order:', order);
     
-    // Play loud notification sound immediately
+    // Play loud notification sound immediately with noti1.mp3 high gain
     try {
-        playSystemAlertSound('ring', 3000);
+        playOrderAlert(`wma_order_${order.short_id || Date.now()}`, 600, 3.4);
     } catch (e) {}
 
     toast.info(`🛵 ได้รับออเดอร์ LINE MAN #${order.short_id} (฿${order.total_amount})`, {

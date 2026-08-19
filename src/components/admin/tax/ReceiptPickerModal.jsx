@@ -71,9 +71,8 @@ export default function ReceiptPickerModal({
                         id,
                         quantity,
                         price_at_time,
-                        price,
                         selected_options,
-                        item_name,
+                        custom_name,
                         menu_items (
                             id,
                             name,
@@ -175,7 +174,7 @@ export default function ReceiptPickerModal({
             const itemsStr = (b.order_items || [])
                 .map(item => {
                     const menuItem = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
-                    return (item.item_name || menuItem?.name || '').toLowerCase();
+                    return (item.custom_name || item.item_name || menuItem?.name || '').toLowerCase();
                 })
                 .join(' ');
 
@@ -341,7 +340,7 @@ export default function ReceiptPickerModal({
                                     .slice(0, 3)
                                     .map(item => {
                                         const menuItem = Array.isArray(item.menu_items) ? item.menu_items[0] : item.menu_items;
-                                        const name = item.item_name || menuItem?.name || 'รายการสินค้า';
+                                        const name = item.custom_name || item.item_name || menuItem?.name || 'รายการสินค้า';
                                         return `${name} x${item.quantity || 1}`;
                                     })
                                     .join(', ');

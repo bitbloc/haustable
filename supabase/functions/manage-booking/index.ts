@@ -264,7 +264,8 @@ Deno.serve(async (req) => {
          const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('line_user_id', lineUserId).single()
          if (!profile) throw new Error("Profile not found. Please register first.")
          
-         const payload = { ...bookingData, user_id: profile.id }
+         const { orderItems, ...cleanBookingData } = bookingData || {}
+         const payload = { ...cleanBookingData, user_id: profile.id }
          
          // Insert Booking
          const { data: booking, error: bookingError } = await supabaseAdmin
@@ -276,13 +277,14 @@ Deno.serve(async (req) => {
          if (bookingError) throw bookingError
          
          // Insert Order Items if any
-         if (bookingData.orderItems && bookingData.orderItems.length > 0) {
-             const items = bookingData.orderItems.map(item => ({
+         const itemsToInsert = orderItems || bookingData.orderItems
+         if (itemsToInsert && itemsToInsert.length > 0) {
+             const items = itemsToInsert.map((item: any) => ({
                  booking_id: booking.id,
                  ...item
              }))
              const { error: itemsError } = await supabaseAdmin.from('order_items').insert(items)
-             if (itemsError) throw itemsError // Warning: Transaction rollback? Supabase API doesn't support complex transactions easily here.
+             if (itemsError) throw itemsError
          }
          
          result = { success: true, booking }

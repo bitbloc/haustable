@@ -110,14 +110,14 @@ function StaffLiveOrdersContent() {
 
     // --- Realtime Alert Callback (Stable Ref) ---
     const handleNewOrderAlert = useCallback((newOrder) => {
-        play()
-        triggerNotification('New Order', { body: `Table ${newOrder.tables_layout?.table_name || 'Pickup'}` })
+        play(`kds_order_${newOrder?.id || Date.now()}`)
+        triggerNotification('New Order', { body: `Table ${newOrder?.tables_layout?.table_name || 'Pickup'}` })
         setNotification({
             visible: true,
-            title: `New Order: ${newOrder.tables_layout?.table_name || 'Pickup'}`,
+            title: `New Order: ${newOrder?.tables_layout?.table_name || 'Pickup'}`,
             message: 'New items sent to kitchen',
-            price: newOrder.total_amount,
-            orderId: newOrder.id
+            price: newOrder?.total_amount,
+            orderId: newOrder?.id
         })
     }, [play, triggerNotification])
 

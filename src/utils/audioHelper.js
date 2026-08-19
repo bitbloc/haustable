@@ -1,23 +1,28 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 /**
- * Singleton High-Output Audio & Notification Engine for POS & Kitchen Display System (KDS)
+ * Singleton High-Output Audio & Notification Engine for POS, Kitchen (KDS) & Android APK
  * 
  * Features:
- * - Acoustic Tuning for POS / Android APK / Tablet speakers (cuts inaudible <380Hz, boosts 2.6kHz ear presence)
- * - Multi-Stage Mastering Chain: High-Pass -> Presence EQ -> Dynamics Limiter Compressor -> +16dB Makeup Gain -> Soft-Clip Saturation
- * - High-Impact 4-Note Ascending Arpeggio + Climax Ring (E6 -> G#6 -> B6 -> E7)
- * - Universal Mobile / WebView AudioContext Auto-Unlocker
- * - Centralized Sliding-Window Event Deduplicator
+ * - Native Android APK & Sunmi POS Zero-Stutter Optimization (Cached AudioBuffer in memory)
+ * - Acoustic Tuning: 220Hz High-Pass + 2.8kHz Presence EQ + Fast Compressor/Limiter + 3.2x (+14dB) Make-up Gain + WaveShaper
+ * - Primary: High-Gain `/noti1.mp3` Web Audio playback (Loud & piercing like Grab/LINE MAN)
+ * - Fallback 1: HTML5 Audio with maximum gain
+ * - Fallback 2: High-Impact Synthesized Bell Chime (100% offline & zero-dependency guarantee)
+ * - Android Lifecycle Auto-Resumer (visibilitychange, focus, pageshow, touchstart)
+ * - Centralized Sliding-Window Event Deduplicator (4.5s window) & Global Throttle (800ms)
  */
 
 let sharedAudioContext = null;
+let noti1AudioBuffer = null;
+let isPreloadingNoti1 = false;
 let lastAlertPlayedTime = 0;
+let isAudioEngineUnlocked = false;
 const eventDeduplicationMap = new Map(); // key -> timestamp
 
 /**
  * Generate soft-clipping saturation curve to maximize SPL without digital harshness
  */
-function makeSoftDistortionCurve(amount = 20, samples = 4096) {
+function makeSoftDistortionCurve(amount = 12, samples = 4096) {
     const curve = new Float32Array(samples);
     const deg = Math.PI / 180;
     for (let i = 0; i < samples; ++i) {
@@ -38,89 +43,181 @@ export function getSharedAudioContext() {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return null;
         if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
-            sharedAudioContext = new AudioContextClass();
+            sharedAudioContext = new AudioContextClass({
+                latencyHint: 'interactive'
+            });
         }
         if (sharedAudioContext.state === 'suspended') {
             sharedAudioContext.resume().catch(() => {});
         }
         return sharedAudioContext;
     } catch (e) {
-        console.warn('[AudioHelper] Failed to obtain AudioContext:', e);
+        console.warn('[AudioEngine] Failed to obtain AudioContext:', e);
         return null;
     }
 }
 
 /**
- * Universal auto-unlocker on first user interaction for Android WebView & Mobile Browsers
+ * Preload and decode /noti1.mp3 into memory for instant, non-blocking playback on Android APK
+ */
+export async function preloadNotificationAudio() {
+    if (typeof window === 'undefined' || noti1AudioBuffer || isPreloadingNoti1) return;
+    isPreloadingNoti1 = true;
+
+    try {
+        const ctx = getSharedAudioContext();
+        if (!ctx) {
+            isPreloadingNoti1 = false;
+            return;
+        }
+
+        const response = await fetch('/noti1.mp3', { cache: 'force-cache' });
+        if (!response.ok) throw new Error(`HTTP ${response.status} loading noti1.mp3`);
+        
+        const arrayBuffer = await response.arrayBuffer();
+        ctx.decodeAudioData(
+            arrayBuffer,
+            (decoded) => {
+                noti1AudioBuffer = decoded;
+                isPreloadingNoti1 = false;
+                console.log('🔊 [AudioEngine] noti1.mp3 preloaded & decoded into memory successfully.');
+            },
+            (err) => {
+                console.warn('[AudioEngine] decodeAudioData error for noti1.mp3:', err);
+                isPreloadingNoti1 = false;
+            }
+        );
+    } catch (err) {
+        console.warn('[AudioEngine] Preload noti1.mp3 fetch failed:', err);
+        isPreloadingNoti1 = false;
+    }
+}
+
+/**
+ * Unlock Web Audio Engine for Android WebView & Mobile Browsers
+ * Plays a silent 1-sample buffer to completely awaken Android audio hardware threads.
+ */
+export function unlockAudioEngine() {
+    if (typeof window === 'undefined') return;
+    try {
+        const ctx = getSharedAudioContext();
+        if (!ctx) return;
+
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+                isAudioEngineUnlocked = true;
+            }).catch(() => {});
+        } else if (ctx.state === 'running') {
+            isAudioEngineUnlocked = true;
+        }
+
+        // Play a silent buffer to prime Android audio thread
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+
+        // Preload noti1.mp3 if not already in memory
+        if (!noti1AudioBuffer) {
+            preloadNotificationAudio();
+        }
+    } catch (e) {
+        console.warn('[AudioEngine] Unlock error:', e);
+    }
+}
+
+export function isAudioUnlocked() {
+    if (typeof window === 'undefined') return false;
+    const ctx = getSharedAudioContext();
+    return Boolean(ctx && ctx.state === 'running');
+}
+
+/**
+ * Universal auto-unlocker on first user interaction for Android APK & Mobile Browsers
  */
 export function initAudioUnlocker() {
     if (typeof window === 'undefined') return;
-    const unlock = () => {
-        const ctx = getSharedAudioContext();
-        if (ctx && ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-        }
-        window.removeEventListener('pointerdown', unlock);
-        window.removeEventListener('touchstart', unlock);
-        window.removeEventListener('keydown', unlock);
-        window.removeEventListener('click', unlock);
-        window.removeEventListener('mousedown', unlock);
+
+    const handleUnlockEvent = () => {
+        unlockAudioEngine();
+        window.removeEventListener('pointerdown', handleUnlockEvent);
+        window.removeEventListener('touchstart', handleUnlockEvent);
+        window.removeEventListener('keydown', handleUnlockEvent);
+        window.removeEventListener('click', handleUnlockEvent);
+        window.removeEventListener('mousedown', handleUnlockEvent);
     };
 
-    window.addEventListener('pointerdown', unlock, { once: true });
-    window.addEventListener('touchstart', unlock, { once: true });
-    window.addEventListener('keydown', unlock, { once: true });
-    window.addEventListener('click', unlock, { once: true });
-    window.addEventListener('mousedown', unlock, { once: true });
+    window.addEventListener('pointerdown', handleUnlockEvent, { once: true, passive: true });
+    window.addEventListener('touchstart', handleUnlockEvent, { once: true, passive: true });
+    window.addEventListener('keydown', handleUnlockEvent, { once: true, passive: true });
+    window.addEventListener('click', handleUnlockEvent, { once: true, passive: true });
+    window.addEventListener('mousedown', handleUnlockEvent, { once: true, passive: true });
+
+    // Android APK Lifecycle Watcher: Resume audio context when returning to foreground
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            const ctx = getSharedAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+        }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleVisibilityChange);
+    window.addEventListener('pageshow', handleVisibilityChange);
+
+    // Initial preload trigger
+    preloadNotificationAudio();
 }
 
-// Auto-run unlocker setup on module import in browser
+// Auto-run unlocker setup on module load
 if (typeof window !== 'undefined') {
     initAudioUnlocker();
 }
 
 /**
- * Master High-Gain Mastering Chain for POS & Mobile Hardware:
- * Source -> High-Pass Filter (380Hz) -> Presence Peaking EQ (2.6kHz +5dB) -> Dynamics Compressor -> High Make-up Gain -> Soft Shaper -> Output
- * Guarantees maximum perceived loudness ("ลั่นๆ") on small built-in speakers while eliminating speaker rattle.
+ * Master High-Gain Mastering Chain for POS, Sunmi & Mobile Hardware:
+ * Source -> High-Pass (220Hz) -> Presence EQ (2.8kHz +5.0dB) -> Dynamics Compressor -> Make-up Gain (3.2x / +14dB) -> WaveShaper -> Destination
+ * Guarantees piercing loudness ("ลั่นๆ เทียบเท่า Grab/LINE MAN") without digital clipping.
  */
-function createMasterOutputChain(ctx, boostFactor = 3.5) {
+function createMasterOutputChain(ctx, boostFactor = 3.2) {
     try {
         const now = ctx.currentTime;
 
-        // 1. High-Pass Filter (380Hz) - Cut muddy sub-bass that drains speaker wattage
+        // 1. High-Pass Filter (220Hz) - Cut low frequency energy that drains speaker wattage & causes distortion
         const hpFilter = ctx.createBiquadFilter();
         hpFilter.type = 'highpass';
-        hpFilter.frequency.setValueAtTime(380, now);
-        hpFilter.Q.setValueAtTime(0.8, now);
+        hpFilter.frequency.setValueAtTime(220, now);
+        hpFilter.Q.setValueAtTime(0.7, now);
 
-        // 2. Presence Peaking EQ (2600Hz, +5dB) - Sweet-spot for human ear clarity & small speakers
+        // 2. Presence Peaking EQ (2800Hz, +5.0dB) - Maximum human ear sensitivity zone
         const presenceFilter = ctx.createBiquadFilter();
         presenceFilter.type = 'peaking';
-        presenceFilter.frequency.setValueAtTime(2600, now);
-        presenceFilter.Q.setValueAtTime(1.2, now);
+        presenceFilter.frequency.setValueAtTime(2800, now);
+        presenceFilter.Q.setValueAtTime(1.1, now);
         presenceFilter.gain.setValueAtTime(5.0, now);
 
-        // 3. High-End Air Filter (4500Hz, +3dB) - Sparkle & clarity
+        // 3. High-End Air Filter (4800Hz, +2.5dB) - Crispness
         const airFilter = ctx.createBiquadFilter();
         airFilter.type = 'peaking';
-        airFilter.frequency.setValueAtTime(4500, now);
+        airFilter.frequency.setValueAtTime(4800, now);
         airFilter.Q.setValueAtTime(1.0, now);
-        airFilter.gain.setValueAtTime(3.0, now);
+        airFilter.gain.setValueAtTime(2.5, now);
 
-        // 4. Brickwall Limiter / Dynamics Compressor (Tight peak punch)
+        // 4. Fast Dynamics Limiter / Compressor (Punches RMS volume)
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-10, now);
-        compressor.knee.setValueAtTime(4, now);
-        compressor.ratio.setValueAtTime(12, now);
-        compressor.attack.setValueAtTime(0.001, now);
-        compressor.release.setValueAtTime(0.08, now);
+        compressor.threshold.setValueAtTime(-14, now);
+        compressor.knee.setValueAtTime(3, now);
+        compressor.ratio.setValueAtTime(8, now);
+        compressor.attack.setValueAtTime(0.002, now);
+        compressor.release.setValueAtTime(0.06, now);
 
-        // 5. High-Output Make-up Gain (+16dB punch)
+        // 5. High-Output Make-up Gain (+14dB boost)
         const masterGain = ctx.createGain();
         masterGain.gain.setValueAtTime(boostFactor, now);
 
-        // 6. Soft Waveshaper Saturation (prevents harsh digital square distortion)
+        // 6. Soft Waveshaper Saturation (prevents harsh digital clipping)
         if (!softDistortionCurve) {
             softDistortionCurve = makeSoftDistortionCurve(10);
         }
@@ -144,11 +241,11 @@ function createMasterOutputChain(ctx, boostFactor = 3.5) {
 
 /**
  * Check and record event deduplication key within a cooldown window
- * @param {string} eventKey - Unique event identifier (e.g., "booking_123_pending")
- * @param {number} cooldownMs - Cooldown duration in ms (default: 6000ms)
+ * @param {string} eventKey - Unique event identifier (e.g., "order_123_pending")
+ * @param {number} cooldownMs - Cooldown duration in ms (default: 4500ms)
  * @returns {boolean} - True if allowed to trigger, false if duplicate/throttled
  */
-export function checkEventDeduplication(eventKey, cooldownMs = 6000) {
+export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
     if (!eventKey) return true;
     const now = Date.now();
 
@@ -166,6 +263,29 @@ export function checkEventDeduplication(eventKey, cooldownMs = 6000) {
 
     eventDeduplicationMap.set(eventKey, now);
     return true;
+}
+
+/**
+ * Play decoded AudioBuffer through the High-Gain Web Audio Mastering Chain
+ */
+function playAudioBufferDirectly(buffer, boostFactor = 3.2) {
+    try {
+        const ctx = getSharedAudioContext();
+        if (!ctx) return false;
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(() => {});
+        }
+
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        const masterInput = createMasterOutputChain(ctx, boostFactor);
+        source.connect(masterInput);
+        source.start(0);
+        return true;
+    } catch (err) {
+        console.warn('[AudioEngine] playAudioBufferDirectly failed:', err);
+        return false;
+    }
 }
 
 /**
@@ -231,9 +351,8 @@ function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel
 }
 
 /**
- * Play Ultra-High Output POS Order Alert ("เสียงเตือนลั่นๆ")
- * 4-Note Ascending Arpeggio + Climax Ring (E6 -> G#6 -> B6 -> E7) + Confirmation Chime
- * Cuts through kitchen hoods, ambient bar chatter, and noisy espresso machines.
+ * Play Ultra-High Output Fallback Synth Chime
+ * 4-Note Ascending Arpeggio + Climax Ring (E6 -> G#6 -> B6 -> E7)
  */
 export function playSynthChime() {
     try {
@@ -256,13 +375,12 @@ export function playSynthChime() {
         synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.52, 0.22, 1.15); // B6
         synthesizeBellNote(ctx, masterOut, 2637.02, now + 0.64, 0.75, 1.45); // E7 (Sustained Ring)
     } catch (err) {
-        console.warn('[AudioHelper] playSynthChime error:', err);
+        console.warn('[AudioEngine] playSynthChime error:', err);
     }
 }
 
 /**
- * Play Ultra-Clear Doorbell Chime (Ding-Dong: G6 1568Hz -> E6 1318Hz -> C6 1046Hz)
- * Used for QR Table Orders & Walk-in customer arrivals.
+ * Play Doorbell Chime (Ding-Dong: G6 -> E6 -> C6) for customer arrivals / walk-ins
  */
 export function playDoorbellChime() {
     try {
@@ -273,39 +391,18 @@ export function playDoorbellChime() {
         }
 
         const now = ctx.currentTime;
-        const masterOut = createMasterOutputChain(ctx, 3.5);
+        const masterOut = createMasterOutputChain(ctx, 3.2);
 
         synthesizeBellNote(ctx, masterOut, 1568.00, now, 0.40, 1.2);        // G6 (Ding)
         synthesizeBellNote(ctx, masterOut, 1318.51, now + 0.18, 0.45, 1.25); // E6 (Dong)
         synthesizeBellNote(ctx, masterOut, 1046.50, now + 0.38, 0.85, 1.35); // C6 (Dang)
     } catch (err) {
-        console.warn('[AudioHelper] playDoorbellChime error:', err);
+        console.warn('[AudioEngine] playDoorbellChime error:', err);
     }
 }
 
 /**
- * Play high-penetration confirmation beep (Urgent Alert / Barcode / Scanner)
- */
-export function playBeepChime() {
-    try {
-        const ctx = getSharedAudioContext();
-        if (!ctx) return;
-        if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-        }
-
-        const now = ctx.currentTime;
-        const masterOut = createMasterOutputChain(ctx, 3.5);
-
-        synthesizeBellNote(ctx, masterOut, 1760.00, now, 0.18, 1.2);
-        synthesizeBellNote(ctx, masterOut, 2200.00, now + 0.08, 0.30, 1.35);
-    } catch (err) {
-        console.warn('[AudioHelper] playBeepChime error:', err);
-    }
-}
-
-/**
- * Play urgent dual-tone siren alarm (For call staff / call bill / long pending order)
+ * Play Urgent Siren Tone (For critical staff call / table call)
  */
 export function playUrgentTone() {
     try {
@@ -337,32 +434,99 @@ export function playUrgentTone() {
         playUrgentPulse(1400, now + 0.24, 0.15, 1.2);
         playUrgentPulse(1800, now + 0.34, 0.32, 1.4);
     } catch (err) {
-        console.warn('[AudioHelper] playUrgentTone error:', err);
+        console.warn('[AudioEngine] playUrgentTone error:', err);
     }
 }
 
 /**
- * Play throttled system alert sound directly through the high-output synthesis engine.
- * @param {string|null} _ignoredUrl - Kept for API signature compatibility (no custom URLs needed)
- * @param {number} throttleMs - Minimum interval between sounds (default: 2500ms)
- * @param {string|null} eventKey - Optional deduplication key (e.g. "booking_123_INSERT")
- * @returns {boolean} - Whether audio was played
+ * Primary High-Impact Order Alert
+ * Plays /noti1.mp3 through the High-Gain Web Audio Mastering Chain with multi-level fallbacks.
+ * 
+ * @param {string|null} eventKey - Deduplication identifier (e.g. "order_123_pending")
+ * @param {number} throttleMs - Minimum interval between alerts (default: 800ms)
+ * @param {number} boostLevel - Output gain multiplier (default: 3.2x / +14dB)
+ * @returns {boolean} - Whether audio playback was triggered
  */
-export function playSystemAlertSound(_ignoredUrl = null, throttleMs = 2500, eventKey = null) {
+export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.2) {
     const now = Date.now();
 
-    // 1. Check Event Deduplication
-    if (eventKey && !checkEventDeduplication(eventKey, 6000)) {
+    // 1. Check Event Deduplication Key
+    if (eventKey && !checkEventDeduplication(eventKey, 4500)) {
         return false;
     }
 
-    // 2. Global Throttle Check
+    // 2. Global Throttle Check (Prevents audio overlap/stutter)
     if (now - lastAlertPlayedTime < throttleMs) {
         return false;
     }
     lastAlertPlayedTime = now;
 
-    // 3. Play the High-Impact Synthesized Chime directly
-    playSynthChime();
+    // 3. Primary Playback: Decoded noti1.mp3 buffer
+    if (noti1AudioBuffer) {
+        const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
+        if (played) return true;
+    }
+
+    // If buffer is still loading, try triggering preload and fallback immediately
+    if (!noti1AudioBuffer && !isPreloadingNoti1) {
+        preloadNotificationAudio();
+    }
+
+    // 4. Secondary Fallback: HTML5 Audio Element
+    try {
+        const audio = new Audio('/noti1.mp3');
+        audio.volume = 1.0;
+        const promise = audio.play();
+        if (promise !== undefined) {
+            promise.catch((e) => {
+                // If autoplay blocked, trigger synthesized chime
+                console.warn('[AudioEngine] HTML5 Audio play prevented, falling back to synth chime:', e);
+                playSynthChime();
+            });
+        }
+        return true;
+    } catch (e) {
+        // 5. Tertiary Fallback: Synthesized Chime
+        playSynthChime();
+        return true;
+    }
+}
+
+/**
+ * Staff Call Alert (Call Staff / Service Request)
+ */
+export function playStaffCallAlert(eventKey = null) {
+    return playOrderAlert(eventKey ? `call_staff_${eventKey}` : null, 1000, 3.4);
+}
+
+/**
+ * Bill Call Alert (Call Bill / Check Out)
+ */
+export function playBillAlert(eventKey = null) {
+    return playOrderAlert(eventKey ? `call_bill_${eventKey}` : null, 1000, 3.4);
+}
+
+/**
+ * Payment Slip Uploaded Alert
+ */
+export function playSlipAlert(eventKey = null) {
+    return playOrderAlert(eventKey ? `slip_${eventKey}` : null, 1000, 3.0);
+}
+
+/**
+ * Customer Arrival / Check-in Alert
+ */
+export function playDoorbellAlert(eventKey = null) {
+    if (eventKey && !checkEventDeduplication(`doorbell_${eventKey}`, 4500)) {
+        return false;
+    }
+    playDoorbellChime();
     return true;
+}
+
+/**
+ * Backward compatibility alias for playSystemAlertSound
+ */
+export function playSystemAlertSound(_ignoredUrl = null, throttleMs = 1200, eventKey = null) {
+    return playOrderAlert(eventKey, throttleMs, 3.2);
 }

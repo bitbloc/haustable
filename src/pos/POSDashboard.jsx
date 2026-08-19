@@ -18,7 +18,18 @@ import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRe
 import { isOnline, addToOfflineQueue } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
-import { playSynthChime, playDoorbellChime, playSystemAlertSound as playSystemAlertSoundUtil } from '../utils/audioHelper';
+import { 
+    playOrderAlert, 
+    playStaffCallAlert, 
+    playBillAlert, 
+    playSlipAlert, 
+    playDoorbellAlert, 
+    playSynthChime, 
+    playDoorbellChime, 
+    unlockAudioEngine,
+    playSystemAlertSound as playSystemAlertSoundUtil 
+} from '../utils/audioHelper';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
 
 const DEFAULT_BAR_CATS = [
@@ -77,6 +88,7 @@ function formatDbOrderItemToCart(oi) {
 }
 
 export default function POSDashboard() {
+    const { request: requestWakeLock } = useWakeLock();
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
     const [selectedTable, setSelectedTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
@@ -777,12 +789,16 @@ export default function POSDashboard() {
 
     const checkPendingOrders = async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+            const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
             const { data: activeBookings, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
                 .in('status', ['pending', 'seated'])
-                .gte('booking_time', `${today}T00:00:00+07:00`)
+                .gte('booking_time', startOfToday)
+                .lte('booking_time', endOfToday)
                 .order('booking_time', { ascending: false });
             
             if (!error && activeBookings) {
@@ -792,10 +808,10 @@ export default function POSDashboard() {
                 const hasPending = count > 0;
                 setHasPendingOrders(hasPending);
                 
-                // Check if any active booking is a QR order that hasn't been auto-printed yet
+                // Check if any active booking is a QR order for today that hasn't been auto-printed yet
                 for (const b of activeBookings) {
                     const remark = (b.staff_remark || '').toLowerCase();
-                    if (remark.includes('qr walk-in') || remark.includes('qr') || b.source === 'online' || b.source === 'qr') {
+                    if (remark.includes('qr walk-in') || remark.includes('qr') || b.source === 'qr') {
                         handleAutoPrintQROrder(b.id, b.tables_layout?.table_name);
                     }
                 }
@@ -899,17 +915,17 @@ export default function POSDashboard() {
         fetchAttachedMemberCrm();
     }, [activeBooking]);
 
-    // Repeating Sound Alert when pending orders exist
+    // Repeating Sound Alert when pending orders exist (every 12s, instant stop when opened)
     useEffect(() => {
         if (!hasPendingOrders) return;
 
-        // Play high-impact alert chime
-        playSystemAlertSoundUtil(null, 2500, 'pending_orders_loop');
+        // Play high-impact order alert with noti1.mp3
+        playOrderAlert('pending_orders_loop', 1000, 3.2);
 
-        // Repeat every 7 seconds
+        // Repeat every 12 seconds if pending orders remain unacknowledged
         const soundInterval = setInterval(() => {
-            playSystemAlertSoundUtil(null, 2500, 'pending_orders_loop');
-        }, 7000);
+            playOrderAlert('pending_orders_loop', 1000, 3.2);
+        }, 12000);
 
         return () => {
             clearInterval(soundInterval);
@@ -917,11 +933,11 @@ export default function POSDashboard() {
     }, [hasPendingOrders]);
 
     const playSystemAlertSound = (eventKey = null) => {
-        playSystemAlertSoundUtil(null, 2500, eventKey);
+        playOrderAlert(eventKey, 800, 3.2);
     };
 
     const playQRAlertSound = () => {
-        playDoorbellChime();
+        playDoorbellAlert('qr_doorbell');
     };
 
     useEffect(() => {
@@ -968,21 +984,21 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
                                     toast.dismiss(t);
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }}>
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">New Order</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">New Order · อาหารเข้าใหม่</span>
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} สั่งอาหารเข้าห้องครัวแล้ว</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} สั่งอาหารเข้าห้องครัวแล้ว</div>
                                 </div>
                             ), { id: pendingOrderKey, duration: 10000 });
                             pushNotifHistory('ORDER', 'New Order', `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
-                            playSystemAlertSound(pendingOrderKey);
+                            playOrderAlert(pendingOrderKey, 600, 3.4);
                         }
                     }
                 } else if (eventType === 'UPDATE') {
@@ -996,21 +1012,21 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-blue-500" onClick={() => {
                                     toast.dismiss(t);
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }}>
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Add Order</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">Add Order · สั่งเพิ่ม</span>
+                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} สั่งอาหารเพิ่มเติม</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} สั่งอาหารเพิ่มเติม</div>
                                 </div>
                             ), { id: pendingOrderKey, duration: 10000 });
                             pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
-                            playSystemAlertSound(pendingOrderKey);
+                            playOrderAlert(pendingOrderKey, 600, 3.4);
                         }
                     } else {
                         // Clear pending status flag once order is accepted
@@ -1022,21 +1038,21 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(callBillKey)) {
                             activeNotificationsRef.current.add(callBillKey);
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
                                     toast.dismiss(t);
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }}>
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Call Bill</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Bill · เรียกเช็คบิล</span>
+                                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} เรียกเช็คบิล</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} เรียกเช็คบิล</div>
                                 </div>
                             ), { id: callBillKey, duration: 10000 });
                             pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tableName} เรียกเช็คบิล`, tableId);
-                            playSystemAlertSound(callBillKey);
+                            playBillAlert(callBillKey);
                         }
                     } else if (!newRemark.includes('[CALL_BILL]')) {
                         // Clear notification key if [CALL_BILL] is removed
@@ -1049,15 +1065,15 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(cancelKey)) {
                             activeNotificationsRef.current.add(cancelKey);
                             toast.custom((t) => (
-                                <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px]">
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Cancelled</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#1A1A1A]" />
+                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px]">
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">Cancelled · ยกเลิก</span>
+                                        <span className="w-2 h-2 rounded-full bg-[oklch(18%_0.012_28)]" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้ายกเลิกการจอง: โต๊ะ {tableName}</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">ลูกค้ายกเลิกการจอง: โต๊ะ {tableName}</div>
                                 </div>
                             ), { id: cancelKey, duration: 15000 });
-                            playSystemAlertSound(cancelKey);
+                            playDoorbellAlert(cancelKey);
                         }
                     }
 
@@ -1068,15 +1084,15 @@ export default function POSDashboard() {
                             activeNotificationsRef.current.add(arrivedKey);
                             const customerName = newRow?.pickup_contact_name || newRow?.customer_name || 'ลูกค้า';
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px]">
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Customer Arrived</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px]">
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-700">Customer Arrived · ลูกค้ามาถึง</span>
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">ลูกค้า {customerName} มาถึงหน้าร้านแล้ว</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">ลูกค้า {customerName} มาถึงหน้าร้านแล้ว</div>
                                 </div>
                             ), { id: arrivedKey, duration: 15000 });
-                            playSystemAlertSound(arrivedKey);
+                            playDoorbellAlert(arrivedKey);
                         }
                     }
 
@@ -1085,21 +1101,21 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(callStaffKey)) {
                             activeNotificationsRef.current.add(callStaffKey);
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
                                     toast.dismiss(t);
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }}>
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Call Staff</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Staff · เรียกพนักงาน</span>
+                                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} เรียกพนักงาน</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} เรียกพนักงาน</div>
                                 </div>
                             ), { id: callStaffKey, duration: 10000 });
                             pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
-                            playSystemAlertSound(callStaffKey);
+                            playStaffCallAlert(callStaffKey);
                         }
                     } else if (!newRemark.includes('[CALL_STAFF]')) {
                         // Clear notification key if [CALL_STAFF] is removed
@@ -1111,21 +1127,21 @@ export default function POSDashboard() {
                         if (!activeNotificationsRef.current.has(slipReceivedKey)) {
                             activeNotificationsRef.current.add(slipReceivedKey);
                             toast.custom((t) => (
-                                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-xl flex flex-col gap-2 font-sans min-w-[280px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                                <div className="bg-[oklch(97%_0.008_28)] border border-blue-400 rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
                                     toast.dismiss(t);
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }}>
-                                    <div className="flex justify-between items-center border-b border-[#D1D1CD] pb-2">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#767673]">Payment Uploaded</span>
-                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-700">Payment · ส่งสลิปโอนเงิน</span>
+                                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[#1A1A1A] pt-1">โต๊ะ {tableName} ส่งหลักฐานโอนเงินแล้ว</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} ส่งหลักฐานโอนเงินแล้ว</div>
                                 </div>
                             ), { id: slipReceivedKey, duration: 10000 });
                             pushNotifHistory('SLIP', 'Payment Uploaded', `โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว`, tableId);
-                            playSystemAlertSound(slipReceivedKey);
+                            playSlipAlert(slipReceivedKey);
                         }
                     } else if (!newSlip) {
                         activeNotificationsRef.current.delete(slipReceivedKey);

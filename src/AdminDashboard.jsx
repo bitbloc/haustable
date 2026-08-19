@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils } from 'lucide-react'
 import PageTransition from './components/PageTransition'
@@ -7,6 +7,7 @@ import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
+import { playOrderAlert } from './utils/audioHelper'
 
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
@@ -194,30 +195,31 @@ export default function AdminDashboard() {
         }
     }, [dailyBookings])
 
-    // --- Sound Alert Logic ---
-    const [soundUrl, setSoundUrl] = useState(null)
+    // --- Sound Alert Logic (noti1.mp3 High-Gain Engine) ---
     const [soundMuted, setSoundMuted] = useState(false)
-    const [audio] = useState(new Audio())
+    const alertIntervalRef = useRef(null)
 
     useEffect(() => {
-        const fetchSound = async () => {
-            const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
-            if (data?.value) setSoundUrl(data.value)
-        }
-        fetchSound()
-        audio.loop = true
-    }, [])
-
-    useEffect(() => {
-        if (!soundMuted && soundUrl && pendingBookings.length > 0) {
-            audio.src = soundUrl
-            audio.play().catch(e => console.log('Autoplay blocked:', e))
+        if (!soundMuted && pendingBookings.length > 0) {
+            playOrderAlert('admin_pending_orders', 800, 3.2)
+            if (!alertIntervalRef.current) {
+                alertIntervalRef.current = setInterval(() => {
+                    playOrderAlert('admin_pending_orders', 1000, 3.2)
+                }, 12000)
+            }
         } else {
-            audio.pause()
-            audio.currentTime = 0
+            if (alertIntervalRef.current) {
+                clearInterval(alertIntervalRef.current)
+                alertIntervalRef.current = null
+            }
         }
-        return () => audio.pause()
-    }, [pendingBookings.length, soundUrl, soundMuted])
+        return () => {
+            if (alertIntervalRef.current) {
+                clearInterval(alertIntervalRef.current)
+                alertIntervalRef.current = null
+            }
+        }
+    }, [pendingBookings.length, soundMuted])
 
     const handlePrint = (booking, type) => {
         setSlipData({ booking, type })

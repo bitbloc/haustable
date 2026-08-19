@@ -212,7 +212,7 @@ export default function SlipAuditManager({
                     customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),
                     tables_layout ( table_name ),
-                    order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
+                    order_items ( id, quantity, price_at_time, custom_name, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
                 `)
                 .gte('booking_time', startIso)
                 .lte('booking_time', endIso)
@@ -229,7 +229,7 @@ export default function SlipAuditManager({
                     customer_note, pickup_contact_name, pickup_contact_phone, user_id,
                     profiles ( * ),
                     tables_layout ( table_name ),
-                    order_items ( id, quantity, price_at_time, special_instructions, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
+                    order_items ( id, quantity, price_at_time, custom_name, selected_options, menu_items ( id, name, price, menu_categories ( name ) ) )
                 `)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'open', 'draft', 'pending_payment'])
                 .order('booking_time', { ascending: false });
@@ -280,8 +280,7 @@ export default function SlipAuditManager({
                             booking_id,
                             quantity,
                             price_at_time,
-                            price,
-                            special_instructions,
+                            custom_name,
                             selected_options,
                             menu_item_id,
                             menu_items (
@@ -857,9 +856,9 @@ export default function SlipAuditManager({
                                                                 {lineTotal > 0 ? lineTotal.toLocaleString() : (unitPrice > 0 ? unitPrice.toLocaleString() : '')}
                                                             </span>
                                                         </div>
-                                                        {item.special_instructions && (
+                                                        {((item.special_instructions) || (Array.isArray(item.selected_options) && item.selected_options.length > 0)) && (
                                                             <div className="pl-6 text-[10px] text-gray-800 font-bold border-l-2 border-black ml-1 pl-2">
-                                                                ▶ {item.special_instructions}
+                                                                ▶ {item.special_instructions || item.selected_options.map(o => typeof o === 'string' ? o : (o.name || o.label || '')).filter(Boolean).join(', ')}
                                                             </div>
                                                         )}
                                                     </div>

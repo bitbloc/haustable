@@ -1,56 +1,35 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { Wifi, WifiOff, Volume2, VolumeX, Bell, AlertTriangle } from 'lucide-react'
-import { playSynthChime, playUrgentTone } from '../../utils/audioHelper'
+import { Wifi, WifiOff, Volume2, Bell } from 'lucide-react'
+import { playOrderAlert, unlockAudioEngine, isAudioUnlocked } from '../../utils/audioHelper'
 
 export default function BookingMonitor() {
-    const [isOnline, setIsOnline] = useState(true)
+    const [isOnlineState, setIsOnlineState] = useState(true)
     const [audioUnlocked, setAudioUnlocked] = useState(false)
     const [incomingBooking, setIncomingBooking] = useState(null)
     const [wakeLock, setWakeLock] = useState(null)
 
     // Audio Refs
     const intervalRef = useRef(null)
-    const [customSoundUrl, setCustomSoundUrl] = useState(null)
-    const customAudioRef = useRef(new Audio())
 
     useEffect(() => {
-        // Fetch setting once on mount
-        const fetchSettings = async () => {
-            const { data } = await supabase.from('app_settings').select('value').eq('key', 'alert_sound_url').single()
-            if (data?.value) {
-                setCustomSoundUrl(data.value)
-                customAudioRef.current.src = data.value
-                customAudioRef.current.loop = true
-                customAudioRef.current.volume = 1.0
-            }
+        if (isAudioUnlocked()) {
+            setAudioUnlocked(true)
         }
-        fetchSettings()
     }, [])
 
-    const startAlarm = () => {
-        if (customSoundUrl) {
-            customAudioRef.current.volume = 1.0
-            customAudioRef.current.play().catch(e => {
-                console.warn("Play failed, fallback to synth chime:", e)
-                playSynthChime()
-            })
-        } else {
-            // Play High-Impact Kitchen Chime Fallback
-            playSynthChime()
-            if (intervalRef.current) return
-            intervalRef.current = setInterval(() => {
-                playSynthChime()
-            }, 3500)
-        }
+    const startAlarm = (booking = null) => {
+        const eventKey = booking?.id ? `monitor_order_${booking.id}` : 'monitor_order';
+        playOrderAlert(eventKey, 600, 3.4)
+        
+        if (intervalRef.current) clearInterval(intervalRef.current)
+        intervalRef.current = setInterval(() => {
+            playOrderAlert('monitor_repeat', 1000, 3.4)
+        }, 12000)
     }
 
     const stopAlarm = () => {
-        if (customSoundUrl) {
-            customAudioRef.current.pause()
-            customAudioRef.current.currentTime = 0
-        }
-
         if (intervalRef.current) {
             clearInterval(intervalRef.current)
             intervalRef.current = null
@@ -77,62 +56,45 @@ export default function BookingMonitor() {
 
     // --- 3. Interaction (Open System) ---
     const handleOpenSystem = async () => {
-        initAudio()
-        if (audioContextRef.current.state === 'suspended') {
-            await audioContextRef.current.resume()
-        }
-        playTone(600, 'sine') // Test sound
+        unlockAudioEngine()
+        playOrderAlert('test_system', 500, 3.0) // Test sound
         await requestWakeLock()
         setAudioUnlocked(true)
     }
 
     // --- 4. Supabase Realtime & Health ---
     useEffect(() => {
-        // Connection Check using Supabase internal websocket state if possible, 
-        // or rely on 'system' channel events.
         const channel = supabase.channel('room_monitor')
 
         channel
-            .on('system', { event: '*' }, (payload) => {
-                // Supabase doesn't always emit 'disconnect' reliably on net drop, 
-                // but we can track subscription status.
-            })
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'bookings' },
                 (payload) => {
-                    // New Booking!
                     console.log('New Booking:', payload.new)
                     setIncomingBooking(payload.new)
-                    if (audioUnlocked) startAlarm()
+                    startAlarm(payload.new)
                 }
             )
             .subscribe((status) => {
-                if (status === 'SUBSCRIBED') setIsOnline(true)
-                if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setIsOnline(false)
+                if (status === 'SUBSCRIBED') setIsOnlineState(true)
+                if (status === 'CLOSED' || status === 'CHANNEL_ERROR') setIsOnlineState(false)
             })
 
-        // Native Online/Offline listeners
-        const handleOnline = () => setIsOnline(true)
-        const handleOffline = () => {
-            setIsOnline(false)
-            if (audioUnlocked) playTone(200, 'sawtooth') // Error sound
-        }
+        const handleOnline = () => setIsOnlineState(true)
+        const handleOffline = () => setIsOnlineState(false)
 
         window.addEventListener('online', handleOnline)
         window.addEventListener('offline', handleOffline)
 
         return async () => {
-            // Using unsubscribe() is standard for RealtimeSubscription
-            // Note: removeChannel is the high level Supabase Client method, which handles internal map.
-            // We use removeChannel to be safe.
             await supabase.removeChannel(channel)
             window.removeEventListener('online', handleOnline)
             window.removeEventListener('offline', handleOffline)
             stopAlarm()
             if (wakeLock) wakeLock.release()
         }
-    }, [audioUnlocked]) // Re-bind if unlocked state changes? No, independent.
+    }, [])
 
     // Acknowledge Function
     const handleAcknowledge = () => {
@@ -145,10 +107,10 @@ export default function BookingMonitor() {
             <div className="fixed bottom-4 right-4 z-50 animate-bounce">
                 <button
                     onClick={handleOpenSystem}
-                    className="bg-red-600 hover:bg-red-500 text-white font-bold p-4 rounded-full shadow-lg flex items-center gap-2 border-4 border-white"
+                    className="bg-[oklch(52%_0.16_28)] hover:opacity-90 text-white font-bold p-4 rounded-full shadow-xl flex items-center gap-2 border-2 border-white"
                 >
                     <Volume2 size={24} />
-                    <span>กดเพื่อเปิดระบบ (Start Shift)</span>
+                    <span>กดเพื่อเปิดระบบเสียง (Enable Audio)</span>
                 </button>
             </div>
         )
@@ -157,30 +119,31 @@ export default function BookingMonitor() {
     return (
         <>
             {/* Status Indicator (Bottom Left) */}
-            <div className={`fixed bottom-4 left-4 z-50 px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-2 ${isOnline ? 'bg-black/80 text-[#DFFF00] border-[#DFFF00]' : 'bg-red-600 text-white border-white animate-pulse'}`}>
-                {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
-                {isOnline ? 'SYSTEM ONLINE' : 'DISCONNECTED'}
+            <div className={`fixed bottom-4 left-4 z-50 px-3 py-1 rounded-full text-xs font-mono font-bold border flex items-center gap-2 ${isOnlineState ? 'bg-black/80 text-[#DFFF00] border-[#DFFF00]' : 'bg-red-600 text-white border-white animate-pulse'}`}>
+                {isOnlineState ? <Wifi size={14} /> : <WifiOff size={14} />}
+                {isOnlineState ? 'SYSTEM ONLINE' : 'DISCONNECTED'}
             </div>
 
-            {/* Wake Lock Status (Hidden or subtle) */}
+            {/* Wake Lock Status */}
             {wakeLock && (
-                <div className="fixed bottom-4 left-36 z-50 text-[10px] text-gray-400 opacity-50">
+                <div className="fixed bottom-4 left-36 z-50 text-[10px] font-mono text-gray-400 opacity-50">
                     ⚡ Screen Active
                 </div>
             )}
 
             {/* Incoming Booking Modal */}
             {incomingBooking && (
-                <div className="fixed inset-0 z-[100] bg-red-600/90 backdrop-blur-md flex flex-col items-center justify-center animate-pulse-fast">
-                    <div className="text-white text-center space-y-6 p-8">
-                        <Bell size={80} className="mx-auto animate-bounce" />
-                        <h1 className="text-5xl font-bold">NEW ORDER!</h1>
-                        <p className="text-2xl">โต๊ะ (Table): {incomingBooking.table_id}</p>
-                        <p className="text-xl">ยอดเงิน: {incomingBooking.total_amount} บาท</p>
+                <div className="fixed inset-0 z-[100] bg-[oklch(18%_0.012_28)]/90 backdrop-blur-md flex flex-col items-center justify-center">
+                    <div className="text-white text-center space-y-6 p-8 max-w-lg bg-[oklch(22%_0.015_28)] border border-[oklch(85%_0.012_28)]/20 rounded-2xl shadow-2xl">
+                        <Bell size={64} className="mx-auto text-[oklch(52%_0.16_28)] animate-bounce" />
+                        <div className="text-[12px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Incoming Order</div>
+                        <h1 className="text-3xl font-bold">มีออเดอร์ใหม่เข้ามา!</h1>
+                        <p className="text-xl">โต๊ะ / รายการ: {incomingBooking.tables_layout?.table_name || incomingBooking.table_id || 'Pickup / Online'}</p>
+                        <p className="text-lg font-mono font-bold text-emerald-400">ยอดเงิน: ฿{incomingBooking.total_amount || 0}.-</p>
 
                         <button
                             onClick={handleAcknowledge}
-                            className="bg-white text-red-600 px-12 py-6 rounded-3xl font-bold text-3xl shadow-xl hover:scale-105 transition-transform"
+                            className="bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] px-10 py-4 rounded-xl font-bold text-xl shadow-xl hover:opacity-90 active:scale-98 transition-all w-full"
                         >
                             รับทราบ (Acknowledge)
                         </button>

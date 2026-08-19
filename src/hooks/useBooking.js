@@ -147,6 +147,7 @@ export function useBooking() {
                 pickup_contact_name: finalContactName,
                 pickup_contact_phone: finalContactPhone,
                 customer_note: customerNoteContent,
+                staff_remark: '[ONLINE] จองโต๊ะล่วงหน้า',
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
                 discount_amount: promotionData?.discountAmount || 0,
