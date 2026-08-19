@@ -1638,12 +1638,18 @@ export default function POSDashboard() {
     }, []);
 
     const handleBackToTables = () => {
-        localStorage.removeItem('pos_active_table_id');
-        setView('tables');
-        setSelectedTable(null);
-        setActiveBooking(null);
-        setCurrentOrder({ items: [], customer: null, table: null });
-        setAttachedMemberCrm(null);
+        if (view === 'menu' && selectedTable) {
+            // Return from Menu key-in back to Tables floorplan, preserving active table & items
+            setView('tables');
+        } else {
+            // Full reset to clean Tables floorplan
+            localStorage.removeItem('pos_active_table_id');
+            setView('tables');
+            setSelectedTable(null);
+            setActiveBooking(null);
+            setCurrentOrder({ items: [], customer: null, table: null });
+            setAttachedMemberCrm(null);
+        }
     };
 
     const handleAddToOrder = useCallback((item) => {
@@ -2656,6 +2662,7 @@ export default function POSDashboard() {
                             onUpdateItemNote={handleUpdateItemNote}
                             onClear={handleClearOrderOrTable}
                             onCheckout={handleCheckout}
+                            onOpenMenu={() => setView('menu')}
                             onInjectRewardItem={handleInjectRewardItem}
                             onRemoveRewardItem={handleRemoveRewardItem}
                             onAddEmergencyItem={handleAddToOrder}

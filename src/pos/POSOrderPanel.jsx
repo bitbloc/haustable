@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -722,7 +722,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </div>
                     )}
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    {onOpenMenu && (
+                        <button
+                            type="button"
+                            onClick={onOpenMenu}
+                            className="text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-lg cursor-pointer transition-all active:scale-95 flex items-center gap-1 shadow-2xs font-mono uppercase"
+                            title="เปิดเมนูเพื่อคีย์และสั่งอาหารเข้าโต๊ะนี้"
+                        >
+                            <Plus size={12} />
+                            <span>สั่งอาหาร / คีย์เมนู</span>
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={() => setShowEmergencyModal(true)}
@@ -888,9 +899,19 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Items List */}
             <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-2 scrollbar-none touch-manipulation">
                 {order.items.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-2 opacity-50 font-mono text-xs font-bold uppercase tracking-wider py-8">
-                        <UtensilsIcon size={28} strokeWidth={1.5} />
-                        <span>Cart is empty</span>
+                    <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-3 opacity-90 font-mono text-xs font-bold uppercase tracking-wider py-8">
+                        <Utensils size={32} strokeWidth={1.5} className="opacity-40" />
+                        <span className="opacity-60">Cart is empty / ยังไม่มีรายการ</span>
+                        {onOpenMenu && (
+                            <button
+                                type="button"
+                                onClick={onOpenMenu}
+                                className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white px-4 py-2 rounded-xl text-xs font-bold font-sans tracking-normal uppercase cursor-pointer transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
+                            >
+                                <Plus size={14} />
+                                <span>+ สั่งอาหาร / คีย์รายการ</span>
+                            </button>
+                        )}
                     </div>
                 ) : (
                     order.items.map(item => (
