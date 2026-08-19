@@ -79,6 +79,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         const bookingsSub = supabase.channel('pos-tables-bookings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchTables)
             .subscribe((status, err) => {
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
                     console.warn(`[Realtime POS Bookings] Channel status: ${status}`, err || '');

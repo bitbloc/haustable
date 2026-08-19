@@ -27,6 +27,7 @@ import {
     playSynthChime, 
     playDoorbellChime, 
     unlockAudioEngine,
+    checkEventDeduplication,
     playSystemAlertSound as playSystemAlertSoundUtil 
 } from '../utils/audioHelper';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -45,9 +46,19 @@ const DEFAULT_BAR_CATS = [
 function formatDbOrderItemToCart(oi) {
     if (!oi) return null;
     const isCustom = Boolean(oi.is_custom === true || oi.is_emergency === true || String(oi.id).startsWith('custom_'));
+    
+    // Normalize options to always be a safe Array
+    let optionsArr = [];
+    if (Array.isArray(oi.selected_options)) {
+        optionsArr = oi.selected_options;
+    } else if (oi.selected_options && typeof oi.selected_options === 'object') {
+        optionsArr = Object.entries(oi.selected_options).map(([k, v]) => (typeof v === 'object' && v !== null ? v : { name: `${k}: ${v}` }));
+    }
+
+    const customNameInOpts = optionsArr.find(o => o?.custom_item_name)?.custom_item_name;
     const resolvedName = oi.custom_name 
         || oi.menu_items?.name 
-        || oi.selected_options?.find(o => o.custom_item_name)?.custom_item_name
+        || customNameInOpts
         || oi.name 
         || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
     
@@ -59,9 +70,9 @@ function formatDbOrderItemToCart(oi) {
         resolvedDest = 'bar';
     } else if (oi.destination === 'other') {
         resolvedDest = 'other';
-    } else if (oi.selected_options?.some(o => {
-        const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-        return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+    } else if (optionsArr.some(o => {
+        const oStr = typeof o === 'object' && o !== null ? (o.name || o.destination || '') : String(o || '');
+        return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o?.destination === 'bar';
     })) {
         resolvedDest = 'bar';
     }
@@ -77,7 +88,7 @@ function formatDbOrderItemToCart(oi) {
         price: parseFloat(oi.price_at_time ?? oi.price) || 0,
         quantity: oi.quantity || 1,
         db_id: cleanDbId,
-        selected_options: oi.selected_options || [],
+        selected_options: optionsArr,
         category_id: oi.menu_items?.category_id || oi.category_id || '',
         category_name: oi.menu_items?.menu_categories?.name || oi.category_name || (resolvedDest === 'bar' ? 'เครื่องดื่ม' : 'อาหาร'),
         destination: resolvedDest,
@@ -1008,7 +1019,7 @@ export default function POSDashboard() {
                 }
 
                 if (eventType === 'INSERT') {
-                    if (newRow.status === 'pending') {
+                    if (newRow.status === 'pending' || newRow.source === 'qr' || (newRow.staff_remark || '').toLowerCase().includes('qr')) {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
                             toast.custom((t) => (
@@ -1180,10 +1191,40 @@ export default function POSDashboard() {
                 event: '*',
                 schema: 'public',
                 table: 'order_items'
-            }, (payload) => {
+            }, async (payload) => {
                 const bookingId = payload.new?.booking_id || payload.old?.booking_id;
                 if (bookingId) {
                     if (payload.eventType === 'INSERT') {
+                        // Play loud noti1.mp3 sound for QR / incoming order items (with 4.5s deduplication)
+                        const qrItemAlertKey = `order_items_${bookingId}`;
+                        if (checkEventDeduplication(qrItemAlertKey, 4500)) {
+                            console.log(`🔊 [POS Alert] QR / New items incoming for booking: ${bookingId}`);
+                            playOrderAlert(qrItemAlertKey, 600, 3.4);
+                            
+                            // Lookup table name for toast & history
+                            supabase.from('bookings').select('table_id, staff_remark, source, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
+                                const tName = bData?.tables_layout?.table_name || tablesMap[bData?.table_id] || `โต๊ะ #${bData?.table_id || ''}`;
+                                const tId = bData?.table_id;
+                                toast.custom((t) => (
+                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
+                                        toast.dismiss(t);
+                                        if (tId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }}>
+                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">QR Order · ออเดอร์เข้าใหม่</span>
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        </div>
+                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว</div>
+                                    </div>
+                                ), { id: qrItemAlertKey, duration: 10000 });
+                                pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                            });
+                        }
+
                         if (window.autoPrintDebounceTimer) {
                             clearTimeout(window.autoPrintDebounceTimer);
                         }
@@ -1201,6 +1242,8 @@ export default function POSDashboard() {
                             refreshActiveBookingItems(bookingId);
                         }, 500);
                     }
+
+                    setRefreshKey(prev => prev + 1);
                 }
             })
             .subscribe();

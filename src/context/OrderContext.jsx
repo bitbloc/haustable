@@ -307,8 +307,9 @@ export function OrderProvider({ children }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, payload => {
                 const bookingId = payload.new?.booking_id || payload.old?.booking_id
                 if (bookingId) {
+                    const isNewItem = payload.eventType === 'INSERT'
                     if (fetchDebounceRef.current[bookingId]) clearTimeout(fetchDebounceRef.current[bookingId].timeout)
-                    const isNew = fetchDebounceRef.current[bookingId]?.isNew || false
+                    const isNew = isNewItem || fetchDebounceRef.current[bookingId]?.isNew || false
                     fetchDebounceRef.current[bookingId] = {
                         isNew,
                         timeout: setTimeout(() => fetchAndAddOrder(bookingId, isNew, alertCallbackRef.current), 250)
