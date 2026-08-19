@@ -18,6 +18,7 @@ import TopMenuInfographic from './financial/TopMenuInfographic'
 import CRMFinancialSummary from './financial/CRMFinancialSummary'
 import CasualDiningInsights from './financial/CasualDiningInsights'
 import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
+import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '../../utils/categoryClassifier'
 
 export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
@@ -244,8 +245,8 @@ export default function AdminFinancialDashboard() {
             let dineInAmt = 0, takeawayAmt = 0
             let dineInTables = 0, takeawayOrders = 0
 
-            // Casual dining breakdown aggregations
-            let foodRev = 0, bevRev = 0, alcRev = 0, comboRev = 0
+            // Casual dining breakdown aggregations (6 core categories)
+            let foodRev = 0, snackRev = 0, setRev = 0, dessertRev = 0, bevRev = 0, alcRev = 0
             let soloCount = 0, soloRev = 0
             let coupleCount = 0, coupleRev = 0
             let mediumCount = 0, mediumRev = 0
@@ -265,7 +266,7 @@ export default function AdminFinancialDashboard() {
 
             const itemAgg = {}
             const categoryAgg = {}
-            const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, peakItem: '-' }))
+            const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, items: {} }))
             const dayHourAgg = Array(7).fill(0).map(() => Array(12).fill(0)) // 7 days x 12 intervals
 
             // Raw Transactions for Visual Ledger
@@ -396,35 +397,45 @@ export default function AdminFinancialDashboard() {
                     const qty = item.quantity || 1
                     const itemPrice = parseFloat(item.price_at_time || mItem?.price || 0)
                     const itemRev = itemPrice * qty
-                    const catName = (mItem?.menu_categories?.name || 'ทั่วไป').toLowerCase()
+                    const rawCatName = mItem?.menu_categories?.name || item.category_name || item.category || 'ทั่วไป'
+                    const catKey = classifyMenuCategory(rawCatName, itemName)
+                    const formattedCatLabel = formatCategoryLabel(rawCatName)
 
                     formattedItems.push({
                         name: itemName,
                         quantity: qty,
                         price: itemPrice,
-                        category: catName
+                        category: formattedCatLabel,
+                        categoryKey: catKey
                     })
 
-                    if (catName.includes('แอลกอฮอล์') || catName.includes('เบียร์') || catName.includes('เหล้า') || catName.includes('alcohol')) {
+                    // Categorized Revenue Accumulation
+                    if (catKey === MENU_CATEGORY_KEYS.ALCOHOL) {
                         alcRev += itemRev
                         orderDrinkRev += itemRev
-                    } else if (catName.includes('เครื่องดื่ม') || catName.includes('ชา') || catName.includes('กาแฟ') || catName.includes('beverage')) {
+                    } else if (catKey === MENU_CATEGORY_KEYS.DRINK) {
                         bevRev += itemRev
                         orderDrinkRev += itemRev
-                    } else if (catName.includes('เซต') || catName.includes('ขนม') || catName.includes('ของหวาน') || catName.includes('combo') || catName.includes('dessert')) {
-                        comboRev += itemRev
+                    } else if (catKey === MENU_CATEGORY_KEYS.SET) {
+                        setRev += itemRev
+                        orderFoodRev += itemRev
+                    } else if (catKey === MENU_CATEGORY_KEYS.DESSERT) {
+                        dessertRev += itemRev
+                        orderFoodRev += itemRev
+                    } else if (catKey === MENU_CATEGORY_KEYS.SNACK) {
+                        snackRev += itemRev
                         orderFoodRev += itemRev
                     } else {
                         foodRev += itemRev
                         orderFoodRev += itemRev
                     }
 
-                    // Accumulate Item
+                    // Accumulate Item Aggregate
                     if (!itemAgg[itemName]) {
                         itemAgg[itemName] = {
                             name: itemName,
-                            categoryName: mItem?.menu_categories?.name || 'เมนูพิเศษ/ทั่วไป',
-                            category: catName.includes('เครื่องดื่ม') ? 'drink' : catName.includes('แอลกอฮอล์') ? 'alcohol' : catName.includes('เซต') ? 'combo' : 'main',
+                            categoryName: formattedCatLabel,
+                            category: catKey,
                             units: 0,
                             revenue: 0,
                             price: itemPrice
@@ -433,9 +444,13 @@ export default function AdminFinancialDashboard() {
                     itemAgg[itemName].units += qty
                     itemAgg[itemName].revenue += itemRev
 
+                    // Accumulate Hourly Velocity Item
+                    if (hour >= 0 && hour < 24) {
+                        hourlyAgg[hour].items[itemName] = (hourlyAgg[hour].items[itemName] || 0) + qty
+                    }
+
                     // Accumulate Category
-                    const categoryTitle = mItem?.menu_categories?.name || 'เมนูพิเศษ/ทั่วไป'
-                    categoryAgg[categoryTitle] = (categoryAgg[categoryTitle] || 0) + itemRev
+                    categoryAgg[formattedCatLabel] = (categoryAgg[formattedCatLabel] || 0) + itemRev
                 })
 
                 // Shift food/drink accumulation
@@ -539,15 +554,22 @@ export default function AdminFinancialDashboard() {
                 avgTicket: avgBillSize,
             })
 
-            // Format Hourly Velocity
+            // Format Hourly Velocity with actual peak item
             const formattedHourly = hourlyAgg
-                .map((h, hr) => ({
-                    hour: `${hr.toString().padStart(2, '0')}:00 - ${(hr + 1).toString().padStart(2, '0')}:00`,
-                    gross: h.gross,
-                    bills: h.bills,
-                    avgBill: h.bills > 0 ? Math.round(h.gross / h.bills) : 0,
-                    peakItem: h.gross > 0 ? 'Live POS Shift' : '-',
-                }))
+                .map((h, hr) => {
+                    let peakItemName = '-'
+                    if (h.items && Object.keys(h.items).length > 0) {
+                        const sortedItems = Object.entries(h.items).sort((a, b) => b[1] - a[1])
+                        if (sortedItems.length > 0) peakItemName = sortedItems[0][0]
+                    }
+                    return {
+                        hour: `${hr.toString().padStart(2, '0')}:00 - ${(hr + 1).toString().padStart(2, '0')}:00`,
+                        gross: h.gross,
+                        bills: h.bills,
+                        avgBill: h.bills > 0 ? Math.round(h.gross / h.bills) : 0,
+                        peakItem: peakItemName,
+                    }
+                })
                 .filter(h => h.gross > 0 || h.bills > 0)
             setHourlyVelocityData(formattedHourly)
 
@@ -595,12 +617,16 @@ export default function AdminFinancialDashboard() {
                 { size: 'Large Parties (5+ ท่าน)', share: Math.round((largeCount / totalOrdersCount) * 1000) / 10, count: largeCount, avgSpend: largeCount > 0 ? Math.round(largeRev / largeCount) : 0, turnTime: 80, tip: 'ช่วงยอดต่อบิลสูง' },
             ]
 
-            const itemTotalRev = foodRev + bevRev + alcRev + comboRev || 1
+            const itemTotalRev = foodRev + snackRev + setRev + dessertRev + bevRev + alcRev || 1
             const categoryRatio = {
-                food: { percent: Math.round((foodRev / itemTotalRev) * 1000) / 10, revenue: foodRev, margin: 'Food' },
-                beverage: { percent: Math.round((bevRev / itemTotalRev) * 1000) / 10, revenue: bevRev, margin: 'Beverage' },
-                alcohol: { percent: Math.round((alcRev / itemTotalRev) * 1000) / 10, revenue: alcRev, margin: 'Alcohol' },
-                dessertCombo: { percent: Math.round((comboRev / itemTotalRev) * 1000) / 10, revenue: comboRev, margin: 'Combo/Dessert' },
+                food: { percent: Math.round((foodRev / itemTotalRev) * 1000) / 10, revenue: foodRev, label: 'อาหารจานหลัก' },
+                snack: { percent: Math.round((snackRev / itemTotalRev) * 1000) / 10, revenue: snackRev, label: 'ของทานเล่น' },
+                set: { percent: Math.round((setRev / itemTotalRev) * 1000) / 10, revenue: setRev, label: 'ชุดเซตสำรับ' },
+                dessert: { percent: Math.round((dessertRev / itemTotalRev) * 1000) / 10, revenue: dessertRev, label: 'ของหวาน' },
+                beverage: { percent: Math.round((bevRev / itemTotalRev) * 1000) / 10, revenue: bevRev, label: 'เครื่องดื่ม' },
+                alcohol: { percent: Math.round((alcRev / itemTotalRev) * 1000) / 10, revenue: alcRev, label: 'แอลกอฮอล์' },
+                // Backward compatibility alias for 4-segment gauge
+                dessertCombo: { percent: Math.round(((setRev + dessertRev) / itemTotalRev) * 1000) / 10, revenue: (setRev + dessertRev), margin: 'Set/Dessert' }
             }
 
             setCasualData({

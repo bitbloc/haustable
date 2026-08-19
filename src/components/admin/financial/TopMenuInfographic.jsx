@@ -1,16 +1,18 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react'
-import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Award, Sparkles, Inbox, TrendingUp } from 'lucide-react'
+import { Trophy, Utensils, GlassWater, Beer, Flame, Layers, Sparkles, Inbox } from 'lucide-react'
 
 export default function TopMenuInfographic({ data }) {
     const [activeCategory, setActiveCategory] = useState('all')
 
     const categories = [
         { id: 'all', label: 'ทั้งหมด (All)', icon: Trophy },
-        { id: 'main', label: 'อาหารหลัก (Mains)', icon: Utensils },
+        { id: 'main', label: 'อาหารจานหลัก (Mains)', icon: Utensils },
+        { id: 'snack', label: 'ของทานเล่น (Snacks)', icon: Flame },
+        { id: 'set', label: 'ชุดเซตสำรับ (Set Menus)', icon: Layers },
+        { id: 'dessert', label: 'ของหวาน (Desserts)', icon: Sparkles },
         { id: 'drink', label: 'เครื่องดื่ม (Beverages)', icon: GlassWater },
         { id: 'alcohol', label: 'แอลกอฮอล์ (Alcohol)', icon: Beer },
-        { id: 'combo', label: 'ชุดเซต / ของหวาน', icon: Layers },
     ]
 
     const allTopItems = data?.topMenuData || []
@@ -19,8 +21,10 @@ export default function TopMenuInfographic({ data }) {
         ? allTopItems 
         : allTopItems.filter(item => item.category === activeCategory)
 
-    const maxRevenue = allTopItems.length > 0 ? Math.max(...allTopItems.map(i => i.revenue || 0), 1) : 1
     const totalMenuRevenue = allTopItems.reduce((s, i) => s + (i.revenue || 0), 0)
+    const currentCatTotalRevenue = filteredItems.reduce((s, i) => s + (i.revenue || 0), 0)
+    const maxRevenue = filteredItems.length > 0 ? Math.max(...filteredItems.map(i => i.revenue || 0), 1) : 1
+    const activeCatObj = categories.find(c => c.id === activeCategory) || categories[0]
 
     return (
         <div className="space-y-4 md:space-y-6">
@@ -34,13 +38,20 @@ export default function TopMenuInfographic({ data }) {
                         </h3>
                     </div>
                     <p className="text-xs font-bold text-[oklch(42%_0.010_28)] mt-0.5">
-                        จัดอันดับเมนูขายดีจากฐานข้อมูลออเดอร์ POS จริง
+                        จัดอันดับเมนูขายดีจากฐานข้อมูลออเดอร์ POS จริง แยกตามหมวดหมู่ชัดเจน
                     </p>
                 </div>
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] font-black self-start sm:self-auto">
                     <Sparkles size={14} className="text-amber-600" />
-                    <span>SORTED BY REVENUE (฿{totalMenuRevenue.toLocaleString()})</span>
+                    {activeCategory === 'all' ? (
+                        <span>SORTED BY REVENUE (฿{totalMenuRevenue.toLocaleString()})</span>
+                    ) : (
+                        <span>
+                            ยอดขายหมวด ฿{currentCatTotalRevenue.toLocaleString()}&nbsp;
+                            ({totalMenuRevenue > 0 ? ((currentCatTotalRevenue / totalMenuRevenue) * 100).toFixed(1) : 0}% ของยอดรวม)
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -49,6 +60,10 @@ export default function TopMenuInfographic({ data }) {
                 {categories.map((cat) => {
                     const Icon = cat.icon
                     const isSelected = activeCategory === cat.id
+                    const countInCat = cat.id === 'all' 
+                        ? allTopItems.length 
+                        : allTopItems.filter(i => i.category === cat.id).length
+
                     return (
                         <button
                             key={cat.id}
@@ -61,6 +76,11 @@ export default function TopMenuInfographic({ data }) {
                         >
                             <Icon size={16} />
                             <span>{cat.label}</span>
+                            <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                                isSelected ? 'bg-white/20 text-white' : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)]'
+                            }`}>
+                                {countInCat}
+                            </span>
                         </button>
                     )
                 })}
@@ -70,7 +90,7 @@ export default function TopMenuInfographic({ data }) {
             {filteredItems.length === 0 && (
                 <div className="p-8 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl text-center space-y-2">
                     <Inbox size={36} className="mx-auto text-[oklch(55%_0.010_28)] opacity-60" />
-                    <h4 className="font-black text-sm text-[oklch(18%_0.012_28)]">ไม่มีข้อมูลการขายเมนูในหมวดนี้</h4>
+                    <h4 className="font-black text-sm text-[oklch(18%_0.012_28)]">ไม่มีข้อมูลการขายเมนูใน{activeCatObj.label}</h4>
                     <p className="text-xs text-[oklch(42%_0.010_28)] font-bold">ข้อมูลจะอัปเดตอัตโนมัติเมื่อมีการสั่งอาหารและชำระเงินผ่านระบบ POS</p>
                 </div>
             )}
@@ -78,7 +98,9 @@ export default function TopMenuInfographic({ data }) {
             {/* Top Menu Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 md:gap-4">
                 {filteredItems.map((item, idx) => {
+                    const categoryRank = idx + 1
                     const pctOfMax = Math.round((item.revenue / maxRevenue) * 100)
+                    const shareOfCat = currentCatTotalRevenue > 0 ? ((item.revenue / currentCatTotalRevenue) * 100).toFixed(1) : 0
                     const shareOfTotal = totalMenuRevenue > 0 ? ((item.revenue / totalMenuRevenue) * 100).toFixed(1) : 0
 
                     return (
@@ -86,31 +108,38 @@ export default function TopMenuInfographic({ data }) {
                             key={idx}
                             className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 space-y-3 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all relative overflow-hidden"
                         >
-                            {item.isBestSeller && (
-                                <div className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-bl-xl tracking-wider">
-                                    TOP SELLER #1
+                            {/* Top Badge */}
+                            {idx === 0 && (
+                                <div className="absolute top-0 right-0 bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-black px-2.5 py-0.5 rounded-bl-xl tracking-wider uppercase">
+                                    {activeCategory === 'all' ? 'TOP SELLER #1' : `TOP ${activeCatObj.shortLabel || 'CAT'} #1`}
                                 </div>
                             )}
 
                             <div className="flex items-start justify-between gap-2">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-mono font-black text-sm shrink-0 ${
-                                        item.rank === 1 ? 'bg-amber-100 text-amber-900 border-2 border-amber-400' :
-                                        item.rank === 2 ? 'bg-slate-100 text-slate-900 border-2 border-slate-400' :
-                                        item.rank === 3 ? 'bg-orange-100 text-orange-900 border-2 border-orange-400' :
+                                        categoryRank === 1 ? 'bg-amber-100 text-amber-900 border-2 border-amber-400' :
+                                        categoryRank === 2 ? 'bg-slate-100 text-slate-900 border-2 border-slate-400' :
+                                        categoryRank === 3 ? 'bg-orange-100 text-orange-900 border-2 border-orange-400' :
                                         'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)]'
                                     }`}>
-                                        #{item.rank}
+                                        #{categoryRank}
                                     </div>
                                     <div>
-                                        <h4 className="font-black text-sm md:text-base text-[oklch(18%_0.012_28)]">{item.name}</h4>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)]">
+                                        <h4 className="font-black text-sm md:text-base text-[oklch(18%_0.012_28)] leading-snug">{item.name}</h4>
+                                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                            <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
                                                 {item.categoryLabel}
                                             </span>
-                                            <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                                                {shareOfTotal}% ของยอดรวม
-                                            </span>
+                                            {activeCategory !== 'all' ? (
+                                                <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
+                                                    {shareOfCat}% ของหมวดนี้ ({shareOfTotal}% รวม)
+                                                </span>
+                                            ) : (
+                                                <span className="text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
+                                                    {shareOfTotal}% ของยอดรวม
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -124,7 +153,7 @@ export default function TopMenuInfographic({ data }) {
                                 </div>
                                 <div>
                                     <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold font-sans">จำนวนที่ขายได้</div>
-                                    <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">{item.units} จาน/แก้ว</div>
+                                    <div className="font-black text-base md:text-lg text-[oklch(18%_0.012_28)]">{item.units} รายการ</div>
                                 </div>
                                 <div className="col-span-2 sm:col-span-1">
                                     <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ราคาเฉลี่ย/หน่วย</div>
@@ -137,7 +166,11 @@ export default function TopMenuInfographic({ data }) {
                             {/* Relative Progress Bar */}
                             <div className="space-y-1 pt-1">
                                 <div className="flex justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)] font-bold">
-                                    <span>สัดส่วนความนิยมเทียบอันดับ 1</span>
+                                    <span>
+                                        {activeCategory === 'all' 
+                                            ? 'สัดส่วนความนิยมเทียบอันดับ 1 รวม' 
+                                            : 'สัดส่วนความนิยมเทียบอันดับ 1 ในหมวด'}
+                                    </span>
                                     <span className="font-black text-[oklch(52%_0.16_28)]">{pctOfMax}%</span>
                                 </div>
                                 <div className="w-full bg-[oklch(94%_0.010_28)] h-2.5 rounded-full overflow-hidden">
