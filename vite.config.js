@@ -41,16 +41,22 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
-            if (id.includes('framer-motion')) {
+            if (id.includes('framer-motion') || id.includes('react-zoom-pan-pinch') || id.includes('sonner')) {
               return 'vendor-ui';
             }
-            if (id.includes('recharts')) {
-              return 'vendor-charts';
+            if (id.includes('html2canvas') || id.includes('html-to-image') || id.includes('canvas-confetti')) {
+              return 'vendor-canvas';
+            }
+            if (id.includes('html5-qrcode') || id.includes('qrcode') || id.includes('promptpay-qr')) {
+              return 'vendor-qrcode';
+            }
+            if (id.includes('date-fns')) {
+              return 'vendor-date';
             }
             if (id.includes('supabase')) {
-              return 'vendor-supabase'; // Supabase client is decent size
+              return 'vendor-supabase';
             }
-            return 'vendor'; // functional & others
+            return 'vendor';
           }
         },
       },

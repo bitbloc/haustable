@@ -831,10 +831,34 @@ export default function POSDashboard() {
     };
 
     useEffect(() => {
+        // Request Screen Wake Lock for POS Android APK / Tablet
+        requestWakeLock().catch(() => {});
+
         // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
         const cleanupPrinterSync = initPrinterConfigSync();
 
         checkPendingOrders();
+
+        // Android Foreground Wakeup / Network Reconnect Listener
+        const handleForegroundWakeup = () => {
+            if (document.visibilityState === 'visible') {
+                console.log('⚡ [POS Lifecycle] App foregrounded. Synchronizing data & audio...');
+                unlockAudioEngine();
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            }
+        };
+
+        const handleOnlineStatus = () => {
+            console.log('⚡ [POS Network] Network restored online. Synchronizing...');
+            checkPendingOrders();
+            setRefreshKey(prev => prev + 1);
+        };
+
+        document.addEventListener('visibilitychange', handleForegroundWakeup);
+        window.addEventListener('focus', handleForegroundWakeup);
+        window.addEventListener('pageshow', handleForegroundWakeup);
+        window.addEventListener('online', handleOnlineStatus);
 
         // Poll pending orders every 20 seconds as fallback to Supabase Realtime
         const pollInterval = setInterval(checkPendingOrders, 20000);
@@ -872,10 +896,14 @@ export default function POSDashboard() {
 
         return () => {
             clearInterval(pollInterval);
+            document.removeEventListener('visibilitychange', handleForegroundWakeup);
+            window.removeEventListener('focus', handleForegroundWakeup);
+            window.removeEventListener('pageshow', handleForegroundWakeup);
+            window.removeEventListener('online', handleOnlineStatus);
             window.removeEventListener('pos-menu-updated', handlePosMenuUpdated);
             if (cleanupPrinterSync) cleanupPrinterSync();
         };
-    }, []);
+    }, [requestWakeLock]);
 
     const [attachedMemberCrm, setAttachedMemberCrm] = useState(null);
 

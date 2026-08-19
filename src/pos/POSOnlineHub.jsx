@@ -168,8 +168,18 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             )
             .subscribe();
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchOnlineData();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('online', fetchOnlineData);
+
         return () => {
             stopAlert();
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('online', fetchOnlineData);
             supabase.removeChannel(channel);
         };
     }, [soundEnabled]);
