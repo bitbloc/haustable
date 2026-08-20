@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -36,6 +36,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [editPaxInput, setEditPaxInput] = React.useState('1');
     const [includeTax, setIncludeTax] = React.useState(true);
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
+    const [cashStep, setCashStep] = React.useState('input'); // 'input' | 'change'
     const [cashReceivedInput, setCashReceivedInput] = React.useState('');
     const [viewSlipModalUrl, setViewSlipModalUrl] = React.useState(null);
     
@@ -1058,6 +1059,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     type="button"
                                     onClick={() => {
                                         setCashReceivedInput(''); // reset cash received input
+                                        setCashStep('input');
                                         setActiveModal('checkout');
                                     }}
                                     className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
@@ -1791,257 +1793,291 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 )}
 
                 {/* Checkout Modal */}
-                {activeModal === 'checkout' && (
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
+                >
                     <motion.div 
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
+                        initial={{ scale: 0.97, y: 10 }}
+                        animate={{ scale: 1, y: 0 }}
+                        exit={{ scale: 0.97, y: 10 }}
+                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col text-[oklch(18%_0.012_28)]"
                     >
-                        <motion.div 
-                            initial={{ scale: 0.97, y: 10 }}
-                            animate={{ scale: 1, y: 0 }}
-                            exit={{ scale: 0.97, y: 10 }}
-                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
-                        >
-                            <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
-                                <div>
-                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">Payment & Checkout</h3>
-                                    <p className="text-xs text-[#767673] font-medium mt-0.5">ชำระเงินและปิดบิล</p>
-                                </div>
+                        {/* Modal Header (Tabular Division) */}
+                        <div className="p-4 flex justify-between items-center bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
+                            <div>
+                                <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-[oklch(18%_0.012_28)]">CHECKOUT · ปิดบิล</h3>
+                                <p className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">เลือกช่องทางชำระเงินและปิดบิล</p>
+                            </div>
+                            <button 
+                                onClick={() => setActiveModal(null)} 
+                                className="px-2.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white rounded transition-colors cursor-pointer"
+                            >
+                                ESC
+                            </button>
+                        </div>
+                        
+                        <div className="p-4 space-y-3 bg-[oklch(97%_0.008_28)]">
+                            {/* Segmented Method Switcher (Zero-Icon Pure Typography) */}
+                            <div className="grid grid-cols-2 p-1 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)]">
                                 <button 
-                                    onClick={() => setActiveModal(null)} 
-                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors cursor-pointer"
+                                    type="button"
+                                    onClick={() => {
+                                        setPaymentMethod('cash');
+                                        setCashStep('input');
+                                    }}
+                                    className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-medium'}`}
                                 >
-                                    <X size={20} />
+                                    CASH · เงินสด
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => {
+                                        setPaymentMethod('qr');
+                                    }}
+                                    className={`py-2 rounded font-mono text-xs uppercase tracking-wider transition-all cursor-pointer touch-manipulation ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-medium'}`}
+                                >
+                                    QR PROMPTPAY · สแกน
                                 </button>
                             </div>
-                            
-                            <div className="p-5 space-y-5 bg-white">
-                                <div className="text-center bg-[#EBEBE9] py-4 rounded-xl border border-[#D1D1CD]">
-                                    <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider mb-1">Total Amount</p>
-                                    <p className="text-4xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{Math.ceil(total).toLocaleString()}</p>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">Payment Method</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPaymentMethod('cash')}
-                                            className={`py-3 rounded-xl border font-mono font-bold text-sm uppercase tracking-wider transition-all flex flex-col items-center gap-1 cursor-pointer touch-manipulation ${paymentMethod === 'cash' ? 'bg-[#1A1A1A] text-white border-black shadow-md' : 'bg-white text-[#1A1A1A] border-[#D1D1CD] hover:border-black/30'}`}
-                                        >
-                                            <Banknote size={20} />
-                                            CASH
-                                        </button>
-                                        <button 
-                                            type="button"
-                                            onClick={() => setPaymentMethod('qr')}
-                                            className={`py-3 rounded-xl border font-mono font-bold text-sm uppercase tracking-wider transition-all flex flex-col items-center gap-1 cursor-pointer touch-manipulation ${paymentMethod === 'qr' ? 'bg-[#1A1A1A] text-white border-black shadow-md' : 'bg-white text-[#1A1A1A] border-[#D1D1CD] hover:border-black/30'}`}
-                                        >
-                                            <QrCode size={20} />
-                                            QR PROMPTPAY
-                                        </button>
-                                    </div>
-                                </div>
+                            {/* Total Amount Display Box */}
+                            <div className="text-center bg-[oklch(94%_0.010_28)] py-3 px-4 rounded-lg border border-[oklch(85%_0.012_28)]">
+                                <p className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-widest mb-0.5">NET TOTAL · ยอดชำระสุทธิ</p>
+                                <p className="text-3xl font-mono font-bold text-[oklch(52%_0.16_28)]">฿{Math.ceil(total).toLocaleString()}</p>
+                            </div>
 
-                                {paymentMethod === 'cash' && (() => {
-                                    const ceilTotal = Math.ceil(total);
-                                    const parsedInput = parseFloat(cashReceivedInput);
-                                    const hasInput = !isNaN(parsedInput) && cashReceivedInput !== '';
-                                    const cashRecvNum = hasInput ? parsedInput : 0;
-                                    const changeDue = Math.max(0, cashRecvNum - ceilTotal);
-                                    const isShort = hasInput && cashRecvNum > 0 && cashRecvNum < ceilTotal;
-                                    const isSufficient = hasInput && cashRecvNum >= ceilTotal;
+                            {/* --- CASH FLOW --- */}
+                            {paymentMethod === 'cash' && (() => {
+                                const ceilTotal = Math.ceil(total);
+                                const parsedInput = parseFloat(cashReceivedInput);
+                                const hasInput = !isNaN(parsedInput) && cashReceivedInput !== '';
+                                const cashRecvNum = hasInput ? parsedInput : 0;
+                                const changeDue = Math.max(0, cashRecvNum - ceilTotal);
+                                const isShort = hasInput && cashRecvNum > 0 && cashRecvNum < ceilTotal;
 
-                                    // Dynamic smart presets calculation
-                                    const smartPresets = [];
-                                    if (ceilTotal > 0) {
-                                        const candidateSet = new Set();
-                                        if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 50) * 50);
-                                        if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
-                                        if (ceilTotal < 500) candidateSet.add(500);
-                                        if (ceilTotal < 1000) candidateSet.add(1000);
-                                        if (ceilTotal >= 500 && ceilTotal < 1000) candidateSet.add(1000);
-                                        if (ceilTotal >= 1000) {
-                                            candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
-                                            candidateSet.add(Math.ceil(ceilTotal / 500) * 500);
-                                            candidateSet.add(Math.ceil(ceilTotal / 1000) * 1000);
-                                            if (candidateSet.size < 3) {
-                                                candidateSet.add(Math.ceil((ceilTotal + 500) / 500) * 500);
-                                            }
-                                        }
-                                        const sortedCandidates = Array.from(candidateSet)
-                                            .filter(amt => amt > ceilTotal)
-                                            .sort((a, b) => a - b)
-                                            .slice(0, 3);
-                                        smartPresets.push(...sortedCandidates);
+                                const smartPresets = [];
+                                if (ceilTotal > 0) {
+                                    const candidateSet = new Set();
+                                    if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 50) * 50);
+                                    if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
+                                    if (ceilTotal < 500) candidateSet.add(500);
+                                    if (ceilTotal < 1000) candidateSet.add(1000);
+                                    if (ceilTotal >= 500 && ceilTotal < 1000) candidateSet.add(1000);
+                                    if (ceilTotal >= 1000) {
+                                        candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
+                                        candidateSet.add(Math.ceil(ceilTotal / 500) * 500);
+                                        candidateSet.add(Math.ceil(ceilTotal / 1000) * 1000);
+                                        if (candidateSet.size < 3) candidateSet.add(Math.ceil((ceilTotal + 500) / 500) * 500);
                                     }
+                                    smartPresets.push(...Array.from(candidateSet).filter(amt => amt > ceilTotal).sort((a, b) => a - b).slice(0, 3));
+                                }
 
+                                if (cashStep === 'input') {
                                     return (
-                                        <div className="space-y-3 animate-in fade-in duration-200">
+                                        <div className="space-y-2.5 animate-in fade-in duration-150">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
-                                                    รับเงินสดมา (Cash Received)
+                                                <p className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                                    CASH RECEIVED · ระบุยอดเงินสดที่รับมา
                                                 </p>
                                                 {cashReceivedInput && (
                                                     <button
                                                         type="button"
                                                         onClick={() => setCashReceivedInput('')}
-                                                        className="text-[10px] font-mono font-bold text-red-600 hover:text-red-800 uppercase tracking-wider cursor-pointer"
+                                                        className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline uppercase tracking-wider cursor-pointer"
                                                     >
-                                                        ล้างค่า (Clear)
+                                                        CLEAR
                                                     </button>
                                                 )}
                                             </div>
 
                                             <div className="relative">
-                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-mono font-bold text-[#767673]">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-mono font-bold text-[oklch(42%_0.010_28)]">
                                                     ฿
                                                 </span>
                                                 <input
                                                     type="number"
-                                                    placeholder={`ระบุยอดเงินสด เช่น ${Math.ceil(ceilTotal / 100) * 100}`}
+                                                    placeholder={`เช่น ${Math.ceil(ceilTotal / 100) * 100}`}
                                                     value={cashReceivedInput}
                                                     onChange={(e) => setCashReceivedInput(e.target.value)}
-                                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-10 pr-4 py-3 text-2xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[var(--color-accent)] h-14 placeholder:text-gray-300 placeholder:text-base"
+                                                    className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg pl-10 pr-4 py-2.5 text-2xl font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(52%_0.16_28)] h-12 placeholder:text-[oklch(70%_0.010_28)]"
                                                     autoFocus
                                                 />
                                             </div>
-                                            
-                                            {/* Quick Cash Tender Presets */}
-                                            <div className="space-y-1.5">
+
+                                            {/* Single Clean Row of 4 Fast Presets (Pure Typography) */}
+                                            <div className="space-y-1">
+                                                <p className="text-[9px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                                    QUICK TENDER · ปุ่มลัดข้ามไปสรุปเงินทอน
+                                                </p>
                                                 <div className="grid grid-cols-4 gap-1.5">
                                                     <button
                                                         type="button"
-                                                        onClick={() => setCashReceivedInput(String(ceilTotal))}
-                                                        className="py-2.5 bg-[#E6F4FF] border border-blue-200 hover:border-blue-500 rounded-lg font-mono font-bold text-xs uppercase tracking-wider text-blue-700 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                        onClick={() => {
+                                                            setCashReceivedInput(String(ceilTotal));
+                                                            setCashStep('change');
+                                                        }}
+                                                        className="py-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white rounded-lg font-mono font-bold text-xs text-[oklch(52%_0.16_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                                                     >
-                                                        พอดี (฿{ceilTotal.toLocaleString()})
+                                                        <span className="text-[9px] uppercase tracking-wider opacity-80">EXACT</span>
+                                                        <span>฿{ceilTotal.toLocaleString()}</span>
                                                     </button>
+
                                                     {smartPresets.map(amt => (
                                                         <button
                                                             key={amt}
                                                             type="button"
-                                                            onClick={() => setCashReceivedInput(String(amt))}
-                                                            className="py-2.5 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] hover:bg-white rounded-lg font-mono font-bold text-xs text-[#1A1A1A] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                            onClick={() => {
+                                                                setCashReceivedInput(String(amt));
+                                                                setCashStep('change');
+                                                            }}
+                                                            className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                                                         >
-                                                            ฿{amt.toLocaleString()}
+                                                            <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
+                                                            <span>฿{amt.toLocaleString()}</span>
                                                         </button>
                                                     ))}
+
                                                     {smartPresets.length < 3 && [100, 500, 1000].filter(d => !smartPresets.includes(d) && d > ceilTotal).slice(0, 3 - smartPresets.length).map(amt => (
                                                         <button
                                                             key={amt}
                                                             type="button"
-                                                            onClick={() => setCashReceivedInput(String(amt))}
-                                                            className="py-2.5 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] hover:bg-white rounded-lg font-mono font-bold text-xs text-[#1A1A1A] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                            onClick={() => {
+                                                                setCashReceivedInput(String(amt));
+                                                                setCashStep('change');
+                                                            }}
+                                                            className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
                                                         >
-                                                            ฿{amt.toLocaleString()}
-                                                        </button>
-                                                    ))}
-                                                </div>
-
-                                                {/* Common Thai Banknotes Row */}
-                                                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                                                    {[100, 500, 1000].map(amt => (
-                                                        <button
-                                                            key={`note_${amt}`}
-                                                            type="button"
-                                                            onClick={() => setCashReceivedInput(String(amt))}
-                                                            className="py-1.5 bg-white border border-[#E0E0DC] hover:border-[#1A1A1A] rounded-lg font-mono font-semibold text-[11px] text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
-                                                        >
-                                                            ธนบัตร ฿{amt}
+                                                            <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
+                                                            <span>฿{amt.toLocaleString()}</span>
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            {/* Dynamic Pop Banner: Change Due or Shortfall Alert */}
-                                            {isSufficient && (
-                                                <div className="bg-[#E6F4EA] border-2 border-emerald-500/40 rounded-xl p-4 text-[#1A1A1A] animate-in zoom-in-95 duration-150 shadow-xs flex items-center justify-between">
-                                                    <div>
-                                                        <span className="text-[11px] font-mono font-black uppercase tracking-wider text-emerald-800 block">
-                                                            เงินทอน (CHANGE DUE)
-                                                        </span>
-                                                        <span className="text-[10px] text-emerald-700/80 font-mono">
-                                                            รับมา ฿{cashRecvNum.toLocaleString()} • ยอด ฿{ceilTotal.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-3xl font-mono font-black text-emerald-800 leading-none">
-                                                            ฿{changeDue.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            )}
-
+                                            {/* Shortfall Alert */}
                                             {isShort && (
-                                                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-amber-900 animate-in fade-in duration-150 flex items-center justify-between">
-                                                    <div>
-                                                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-800 block">
-                                                            ยังขาดอีก (SHORT BY)
-                                                        </span>
-                                                        <span className="text-[10px] text-amber-700 font-mono">
-                                                            รับมา ฿{cashRecvNum.toLocaleString()} / ยอด ฿{ceilTotal.toLocaleString()}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-xl font-mono font-black text-amber-700">
+                                                <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(52%_0.16_28)] rounded-lg p-2.5 text-[oklch(18%_0.012_28)] animate-in fade-in duration-150 flex items-center justify-between font-mono">
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                                        SHORT BY · ยังขาดอีก
+                                                    </span>
+                                                    <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
                                                         ฿{(ceilTotal - cashRecvNum).toLocaleString()}
                                                     </span>
                                                 </div>
                                             )}
                                         </div>
                                     );
-                                })()}
+                                }
 
-                                {paymentMethod === 'qr' && (
-                                    <div className="space-y-3 mt-1 animate-in fade-in duration-200 border-t border-[#D1D1CD] pt-4">
-                                        <button 
+                                // CASH STEP 2: Change Due Screen (Hero Rams Element)
+                                return (
+                                    <div className="space-y-3 animate-in zoom-in-95 duration-150">
+                                        <div className="flex items-center justify-between px-3 py-2 bg-[oklch(94%_0.010_28)] rounded-lg border border-[oklch(85%_0.012_28)] text-xs font-mono text-[oklch(42%_0.010_28)]">
+                                            <span>RECEIVED: <strong className="text-[oklch(18%_0.012_28)]">฿{cashRecvNum.toLocaleString()}</strong></span>
+                                            <span>BILL: <strong className="text-[oklch(18%_0.012_28)]">฿{ceilTotal.toLocaleString()}</strong></span>
+                                        </div>
+
+                                        {/* Hero Change Due Box */}
+                                        <div className="bg-[oklch(94%_0.010_28)] border-2 border-[oklch(45%_0.08_140)] rounded-xl p-5 text-center shadow-xs">
+                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(45%_0.08_140)] block">
+                                                CHANGE DUE · เงินทอนลูกค้า
+                                            </span>
+                                            <p className="text-5xl font-mono font-bold text-[oklch(18%_0.012_28)] tracking-tight my-2">
+                                                ฿{changeDue.toLocaleString()}
+                                            </p>
+                                            <span className="text-[11px] text-[oklch(42%_0.010_28)] font-sans">
+                                                {changeDue > 0 ? 'โปรดคืนเงินทอนให้ลูกค้าและกดปิดบิล' : 'รับเงินสดพอดี'}
+                                            </span>
+                                        </div>
+
+                                        {/* Back / Edit Button */}
+                                        <button
                                             type="button"
-                                            onClick={() => {
-                                                if (onOpenSlip) {
-                                                    const totalDiscountVal = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
-                                                    onOpenSlip('billing', {
-                                                        discount_amount: totalDiscountVal,
-                                                        total_amount: total,
-                                                        xhaus_discount: xhausDiscount,
-                                                        manual_discount: manualDiscount,
-                                                        promo_discount: promoDiscount,
-                                                        member_discount: memberDiscount,
-                                                        include_tax: includeTax
-                                                    });
-                                                }
-                                            }}
-                                            className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] font-mono font-bold text-sm uppercase tracking-wider cursor-pointer"
+                                            onClick={() => setCashStep('input')}
+                                            className="w-full py-1.5 text-xs font-mono font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] uppercase tracking-wider transition-colors text-center cursor-pointer"
                                         >
-                                            <Printer size={16} /> Print Bill & QR
+                                            [ EDIT TENDER · แก้ไขยอดเงินรับ ]
                                         </button>
-                                        <p className="text-center text-[11px] text-[#767673] font-medium px-2 leading-relaxed">
-                                            พิมพ์ใบแจ้งยอดให้ลูกค้าสแกนจ่าย ก่อนกด Confirm Payment<br/>(พิมพ์ออกแบบ Silent Print)
+                                    </div>
+                                );
+                            })()}
+
+                            {/* --- QR FLOW --- */}
+                            {paymentMethod === 'qr' && (
+                                <div className="space-y-2.5 animate-in fade-in duration-150">
+                                    <div className="p-3.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-center space-y-1">
+                                        <p className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                            PROMPTPAY READY · พร้อมรับชำระ
+                                        </p>
+                                        <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed">
+                                            ลูกค้าสแกนได้จากหน้าจอ CFD หรือพิมพ์ใบแจ้งยอด
                                         </p>
                                     </div>
-                                )}
-                            </div>
 
-                            <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9]">
-                                <button
-                                    type="button"
-                                    disabled={paymentMethod === 'cash' && (parseFloat(cashReceivedInput) < total || !cashReceivedInput)}
-                                    onClick={() => {
-                                        // Fallback to searching the cart for injected reward item metadata if local state was lost
-                                        const rewardItemsInCart = order.items.filter(item => item.is_reward);
-                                        const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
-                                        const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
-                                        
-                                        const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
-                                        const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
+                                    <button 
+                                        type="button"
+                                        onClick={() => {
+                                            if (onOpenSlip) {
+                                                const totalDiscountVal = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
+                                                onOpenSlip('billing', {
+                                                    discount_amount: totalDiscountVal,
+                                                    total_amount: total,
+                                                    xhaus_discount: xhausDiscount,
+                                                    manual_discount: manualDiscount,
+                                                    promo_discount: promoDiscount,
+                                                    member_discount: memberDiscount,
+                                                    include_tax: includeTax
+                                                });
+                                            }
+                                        }}
+                                        className="w-full bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] py-2.5 rounded-lg transition-colors shadow-2xs font-mono font-bold text-xs uppercase tracking-wider cursor-pointer"
+                                    >
+                                        PRINT BILL & QR · พิมพ์ใบแจ้งยอด
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
-                                        const ceilTotal = Math.ceil(total);
-                                        const parsedCash = parseFloat(cashReceivedInput);
-                                        const cashRecvNum = (!isNaN(parsedCash) && parsedCash > 0) ? parsedCash : ceilTotal;
-                                        const changeDueVal = paymentMethod === 'cash' ? Math.max(0, cashRecvNum - ceilTotal) : 0;
+                        {/* Modal Action Footer (Stark CTAs) */}
+                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                            {/* Cash Step 1 Button */}
+                            {paymentMethod === 'cash' && cashStep === 'input' && (() => {
+                                const ceilTotal = Math.ceil(total);
+                                const parsedCash = parseFloat(cashReceivedInput);
+                                const isReady = !isNaN(parsedCash) && parsedCash >= ceilTotal;
+                                return (
+                                    <button
+                                        type="button"
+                                        disabled={!isReady}
+                                        onClick={() => setCashStep('change')}
+                                        className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        NEXT · คำนวณเงินทอน
+                                    </button>
+                                );
+                            })()}
 
-                                        if (paymentMethod === 'cash') {
+                            {/* Cash Step 2 Settle Button */}
+                            {paymentMethod === 'cash' && cashStep === 'change' && (() => {
+                                const ceilTotal = Math.ceil(total);
+                                const parsedCash = parseFloat(cashReceivedInput);
+                                const cashRecvNum = (!isNaN(parsedCash) && parsedCash > 0) ? parsedCash : ceilTotal;
+                                const changeDueVal = Math.max(0, cashRecvNum - ceilTotal);
+
+                                return (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const rewardItemsInCart = order.items.filter(item => item.is_reward);
+                                            const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                            const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
+                                            
+                                            const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
+                                            const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
+
                                             try {
                                                 localStorage.setItem('last_cash_received', String(cashRecvNum));
                                                 localStorage.setItem('last_cash_change', String(changeDueVal));
@@ -2049,17 +2085,55 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                                             if (changeDueVal > 0) {
                                                 toast.success(
-                                                    `💵 เงินทอน: ฿${changeDueVal.toLocaleString()} (รับเงินสด ฿${cashRecvNum.toLocaleString()})`,
+                                                    `เงินทอน: ฿${changeDueVal.toLocaleString()} (รับเงินสด ฿${cashRecvNum.toLocaleString()})`,
                                                     { duration: 6000 }
                                                 );
                                             } else {
-                                                toast.success(`💵 รับเงินสดพอดี ฿${cashRecvNum.toLocaleString()}`, { duration: 4000 });
+                                                toast.success(`รับเงินสดพอดี ฿${cashRecvNum.toLocaleString()}`, { duration: 4000 });
                                             }
-                                        }
+
+                                            if (onCheckout) {
+                                                onCheckout(
+                                                    'cash',
+                                                    includeTax,
+                                                    pointsEarned,
+                                                    totalXhausRedeemed,
+                                                    xhausDiscount,
+                                                    promoDiscount + rewardDiscount,
+                                                    manualDiscount,
+                                                    finalRewardCode,
+                                                    finalRewardId,
+                                                    useFreeDrinkQuota,
+                                                    cashRecvNum,
+                                                    changeDueVal
+                                                );
+                                            }
+                                            setActiveModal(null);
+                                        }}
+                                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                                    >
+                                        SETTLE CASH & PRINT · ปิดบิลเงินสด
+                                    </button>
+                                );
+                            })()}
+
+                            {/* QR Settle Button */}
+                            {paymentMethod === 'qr' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const rewardItemsInCart = order.items.filter(item => item.is_reward);
+                                        const cartRewardCost = rewardItemsInCart.reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                        const totalXhausRedeemed = (xhausToRedeem || 0) + (appliedReward ? parseFloat(appliedReward.xhaus_cost || 0) : cartRewardCost);
+                                        
+                                        const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
+                                        const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
+
+                                        toast.success('รับชำระเงินผ่าน QR สำเร็จ', { duration: 4000 });
 
                                         if (onCheckout) {
                                             onCheckout(
-                                                paymentMethod,
+                                                'qr',
                                                 includeTax,
                                                 pointsEarned,
                                                 totalXhausRedeemed,
@@ -2069,20 +2143,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 finalRewardCode,
                                                 finalRewardId,
                                                 useFreeDrinkQuota,
-                                                cashRecvNum,
-                                                changeDueVal
+                                                0,
+                                                0
                                             );
                                         }
                                         setActiveModal(null);
                                     }}
-                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-4 rounded-xl font-mono text-sm font-bold uppercase tracking-widest transition-all cursor-pointer shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white py-3.5 rounded-lg font-mono text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
                                 >
-                                    <Check size={18} />
-                                    Confirm Payment
+                                    CONFIRM QR & SETTLE · ยืนยันชำระ QR
                                 </button>
-                            </div>
-                        </motion.div>
+                            )}
+                        </div>
                     </motion.div>
+                </motion.div>
                 )}
             </AnimatePresence>
 
