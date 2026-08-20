@@ -708,8 +708,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             </div>
             {/* 🔄 Smart Re-assignment Modal (แก้ปัญหาคิวจองชนลูกค้านั่งแช่) */}
             {reassignModalBooking && (
-                <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-amber-500 animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-lg border-2 border-amber-500">
                         <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
                             <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
                                 <AlertCircle size={24} />

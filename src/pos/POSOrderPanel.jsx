@@ -1809,21 +1809,23 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     document.body
                 )}
 
-                {/* Checkout Modal (True Center Full-Screen Pop-up) */}
+                {/* Checkout Modal (True Center Full-Screen Pop-up - High-Performance Zero-Blur) */}
                 {activeModal === 'checkout' && typeof document !== 'undefined' && createPortal(
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        transition={{ duration: 0.08 }}
                         onClick={() => setActiveModal(null)}
-                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans backdrop-blur-xs"
+                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
                     >
                     <motion.div 
-                        initial={{ scale: 0.97, y: 10 }}
-                        animate={{ scale: 1, y: 0 }}
-                        exit={{ scale: 0.97, y: 10 }}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        transition={{ duration: 0.08 }}
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col text-[oklch(18%_0.012_28)]"
+                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden max-w-md w-full shadow-lg flex flex-col text-[oklch(18%_0.012_28)]"
                     >
                         {/* Modal Header (Tabular Division) */}
                         <div className="p-4 flex justify-between items-center bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
@@ -2183,8 +2185,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Edit Guest Count (Pax) Modal */}
             {showEditPaxModal && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-[#1A1A1A]">
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans">
+                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-lg text-[#1A1A1A]">
                         <div className="p-4.5 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
                                 <h3 className="font-mono font-bold text-sm uppercase tracking-wider">ปรับจำนวนลูกค้า (Guest Count)</h3>
