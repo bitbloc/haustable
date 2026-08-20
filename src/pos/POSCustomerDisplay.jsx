@@ -1026,6 +1026,23 @@ export default function POSCustomerDisplay() {
                     </p>
                 </div>
 
+                {/* Cash Change Due Box */}
+                {orderData.paymentMethod === 'cash' && orderData.changeDue > 0 && (
+                    <div className="bg-white/10 border border-white/20 p-3 rounded-xl w-full backdrop-blur-xs space-y-0.5">
+                        <span className="text-[8px] font-mono font-bold tracking-widest uppercase text-emerald-300">
+                            CHANGE DUE (เงินทอน)
+                        </span>
+                        <p className="text-xl font-mono font-black text-white">
+                            ฿{(orderData.changeDue || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                        </p>
+                        {orderData.cashReceived > 0 && (
+                            <p className="text-[10px] text-white/80 font-mono">
+                                รับเงินสดมา ฿{orderData.cashReceived.toLocaleString()}
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 {/* XHAUS Points Earned Box */}
                 {orderData.pointsEarned > 0 && (
                     <div className="bg-white/10 border border-white/20 p-3 rounded-xl w-full backdrop-blur-xs space-y-0.5">

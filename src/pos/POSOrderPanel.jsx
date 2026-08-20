@@ -604,6 +604,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput, storePromptpayId]);
 
     const lastBroadcastMsgRef = React.useRef('');
+    const cfdDebounceTimerRef = React.useRef(null);
 
     const broadcastCFD = React.useCallback((msg) => {
         if (!msg) return;
@@ -611,19 +612,31 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         if (msgStr === lastBroadcastMsgRef.current) return;
         lastBroadcastMsgRef.current = msgStr;
 
+        // Instant local channel broadcast (zero lag for local secondary monitors)
         if (cfdChannel.current) {
             try { cfdChannel.current.postMessage(msg); } catch (e) {}
         }
-        if (supabaseCfdRef.current) {
-            supabaseCfdRef.current.send({
-                type: 'broadcast',
-                event: 'cfd_event',
-                payload: msg
-            }).catch(() => {});
+        
+        // Debounce cloud realtime broadcast and storage write to prevent UI thread lock
+        if (cfdDebounceTimerRef.current) {
+            clearTimeout(cfdDebounceTimerRef.current);
         }
-        try {
-            localStorage.setItem('pos_cfd_last_event', msgStr);
-        } catch (e) {}
+
+        const isUrgent = msg.type === 'PAYMENT_SUCCESS' || msg.type === 'IDLE';
+        const delay = isUrgent ? 0 : 120;
+
+        cfdDebounceTimerRef.current = setTimeout(() => {
+            if (supabaseCfdRef.current) {
+                supabaseCfdRef.current.send({
+                    type: 'broadcast',
+                    event: 'cfd_event',
+                    payload: msg
+                }).catch(() => {});
+            }
+            try {
+                localStorage.setItem('pos_cfd_last_event', msgStr);
+            } catch (e) {}
+        }, delay);
     }, []);
 
     const computeCurrentCFDPayloadRef = React.useRef(computeCurrentCFDPayload);
@@ -650,6 +663,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         }).subscribe();
 
         return () => {
+            if (cfdDebounceTimerRef.current) clearTimeout(cfdDebounceTimerRef.current);
             if (cfdChannel.current) cfdChannel.current.close();
             if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
         };
@@ -1831,45 +1845,154 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     </div>
                                 </div>
 
-                                {paymentMethod === 'cash' && (
-                                    <div className="space-y-2 animate-in fade-in duration-200">
-                                        <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">Cash Received</p>
-                                        <input
-                                            type="number"
-                                            placeholder={`e.g. ${Math.ceil(total / 100) * 100}`}
-                                            value={cashReceivedInput}
-                                            onChange={(e) => setCashReceivedInput(e.target.value)}
-                                            className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-2xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[var(--color-accent)] h-14 placeholder:text-gray-300"
-                                        />
-                                        
-                                        <div className="grid grid-cols-4 gap-1.5 mt-2">
-                                            {[100, 500, 1000].map(amt => (
-                                                <button
-                                                    key={amt}
-                                                    type="button"
-                                                    onClick={() => setCashReceivedInput(String(amt))}
-                                                    className="py-2 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] rounded-lg font-mono font-bold text-sm text-[#1A1A1A] transition-colors cursor-pointer"
-                                                >
-                                                    ฿{amt}
-                                                </button>
-                                            ))}
-                                            <button
-                                                type="button"
-                                                onClick={() => setCashReceivedInput(String(Math.ceil(total)))}
-                                                className="py-2 bg-[#E6F4FF] border border-blue-200 hover:border-blue-400 rounded-lg font-mono font-bold text-[10px] uppercase tracking-wider text-blue-700 transition-colors cursor-pointer"
-                                            >
-                                                EXACT
-                                            </button>
-                                        </div>
+                                {paymentMethod === 'cash' && (() => {
+                                    const ceilTotal = Math.ceil(total);
+                                    const parsedInput = parseFloat(cashReceivedInput);
+                                    const hasInput = !isNaN(parsedInput) && cashReceivedInput !== '';
+                                    const cashRecvNum = hasInput ? parsedInput : 0;
+                                    const changeDue = Math.max(0, cashRecvNum - ceilTotal);
+                                    const isShort = hasInput && cashRecvNum > 0 && cashRecvNum < ceilTotal;
+                                    const isSufficient = hasInput && cashRecvNum >= ceilTotal;
 
-                                        {parseFloat(cashReceivedInput) > 0 && parseFloat(cashReceivedInput) >= total && (
-                                            <div className="flex justify-between items-center px-4 py-3 bg-[#F5F5F2] border border-[#D1D1CD] rounded-xl mt-3 text-[#1A1A1A]">
-                                                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[#767673]">Change Due</span>
-                                                <span className="text-xl font-mono font-bold">฿{Math.ceil(Math.max(0, parseFloat(cashReceivedInput || 0) - total)).toLocaleString()}</span>
+                                    // Dynamic smart presets calculation
+                                    const smartPresets = [];
+                                    if (ceilTotal > 0) {
+                                        const candidateSet = new Set();
+                                        if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 50) * 50);
+                                        if (ceilTotal % 100 !== 0) candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
+                                        if (ceilTotal < 500) candidateSet.add(500);
+                                        if (ceilTotal < 1000) candidateSet.add(1000);
+                                        if (ceilTotal >= 500 && ceilTotal < 1000) candidateSet.add(1000);
+                                        if (ceilTotal >= 1000) {
+                                            candidateSet.add(Math.ceil(ceilTotal / 100) * 100);
+                                            candidateSet.add(Math.ceil(ceilTotal / 500) * 500);
+                                            candidateSet.add(Math.ceil(ceilTotal / 1000) * 1000);
+                                            if (candidateSet.size < 3) {
+                                                candidateSet.add(Math.ceil((ceilTotal + 500) / 500) * 500);
+                                            }
+                                        }
+                                        const sortedCandidates = Array.from(candidateSet)
+                                            .filter(amt => amt > ceilTotal)
+                                            .sort((a, b) => a - b)
+                                            .slice(0, 3);
+                                        smartPresets.push(...sortedCandidates);
+                                    }
+
+                                    return (
+                                        <div className="space-y-3 animate-in fade-in duration-200">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">
+                                                    รับเงินสดมา (Cash Received)
+                                                </p>
+                                                {cashReceivedInput && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCashReceivedInput('')}
+                                                        className="text-[10px] font-mono font-bold text-red-600 hover:text-red-800 uppercase tracking-wider cursor-pointer"
+                                                    >
+                                                        ล้างค่า (Clear)
+                                                    </button>
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-mono font-bold text-[#767673]">
+                                                    ฿
+                                                </span>
+                                                <input
+                                                    type="number"
+                                                    placeholder={`ระบุยอดเงินสด เช่น ${Math.ceil(ceilTotal / 100) * 100}`}
+                                                    value={cashReceivedInput}
+                                                    onChange={(e) => setCashReceivedInput(e.target.value)}
+                                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-10 pr-4 py-3 text-2xl font-mono font-bold text-[#1A1A1A] outline-none focus:border-[var(--color-accent)] h-14 placeholder:text-gray-300 placeholder:text-base"
+                                                    autoFocus
+                                                />
+                                            </div>
+                                            
+                                            {/* Quick Cash Tender Presets */}
+                                            <div className="space-y-1.5">
+                                                <div className="grid grid-cols-4 gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCashReceivedInput(String(ceilTotal))}
+                                                        className="py-2.5 bg-[#E6F4FF] border border-blue-200 hover:border-blue-500 rounded-lg font-mono font-bold text-xs uppercase tracking-wider text-blue-700 transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                    >
+                                                        พอดี (฿{ceilTotal.toLocaleString()})
+                                                    </button>
+                                                    {smartPresets.map(amt => (
+                                                        <button
+                                                            key={amt}
+                                                            type="button"
+                                                            onClick={() => setCashReceivedInput(String(amt))}
+                                                            className="py-2.5 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] hover:bg-white rounded-lg font-mono font-bold text-xs text-[#1A1A1A] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                        >
+                                                            ฿{amt.toLocaleString()}
+                                                        </button>
+                                                    ))}
+                                                    {smartPresets.length < 3 && [100, 500, 1000].filter(d => !smartPresets.includes(d) && d > ceilTotal).slice(0, 3 - smartPresets.length).map(amt => (
+                                                        <button
+                                                            key={amt}
+                                                            type="button"
+                                                            onClick={() => setCashReceivedInput(String(amt))}
+                                                            className="py-2.5 bg-[#F5F5F2] border border-[#D1D1CD] hover:border-[#1A1A1A] hover:bg-white rounded-lg font-mono font-bold text-xs text-[#1A1A1A] transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                                                        >
+                                                            ฿{amt.toLocaleString()}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                                {/* Common Thai Banknotes Row */}
+                                                <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                                                    {[100, 500, 1000].map(amt => (
+                                                        <button
+                                                            key={`note_${amt}`}
+                                                            type="button"
+                                                            onClick={() => setCashReceivedInput(String(amt))}
+                                                            className="py-1.5 bg-white border border-[#E0E0DC] hover:border-[#1A1A1A] rounded-lg font-mono font-semibold text-[11px] text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                                        >
+                                                            ธนบัตร ฿{amt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Dynamic Pop Banner: Change Due or Shortfall Alert */}
+                                            {isSufficient && (
+                                                <div className="bg-[#E6F4EA] border-2 border-emerald-500/40 rounded-xl p-4 text-[#1A1A1A] animate-in zoom-in-95 duration-150 shadow-xs flex items-center justify-between">
+                                                    <div>
+                                                        <span className="text-[11px] font-mono font-black uppercase tracking-wider text-emerald-800 block">
+                                                            เงินทอน (CHANGE DUE)
+                                                        </span>
+                                                        <span className="text-[10px] text-emerald-700/80 font-mono">
+                                                            รับมา ฿{cashRecvNum.toLocaleString()} • ยอด ฿{ceilTotal.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-3xl font-mono font-black text-emerald-800 leading-none">
+                                                            ฿{changeDue.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {isShort && (
+                                                <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 text-amber-900 animate-in fade-in duration-150 flex items-center justify-between">
+                                                    <div>
+                                                        <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-800 block">
+                                                            ยังขาดอีก (SHORT BY)
+                                                        </span>
+                                                        <span className="text-[10px] text-amber-700 font-mono">
+                                                            รับมา ฿{cashRecvNum.toLocaleString()} / ยอด ฿{ceilTotal.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-xl font-mono font-black text-amber-700">
+                                                        ฿{(ceilTotal - cashRecvNum).toLocaleString()}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {paymentMethod === 'qr' && (
                                     <div className="space-y-3 mt-1 animate-in fade-in duration-200 border-t border-[#D1D1CD] pt-4">
@@ -1913,6 +2036,27 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         const finalRewardCode = appliedReward?.claim_code || rewardItemsInCart[0]?.claim_code || null;
                                         const finalRewardId = appliedReward?.id || rewardItemsInCart[0]?.reward_id || null;
 
+                                        const ceilTotal = Math.ceil(total);
+                                        const parsedCash = parseFloat(cashReceivedInput);
+                                        const cashRecvNum = (!isNaN(parsedCash) && parsedCash > 0) ? parsedCash : ceilTotal;
+                                        const changeDueVal = paymentMethod === 'cash' ? Math.max(0, cashRecvNum - ceilTotal) : 0;
+
+                                        if (paymentMethod === 'cash') {
+                                            try {
+                                                localStorage.setItem('last_cash_received', String(cashRecvNum));
+                                                localStorage.setItem('last_cash_change', String(changeDueVal));
+                                            } catch (e) {}
+
+                                            if (changeDueVal > 0) {
+                                                toast.success(
+                                                    `💵 เงินทอน: ฿${changeDueVal.toLocaleString()} (รับเงินสด ฿${cashRecvNum.toLocaleString()})`,
+                                                    { duration: 6000 }
+                                                );
+                                            } else {
+                                                toast.success(`💵 รับเงินสดพอดี ฿${cashRecvNum.toLocaleString()}`, { duration: 4000 });
+                                            }
+                                        }
+
                                         if (onCheckout) {
                                             onCheckout(
                                                 paymentMethod,
@@ -1924,7 +2068,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 manualDiscount,
                                                 finalRewardCode,
                                                 finalRewardId,
-                                                useFreeDrinkQuota
+                                                useFreeDrinkQuota,
+                                                cashRecvNum,
+                                                changeDueVal
                                             );
                                         }
                                         setActiveModal(null);

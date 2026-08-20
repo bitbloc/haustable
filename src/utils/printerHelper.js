@@ -360,6 +360,9 @@ export function getCleanStaffRemark(remark) {
     if (
         defaultPlaceholders.includes(lower) ||
         lower.startsWith('walk-in') ||
+        lower.startsWith('paid by cash') ||
+        lower.startsWith('paid by qr') ||
+        lower.startsWith('paid by credit') ||
         lower === '[call_staff]' ||
         lower === '[call_bill]' ||
         lower.startsWith('merged into table') ||
@@ -368,8 +371,82 @@ export function getCleanStaffRemark(remark) {
         return '';
     }
 
-    const cleaned = r.replace('[CALL_STAFF]', '').replace('[CALL_BILL]', '').trim();
+    const cleaned = r
+        .replace(/\[CALL_STAFF\]/g, '')
+        .replace(/\[CALL_BILL\]/g, '')
+        .replace(/\[CASH:[^\]]+\]/g, '')
+        .replace(/\[SPLIT:[^\]]+\]/g, '')
+        .trim();
     return cleaned;
+}
+
+// Extract cash payment details (received and change) from booking object, remark tags, or localStorage
+export function extractCashDetails(booking, fallbackTotal = 0) {
+    if (!booking) {
+        return { received: null, change: null };
+    }
+    
+    // 1. Direct object properties
+    if (booking.cash_received !== undefined && booking.cash_received !== null && Number(booking.cash_received) > 0) {
+        const recv = Number(booking.cash_received);
+        const chg = Number(booking.cash_change !== undefined && booking.cash_change !== null 
+            ? booking.cash_change 
+            : (booking.change_due !== undefined && booking.change_due !== null ? booking.change_due : Math.max(0, recv - (booking.total_amount || fallbackTotal))));
+        return { received: recv, change: chg };
+    }
+    
+    // 2. Metadata properties
+    if (booking.metadata && typeof booking.metadata === 'object') {
+        if (booking.metadata.cash_received) {
+            const recv = Number(booking.metadata.cash_received);
+            const chg = Number(booking.metadata.cash_change || booking.metadata.change_due || Math.max(0, recv - (booking.total_amount || fallbackTotal)));
+            return { received: recv, change: chg };
+        }
+    }
+    
+    // 3. Staff remark parsing (e.g. [CASH: RECV=500, CHANGE=265] or รับเงินสด: 500 ทอน: 265)
+    const remark = String(booking.staff_remark || '');
+    if (remark) {
+        const tagMatch = remark.match(/\[CASH:\s*RECV=([0-9.]+),\s*CHANGE=([0-9.]+)\]/i);
+        if (tagMatch) {
+            return { received: parseFloat(tagMatch[1]), change: parseFloat(tagMatch[2]) };
+        }
+        
+        const recvMatch = remark.match(/(?:รับเงิน(?:สด)?|รับมา|received|recv)[\s:=]*฿?([0-9,]+(?:\.[0-9]+)?)/i);
+        const chgMatch = remark.match(/(?:เงินทอน|ทอน|change(?:_due)?)[\s:=]*฿?([0-9,]+(?:\.[0-9]+)?)/i);
+        if (recvMatch) {
+            const recv = parseFloat(recvMatch[1].replace(/,/g, ''));
+            const chg = chgMatch ? parseFloat(chgMatch[1].replace(/,/g, '')) : Math.max(0, recv - (Number(booking.total_amount) || fallbackTotal));
+            return { received: recv, change: chg };
+        }
+    }
+    
+    // 4. LocalStorage fallback (if active session)
+    if (typeof window !== 'undefined') {
+        try {
+            const storedRecv = localStorage.getItem('last_cash_received');
+            const storedChange = localStorage.getItem('last_cash_change');
+            if (storedRecv !== null && Number(storedRecv) > 0) {
+                return {
+                    received: parseFloat(storedRecv),
+                    change: storedChange !== null ? parseFloat(storedChange) : Math.max(0, parseFloat(storedRecv) - (Number(booking.total_amount) || fallbackTotal))
+                };
+            }
+        } catch (e) {}
+    }
+    
+    // 5. Fallback for cash payment when no specific tender was recorded (exact cash)
+    const methodStr = (booking.payment_method || '').toLowerCase();
+    const remarkLower = (booking.staff_remark || '').toLowerCase();
+    const isCash = methodStr === 'cash' || remarkLower.includes('cash') || (!remarkLower.includes('qr') && !remarkLower.includes('credit') && !booking.payment_slip_url);
+    if (isCash) {
+        const total = Number(booking.total_amount || fallbackTotal);
+        if (total > 0) {
+            return { received: total, change: 0 };
+        }
+    }
+    
+    return { received: null, change: null };
 }
 
 // Generate customizable divider lines (dashed, dotted, solid, double, star, wave)
@@ -1185,20 +1262,21 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // Payment details
     if (activeTab === 'receipt') {
-        const methodLabel = paymentMethod === 'cash' ? 'เงินสด' : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
+        const isCashMethod = String(paymentMethod || '').toLowerCase() === 'cash';
+        const isCreditMethod = String(paymentMethod || '').toLowerCase() === 'credit';
+        const methodLabel = isCashMethod ? 'เงินสด' : (isCreditMethod ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
+        
         encoder.align('center')
                .line(`ช่องทางชำระเงิน: ${methodLabel}`);
                
-        if (paymentMethod === 'cash') {
+        if (isCashMethod) {
             encoder.align('left').size(0, 0);
-            const storedRecv = localStorage.getItem('last_cash_received');
-            const storedChange = localStorage.getItem('last_cash_change');
-            if (storedRecv !== null) {
-                const cashRecvVal = formatReceiptMoney(parseFloat(storedRecv));
+            const totalForCash = Number(booking.total_amount) || 0;
+            const cashDetails = extractCashDetails(booking, totalForCash);
+            if (cashDetails.received !== null && cashDetails.received > 0) {
+                const cashRecvVal = formatReceiptMoney(cashDetails.received);
+                const cashChangeVal = formatReceiptMoney(cashDetails.change || 0);
                 encoder.line(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols));
-            }
-            if (storedChange !== null) {
-                const cashChangeVal = formatReceiptMoney(parseFloat(storedChange));
                 encoder.line(formatTwoCols('เงินทอน', cashChangeVal, maxCols));
             }
         }
@@ -2639,7 +2717,8 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
             activePaperSize = config.cashier_paper_size || config.paper_width || '80mm';
         }
 
-        const paymentMethod = booking.payment_method || 'cash';
+        const rawMethod = getBookingPaymentMethod(booking) || booking.payment_method || 'cash';
+        const paymentMethod = String(rawMethod).toLowerCase();
         let printed = false;
 
         if (printerType === 'sunmi') {

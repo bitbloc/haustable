@@ -554,10 +554,17 @@ export function usePOSOrder() {
         xhausDiscount = 0,
         rewardCode = null,
         rewardId = null,
-        profileId = null
+        profileId = null,
+        cashReceived = 0,
+        changeDue = 0
     ) => {
         setLoading(true);
         
+        const isCashMethod = String(paymentMethod || '').toLowerCase() === 'cash';
+        const numCashRecv = Number(cashReceived) || 0;
+        const numChangeDue = Number(changeDue) || (isCashMethod && numCashRecv > 0 ? Math.max(0, numCashRecv - totalAmount) : 0);
+        const cashTag = isCashMethod && numCashRecv > 0 ? ` [CASH: RECV=${numCashRecv}, CHANGE=${numChangeDue}]` : '';
+
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Checking out table offline');
             const bookings = posCache.getBookings();
@@ -573,9 +580,11 @@ export function usePOSOrder() {
                         xhaus_discount: xhausDiscount,
                         xhaus_reward_id: rewardId,
                         user_id: profileId || b.user_id,
+                        cash_received: numCashRecv > 0 ? numCashRecv : null,
+                        cash_change: numCashRecv > 0 ? numChangeDue : null,
                         staff_remark: rewardCode 
-                            ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}`
-                            : `Paid by ${paymentMethod.toUpperCase()}` 
+                            ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
+                            : `Paid by ${paymentMethod.toUpperCase()}${cashTag}` 
                     };
                 }
                 return b;
@@ -592,7 +601,9 @@ export function usePOSOrder() {
                 xhausDiscount,
                 rewardCode,
                 rewardId,
-                profileId
+                profileId,
+                cashReceived: numCashRecv,
+                changeDue: numChangeDue
             });
             recordShiftTransaction(bookingId, totalAmount, paymentMethod);
             
@@ -604,8 +615,8 @@ export function usePOSOrder() {
         try {
             // 1. Complete booking status
             const remarkText = rewardCode 
-                ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}`
-                : `Paid by ${paymentMethod.toUpperCase()}`;
+                ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
+                : `Paid by ${paymentMethod.toUpperCase()}${cashTag}`;
 
             const updatePayload = {
                 status: 'completed',

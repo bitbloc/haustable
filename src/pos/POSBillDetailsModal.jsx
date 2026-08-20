@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, X, Loader2, Receipt, Printer } from 'lucide-react';
-import { getShortBookingId } from '../utils/printerHelper';
+import { getShortBookingId, extractCashDetails } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
 import TaxInvoiceModal from '../components/admin/tax/TaxInvoiceModal';
 import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
@@ -338,6 +338,26 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                                 {getBookingPaymentMethod(booking)}
                             </span>
                         </div>
+
+                        {getBookingPaymentMethod(booking) === 'CASH' && (() => {
+                            const totalAmt = Number(booking.total_amount) || 0;
+                            const cashDetails = extractCashDetails(booking, totalAmt);
+                            if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
+                                return (
+                                    <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1 font-mono text-xs">
+                                        <div className="flex justify-between text-[#767673]">
+                                            <span>รับเงินสดมา (Cash Received):</span>
+                                            <span className="font-bold text-[#1A1A1A]">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between font-black text-emerald-700 border-t border-dashed border-[#ECECE9] pt-1">
+                                            <span>เงินทอน (Change Due):</span>
+                                            <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
                     </div>
                     
                     {booking.staff_remark && (

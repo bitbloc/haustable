@@ -3,7 +3,7 @@ import { X, Printer as PrinterIcon, Download, Check } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -612,9 +612,11 @@ export default function SlipModal({ booking, type, onClose }) {
             
             let cashChangeHtml = ''
             if (paymentMethod === 'cash') {
-                const cashRecvVal = Math.ceil(parseFloat(localStorage.getItem('last_cash_received') || 0)).toLocaleString();
-                const cashChangeVal = Math.ceil(parseFloat(localStorage.getItem('last_cash_change') || 0)).toLocaleString();
-                if (cashRecvVal !== 'NaN' && cashChangeVal !== 'NaN') {
+                const totalAmt = Number(booking.total_amount) || subtotal;
+                const cashDetails = extractCashDetails(booking, totalAmt);
+                if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
+                    const cashRecvVal = Math.ceil(cashDetails.received).toLocaleString();
+                    const cashChangeVal = Math.ceil(cashDetails.change || 0).toLocaleString();
                     cashChangeHtml = `
                         <div style="font-size: 10px; margin-top: 6px; text-align: left; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px dashed black; padding-bottom: 4px; margin-bottom: 4px;">
                             <div style="display: flex; justify-content: space-between;"><span>รับเงินสดมา:</span> <span>฿${cashRecvVal}</span></div>
@@ -1405,21 +1407,40 @@ export default function SlipModal({ booking, type, onClose }) {
                         )}
 
                         {/* Payment Details Section (Only for Receipt) */}
-                        {activeTab === 'receipt' && (
-                            <>
-                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
-                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                </div>
-                                <div className="py-2 my-1 text-center flex flex-col items-center">
-                                    <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                                        Payment Method: {paymentMethod === 'cash' ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
+                        {activeTab === 'receipt' && (() => {
+                            const isCash = paymentMethod === 'cash';
+                            const totalAmt = Number(booking.total_amount) || displayTotalAmount;
+                            const cashDetails = isCash ? extractCashDetails(booking, totalAmt) : null;
+                            return (
+                                <>
+                                    <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
+                                        {generateDivider(printerConfig.divider_style || 'dashed', 32)}
                                     </div>
-                                    <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
-                                        PAID / ชำระแล้ว
+                                    <div className="py-2 my-1 text-center flex flex-col items-center">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
+                                            Payment Method: {isCash ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
+                                        </div>
+
+                                        {isCash && cashDetails && cashDetails.received !== null && cashDetails.received > 0 && (
+                                            <div className="w-full text-xs font-mono border-t border-b border-dashed border-black/40 py-2 my-2 space-y-1">
+                                                <div className="flex justify-between text-gray-700">
+                                                    <span>รับเงินสดมา:</span>
+                                                    <span className="font-bold">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
+                                                </div>
+                                                <div className="flex justify-between font-black text-black">
+                                                    <span>เงินทอน:</span>
+                                                    <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
+                                            PAID / ชำระแล้ว
+                                        </div>
                                     </div>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            );
+                        })()}
 
                         {/* PromptPay QR Code (For Billing tab only, never on paid receipt) */}
                         {activeTab === 'billing' && qrCodeUrl && (

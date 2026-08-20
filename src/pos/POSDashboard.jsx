@@ -2030,7 +2030,9 @@ export default function POSDashboard() {
         manualDiscount = 0,
         rewardCode = null,
         rewardId = null,
-        useFreeDrinkQuota = false
+        useFreeDrinkQuota = false,
+        cashReceived = 0,
+        changeDue = 0
     ) => {
         if (submittingOrderRef.current || isSubmittingOrder) return;
         if (currentOrder.items.length === 0) return;
@@ -2102,6 +2104,16 @@ export default function POSDashboard() {
             finalRewardCode = finalRewardCode ? `${finalRewardCode} | 10 Free 1 Drink` : '10 Free 1 Drink';
         }
 
+        const numCashRecv = Number(cashReceived) || finalTotal;
+        const numChangeDue = Number(changeDue) || (paymentMethod === 'cash' ? Math.max(0, numCashRecv - finalTotal) : 0);
+
+        if (paymentMethod === 'cash') {
+            try {
+                localStorage.setItem('last_cash_received', String(numCashRecv));
+                localStorage.setItem('last_cash_change', String(numChangeDue));
+            } catch (e) {}
+        }
+
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
@@ -2112,7 +2124,9 @@ export default function POSDashboard() {
             xhausDiscount,
             finalRewardCode,
             rewardId,
-            fallbackProfileId
+            fallbackProfileId,
+            numCashRecv,
+            numChangeDue
         );
         if (success) {
             // Process Automatic Drink Stamps 10 Free 1 for Attached Member Profile
@@ -2251,13 +2265,23 @@ export default function POSDashboard() {
                     payload: {
                         total: finalTotal,
                         pointsEarned,
+                        paymentMethod,
+                        cashReceived: paymentMethod === 'cash' ? numCashRecv : 0,
+                        changeDue: paymentMethod === 'cash' ? numChangeDue : 0,
                         tableName: selectedTable?.table_name || currentBooking?.tables_layout?.table_name || null,
                         customer: currentBooking?.customer_name || 'Walk-in Guest'
                     }
                 }
             }));
 
-            openSlipOrSilentPrint(completedBooking || currentBooking, 'receipt');
+            const printBookingData = {
+                ...(completedBooking || currentBooking),
+                payment_method: paymentMethod,
+                cash_received: paymentMethod === 'cash' ? numCashRecv : null,
+                cash_change: paymentMethod === 'cash' ? numChangeDue : null
+            };
+
+            openSlipOrSilentPrint(printBookingData, 'receipt');
 
             // Clear the cart state after successful checkout
             setCurrentOrder({ items: [], customer: null, table: null });
