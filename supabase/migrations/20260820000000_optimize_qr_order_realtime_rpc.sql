@@ -133,7 +133,7 @@ BEGIN
     )
     SELECT 
         v_booking_id,
-        NULLIF(item->>'menu_item_id', '')::UUID,
+        NULLIF(item->>'menu_item_id', '')::BIGINT,
         COALESCE((item->>'quantity')::INT, 1),
         COALESCE((item->>'price_at_time')::NUMERIC(10, 2), 0.00),
         COALESCE(item->>'destination', 'kitchen'),
