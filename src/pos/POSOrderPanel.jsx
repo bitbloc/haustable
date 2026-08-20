@@ -698,8 +698,11 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     }, [broadcastCFD]);
 
     React.useEffect(() => {
-        const currentMsg = computeCurrentCFDPayload();
-        broadcastCFD(currentMsg);
+        const timer = setTimeout(() => {
+            const currentMsg = computeCurrentCFDPayload();
+            broadcastCFD(currentMsg);
+        }, 80);
+        return () => clearTimeout(timer);
     }, [computeCurrentCFDPayload, broadcastCFD]);
     
     const hasNewItems = order.items.some(item => !item.db_id);

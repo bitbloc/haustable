@@ -1532,7 +1532,7 @@ export default function POSDashboard() {
         }
     };
 
-    const openSlipOrSilentPrint = async (booking, slipType) => {
+    const openSlipOrSilentPrint = useCallback(async (booking, slipType) => {
         if (!booking) return;
         try {
             const silentSuccess = await silentPrintSlip(booking, slipType);
@@ -1545,9 +1545,9 @@ export default function POSDashboard() {
             setActiveSlipBooking(booking);
             setActiveSlipType(slipType);
         }
-    };
+    }, []);
 
-    const handleSelectOpenBill = async (booking) => {
+    const handleSelectOpenBill = useCallback(async (booking) => {
         if (!booking) return;
 
         let fullBooking = booking;
@@ -1602,7 +1602,7 @@ export default function POSDashboard() {
         } else {
             setView('menu');
         }
-    };
+    }, []);
 
     const { getActiveBooking, createWalkIn, createWalkInPickup, completeCheckout, submitOrderItems, acceptOrder, attachCustomerToBooking, updateGuestCount, deleteOrderItem, updateOrderItemDbQty } = usePOSOrder();
 
@@ -1613,7 +1613,7 @@ export default function POSDashboard() {
     const [showPickupModal, setShowPickupModal] = useState(false);
     const [pickupNoteInput, setPickupNoteInput] = useState('');
 
-    const handleSelectTable = async (table) => {
+    const handleSelectTable = useCallback(async (table) => {
         setSelectedTable(table);
         setAttachedMemberCrm(null); // Clear stale attached member immediately on table change
         if (table?.id) {
@@ -1645,9 +1645,9 @@ export default function POSDashboard() {
             setOpenTablePaxInput(String(table.capacity || 2));
             setOpenTableModalData({ table });
         }
-    };
+    }, [getActiveBooking]);
 
-    const handleConfirmOpenTable = async () => {
+    const handleConfirmOpenTable = useCallback(async () => {
         if (!openTableModalData?.table) return;
         const paxNum = parseInt(openTablePaxInput);
         if (!paxNum || paxNum <= 0) {
@@ -1671,9 +1671,9 @@ export default function POSDashboard() {
             console.error('Failed to open table:', err);
             toast.error('เกิดข้อผิดพลาดในการเปิดโต๊ะ', { id: toastId });
         }
-    };
+    }, [createWalkIn, openTableModalData, openTablePaxInput]);
 
-    const handleSelectPickupOrder = async (booking) => {
+    const handleSelectPickupOrder = useCallback(async (booking) => {
         setAttachedMemberCrm(null); // Clear stale member profile immediately
         setActiveBooking(booking);
         setSelectedTable(null); 
@@ -1711,14 +1711,14 @@ export default function POSDashboard() {
             table: null
         });
         setView('menu');
-    };
+    }, []);
 
-    const handleNewWalkInPickup = () => {
+    const handleNewWalkInPickup = useCallback(() => {
         setPickupNoteInput('');
         setShowPickupModal(true);
-    };
+    }, []);
 
-    const confirmNewWalkInPickup = async () => {
+    const confirmNewWalkInPickup = useCallback(async () => {
         const note = pickupNoteInput.trim() || 'Walk-in Pick-up';
         setShowPickupModal(false);
         setPickupNoteInput('');
@@ -1726,7 +1726,7 @@ export default function POSDashboard() {
         if (newBooking) {
             handleSelectPickupOrder(newBooking);
         }
-    };
+    }, [createWalkInPickup, handleSelectPickupOrder, pickupNoteInput]);
 
     useEffect(() => {
         const autoSelectPending = async () => {
@@ -1743,7 +1743,7 @@ export default function POSDashboard() {
         }
     }, []);
 
-    const handleBackToTables = () => {
+    const handleBackToTables = useCallback(() => {
         if (view === 'menu' && selectedTable) {
             // Return from Menu key-in back to Tables floorplan, preserving active table & items
             setView('tables');
@@ -1756,7 +1756,7 @@ export default function POSDashboard() {
             setCurrentOrder({ items: [], customer: null, table: null });
             setAttachedMemberCrm(null);
         }
-    };
+    }, [selectedTable, view]);
 
     const handleAddToOrder = useCallback((item) => {
         setCurrentOrder(prev => {
@@ -1845,6 +1845,8 @@ export default function POSDashboard() {
         });
     }, []);
 
+    const qtyDebounceTimersRef = useRef({});
+
     const handleUpdateQuantity = useCallback((itemId, delta) => {
         let currentTargetItem = null;
         let nextQty = 0;
@@ -1874,29 +1876,36 @@ export default function POSDashboard() {
             };
         });
 
-        // Perform asynchronous DB sync outside the state updater function
+        // Perform asynchronous DB sync outside the state updater function with debouncing
         if (currentTargetItem && currentTargetItem.db_id) {
             const currentBookingId = activeBookingRef.current?.id;
             const cleanDbId = String(currentTargetItem.db_id).replace(/^db_/, '');
 
+            // Instant optimistic update to activeBooking in memory
+            setActiveBooking(prev => {
+                if (!prev || !prev.order_items) return prev;
+                let updatedOrderItems;
+                if (nextQty === 0) {
+                    updatedOrderItems = prev.order_items.filter(i => String(i.id).replace(/^db_/, '') !== cleanDbId);
+                } else {
+                    updatedOrderItems = prev.order_items.map(i => String(i.id).replace(/^db_/, '') === cleanDbId ? { ...i, quantity: nextQty } : i);
+                }
+                const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
+                return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
+            });
+
+            if (qtyDebounceTimersRef.current[cleanDbId]) {
+                clearTimeout(qtyDebounceTimersRef.current[cleanDbId]);
+            }
+
             if (nextQty === 0) {
                 deleteOrderItem(cleanDbId, currentBookingId);
-                // Also update activeBooking state in memory
-                setActiveBooking(prev => {
-                    if (!prev || !prev.order_items) return prev;
-                    const updatedOrderItems = prev.order_items.filter(i => String(i.id).replace(/^db_/, '') !== cleanDbId);
-                    const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
-                    return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
-                });
+                delete qtyDebounceTimersRef.current[cleanDbId];
             } else {
-                updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
-                // Also update activeBooking state in memory
-                setActiveBooking(prev => {
-                    if (!prev || !prev.order_items) return prev;
-                    const updatedOrderItems = prev.order_items.map(i => String(i.id).replace(/^db_/, '') === cleanDbId ? { ...i, quantity: nextQty } : i);
-                    const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
-                    return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
-                });
+                qtyDebounceTimersRef.current[cleanDbId] = setTimeout(() => {
+                    updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
+                    delete qtyDebounceTimersRef.current[cleanDbId];
+                }, 300);
             }
         }
     }, [deleteOrderItem, updateOrderItemDbQty]);
@@ -2750,6 +2759,7 @@ export default function POSDashboard() {
                         {/* Extended panels with layer isolation */}
                         <div className={view === 'open_bills' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSOpenBillsGrid 
+                                isActive={view === 'open_bills'}
                                 onSelectOrder={handleSelectOpenBill} 
                                 onOpenSlip={(booking, slipType) => {
                                     openSlipOrSilentPrint(booking, slipType);
@@ -2759,6 +2769,7 @@ export default function POSDashboard() {
                         </div>
                         <div className={view === 'crm' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSCRMPanel 
+                                isActive={view === 'crm'}
                                 onAttachToOrder={(member) => {
                                     handleSelectCrmCustomer(member);
                                     setView('menu');
@@ -2770,6 +2781,7 @@ export default function POSDashboard() {
                         </div>
                         <div className={view === 'online_hub' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSOnlineHub 
+                                isActive={view === 'online_hub'}
                                 activeShift={activeShift} 
                                 onOpenSlipModal={(booking, slipType) => {
                                     openSlipOrSilentPrint(booking, slipType);

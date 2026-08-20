@@ -21,7 +21,7 @@ import {
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
 
-export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey }) {
+export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +31,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     const [viewSlipUrl, setViewSlipUrl] = useState(null);
 
     const fetchOpenBills = async () => {
+        if (!isActive) return;
         try {
             setLoading(true);
             if (!isOnline()) {
@@ -63,13 +64,15 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     const fetchDebounceRef = useRef(null);
 
     const triggerDebouncedFetch = useCallback(() => {
+        if (!isActive) return;
         if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
         fetchDebounceRef.current = setTimeout(() => {
             fetchOpenBills();
-        }, 200);
-    }, []);
+        }, 300);
+    }, [isActive]);
 
     useEffect(() => {
+        if (!isActive) return;
         fetchOpenBills();
 
         const openBillsSub = supabase.channel('pos-open-bills-realtime')
@@ -78,7 +81,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
             .subscribe();
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
+            if (document.visibilityState === 'visible' && isActive) {
                 fetchOpenBills();
             }
         };
@@ -91,13 +94,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
             window.removeEventListener('online', fetchOpenBills);
             supabase.removeChannel(openBillsSub);
         };
-    }, [triggerDebouncedFetch]);
+    }, [isActive, triggerDebouncedFetch]);
 
     useEffect(() => {
-        if (refreshKey > 0) {
+        if (isActive && refreshKey > 0) {
             fetchOpenBills();
         }
-    }, [refreshKey]);
+    }, [isActive, refreshKey]);
 
     // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills)
     const activeOrders = orders.filter(o => {

@@ -6,7 +6,7 @@ import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
 import { posCache } from '../utils/offlineHelper';
 
-export default function POSCRMPanel({ onAttachToOrder }) {
+export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -18,6 +18,7 @@ export default function POSCRMPanel({ onAttachToOrder }) {
     const [hasSession, setHasSession] = useState(true);
 
     useEffect(() => {
+        if (!isActive) return;
         supabase.auth.getSession().then(({ data: { session } }) => {
             setHasSession(!!session);
             if (session) {
@@ -36,13 +37,15 @@ export default function POSCRMPanel({ onAttachToOrder }) {
         const channel = supabase
             .channel('pos_crm_panel_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchMembers();
-                if (selectedMember?.id) {
-                    handleSelectMember(selectedMember);
+                if (isActive) {
+                    fetchMembers();
+                    if (selectedMember?.id) {
+                        handleSelectMember(selectedMember);
+                    }
                 }
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                fetchMembers();
+                if (isActive) fetchMembers();
             })
             .subscribe();
 
@@ -50,7 +53,7 @@ export default function POSCRMPanel({ onAttachToOrder }) {
             subscription.unsubscribe();
             supabase.removeChannel(channel);
         };
-    }, [selectedMember?.id]);
+    }, [isActive, selectedMember?.id]);
 
     const fetchMembers = async () => {
         setLoading(true);

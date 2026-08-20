@@ -81,18 +81,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         fetchTables();
         fetchFloorplan();
 
-        const bookingsSub = supabase.channel('pos-realtime-notifications')
-            .on('broadcast', { event: 'qr_order_created' }, fetchTables)
-            .on('broadcast', { event: 'call_staff' }, fetchTables)
-            .on('broadcast', { event: 'call_bill' }, fetchTables)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchTables)
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.warn(`[Realtime POS Bookings] Channel status: ${status}`, err || '');
-                }
-            });
-            
         const tablesSub = supabase.channel('pos-tables-layout')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, fetchTables)
             .subscribe((status, err) => {
@@ -111,22 +99,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // 6-second polling fallback to keep grid fresh if realtime fails
+        // 10-second polling fallback to keep grid fresh if realtime fails
         const pollInterval = setInterval(() => {
             fetchTables();
-        }, 6000);
+        }, 10000);
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 fetchTables();
-                fetchFloorplan();
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         window.addEventListener('online', fetchTables);
 
         return () => {
-            supabase.removeChannel(bookingsSub);
             supabase.removeChannel(tablesSub);
             supabase.removeChannel(settingsSub);
             clearInterval(pollInterval);
@@ -138,7 +124,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     useEffect(() => {
         if (refreshKey > 0) {
             fetchTables();
-            fetchFloorplan();
         }
     }, [refreshKey]);
 
@@ -272,21 +257,23 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         }, 150);
     }, []);
 
-    const filteredTables = tables.filter(table => {
+    const filteredTables = useMemo(() => {
         if (!searchQuery.trim()) {
-            return statusFilter === 'all' || table.status === statusFilter;
+            return statusFilter === 'all' ? tables : tables.filter(t => t.status === statusFilter);
         }
         const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
-        const tableName = table.table_name.toLowerCase();
-        const booking = table.booking;
-        const shortId = booking ? getShortBookingId(booking).toLowerCase() : '';
-        const tokenStr = (booking?.tracking_token || '').toLowerCase();
-        const custName = (booking?.profiles?.display_name || booking?.customer_name || booking?.pickup_contact_name || booking?.customer_note || '').toLowerCase();
+        return tables.filter(table => {
+            const tableName = (table.table_name || '').toLowerCase();
+            const booking = table.booking;
+            const shortId = booking ? getShortBookingId(booking).toLowerCase() : '';
+            const tokenStr = (booking?.tracking_token || '').toLowerCase();
+            const custName = (booking?.profiles?.display_name || booking?.customer_name || booking?.pickup_contact_name || booking?.customer_note || '').toLowerCase();
 
-        const matchesSearch = tableName.includes(q) || shortId.includes(q) || tokenStr.includes(q) || custName.includes(q);
-        const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+            const matchesSearch = tableName.includes(q) || shortId.includes(q) || tokenStr.includes(q) || custName.includes(q);
+            const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [tables, searchQuery, statusFilter]);
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[#ECECE9]">
@@ -465,142 +452,14 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                             )}
                                             
                                             {/* Render positioned tables */}
-                                            {filteredTables.map((table) => {
-                                                const isCircle = table.shape === 'circle';
-                                                const rotation = table.rotation || 0;
-                                                
-                                                const isOccupied = table.status === 'occupied';
-                                                const isPending = table.status === 'pending';
-                                                const hasOrder = isPending;
-                                                const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
-                                                const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
-                                                const hasSlip = !!table.booking?.payment_slip_url;
-
-                                                // Braun style tables: Matte colors with clear LED status lights
-                                                let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
-                                                let ledColor = 'bg-[#00CC44]';
-                                                
-                                                if (isOccupied || isPending) {
-                                                    tableBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
-                                                    ledColor = 'bg-white';
-                                                    
-                                                    if (hasCallStaff) {
-                                                        tableBgClass = 'animate-pos-blink-blue border-2 shadow-md';
-                                                        ledColor = 'bg-[#0099FF] animate-ping';
-                                                    }
-                                                    if (hasCallBill) {
-                                                        tableBgClass = 'animate-pos-blink-orange border-2 shadow-md';
-                                                        ledColor = 'bg-[#FFAA00] animate-ping';
-                                                    }
-                                                    if (hasOrder) {
-                                                        tableBgClass = 'animate-pos-blink-red border-2 shadow-md';
-                                                        ledColor = 'bg-[#ff0000] animate-ping';
-                                                    }
-                                                }
-                                                
-                                                return (
-                                                    <button
-                                                        key={table.id}
-                                                        onClick={() => onSelectTable(table)}
-                                                        className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100`}
-                                                        style={{
-                                                            left: `${table.pos_x}%`,
-                                                            top: `${table.pos_y}%`,
-                                                            width: `${table.width}%`,
-                                                            height: `${table.height}%`,
-                                                            transform: `rotate(${rotation}deg)`
-                                                        }}
-                                                    >
-                                                        {/* Counter-rotate content */}
-                                                        <div 
-                                                            className="flex flex-col items-center justify-center w-full h-full text-center pointer-events-none p-1 relative"
-                                                            style={{ transform: `rotate(${-rotation}deg)` }}
-                                                        >
-                                                            {/* LED indicator light in top-right */}
-                                                            <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
-                                                                {table.upcomingConflict && (
-                                                                    <button
-                                                                        onClick={(e) => { e.stopPropagation(); setReassignModalBooking(table.booking); }}
-                                                                        className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-bounce shadow cursor-pointer pointer-events-auto"
-                                                                    >
-                                                                        ⚠️ ชนคิว!
-                                                                    </button>
-                                                                )}
-                                                                {hasOrder && (
-                                                                    <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                                                        ORDER
-                                                                    </span>
-                                                                )}
-                                                                {hasCallStaff && (
-                                                                    <span className="bg-[#0099FF] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                                                        CALL
-                                                                    </span>
-                                                                )}
-                                                                {hasCallBill && (
-                                                                    <span className="bg-[#FFAA00] text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                                                        BILL
-                                                                    </span>
-                                                                )}
-                                                                {hasSlip && (
-                                                                    <span className="bg-[#00CC44] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
-                                                                        SLIP
-                                                                    </span>
-                                                                )}
-                                                                <span className={`w-1.5 h-1.5 rounded-full border border-black/10 ${ledColor}`}></span>
-                                                            </div>
-                                                            
-                                                            {/* Table Name */}
-                                                            <span className="font-mono font-bold text-xs md:text-sm tracking-tight leading-tight">
-                                                                {table.table_name}
-                                                            </span>
-                                                            
-                                                            {/* Capacity / Guest count */}
-                                                            <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
-                                                                {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
-                                                            </span>
-
-                                                            {/* Upcoming Advance Reservation on Free Table */}
-                                                            {table.upcomingReservation && !isOccupied && !isPending && (
-                                                                <span className="mt-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight">
-                                                                    🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
-                                                                </span>
-                                                            )}
-                                                            
-                                                            {/* Booking / Seated time & Dwell Counter */}
-                                                            {table.booking?.booking_time && (isOccupied || isPending) && (() => {
-                                                                const startMins = Math.max(0, Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000));
-                                                                const isStale = startMins >= 2880; // >48h (2 days)
-                                                                const isLongDwell = startMins >= 120; // >2h
-                                                                return (
-                                                                    <div className="flex flex-col items-center mt-0.5">
-                                                                        <div className="flex items-center gap-0.5 text-[8px] font-mono font-bold opacity-80">
-                                                                            <Clock size={8} />
-                                                                            <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                        </div>
-                                                                        {isStale ? (
-                                                                            <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                                                                ⚠️ บิลค้าง &gt;2วัน
-                                                                            </span>
-                                                                        ) : isPending && startMins >= 10 ? (
-                                                                            <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                                                                OVERDUE {startMins}M
-                                                                            </span>
-                                                                        ) : isLongDwell ? (
-                                                                            <span className="mt-0.5 bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
-                                                                                🔥 นั่งแช่ {Math.floor(startMins / 60)}h{startMins % 60}m
-                                                                            </span>
-                                                                        ) : (
-                                                                            <span className="mt-0.5 text-[7px] font-mono opacity-70">
-                                                                                ⏱️ {startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                );
-                                                            })()}
-                                                        </div>
-                                                    </button>
-                                                );
-                                            })}
+                                            {filteredTables.map((table) => (
+                                                <FloorplanTableButton 
+                                                    key={table.id}
+                                                    table={table}
+                                                    onSelectTable={onSelectTable}
+                                                    onReassign={setReassignModalBooking}
+                                                />
+                                            ))}
                                         </div>
                                     </TransformComponent>
                                 </>
@@ -617,90 +476,13 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
-                                {filteredTables.map((table) => {
-                                    const isOccupied = table.status === 'occupied';
-                                    const isPending = table.status === 'pending';
-                                    
-                                    const hasOrder = isPending;
-                                    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
-                                    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
-                                    const hasSlip = !!table.booking?.payment_slip_url;
-
-                                    let cellBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A] hover:border-[#B0B0AC]';
-                                    let ledColor = 'bg-[#00CC44]';
-                                    
-                                    if (isOccupied || isPending) {
-                                        cellBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
-                                        ledColor = 'bg-white';
-                                        
-                                        if (hasCallStaff) {
-                                            cellBgClass = 'animate-pos-blink-blue border-2 shadow-md';
-                                            ledColor = 'bg-[#0099FF] animate-ping';
-                                        }
-                                        if (hasCallBill) {
-                                            cellBgClass = 'animate-pos-blink-orange border-2 shadow-md';
-                                            ledColor = 'bg-[#FFAA00] animate-ping';
-                                        }
-                                        if (hasOrder) {
-                                            cellBgClass = 'animate-pos-blink-red border-2 shadow-md';
-                                            ledColor = 'bg-[#ff0000] animate-ping';
-                                        }
-                                    }
-
-                                    return (
-                                        <button
-                                            key={table.id}
-                                            onClick={() => onSelectTable(table)}
-                                            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.02] active:scale-[0.98] ${cellBgClass}`}
-                                        >
-                                            {/* Top row: Status LEDs */}
-                                            <div className="flex justify-between items-center w-full">
-                                                <div className="flex gap-1 items-center flex-wrap">
-                                                     {hasOrder && (
-                                                         <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
-                                                     )}
-                                                     {isPending && table.booking?.booking_time && (Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000) >= 10) && (
-                                                         <span className="bg-red-700 text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">OVERDUE</span>
-                                                     )}
-                                                     {hasCallStaff && (
-                                                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
-                                                     )}
-                                                     {hasCallBill && (
-                                                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
-                                                     )}
-                                                     {hasSlip && (
-                                                         <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
-                                                     )}
-                                                 </div>
-                                                <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
-                                            </div>
-                                            
-                                            {/* Center row: Table Info */}
-                                            <div className="flex flex-col items-center gap-1 my-3 select-none">
-                                                 <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
-                                                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[#767673]'}`}>
-                                                     {table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT'}
-                                                 </span>
-                                            </div>
-                                            
-                                            {/* Bottom row: Capacity / Timing */}
-                                            <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
-                                                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAPACITY: ${table.capacity}P`}</span>
-                                                {(isOccupied || isPending) ? (
-                                                    <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
-                                                        <Clock size={10} />
-                                                        <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
-                                                    </div>
-                                                ) : table.upcomingReservation && (
-                                                    <div className="flex items-center gap-0.5 text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold">
-                                                        <Clock size={9} />
-                                                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({table.upcomingReservation.pax || 2}p)</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </button>
-                                    );
-                                })}
+                                {filteredTables.map((table) => (
+                                    <GridTableButton 
+                                        key={table.id}
+                                        table={table}
+                                        onSelectTable={onSelectTable}
+                                    />
+                                ))}
                             </div>
                         )}
                     </div>
@@ -778,3 +560,227 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 });
 
 export default POSTableGrid;
+
+const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelectTable, onReassign }) {
+    const isCircle = table.shape === 'circle';
+    const rotation = table.rotation || 0;
+    
+    const isOccupied = table.status === 'occupied';
+    const isPending = table.status === 'pending';
+    const hasOrder = isPending;
+    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
+    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+    const hasSlip = !!table.booking?.payment_slip_url;
+
+    let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
+    let ledColor = 'bg-[#00CC44]';
+    
+    if (isOccupied || isPending) {
+        tableBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+        ledColor = 'bg-white';
+        
+        if (hasCallStaff) {
+            tableBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+            ledColor = 'bg-[#0099FF] animate-ping';
+        }
+        if (hasCallBill) {
+            tableBgClass = 'animate-pos-blink-orange border-2 shadow-md';
+            ledColor = 'bg-[#FFAA00] animate-ping';
+        }
+        if (hasOrder) {
+            tableBgClass = 'animate-pos-blink-red border-2 shadow-md';
+            ledColor = 'bg-[#ff0000] animate-ping';
+        }
+    }
+
+    return (
+        <button
+            key={table.id}
+            type="button"
+            onClick={() => onSelectTable(table)}
+            className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100`}
+            style={{
+                left: `${table.pos_x}%`,
+                top: `${table.pos_y}%`,
+                width: `${table.width}%`,
+                height: `${table.height}%`,
+                transform: `rotate(${rotation}deg)`
+            }}
+        >
+            {/* Counter-rotate content */}
+            <div 
+                className="flex flex-col items-center justify-center w-full h-full text-center pointer-events-none p-1 relative"
+                style={{ transform: `rotate(${-rotation}deg)` }}
+            >
+                {/* LED indicator light in top-right */}
+                <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
+                    {table.upcomingConflict && (
+                        <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onReassign(table.booking); }}
+                            className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-bounce shadow cursor-pointer pointer-events-auto"
+                        >
+                            ⚠️ ชนคิว!
+                        </button>
+                    )}
+                    {hasOrder && (
+                        <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                            ORDER
+                        </span>
+                    )}
+                    {hasCallStaff && (
+                        <span className="bg-[#0099FF] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                            CALL
+                        </span>
+                    )}
+                    {hasCallBill && (
+                        <span className="bg-[#FFAA00] text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                            BILL
+                        </span>
+                    )}
+                    {hasSlip && (
+                        <span className="bg-[#00CC44] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                            SLIP
+                        </span>
+                    )}
+                    <span className={`w-1.5 h-1.5 rounded-full border border-black/10 ${ledColor}`}></span>
+                </div>
+                
+                {/* Table Name */}
+                <span className="font-mono font-bold text-xs md:text-sm tracking-tight leading-tight">
+                    {table.table_name}
+                </span>
+                
+                {/* Capacity / Guest count */}
+                <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
+                    {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
+                </span>
+
+                {/* Upcoming Advance Reservation on Free Table */}
+                {table.upcomingReservation && !isOccupied && !isPending && (
+                    <span className="mt-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight">
+                        🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                    </span>
+                )}
+                
+                {/* Booking / Seated time & Dwell Counter */}
+                {table.booking?.booking_time && (isOccupied || isPending) && (() => {
+                    const startMins = Math.max(0, Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000));
+                    const isStale = startMins >= 2880; // >48h (2 days)
+                    const isLongDwell = startMins >= 120; // >2h
+                    return (
+                        <div className="flex flex-col items-center mt-0.5">
+                            <div className="flex items-center gap-0.5 text-[8px] font-mono font-bold opacity-80">
+                                <Clock size={8} />
+                                <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            {isStale ? (
+                                <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                    ⚠️ บิลค้าง &gt;2วัน
+                                </span>
+                            ) : isPending && startMins >= 10 ? (
+                                <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                                    OVERDUE {startMins}M
+                                </span>
+                            ) : isLongDwell ? (
+                                <span className="mt-0.5 bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                                    🔥 นั่งแช่ {Math.floor(startMins / 60)}h{startMins % 60}m
+                                </span>
+                            ) : (
+                                <span className="mt-0.5 text-[7px] font-mono opacity-70">
+                                    ⏱️ {startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`}
+                                </span>
+                            )}
+                        </div>
+                    );
+                })()}
+            </div>
+        </button>
+    );
+});
+
+const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) {
+    const isOccupied = table.status === 'occupied';
+    const isPending = table.status === 'pending';
+    
+    const hasOrder = isPending;
+    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
+    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+    const hasSlip = !!table.booking?.payment_slip_url;
+
+    let cellBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A] hover:border-[#B0B0AC]';
+    let ledColor = 'bg-[#00CC44]';
+    
+    if (isOccupied || isPending) {
+        cellBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+        ledColor = 'bg-white';
+        
+        if (hasCallStaff) {
+            cellBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+            ledColor = 'bg-[#0099FF] animate-ping';
+        }
+        if (hasCallBill) {
+            cellBgClass = 'animate-pos-blink-orange border-2 shadow-md';
+            ledColor = 'bg-[#FFAA00] animate-ping';
+        }
+        if (hasOrder) {
+            cellBgClass = 'animate-pos-blink-red border-2 shadow-md';
+            ledColor = 'bg-[#ff0000] animate-ping';
+        }
+    }
+
+    return (
+        <button
+            key={table.id}
+            type="button"
+            onClick={() => onSelectTable(table)}
+            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.02] active:scale-[0.98] ${cellBgClass}`}
+        >
+            {/* Top row: Status LEDs */}
+            <div className="flex justify-between items-center w-full">
+                <div className="flex gap-1 items-center flex-wrap">
+                     {hasOrder && (
+                         <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
+                     )}
+                     {isPending && table.booking?.booking_time && (Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000) >= 10) && (
+                         <span className="bg-red-700 text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">OVERDUE</span>
+                     )}
+                     {hasCallStaff && (
+                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
+                     )}
+                     {hasCallBill && (
+                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
+                     )}
+                     {hasSlip && (
+                         <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
+                     )}
+                 </div>
+                <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
+            </div>
+            
+            {/* Center row: Table Info */}
+            <div className="flex flex-col items-center gap-1 my-3 select-none">
+                 <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
+                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[#767673]'}`}>
+                     {table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT'}
+                 </span>
+            </div>
+            
+            {/* Bottom row: Capacity / Timing */}
+            <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
+                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAPACITY: ${table.capacity}P`}</span>
+                {(isOccupied || isPending) ? (
+                    <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
+                        <Clock size={10} />
+                        <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                ) : table.upcomingReservation && (
+                    <div className="flex items-center gap-0.5 text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold">
+                        <Clock size={9} />
+                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({table.upcomingReservation.pax || 2}p)</span>
+                    </div>
+                )}
+            </div>
+        </button>
+    );
+});

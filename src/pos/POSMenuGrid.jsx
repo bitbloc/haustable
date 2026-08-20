@@ -152,7 +152,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         }
     }, [isSyncing]);
 
-    const handleItemClick = (item) => {
+    const handleItemClick = useCallback((item) => {
         const opts = item.menu_item_options;
         const cachedImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
         if (opts && Array.isArray(opts) && opts.length > 0) {
@@ -160,7 +160,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         } else {
             onAddItem({ ...item, image_url: cachedImg });
         }
-    };
+    }, [localImageMap, onAddItem]);
 
     // Pre-index items by Category ID in O(1) Hash Map
     const itemsByCategoryMap = useMemo(() => {
@@ -254,45 +254,14 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5">
-                    {filteredItems.map(item => {
-                        const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
-                        const displayImg = (item.image_url && localImageMap[item.image_url]) || item.image_url;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => handleItemClick(item)}
-                                className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.97] transition-transform duration-75 cursor-pointer shadow-sm relative select-none touch-manipulation"
-                            >
-                                <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
-                                    {displayImg ? (
-                                        <img src={displayImg} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
-                                            {item.name.charAt(0)}
-                                        </div>
-                                    )}
-                                    {hasOptions && (
-                                        <div className="absolute top-2 left-2 bg-black/85 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                            <span>มีตัวเลือก</span>
-                                        </div>
-                                    )}
-                                    <div className="absolute bottom-2 right-2 w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] flex items-center justify-center shadow-md group-hover:bg-[oklch(52%_0.16_28)] group-hover:text-white group-hover:border-[oklch(45%_0.16_28)] transition-colors">
-                                        <Plus size={20} />
-                                    </div>
-                                </div>
-                                
-                                <div className="flex flex-col flex-1 min-h-[64px]">
-                                    <h4 className="font-bold text-base text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
-                                    <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-sm font-mono font-bold uppercase tracking-wider">
-                                        <span className="text-[oklch(52%_0.16_28)]">฿{item.price}</span>
-                                        {item.stock_quantity !== null && (
-                                            <span className="text-[#767673] text-xs tracking-normal font-medium">QTY: {item.stock_quantity}</span>
-                                        )}
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
+                    {filteredItems.map(item => (
+                        <MenuItemCard 
+                            key={item.id}
+                            item={item}
+                            cachedImg={(item.image_url && localImageMap[item.image_url]) || item.image_url}
+                            onClick={handleItemClick}
+                        />
+                    ))}
                 </div>
             </div>
 
@@ -322,6 +291,47 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
 });
 
 export default POSMenuGrid;
+
+const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
+    const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+    
+    return (
+        <button
+            type="button"
+            onClick={() => onClick(item)}
+            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.97] transition-transform duration-75 cursor-pointer shadow-sm relative select-none touch-manipulation"
+            style={{ contain: 'content' }}
+        >
+            <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
+                {cachedImg ? (
+                    <img src={cachedImg} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
+                        {item.name.charAt(0)}
+                    </div>
+                )}
+                {hasOptions && (
+                    <div className="absolute top-2 left-2 bg-black/85 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <span>มีตัวเลือก</span>
+                    </div>
+                )}
+                <div className="absolute bottom-2 right-2 w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] flex items-center justify-center shadow-md group-hover:bg-[oklch(52%_0.16_28)] group-hover:text-white group-hover:border-[oklch(45%_0.16_28)] transition-colors">
+                    <Plus size={20} />
+                </div>
+            </div>
+            
+            <div className="flex flex-col flex-1 min-h-[64px]">
+                <h4 className="font-bold text-base text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
+                <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-sm font-mono font-bold uppercase tracking-wider">
+                    <span className="text-[oklch(52%_0.16_28)]">฿{item.price}</span>
+                    {item.stock_quantity !== null && (
+                        <span className="text-[#767673] text-xs tracking-normal font-medium">QTY: {item.stock_quantity}</span>
+                    )}
+                </div>
+            </div>
+        </button>
+    );
+});
 
 const CategoryButton = memo(function CategoryButton({ label, active, onClick }) {
     return (

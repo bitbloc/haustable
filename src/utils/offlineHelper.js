@@ -63,9 +63,12 @@ export function addToOfflineQueue(actionType, payload) {
     window.dispatchEvent(new Event('offline-queue-changed'));
 }
 
-// 2. Cache Helpers
+// 2. In-Memory Cache Layer (Eliminates repeated synchronous JSON.parse / localStorage reads)
+const memoryCache = new Map();
+
 export function cacheData(key, data) {
-    if (data) {
+    if (data !== undefined) {
+        memoryCache.set(key, data);
         try {
             localStorage.setItem(key, JSON.stringify(data));
         } catch (err) {
@@ -75,9 +78,16 @@ export function cacheData(key, data) {
 }
 
 export function getCachedData(key) {
+    if (memoryCache.has(key)) {
+        return memoryCache.get(key);
+    }
     try {
         const item = localStorage.getItem(key);
-        return item ? JSON.parse(item) : null;
+        const parsed = item ? JSON.parse(item) : null;
+        if (parsed !== null) {
+            memoryCache.set(key, parsed);
+        }
+        return parsed;
     } catch (err) {
         console.warn(`[Offline Cache] Error parsing key ${key}:`, err);
         return null;

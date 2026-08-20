@@ -25,7 +25,7 @@ import { getShortBookingId } from '../utils/printerHelper';
 import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
 
-export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey }) {
+export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [hubTab, setHubTab] = useState('active'); // 'active' | 'completed' | 'cancelled'
@@ -71,6 +71,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     };
 
     const fetchOnlineData = async () => {
+        if (!isActive) return;
         try {
             setLoading(true);
             const today = new Date();
@@ -104,7 +105,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     };
 
     useEffect(() => {
-        fetchOnlineData();
+        if (isActive) {
+            fetchOnlineData();
+        }
 
         const channel = supabase.channel('online_orders_hub')
             .on(
@@ -129,7 +132,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             setPersistentAlert(b);
                             playAlert(eventKey);
                         }
-                        fetchOnlineData();
+                        if (isActive) fetchOnlineData();
                     }
                 }
             )
@@ -141,7 +144,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     table: 'bookings',
                 },
                 (payload) => {
-                    fetchOnlineData();
+                    if (isActive) fetchOnlineData();
                     const updated = payload.new;
                     
                     // Auto-dismiss persistent alert if this order was accepted/cancelled/completed from another terminal!
@@ -169,7 +172,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             .subscribe();
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
+            if (document.visibilityState === 'visible' && isActive) {
                 fetchOnlineData();
             }
         };
@@ -182,12 +185,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             window.removeEventListener('online', fetchOnlineData);
             supabase.removeChannel(channel);
         };
-    }, [soundEnabled]);
+    }, [soundEnabled, isActive]);
 
     // Fast-path listener for local native WMA bridge interception
     useEffect(() => {
         const handleWmaOrder = (event) => {
-            fetchOnlineData();
+            if (isActive) fetchOnlineData();
             const b = event.detail?.booking;
             if (b) {
                 const eventKey = `online_hub_wma_${b.id || Date.now()}`;
@@ -202,13 +205,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         return () => {
             window.removeEventListener('wma_order_received', handleWmaOrder);
         };
-    }, [soundEnabled]);
+    }, [soundEnabled, isActive]);
 
     useEffect(() => {
-        if (refreshKey > 0) {
+        if (isActive && refreshKey > 0) {
             fetchOnlineData();
         }
-    }, [refreshKey]);
+    }, [isActive, refreshKey]);
 
     const handleAcknowledge = () => {
         setPersistentAlert(null);
