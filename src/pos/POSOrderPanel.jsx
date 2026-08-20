@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -243,6 +244,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             return () => clearTimeout(timer);
         }
     }, [activeModal, booking?.profiles, crmSearchTerm]);
+
+    // Global ESC keydown listener to close active modal cleanly
+    React.useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                if (activeModal) setActiveModal(null);
+                if (showEditPaxModal) setShowEditPaxModal(false);
+                if (showEmergencyModal) setShowEmergencyModal(false);
+                if (viewSlipModalUrl) setViewSlipModalUrl(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeModal, showEditPaxModal, showEmergencyModal, viewSlipModalUrl]);
 
     const filteredCrmMembers = React.useMemo(() => {
         if (!crmSearchTerm) return crmMembers.slice(0, 50);
@@ -1099,9 +1114,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 </div>
             </div>
 
-            {/* Overlay Modals */}
+            {/* Overlay Modals (Portaled directly to document.body for true full-screen centering) */}
             <AnimatePresence>
-                {activeModal === 'crm' && (
+                {activeModal === 'crm' && typeof document !== 'undefined' && createPortal(
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1683,11 +1698,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 </button>
                             </form>
                         </motion.div>
-                    </motion.div>
+                    </motion.div>,
+                    document.body
                 )}
 
                 {/* Discount Modal */}
-                {activeModal === 'discount' && (
+                {activeModal === 'discount' && typeof document !== 'undefined' && createPortal(
                     <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -1698,7 +1714,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             initial={{ scale: 0.97, y: 10 }}
                             animate={{ scale: 1, y: 0 }}
                             exit={{ scale: 0.97, y: 10 }}
-                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col"
+                            className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col"
                         >
                             <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
                                 <div>
@@ -1789,21 +1805,25 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 </button>
                             </div>
                         </motion.div>
-                    </motion.div>
+                    </motion.div>,
+                    document.body
                 )}
 
-                {/* Checkout Modal */}
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans"
-                >
+                {/* Checkout Modal (True Center Full-Screen Pop-up) */}
+                {activeModal === 'checkout' && typeof document !== 'undefined' && createPortal(
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setActiveModal(null)}
+                        className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans backdrop-blur-xs"
+                    >
                     <motion.div 
                         initial={{ scale: 0.97, y: 10 }}
                         animate={{ scale: 1, y: 0 }}
                         exit={{ scale: 0.97, y: 10 }}
-                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col text-[oklch(18%_0.012_28)]"
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col text-[oklch(18%_0.012_28)]"
                     >
                         {/* Modal Header (Tabular Division) */}
                         <div className="p-4 flex justify-between items-center bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
@@ -2156,13 +2176,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             )}
                         </div>
                     </motion.div>
-                </motion.div>
+                </motion.div>,
+                document.body
                 )}
             </AnimatePresence>
 
             {/* Edit Guest Count (Pax) Modal */}
-            {showEditPaxModal && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 font-sans">
+            {showEditPaxModal && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 font-sans backdrop-blur-xs">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-[#1A1A1A]">
                         <div className="p-4.5 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
@@ -2238,7 +2259,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* View Slip Modal */}

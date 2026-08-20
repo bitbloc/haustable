@@ -256,8 +256,10 @@ export default POSLayout;
 const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label }) {
     return (
         <button 
+            type="button"
             onClick={onClick}
-            className={`group relative flex flex-col items-center justify-center w-full py-3 rounded-xl border transition-all duration-150 cursor-pointer select-none touch-manipulation active:scale-95 ${
+            style={{ transform: 'translateZ(0)' }}
+            className={`group relative flex flex-col items-center justify-center w-full py-3 rounded-xl border transition-colors duration-100 cursor-pointer select-none touch-manipulation active:scale-95 ${
                 active 
                 ? 'bg-[#E0E0DC] border-[#B0B0AC] shadow-inner font-bold' 
                 : 'bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] shadow-sm hover:border-[#B0B0AC]'

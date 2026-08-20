@@ -2727,11 +2727,11 @@ export default function POSDashboard() {
                 selectedTable={selectedTable}
                 onBack={handleBackToTables}
             >
-                <div className="flex h-full w-full overflow-hidden">
+                <div className="flex h-full w-full overflow-hidden pos-view-container">
                     {/* Main Content Area */}
-                    <div className="flex-1 h-full overflow-hidden relative">
+                    <div className="flex-1 h-full overflow-hidden relative pos-panel-layer">
                         {/* Core views kept mounted for instant switching */}
-                        <div className={view === 'tables' ? 'h-full' : 'hidden'}>
+                        <div className={view === 'tables' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSTableGrid 
                                 onSelectTable={handleSelectTable} 
                                 hasPendingOrders={hasPendingOrders} 
@@ -2743,12 +2743,12 @@ export default function POSDashboard() {
                                 unreadNotifCount={unreadNotifCount}
                             />
                         </div>
-                        <div className={view === 'menu' ? 'h-full' : 'hidden'}>
+                        <div className={view === 'menu' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSMenuGrid onAddItem={handleAddToOrder} />
                         </div>
 
-                        {/* Less frequent panels mounted conditionally */}
-                        {view === 'open_bills' && (
+                        {/* Extended panels with layer isolation */}
+                        <div className={view === 'open_bills' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSOpenBillsGrid 
                                 onSelectOrder={handleSelectOpenBill} 
                                 onOpenSlip={(booking, slipType) => {
@@ -2756,19 +2756,19 @@ export default function POSDashboard() {
                                 }} 
                                 refreshKey={refreshKey} 
                             />
-                        )}
-                        {view === 'crm' && (
+                        </div>
+                        <div className={view === 'crm' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSCRMPanel 
                                 onAttachToOrder={(member) => {
                                     handleSelectCrmCustomer(member);
                                     setView('menu');
                                 }}
                             />
-                        )}
-                        {view === 'reports' && (
-                            <POSReportsPanel />
-                        )}
-                        {view === 'online_hub' && (
+                        </div>
+                        <div className={view === 'reports' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
+                            <POSReportsPanel isActive={view === 'reports'} refreshKey={refreshKey} />
+                        </div>
+                        <div className={view === 'online_hub' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSOnlineHub 
                                 activeShift={activeShift} 
                                 onOpenSlipModal={(booking, slipType) => {
@@ -2778,11 +2778,11 @@ export default function POSDashboard() {
                                 onSelectOrder={handleSelectOpenBill}
                                 refreshKey={refreshKey}
                             />
-                        )}
+                        </div>
                     </div>
 
-                    {/* Order Panel Sidebar */}
-                    {view !== 'reports' && view !== 'crm' && view !== 'open_bills' && view !== 'online_hub' && (
+                    {/* Order Panel Sidebar - Persistently mounted with GPU layer to prevent layout reflow jumping */}
+                    <div className={view !== 'reports' && view !== 'crm' && view !== 'open_bills' && view !== 'online_hub' ? 'h-full shrink-0 flex pos-panel-layer' : 'hidden'}>
                         <POSOrderPanel 
                             order={currentOrder} 
                             booking={activeBooking}
@@ -2918,7 +2918,7 @@ export default function POSDashboard() {
                                 }
                             }}
                         />
-                    )}
+                    </div>
                 </div>
             </POSLayout>
 

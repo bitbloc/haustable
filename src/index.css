@@ -83,6 +83,20 @@ button, a, select, input, textarea, [role="button"] {
   will-change: transform, opacity;
 }
 
+/* Anti-glitch & Zero-tear GPU Compositing for Fast Tab/View Switching */
+.pos-view-container {
+  contain: strict;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.pos-panel-layer {
+  contain: content;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

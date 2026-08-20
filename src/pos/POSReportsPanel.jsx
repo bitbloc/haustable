@@ -77,7 +77,7 @@ export const getBookingPaymentBreakdown = (b) => {
     return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
 };
 
-export default function POSReportsPanel() {
+export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     const [loading, setLoading] = useState(true);
     const [bookings, setBookings] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -315,23 +315,8 @@ export default function POSReportsPanel() {
         fetchShiftSellers();
     }, [expandedShiftId, shiftHistory]);
 
-    useEffect(() => {
-        fetchReportData();
-        loadShiftHistoryData();
-        loadActiveShift();
-
-        const handleShiftChanged = () => {
-            loadShiftHistoryData();
-            loadActiveShift();
-        };
-        window.addEventListener('pos-shift-changed', handleShiftChanged);
-        return () => {
-            window.removeEventListener('pos-shift-changed', handleShiftChanged);
-        };
-    }, [filterDate]);
-
-    const fetchReportData = async () => {
-        setLoading(true);
+    const fetchReportData = async (showSpinner = true) => {
+        if (showSpinner) setLoading(true);
         try {
             const startOfDay = `${filterDate}T00:00:00+07:00`;
             const endOfDay = `${filterDate}T23:59:59+07:00`;
@@ -355,12 +340,38 @@ export default function POSReportsPanel() {
                     ),
                     promotion_codes (code)
                 `)
-                .gte('booking_time', startOfDay)
-                .lte('booking_time', endOfDay)
+                .or(`and(booking_time.gte.${startOfDay},booking_time.lte.${endOfDay}),and(updated_at.gte.${startOfDay},updated_at.lte.${endOfDay},status.eq.completed)`)
                 .order('booking_time', { ascending: false });
 
-            if (bookingsError) throw bookingsError;
-            setBookings(bookingsData || []);
+            let finalBookings = bookingsData || [];
+            if (bookingsError) {
+                // Fallback to strict booking_time range
+                const fallbackRes = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        profiles ( id, display_name, nickname, phone_number, current_tier ),
+                        tables_layout (table_name),
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            selected_options,
+                            menu_item_id,
+                            menu_items (
+                                name,
+                                category_id
+                            )
+                        ),
+                        promotion_codes (code)
+                    `)
+                    .gte('booking_time', startOfDay)
+                    .lte('booking_time', endOfDay)
+                    .order('booking_time', { ascending: false });
+                if (fallbackRes.error) throw fallbackRes.error;
+                finalBookings = fallbackRes.data || [];
+            }
+            setBookings(finalBookings);
 
             const { data: categoriesData } = await supabase
                 .from('menu_categories')
@@ -370,9 +381,48 @@ export default function POSReportsPanel() {
         } catch (err) {
             console.error("Error fetching report data:", err);
         } finally {
-            setLoading(false);
+            if (showSpinner) setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchReportData(true);
+        loadShiftHistoryData();
+        loadActiveShift();
+
+        const handleShiftChanged = () => {
+            loadShiftHistoryData();
+            loadActiveShift();
+            fetchReportData(false);
+        };
+        window.addEventListener('pos-shift-changed', handleShiftChanged);
+
+        // Realtime Subscription: Instant update whenever any booking or shift changes
+        const reportsRealtimeChannel = supabase.channel('pos-reports-realtime-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchReportData(false);
+                loadActiveShift();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, () => {
+                loadShiftHistoryData();
+                loadActiveShift();
+            })
+            .subscribe();
+
+        return () => {
+            window.removeEventListener('pos-shift-changed', handleShiftChanged);
+            supabase.removeChannel(reportsRealtimeChannel);
+        };
+    }, [filterDate]);
+
+    // Instant update when switching into reports tab or when a checkout happens
+    useEffect(() => {
+        if (isActive) {
+            fetchReportData(false);
+            loadActiveShift();
+            loadShiftHistoryData();
+        }
+    }, [isActive, refreshKey]);
 
     // --- DERIVED METRICS ---
     const categoryMap = useMemo(() => {
