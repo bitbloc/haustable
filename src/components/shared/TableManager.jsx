@@ -5,6 +5,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { safeTimestampUrl, safeCssUrl } from '../../utils/urlHelper';
+import { getThaiDate } from '../../utils/timeUtils';
 
 export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable }) {
     const [tables, setTables] = useState([]);
@@ -32,46 +33,46 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
     const [actionLoading, setActionLoading] = useState(false);
 
-    // Initial Load & Realtime Sync
+    // Initial Load & Realtime Subscription
     useEffect(() => {
         fetchData();
-        const pollInterval = setInterval(fetchData, 15000); // 15s fallback poll
 
         const channel = supabase
-            .channel('table-manager-live-sync')
+            .channel('table-manager-live-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => fetchData())
             .subscribe();
 
         return () => {
-            clearInterval(pollInterval);
             supabase.removeChannel(channel);
         };
     }, []);
 
     const fetchData = async () => {
         try {
-            // 1. Fetch tables
+            // 1. Fetch tables layout
             const { data: tablesData, error: tErr } = await supabase
                 .from('tables_layout')
                 .select('*')
-                .order('id');
+                .order('table_name');
+
             if (tErr) throw tErr;
             if (tablesData) setTables(tablesData);
 
-            // 2. Settings (Floorplan schematic image)
+            // 2. Fetch Floorplan URL from settings
             const { data: settingsData } = await supabase
-                .from('app_settings')
+                .from('settings')
                 .select('value')
                 .eq('key', 'floorplan_url')
-                .single();
-            if (settingsData?.value) {
+                .maybeSingle();
+
+            if (settingsData && settingsData.value) {
                 setFloorplanUrl(safeTimestampUrl(settingsData.value));
             }
 
             // 3. Fetch active bookings of today with order items & menu items
-            const today = new Date().toISOString().split('T')[0];
+            const today = getThaiDate();
             const start = `${today}T00:00:00+07:00`;
             const end = `${today}T23:59:59+07:00`;
 
@@ -109,8 +110,10 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             return { status: 'free', booking: null };
         }
 
-        // Active Seated Booking
+        // Active Seated Booking (Seated / Dine-in Ready / Time Window)
         const currentBooking = tableBookings.find(b => {
+            if (b.status === 'seated') return true;
+            if (b.status === 'ready' && b.booking_type !== 'pickup') return true;
             const bStart = new Date(b.booking_time);
             const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000);
             return now >= bStart && now < bEnd;
@@ -142,6 +145,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
         // Upcoming reservation arriving in next 60 minutes
         const upcoming = tableBookings.find(b => {
+            if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false;
             const bStart = new Date(b.booking_time);
             const diffMins = (bStart - now) / 60000;
             return diffMins > 0 && diffMins <= 60;
@@ -253,7 +257,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
         try {
             const start = new Date(booking.booking_time);
             const currentEnd = booking.end_time ? new Date(booking.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
-            const newEnd = new Date(currentEnd.getTime() + addMinutes * 60 * 1000);
+            const baseTime = currentEnd > new Date() ? currentEnd : new Date();
+            const newEnd = new Date(baseTime.getTime() + addMinutes * 60 * 1000);
 
             const { error } = await supabase
                 .from('bookings')

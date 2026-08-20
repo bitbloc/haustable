@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Lock, Unlock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw } from 'lucide-react'
 
+import { getThaiDate } from '../../../utils/timeUtils'
+
 export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const [tables, setTables] = useState([])
     const [bookings, setBookings] = useState([])
@@ -37,8 +39,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
             if (tErr) throw tErr
 
-            // 2. Fetch today's active bookings
-            const today = new Date().toISOString().split('T')[0]
+            // 2. Fetch today's active bookings + any active seated bookings
+            const today = getThaiDate()
             const start = `${today}T00:00:00+07:00`
             const end = `${today}T23:59:59+07:00`
 
@@ -66,13 +68,15 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 activeTables.forEach(table => {
                     const tBookings = activeBookings.filter(b => b.table_id === table.id)
                     const isOcc = tBookings.some(b => {
+                        if (b.status === 'seated') return true
+                        if (b.status === 'ready' && b.booking_type !== 'pickup') return true
                         const bStart = new Date(b.booking_time)
                         const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
                         return now >= bStart && now < bEnd
                     })
                     if (isOcc) {
                         occupiedCount++
-                        seatedGuests += table.capacity || 2
+                        seatedGuests += Number(table.capacity) || 2
                     }
                 })
 
@@ -95,15 +99,17 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
         if (tableBookings.length === 0) return { status: 'free', booking: null }
 
-        // Current active booking
+        // Current active booking (Seated / In-store Dining / Time Window)
         const currentBooking = tableBookings.find(b => {
+            if (b.status === 'seated') return true
+            if (b.status === 'ready' && b.booking_type !== 'pickup') return true
             const start = new Date(b.booking_time)
             const endTime = b.end_time ? new Date(b.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000)
             return now >= start && now < endTime
         })
 
         if (currentBooking) {
-            const isInternalBlock = currentBooking.booking_type === 'walk_in' && currentBooking.customer_note === 'Internal Block'
+            const isInternalBlock = currentBooking.customer_note === 'Internal Block' || currentBooking.customer_note === 'Maintenance Block' || (currentBooking.booking_type === 'walk_in' && currentBooking.customer_note === 'Internal Block')
             return {
                 status: isInternalBlock ? 'blocked' : 'occupied',
                 booking: currentBooking
@@ -112,6 +118,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
         // Upcoming reservation within 60 mins
         const upcoming = tableBookings.find(b => {
+            if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
             const start = new Date(b.booking_time)
             const diffMins = (start - now) / 60000
             return diffMins > 0 && diffMins <= 60
@@ -192,7 +199,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         setActionLoading(true)
         try {
             const currentEnd = booking.end_time ? new Date(booking.end_time) : new Date(new Date(booking.booking_time).getTime() + 2 * 60 * 60 * 1000)
-            const newEnd = new Date(currentEnd.getTime() + mins * 60 * 1000)
+            const baseTime = currentEnd > new Date() ? currentEnd : new Date()
+            const newEnd = new Date(baseTime.getTime() + mins * 60 * 1000)
 
             const { error } = await supabase
                 .from('bookings')

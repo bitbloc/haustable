@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import TableManager from '../components/shared/TableManager'
 import AdminTableEditor from '../AdminTableEditor'
+import { getThaiDate } from '../utils/timeUtils'
 
 export default function AdminTableManager({ defaultTab = 'live' }) {
     const [activeTab, setActiveTab] = useState(defaultTab) // 'live' | 'editor'
@@ -41,14 +42,14 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
             const totalCapacity = tablesData ? tablesData.reduce((sum, t) => sum + (Number(t.capacity) || 0), 0) : 0
 
             // 2. Active Bookings
-            const today = new Date().toISOString().split('T')[0]
+            const today = getThaiDate()
             const start = `${today}T00:00:00+07:00`
             const end = `${today}T23:59:59+07:00`
 
             const { data: bookingsData } = await supabase
                 .from('bookings')
                 .select(`
-                    id, table_id, booking_time, end_time, pax, status, staff_remark, total_amount,
+                    id, table_id, booking_time, end_time, pax, status, staff_remark, total_amount, booking_type,
                     order_items(price_at_time, quantity)
                 `)
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
@@ -65,7 +66,7 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
                 bookingsData.forEach(b => {
                     const bStart = new Date(b.booking_time)
                     const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
-                    const isCurrent = now >= bStart && now < bEnd
+                    const isCurrent = b.status === 'seated' || (b.status === 'ready' && b.booking_type !== 'pickup') || (now >= bStart && now < bEnd)
 
                     if (isCurrent) {
                         occupiedCount++
