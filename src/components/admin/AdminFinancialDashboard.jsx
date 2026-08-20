@@ -34,7 +34,7 @@ export default function AdminFinancialDashboard() {
     };
 
     // Filter States
-    const [filterMode, setFilterMode] = useState('month') // 'day', 'month', 'year'
+    const [filterMode, setFilterMode] = useState('day') // 'day', 'month', 'year'
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [selectedMonth, setSelectedMonth] = useState(getCurrentBangkokMonth())
     const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
