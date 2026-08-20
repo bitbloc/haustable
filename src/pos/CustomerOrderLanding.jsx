@@ -1056,7 +1056,6 @@ export default function CustomerOrderLanding() {
                         staff_remark: remarkStr,
                         tracking_token: trackingToken,
                         total_amount: 0,
-                        source: 'qr',
                         user_id: memberProfile?.id || null
                     };
 
@@ -1100,7 +1099,6 @@ export default function CustomerOrderLanding() {
 
                 const updateData = {
                     status: 'seated',
-                    source: 'qr',
                     total_amount: recalculatedTotal,
                     staff_remark: updatedRemark
                 };

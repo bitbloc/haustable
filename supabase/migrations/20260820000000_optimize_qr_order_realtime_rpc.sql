@@ -1,14 +1,17 @@
 -- Migration: 20260820000000_optimize_qr_order_realtime_rpc.sql
 -- Description: High-Performance Atomic RPC for Customer QR Ordering with Instant Table Session Resolution & Total Recalculation
 
--- 1. Optimized Compound Index for Sub-Millisecond Active Booking Lookup
+-- 1. Ensure source column exists safely on bookings
+ALTER TABLE public.bookings ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'pos';
+
+-- 2. Optimized Compound Index for Sub-Millisecond Active Booking Lookup
 CREATE INDEX IF NOT EXISTS idx_bookings_table_active_session 
 ON public.bookings (table_id, status, booking_time DESC);
 
 CREATE INDEX IF NOT EXISTS idx_order_items_booking_pricing 
 ON public.order_items (booking_id, price_at_time, quantity);
 
--- 2. Atomic QR Order Submission Function
+-- 3. Atomic QR Order Submission Function
 CREATE OR REPLACE FUNCTION public.submit_customer_qr_order(
     p_table_id INT,
     p_items JSONB,
@@ -167,5 +170,5 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Grant Permissions
+-- 4. Grant Permissions
 GRANT EXECUTE ON FUNCTION public.submit_customer_qr_order(INT, JSONB, UUID, INT, TEXT, TEXT) TO anon, authenticated, service_role;
