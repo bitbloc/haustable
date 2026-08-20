@@ -58,6 +58,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         try {
             const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
             const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const cachedFloorplan = localStorage.getItem('pos_cache_floorplan_url');
+            if (cachedFloorplan) {
+                setFloorplanUrl(safeTimestampUrl(cachedFloorplan));
+            }
             if (cachedTables.length > 0) {
                 const merged = cachedTables.map(t => {
                     const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
@@ -97,6 +101,16 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
+        const settingsSub = supabase.channel('pos-app-settings')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
+                fetchFloorplan();
+            })
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Realtime POS Settings] Channel status: ${status}`, err || '');
+                }
+            });
+
         // 6-second polling fallback to keep grid fresh if realtime fails
         const pollInterval = setInterval(() => {
             fetchTables();
@@ -105,6 +119,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
                 fetchTables();
+                fetchFloorplan();
             }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
@@ -113,6 +128,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         return () => {
             supabase.removeChannel(bookingsSub);
             supabase.removeChannel(tablesSub);
+            supabase.removeChannel(settingsSub);
             clearInterval(pollInterval);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('online', fetchTables);
@@ -122,6 +138,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     useEffect(() => {
         if (refreshKey > 0) {
             fetchTables();
+            fetchFloorplan();
         }
     }, [refreshKey]);
 
@@ -129,11 +146,22 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         try {
             const { data: settingsData } = await supabase
                 .from('app_settings')
-                .select('value')
-                .eq('key', 'floorplan_image_url')
-                .single();
-            if (settingsData?.value) {
-                setFloorplanUrl(safeTimestampUrl(settingsData.value));
+                .select('key, value')
+                .in('key', ['floorplan_url', 'floorplan_image_url']);
+
+            const floorSetting = settingsData?.find(s => s.key === 'floorplan_url')?.value 
+                              || settingsData?.find(s => s.key === 'floorplan_image_url')?.value;
+
+            if (floorSetting) {
+                setFloorplanUrl(safeTimestampUrl(floorSetting));
+                try {
+                    localStorage.setItem('pos_cache_floorplan_url', floorSetting);
+                } catch (e) {
+                    console.warn('Failed to cache floorplan url:', e);
+                }
+            } else if (settingsData && settingsData.length > 0) {
+                setFloorplanUrl(null);
+                localStorage.removeItem('pos_cache_floorplan_url');
             }
         } catch (err) {
             console.error("Error fetching floorplan URL:", err);
@@ -424,7 +452,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                                 width: '1000px',
                                                 height: '750px',
                                                 backgroundImage: safeCssUrl(floorplanUrl),
-                                                backgroundSize: 'cover',
+                                                backgroundSize: '100% 100%',
+                                                backgroundRepeat: 'no-repeat',
                                                 backgroundPosition: 'center',
                                             }}
                                         >
