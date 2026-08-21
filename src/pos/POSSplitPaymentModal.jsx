@@ -15,6 +15,7 @@ import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
 import { normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
+import { formatOrderItemOptions } from '../utils/menuHelper';
 
 export default function POSSplitPaymentModal({
     order,
@@ -462,11 +463,15 @@ export default function POSSplitPaymentModal({
                                                     (สั่งทั้งหมด: {item.quantity})
                                                 </span>
                                             </div>
-                                            {item.selected_options && item.selected_options.length > 0 && (
-                                                <p className="text-[10px] font-mono text-[oklch(55%_0.010_28)] mt-0.5 line-clamp-1">
-                                                    {item.selected_options.map(o => typeof o === 'object' ? o.name : o).join(', ')}
-                                                </p>
-                                            )}
+                                            {(() => {
+                                                const opts = formatOrderItemOptions(item.selected_options);
+                                                if (opts.length === 0) return null;
+                                                return (
+                                                    <p className="text-[10px] font-mono text-[oklch(55%_0.010_28)] mt-0.5 line-clamp-1">
+                                                        {opts.join(', ')}
+                                                    </p>
+                                                );
+                                            })()}
                                         </div>
 
                                         <div className="flex items-center gap-2 shrink-0">

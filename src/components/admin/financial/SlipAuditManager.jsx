@@ -11,6 +11,7 @@ import {
     fetchPrinterConfigOnline, initPrinterConfigSync,
     generateDivider, getShortBookingId, getCleanCustomerNote, getCleanStaffRemark
 } from '../../../utils/printerHelper';
+import { formatOrderItemOptions } from '../../../utils/menuHelper';
 import { posCache, getOfflineQueue } from '../../../utils/offlineHelper';
 import {
     Receipt, Calendar, Filter, Search, Download, ExternalLink,
@@ -856,11 +857,17 @@ export default function SlipAuditManager({
                                                                 {lineTotal > 0 ? lineTotal.toLocaleString() : (unitPrice > 0 ? unitPrice.toLocaleString() : '')}
                                                             </span>
                                                         </div>
-                                                        {((item.special_instructions) || (Array.isArray(item.selected_options) && item.selected_options.length > 0)) && (
-                                                            <div className="pl-6 text-[10px] text-gray-800 font-bold border-l-2 border-black ml-1 pl-2">
-                                                                ▶ {item.special_instructions || item.selected_options.map(o => typeof o === 'string' ? o : (o.name || o.label || '')).filter(Boolean).join(', ')}
-                                                            </div>
-                                                        )}
+                                                        {(() => {
+                                                            const opts = formatOrderItemOptions(item.selected_options, item.special_instructions);
+                                                            if (opts.length === 0) return null;
+                                                            return (
+                                                                <div className="pl-6 text-[10px] text-gray-800 font-bold border-l-2 border-black ml-1 pl-2 space-y-0.5">
+                                                                    {opts.map((opt, oIdx) => (
+                                                                        <div key={oIdx}>▶ {opt}</div>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        })()}
                                                     </div>
                                                 );
                                             })

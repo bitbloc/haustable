@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
+import { formatOrderItemOptions } from '../utils/menuHelper';
 
 const POSOrderPanel = React.memo(function POSOrderPanel({ 
     order, 
@@ -2270,11 +2271,15 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                 </div>
                 
                 {/* Display existing options/notes if any */}
-                {item.selected_options && item.selected_options.length > 0 && (
-                    <div className="text-xs text-[#767673] font-mono leading-tight mt-1">
-                        {item.selected_options.map(opt => typeof opt === 'object' ? opt.name : opt).join(', ')}
-                    </div>
-                )}
+                {(() => {
+                    const opts = formatOrderItemOptions(item.selected_options);
+                    if (opts.length === 0) return null;
+                    return (
+                        <div className="text-xs text-[#767673] font-mono leading-tight mt-1">
+                            {opts.join(', ')}
+                        </div>
+                    );
+                })()}
                 
                 {/* Display newly added note */}
                 {item.item_note && (

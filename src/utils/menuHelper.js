@@ -76,3 +76,109 @@ export const formatOptionName = (name) => {
     // Matches parentheses containing numbers and symbols, possibly with 'plus' or 'minus'
     return name.replace(/\(\s*[+-]?\s*\d+(\.\d+)?\s*(\.-)?\s*\)/g, '').trim()
 }
+
+/**
+ * Safely format order item selected_options and item notes into clean, human-readable strings.
+ * Handles arrays, objects, JSON strings, nested choices, prices, and notes.
+ * Guarantees NO "[object Object]" or raw JSON leaks.
+ * 
+ * @param {Array|Object|string} options - selected_options from DB or cart
+ * @param {string} [itemNote] - item_note or special_instructions
+ * @returns {string[]} Array of formatted option strings e.g. ['ระดับความเผ็ด: เผ็ดน้อย', 'ไข่ดาว (+฿10)', 'หมายเหตุ: แยกน้ำ']
+ */
+export const formatOrderItemOptions = (options, itemNote = null) => {
+    if (!options && !itemNote) return []
+    let list = []
+
+    let parsed = options
+    if (typeof options === 'string') {
+        const trimmed = options.trim()
+        if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+            try {
+                parsed = JSON.parse(trimmed)
+            } catch {
+                parsed = trimmed
+            }
+        } else {
+            parsed = trimmed
+        }
+    }
+
+    const formatSingleOpt = (opt) => {
+        if (!opt) return ''
+        if (typeof opt === 'string' || typeof opt === 'number') {
+            const str = String(opt).trim()
+            return str === '[object Object]' ? '' : str
+        }
+        if (typeof opt === 'object') {
+            if (Array.isArray(opt)) {
+                return opt.map(formatSingleOpt).filter(Boolean).join(', ')
+            }
+            const group = opt.group_name || opt.group || opt.option_group || opt.category || ''
+            const name = opt.name || opt.choice_name || opt.label || opt.option_name || opt.choice || opt.title || opt.value || ''
+            const price = Number(opt.price || opt.extra_price || opt.price_adjustment || 0)
+            const priceStr = price > 0 ? ` (+฿${price})` : ''
+
+            if (group && name) {
+                return `${group}: ${name}${priceStr}`
+            }
+            if (name) {
+                return `${name}${priceStr}`
+            }
+            // If it's a key-value object
+            const entries = Object.entries(opt)
+            if (entries.length > 0) {
+                const parts = entries
+                    .map(([k, v]) => {
+                        if (/^\d+$/.test(k)) return formatSingleOpt(v)
+                        const valStr = typeof v === 'object' ? formatSingleOpt(v) : String(v)
+                        return valStr && valStr !== '[object Object]' ? `${k}: ${valStr}` : k
+                    })
+                    .filter(Boolean)
+                return parts.join(' | ')
+            }
+        }
+        return ''
+    }
+
+    if (Array.isArray(parsed)) {
+        list = parsed.map(formatSingleOpt).filter(Boolean)
+    } else if (typeof parsed === 'object' && parsed !== null) {
+        // Check if this object represents a single option entity
+        if (parsed.name || parsed.choice_name || parsed.label || parsed.option_name || parsed.choice) {
+            const single = formatSingleOpt(parsed)
+            if (single) list.push(single)
+        } else {
+            list = Object.entries(parsed).flatMap(([k, v]) => {
+                if (/^\d+$/.test(k)) {
+                    const formatted = formatSingleOpt(v)
+                    return formatted ? [formatted] : []
+                }
+                if (Array.isArray(v)) {
+                    const inner = v.map(formatSingleOpt).filter(Boolean).join(', ')
+                    return inner ? [`${k}: ${inner}`] : []
+                }
+                if (typeof v === 'object' && v !== null) {
+                    const formatted = formatSingleOpt(v)
+                    return formatted ? (formatted.includes(':') ? [formatted] : [`${k}: ${formatted}`]) : []
+                }
+                const vStr = String(v)
+                return vStr && vStr !== '[object Object]' ? [`${k}: ${vStr}`] : [`${k}`]
+            }).filter(Boolean)
+        }
+    } else if (typeof parsed === 'string' && parsed.trim()) {
+        if (parsed.trim() !== '[object Object]') {
+            list = [parsed.trim()]
+        }
+    }
+
+    // Append item note if exists and not already contained in the options list
+    if (itemNote && typeof itemNote === 'string' && itemNote.trim()) {
+        const noteTrimmed = itemNote.trim()
+        if (noteTrimmed !== '[object Object]' && !list.some(item => item.includes(noteTrimmed))) {
+            list.push(`หมายเหตุ: ${noteTrimmed}`)
+        }
+    }
+
+    return list
+}

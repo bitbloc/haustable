@@ -12,35 +12,11 @@ import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
 import { formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime, getThaiDate } from './utils/timeUtils'
 import { getShortBookingId } from './utils/printerHelper'
+import { formatOrderItemOptions } from './utils/menuHelper'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
-function formatOptionList(options) {
-    if (!options) return []
-    if (Array.isArray(options)) {
-        return options.map(opt => {
-            if (typeof opt === 'object' && opt !== null) {
-                if (opt.group_name && opt.name) {
-                    const priceStr = opt.price && Number(opt.price) > 0 ? ` (+฿${opt.price})` : ''
-                    return `${opt.group_name}: ${opt.name}${priceStr}`
-                }
-                if (opt.name) {
-                    const priceStr = opt.price && Number(opt.price) > 0 ? ` (+฿${opt.price})` : ''
-                    return `${opt.name}${priceStr}`
-                }
-                return JSON.stringify(opt)
-            }
-            return String(opt)
-        })
-    }
-    if (typeof options === 'object' && options !== null) {
-        return Object.entries(options).flatMap(([key, val]) => {
-            if (Array.isArray(val)) return val.map(v => `${key}: ${v}`)
-            return [`${key}: ${val}`]
-        })
-    }
-    return [String(options)]
-}
+const formatOptionList = (options, note) => formatOrderItemOptions(options, note)
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -1001,7 +977,7 @@ export default function AdminBookings() {
                                                                     </div>
 
                                                                     {booking.order_items.map((item, idx) => {
-                                                                        const optList = formatOptionList(item.selected_options)
+                                                                        const optList = formatOptionList(item.selected_options, item.item_note || item.special_instructions || item.notes || item.remark)
                                                                         const unitPrice = Number(item.price_at_time || 0)
                                                                         const lineTotal = unitPrice * item.quantity
 
@@ -1009,7 +985,7 @@ export default function AdminBookings() {
                                                                             <div key={idx} className="grid grid-cols-12 text-xs py-1.5 border-b border-[oklch(92%_0.008_28)] last:border-0 items-start">
                                                                                 <div className="col-span-6">
                                                                                     <div className="font-bold text-[oklch(18%_0.012_28)]">
-                                                                                        {item.menu_items?.name || 'Menu Item'}
+                                                                                        {item.custom_name || item.menu_items?.name || item.name || 'Menu Item'}
                                                                                     </div>
                                                                                     {optList.length > 0 && (
                                                                                         <div className="flex flex-wrap gap-1 mt-1">

@@ -28,6 +28,7 @@ import {
 import { formatThaiTimeOnly, getThaiDate } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
+import { formatOrderItemOptions } from '../../../utils/menuHelper'
 
 export default function AllDailyBillsHub({ 
     bookings = [], 
@@ -523,10 +524,14 @@ export default function AllDailyBillsHub({
                                         {b.order_items && b.order_items.length > 0 ? (
                                             <div className="divide-y divide-[oklch(90%_0.008_28)] font-mono text-xs">
                                                 {b.order_items.map((item, idx) => {
-                                                    const mName = item.menu_items?.name || item.name || 'Custom Item'
-                                                    const price = parseFloat(item.price_at_time || item.menu_items?.price || 0)
+                                                    const mName = item.custom_name || item.menu_items?.name || item.name || 'Custom Item'
+                                                    const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
                                                     const qty = item.quantity || 1
                                                     const subtotal = price * qty
+                                                    const optList = formatOrderItemOptions(
+                                                        item.selected_options, 
+                                                        item.item_note || item.special_instructions || item.notes || item.remark
+                                                    )
 
                                                     return (
                                                         <div key={idx} className="py-2 flex items-start justify-between gap-4">
@@ -538,9 +543,13 @@ export default function AllDailyBillsHub({
                                                                     <div className="font-bold text-[oklch(18%_0.012_28)]">
                                                                         {mName}
                                                                     </div>
-                                                                    {item.selected_options && typeof item.selected_options === 'object' && Object.keys(item.selected_options).length > 0 && (
-                                                                        <div className="text-[11px] text-[oklch(42%_0.010_28)] mt-0.5">
-                                                                            {Object.entries(item.selected_options).map(([k, v]) => `${k}: ${v}`).join(' | ')}
+                                                                    {optList.length > 0 && (
+                                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                                            {optList.map((opt, oIdx) => (
+                                                                                <span key={oIdx} className="bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[11px] text-[oklch(42%_0.010_28)] px-1.5 py-0.5 rounded-sm">
+                                                                                    ▶ {opt}
+                                                                                </span>
+                                                                            ))}
                                                                         </div>
                                                                     )}
                                                                 </div>
