@@ -15,7 +15,7 @@ import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit } from '../utils/shiftHelper';
-import { isOnline, addToOfflineQueue } from '../utils/offlineHelper';
+import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
 import { 
@@ -2323,8 +2323,8 @@ export default function POSDashboard() {
         } catch (err) {
             console.error("Failed to load tables for move, fallback to cache:", err);
             try {
-                const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
-                const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                const cachedTables = posCache.getTables() || [];
+                const cachedBookings = posCache.getBookings() || [];
                 const occupiedIds = cachedBookings.map(b => b.table_id);
                 const free = cachedTables.filter(t => !occupiedIds.includes(t.id));
                 setAvailableTables(free);
@@ -2340,14 +2340,14 @@ export default function POSDashboard() {
         const toastId = toast.loading(`กำลังย้ายจากโต๊ะ ${selectedTable.table_name} ไปโต๊ะ ${targetTable.table_name}...`);
         
         if (!isOnline()) {
-            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const cachedBookings = posCache.getBookings() || [];
             const updated = cachedBookings.map(b => {
                 if (b.id === activeBooking.id) {
                     return { ...b, table_id: targetTable.id };
                 }
                 return b;
             });
-            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updated));
+            posCache.setBookings(updated);
             
             addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id });
             
@@ -2404,8 +2404,8 @@ export default function POSDashboard() {
         } catch (err) {
             console.error("Failed to load tables for merge, fallback to cache:", err);
             try {
-                const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
-                const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                const cachedTables = posCache.getTables() || [];
+                const cachedBookings = posCache.getBookings() || [];
                 const activeMap = {};
                 cachedBookings.forEach(b => { activeMap[b.table_id] = b; });
                 const occupied = cachedTables
@@ -2432,7 +2432,7 @@ export default function POSDashboard() {
         const toastId = toast.loading(`กำลังรวมบิลโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}...`);
 
         if (!isOnline()) {
-            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const cachedBookings = posCache.getBookings() || [];
             const updatedBookings = cachedBookings.map(b => {
                 if (b.id === targetBooking.id) {
                     const sourceItems = activeBooking.order_items || [];
@@ -2443,7 +2443,7 @@ export default function POSDashboard() {
                 return b;
             }).filter(b => b.id !== activeBooking.id);
             
-            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
+            posCache.setBookings(updatedBookings);
             addToOfflineQueue('merge_bills', { sourceBookingId: activeBooking.id, targetBookingId: targetBooking.id });
             
             toast.success(`⚠️ ออฟไลน์: รวมบิลสำเร็จ!`, { id: toastId });

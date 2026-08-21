@@ -236,10 +236,8 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                             ONHAUS SYSTEM ©
                         </span>
                         
-                        <div className="flex items-center gap-2 text-[#767673] text-xs bg-white border border-[#D1D1CD] px-3.5 py-2 rounded-full font-mono font-bold shadow-sm">
-                            <Clock size={14} />
-                            <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                        {/* Isolated Header Clock (Ticks every second without re-rendering parent layout) */}
+                        <POSHeaderClock />
                     </div>
                 </header>
 
@@ -247,6 +245,24 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                     {children}
                 </main>
             </div>
+        </div>
+    );
+});
+
+const POSHeaderClock = memo(function POSHeaderClock() {
+    const [timeStr, setTimeStr] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setTimeStr(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="flex items-center gap-2 text-[#767673] text-xs bg-white border border-[#D1D1CD] px-3.5 py-2 rounded-full font-mono font-bold shadow-sm select-none">
+            <Clock size={14} className="shrink-0" />
+            <span className="tabular-nums">{timeStr}</span>
         </div>
     );
 });

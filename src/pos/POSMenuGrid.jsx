@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getAllCachedImages, syncAllMenuImages } from '../utils/imageStore';
+import { posCache } from '../utils/offlineHelper';
 
 const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
@@ -26,10 +27,10 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             }
         });
 
-        // Stale-While-Revalidate: Read local cache immediately if valid
+        // Stale-While-Revalidate: Read in-memory / local cache immediately if valid
         try {
-            const cachedCats = JSON.parse(localStorage.getItem('pos_cache_menu_categories')) || [];
-            const cachedItems = JSON.parse(localStorage.getItem('pos_cache_menu_items')) || [];
+            const cachedCats = posCache.getCategories() || [];
+            const cachedItems = posCache.getMenuItems() || [];
             if (cachedItems.length > 0 && Array.isArray(cachedItems[0]?.menu_item_options)) {
                 setCategories(cachedCats);
                 setMenuItems(cachedItems);
@@ -81,8 +82,8 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             setCategories(cats);
             setMenuItems(items);
 
-            localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
-            localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+            posCache.setCategories(cats);
+            posCache.setMenuItems(items);
 
             // Broadcast menu update event so POS active carts can auto-sync prices immediately
             window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));

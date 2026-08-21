@@ -23,6 +23,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
+import { posCache } from '../utils/offlineHelper';
 
 const formatUpcomingResTime = (timeStr) => {
     if (!timeStr) return '';
@@ -54,10 +55,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     const [reassigning, setReassigning] = useState(false);
 
     useEffect(() => {
-        // Immediate local cache render for sub-100ms UI responsiveness
+        // Immediate in-memory/local cache render for sub-100ms UI responsiveness
         try {
-            const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
-            const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+            const cachedTables = posCache.getTables() || [];
+            const cachedBookings = posCache.getBookings() || [];
             const cachedFloorplan = localStorage.getItem('pos_cache_floorplan_url');
             if (cachedFloorplan) {
                 setFloorplanUrl(safeTimestampUrl(cachedFloorplan));
@@ -173,9 +174,9 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
 
-                // Cache data
-                localStorage.setItem('pos_cache_tables_layout', JSON.stringify(currentTables));
-                localStorage.setItem('pos_cache_active_bookings', JSON.stringify(currentBookings));
+                // Cache data into in-memory posCache and localStorage
+                posCache.setTables(currentTables);
+                posCache.setBookings(currentBookings);
 
                 const now = new Date();
                 const today = new Date();
@@ -226,8 +227,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             } catch (err) {
                 console.warn('[Offline Mode] Failed to fetch tables online, loading cache:', err);
                 try {
-                    const cachedTables = JSON.parse(localStorage.getItem('pos_cache_tables_layout')) || [];
-                    const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
+                    const cachedTables = posCache.getTables() || [];
+                    const cachedBookings = posCache.getBookings() || [];
                     const today = new Date();
                     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
                     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
