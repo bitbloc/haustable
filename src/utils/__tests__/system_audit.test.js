@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData } from '../printerHelper';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
 
@@ -141,3 +141,81 @@ describe('System Audit - Phase 3: CRM Loyalty Tier & Duplicate Detection Engine'
         expect(noMatch).toBeNull();
     });
 });
+
+describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Alignment', () => {
+    it('should reconcile cash sales, expected cash, and difference with 100% accuracy', () => {
+        const mockShift = {
+            id: 'shift_1787261694715',
+            staffName: 'Add',
+            openedAt: '2026-08-21T10:00:00.000Z',
+            closedAt: '2026-08-21T17:52:00.000Z',
+            openingFloat: 4193,
+            closedCash: 3978,
+            adjustments: [
+                { type: 'out', amount: 100, note: 'แอ็ด-น้ำแข็ง' },
+                { type: 'out', amount: 1000, note: 'แอ็ด-ไปตลาด' },
+                { type: 'in', amount: 865, note: 'แอ็ด-เงินทอนไปตลาด' },
+                { type: 'out', amount: 216, note: 'แอ็ด-พนักงาน' },
+                { type: 'out', amount: 40, note: 'แอ็ด-ซื้อผัก' },
+                { type: 'out', amount: 198, note: 'แอ็ด-ไอติม' }
+            ]
+        };
+
+        const mockBookings = [
+            { id: 'b1', status: 'completed', total_amount: 75, staff_remark: 'เงินสด', order_items: [{ name: 'กลับบ้าน', quantity: 1, price: 75, status: 'completed' }] },
+            { id: 'b2', status: 'completed', total_amount: 399, staff_remark: '', order_items: [{ name: 'กับข้าว', quantity: 2, price: 199.5, status: 'completed' }] },
+            { id: 'b3', status: 'completed', total_amount: 1000, staff_remark: 'QR Transfer', order_items: [] },
+            { id: 'b4', status: 'completed', total_amount: 500, staff_remark: 'โอน', order_items: [] },
+            { id: 'b5', status: 'completed', total_amount: 498, payment_slip_url: 'https://example.com/slip.jpg', order_items: [] },
+            { id: 'b6_void', status: 'void', total_amount: 75, staff_remark: 'Voided bill', order_items: [{ name: 'ทำลายบิล', quantity: 1, price: 75, status: 'void' }] }
+        ];
+
+        const report = compileShiftReportData(mockShift, mockBookings, []);
+
+        // Total Net Revenue (5 completed bills = 75 + 399 + 1000 + 500 + 498 = 2472)
+        expect(report.netSales).toBe(2472);
+        expect(report.totalBookings).toBe(5);
+
+        // Cash Sales = 75 + 399 = 474
+        expect(report.cashSales).toBe(474);
+        expect(report.paymentSales.cash.count).toBe(2);
+        expect(report.paymentSales.cash.amount).toBe(474);
+
+        // QR Sales = 1000 + 500 + 498 = 1998
+        expect(report.qrSales).toBe(1998);
+        expect(report.paymentSales.qrPromptPay.count).toBe(3);
+        expect(report.paymentSales.qrPromptPay.amount).toBe(1998);
+
+        // Petty Cash Flow: Total In = 865, Total Out = 1554
+        expect(report.totalIn).toBe(865);
+        expect(report.totalOut).toBe(1554);
+
+        // Expected Cash in Drawer = 4193 + 474 + 865 - 1554 = 3978
+        expect(report.expectedCash).toBe(3978);
+
+        // Actual Counted Cash = 3978 -> Difference = 0
+        expect(report.actualCash).toBe(3978);
+        expect(report.difference).toBe(0);
+
+        // Void Data = 1 bill, 75 baht
+        expect(report.voidData.wholeBill.count).toBe(1);
+        expect(report.voidData.wholeBill.amount).toBe(75);
+    });
+
+    it('should format multi-line three columns with strict column alignment and no overflow', () => {
+        const line = formatThreeCols('Set : จับคู่อาหารจานเดียว + Set : ใหญ่', 1, '149.00', 36);
+        const subLines = line.split('\n');
+        expect(subLines.length).toBeGreaterThan(1);
+        
+        // Every sub-line should not exceed maxCols (36)
+        subLines.forEach(l => {
+            expect(getPrinterCellWidth(l)).toBeLessThanOrEqual(36);
+        });
+
+        // The last line must end with price '149.00' and contain quantity '1'
+        const lastLine = subLines[subLines.length - 1];
+        expect(lastLine).toContain('149.00');
+        expect(lastLine).toContain('1');
+    });
+});
+

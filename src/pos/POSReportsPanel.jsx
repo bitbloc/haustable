@@ -674,38 +674,30 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         const totalIn = shift.totalIn !== undefined ? shift.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
         const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
 
-        try {
-            const completedBookingIds = shift.transactions?.map(tx => tx.bookingId) || [];
             let bookingsData = [];
-            
-            let bookingsQuery = supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    tables_layout (table_name),
-                    order_items (
-                        id,
-                        quantity,
-                        price_at_time,
-                        menu_item_id,
-                        status,
-                        menu_items (
-                            name,
-                            category_id
+            if (isOnline()) {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        tables_layout (table_name),
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            menu_item_id,
+                            status,
+                            menu_items (
+                                name,
+                                category_id
+                            )
                         )
-                    )
-                `);
-
-            if (completedBookingIds.length > 0) {
-                const orFilter = `id.in.(${completedBookingIds.join(',')}),and(status.in.(void,cancelled),booking_time.gte.${shift.openedAt})`;
-                const { data } = await bookingsQuery.or(orFilter);
-                bookingsData = data || [];
-            } else {
-                const { data } = await bookingsQuery
-                    .in('status', ['void', 'cancelled'])
+                    `)
                     .gte('booking_time', shift.openedAt)
                     .lte('booking_time', shift.closedAt || new Date().toISOString());
-                bookingsData = data || [];
+                if (!error && data) {
+                    bookingsData = data;
+                }
             }
             
             const { data: categoriesData } = await supabase

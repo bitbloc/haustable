@@ -357,27 +357,31 @@ export function addShiftAdjustment(amount, note, type) {
     shift.adjustments.push(newAdj);
     
     // Recalculate expected cash in drawer
-    const cashSales = shift.transactions
+    const txCashSales = (shift.transactions || [])
         .filter(tx => tx.paymentMethod === 'cash')
-        .reduce((sum, tx) => sum + tx.amount, 0);
-    const qrSales = shift.transactions
+        .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const txQrSales = (shift.transactions || [])
         .filter(tx => tx.paymentMethod === 'qr')
-        .reduce((sum, tx) => sum + tx.amount, 0);
-    const creditSales = shift.transactions
+        .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+    const txCreditSales = (shift.transactions || [])
         .filter(tx => tx.paymentMethod === 'credit')
-        .reduce((sum, tx) => sum + tx.amount, 0);
+        .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
         
     const adjustments = shift.adjustments || [];
-    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
     
+    const cashSales = Math.max(Number(shift.cashSales || 0), txCashSales);
+    const qrSales = Math.max(Number(shift.qrSales || 0), txQrSales);
+    const creditSales = Math.max(Number(shift.creditSales || 0), txCreditSales);
+
     shift.cashSales = cashSales;
     shift.qrSales = qrSales;
     shift.creditSales = creditSales;
     shift.totalSales = cashSales + qrSales + creditSales;
     shift.totalIn = totalIn;
     shift.totalOut = totalOut;
-    shift.expectedCash = shift.openingFloat + cashSales + totalIn - totalOut;
+    shift.expectedCash = (Number(shift.openingFloat) || 0) + cashSales + totalIn - totalOut;
     
     localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(shift));
     console.log('[Shift Management] Cash adjustment recorded:', newAdj);

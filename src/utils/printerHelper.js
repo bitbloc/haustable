@@ -1566,7 +1566,7 @@ function formatItemLine(calculationText, name, priceStr, maxCols) {
     return [...nameLines, numericRow].join('\n');
 }
 
-function formatThreeCols(left, mid, right, maxCols, customMidWidth = null, customRightWidth = null) {
+export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null, customRightWidth = null) {
     const totalWidth = Math.max(20, Number(maxCols) || 36);
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
@@ -1591,19 +1591,27 @@ function formatThreeCols(left, mid, right, maxCols, customMidWidth = null, custo
     const leftLines = wrapTextByWords(leftStr, leftWidth);
     if (leftLines.length === 0) leftLines.push('');
 
-    const output = [
-        padEndPrinter(leftLines[0], leftWidth) +
+    if (leftLines.length === 1) {
+        return padEndPrinter(leftLines[0], leftWidth) +
+            ' ' + padStartPrinter(midStr, midWidth) +
+            ' ' + padStartPrinter(rightStr, rightWidth);
+    }
+
+    // Multi-line: Print preceding name lines first, and attach quantity & price strictly to the last line
+    const output = [];
+    for (let i = 0; i < leftLines.length - 1; i++) {
+        output.push(leftLines[i]);
+    }
+    const lastLine = leftLines[leftLines.length - 1];
+    output.push(
+        padEndPrinter(lastLine, leftWidth) +
         ' ' + padStartPrinter(midStr, midWidth) +
         ' ' + padStartPrinter(rightStr, rightWidth)
-    ];
-
-    for (let i = 1; i < leftLines.length; i++) {
-        output.push('  ' + leftLines[i]);
-    }
+    );
     return output.join('\n');
 }
 
-function formatTwoCols(left, right, maxCols, customRightWidth = null) {
+export function formatTwoCols(left, right, maxCols, customRightWidth = null) {
     const totalWidth = Math.max(20, Number(maxCols) || 36);
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
@@ -1620,14 +1628,20 @@ function formatTwoCols(left, right, maxCols, customRightWidth = null) {
     const leftLines = wrapTextByWords(leftStr, leftWidth);
     if (leftLines.length === 0) leftLines.push('');
 
-    const output = [
-        padEndPrinter(leftLines[0], leftWidth) +
-        ' ' + padStartPrinter(rightStr, rightWidth)
-    ];
-
-    for (let i = 1; i < leftLines.length; i++) {
-        output.push('  ' + leftLines[i]);
+    if (leftLines.length === 1) {
+        return padEndPrinter(leftLines[0], leftWidth) +
+            ' ' + padStartPrinter(rightStr, rightWidth);
     }
+
+    const output = [];
+    for (let i = 0; i < leftLines.length - 1; i++) {
+        output.push(leftLines[i]);
+    }
+    const lastLine = leftLines[leftLines.length - 1];
+    output.push(
+        padEndPrinter(lastLine, leftWidth) +
+        ' ' + padStartPrinter(rightStr, rightWidth)
+    );
     return output.join('\n');
 }
 
@@ -1827,24 +1841,34 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
 
     // Deduct adjustments
     const adjustments = shift.adjustments || [];
-    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalIn = shift.totalIn !== undefined ? Number(shift.totalIn) : adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalOut = shift.totalOut !== undefined ? Number(shift.totalOut) : adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+
+    const openingFloat = Number(shift.openingFloat ?? 0);
+    const finalCashSales = (bookingsData && bookingsData.length > 0) ? cashAmount : Number(shift.cashSales ?? cashAmount);
+    const finalQrSales = (bookingsData && bookingsData.length > 0) ? qrAmount : Number(shift.qrSales ?? qrAmount);
+    const finalCreditSales = (bookingsData && bookingsData.length > 0) ? creditAmount : Number(shift.creditSales ?? creditAmount);
+    const finalNetSales = (bookingsData && bookingsData.length > 0) ? netSales : Number(shift.totalSales ?? shift.netSales ?? (finalCashSales + finalQrSales + finalCreditSales));
+
+    const calculatedExpectedCash = openingFloat + finalCashSales + totalIn - totalOut;
+    const actualCash = (shift.closedCash !== undefined && shift.closedCash !== null) ? Number(shift.closedCash) : (shift.actualCash !== undefined && shift.actualCash !== null) ? Number(shift.actualCash) : null;
+    const difference = actualCash !== null ? (actualCash - calculatedExpectedCash) : (shift.difference !== undefined ? Number(shift.difference) : 0);
 
     return {
         staffName: shift.staffName || '',
         openedAt: shift.openedAt,
         closedAt: shift.closedAt || new Date().toISOString(),
-        openingFloat: shift.openingFloat ?? 0,
-        cashSales: shift.cashSales ?? cashAmount,
-        qrSales: shift.qrSales ?? qrAmount,
-        creditSales: shift.creditSales ?? creditAmount,
-        totalSales: netSales,
-        netSales,
+        openingFloat,
+        cashSales: finalCashSales,
+        qrSales: finalQrSales,
+        creditSales: finalCreditSales,
+        totalSales: finalNetSales,
+        netSales: finalNetSales,
         totalIn,
         totalOut,
-        expectedCash: shift.expectedCash,
-        actualCash: shift.closedCash,
-        difference: shift.difference,
+        expectedCash: calculatedExpectedCash,
+        actualCash,
+        difference,
         
         shiftId: shift.id ? String(shift.id).replace('shift_', '') : '',
         totalBookings: completedBookings.length,
@@ -2142,29 +2166,39 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     encoder.line(divider);
     encoder.bold(true).line('รอบการขาย').bold(false);
     encoder.line(formatTwoCols('เงินสดเริ่มต้น', formatReceiptMoney(reportData.openingFloat), maxCols));
-    encoder.line(formatTwoCols('ยอดขายเงินสด', formatReceiptMoney(reportData.cashSales), maxCols));
+    encoder.line(formatTwoCols('ยอดขายเงินสด (+)', `+${formatReceiptMoney(reportData.cashSales)}`, maxCols));
 
-    const netCashFlow = (reportData.totalIn || 0) - (reportData.totalOut || 0);
-    if (netCashFlow !== 0) {
-        const sign = netCashFlow > 0 ? '+' : '';
-        encoder.line(formatTwoCols('เงินเข้า/เงินออก', `${sign}${formatReceiptMoney(netCashFlow)}`, maxCols));
+    if (reportData.totalIn > 0) {
+        encoder.line(formatTwoCols('เงินเข้าลิ้นชัก (+)', `+${formatReceiptMoney(reportData.totalIn)}`, maxCols));
+    }
+    if (reportData.totalOut > 0) {
+        encoder.line(formatTwoCols('เงินออกลิ้นชัก (-)', `-${formatReceiptMoney(reportData.totalOut)}`, maxCols));
     }
     
+    encoder.line(divider);
     encoder.bold(true).line(formatTwoCols('เงินที่ควรมีในลิ้นชัก', formatReceiptMoney(reportData.expectedCash), maxCols)).bold(false);
     
-    if (reportData.closedAt) {
+    if (reportData.closedAt || (reportData.actualCash !== null && reportData.actualCash !== undefined)) {
         encoder.bold(true).line(formatTwoCols('จำนวนจริงในลิ้นชัก', formatReceiptMoney(reportData.actualCash), maxCols)).bold(false);
         
-        const isDiff = reportData.difference !== 0;
-        if (isDiff) encoder.bold(true);
-        encoder.line(formatTwoCols(isDiff ? '>> ส่วนต่าง' : 'ส่วนต่าง', formatReceiptMoney(reportData.difference), maxCols));
-        if (isDiff) encoder.bold(false);
+        const diffVal = Number(reportData.difference || 0);
+        const isDiff = Math.abs(diffVal) >= 0.01;
+        if (isDiff) {
+            const diffSign = diffVal > 0 ? '+' : '';
+            encoder.bold(true);
+            encoder.line(formatTwoCols('>> ส่วนต่าง (ขาด/เกิน)', `${diffSign}${formatReceiptMoney(diffVal)}`, maxCols));
+            encoder.bold(false);
+        } else {
+            encoder.line(formatTwoCols('ส่วนต่าง (ยอดตรงพอดี)', '0.00', maxCols));
+        }
     }
     
-    encoder.line(formatTwoCols('บิลทั้งหมด', (reportData.totalBookings || 0).toString(), maxCols));
+    encoder.line(formatTwoCols('บิลสำเร็จทั้งหมด', `${reportData.totalBookings || 0} บิล`, maxCols));
 
     // Detailed adjustments list on receipt
     if (reportData.adjustments && reportData.adjustments.length > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line('รายการเงินเข้า-เงินออก').bold(false);
         reportData.adjustments.forEach(adj => {
             const prefix = adj.type === 'in' ? 'นำเข้า' : 'นำออก';
             const sign = adj.type === 'in' ? '+' : '-';
