@@ -673,7 +673,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         const adjs = shift.adjustments || [];
         const totalIn = shift.totalIn !== undefined ? shift.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
         const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
-
+        try {
             let bookingsData = [];
             if (isOnline()) {
                 const { data, error } = await supabase

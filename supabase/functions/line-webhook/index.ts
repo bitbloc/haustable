@@ -2299,8 +2299,11 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // --- NEW: Live POS Daily Sales Summary (stsales / ยอดขาย / sttoday) ---
-        if (text === 'stsales' || text === 'ยอดขาย' || text === 'sttoday' || text === 'stsales today') {
+        // --- NEW: Live POS Daily Sales Summary (stsales / ยอดขาย / สรุปยอดขาย / รายงานยอดขาย / sttoday) ---
+        if (
+          text === 'stsales' || text === 'ยอดขาย' || text === 'สรุปยอดขาย' || text === 'รายงานยอดขาย' ||
+          text === 'ยอดวันนี้' || text === 'sttoday' || text === 'stsales today' || text === 'sales'
+        ) {
           console.log('Processing stsales command...')
           try {
             const now = new Date()
@@ -2849,8 +2852,11 @@ Deno.serve(async (req) => {
           continue
         }
 
-        // --- NEW: POS Shift Status (stshift / กะ / ยอดกะ) ---
-        if (text === 'stshift' || text === 'กะ' || text === 'ยอดกะ') {
+        // --- NEW: POS Shift Status (stshift / กะ / ยอดกะ / สรุปกะ / รายงานกะ / รอบขาย / รอบการขาย / ปิดกะ) ---
+        if (
+          text === 'stshift' || text === 'กะ' || text === 'ยอดกะ' || text === 'สรุปกะ' ||
+          text === 'รายงานกะ' || text === 'รอบขาย' || text === 'รอบการขาย' || text === 'ปิดกะ'
+        ) {
           console.log('Processing stshift command...')
           try {
             const { data: shifts, error: shiftErr } = await supabaseAdmin
@@ -2883,6 +2889,20 @@ Deno.serve(async (req) => {
             } catch {
               openTimeStr = ''
             }
+
+            const openingFloat = Number(currentShift.opening_float || 0)
+            const cashSales = Number(currentShift.cash_sales || 0)
+            const totalIn = Number(currentShift.total_in || 0)
+            const totalOut = Number(currentShift.total_out || 0)
+            const expectedCash = currentShift.expected_cash !== undefined && currentShift.expected_cash !== null
+              ? Number(currentShift.expected_cash)
+              : (openingFloat + cashSales + totalIn - totalOut)
+            const closedCash = currentShift.closed_cash !== undefined && currentShift.closed_cash !== null
+              ? Number(currentShift.closed_cash)
+              : null
+            const difference = currentShift.difference !== undefined && currentShift.difference !== null
+              ? Number(currentShift.difference)
+              : (closedCash !== null ? (closedCash - expectedCash) : 0)
 
             const shiftFlex = {
               type: "flex",
@@ -2930,7 +2950,7 @@ Deno.serve(async (req) => {
                           layout: "horizontal",
                           contents: [
                             { type: "text", text: "💵 เงินสด Cash", size: "xs", color: "#1E1B18", flex: 7 },
-                            { type: "text", text: `฿${Number(currentShift.cash_sales || 0).toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
+                            { type: "text", text: `฿${cashSales.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 3 }
                           ]
                         },
                         {
@@ -2954,20 +2974,60 @@ Deno.serve(async (req) => {
                     { type: "separator", margin: "md", color: "#E6E1D6" },
                     {
                       type: "box",
-                      layout: "horizontal",
+                      layout: "vertical",
                       margin: "sm",
+                      spacing: "xs",
                       contents: [
-                        { type: "text", text: "เงินทอนตั้งต้น (Float)", size: "xs", color: "#78736A", flex: 6 },
-                        { type: "text", text: `฿${Number(currentShift.opening_float || 0).toFixed(2)}`, size: "xs", color: "#1E1B18", align: "end", flex: 4 }
-                      ]
-                    },
-                    {
-                      type: "box",
-                      layout: "horizontal",
-                      margin: "xs",
-                      contents: [
-                        { type: "text", text: "เงินสดที่คาดว่ามีในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
-                        { type: "text", text: `฿${(Number(currentShift.opening_float || 0) + Number(currentShift.cash_sales || 0)).toFixed(2)}`, size: "xs", weight: "bold", color: "#4A6B3D", align: "end", flex: 4 }
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "เงินทอนตั้งต้น", size: "xs", color: "#78736A", flex: 6 },
+                            { type: "text", text: `฿${openingFloat.toFixed(2)}`, size: "xs", color: "#1E1B18", align: "end", flex: 4 }
+                          ]
+                        },
+                        ...(totalIn > 0 ? [{
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "เงินนำเข้าลิ้นชัก (+)", size: "xs", color: "#4A6B3D", flex: 6 },
+                            { type: "text", text: `+฿${totalIn.toFixed(2)}`, size: "xs", color: "#4A6B3D", align: "end", flex: 4 }
+                          ]
+                        }] : []),
+                        ...(totalOut > 0 ? [{
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "เงินนำออกลิ้นชัก (-)", size: "xs", color: "#C85A32", flex: 6 },
+                            { type: "text", text: `-฿${totalOut.toFixed(2)}`, size: "xs", color: "#C85A32", align: "end", flex: 4 }
+                          ]
+                        }] : []),
+                        {
+                          type: "box",
+                          layout: "horizontal",
+                          contents: [
+                            { type: "text", text: "เงินที่ควรมีในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
+                            { type: "text", text: `฿${expectedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 4 }
+                          ]
+                        },
+                        ...(closedCash !== null ? [
+                          {
+                            type: "box",
+                            layout: "horizontal",
+                            contents: [
+                              { type: "text", text: "จำนวนจริงในลิ้นชัก", size: "xs", weight: "bold", color: "#1E1B18", flex: 6 },
+                              { type: "text", text: `฿${closedCash.toFixed(2)}`, size: "xs", weight: "bold", color: "#1E1B18", align: "end", flex: 4 }
+                            ]
+                          },
+                          {
+                            type: "box",
+                            layout: "horizontal",
+                            contents: [
+                              { type: "text", text: Math.abs(difference) < 0.01 ? "ส่วนต่าง (ตรงยอดพอดี)" : ">> ส่วนต่าง", size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#4A6B3D" : "#C85A32", flex: 6 },
+                              { type: "text", text: `${difference > 0 ? '+' : ''}฿${difference.toFixed(2)}`, size: "xs", weight: "bold", color: Math.abs(difference) < 0.01 ? "#4A6B3D" : "#C85A32", align: "end", flex: 4 }
+                            ]
+                          }
+                        ] : [])
                       ]
                     }
                   ]
@@ -2994,6 +3054,101 @@ Deno.serve(async (req) => {
               })
             })
           }
+          continue
+        }
+
+        // --- NEW: Command Help Menu (คำสั่ง / help / เมนู) ---
+        if (text === 'คำสั่ง' || text === 'help' || text === 'เมนู' || text === 'sthelp') {
+          const helpFlex = {
+            type: "flex",
+            altText: "📖 รายการคำสั่งระบบ IN THE HAUS POS",
+            contents: {
+              type: "bubble",
+              size: "mega",
+              header: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#1E1B18",
+                paddingAll: "20px",
+                contents: [
+                  { type: "text", text: "HAUS POS CHATBOT", size: "xs", weight: "bold", color: "#C85A32" },
+                  { type: "text", text: "คำสั่งดูรายงานและจัดการร้าน", size: "md", weight: "bold", color: "#FBF9F5", margin: "xs" },
+                  { type: "text", text: "พิมพ์คำสั่งเหล่านี้ในกลุ่ม LINE ได้ตลอด 24 ชม.", size: "xxs", color: "#A09B90", margin: "xs" }
+                ]
+              },
+              body: {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FBF9F5",
+                paddingAll: "20px",
+                spacing: "md",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "📊 ยอดขาย", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
+                      { type: "text", text: "สรุปยอดขายสุทธิวันนี้ แยกช่องทางชำระเงิน", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  },
+                  { type: "separator", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "⏱️ กะ / ปิดกะ", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
+                      { type: "text", text: "ดูสถานะกะ ยอดเงินสดในลิ้นชัก และส่วนต่าง", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  },
+                  { type: "separator", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "🧾 บิล", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
+                      { type: "text", text: "ดูรายการบิลที่ชำระเงินล่าสุด 6 บิล", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  },
+                  { type: "separator", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "🪑 โต๊ะ", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
+                      { type: "text", text: "ดูสถานะโต๊ะอาหารทั้งหมด หรือ โต๊ะ [เลข]", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  },
+                  { type: "separator", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "📑 ค่าใช้จ่าย", weight: "bold", size: "sm", color: "#C85A32", flex: 4 },
+                      { type: "text", text: "ดูสรุปรายจ่ายวันนี้ที่บันทึกเข้าระบบ", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  },
+                  { type: "separator", color: "#E6E1D6" },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "📸 ถ่ายรูปสลิป", weight: "bold", size: "sm", color: "#2D804E", flex: 4 },
+                      { type: "text", text: "ส่งภาพใบเสร็จ/บิลซื้อของ AI บันทึกบัญชีให้อัตโนมัติ", size: "xs", color: "#78736A", flex: 6, wrap: true }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+
+          await fetch('https://api.line.me/v2/bot/message/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+            body: JSON.stringify({
+              replyToken: event.replyToken,
+              messages: [helpFlex]
+            })
+          })
           continue
         }
 
