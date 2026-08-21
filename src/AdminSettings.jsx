@@ -129,7 +129,8 @@ export default function AdminSettings() {
         receipt_shop_phone: '',
         receipt_shop_vat: '',
         receipt_shop_logo_url: '',
-        receipt_shop_footer: 'THANK YOU FOR YOUR VISIT'
+        receipt_shop_footer: 'THANK YOU FOR YOUR VISIT',
+        google_review_url: 'https://g.page/r/CXmnpQhwM5MYEBM/review'
     })
     const [loading, setLoading] = useState(false)
     const [timestamp, setTimestamp] = useState(Date.now())
@@ -1771,6 +1772,37 @@ export default function AdminSettings() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Google Review Link Setting */}
+                                <div className="border-t border-gray-100 pt-4 mt-4">
+                                    <label className="block text-xs font-bold text-ink mb-1">
+                                        Google Review URL (ลิงก์รีวิวร้าน Google Maps)
+                                    </label>
+                                    <p className="text-[10px] text-subInk mb-2">
+                                        ลิงก์สำหรับให้ลูกค้ากดรีวิว 5 ดาว หลังสั่งอาหารในหน้า QR Code
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={settings.google_review_url || ''}
+                                            onChange={(e) => setSettings(prev => ({ ...prev, google_review_url: e.target.value }))}
+                                            onBlur={() => handleSave('google_review_url', settings.google_review_url)}
+                                            className="w-full bg-canvas border border-gray-200 p-2.5 rounded-xl text-xs font-mono text-ink outline-none focus:border-brand"
+                                            placeholder="https://g.page/r/CXmnpQhwM5MYEBM/review"
+                                        />
+                                        {settings.google_review_url && (
+                                            <a
+                                                href={settings.google_review_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="px-3 py-2 bg-canvas hover:bg-gray-200 border border-gray-200 rounded-xl text-xs font-mono text-ink flex items-center gap-1 shrink-0"
+                                            >
+                                                <ExternalLink size={13} />
+                                                <span>เปิดดู</span>
+                                            </a>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

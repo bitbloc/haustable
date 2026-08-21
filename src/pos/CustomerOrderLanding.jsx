@@ -18,6 +18,7 @@ import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Haversine Distance Formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -102,7 +103,8 @@ export default function CustomerOrderLanding() {
         qr_kitchen_close_time: '22:00',
         qr_kitchen_cutoff_enabled: 'true',
         qr_kitchen_mode: 'auto',
-        qr_kitchen_closed_categories: '[]'
+        qr_kitchen_closed_categories: '[]',
+        google_review_url: 'https://g.page/r/CXmnpQhwM5MYEBM/review'
     });
     const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
 
@@ -1140,8 +1142,8 @@ export default function CustomerOrderLanding() {
                 localStorage.setItem(`table_${effectiveNumericTableId}_token`, finalTrackingToken);
             }
 
-            // Redirect to status page immediately
-            navigate(`/table/${encodeURIComponent(table?.table_name || tableId)}/status`);
+            // Redirect to status page immediately with ordered flag
+            navigate(`/table/${encodeURIComponent(table?.table_name || tableId)}/status?ordered=1`);
 
         } catch (err) {
             console.error('Checkout error:', err);
@@ -1942,6 +1944,12 @@ export default function CustomerOrderLanding() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Google Review Prompt */}
+                                    <CustomerGoogleReviewCard
+                                        variant="compact"
+                                        googleReviewUrl={settings.google_review_url}
+                                    />
 
                                     {/* Bill Request Section */}
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4 text-center">

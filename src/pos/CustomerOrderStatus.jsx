@@ -5,16 +5,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { 
     Clock, CheckCircle, Receipt, ArrowLeft, Smartphone, 
-    Edit, Check, X, Gamepad2, Crown, ArrowRight, Plus
+    Edit, Check, X, Gamepad2, Crown, ArrowRight, Plus, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
@@ -34,6 +35,7 @@ function isBookingActiveAndFresh(booking) {
 export default function CustomerOrderStatus() {
     const { tableId } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     // UI States
     const [showPaxModal, setShowPaxModal] = useState(false);
@@ -43,7 +45,15 @@ export default function CustomerOrderStatus() {
     const [booking, setBooking] = useState(null);
     const [orderItems, setOrderItems] = useState([]);
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
+    const [googleReviewUrl, setGoogleReviewUrl] = useState('https://g.page/r/CXmnpQhwM5MYEBM/review');
     const [resolvedTableInfo, setResolvedTableInfo] = useState(null);
+    const [showOrderSuccessBanner, setShowOrderSuccessBanner] = useState(false);
+
+    useEffect(() => {
+        if (searchParams.get('ordered') === '1') {
+            setShowOrderSuccessBanner(true);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         let channelSub = null;
@@ -86,7 +96,7 @@ export default function CustomerOrderStatus() {
                         schema: 'public',
                         table: 'app_settings'
                     }, () => {
-                        fetchPaymentQr();
+                        fetchSettings();
                     })
                     .subscribe();
             }
@@ -100,19 +110,22 @@ export default function CustomerOrderStatus() {
         };
     }, [tableId]);
 
-    const fetchPaymentQr = async () => {
+    const fetchSettings = async () => {
         try {
-            const { data: qrData } = await supabase
+            const { data: settingsData } = await supabase
                 .from('app_settings')
-                .select('value')
-                .eq('key', 'payment_qr_url')
-                .maybeSingle();
+                .select('key, value')
+                .in('key', ['payment_qr_url', 'google_review_url']);
 
-            if (qrData?.value) {
-                setPaymentQrUrl(qrData.value);
+            if (settingsData && settingsData.length > 0) {
+                const qrSetting = settingsData.find(s => s.key === 'payment_qr_url');
+                if (qrSetting?.value) setPaymentQrUrl(qrSetting.value);
+
+                const reviewSetting = settingsData.find(s => s.key === 'google_review_url');
+                if (reviewSetting?.value) setGoogleReviewUrl(reviewSetting.value);
             }
         } catch (e) {
-            console.warn('Failed to fetch payment QR:', e);
+            console.warn('Failed to fetch settings:', e);
         }
     };
 
@@ -217,8 +230,8 @@ export default function CustomerOrderStatus() {
 
             setOrderItems(itemsData || []);
 
-            // Fetch payment QR Code
-            await fetchPaymentQr();
+            // Fetch payment QR Code & app settings
+            await fetchSettings();
 
             return numericTableId;
 
@@ -356,6 +369,27 @@ export default function CustomerOrderStatus() {
             </header>
 
             <div className="max-w-2xl mx-auto w-full p-4 space-y-4">
+                {/* Post-Order Success Celebration Banner */}
+                {showOrderSuccessBanner && (
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-sm p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-sm bg-emerald-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                                ✓
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-xs">ส่งรายการสั่งอาหารสู่ห้องครัวเรียบร้อยแล้ว</h4>
+                                <p className="text-[10px] text-emerald-700 font-mono mt-0.5">ห้องครัวและบาร์กำลังเริ่มจัดเตรียมรายการตามคิว</p>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setShowOrderSuccessBanner(false)}
+                            className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                )}
+
                 {/* Order More Action Banner */}
                 <button
                     onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
@@ -409,6 +443,12 @@ export default function CustomerOrderStatus() {
                         })}
                     </div>
                 </section>
+
+                {/* Google Review 5-Star Invitation Card */}
+                <CustomerGoogleReviewCard
+                    variant="card"
+                    googleReviewUrl={googleReviewUrl}
+                />
 
                 {/* In-Store Interactive Arcade Playground */}
                 <section className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4 shadow-sm relative overflow-hidden">
