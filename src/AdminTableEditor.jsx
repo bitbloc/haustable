@@ -146,11 +146,16 @@ export default function AdminTableEditor() {
             // 2. Fetch floorplan schematic image
             const { data: settingsData } = await supabase
                 .from('app_settings')
-                .select('value')
-                .eq('key', 'floorplan_url')
-                .single();
-            if (settingsData?.value) {
-                setFloorplanUrl(safeTimestampUrl(settingsData.value));
+                .select('key, value')
+                .in('key', ['floorplan_url', 'floorplan_image_url']);
+
+            const floorSetting = settingsData?.find(s => s.key === 'floorplan_url')?.value 
+                              || settingsData?.find(s => s.key === 'floorplan_image_url')?.value;
+
+            if (floorSetting) {
+                setFloorplanUrl(safeTimestampUrl(floorSetting));
+            } else {
+                setFloorplanUrl(null);
             }
         } catch (err) {
             console.error('Fetch error:', err);

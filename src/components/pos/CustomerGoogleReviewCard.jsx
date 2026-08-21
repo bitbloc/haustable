@@ -173,7 +173,7 @@ export default function CustomerGoogleReviewCard({
             <div className="pt-2 border-t border-[var(--color-rule)] flex flex-col sm:flex-row items-center justify-between gap-2.5">
                 <div className="text-[10px] font-mono text-[var(--color-neutral)] uppercase tracking-wider flex items-center gap-1">
                     <Sparkles size={11} className="text-[var(--color-accent)]" />
-                    <span>In the HAUS · Cafe & Bar</span>
+                    <span>IN THE HAUS จริตจัด รสชัดเจน</span>
                 </div>
 
                 <button

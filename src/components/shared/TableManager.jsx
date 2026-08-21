@@ -35,6 +35,15 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
     // Initial Load & Realtime Subscription
     useEffect(() => {
+        try {
+            const cachedFloorplan = localStorage.getItem('pos_cache_floorplan_url') || localStorage.getItem('admin_cache_floorplan_url');
+            if (cachedFloorplan) {
+                setFloorplanUrl(safeTimestampUrl(cachedFloorplan));
+            }
+        } catch (e) {
+            console.warn('Failed to read cached floorplan url:', e);
+        }
+
         fetchData();
 
         const channel = supabase
@@ -42,6 +51,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => fetchData())
             .subscribe();
 
         return () => {
@@ -60,15 +70,26 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             if (tErr) throw tErr;
             if (tablesData) setTables(tablesData);
 
-            // 2. Fetch Floorplan URL from settings
+            // 2. Fetch Floorplan URL from app_settings
             const { data: settingsData } = await supabase
-                .from('settings')
-                .select('value')
-                .eq('key', 'floorplan_url')
-                .maybeSingle();
+                .from('app_settings')
+                .select('key, value')
+                .in('key', ['floorplan_url', 'floorplan_image_url']);
 
-            if (settingsData && settingsData.value) {
-                setFloorplanUrl(safeTimestampUrl(settingsData.value));
+            const floorSetting = settingsData?.find(s => s.key === 'floorplan_url')?.value 
+                              || settingsData?.find(s => s.key === 'floorplan_image_url')?.value;
+
+            if (floorSetting) {
+                setFloorplanUrl(safeTimestampUrl(floorSetting));
+                try {
+                    localStorage.setItem('admin_cache_floorplan_url', floorSetting);
+                    localStorage.setItem('pos_cache_floorplan_url', floorSetting);
+                } catch (e) {}
+            } else {
+                setFloorplanUrl(null);
+                try {
+                    localStorage.removeItem('admin_cache_floorplan_url');
+                } catch (e) {}
             }
 
             // 3. Fetch active bookings of today with order items & menu items
