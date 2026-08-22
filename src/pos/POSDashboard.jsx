@@ -729,11 +729,11 @@ export default function POSDashboard() {
             } catch (e) {}
 
             // Find new items that haven't been printed yet
-            const unprintedItems = fullBooking.order_items.filter(item => !printedItems.includes(item.id));
+            const unprintedItems = fullBooking.order_items.filter(item => item.id && !printedItems.includes(item.id));
 
             if (unprintedItems.length > 0) {
                 // Update tracker immediately to prevent duplicate fires
-                const newPrintedItems = [...printedItems, ...unprintedItems.map(i => i.id)];
+                const newPrintedItems = Array.from(new Set([...printedItems, ...unprintedItems.map(i => i.id).filter(Boolean)]));
                 localStorage.setItem(storageKey, JSON.stringify(newPrintedItems));
                 
                 // Construct a temporary booking object that ONLY contains the unprinted items for the printer
@@ -763,7 +763,7 @@ export default function POSDashboard() {
         } finally {
             setTimeout(() => {
                 processingQrPrintRef.current.delete(bookingId);
-            }, 1000);
+            }, 1500);
         }
     };
 
@@ -818,14 +818,6 @@ export default function POSDashboard() {
                 const count = pendingOnly.length;
                 const hasPending = count > 0;
                 setHasPendingOrders(hasPending);
-                
-                // Check if any active booking is a QR order for today that hasn't been auto-printed yet
-                for (const b of activeBookings) {
-                    const remark = (b.staff_remark || '').toLowerCase();
-                    if (remark.includes('qr walk-in') || remark.includes('qr') || b.source === 'qr') {
-                        handleAutoPrintQROrder(b.id, b.tables_layout?.table_name);
-                    }
-                }
 
                 // Auto trigger pop-up overlay if new pending bookings arrive
                 if (count !== prevPendingCountRef.current) {
@@ -1118,14 +1110,13 @@ export default function POSDashboard() {
                 const pendingOrderKey = `${bookingId}_PENDING_ORDER`;
                 const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
 
-                // Trigger Auto Print for QR Orders on INSERT or UPDATE
-                const remarkCheck = (newRow?.staff_remark || '').toLowerCase();
-                if (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr') {
-                    handleAutoPrintQROrder(bookingId, tableName);
-                }
-
                 if (eventType === 'INSERT') {
-                    if (newRow.status === 'pending' || newRow.source === 'qr' || (newRow.staff_remark || '').toLowerCase().includes('qr')) {
+                    const remarkCheck = (newRow?.staff_remark || '').toLowerCase();
+                    if (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr') {
+                        handleAutoPrintQROrder(bookingId, tableName);
+                    }
+
+                    if (newRow.status === 'pending' || newRow.source === 'qr' || remarkCheck.includes('qr')) {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
                             toast.custom((t) => (
@@ -1363,6 +1354,10 @@ export default function POSDashboard() {
         if (submittingOrderRef.current || isSubmittingOrder) return;
         submittingOrderRef.current = true;
         setIsSubmittingOrder(true);
+        let lockedBookingId = activeBooking?.id || null;
+        if (lockedBookingId) {
+            processingQrPrintRef.current.add(lockedBookingId);
+        }
         try {
             if (currentOrder.items.length === 0 && !activeBooking) {
                 toast.error("No items in order to print");
@@ -1381,6 +1376,11 @@ export default function POSDashboard() {
                 if (!newBooking) return;
                 bookingId = newBooking.id;
                 currentBooking = newBooking;
+                lockedBookingId = bookingId;
+                processingQrPrintRef.current.add(bookingId);
+            } else {
+                lockedBookingId = bookingId;
+                processingQrPrintRef.current.add(bookingId);
             }
 
             // Attach CRM member if attached in local draft state
@@ -1402,6 +1402,16 @@ export default function POSDashboard() {
                 } else if (typeof result === 'string') {
                     bookingId = result;
                 }
+            }
+
+            // Track newly inserted items in QR tracker immediately so realtime listener doesn't double print
+            if (newlyInsertedRows.length > 0 && bookingId) {
+                const storageKey = `qr_printed_items_${bookingId}`;
+                try {
+                    const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    const combined = Array.from(new Set([...printed, ...newlyInsertedRows.map(r => r.id).filter(Boolean)]));
+                    localStorage.setItem(storageKey, JSON.stringify(combined));
+                } catch (e) {}
             }
 
             // 3. Reload the booking to get updated order_items and references
@@ -1509,16 +1519,6 @@ export default function POSDashboard() {
                     toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
                 }
                 
-                // Track newly printed items in QR tracker so realtime listener doesn't double print
-                if (newlyInsertedRows.length > 0 && bookingId) {
-                    const storageKey = `qr_printed_items_${bookingId}`;
-                    try {
-                        const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                        const combined = [...printed, ...newlyInsertedRows.map(r => r.id)];
-                        localStorage.setItem(storageKey, JSON.stringify(combined));
-                    } catch (e) {}
-                }
-
                 // For kitchen slips, ONLY print the newly inserted items if they exist
                 let printBooking = targetBooking;
                 if (type === 'kitchen' && newlyInsertedRows.length > 0) {
@@ -1529,6 +1529,11 @@ export default function POSDashboard() {
         } finally {
             submittingOrderRef.current = false;
             setIsSubmittingOrder(false);
+            if (lockedBookingId) {
+                setTimeout(() => {
+                    processingQrPrintRef.current.delete(lockedBookingId);
+                }, 3500);
+            }
         }
     };
 
@@ -2829,10 +2834,23 @@ export default function POSDashboard() {
                                         
                                         const finalBooking = updatedBooking || activeBooking;
                                         
-                                        // Try silent print first for Kitchen
-                                        openSlipOrSilentPrint(finalBooking, 'kitchen');
+                                        // Try silent print first for Kitchen (ONLY for items not already auto-printed)
+                                        const storageKey = `qr_printed_items_${activeBooking.id}`;
+                                        let printed = [];
+                                        try {
+                                            printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                                        } catch (e) {}
                                         
-                                            checkPendingOrders();
+                                        const allItems = finalBooking.order_items || [];
+                                        const unprinted = allItems.filter(i => i.id && !printed.includes(i.id));
+                                        
+                                        if (unprinted.length > 0) {
+                                            const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
+                                            localStorage.setItem(storageKey, JSON.stringify(newPrinted));
+                                            openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
+                                        }
+                                        
+                                        checkPendingOrders();
                                         }
                                     }
                                 } finally {

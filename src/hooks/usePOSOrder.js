@@ -469,6 +469,18 @@ export function usePOSOrder() {
                 };
             });
 
+            // Immediately track inserted items in localStorage so realtime listeners don't double print
+            if (enrichedInserted && enrichedInserted.length > 0 && bookingId && typeof window !== 'undefined') {
+                try {
+                    const storageKey = `qr_printed_items_${bookingId}`;
+                    const printed = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    const combined = Array.from(new Set([...printed, ...enrichedInserted.map(r => r.id).filter(Boolean)]));
+                    localStorage.setItem(storageKey, JSON.stringify(combined));
+                } catch (e) {
+                    console.warn('[submitOrderItems] Could not update local print cache:', e);
+                }
+            }
+
             if (isOnline() && typeof bookingId === 'string' && !bookingId.startsWith('local_')) {
                 try {
                     const { data: allItems } = await supabase
