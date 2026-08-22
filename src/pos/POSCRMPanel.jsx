@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Search, Shield, User, Phone, Clock, RefreshCw, FileText, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,98 +16,102 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const [activeViewBooking, setActiveViewBooking] = useState(null);
 
     const [hasSession, setHasSession] = useState(true);
+    
+    // In-memory cache for instant 0ms history switching
+    const historyCacheRef = useRef(new Map());
+    const selectedMemberRef = useRef(selectedMember);
+    selectedMemberRef.current = selectedMember;
 
-    useEffect(() => {
-        if (!isActive) return;
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setHasSession(!!session);
-            if (session) {
-                fetchMembers();
-            }
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            setHasSession(!!session);
-            if (session) {
-                fetchMembers();
-            }
-        });
-
-        // Supabase Realtime subscription for live CRM member and booking updates
-        const channel = supabase
-            .channel('pos_crm_panel_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                if (isActive) {
-                    fetchMembers();
-                    if (selectedMember?.id) {
-                        handleSelectMember(selectedMember);
-                    }
-                }
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                if (isActive) fetchMembers();
-            })
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-            supabase.removeChannel(channel);
-        };
-    }, [isActive, selectedMember?.id]);
-
-    const fetchMembers = async () => {
-        setLoading(true);
+    const fetchMembers = useCallback(async (isInitial = false) => {
+        if (isInitial) setLoading(true);
         try {
+            // 1. Fetch Profiles
             const { data: profiles, error: profileError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id, display_name, nickname, phone_number, email, avatar_url, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
                 .order('created_at', { ascending: false })
                 .limit(200);
 
             if (profileError) throw profileError;
 
-            // Fetch booking counts per user (including matching phone numbers for unlinked bookings)
+            // 2. Fetch Aggregated Bookings efficiently (user_id and status only)
             const { data: bookings, error: bookingError } = await supabase
                 .from('bookings')
-                .select('user_id, pickup_contact_phone, status');
+                .select('user_id, pickup_contact_phone, status')
+                .in('status', ['completed', 'confirmed', 'seated', 'pending', 'paid']);
 
+            // O(M) Map aggregation
+            const bookingMapByUser = new Map();
+            const bookingMapByPhone = new Map();
+
+            if (bookings && Array.isArray(bookings)) {
+                bookings.forEach(b => {
+                    const isFinished = b.status === 'completed' || b.status === 'confirmed' || b.status === 'paid';
+                    if (b.user_id) {
+                        const cur = bookingMapByUser.get(b.user_id) || { total: 0, completed: 0 };
+                        cur.total++;
+                        if (isFinished) cur.completed++;
+                        bookingMapByUser.set(b.user_id, cur);
+                    }
+                    if (b.pickup_contact_phone) {
+                        const norm = b.pickup_contact_phone.replace(/\D/g, '');
+                        if (norm) {
+                            const curP = bookingMapByPhone.get(norm) || { total: 0, completed: 0 };
+                            curP.total++;
+                            if (isFinished) curP.completed++;
+                            bookingMapByPhone.set(norm, curP);
+                        }
+                    }
+                });
+            }
+
+            // O(N) linear merge
             const merged = (profiles || []).map(p => {
                 const normPPhone = p.phone_number ? p.phone_number.replace(/\D/g, '') : '';
-                const userBookings = bookingError ? [] : (bookings || []).filter(b => {
-                    if (b.user_id === p.id) return true;
-                    if (!b.user_id && normPPhone && b.pickup_contact_phone) {
-                        return b.pickup_contact_phone.replace(/\D/g, '') === normPPhone;
-                    }
-                    return false;
-                });
-                const completed = userBookings.filter(b => b.status === 'completed' || b.status === 'confirmed').length;
+                const userStat = bookingMapByUser.get(p.id);
+                const phoneStat = normPPhone ? bookingMapByPhone.get(normPPhone) : null;
+                
+                const totalBookings = userStat?.total || phoneStat?.total || 0;
+                const completedBookings = userStat?.completed || phoneStat?.completed || 0;
+
                 return {
                     ...p,
-                    total_bookings: userBookings.length,
-                    completed_bookings: completed
+                    total_bookings: totalBookings,
+                    completed_bookings: completedBookings
                 };
             });
 
             setMembers(merged);
 
-            // Update selected member if active
-            if (selectedMember?.id) {
-                const updatedSel = merged.find(m => m.id === selectedMember.id);
+            // Keep selected member stats updated silently
+            const curSel = selectedMemberRef.current;
+            if (curSel?.id) {
+                const updatedSel = merged.find(m => m.id === curSel.id);
                 if (updatedSel) {
                     setSelectedMember(prev => ({ ...prev, ...updatedSel }));
                 }
             }
         } catch (err) {
-            console.error(err);
+            console.error('Failed to load CRM members:', err);
         } finally {
-            setLoading(false);
+            if (isInitial) setLoading(false);
         }
-    };
+    }, []);
 
-    const handleSelectMember = async (member) => {
+    const handleSelectMember = useCallback(async (member) => {
+        if (!member?.id) return;
         setSelectedMember(member);
-        setHistoryLoading(true);
-        setMemberHistory([]);
+
+        // Instant cache lookup for 0ms response
+        const cachedHistory = historyCacheRef.current.get(member.id);
+        if (cachedHistory) {
+            setMemberHistory(cachedHistory);
+            setHistoryLoading(false);
+        } else {
+            setMemberHistory([]);
+            setHistoryLoading(true);
+        }
+
         try {
             let fetchedHistory = [];
             const { data: rpcData, error: rpcErr } = await supabase.rpc('get_member_service_history', { p_user_id: member.id });
@@ -126,13 +130,14 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                         )
                     `)
                     .or(`user_id.eq.${member.id},pickup_contact_phone.eq.${member.phone_number || 'NONE'}`)
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .limit(50);
 
                 if (error) throw error;
                 fetchedHistory = data || [];
             }
             
-            // BUG FIX: Merge offline/local completed bills that haven't synced yet
+            // Merge local/offline completed bills
             const localBookings = posCache.getBookings().filter(b => b.user_id === member.id && b.status === 'completed');
             const mergedHistory = [...fetchedHistory];
             
@@ -149,22 +154,73 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             // Sort merged history by created_at descending
             mergedHistory.sort((a, b) => new Date(b.created_at || b.booking_time) - new Date(a.created_at || a.booking_time));
             
-            setMemberHistory(mergedHistory);
+            // Save to in-memory cache
+            historyCacheRef.current.set(member.id, mergedHistory);
+            
+            // Only update state if this member is still the selected one
+            if (selectedMemberRef.current?.id === member.id) {
+                setMemberHistory(mergedHistory);
+            }
         } catch (err) {
             console.error('Failed to load member service history:', err);
         } finally {
-            setHistoryLoading(false);
+            if (selectedMemberRef.current?.id === member.id) {
+                setHistoryLoading(false);
+            }
         }
-    };
+    }, []);
 
-    const filteredMembers = members.filter(m => {
-        const term = searchTerm.toLowerCase();
-        const nameMatch = (m.display_name || '').toLowerCase().includes(term);
-        const phoneMatch = (m.phone_number || '').toLowerCase().includes(term);
-        const emailMatch = (m.email || '').toLowerCase().includes(term);
-        const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
-        return nameMatch || phoneMatch || emailMatch || nicknameMatch;
-    });
+    useEffect(() => {
+        if (!isActive) return;
+        
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setHasSession(!!session);
+            if (session) {
+                fetchMembers(true);
+            }
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            setHasSession(!!session);
+            if (session) {
+                fetchMembers(false);
+            }
+        });
+
+        // Supabase Realtime subscription for live CRM updates (does NOT depend on selectedMember)
+        const channel = supabase
+            .channel('pos_crm_panel_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                if (isActive) {
+                    fetchMembers(false);
+                    const curSel = selectedMemberRef.current;
+                    if (curSel?.id) {
+                        handleSelectMember(curSel);
+                    }
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+                if (isActive) fetchMembers(false);
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+            supabase.removeChannel(channel);
+        };
+    }, [isActive, fetchMembers, handleSelectMember]);
+
+    const filteredMembers = useMemo(() => {
+        if (!searchTerm.trim()) return members;
+        const term = searchTerm.toLowerCase().trim();
+        return members.filter(m => {
+            const nameMatch = (m.display_name || '').toLowerCase().includes(term);
+            const phoneMatch = (m.phone_number || '').includes(term);
+            const emailMatch = (m.email || '').toLowerCase().includes(term);
+            const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
+            return nameMatch || phoneMatch || emailMatch || nicknameMatch;
+        });
+    }, [members, searchTerm]);
 
     if (!hasSession) {
         return (

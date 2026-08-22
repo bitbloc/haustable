@@ -221,9 +221,10 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                 setActiveShiftTopSellers(sortedSellers);
             }
 
-            const adjustments = current.adjustments || [];
-            const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-            const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+            const adjustments = Array.isArray(current.adjustments) ? current.adjustments : [];
+            const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+            const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+            const openingFloat = Number(current.openingFloat || 0);
 
             setActiveShiftSummary({
                 cashSales,
@@ -232,7 +233,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                 totalSales: cashSales + qrSales + creditSales,
                 totalIn,
                 totalOut,
-                expectedCash: (current.openingFloat || 0) + cashSales + totalIn - totalOut
+                expectedCash: openingFloat + cashSales + totalIn - totalOut
             });
         } catch (err) {
             console.error("Failed to load active shift summary:", err);
@@ -670,9 +671,13 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
 
     const handlePrintHistoricalShiftReport = async (shift) => {
         const toastId = toast.loading('กำลังโหลดข้อมูลและเตรียมพิมพ์รายงานประวัติ...');
-        const adjs = shift.adjustments || [];
-        const totalIn = shift.totalIn !== undefined ? shift.totalIn : adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-        const totalOut = shift.totalOut !== undefined ? shift.totalOut : adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+        const adjs = Array.isArray(shift.adjustments) ? shift.adjustments : [];
+        const totalIn = adjs.length > 0 
+            ? adjs.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+            : Number(shift.totalIn || 0);
+        const totalOut = adjs.length > 0 
+            ? adjs.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+            : Number(shift.totalOut || 0);
         try {
             let bookingsData = [];
             if (isOnline()) {

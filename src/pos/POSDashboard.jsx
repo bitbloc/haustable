@@ -471,9 +471,11 @@ export default function POSDashboard() {
                     }
                 });
 
-                const adjustments = activeShift.adjustments || [];
-                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+                const currentShift = getCurrentShift() || activeShift;
+                const adjustments = Array.isArray(currentShift?.adjustments) ? currentShift.adjustments : [];
+                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+                const openingFloat = Number(currentShift?.openingFloat || 0);
 
                 setRealtimeShiftSummary({
                     cashSales: Math.round(cashSales),
@@ -482,23 +484,25 @@ export default function POSDashboard() {
                     totalSales: Math.round(cashSales + qrSales + creditSales),
                     totalIn: Math.round(totalIn),
                     totalOut: Math.round(totalOut),
-                    expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
+                    expectedCash: Math.round(openingFloat + cashSales + totalIn - totalOut)
                 });
             } catch (err) {
                 console.error("Failed to fetch realtime shift summary:", err);
                 if (!isMounted) return;
-                const cashSales = activeShift.transactions
+                const currentShift = getCurrentShift() || activeShift;
+                const cashSales = (currentShift.transactions || [])
                     .filter(tx => tx.paymentMethod === 'cash')
-                    .reduce((sum, tx) => sum + tx.amount, 0);
-                const qrSales = activeShift.transactions
+                    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+                const qrSales = (currentShift.transactions || [])
                     .filter(tx => tx.paymentMethod === 'qr')
-                    .reduce((sum, tx) => sum + tx.amount, 0);
-                const creditSales = activeShift.transactions
+                    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+                const creditSales = (currentShift.transactions || [])
                     .filter(tx => tx.paymentMethod === 'credit')
-                    .reduce((sum, tx) => sum + tx.amount, 0);
-                const adjustments = activeShift.adjustments || [];
-                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+                    .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+                const adjustments = Array.isArray(currentShift?.adjustments) ? currentShift.adjustments : [];
+                const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+                const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+                const openingFloat = Number(currentShift?.openingFloat || 0);
                 setRealtimeShiftSummary({
                     cashSales: Math.round(cashSales),
                     qrSales: Math.round(qrSales),
@@ -506,7 +510,7 @@ export default function POSDashboard() {
                     totalSales: Math.round(cashSales + qrSales + creditSales),
                     totalIn: Math.round(totalIn),
                     totalOut: Math.round(totalOut),
-                    expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
+                    expectedCash: Math.round(openingFloat + cashSales + totalIn - totalOut)
                 });
             }
         };
@@ -514,6 +518,8 @@ export default function POSDashboard() {
         fetchRealtimeSummary();
 
         const handleLocalTx = () => {
+            const fresh = getCurrentShift();
+            if (fresh) setActiveShift(fresh);
             fetchRealtimeSummary();
         };
         window.addEventListener('pos-shift-changed', handleLocalTx);
@@ -524,23 +530,31 @@ export default function POSDashboard() {
     }, [activeShift, refreshKey]);
 
     const getShiftSummary = () => {
-        if (realtimeShiftSummary) return realtimeShiftSummary;
+        const currentShift = getCurrentShift() || activeShift;
+        if (!currentShift) return { cashSales: 0, qrSales: 0, creditSales: 0, totalSales: 0, expectedCash: 0, totalIn: 0, totalOut: 0 };
 
-        if (!activeShift) return { cashSales: 0, qrSales: 0, creditSales: 0, totalSales: 0, expectedCash: 0, totalIn: 0, totalOut: 0 };
-        const cashSales = activeShift.transactions
-            .filter(tx => tx.paymentMethod === 'cash')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-        const qrSales = activeShift.transactions
-            .filter(tx => tx.paymentMethod === 'qr')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-        const creditSales = activeShift.transactions
-            .filter(tx => tx.paymentMethod === 'credit')
-            .reduce((sum, tx) => sum + tx.amount, 0);
-            
-        const adjustments = activeShift.adjustments || [];
-        const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-        const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
+        const adjustments = Array.isArray(currentShift.adjustments) ? currentShift.adjustments : [];
+        const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+        const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
 
+        let cashSales = 0, qrSales = 0, creditSales = 0;
+        if (realtimeShiftSummary) {
+            cashSales = realtimeShiftSummary.cashSales;
+            qrSales = realtimeShiftSummary.qrSales;
+            creditSales = realtimeShiftSummary.creditSales;
+        } else {
+            cashSales = (currentShift.transactions || [])
+                .filter(tx => tx.paymentMethod === 'cash')
+                .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+            qrSales = (currentShift.transactions || [])
+                .filter(tx => tx.paymentMethod === 'qr')
+                .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+            creditSales = (currentShift.transactions || [])
+                .filter(tx => tx.paymentMethod === 'credit')
+                .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0);
+        }
+
+        const openingFloat = Number(currentShift.openingFloat || 0);
         return {
             cashSales: Math.round(cashSales),
             qrSales: Math.round(qrSales),
@@ -548,7 +562,7 @@ export default function POSDashboard() {
             totalSales: Math.round(cashSales + qrSales + creditSales),
             totalIn: Math.round(totalIn),
             totalOut: Math.round(totalOut),
-            expectedCash: Math.round(activeShift.openingFloat + cashSales + totalIn - totalOut)
+            expectedCash: Math.round(openingFloat + cashSales + totalIn - totalOut)
         };
     };
 
@@ -564,6 +578,7 @@ export default function POSDashboard() {
 
     const handleCloseShiftSubmit = async (e) => {
         e.preventDefault();
+        const currentShift = getCurrentShift() || activeShift;
         const summary = getShiftSummary();
         const actual = parseFloat(closeShiftForm.actualCash) || 0;
         
@@ -591,7 +606,7 @@ export default function POSDashboard() {
                             )
                         )
                     `)
-                    .gte('booking_time', activeShift.openedAt)
+                    .gte('booking_time', currentShift.openedAt)
                     .lte('booking_time', new Date().toISOString());
                 bookingsData = data || [];
             }
@@ -608,7 +623,7 @@ export default function POSDashboard() {
             // 3. Compile reportData
             const compiledReport = compileShiftReportData(
                 {
-                    ...activeShift,
+                    ...currentShift,
                     expectedCash: summary.expectedCash,
                     closedCash: actual,
                     difference: actual - summary.expectedCash,
@@ -684,7 +699,10 @@ export default function POSDashboard() {
             return;
         }
         
-        addShiftAdjustment(amount, cashAdjustmentForm.note.trim(), cashAdjustmentForm.type);
+        const updated = addShiftAdjustment(amount, cashAdjustmentForm.note.trim(), cashAdjustmentForm.type);
+        if (updated) {
+            setActiveShift(updated);
+        }
         toast.success(`บันทึกรายการสำเร็จ: ${cashAdjustmentForm.type === 'in' ? 'นำฝากเงินสด' : 'เบิกจ่ายเงินสด'} ฿${amount.toLocaleString()}`);
         setShowCashAdjustmentModal(false);
         setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
@@ -3550,8 +3568,9 @@ export default function POSDashboard() {
 
             {/* Close Shift Modal */}
             {showCloseShiftModal && activeShift && (() => {
+                const currentShift = getCurrentShift() || activeShift;
                 const summary = getShiftSummary();
-                const adjustments = activeShift.adjustments || [];
+                const adjustments = currentShift.adjustments || [];
                 return (
                     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
                         <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-lg w-full shadow-2xl flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
@@ -3572,18 +3591,18 @@ export default function POSDashboard() {
                             <div className="grid grid-cols-2 gap-3 text-xs bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm shrink-0">
                                 <div>
                                     <span className="text-[#767673] font-mono font-bold uppercase text-[9px] block">Cashier Staff</span>
-                                    <span className="font-bold text-[#1A1A1A]">{activeShift.staffName}</span>
+                                    <span className="font-bold text-[#1A1A1A]">{currentShift.staffName}</span>
                                 </div>
                                 <div>
                                     <span className="text-[#767673] font-mono font-bold uppercase text-[9px] block">Opened Time</span>
                                     <span className="font-mono font-bold text-[#1A1A1A]">
-                                        {new Date(activeShift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        {new Date(currentShift.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                     </span>
                                 </div>
                                 <div className="col-span-2 border-t border-[#D1D1CD]/50 pt-2.5 grid grid-cols-2 gap-y-2 gap-x-4">
                                     <div className="flex justify-between">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Opening Float:</span>
-                                        <span className="font-mono font-bold">฿{Math.round(activeShift.openingFloat || 0).toLocaleString()}.-</span>
+                                        <span className="font-mono font-bold">฿{Math.round(currentShift.openingFloat || 0).toLocaleString()}.-</span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-[#767673] font-mono font-bold uppercase text-[8px]">Cash Sales:</span>

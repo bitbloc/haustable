@@ -61,10 +61,14 @@ describe('System Audit - Phase 1 & 4: Thai Tax & Financial Calculation Engine', 
 });
 
 describe('System Audit - Phase 2: ESC/POS Thermal Printer & Thai Graphemes Engine', () => {
-    it('should count combining Thai vowels and tone marks correctly by printhead cell width', () => {
-        // "กิมจิ" has 3 clusters: ก+ิ (1 cell), ม (1 cell), จ+ิ (1 cell) -> exactly 3 cells!
-        expect(getPrinterCellWidth('กิมจิ')).toBe(3);
+    it('should measure byte length for ESC/POS text printing and graphemes when requested', () => {
+        // TIS-620 ESC/POS hardware cell width mode (default useByteLength = true per Rule 3)
+        expect(getPrinterCellWidth('กิมจิ')).toBe(5);
         expect(getPrinterCellWidth('ชาไทย')).toBe(5);
+        
+        // Grapheme cluster mode (useByteLength = false)
+        expect(getPrinterCellWidth('กิมจิ', false)).toBe(3);
+        expect(getPrinterCellWidth('ชาไทย', false)).toBe(5);
     });
 
     it('should pad string based on printer cell width without right-edge distortion', () => {
@@ -102,41 +106,51 @@ describe('System Audit - Phase 3: CRM Loyalty Tier & Duplicate Detection Engine'
         expect(user3.multiplier).toBe(1.50);
     });
 
-    it('should detect duplicate expense receipts by invoice number and exact amount+date', () => {
+    it('should detect duplicate expense receipts within similarity threshold (checkDuplicateExpense)', () => {
         const existingExpenses = [
             {
                 id: 'exp_1',
-                amount: 1500,
-                expense_date: '2026-08-19T10:00:00',
-                vendor_name: 'Siam Makro',
+                vendor_name: 'Makro นครพนม',
+                amount: 1450.00,
+                expense_date: '2026-08-20',
                 invoice_no: 'INV-9988'
+            },
+            {
+                id: 'exp_2',
+                vendor_name: 'Lotus นครพนม',
+                amount: 320.50,
+                expense_date: '2026-08-21',
+                invoice_no: null
             }
         ];
 
-        // Match by invoice number
-        const match1 = checkDuplicateExpense({
-            amount: 2000,
-            expense_date: '2026-08-20',
+        // 1. Exact match invoice number -> duplicate
+        const matchInvoice = checkDuplicateExpense({
             vendor_name: 'Makro',
+            amount: 1450.00,
+            expense_date: '2026-08-20',
             invoice_no: 'INV-9988'
         }, existingExpenses);
-        expect(match1?.isDuplicate).toBe(true);
-        expect(match1?.confidence).toBe('HIGH');
+        expect(matchInvoice).not.toBeNull();
+        expect(matchInvoice.isDuplicate).toBe(true);
+        expect(matchInvoice.confidence).toBe('HIGH');
 
-        // Match by amount + date + vendor
-        const match2 = checkDuplicateExpense({
-            amount: 1500,
-            expense_date: '2026-08-19',
-            vendor_name: 'Siam Makro'
-        }, existingExpenses);
-        expect(match2?.isDuplicate).toBe(true);
-        expect(match2?.confidence).toBe('HIGH');
-
-        // Distinct expense (different date & amount)
-        const noMatch = checkDuplicateExpense({
-            amount: 320,
+        // 2. Same merchant + exact amount + close date -> probable duplicate
+        const matchSimilar = checkDuplicateExpense({
+            vendor_name: 'โลตัส นครพนม',
+            amount: 320.50,
             expense_date: '2026-08-21',
-            vendor_name: 'PTT Gas'
+            invoice_no: ''
+        }, existingExpenses);
+        expect(matchSimilar).not.toBeNull();
+        expect(matchSimilar.isDuplicate).toBe(true);
+
+        // 3. Different amount and date -> not duplicate
+        const noMatch = checkDuplicateExpense({
+            vendor_name: 'ร้านป้าศรี',
+            amount: 99.00,
+            expense_date: '2026-08-22',
+            invoice_no: ''
         }, existingExpenses);
         expect(noMatch).toBeNull();
     });
@@ -202,8 +216,55 @@ describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Al
         expect(report.voidData.wholeBill.amount).toBe(75);
     });
 
-    it('should format multi-line three columns with strict column alignment and no overflow', () => {
-        const line = formatThreeCols('Set : จับคู่อาหารจานเดียว + Set : ใหญ่', 1, '149.00', 36);
+    it('should correctly calculate Lotus payout scenario without stale summary overrides', () => {
+        // User actual case scenario:
+        // Opening Float: 4,196.00
+        // Cash Sales: 159.00
+        // Adjustments:
+        //  - [out] 100 (แอ๊ด-น้ำแข็ง)
+        //  - [out] 1000 (แอ๊ด-ไปซื้อโครงไก่)
+        //  - [out] 167 (แอ๊ด-พัสดุพี่แบม)
+        //  - [in]  956 (แอ๊ด-เงินทอนโลตัส)
+        //  - [out] 127 (Add-โลตัส)
+        // Total In = 956.00
+        // Total Out = 100 + 1000 + 167 + 127 = 1,394.00
+        // Expected Cash = 4,196 + 159 + 956 - 1,394 = 3,917.00
+        // Actual Cash = 3,917.00 -> Difference = 0.00
+        const shiftData = {
+            id: 'shift_1787368383131',
+            staffName: 'Add',
+            openedAt: '2026-08-22T10:11:00.000Z',
+            closedAt: '2026-08-22T18:04:00.000Z',
+            openingFloat: 4196,
+            closedCash: 3917,
+            totalOut: 1267, // Stale totalOut passed in should NOT override actual adjustments!
+            totalIn: 956,
+            adjustments: [
+                { type: 'out', amount: 100, note: 'แอ๊ด-น้ำแข็ง' },
+                { type: 'out', amount: 1000, note: 'แอ๊ด-ไปซื้อโครงไก่' },
+                { type: 'out', amount: 167, note: 'แอ๊ด-พัสดุพี่แบม' },
+                { type: 'in',  amount: 956, note: 'แอ๊ด-เงินทอนโลตัส' },
+                { type: 'out', amount: 127, note: 'Add-โลตัส' }
+            ]
+        };
+
+        const mockBookings = [
+            { id: 'b_cash', status: 'completed', total_amount: 159, staff_remark: 'เงินสด', order_items: [] },
+            { id: 'b_qr',   status: 'completed', total_amount: 8491, staff_remark: 'QR PromptPay', order_items: [] }
+        ];
+
+        const report = compileShiftReportData(shiftData, mockBookings, []);
+
+        expect(report.totalIn).toBe(956);
+        expect(report.totalOut).toBe(1394); // Must be 1394 (including Lotus 127)
+        expect(report.expectedCash).toBe(3917);
+        expect(report.actualCash).toBe(3917);
+        expect(report.difference).toBe(0); // Perfect zero discrepancy!
+        expect(report.netSales).toBe(8650);
+    });
+
+    it('should format multi-line three columns with strict column alignment and no overflow for 3. น้ำเปล่าสิงห์', () => {
+        const line = formatThreeCols('3. น้ำเปล่าสิงห์ 600 มล', 4, '80.00', 36);
         const subLines = line.split('\n');
         expect(subLines.length).toBeGreaterThan(1);
         
@@ -212,10 +273,10 @@ describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Al
             expect(getPrinterCellWidth(l)).toBeLessThanOrEqual(36);
         });
 
-        // The last line must end with price '149.00' and contain quantity '1'
+        // The last line must end with price '80.00' and contain quantity '4'
         const lastLine = subLines[subLines.length - 1];
-        expect(lastLine).toContain('149.00');
-        expect(lastLine).toContain('1');
+        expect(lastLine).toContain('80.00');
+        expect(lastLine).toContain('4');
     });
 });
 

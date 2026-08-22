@@ -116,7 +116,12 @@ export async function checkAndRestoreActiveShift() {
                 
                 // Compare with local shift to prevent unnecessary updates if identical, but if different we update.
                 const localShift = getCurrentShift();
-                if (!localShift || localShift.id !== restoredShift.id) {
+                const isDifferent = !localShift || 
+                    localShift.id !== restoredShift.id ||
+                    (localShift.adjustments || []).length !== (restoredShift.adjustments || []).length ||
+                    (localShift.transactions || []).length !== (restoredShift.transactions || []).length;
+                
+                if (isDifferent) {
                      localStorage.setItem(CURRENT_SHIFT_KEY, JSON.stringify(restoredShift));
                      window.dispatchEvent(new Event('pos-shift-changed'));
                      console.log('[Shift Sync] Synced active shift from cloud:', restoredShift);
@@ -420,11 +425,11 @@ export function closeShift(actualCash, computedSummary = null) {
         
     const totalSales = cashSales + qrSales + creditSales;
     
-    const adjustments = shift.adjustments || [];
-    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + a.amount, 0);
-    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + a.amount, 0);
-    
-    const expectedCashInDrawer = computedSummary ? computedSummary.expectedCash : (shift.openingFloat + cashSales + totalIn - totalOut);
+    const adjustments = Array.isArray(shift.adjustments) ? shift.adjustments : [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const openingFloat = Number(shift.openingFloat) || 0;
+    const expectedCashInDrawer = openingFloat + cashSales + totalIn - totalOut;
     const diff = cashActual - expectedCashInDrawer;
     
     const closedShift = {

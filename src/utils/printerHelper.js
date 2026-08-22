@@ -825,7 +825,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const lines = str.split('\n');
         const processedLines = lines.map(line => {
             let processedLine = line;
-            const width = getPrinterCellWidth(processedLine, false);
+            const width = getPrinterCellWidth(processedLine, true);
             if (currentSizeW === 1) {
                 const targetCols = Math.floor(maxCols / 2);
                 const halfOffset = Math.floor(offset / 2);
@@ -1389,8 +1389,8 @@ function splitPrinterGraphemes(str) {
     return clusters;
 }
 
-// Measure string cell width for ESC/POS printing (Visual Thai character cells on thermal printhead)
-export function getPrinterCellWidth(str, useByteLength = false) {
+// Measure string cell width for ESC/POS printing (TIS-620 byte length on thermal printhead per Rule 3)
+export function getPrinterCellWidth(str, useByteLength = true) {
     if (str === null || str === undefined) return 0;
     if (useByteLength) return String(str).length;
     const clusters = splitPrinterGraphemes(str);
@@ -1399,14 +1399,14 @@ export function getPrinterCellWidth(str, useByteLength = false) {
 
 export function padEndPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return value + padChar.repeat(neededPadding);
 }
 
 export function padStartPrinter(str, targetWidth, padChar = ' ') {
     const value = String(str ?? '');
-    const neededPadding = targetWidth - getPrinterCellWidth(value, false);
+    const neededPadding = targetWidth - getPrinterCellWidth(value, true);
     if (neededPadding <= 0) return value;
     return padChar.repeat(neededPadding) + value;
 }
@@ -1440,7 +1440,7 @@ export function wrapTextByWords(str, maxColWidth) {
             output.push('');
             return;
         }
-        if (getPrinterCellWidth(paragraph, false) <= width) {
+        if (getPrinterCellWidth(paragraph, true) <= width) {
             output.push(paragraph);
             return;
         }
@@ -1493,7 +1493,7 @@ export function wrapTextByWords(str, maxColWidth) {
                     parenPhrase += words[j];
                     j++;
                 }
-                if (getPrinterCellWidth(currentLine + ' ' + parenPhrase, false) > width) {
+                if (getPrinterCellWidth(currentLine + ' ' + parenPhrase, true) > width) {
                     output.push(currentLine.trimEnd());
                     currentLine = leadingSpace + word;
                     continue;
@@ -1502,7 +1502,7 @@ export function wrapTextByWords(str, maxColWidth) {
 
             if (!currentLine) {
                 currentLine = leadingSpace;
-                if (getPrinterCellWidth(currentLine + word, false) <= width) {
+                if (getPrinterCellWidth(currentLine + word, true) <= width) {
                     currentLine += word;
                 } else {
                     flushLongWord(currentLine + word);
@@ -1512,7 +1512,7 @@ export function wrapTextByWords(str, maxColWidth) {
             }
 
             const candidate = currentLine + word;
-            if (getPrinterCellWidth(candidate, false) <= width) {
+            if (getPrinterCellWidth(candidate, true) <= width) {
                 currentLine = candidate;
                 continue;
             }
@@ -1521,7 +1521,7 @@ export function wrapTextByWords(str, maxColWidth) {
 
             output.push(currentLine.trimEnd());
             currentLine = leadingSpace;
-            if (getPrinterCellWidth(currentLine + word, false) <= width) {
+            if (getPrinterCellWidth(currentLine + word, true) <= width) {
                 currentLine += word;
             } else {
                 flushLongWord(currentLine + word);
@@ -1577,8 +1577,8 @@ export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null
     const defaultMidWidth = customMidWidth ?? (isSmall ? 4 : 5);
     const defaultRightWidth = customRightWidth ?? (isSmall ? 8 : 10);
 
-    const midWidth = Math.max(getPrinterCellWidth(midStr, false), defaultMidWidth);
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr, false), defaultRightWidth);
+    const midWidth = Math.max(getPrinterCellWidth(midStr, true), defaultMidWidth);
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), defaultRightWidth);
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (midWidth + rightWidth + 2 + minLeftWidth > totalWidth) {
@@ -1616,7 +1616,7 @@ export function formatTwoCols(left, right, maxCols, customRightWidth = null) {
     const isSmall = totalWidth <= 28;
     const leftStr = String(left ?? '');
     const rightStr = String(right ?? '');
-    const rightWidth = Math.max(getPrinterCellWidth(rightStr, false), customRightWidth ?? (isSmall ? 8 : 10));
+    const rightWidth = Math.max(getPrinterCellWidth(rightStr, true), customRightWidth ?? (isSmall ? 8 : 10));
     const minLeftWidth = isSmall ? 6 : 8;
 
     if (rightWidth + 1 + minLeftWidth > totalWidth) {
@@ -1839,10 +1839,14 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     const avgSalesPerBill = completedBookings.length > 0 ? (netSales / completedBookings.length) : 0;
     const avgSalesPerGuest = totalGuests > 0 ? (netSales / totalGuests) : 0;
 
-    // Deduct adjustments
-    const adjustments = shift.adjustments || [];
-    const totalIn = shift.totalIn !== undefined ? Number(shift.totalIn) : adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-    const totalOut = shift.totalOut !== undefined ? Number(shift.totalOut) : adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    // Deduct adjustments strictly from adjustments array when available
+    const adjustments = Array.isArray(shift.adjustments) ? shift.adjustments : [];
+    const totalIn = adjustments.length > 0 
+        ? adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+        : Number(shift.totalIn || 0);
+    const totalOut = adjustments.length > 0 
+        ? adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0)
+        : Number(shift.totalOut || 0);
 
     const openingFloat = Number(shift.openingFloat ?? 0);
     const finalCashSales = (bookingsData && bookingsData.length > 0) ? cashAmount : Number(shift.cashSales ?? cashAmount);
@@ -1960,7 +1964,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         const lines = str.split('\n');
         const processedLines = lines.map(line => {
             let processedLine = line;
-            const width = getPrinterCellWidth(processedLine, false);
+            const width = getPrinterCellWidth(processedLine, true);
             if (currentSizeW === 1) {
                 const targetCols = Math.floor(maxCols / 2);
                 const halfOffset = Math.floor(offset / 2);
