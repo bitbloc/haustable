@@ -229,7 +229,7 @@ export function OrderProvider({ children }) {
 
     const startPolling = useCallback(() => {
         stopPolling()
-        // Run silent polling every 8 seconds
+        // Run silent fallback polling every 30 seconds (only active when realtime is disconnected)
         pollingTimerRef.current = setInterval(async () => {
             if (!isOnline()) return
             try {
@@ -251,7 +251,7 @@ export function OrderProvider({ children }) {
             } catch (pollErr) {
                 console.warn('[Adaptive Polling Error]:', pollErr)
             }
-        }, 8000)
+        }, 30000)
     }, [fetchLiveOrders, fetchScheduleOrders, stopPolling])
 
     const cleanupChannel = useCallback(() => {

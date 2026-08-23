@@ -52,7 +52,7 @@ export function useHausmadeShop() {
                 const [catsRes, itemsRes, settingsRes] = await Promise.all([
                     supabase.from('menu_categories').select('*').order('display_order', { ascending: true }),
                     supabase.from('menu_items').select('*, menu_categories(*), menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true),
-                    supabase.from('app_settings').select('*')
+                    supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
                 ])
 
                 if (!isMounted) return

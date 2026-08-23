@@ -854,7 +854,34 @@ export default function POSDashboard() {
         // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
         const cleanupPrinterSync = initPrinterConfigSync();
 
+        // 1. Initial pending orders check
         checkPendingOrders();
+
+        // 2. Realtime Postgres Changes Listener (Instant 0-100ms Push Updates)
+        let checkDebounceTimer = null;
+        const debouncedCheckPending = () => {
+            if (checkDebounceTimer) clearTimeout(checkDebounceTimer);
+            checkDebounceTimer = setTimeout(() => {
+                checkPendingOrders();
+            }, 300);
+        };
+
+        const posBookingsRealtimeSub = supabase
+            .channel('pos-dashboard-bookings-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+                debouncedCheckPending();
+                if (payload.new?.id && activeBookingRef.current?.id === payload.new.id) {
+                    refreshActiveBookingItems(payload.new.id);
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, (payload) => {
+                debouncedCheckPending();
+                const bookingId = payload.new?.booking_id || payload.old?.booking_id;
+                if (bookingId && activeBookingRef.current?.id === bookingId) {
+                    refreshActiveBookingItems(bookingId);
+                }
+            })
+            .subscribe();
 
         // Android Foreground Wakeup / Network Reconnect Listener
         const handleForegroundWakeup = () => {
@@ -877,8 +904,8 @@ export default function POSDashboard() {
         window.addEventListener('pageshow', handleForegroundWakeup);
         window.addEventListener('online', handleOnlineStatus);
 
-        // Poll pending orders every 6 seconds as fallback to Supabase Realtime
-        const pollInterval = setInterval(checkPendingOrders, 6000);
+        // Adaptive 60-second backup heartbeat (instead of heavy 6-second polling)
+        const pollInterval = setInterval(checkPendingOrders, 60000);
 
         // Realtime sync: Auto-update draft cart item prices when menu items change
         const handlePosMenuUpdated = (e) => {
@@ -912,7 +939,9 @@ export default function POSDashboard() {
         window.addEventListener('pos-menu-updated', handlePosMenuUpdated);
 
         return () => {
+            if (checkDebounceTimer) clearTimeout(checkDebounceTimer);
             clearInterval(pollInterval);
+            supabase.removeChannel(posBookingsRealtimeSub);
             document.removeEventListener('visibilitychange', handleForegroundWakeup);
             window.removeEventListener('focus', handleForegroundWakeup);
             window.removeEventListener('pageshow', handleForegroundWakeup);

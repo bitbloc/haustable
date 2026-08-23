@@ -115,17 +115,22 @@ export default function AdminMembers() {
     useEffect(() => {
         fetchMembers()
 
+        let debounceTimer = null
+        const debouncedFetchMembers = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchMembers()
+            }, 500)
+        }
+
         const channel = supabase
             .channel('admin_members_realtime_sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
-                fetchMembers()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchMembers()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedFetchMembers)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchMembers)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
     }, [])

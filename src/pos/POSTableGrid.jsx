@@ -84,6 +84,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         const tablesSub = supabase.channel('pos-tables-layout')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, fetchTables)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
             .subscribe((status, err) => {
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
                     console.warn(`[Realtime POS Layout] Channel status: ${status}`, err || '');
@@ -100,10 +101,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // 10-second polling fallback to keep grid fresh if realtime fails
+        // 60-second background heartbeat fallback (Realtime handles instant updates)
         const pollInterval = setInterval(() => {
             fetchTables();
-        }, 10000);
+        }, 60000);
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
@@ -163,13 +164,19 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         
         fetchTimeoutRef.current = setTimeout(async () => {
             try {
+                const today = new Date();
+                const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+                const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Fetch active pending, seated, confirmed, ready bookings for store floorplan display
+                // Fetch active pending, seated, confirmed, ready bookings for today only
                 const { data: activeBookings } = await supabase
                     .from('bookings')
-                    .select('*')
-                    .in('status', ['pending', 'seated', 'confirmed', 'ready']);
+                    .select('id, table_id, status, booking_time, booking_type, staff_remark, customer_name, total_amount')
+                    .in('status', ['pending', 'seated', 'confirmed', 'ready'])
+                    .gte('booking_time', startOfToday)
+                    .lte('booking_time', endOfToday);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -179,9 +186,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 posCache.setBookings(currentBookings);
 
                 const now = new Date();
-                const today = new Date();
-                const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
-                const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
                 const merged = currentTables.map(t => {
                     const tableBookings = currentBookings.filter(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));

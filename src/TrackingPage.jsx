@@ -44,7 +44,7 @@ export default function TrackingPage() {
   // App Settings for Contact Info
   useEffect(() => {
     const fetchSettings = async () => {
-        const { data } = await supabase.from('app_settings').select('*')
+        const { data } = await supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
         if (data) {
              const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
              setSettings(map)

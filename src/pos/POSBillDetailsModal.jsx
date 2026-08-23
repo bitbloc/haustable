@@ -69,6 +69,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
             .from('app_settings')
             .select('key, value')
             .like('key', 'tax_%')
+            .not('key', 'eq', 'tax_signature_image')
             .then(({ data }) => {
                 if (data && data.length > 0) {
                     const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});

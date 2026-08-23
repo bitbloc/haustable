@@ -45,14 +45,21 @@ export default function AdminBookings() {
         fetchBookings()
         fetchTables()
 
+        let debounceTimer = null
+        const debouncedFetchBookings = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchBookings(false) // Silent refresh without full skeleton
+            }, 400)
+        }
+
         const channel = supabase
             .channel('admin-bookings-hub')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchBookings(false) // Silent refresh without full skeleton
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchBookings)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
     }, [])
@@ -74,7 +81,7 @@ export default function AdminBookings() {
     const fetchBookings = async (showLoadingState = true) => {
         if (showLoadingState) setLoading(true)
         try {
-            // 1. Fetch Bookings + Table Info + Order Items + Promos
+            // 1. Fetch Bookings + Table Info + Order Items + Promos (Recent 200)
             const { data: bookingsData, error: bookingsError } = await supabase
                 .from('bookings')
                 .select(`
@@ -92,6 +99,7 @@ export default function AdminBookings() {
                     )
                 `)
                 .order('created_at', { ascending: false })
+                .limit(200)
 
             if (bookingsError) throw bookingsError
 

@@ -70,7 +70,7 @@ export default function PickupPage() {
     useEffect(() => {
         const fetchSettings = async () => {
             // 2. Settings
-            const { data: settings } = await supabase.from('app_settings').select('*')
+            const { data: settings } = await supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
             if (settings) {
                 const map = settings.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
                 if (map.payment_qr_url) setQrCodeUrl(safeTimestampUrl(map.payment_qr_url))

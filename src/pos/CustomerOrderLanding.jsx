@@ -243,7 +243,7 @@ export default function CustomerOrderLanding() {
     // Live Fetch App Settings
     const fetchSettings = useCallback(async () => {
         try {
-            const { data: settingsData } = await supabase.from('app_settings').select('*');
+            const { data: settingsData } = await supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")');
             if (settingsData) {
                 const map = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                 setSettings(prev => ({ ...prev, ...map }));
@@ -400,7 +400,8 @@ export default function CustomerOrderLanding() {
             // 2. Fetch App Settings
             const { data: settingsData } = await supabase
                 .from('app_settings')
-                .select('*');
+                .select('key, value')
+                .not('key', 'in', '("tax_signature_image")');
             
             let loadedSettings = { ...settings };
             if (settingsData) {

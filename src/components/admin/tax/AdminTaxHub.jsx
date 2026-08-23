@@ -126,7 +126,8 @@ export default function AdminTaxHub() {
 
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('id, created_at, booking_time, total_amount, status, deposit_amount')
+                    .select('id, created_at, total_amount, deposit_amount, status')
+                    .eq('status', 'completed')
                     .gte('created_at', startOfYear)
                     .lte('created_at', endOfYear);
 

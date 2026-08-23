@@ -38,7 +38,7 @@ export function BookingProvider({ children }) {
                     { data: blockedDates } // New
                 ] = await Promise.all([
                     supabase.from('tables_layout').select('*'),
-                    supabase.from('app_settings').select('*'),
+                    supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")'),
                     supabase.auth.getUser(),
                     supabase.from('blocked_dates').select('blocked_date, reason') // New
                 ])

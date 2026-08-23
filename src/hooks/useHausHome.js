@@ -55,7 +55,7 @@ export const useHausHome = (session) => {
         // 2. Fetch Settings
         const fetchSettings = async () => {
             try {
-                const { data, error } = await supabase.from('app_settings').select('*')
+                const { data, error } = await supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
                 if (error) {
                     console.error("Settings Error:", error)
                     return

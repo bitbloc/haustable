@@ -33,14 +33,23 @@ export default function AdminDashboard() {
     useEffect(() => {
         fetchData()
 
+        let debounceTimer = null
+        const debouncedFetchData = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchData()
+            }, 300)
+        }
+
         // Real-time: Refresh on any booking or order items change
         const subscription = supabase
             .channel('public:admin-dashboard')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchData)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(subscription)
         }
     }, [selectedDate])

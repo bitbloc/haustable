@@ -201,7 +201,7 @@ export default function SlipModal({ booking, type, onClose }) {
             try {
                 const [optionsRes, settingsRes] = await Promise.all([
                     supabase.from('option_choices').select('id, name'),
-                    supabase.from('app_settings').select('*')
+                    supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
                 ]);
 
                 if (optionsRes.data) {

@@ -26,7 +26,7 @@ export function useHausmadeAdmin() {
                     .select('*, order_items(*, menu_items(*))')
                     .or('order_type.eq.hausmade_shipping,order_type.eq.hausmade_pickup,booking_type.eq.hausmade')
                     .order('created_at', { ascending: false }),
-                supabase.from('app_settings').select('*')
+                supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")')
             ])
 
             if (ordersRes.data) {
