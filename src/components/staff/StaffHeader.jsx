@@ -1,4 +1,4 @@
-import { ChefHat, Package, UserCheck, Bell, Home, LogOut, ArrowLeft } from 'lucide-react'
+import { ChefHat, Package, UserCheck, Bell, Home, LogOut, ArrowLeft, Shield } from 'lucide-react'
 
 export default function StaffHeader({ 
     title = "Live View", 
@@ -27,6 +27,13 @@ export default function StaffHeader({
                     </div>
                 </div>
                  <div className="flex gap-2">
+                    <button
+                         onClick={() => window.location.href = '/admin'}
+                         className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full transition-colors"
+                         title="Admin Hub"
+                    >
+                        <Shield className="w-5 h-5" />
+                    </button>
                     <button
                          onClick={() => window.location.href = '/staff/stock'}
                          className="p-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 rounded-full transition-colors relative"

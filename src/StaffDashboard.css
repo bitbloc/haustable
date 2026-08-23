@@ -361,7 +361,8 @@
 }
 
 /* Remove bottom border on last row */
-.sd-fn:nth-last-child(-n+2) {
+.sd-fn:last-child,
+.sd-fn:nth-last-child(2):nth-child(odd) {
   border-bottom: none;
 }
 

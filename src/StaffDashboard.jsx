@@ -15,7 +15,8 @@ import {
     RefreshCw,
     Users,
     UtensilsCrossed,
-    BookOpen
+    BookOpen,
+    Shield
 } from 'lucide-react';
 import usePushNotifications from './hooks/usePushNotifications';
 import { useNavigate } from 'react-router-dom';
@@ -300,6 +301,14 @@ export default function StaffDashboard() {
                 <div className="sd-header__actions">
                     <button 
                         className="sd-header__btn"
+                        onClick={() => navigate('/admin')}
+                        title="Admin Hub"
+                        aria-label="Go to Admin Hub"
+                    >
+                        <Shield />
+                    </button>
+                    <button 
+                        className="sd-header__btn"
                         onClick={() => window.location.href = '/booking'}
                         title="Live Booking"
                         aria-label="Go to live booking page"
@@ -364,16 +373,16 @@ export default function StaffDashboard() {
                     onClick={() => navigate('/staff/orders')}
                 />
                 <FunctionButton 
+                    title="POS" 
+                    desc="Point of Sale" 
+                    icon={UtensilsCrossed} 
+                    onClick={() => navigate('/pos')}
+                />
+                <FunctionButton 
                     title="Inventory" 
                     desc="Stock Levels" 
                     icon={Package} 
                     onClick={() => navigate('/staff/stock')}
-                />
-                <FunctionButton 
-                    title="Attendance" 
-                    desc="Time \u0026 Leaves" 
-                    icon={Users} 
-                    onClick={() => setShowAttendanceModal(true)}
                 />
                 <FunctionButton 
                     title="Check-in" 
@@ -382,22 +391,28 @@ export default function StaffDashboard() {
                     onClick={() => navigate('/staff/checkin')}
                 />
                 <FunctionButton 
+                    title="Attendance" 
+                    desc="Time & Leaves" 
+                    icon={Users} 
+                    onClick={() => setShowAttendanceModal(true)}
+                />
+                <FunctionButton 
                     title="History" 
                     desc="Past Records" 
                     icon={TrendingUp} 
                     onClick={() => navigate('/staff/history')}
                 />
                 <FunctionButton 
-                    title="POS" 
-                    desc="Point of Sale" 
-                    icon={UtensilsCrossed} 
-                    onClick={() => navigate('/pos')}
-                />
-                <FunctionButton 
                     title="Bar SOP" 
                     desc="Recipes" 
                     icon={BookOpen} 
                     onClick={() => navigate('/staff/sop')}
+                />
+                <FunctionButton 
+                    title="Admin Hub" 
+                    desc="Backoffice" 
+                    icon={Shield} 
+                    onClick={() => navigate('/admin')}
                 />
                 <FunctionButton 
                     title="Notifications" 
