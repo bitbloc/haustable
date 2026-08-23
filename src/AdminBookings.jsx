@@ -5,7 +5,7 @@ import {
     Search, Calendar, ChevronDown, ChevronUp, Check, X, Phone, User, Clock, 
     Printer, ChefHat, FileText, Trash2, ArrowUpDown, History, Image as ImageIcon, 
     Edit3, RefreshCw, Layers, Filter, CheckCircle, AlertCircle, Eye, Utensils,
-    DollarSign, Sparkles
+    DollarSign, Sparkles, Receipt
 } from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
@@ -885,24 +885,14 @@ export default function AdminBookings() {
                                                             <Edit3 size={13} />
                                                         </button>
 
-                                                        {/* Print Kitchen Slip */}
+                                                        {/* View / Copy Slip as PNG */}
                                                         <button 
                                                             type="button"
-                                                            onClick={() => handlePrint(booking, 'kitchen')} 
-                                                            className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
-                                                            title="Print Kitchen Slip"
+                                                            onClick={() => handlePrint(booking, booking.status === 'completed' ? 'receipt' : 'billing')} 
+                                                            className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors cursor-pointer" 
+                                                            title="เปิดดูภาพสลิป/PNG (คัดลอกรูปส่ง LINE หรือบันทึกรูป)"
                                                         >
-                                                            <ChefHat size={13} />
-                                                        </button>
-
-                                                        {/* Print Customer Bill */}
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handlePrint(booking, 'customer')} 
-                                                            className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
-                                                            title="Print Bill / Receipt"
-                                                        >
-                                                            <Printer size={13} />
+                                                            <Receipt size={13} />
                                                         </button>
 
                                                         {/* View Payment Slip */}
@@ -1096,11 +1086,12 @@ export default function AdminBookings() {
                 />
             )}
 
-            {/* Slip Modal */}
+            {/* Slip Modal (Admin Digital Bill & Receipt) */}
             {slipData && (
                 <SlipModal
                     booking={slipData.booking}
                     type={slipData.type}
+                    isAdmin={true}
                     onClose={() => setSlipData(null)}
                 />
             )}

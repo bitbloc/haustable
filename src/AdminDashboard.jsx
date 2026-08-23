@@ -492,11 +492,12 @@ export default function AdminDashboard() {
                 />
             )}
 
-            {/* Slip Modal (Receipt / Kitchen / Bar printing) */}
+            {/* Slip Modal (Admin Digital Bill & Receipt) */}
             {slipData && (
                 <SlipModal
                     booking={slipData.booking}
                     type={slipData.type}
+                    isAdmin={true}
                     onClose={() => setSlipData(null)}
                 />
             )}

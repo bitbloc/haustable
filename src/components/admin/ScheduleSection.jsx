@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React from 'react'
 import { formatThaiTimeOnly } from '../../utils/timeUtils'
-import { Printer, CheckCircle, ChefHat, Image as ImageIcon } from 'lucide-react'
+import { Printer, CheckCircle, Image as ImageIcon, Receipt } from 'lucide-react'
 
 export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip }) {
     if (loading) {
@@ -136,24 +136,14 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
 
                                         <td className="p-3.5 pr-5 text-right">
                                             <div className="flex justify-end items-center gap-1.5">
-                                                {/* Print Kitchen Slip */}
+                                                {/* View / Copy Slip as PNG */}
                                                 <button 
                                                     type="button"
-                                                    onClick={() => onPrint && onPrint(booking, 'kitchen')} 
-                                                    className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
-                                                    title="Print Kitchen Slip"
+                                                    onClick={() => onPrint && onPrint(booking, booking.status === 'completed' ? 'receipt' : 'billing')} 
+                                                    className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors cursor-pointer" 
+                                                    title="เปิดดูภาพสลิป/PNG (คัดลอกรูปส่ง LINE หรือบันทึกรูป)"
                                                 >
-                                                    <ChefHat size={14} />
-                                                </button>
-
-                                                {/* Print Customer Bill */}
-                                                <button 
-                                                    type="button"
-                                                    onClick={() => onPrint && onPrint(booking, 'customer')} 
-                                                    className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors" 
-                                                    title="Print Customer Bill"
-                                                >
-                                                    <Printer size={14} />
+                                                    <Receipt size={14} />
                                                 </button>
 
                                                 {/* View Slip */}

@@ -582,24 +582,15 @@ export default function AllDailyBillsHub({
                                             </button>
                                         )}
 
-                                        {/* Print / View Slip as PNG */}
+                                        {/* View / Copy Slip as PNG */}
                                         <button
+                                            type="button"
                                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
                                             className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                            title="เปิดดูภาพสลิปใบเสร็จ (สามารถกด Save เป็นภาพ PNG หรือพิมพ์ได้)"
+                                            title="เปิดดูภาพสลิปใบแจ้งยอด/ใบเสร็จ (คัดลอกรูปส่งลูกค้า LINE หรือ Save PNG)"
                                         >
                                             <Receipt size={13} />
                                             <span>ภาพสลิป/PNG</span>
-                                        </button>
-
-                                        {/* Print Kitchen */}
-                                        <button
-                                            onClick={() => onPrintSlip && onPrintSlip(b, 'kitchen')}
-                                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                                            title="พิมพ์ใบส่งครัว"
-                                        >
-                                            <ChefHat size={13} />
-                                            <span>ใบครัว</span>
                                         </button>
 
                                         {/* Tax Invoice Modal Trigger */}

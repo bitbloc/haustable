@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
+import { formatOrderItemOptions } from '../../utils/menuHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -16,25 +17,31 @@ const BAR_CATEGORIES = [
     '8a3dcc6b-9eff-42b2-83d5-1e02dd0a98cd'  // PRO Beer
 ];
 
-export default function SlipModal({ booking, type, onClose }) {
+export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
     const [isPrinting, setIsPrinting] = useState(false)
     const [optionMap, setOptionMap] = useState({})
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
     // Determine initial tab:
-    // If type === 'kitchen', default to kitchen.
+    // If isAdmin: only 'billing' or 'receipt'
+    // If type === 'kitchen', default to kitchen (non-admin).
     // Else if status === 'completed', default to receipt.
     // Else, default to billing.
     const getInitialTab = () => {
+        if (isAdmin) {
+            const isPaid = booking?.status === 'completed' || booking?.status === 'paid' || booking?.status === 'success'
+            return (type === 'receipt' || isPaid) ? 'receipt' : 'billing'
+        }
         if (type === 'kitchen') return 'kitchen'
-        if (booking?.status === 'completed') return 'receipt'
+        if (booking?.status === 'completed' || booking?.status === 'paid' || booking?.status === 'success') return 'receipt'
         return 'billing'
     }
     const [activeTab, setActiveTab] = useState(getInitialTab)
-    const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+    const isKitchenTab = !isAdmin && (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all');
 
     const getIsAutoPrintingInitial = () => {
+        if (isAdmin) return false;
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
             let config = {};
@@ -251,7 +258,12 @@ export default function SlipModal({ booking, type, onClose }) {
                 console.error("Failed to load options/settings:", err);
             }
 
-            // 3. Check printer configuration
+            // 3. Skip Auto Print completely if in Admin Mode
+            if (isAdmin) {
+                return;
+            }
+
+            // 4. Check printer configuration
             let printerType = 'sunmi';
             try {
                 const stored = localStorage.getItem('onhaus_printer_config');
@@ -1120,52 +1132,20 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     }
 
-    // Jagged Edge CSS (Simulated on Screen)
-    const jaggedCss = `
-        .ticket-visual {
-            position: relative;
-            background: #fff;
-            filter: drop-shadow(0px 2px 10px rgba(0,0,0,0.1));
-        }
-        .ticket-visual::before, .ticket-visual::after {
-            content: "";
-            position: absolute;
-            left: 0;
-            width: 100%;
-            height: 10px;
-            background-size: 20px 20px;
-            background-repeat: repeat-x;
-        }
-        .ticket-visual::before {
-            top: -10px;
-            background: radial-gradient(circle at 10px 15px, transparent 10px, #fff 11px);
-            background-size: 20px 20px;
-            transform: rotate(180deg);
-        }
-        .ticket-visual::after {
-            bottom: -10px;
-            background: radial-gradient(circle at 10px 15px, transparent 10px, #fff 11px);
-            background-size: 20px 20px;
-        }
-    `
-
     const queueNo = getShortBookingId(booking)
     const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString()
     const orderPlacedStr = new Date(orderPlacedAtRaw).toLocaleString('th-TH', {
         year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
-    })
-    const formattedBookingTimeStr = new Date(booking.booking_time || Date.now()).toLocaleString('th-TH', { 
-        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
     })
     const remarkLower = (booking.staff_remark || '').toLowerCase()
     const noteLower = (booking.customer_note || '').toLowerCase()
     const sourceLower = (booking.source || '').toLowerCase()
     const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr')
-    const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr'
     
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
     const discountAmount = Number(booking.discount_amount) || 0;
+    const depositAmount = Number(booking.deposit_amount) || 0;
     const displayTotalAmount = (discountAmount > 0 && Math.abs(Number(booking.total_amount) - subtotal) < 1)
         ? Math.max(0, subtotal - discountAmount)
         : (booking.total_amount || Math.max(0, subtotal - discountAmount));
@@ -1175,360 +1155,455 @@ export default function SlipModal({ booking, type, onClose }) {
     }
 
     return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-            <style>{jaggedCss}</style>
-            <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 md:p-6 overflow-y-auto animate-in fade-in duration-150">
+            <div className="bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col max-h-[92vh]">
                 
                 {/* Header */}
-                <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD]">
-                    <h3 className="font-mono font-bold text-xs uppercase tracking-widest">Ticket Preview</h3>
-                    <button onClick={onClose} className="p-2 hover:bg-[#E0E0DC] text-[#767673] hover:text-[#1A1A1A] rounded-full transition-colors"><X size={18} /></button>
-                </div>
-
-                {/* Interactive Tabs */}
-                <div className="flex bg-[#E0E0DC] border border-[#D1D1CD] p-1 rounded-xl mx-4 mt-4 gap-1">
+                <div className="p-3.5 px-4 bg-white border-b border-[oklch(85%_0.012_28)] flex justify-between items-center text-[oklch(18%_0.012_28)]">
+                    <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-xs uppercase tracking-widest text-[oklch(18%_0.012_28)]">
+                            {isAdmin ? 'สลิปใบเสร็จ / BILL & RECEIPT' : 'Ticket Preview'}
+                        </span>
+                        <span className="font-mono text-[11px] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] px-1.5 py-0.5 rounded-sm">
+                            #{queueNo}
+                        </span>
+                    </div>
                     <button 
-                        onClick={() => setActiveTab('kitchen')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'kitchen' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                        type="button"
+                        onClick={onClose} 
+                        className="p-1 rounded-sm hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-black transition-colors cursor-pointer"
                     >
-                        ใบสั่งครัว (Kitchen)
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('bar')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'bar' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        ใบสั่งบาร์ (Bar)
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('other')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'other' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        ใบสั่งอื่นๆ (Other)
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('billing')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'billing' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        ใบแจ้งยอด (Bill)
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('receipt')} 
-                        className={`flex-1 py-2 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${activeTab === 'receipt' ? 'bg-white text-[#1A1A1A] border border-[#B0B0AC] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
-                    >
-                        ใบเสร็จ (Receipt)
+                        <X size={18} />
                     </button>
                 </div>
 
-                {/* Payment Method Selector (Only for Billing / Receipt tabs) */}
-                {(activeTab === 'billing' || activeTab === 'receipt') && (
-                    <div className="flex items-center justify-between bg-white border border-[#D1D1CD] p-3 rounded-xl mx-4 mt-3">
-                        <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">ช่องทางชำระเงิน / Payment:</span>
-                        <div className="flex gap-1.5">
+                {/* Tabs Switcher */}
+                <div className="p-3 pb-0 bg-[oklch(97%_0.008_28)]">
+                    {isAdmin ? (
+                        /* Admin Mode: 2 clean tabs only (Bill vs Receipt) */
+                        <div className="grid grid-cols-2 bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] p-1 rounded-lg gap-1">
                             <button 
-                                onClick={() => setPaymentMethod('cash')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                type="button"
+                                onClick={() => setActiveTab('billing')} 
+                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'billing' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
                             >
-                                เงินสด (CASH)
+                                ใบแจ้งยอด (Bill & QR)
                             </button>
                             <button 
-                                onClick={() => setPaymentMethod('qr')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
+                                type="button"
+                                onClick={() => setActiveTab('receipt')} 
+                                className={`py-2 rounded-md font-sans font-bold text-xs transition-all cursor-pointer ${activeTab === 'receipt' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)]' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
                             >
-                                โอนเงิน (QR)
-                            </button>
-                            <button 
-                                onClick={() => setPaymentMethod('credit')}
-                                className={`px-2 py-1.5 rounded-lg font-mono font-bold text-[9px] uppercase tracking-wider transition-colors ${paymentMethod === 'credit' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]' : 'bg-[#F5F5F2] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] hover:border-[#B0B0AC]'}`}
-                            >
-                                บัตร (CREDIT)
+                                ใบเสร็จรับเงิน (Receipt)
                             </button>
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        /* POS / Staff Mode: All tabs */
+                        <div className="flex bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] p-1 rounded-lg gap-1 overflow-x-auto">
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('kitchen')} 
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'kitchen' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                            >
+                                ครัว (Kitchen)
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('bar')} 
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'bar' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                            >
+                                บาร์ (Bar)
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('other')} 
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'other' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                            >
+                                อื่นๆ (Other)
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('billing')} 
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'billing' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                            >
+                                แจ้งยอด (Bill)
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('receipt')} 
+                                className={`flex-1 py-1.5 px-2 rounded-md font-mono font-bold text-[9px] uppercase tracking-wider transition-colors whitespace-nowrap ${activeTab === 'receipt' ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs' : 'text-[oklch(42%_0.010_28)] hover:text-black'}`}
+                            >
+                                ใบเสร็จ (Receipt)
+                            </button>
+                        </div>
+                    )}
 
-                {/* Preview Window */}
-                <div className="flex-1 overflow-y-auto py-6 px-4 bg-[#ECECE9] border-t border-b border-[#D1D1CD] flex flex-col items-center mt-4">
+                    {/* Payment Method Selector (Only for Billing / Receipt tabs) */}
+                    {(activeTab === 'billing' || activeTab === 'receipt') && (
+                        <div className="flex items-center justify-between bg-white border border-[oklch(85%_0.012_28)] p-2 px-3 rounded-lg mt-2.5">
+                            <span className="text-[11px] font-sans font-bold text-[oklch(42%_0.010_28)]">
+                                ช่องทางชำระเงิน:
+                            </span>
+                            <div className="flex gap-1">
+                                <button 
+                                    type="button"
+                                    onClick={() => setPaymentMethod('qr')}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'qr' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                >
+                                    โอนเงิน (QR)
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setPaymentMethod('cash')}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'cash' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                >
+                                    เงินสด (CASH)
+                                </button>
+                                <button 
+                                    type="button"
+                                    onClick={() => setPaymentMethod('credit')}
+                                    className={`px-2.5 py-1 rounded font-sans font-bold text-[11px] transition-colors cursor-pointer ${paymentMethod === 'credit' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'}`}
+                                >
+                                    บัตร (CREDIT)
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Preview Window (Dieter Rams + Thai Modern) */}
+                <div className="flex-1 overflow-y-auto py-4 px-3 md:px-4 bg-[oklch(93%_0.010_28)] flex justify-center items-start mt-2.5 border-t border-b border-[oklch(85%_0.012_28)]">
                     <div 
                         ref={slipRef} 
-                        className="ticket-visual bg-[#fdfdfd] text-black pt-8 pb-10 px-8 w-[340px] origin-top mt-4 mb-6"
-                        style={{ fontFamily: "'Courier Prime', 'Courier New', monospace" }}
+                        className="bg-white text-[oklch(18%_0.012_28)] p-6 rounded-md border border-[oklch(85%_0.012_28)] shadow-md w-full max-w-[340px] font-sans select-none space-y-4 my-1"
                     >
-                        {/* BRAND HEADER (Hide for kitchen/bar order to make it neat) */}
-                        {activeTab !== 'kitchen' && activeTab !== 'bar' ? (
-                            <div className="text-center mb-4 flex flex-col items-center">
-                                {/* Logo */}
-                                <img 
-                                    src={receiptShopLogoUrl || '/receipt-logo.png'} 
-                                    alt="Logo" 
-                                    className="w-24 h-auto mb-2 object-contain contrast-125" 
-                                    onError={(e) => {
-                                        if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
-                                            e.target.src = '/receipt-logo.png';
-                                        }
-                                    }}
-                                />
+                        {/* BRAND HEADER */}
+                        {!isKitchenTab && (
+                            <div className="text-center space-y-1 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                                <div className="flex justify-center mb-1.5">
+                                    <img 
+                                        src={receiptShopLogoUrl || '/receipt-logo.png'} 
+                                        alt="Logo" 
+                                        className="h-10 w-auto object-contain" 
+                                        onError={(e) => {
+                                            if (e.target.src !== `${window.location.origin}/receipt-logo.png`) {
+                                                e.target.src = '/receipt-logo.png';
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                    {receiptShopName || 'IN THE HAUS'}
+                                </div>
+                                {receiptShopAddress && (
+                                    <div className="text-[10px] text-[oklch(55%_0.010_28)] leading-tight max-w-[260px] mx-auto">
+                                        {receiptShopAddress}
+                                    </div>
+                                )}
+                                {(receiptShopPhone || receiptShopVat) && (
+                                    <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                        {receiptShopPhone && <span>TEL: {receiptShopPhone} </span>}
+                                        {receiptShopVat && <span>| TAX ID: {receiptShopVat}</span>}
+                                    </div>
+                                )}
                             </div>
-                        ) : null}
+                        )}
 
-                        {/* Prominent Table Name */}
-                        <div className="text-center mb-5">
-                            <div className="inline-block border-2 border-black rounded-md px-6 py-2">
-                                <span className="text-sm font-bold block leading-none text-gray-500 uppercase tracking-wider text-[8px] mb-1">TABLE / โต๊ะ</span>
-                                <span className="text-3xl font-black leading-none block">
-                                    {booking.tables_layout?.table_name || 'PICKUP'}
+                        {/* DOCUMENT TITLE & ORDER TYPE BADGE */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs font-mono font-bold border-b border-[oklch(88%_0.010_28)] pb-1.5">
+                                <span className="uppercase text-[oklch(42%_0.010_28)]">
+                                    {activeTab === 'kitchen' ? 'ใบสั่งครัว (KITCHEN)' : activeTab === 'bar' ? 'ใบสั่งบาร์ (BAR)' : activeTab === 'other' ? 'ใบสั่งอื่นๆ (OTHER)' : activeTab === 'billing' ? 'ใบแจ้งยอดชำระเงิน / BILL' : 'ใบเสร็จรับเงิน / RECEIPT'}
                                 </span>
+                                <span className="text-[oklch(18%_0.012_28)]">
+                                    #{queueNo}
+                                </span>
+                            </div>
+
+                            {/* Table / Order Channel Banner (Clean Dieter Rams Structural Block) */}
+                            <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(88%_0.010_28)] p-2.5 rounded-sm flex items-center justify-between">
+                                <div>
+                                    <span className="text-[9px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block leading-none">
+                                        {booking.tables_layout ? 'TABLE / โต๊ะ' : 'ORDER TYPE / ประเภท'}
+                                    </span>
+                                    <span className="text-xl font-black text-[oklch(18%_0.012_28)] leading-tight block mt-0.5">
+                                        {booking.tables_layout?.table_name || (isPickupOrder ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน')}
+                                    </span>
+                                </div>
+                                <div className="text-right font-mono text-xs">
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PAX / จำนวน</span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)]">{booking.pax || 1} ท่าน</span>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Meta Grid */}
-                        <div className="grid grid-cols-2 gap-y-1.5 text-[10px] font-bold border-b-2 border-dashed border-black pb-4 mb-4">
-                            <div className="text-gray-500">QUEUE NO.</div>
-                            <div className="text-right font-mono">#{queueNo}</div>
-                            
-                            {isPickupOrder ? (
-                                <>
-                                    <div className="text-gray-500">ORDER TIME</div>
-                                    <div className="text-right">{orderPlacedStr}</div>
+                        {/* Order Metadata Grid */}
+                        <div className="grid grid-cols-2 gap-y-1 text-[11px] border-b border-[oklch(88%_0.010_28)] pb-2.5 font-mono">
+                            <span className="text-[oklch(55%_0.010_28)]">วันที่ & เวลา:</span>
+                            <span className="text-right text-[oklch(18%_0.012_28)] font-semibold">{orderPlacedStr}</span>
 
-                                    <div className="text-gray-500 text-red-600 font-extrabold">PICKUP TIME</div>
-                                    <div className="text-right text-red-600 font-black">{formattedBookingTimeStr}</div>
-                                </>
-                            ) : isOnlineBooking ? (
-                                <>
-                                    <div className="text-gray-500">BOOKED AT</div>
-                                    <div className="text-right">{orderPlacedStr}</div>
-
-                                    <div className="text-gray-500 text-red-600 font-extrabold">RESERVED TIME</div>
-                                    <div className="text-right text-red-600 font-black">{formattedBookingTimeStr}</div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="text-gray-500">DATE & TIME</div>
-                                    <div className="text-right">{orderPlacedStr}</div>
-                                </>
-                            )}
-                            
-                            <div className="text-gray-500">GUEST</div>
-                            <div className="text-right break-words">{booking.profiles?.display_name || booking.pickup_contact_name || 'Guest'}</div>
-
-                            <div className="text-gray-500">PAX / จำนวนคน</div>
-                            <div className="text-right font-bold">{booking.pax || 1} คน</div>
+                            <span className="text-[oklch(55%_0.010_28)]">ลูกค้า:</span>
+                            <span className="text-right text-[oklch(18%_0.012_28)] font-semibold truncate">
+                                {booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป'}
+                            </span>
 
                             {(booking.profiles?.phone_number || booking.pickup_contact_phone) && (
                                 <>
-                                    <div className="text-gray-500">PHONE</div>
-                                    <div className="text-right">{booking.profiles?.phone_number || booking.pickup_contact_phone}</div>
+                                    <span className="text-[oklch(55%_0.010_28)]">โทรศัพท์:</span>
+                                    <span className="text-right text-[oklch(18%_0.012_28)] font-semibold">
+                                        {booking.profiles?.phone_number || booking.pickup_contact_phone}
+                                    </span>
                                 </>
                             )}
                         </div>
 
-                        {/* Items */}
-                        <div className="space-y-3 mb-5">
-                            <div className="text-[9px] font-black uppercase tracking-widest text-right mb-1 opacity-55">
-                                {activeTab === 'kitchen' ? 'KITCHEN ITEMS' : activeTab === 'bar' ? 'BAR ITEMS' : activeTab === 'other' ? 'OTHER ITEMS' : '01. ITEMS'}
+                        {/* ORDER ITEMS LIST */}
+                        <div className="space-y-2.5">
+                            <div className="flex justify-between items-center text-[10px] font-mono font-bold uppercase text-[oklch(55%_0.010_28)] border-b border-[oklch(88%_0.010_28)] pb-1">
+                                <span>รายการอาหาร (ITEMS)</span>
+                                {!isKitchenTab && <span>จำนวนเงิน</span>}
                             </div>
-                            {selectItemsForTab(booking.order_items || [], activeTab, printerConfig).map((item, idx) => {
-                                let optionsList = []
-                                if (Array.isArray(item.selected_options)) {
-                                     optionsList = item.selected_options.map(opt => {
-                                         if (typeof opt === 'object' && opt !== null) {
-                                             if (opt.group_name && opt.name) {
-                                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                                 return `${opt.group_name}: ${opt.name}${priceStr}`;
-                                             }
-                                             if (opt.name) {
-                                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                                 return `${opt.name}${priceStr}`;
-                                             }
-                                             return JSON.stringify(opt);
-                                         }
-                                         return getOptionName(opt);
-                                     });
-                                } else if (typeof item.selected_options === 'object') {
-                                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
-                                        if (Array.isArray(val)) {
-                                            return val.map(id => getOptionName(id));
-                                        }
-                                        return [`${key}: ${val}`];
-                                    });
-                                }
-                                
-                                return (
-                                    <div key={idx} className="text-xs">
-                                        <div className="flex justify-between font-bold items-baseline gap-2 mb-0.5">
-                                            <span className="w-6 shrink-0 text-sm font-black">{item.quantity}x</span>
-                                            <span className="grow font-bold uppercase text-[13px] tracking-tight leading-4">{item.custom_name || item.name || item.menu_items?.name || 'Item'}</span>
-                                            {activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && (
-                                                <span className="shrink-0 font-mono font-normal">{(item.price_at_time * item.quantity).toLocaleString()}</span>
+
+                            <div className="space-y-2">
+                                {selectItemsForTab(booking.order_items || [], activeTab, printerConfig).map((item, idx) => {
+                                    const optList = formatOrderItemOptions(item.selected_options, item.item_note || item.notes || item.special_instructions || item.remark)
+                                    const unitPrice = Number(item.price_at_time || 0)
+                                    const lineTotal = unitPrice * (item.quantity || 1)
+
+                                    return (
+                                        <div key={idx} className="text-xs space-y-0.5 border-b border-[oklch(93%_0.008_28)] last:border-0 pb-1.5 last:pb-0">
+                                            <div className="flex justify-between items-start gap-2">
+                                                <div className="flex items-baseline gap-1.5 grow">
+                                                    <span className="font-mono font-black text-xs text-[oklch(18%_0.012_28)] shrink-0">
+                                                        {item.quantity}x
+                                                    </span>
+                                                    <span className="font-bold text-[oklch(18%_0.012_28)] leading-snug">
+                                                        {item.custom_name || item.name || item.menu_items?.name || 'รายการสินค้า'}
+                                                    </span>
+                                                </div>
+                                                {!isKitchenTab && (
+                                                    <span className="font-mono text-right shrink-0 text-[oklch(18%_0.012_28)] font-medium">
+                                                        ฿{lineTotal.toLocaleString()}
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {optList.length > 0 && (
+                                                <div className="pl-5 space-y-0.5">
+                                                    {optList.map((opt, oIdx) => (
+                                                        <div key={oIdx} className="text-[10px] text-[oklch(45%_0.010_28)] font-sans leading-tight">
+                                                            • {opt}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             )}
                                         </div>
-                                        {optionsList.length > 0 && (
-                                            <div className={`pl-6 space-y-1 ${isKitchenTab ? 'text-[13px] font-bold text-black border-l-2 border-black ml-1 pl-2.5 my-1 leading-snug' : 'text-[10px] text-black font-bold border-l-2 border-black ml-1 pl-2.5'}`}>
-                                                {optionsList.map((opt, i) => <div key={i}>▶ {opt}</div>)}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
+                                    )
+                                })}
+                            </div>
                         </div>
 
-                        {/* Totals (Hide for kitchen/bar) */}
-                        {activeTab !== 'kitchen' && activeTab !== 'bar' && (
-                            <div className="border-t-2 border-black pt-3.5 mb-4">
-                                <div className="flex justify-between text-xs mb-1 font-bold text-gray-500">
-                                    <span>SUBTOTAL</span>
-                                    <span>{subtotal.toLocaleString()}</span>
+                        {/* TOTALS SUMMARY */}
+                        {!isKitchenTab && (
+                            <div className="border-t-2 border-[oklch(18%_0.012_28)] pt-2.5 space-y-1.5 font-mono text-xs">
+                                <div className="flex justify-between text-[oklch(55%_0.010_28)]">
+                                    <span>รวมค่าอาหาร (SUBTOTAL):</span>
+                                    <span>฿{subtotal.toLocaleString()}</span>
                                 </div>
-                                 {booking.discount_amount > 0 && (
-                                    <div className="flex justify-between text-xs mb-1 font-bold text-green-600">
-                                        <span>DISCOUNT</span>
-                                        <span>-{booking.discount_amount.toLocaleString()}</span>
+
+                                {discountAmount > 0 && (
+                                    <div className="flex justify-between text-[oklch(45%_0.08_140)] font-semibold">
+                                        <span>ส่วนลด (DISCOUNT):</span>
+                                        <span>-฿{discountAmount.toLocaleString()}</span>
                                     </div>
                                 )}
-                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
-                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                </div>
-                                <div className="flex justify-between items-end pt-1">
-                                    <span className="font-black text-xs uppercase tracking-wider">TOTAL AMOUNT</span>
-                                    <span className="font-black text-xl leading-none">{Math.ceil(displayTotalAmount).toLocaleString()}</span>
+
+                                {depositAmount > 0 && (
+                                    <div className="flex justify-between text-[oklch(35%_0.10_220)] font-semibold">
+                                        <span>มัดจำล่วงหน้า (DEPOSIT):</span>
+                                        <span>-฿{depositAmount.toLocaleString()}</span>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-between items-baseline pt-2 border-t border-[oklch(88%_0.010_28)] text-[oklch(18%_0.012_28)]">
+                                    <span className="font-bold text-xs uppercase">
+                                        ยอดสุทธิ (TOTAL AMOUNT):
+                                    </span>
+                                    <span className="text-xl font-black">
+                                        ฿{Math.ceil(displayTotalAmount).toLocaleString()}
+                                    </span>
                                 </div>
                             </div>
                         )}
 
-                        {/* CRM Member Details Section (Only for Receipt/Billing) */}
-                        {activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && booking.profiles && (
-                            <div className="border-t-2 border-black pt-3 mb-4 text-xs font-mono font-bold">
-                                <div className="text-center font-black uppercase tracking-wider text-[10px] mb-2 bg-black text-white py-0.5">--- MEMBER ---</div>
-                                
-                                <div className="flex justify-between mb-1">
-                                    <span className="text-gray-600">ชื่อสมาชิก</span>
+                        {/* CRM MEMBER DETAILS */}
+                        {!isKitchenTab && booking.profiles && (
+                            <div className="bg-[oklch(96%_0.008_28)] p-2.5 rounded-sm border border-[oklch(88%_0.010_28)] text-[11px] font-mono space-y-1">
+                                <div className="flex justify-between font-bold text-[oklch(42%_0.010_28)] text-[10px] uppercase border-b border-[oklch(88%_0.010_28)] pb-0.5">
+                                    <span>MEMBER</span>
                                     <span>{booking.profiles.display_name || '-'}</span>
                                 </div>
-                                {booking.profiles.phone_number && (
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-gray-600">เบอร์โทรศัพท์</span>
-                                        <span>{booking.profiles.phone_number}</span>
+                                {Number(booking.xhaus_earned) > 0 && (
+                                    <div className="flex justify-between text-[oklch(45%_0.08_140)]">
+                                        <span>ได้รับแต้ม xhaus:</span>
+                                        <span>+{Number(booking.xhaus_earned).toLocaleString()} xhaus</span>
                                     </div>
                                 )}
-                                
-                                {(Number(booking.xhaus_earned) > 0 || Number(booking.xhaus_redeemed) > 0) && (
-                                    <>
-                                        <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
-                                            {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                        </div>
-                                        {Number(booking.xhaus_earned) > 0 && (
-                                            <div className="flex justify-between mb-1 text-green-600">
-                                                <span>ได้รับ xhaus ครั้งนี้</span>
-                                                <span>+{Number(booking.xhaus_earned).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus</span>
-                                            </div>
-                                        )}
-                                        {Number(booking.xhaus_redeemed) > 0 && (
-                                            <div className="flex justify-between mb-1 text-amber-600">
-                                                <span>ตัดยอดแต้มที่ใช้ไป</span>
-                                                <span>-{Number(booking.xhaus_redeemed).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus {Number(booking.xhaus_discount || 0) > 0 && `(-฿${Number(booking.xhaus_discount).toLocaleString()})`}</span>
-                                            </div>
-                                        )}
-                                    </>
+                                {Number(booking.xhaus_redeemed) > 0 && (
+                                    <div className="flex justify-between text-[oklch(52%_0.16_28)]">
+                                        <span>ใช้แต้ม xhaus:</span>
+                                        <span>-{Number(booking.xhaus_redeemed).toLocaleString()} xhaus</span>
+                                    </div>
                                 )}
                             </div>
                         )}
 
-                        {/* Payment Details Section (Only for Receipt) */}
+                        {/* BILL TAB: DYNAMIC PROMPTPAY QR CODE */}
+                        {activeTab === 'billing' && qrCodeUrl && (
+                            <div className="pt-2 border-t border-[oklch(88%_0.010_28)] text-center space-y-1.5 flex flex-col items-center">
+                                <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-[oklch(42%_0.010_28)]">
+                                    SCAN TO PAY / สแกนชำระเงิน
+                                </span>
+                                <div className="p-2 bg-white rounded-lg border border-[oklch(85%_0.012_28)] shadow-xs">
+                                    <img 
+                                        src={qrCodeUrl} 
+                                        alt="PromptPay QR" 
+                                        className="w-36 h-36 object-contain" 
+                                    />
+                                </div>
+                                <span className="text-[9px] text-[oklch(55%_0.010_28)] font-mono">
+                                    IN THE HAUS PROMPTPAY
+                                </span>
+                            </div>
+                        )}
+
+                        {/* RECEIPT TAB: PAYMENT METHOD & STATUS (Dieter Rams Minimalist Banner, No decorative stamp) */}
                         {activeTab === 'receipt' && (() => {
                             const isCash = paymentMethod === 'cash';
                             const totalAmt = Number(booking.total_amount) || displayTotalAmount;
                             const cashDetails = isCash ? extractCashDetails(booking, totalAmt) : null;
+                            const paymentLabel = isCash 
+                                ? 'เงินสด (CASH)' 
+                                : (paymentMethod === 'credit' ? 'บัตรเครดิต (CREDIT)' : 'โอนเงินผ่าน QR (PROMPTPAY)');
+
                             return (
-                                <>
-                                    <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
-                                        {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                    </div>
-                                    <div className="py-2 my-1 text-center flex flex-col items-center">
-                                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-600">
-                                            Payment Method: {isCash ? 'CASH / เงินสด' : (paymentMethod === 'credit' ? 'CREDIT CARD / บัตรเครดิต' : 'QR TRANSFER / โอนเงินผ่าน QR')}
+                                <div className="pt-2 border-t border-[oklch(88%_0.010_28)] space-y-2">
+                                    <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2.5 rounded-sm space-y-1 font-mono text-xs">
+                                        <div className="flex justify-between items-center text-[10px] uppercase font-bold text-[oklch(42%_0.010_28)]">
+                                            <span>สถานะการชำระ:</span>
+                                            <span className="text-[oklch(45%_0.08_140)] font-black">PAID / ชำระแล้ว</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1 border-t border-[oklch(90%_0.008_28)]">
+                                            <span className="text-[oklch(55%_0.010_28)]">ช่องทางชำระ:</span>
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">{paymentLabel}</span>
                                         </div>
 
-                                        {isCash && cashDetails && cashDetails.received !== null && cashDetails.received > 0 && (
-                                            <div className="w-full text-xs font-mono border-t border-b border-dashed border-black/40 py-2 my-2 space-y-1">
-                                                <div className="flex justify-between text-gray-700">
+                                        {isCash && cashDetails && cashDetails.received > 0 && (
+                                            <div className="pt-1 border-t border-[oklch(90%_0.008_28)] space-y-0.5 text-[11px]">
+                                                <div className="flex justify-between text-[oklch(55%_0.010_28)]">
                                                     <span>รับเงินสดมา:</span>
                                                     <span className="font-bold">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
                                                 </div>
-                                                <div className="flex justify-between font-black text-black">
+                                                <div className="flex justify-between font-bold text-[oklch(18%_0.012_28)]">
                                                     <span>เงินทอน:</span>
                                                     <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
                                                 </div>
                                             </div>
                                         )}
-
-                                        <div className="border-4 border-double border-black rounded-lg py-1.5 px-6 font-black text-sm text-black uppercase tracking-widest transform -rotate-2 mt-3 select-none">
-                                            PAID / ชำระแล้ว
-                                        </div>
                                     </div>
-                                </>
+                                </div>
                             );
                         })()}
 
-                        {/* PromptPay QR Code (For Billing tab only, never on paid receipt) */}
-                        {activeTab === 'billing' && qrCodeUrl && (
-                            <>
-                                <div className="text-center font-mono text-[10px] text-black overflow-hidden whitespace-nowrap my-1 font-bold">
-                                    {generateDivider(printerConfig.divider_style || 'dashed', 32)}
-                                </div>
-                                <div className="pt-2 mt-2 text-center flex flex-col items-center">
-                                    <span className="text-[9px] font-black tracking-widest uppercase mb-2">
-                                        SCAN TO PAY / สแกนชำระเงิน
-                                    </span>
-                                    <img src={qrCodeUrl} alt="PromptPay QR" className="w-36 h-36 object-contain rounded-xl border border-gray-100 p-2 bg-white" />
-                                    <span className="text-[8px] text-gray-400 font-mono mt-1">IN THE HAUS PROMPTPAY</span>
-                                </div>
-                            </>
-                        )}
-
-                        {/* Note for Kitchen & Staff (Cleaned) */}
+                        {/* Customer & Staff Notes */}
                         {(() => {
                             const cleanCust = getCleanCustomerNote(booking.customer_note);
                             const cleanStaff = getCleanStaffRemark(booking.staff_remark);
                             if (!cleanCust && !cleanStaff) return null;
                             return (
-                                <div className="bg-black text-white p-2.5 font-mono text-[10px] relative mt-3 rounded">
-                                    <div className="text-[8px] font-bold uppercase tracking-wider border-b border-white/40 pb-1 mb-1.5 opacity-80">หมายเหตุ / NOTES</div>
-                                    {cleanCust && <div><strong>ลูกค้า:</strong> {cleanCust}</div>}
-                                    {cleanStaff && <div><strong>พนักงาน:</strong> {cleanStaff}</div>}
+                                <div className="bg-[oklch(96%_0.008_28)] border border-[oklch(88%_0.010_28)] p-2.5 rounded-sm font-sans text-xs space-y-1">
+                                    <div className="text-[10px] font-mono font-bold uppercase text-[oklch(42%_0.010_28)]">
+                                        หมายเหตุ (NOTES)
+                                    </div>
+                                    {cleanCust && <div className="text-[oklch(18%_0.012_28)]"><strong>ลูกค้า:</strong> {cleanCust}</div>}
+                                    {cleanStaff && <div className="text-[oklch(42%_0.010_28)]"><strong>พนักงาน:</strong> {cleanStaff}</div>}
                                 </div>
                             );
                         })()}
-                        
-                        {/* Footer & ASCII Art */}
+
+                        {/* SHOP FOOTER */}
                         {!isKitchenTab && (
-                            <div className="text-center mt-5 space-y-1">
-                                {(printerConfig.footer_ascii_art || getStoredShopSetting('footer_ascii_art')) && (
-                                    <pre className="font-mono text-[9px] font-bold leading-tight text-center whitespace-pre overflow-x-auto text-black my-1.5">
-                                        {printerConfig.footer_ascii_art || getStoredShopSetting('footer_ascii_art')}
-                                    </pre>
-                                )}
-                                {(receiptShopFooter || printerConfig.shop_footer_text || getStoredShopSetting('receipt_shop_footer')) && (
-                                    <div className="text-[10px] font-mono text-black font-bold uppercase tracking-wider">
-                                        {receiptShopFooter || printerConfig.shop_footer_text || getStoredShopSetting('receipt_shop_footer')}
-                                    </div>
-                                )}
+                            <div className="text-center pt-2 border-t border-[oklch(88%_0.010_28)] space-y-1">
+                                <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                    {receiptShopFooter || 'THANK YOU FOR YOUR VISIT // ขอบคุณที่ใช้บริการ'}
+                                </div>
                             </div>
                         )}
                     </div>
                 </div>
 
-                {/* Actions */}
-                <div className="p-4 bg-[#F5F5F2] flex flex-wrap gap-2.5 border-t border-[#D1D1CD]">
-                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 min-w-[140px] ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] cursor-pointer'} py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
-                        <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
-                    </button>
-                    <button onClick={handleCopyImage} className="px-4 bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" title="คัดลอกรูปลง Clipboard เพื่อส่งเข้า LINE">
-                        {copiedImage ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
-                        <span>{copiedImage ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}</span>
-                    </button>
-                    <button onClick={handleSaveImage} className="flex-1 min-w-[140px] bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
-                        {saving ? 'กำลังบันทึก...' : <><Download size={14} /> SAVE PNG</>}
-                    </button>
+                {/* Actions Bar */}
+                <div className="p-3 md:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex items-center justify-between gap-2.5">
+                    {isAdmin ? (
+                        /* Admin Mode: Copy Image to Clipboard as Primary CTA, Save PNG as Secondary */
+                        <>
+                            <button 
+                                type="button"
+                                onClick={handleCopyImage} 
+                                className="flex-1 py-2.5 px-4 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" 
+                                title="คัดลอกรูปลง Clipboard เพื่อส่งเข้า LINE ให้ลูกค้าทันที"
+                            >
+                                {copiedImage ? <Check size={15} className="text-emerald-300" /> : <Copy size={15} />}
+                                <span>{copiedImage ? 'คัดลอกแล้ว!' : 'คัดลอกรูปสลิป'}</span>
+                            </button>
+
+                            <button 
+                                type="button"
+                                onClick={handleSaveImage} 
+                                disabled={saving}
+                                className="py-2.5 px-4 bg-[oklch(95%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                                <Download size={15} />
+                                <span>{saving ? 'กำลังบันทึก...' : 'SAVE PNG'}</span>
+                            </button>
+
+                            <button 
+                                type="button"
+                                onClick={onClose}
+                                className="py-2.5 px-3 bg-white hover:bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-sans text-xs font-semibold transition-colors cursor-pointer"
+                            >
+                                ปิด
+                            </button>
+                        </>
+                    ) : (
+                        /* POS / Staff Mode: Print Ticket as Primary */
+                        <>
+                            <button 
+                                type="button"
+                                onClick={handlePrint} 
+                                disabled={isPrinting || isAutoPrinting} 
+                                className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white cursor-pointer'} py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
+                            >
+                                <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleCopyImage} 
+                                className="px-3 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(95%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
+                                title="คัดลอกรูปลง Clipboard"
+                            >
+                                {copiedImage ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleSaveImage} 
+                                className="px-3 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(95%_0.008_28)] py-2.5 rounded-lg font-mono font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer" 
+                                disabled={saving}
+                            >
+                                <Download size={14} />
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
