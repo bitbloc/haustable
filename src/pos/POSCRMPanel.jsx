@@ -25,14 +25,21 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const fetchMembers = useCallback(async (isInitial = false) => {
         if (isInitial) setLoading(true);
         try {
-            // 1. Fetch Profiles
-            const { data: profiles, error: profileError } = await supabase
-                .from('profiles')
-                .select('id, display_name, nickname, phone_number, email, avatar_url, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
-                .order('created_at', { ascending: false })
-                .limit(200);
+            // 1. Fetch Profiles safely via SECURITY DEFINER RPC or direct fallback
+            let profiles = [];
+            const { data: rpcProfiles, error: rpcError } = await supabase.rpc('search_member_crm_pos', { p_term: '' });
+            if (!rpcError && rpcProfiles && Array.isArray(rpcProfiles)) {
+                profiles = rpcProfiles;
+            } else {
+                const { data: directProfiles, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, nickname, phone_number, avatar_url, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
+                    .order('created_at', { ascending: false })
+                    .limit(200);
 
-            if (profileError) throw profileError;
+                if (profileError) throw profileError;
+                profiles = directProfiles || [];
+            }
 
             // 2. Fetch Aggregated Bookings efficiently (user_id and status only)
             const { data: bookings, error: bookingError } = await supabase
@@ -216,9 +223,8 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
         return members.filter(m => {
             const nameMatch = (m.display_name || '').toLowerCase().includes(term);
             const phoneMatch = (m.phone_number || '').includes(term);
-            const emailMatch = (m.email || '').toLowerCase().includes(term);
             const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
-            return nameMatch || phoneMatch || emailMatch || nicknameMatch;
+            return nameMatch || phoneMatch || nicknameMatch;
         });
     }, [members, searchTerm]);
 
@@ -314,7 +320,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 </div>
                                                 <div>
                                                     <p className="font-bold text-xs text-[#1A1A1A] uppercase tracking-tight">{m.display_name || 'Anonymous User'}</p>
-                                                    <p className="text-[9px] font-mono text-[#767673] tracking-normal mt-0.5">{m.email || 'NO EMAIL LOG'}</p>
+                                                    <p className="text-[9px] font-mono text-[#767673] tracking-normal mt-0.5">{m.nickname ? `@${m.nickname}` : (m.phone_number || 'MEMBER')}</p>
                                                 </div>
                                             </td>
                                             <td className="py-3 px-4 font-mono text-[10px] text-[#1A1A1A]">

@@ -70,16 +70,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     // Profile editing states
     const [editingProfile, setEditingProfile] = React.useState(null);
     const [editDisplayName, setEditDisplayName] = React.useState('');
+    const [editNickname, setEditNickname] = React.useState('');
     const [editPhone, setEditPhone] = React.useState('');
-    const [editEmail, setEditEmail] = React.useState('');
     const [isMenuDrawerOpen, setIsMenuDrawerOpen] = React.useState(false);
     const [storePromptpayId, setStorePromptpayId] = React.useState('0985284217');
 
     const startEditingProfile = (profile) => {
         setEditingProfile(profile);
         setEditDisplayName(profile.display_name || '');
+        setEditNickname(profile.nickname || '');
         setEditPhone(profile.phone_number || profile.phone || '');
-        setEditEmail(profile.email || '');
     };
 
     const handleSaveProfile = async () => {
@@ -90,8 +90,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 .from('profiles')
                 .update({
                     display_name: editDisplayName,
-                    phone_number: editPhone,
-                    email: editEmail
+                    nickname: editNickname,
+                    phone_number: editPhone
                 })
                 .eq('id', editingProfile.id);
             
@@ -215,15 +215,22 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
         try {
+            const cleanQuery = (searchQuery || '').trim();
+            const { data: rpcData, error: rpcError } = await supabase.rpc('search_member_crm_pos', { p_term: cleanQuery });
+            if (!rpcError && rpcData) {
+                setCrmMembers(rpcData);
+                return;
+            }
+
             let query = supabase
                 .from('profiles')
-                .select('*')
+                .select('id, display_name, nickname, phone_number, avatar_url, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota')
                 .order('display_name', { ascending: true })
                 .limit(50);
 
-            if (searchQuery.trim()) {
-                const q = `%${searchQuery.trim()}%`;
-                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q}`);
+            if (cleanQuery) {
+                const q = `%${cleanQuery}%`;
+                query = query.or(`display_name.ilike.${q},phone_number.ilike.${q},nickname.ilike.${q}`);
             }
 
             const { data, error } = await query;
@@ -238,13 +245,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     };
 
     React.useEffect(() => {
-        if (activeModal === 'crm' && !booking?.profiles) {
+        if (activeModal === 'crm') {
             const timer = setTimeout(() => {
                 loadCrmMembers(crmSearchTerm);
-            }, 200);
+            }, 150);
             return () => clearTimeout(timer);
         }
-    }, [activeModal, booking?.profiles, crmSearchTerm]);
+    }, [activeModal, crmSearchTerm]);
 
     // Global ESC keydown listener to close active modal cleanly
     React.useEffect(() => {
@@ -267,7 +274,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             return (m.display_name || '').toLowerCase().includes(term) ||
                    (m.phone_number || '').toLowerCase().includes(term) ||
                    (m.phone || '').toLowerCase().includes(term) ||
-                   (m.email || '').toLowerCase().includes(term);
+                   (m.nickname || '').toLowerCase().includes(term);
         }).slice(0, 50);
     }, [crmMembers, crmSearchTerm]);
 
@@ -1171,16 +1178,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             />
                                         </div>
 
-                                        {/* Email Input */}
+                                        {/* Nickname Input */}
                                         <div className="space-y-1.5">
                                             <label className="block text-xs font-mono font-bold text-[var(--color-muted)] uppercase">
-                                                Email Address / อีเมล
+                                                Nickname / ชื่อเล่น (ถ้ามี)
                                             </label>
                                             <input 
-                                                type="email"
-                                                placeholder="e.g. customer@example.com"
-                                                value={editEmail}
-                                                onChange={(e) => setEditEmail(e.target.value)}
+                                                type="text"
+                                                placeholder="e.g. พี่เอก"
+                                                value={editNickname}
+                                                onChange={(e) => setEditNickname(e.target.value)}
                                                 className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
@@ -1231,17 +1238,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     </div>
                                                     <p className="text-base font-bold text-[#1A1A1A] uppercase mt-1 truncate">{currentMemberProfile.display_name || 'Anonymous User'}</p>
                                                     
-                                                    {/* Display Phone & Email */}
+                                                    {/* Display Phone & Nickname */}
                                                     <div className="flex flex-col gap-1 mt-2 text-xs font-mono text-[#555]">
                                                         {currentMemberProfile.phone_number ? (
                                                             <span className="font-bold text-[#1A1A1A]">📞 {currentMemberProfile.phone_number}</span>
                                                         ) : (
                                                             <span className="text-red-600 font-bold">📞 No Phone (ไม่มีเบอร์)</span>
                                                         )}
-                                                        {currentMemberProfile.email ? (
-                                                            <span>✉️ {currentMemberProfile.email}</span>
-                                                        ) : (
-                                                            <span className="text-amber-700/80 font-medium">✉️ No Email</span>
+                                                        {currentMemberProfile.nickname && (
+                                                            <span>🏷️ {currentMemberProfile.nickname}</span>
                                                         )}
                                                         {currentMemberProfile.xhaus_balance !== undefined && (() => {
                                                             const originalBalance = Math.ceil(parseFloat(currentMemberProfile.xhaus_balance || 0));
@@ -1550,17 +1555,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                             <div className="min-w-0">
                                                                 <p className="font-bold text-sm text-[#1A1A1A] uppercase tracking-tight truncate">{m.display_name || 'Anonymous User'}</p>
                                                                 
-                                                                {/* Display Phone & Email in Search Items */}
+                                                                {/* Display Phone & Nickname in Search Items */}
                                                                 <div className="flex flex-col gap-0.5 mt-1 text-xs font-mono text-[#555]">
                                                                     {m.phone_number ? (
                                                                         <span className="font-bold text-[#1A1A1A]">📞 {m.phone_number}</span>
                                                                     ) : (
                                                                         <span className="text-red-600 font-semibold">📞 No Phone (ไม่มีเบอร์)</span>
                                                                     )}
-                                                                    {m.email ? (
-                                                                        <span>✉️ {m.email}</span>
-                                                                    ) : (
-                                                                        <span className="text-amber-700/80 font-semibold">✉️ No Email</span>
+                                                                    {m.nickname && (
+                                                                        <span>🏷️ {m.nickname}</span>
                                                                     )}
                                                                 </div>
                                                             </div>

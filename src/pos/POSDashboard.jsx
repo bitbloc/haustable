@@ -352,8 +352,8 @@ export default function POSDashboard() {
         return crmMembers.filter(m => {
             const nameMatch = (m.display_name || '').toLowerCase().includes(term);
             const phoneMatch = (m.phone_number || m.phone || '').toLowerCase().includes(term);
-            const emailMatch = (m.email || '').toLowerCase().includes(term);
-            return nameMatch || phoneMatch || emailMatch;
+            const nickMatch = (m.nickname || '').toLowerCase().includes(term);
+            return nameMatch || phoneMatch || nickMatch;
         }).slice(0, 50);
     }, [crmMembers, crmSearchTerm]);
 
