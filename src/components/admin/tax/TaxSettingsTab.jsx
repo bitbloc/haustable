@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Building2, 
     Save, 
@@ -15,7 +15,12 @@ import {
     ToggleRight,
     Sparkles,
     Bot,
-    Key
+    Key,
+    PenTool,
+    Upload,
+    RotateCcw,
+    Image as ImageIcon,
+    Check
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { validateThaiTaxId, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
@@ -43,11 +48,18 @@ export default function TaxSettingsTab({
         tax_invoice_prefix: 'INV',
         tax_wht_prefix: 'WHT',
         tax_signature_name: 'ผู้มีอำนาจลงนาม / ผู้รับเงิน',
+        tax_signature_position: 'ผู้จัดการร้าน / กรรมการผู้มีอำนาจ',
+        tax_signature_image: localStorage.getItem('onhaus_tax_signature_image') || '',
+        tax_signature_enabled: 'true',
         gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || '',
         gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-3.7-flash'
     });
 
     const [saving, setSaving] = useState(false);
+    const [signatureMode, setSignatureMode] = useState('draw'); // 'draw' | 'upload'
+    const canvasRef = useRef(null);
+    const [isDrawing, setIsDrawing] = useState(false);
+    const [hasDrawn, setHasDrawn] = useState(false);
 
     // Customer Directory State
     const [customers, setCustomers] = useState([]);
@@ -92,6 +104,99 @@ export default function TaxSettingsTab({
     const isCompanyTaxIdValid = validateThaiTaxId(settings.tax_id);
     const isVatOn = settings.tax_is_vat_registered === 'true' || settings.tax_is_vat_registered === true;
 
+    // Canvas Drawing Handlers
+    const getCoordinates = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return { x: 0, y: 0 };
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        if (e.touches && e.touches[0]) {
+            return {
+                x: (e.touches[0].clientX - rect.left) * scaleX,
+                y: (e.touches[0].clientY - rect.top) * scaleY
+            };
+        }
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    };
+
+    const startDrawing = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const coords = getCoordinates(e);
+        ctx.beginPath();
+        ctx.moveTo(coords.x, coords.y);
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 2.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        setIsDrawing(true);
+        setHasDrawn(true);
+    };
+
+    const draw = (e) => {
+        if (!isDrawing) return;
+        if (e.cancelable && e.type.startsWith('touch')) e.preventDefault();
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const coords = getCoordinates(e);
+        ctx.lineTo(coords.x, coords.y);
+        ctx.stroke();
+    };
+
+    const stopDrawing = () => {
+        setIsDrawing(false);
+    };
+
+    const clearCanvas = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setHasDrawn(false);
+    };
+
+    const saveCanvasSignature = () => {
+        const canvas = canvasRef.current;
+        if (!canvas || !hasDrawn) {
+            toast.error('กรุณาวาดลายเซ็นบนผืนผ้าใบก่อนกดบันทึก');
+            return;
+        }
+        const dataUrl = canvas.toDataURL('image/png');
+        handleSettingChange('tax_signature_image', dataUrl);
+        localStorage.setItem('onhaus_tax_signature_image', dataUrl);
+        toast.success('นำลายเซ็นจากการวาดไปใช้งานแล้ว (อย่าลืมกดปุ่มบันทึกการตั้งค่า)');
+    };
+
+    const handleSignatureImageUpload = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, SVG)');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const dataUrl = event.target.result;
+            handleSettingChange('tax_signature_image', dataUrl);
+            localStorage.setItem('onhaus_tax_signature_image', dataUrl);
+            toast.success('อัปโหลดรูปลายเซ็น/ตรายางเรียบร้อยแล้ว');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const removeSignatureImage = () => {
+        handleSettingChange('tax_signature_image', '');
+        localStorage.removeItem('onhaus_tax_signature_image');
+        clearCanvas();
+        toast.info('ลบลายเซ็นออกจากระบบแล้ว');
+    };
+
     // Save Settings
     const handleSaveSettings = async () => {
         setSaving(true);
@@ -110,6 +215,9 @@ export default function TaxSettingsTab({
 
             // 2. LocalStorage Sync
             localStorage.setItem('onhaus_tax_settings', JSON.stringify(settings));
+            if (settings.tax_signature_image) {
+                localStorage.setItem('onhaus_tax_signature_image', settings.tax_signature_image);
+            }
             if (settings.gemini_api_key) {
                 localStorage.setItem('onhaus_gemini_api_key', settings.gemini_api_key.trim());
             }
@@ -117,7 +225,7 @@ export default function TaxSettingsTab({
                 localStorage.setItem('onhaus_gemini_model', settings.gemini_model.trim());
             }
 
-            toast.success('บันทึกการตั้งค่าระบบภาษีและ Gemini AI เรียบร้อยแล้ว');
+            toast.success('บันทึกการตั้งค่าระบบภาษี ลายเซ็น และ Gemini AI เรียบร้อยแล้ว');
             if (onSettingsUpdated) onSettingsUpdated(settings);
         } catch (err) {
             toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
@@ -441,6 +549,251 @@ export default function TaxSettingsTab({
                         <Save size={15} />
                         <span>{saving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (SAVE SETTINGS)'}</span>
                     </button>
+                </div>
+            </div>
+
+            {/* Digital Signature & Official Stamp Manager */}
+            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3">
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1.5 bg-zinc-900 text-white rounded-lg">
+                            <PenTool size={18} />
+                        </div>
+                        <div>
+                            <h3 className="font-mono font-bold text-sm text-zinc-950 uppercase tracking-wider flex items-center gap-2">
+                                ระบบลายเซ็นดิจิทัล &amp; ตรายางประจำร้าน (Digital Signature &amp; Stamp)
+                            </h3>
+                            <p className="text-[11px] text-zinc-500 font-mono">
+                                เพิ่มลายเซ็นผู้มีอำนาจลงนาม เพื่อพิมพ์ลงในช่องผู้รับเงินของใบเสร็จรับเงินและใบกำกับภาษีอัตโนมัติ
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Enable / Disable Signature Toggle */}
+                    <button
+                        type="button"
+                        onClick={() => handleSettingChange('tax_signature_enabled', settings.tax_signature_enabled === 'true' ? 'false' : 'true')}
+                        className={`px-3 py-1.5 rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            settings.tax_signature_enabled === 'true'
+                                ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                                : 'bg-zinc-100 text-zinc-600 border border-zinc-300'
+                        }`}
+                    >
+                        {settings.tax_signature_enabled === 'true' ? <ToggleRight size={18} className="text-emerald-700" /> : <ToggleLeft size={18} />}
+                        <span>{settings.tax_signature_enabled === 'true' ? '✓ แสดงลายเซ็นในเอกสาร' : 'ปิดการแสดงลายเซ็น'}</span>
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                    {/* Left Column: Signer Information Form (5 cols) */}
+                    <div className="lg:col-span-5 space-y-4">
+                        <div>
+                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                                ชื่อผู้มีอำนาจลงนาม / ผู้รับเงิน (Signer Name) *
+                            </label>
+                            <input
+                                type="text"
+                                value={settings.tax_signature_name}
+                                onChange={(e) => handleSettingChange('tax_signature_name', e.target.value)}
+                                placeholder="เช่น นาย ธนวัฒน์ หรือ ผู้มีอำนาจลงนาม"
+                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                                ตำแหน่งผู้ลงนาม (Signer Position)
+                            </label>
+                            <input
+                                type="text"
+                                value={settings.tax_signature_position}
+                                onChange={(e) => handleSettingChange('tax_signature_position', e.target.value)}
+                                placeholder="เช่น ผู้จัดการร้าน / กรรมการผู้จัดการ"
+                                className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs focus:border-zinc-900 focus:outline-none"
+                            />
+                        </div>
+
+                        {/* Signature Status & Quick Actions */}
+                        <div className="p-3.5 bg-zinc-50 border border-zinc-200 rounded-xl space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                                <span className="font-mono font-bold text-[10px] text-zinc-500 uppercase">สถานะลายเซ็นปัจจุบัน:</span>
+                                {settings.tax_signature_image ? (
+                                    <span className="font-mono font-bold text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 flex items-center gap-1">
+                                        <Check size={11} /> มีลายเซ็นในระบบแล้ว
+                                    </span>
+                                ) : (
+                                    <span className="font-mono text-[10px] text-zinc-400">ยังไม่มีลายเซ็น</span>
+                                )}
+                            </div>
+
+                            {settings.tax_signature_image && (
+                                <div className="flex items-center justify-between pt-1">
+                                    <span className="text-[11px] text-zinc-600">จัดการไฟล์ลายเซ็น:</span>
+                                    <button
+                                        type="button"
+                                        onClick={removeSignatureImage}
+                                        className="px-2 py-1 text-red-600 hover:bg-red-50 rounded font-mono text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                    >
+                                        <Trash2 size={12} />
+                                        <span>ลบลายเซ็นออก</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pt-2">
+                            <button
+                                type="button"
+                                disabled={saving}
+                                onClick={handleSaveSettings}
+                                className="w-full py-2.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm disabled:opacity-50"
+                            >
+                                <Save size={14} />
+                                <span>บันทึกข้อมูลลายเซ็น &amp; การตั้งค่า</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Signature Creator (Canvas / Upload) & Live Preview (7 cols) */}
+                    <div className="lg:col-span-7 space-y-4">
+                        {/* Mode Selector */}
+                        <div className="flex border border-zinc-300 rounded-lg p-1 bg-zinc-100 text-xs font-mono font-bold">
+                            <button
+                                type="button"
+                                onClick={() => setSignatureMode('draw')}
+                                className={`flex-1 py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                                    signatureMode === 'draw'
+                                        ? 'bg-white text-zinc-950 shadow-xs'
+                                        : 'text-zinc-500 hover:text-zinc-950'
+                                }`}
+                            >
+                                <PenTool size={13} />
+                                <span>1. วาดลายเซ็นสด (Draw with Finger/Pen)</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSignatureMode('upload')}
+                                className={`flex-1 py-1.5 rounded flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                                    signatureMode === 'upload'
+                                        ? 'bg-white text-zinc-950 shadow-xs'
+                                        : 'text-zinc-500 hover:text-zinc-950'
+                                }`}
+                            >
+                                <Upload size={13} />
+                                <span>2. อัปโหลดรูปภาพ (PNG / JPG / Stamp)</span>
+                            </button>
+                        </div>
+
+                        {/* 1. Interactive Drawing Canvas Mode */}
+                        {signatureMode === 'draw' && (
+                            <div className="border border-zinc-300 rounded-xl p-3 bg-white space-y-2.5">
+                                <div className="flex items-center justify-between text-[11px] text-zinc-500 font-mono">
+                                    <span>✍️ ใช้นิ้วมือ, เมาส์ หรือปากกาสไตลัสเซ็นชื่อลงในกรอบ:</span>
+                                    <span className="text-zinc-400 text-[10px]">ความหนาเส้น 2.5px คมชัด</span>
+                                </div>
+
+                                <div className="relative border-2 border-dashed border-zinc-300 rounded-lg bg-zinc-50/50 overflow-hidden flex items-center justify-center touch-none">
+                                    <canvas
+                                        ref={canvasRef}
+                                        width={480}
+                                        height={160}
+                                        onMouseDown={startDrawing}
+                                        onMouseMove={draw}
+                                        onMouseUp={stopDrawing}
+                                        onMouseLeave={stopDrawing}
+                                        onTouchStart={startDrawing}
+                                        onTouchMove={draw}
+                                        onTouchEnd={stopDrawing}
+                                        className="w-full h-36 cursor-crosshair bg-transparent"
+                                    />
+                                    {/* Baseline guide line */}
+                                    <div className="absolute bottom-7 left-8 right-8 border-b border-zinc-200 pointer-events-none text-[9px] font-mono text-zinc-300 flex justify-between">
+                                        <span>เส้นฐานลายเซ็น (Baseline)</span>
+                                        <span>IN THE HAUS</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-1">
+                                    <button
+                                        type="button"
+                                        onClick={clearCanvas}
+                                        className="px-3 py-1.5 border border-zinc-300 text-zinc-700 hover:bg-zinc-100 rounded-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    >
+                                        <RotateCcw size={13} />
+                                        <span>ล้างผ้าใบ (Clear)</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={saveCanvasSignature}
+                                        className="px-4 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                                    >
+                                        <Check size={14} />
+                                        <span>นำลายเซ็นที่วาดไปใช้งาน (Apply)</span>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 2. File Upload Mode */}
+                        {signatureMode === 'upload' && (
+                            <div className="border border-zinc-300 rounded-xl p-4 bg-white space-y-3">
+                                <label className="border-2 border-dashed border-zinc-300 hover:border-zinc-500 rounded-lg p-6 flex flex-col items-center justify-center gap-2 cursor-pointer bg-zinc-50/50 hover:bg-zinc-50 transition-colors block text-center">
+                                    <ImageIcon size={28} className="text-zinc-400" />
+                                    <div className="font-mono font-bold text-xs text-zinc-900">
+                                        คลิกเพื่อเลือกไฟล์รูปลายเซ็น หรือรูปตรายาง
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500 font-mono">
+                                        รองรับไฟล์ .PNG (แนะนำพื้นหลังโปร่งใส Transparent), .JPG, .SVG (ขนาดไม่เกิน 5MB)
+                                    </p>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/svg+xml"
+                                        onChange={handleSignatureImageUpload}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+                        )}
+
+                        {/* Live Document Preview Box */}
+                        <div className="border border-zinc-300 rounded-xl p-4 bg-zinc-50 space-y-2">
+                            <div className="font-mono font-bold text-[10px] text-zinc-500 uppercase tracking-wider flex items-center justify-between">
+                                <span>ตัวอย่างการแสดงผลบนเอกสารจริง (Official Document Preview)</span>
+                                <span className="text-[9px] text-zinc-400">มาตรา 86/4 &amp; 105</span>
+                            </div>
+
+                            <div className="bg-white border border-zinc-900 p-4 max-w-sm mx-auto text-center font-mono text-[11px] space-y-1 shadow-xs">
+                                {/* Signature line container with overlay */}
+                                <div className="relative w-48 mx-auto h-16 flex items-end justify-center mb-1">
+                                    {settings.tax_signature_image && settings.tax_signature_enabled === 'true' ? (
+                                        <img
+                                            src={settings.tax_signature_image}
+                                            alt="Signature"
+                                            className="max-h-14 max-w-full object-contain filter drop-shadow-xs"
+                                        />
+                                    ) : (
+                                        <div className="text-[10px] text-zinc-300 italic pb-1">
+                                            {settings.tax_signature_enabled === 'false' ? '(ปิดการแสดงลายเซ็น)' : '(ยังไม่ได้ใส่ลายเซ็น)'}
+                                        </div>
+                                    )}
+                                    <div className="absolute bottom-0 left-0 right-0 border-b border-zinc-900"></div>
+                                </div>
+
+                                <div className="font-bold text-zinc-950 text-xs">
+                                    ( {settings.tax_signature_name || 'ผู้มีอำนาจลงนาม'} )
+                                </div>
+                                {settings.tax_signature_position && (
+                                    <div className="text-[10px] text-zinc-600 font-sans">
+                                        ตำแหน่ง: {settings.tax_signature_position}
+                                    </div>
+                                )}
+                                <div className="text-[9px] text-zinc-400">
+                                    วันที่ / Date: {new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

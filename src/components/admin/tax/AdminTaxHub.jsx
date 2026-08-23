@@ -12,7 +12,8 @@ import {
     X,
     BookOpen,
     ShoppingCart,
-    ShieldAlert
+    ShieldAlert,
+    Mail
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
@@ -58,6 +59,7 @@ export default function AdminTaxHub() {
     const [activePrintInvoice, setActivePrintInvoice] = useState(null);
     const [cancellationTarget, setCancellationTarget] = useState(null);
     const [cancellationReason, setCancellationReason] = useState('');
+    const [voiding, setVoiding] = useState(false);
 
     // Expense Modals
     const [showExpenseModal, setShowExpenseModal] = useState(false);
@@ -176,7 +178,7 @@ export default function AdminTaxHub() {
             .reduce((s, b) => s + Number(b.total_amount || b.deposit_amount || 0), 0);
     }, [allYearBookings, monthFilter]);
 
-    // Handle Document Cancellation
+    // Handle Document Cancellation (with resilient DB fallback)
     const handleConfirmCancel = async () => {
         if (!cancellationTarget) return;
         if (!cancellationReason.trim()) {
@@ -184,18 +186,36 @@ export default function AdminTaxHub() {
             return;
         }
 
+        setVoiding(true);
         try {
             const updatedPayload = {
                 status: 'cancelled',
-                cancelled_at: new Date().toISOString(),
-                cancellation_reason: cancellationReason.trim()
+                cancellation_reason: cancellationReason.trim(),
+                cancelled_at: new Date().toISOString()
             };
 
             if (!String(cancellationTarget.id).startsWith('local_')) {
-                await supabase
+                // 1. Try full update with cancelled_at
+                const { error: primaryErr } = await supabase
                     .from('tax_invoices')
                     .update(updatedPayload)
                     .eq('id', cancellationTarget.id);
+
+                if (primaryErr) {
+                    console.warn('Primary update error, attempting fallback update:', primaryErr);
+                    // Fallback in case schema cache doesn't have cancelled_at
+                    const { error: fallbackErr } = await supabase
+                        .from('tax_invoices')
+                        .update({
+                            status: 'cancelled',
+                            cancellation_reason: cancellationReason.trim()
+                        })
+                        .eq('id', cancellationTarget.id);
+
+                    if (fallbackErr) {
+                        console.error('Supabase fallback void error:', fallbackErr);
+                    }
+                }
             }
 
             const updatedInvoices = invoices.map(i => 
@@ -209,6 +229,8 @@ export default function AdminTaxHub() {
             setCancellationReason('');
         } catch (err) {
             toast.error('เกิดข้อผิดพลาดในการยกเลิก: ' + err.message);
+        } finally {
+            setVoiding(false);
         }
     };
 
@@ -483,11 +505,22 @@ export default function AdminTaxHub() {
                                                                 <span>A4</span>
                                                             </button>
 
+                                                            <button
+                                                                onClick={() => setActivePrintInvoice(inv)}
+                                                                className="px-1.5 py-1 bg-blue-700 hover:bg-blue-600 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                                                                title="Send via Email or Copy Summary"
+                                                            >
+                                                                <Mail size={11} />
+                                                            </button>
+
                                                             {!isCancelled && (
                                                                 <button
-                                                                    onClick={() => setCancellationTarget(inv)}
+                                                                    onClick={() => {
+                                                                        setCancellationTarget(inv);
+                                                                        setCancellationReason('');
+                                                                    }}
                                                                     className="p-1 text-[var(--color-neutral)] hover:text-red-600 transition-colors cursor-pointer"
-                                                                    title="Cancel this document"
+                                                                    title="Cancel / Void this document"
                                                                 >
                                                                     <X size={14} />
                                                                 </button>
@@ -627,7 +660,7 @@ export default function AdminTaxHub() {
 
             {/* 4. Document Cancellation Confirmation Modal */}
             {cancellationTarget && (
-                <div className="fixed inset-0 z-[190] flex items-center justify-center bg-black/85 p-4 font-sans text-xs">
+                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/85 backdrop-blur-xs p-4 font-sans text-xs">
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] w-full max-w-md p-6 space-y-4 shadow-2xl">
                         <div className="border-b border-[var(--color-rule)] pb-3 flex items-center gap-2 text-red-600">
                             <ShieldAlert size={18} />
@@ -637,7 +670,7 @@ export default function AdminTaxHub() {
                         </div>
 
                         <p className="text-[12px] text-[var(--color-neutral)] leading-relaxed">
-                            การยกเลิกเอกสารนี้จะถูกบันทึกประวัติการยกเลิกเพื่อส่งสรรพากร และไม่สามารถย้อนคืนได้
+                            การยกเลิกเอกสารนี้จะถูกบันทึกประวัติการยกเลิกในระบบ และสถานะจะเปลี่ยนเป็น [VOID] ทันที
                         </p>
 
                         <div>
@@ -648,26 +681,52 @@ export default function AdminTaxHub() {
                                 type="text"
                                 value={cancellationReason}
                                 onChange={(e) => setCancellationReason(e.target.value)}
-                                placeholder="เช่น ลูกค้าเปลี่ยนที่อยู่, ยกเลิกออเดอร์, พิมพ์ผิด"
+                                placeholder="พิมพ์สาเหตุ หรือคลิกเลือกจากตัวเลือกด้านล่าง"
                                 className="w-full px-3 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-medium focus:border-[var(--color-ink)] focus:outline-none"
                                 autoFocus
                             />
+
+                            {/* Quick Reason Chips */}
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                {[
+                                    'พิมพ์ผิด / แก้ไขข้อมูล',
+                                    'ลูกค้ายกเลิกออเดอร์',
+                                    'เปลี่ยนชื่อ / ที่อยู่ผู้ซื้อ',
+                                    'ออกเอกสารซ้ำ',
+                                    'ลูกค้าขอเปลี่ยนเป็นใบกำกับภาษี'
+                                ].map((reason) => (
+                                    <button
+                                        key={reason}
+                                        type="button"
+                                        onClick={() => setCancellationReason(reason)}
+                                        className={`px-2 py-0.5 border text-[10px] font-mono transition-colors cursor-pointer ${
+                                            cancellationReason === reason
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-bold'
+                                                : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)] hover:border-[var(--color-ink)]'
+                                        }`}
+                                    >
+                                        + {reason}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-[var(--color-rule)] font-mono text-xs">
+                        <div className="flex justify-end gap-2 pt-3 border-t border-[var(--color-rule)] font-mono text-xs">
                             <button
                                 type="button"
+                                disabled={voiding}
                                 onClick={() => setCancellationTarget(null)}
-                                className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold cursor-pointer"
+                                className="px-4 py-2 border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] font-bold cursor-pointer disabled:opacity-50"
                             >
                                 CANCEL
                             </button>
                             <button
                                 type="button"
+                                disabled={voiding || !cancellationReason.trim()}
                                 onClick={handleConfirmCancel}
-                                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer"
+                                className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                             >
-                                CONFIRM VOID
+                                <span>{voiding ? 'กำลังยกเลิก...' : 'CONFIRM VOID'}</span>
                             </button>
                         </div>
                     </div>
