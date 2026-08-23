@@ -591,12 +591,12 @@ export default function AdsLandingPage() {
                                         <div
                                             key={i}
                                             onClick={() => setSelectedLightbox({ type: 'atm', url })}
-                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer flex"
+                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer aspect-square overflow-hidden group flex"
                                         >
                                             <img 
                                                 src={optimizeImageUrl(url, 500)} 
                                                 alt={`Atmosphere ${i + 1}`} 
-                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity" 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                                                 loading="lazy"
                                                 decoding="async"
                                             />
@@ -623,12 +623,12 @@ export default function AdsLandingPage() {
                                         <div
                                             key={i}
                                             onClick={() => setSelectedLightbox({ type: 'checkin', item: checkin })}
-                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group flex"
+                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group aspect-square overflow-hidden flex"
                                         >
                                             <img 
                                                 src={optimizeImageUrl(checkin.image_url, 400)} 
                                                 alt={`Checkin ${i + 1}`} 
-                                                className="w-full h-full object-cover hover:opacity-90 transition-opacity" 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                                                 loading="lazy"
                                                 decoding="async"
                                             />
@@ -695,41 +695,41 @@ export default function AdsLandingPage() {
                             />
                         </div>
 
-                        {/* Delivery */}
-                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
-                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
-                                [ 03.2 // DELIVERY SERVICE ]
-                            </h3>
+                        {/* Delivery Service */}
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    DELIVERY SERVICE
+                                </h3>
+                            </div>
                             <LinkCard 
                                 href="https://lin.ee/8uqmIzZ" 
-                                icon={<Utensils size={12} />} 
-                                title="ORDER DIRECT ON LINEMAN" 
-                                bg="bg-[var(--color-hallmark-ink)] text-white hover:bg-neutral-800" 
+                                title="ORDER DIRECT ON LINEMAN ➔" 
+                                bg="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800" 
                                 wide 
                                 id="cta-lineman" 
                             />
                         </div>
 
                         {/* Information Hub */}
-                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4">
-                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider text-[var(--color-hallmark-ink)] pb-3 border-b border-[var(--color-hallmark-rule)] mb-4">
-                                [ 03.3 // INFORMATION HUB ]
-                            </h3>
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    INFORMATION HUB
+                                </h3>
+                            </div>
                             <LinkCard 
                                 href="/qa" 
-                                icon={<HelpCircle size={12} />} 
-                                title="RESTAURANT Q&A / DETAILS" 
-                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)] hover:bg-neutral-100/50" 
+                                title="RESTAURANT Q&A // คำถามที่พบบ่อย ➔" 
+                                bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
                                 internal 
                                 id="cta-qa" 
                             />
-                            <div className="mt-2.5" />
                             <LinkCard 
                                 href="/link/hauscheckin" 
-                                icon={<Compass size={12} />} 
-                                title="HAUS CHECK-IN WALL" 
-                                bg="bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] hover:opacity-90 font-bold" 
+                                title="HAUS CHECK-IN WALL // บอร์ดเช็กอินลูกค้า ➔" 
+                                bg="bg-[var(--color-brand)] text-white hover:opacity-90 font-bold" 
                                 wide 
                                 internal 
                                 id="cta-checkin" 
@@ -737,25 +737,32 @@ export default function AdsLandingPage() {
                         </div>
 
                         {/* Address & Navigation Map (Unified Launch Map) */}
-                        <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] rounded-sm p-4 font-mono text-[11px] text-[var(--color-hallmark-ink)]">
-                            <h3 className="font-[var(--font-display)] text-[10px] font-bold uppercase tracking-wider pb-2 border-b border-[var(--color-hallmark-rule)] mb-3 text-[var(--color-hallmark-ink-muted)]">
-                                [ 03.4 // LOCATION & MAP ]
-                            </h3>
-                            <p className="font-[var(--font-body)] font-bold text-xs leading-relaxed">{locationText}</p>
-                            <p className="mt-2 text-[var(--color-hallmark-ink-muted)] font-bold">TEL: 098-528-4217</p>
-                            <p className="mt-1 text-[var(--color-hallmark-ink-muted)] font-bold font-mono">OPEN: {hours}</p>
-                            
-                            <div className="mt-4 pt-3 border-t border-[var(--color-hallmark-rule)]">
-                                <a
-                                    href={mapUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={handleDirectionsClick}
-                                    className="w-full py-3 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] rounded-sm font-mono text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
-                                >
-                                    <Navigation size={14} /> LAUNCH MAP // นำทางมาร้าน
-                                </a>
+                        <div className="border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] divide-y divide-[var(--color-hallmark-rule)]">
+                            <div className="p-3 bg-[var(--color-hallmark-paper-dark)] flex items-center justify-between">
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    LOCATION & MAP
+                                </h3>
+                                <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
+                                    NAKHON PHANOM
+                                </span>
                             </div>
+                            <div className="p-4 bg-[var(--color-hallmark-paper)] font-mono text-xs text-[var(--color-hallmark-ink)] space-y-2">
+                                <p className="font-[var(--font-body)] font-bold text-sm leading-relaxed">{locationText}</p>
+                                <div className="pt-2 flex flex-col gap-1 text-[11px] text-[var(--color-hallmark-ink-muted)] font-bold">
+                                    <p>TEL: 098-528-4217</p>
+                                    <p>OPEN: {hours}</p>
+                                </div>
+                            </div>
+                            
+                            <a
+                                href={mapUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={handleDirectionsClick}
+                                className="w-full py-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-mono text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
+                            >
+                                <Navigation size={14} /> LAUNCH MAP // นำทางมาร้าน
+                            </a>
                         </div>
                         
                     </div>
@@ -1056,52 +1063,55 @@ export default function AdsLandingPage() {
 
 // ─── HELPER SUB-COMPONENTS ───
 
-// Menu List Item Component (Tabular Version)
+// Menu List Item Component (Tabular Version with Strict 1:1 Aspect-Square Images)
 function MenuListItem({ item, index, onImageClick }) {
     const isRecommended = item.is_recommended === true;
     return (
-        <div className="flex items-stretch min-h-[48px] border-b border-[var(--color-hallmark-rule)] last:border-0 group bg-[var(--color-hallmark-paper)]">
-            <div className="flex-1 flex flex-col justify-center p-3 border-r border-[var(--color-hallmark-rule)]">
-                <div className="flex items-center gap-2">
-                    <h4 className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] uppercase">
+        <div className="flex items-stretch min-h-[64px] border-b border-[var(--color-hallmark-rule)] last:border-0 group bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors">
+            {/* Title & Description Cell */}
+            <div className="flex-1 flex flex-col justify-center p-3 sm:p-3.5 border-r border-[var(--color-hallmark-rule)] min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] leading-snug">
                         {item.name}
                     </h4>
                     {isRecommended && (
-                        <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-bold px-1 py-0.5 uppercase tracking-wider">
+                        <span className="text-[8px] font-mono bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-bold px-1.5 py-0.5 uppercase tracking-wider">
                             REC
                         </span>
                     )}
                 </div>
                 {item.description && (
-                    <p className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-2">
+                    <p className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-2 leading-relaxed">
                         {item.description}
                     </p>
                 )}
             </div>
             
-            <div className="flex flex-shrink-0">
-                <div className="flex items-center justify-center p-3 w-[60px] border-r border-[var(--color-hallmark-rule)]">
-                    <span className="font-mono font-bold text-[10px] text-[var(--color-hallmark-ink)]">฿{item.price}</span>
-                </div>
-                
+            {/* Price Cell */}
+            <div className="flex items-center justify-center px-3 w-[64px] sm:w-[72px] flex-shrink-0 border-r border-[var(--color-hallmark-rule)]">
+                <span className="font-mono font-bold text-xs text-[var(--color-hallmark-ink)]">฿{item.price}</span>
+            </div>
+            
+            {/* Image Cell (Strict 1:1 Aspect-Ratio Square) */}
+            <div className="w-[68px] sm:w-[76px] flex-shrink-0 flex items-center justify-center p-1.5 bg-[var(--color-hallmark-paper)]">
                 {item.image_url ? (
                     <div 
                         onClick={() => onImageClick(item.image_url)}
-                        className="w-16 h-full bg-neutral-100 cursor-pointer relative hover:brightness-95 transition-all"
+                        className="w-full aspect-square bg-neutral-100 overflow-hidden cursor-pointer relative group-hover:brightness-95 transition-all border border-[var(--color-hallmark-rule)]"
                     >
                         <img 
-                            src={optimizeImageUrl(item.image_url, 120)} 
+                            src={optimizeImageUrl(item.image_url, 180)} 
                             alt={item.name} 
-                            className="w-full h-full object-cover"
-                            loading={index !== undefined && index < 3 ? undefined : "lazy"}
-                            fetchPriority={index !== undefined && index < 3 ? "high" : undefined}
+                            className="w-full h-full object-cover aspect-square"
+                            loading={index !== undefined && index < 4 ? undefined : "lazy"}
+                            fetchPriority={index !== undefined && index < 4 ? "high" : undefined}
                             decoding="async"
                         />
                         <div className="absolute inset-0 border border-transparent hover:border-[var(--color-hallmark-ink)] transition-colors pointer-events-none" />
                     </div>
                 ) : (
-                    <div className="w-16 h-full bg-[var(--color-hallmark-paper-dark)] flex items-center justify-center">
-                        <span className="text-[var(--color-hallmark-rule)]">-</span>
+                    <div className="w-full aspect-square bg-[var(--color-hallmark-paper-dark)] flex items-center justify-center border border-[var(--color-hallmark-rule)]">
+                        <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)]">HAUS</span>
                     </div>
                 )}
             </div>
