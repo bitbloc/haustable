@@ -1121,45 +1121,45 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             {/* Overlay Modals (Portaled directly to document.body for true full-screen centering) */}
             {activeModal === 'crm' && typeof document !== 'undefined' && createPortal(
                 <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
                         {/* Header */}
-                        <div className="p-4 flex justify-between items-center text-[#1A1A1A] border-b border-[#D1D1CD] bg-white">
+                        <div className="p-4 flex justify-between items-center text-[var(--color-ink)] border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
                                 <div>
-                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[#1A1A1A]">Customer CRM & Rewards</h3>
-                                    <p className="text-xs text-[#767673] font-medium mt-0.5">จัดการข้อมูลสมาชิกและสิทธิพิเศษสำหรับลูกค้า</p>
+                                    <h3 className="font-mono font-bold text-base uppercase tracking-wider text-[var(--color-ink)]">Customer CRM & Rewards</h3>
+                                    <p className="text-xs text-[var(--color-muted)] font-medium mt-0.5">จัดการข้อมูลสมาชิกและสิทธิพิเศษสำหรับลูกค้า</p>
                                 </div>
                                 <button 
                                     onClick={() => setActiveModal(null)} 
-                                    className="p-2 hover:bg-[#F5F5F2] text-[#767673] hover:text-[#1A1A1A] rounded-full border border-transparent hover:border-[#D1D1CD]/50 transition-colors cursor-pointer"
+                                    className="p-2 hover:bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] rounded-full border border-transparent hover:border-[var(--color-rule)] transition-colors cursor-pointer"
                                 >
                                     <X size={20} />
                                 </button>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-white">
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[var(--color-paper)]">
                                 {editingProfile ? (
                                     /* Edit Customer Profile Form */
-                                    <div className="space-y-4 text-left p-4.5 bg-[#F5F5F2] rounded-xl border border-[#D1D1CD] shadow-inner font-sans">
-                                        <h4 className="font-mono font-bold text-xs text-[#767673] uppercase tracking-wider">
+                                    <div className="space-y-4 text-left p-4.5 bg-[var(--color-paper-2)] rounded-xl border border-[var(--color-rule)] shadow-inner font-sans">
+                                        <h4 className="font-mono font-bold text-xs text-[var(--color-muted)] uppercase tracking-wider">
                                             Edit Customer Profile / แก้ไขข้อมูลลูกค้า
                                         </h4>
                                         
                                         {/* Display Name Input */}
                                         <div className="space-y-1.5">
-                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
+                                            <label className="block text-xs font-mono font-bold text-[var(--color-muted)] uppercase">
                                                 Customer Name / ชื่อลูกค้า
                                             </label>
                                             <input 
                                                 type="text"
                                                 value={editDisplayName}
                                                 onChange={(e) => setEditDisplayName(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
 
                                         {/* Phone Number Input */}
                                         <div className="space-y-1.5">
-                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
+                                            <label className="block text-xs font-mono font-bold text-[var(--color-muted)] uppercase">
                                                 Phone Number / เบอร์โทรศัพท์
                                             </label>
                                             <input 
@@ -1167,13 +1167,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. 0812345678"
                                                 value={editPhone}
                                                 onChange={(e) => setEditPhone(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
 
                                         {/* Email Input */}
                                         <div className="space-y-1.5">
-                                            <label className="block text-xs font-mono font-bold text-[#767673] uppercase">
+                                            <label className="block text-xs font-mono font-bold text-[var(--color-muted)] uppercase">
                                                 Email Address / อีเมล
                                             </label>
                                             <input 
@@ -1181,17 +1181,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. customer@example.com"
                                                 value={editEmail}
                                                 onChange={(e) => setEditEmail(e.target.value)}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[#1A1A1A] outline-none focus:border-[#1A1A1A] h-11"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="flex gap-3 pt-3 border-t border-[#D1D1CD]/50">
+                                        <div className="flex gap-3 pt-3 border-t border-[var(--color-rule)]">
                                             <button
                                                 type="button"
                                                 onClick={() => setEditingProfile(null)}
                                                 disabled={isSavingProfile}
-                                                className="flex-1 bg-white hover:bg-[#EBEBE9] border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer h-11"
+                                                className="flex-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer h-11"
                                             >
                                                 Cancel
                                             </button>
@@ -1199,7 +1199,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 type="button"
                                                 onClick={handleSaveProfile}
                                                 disabled={isSavingProfile}
-                                                className="flex-1 bg-[#1A1A1A] hover:bg-[#333330] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 h-11"
+                                                className="flex-1 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 h-11"
                                             >
                                                 {isSavingProfile ? (
                                                     <>
@@ -1215,16 +1215,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 ) : currentMemberProfile ? (
                                     <div className="space-y-4 text-left">
                                         {/* Member Profile Card */}
-                                        <div className="bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-4 flex items-center justify-between shadow-sm">
+                                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-xl p-4 flex items-center justify-between shadow-sm">
                                             <div className="flex items-center gap-3.5 min-w-0">
                                                 <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 flex items-center justify-center text-[var(--color-accent)] shrink-0 font-mono font-bold text-base">
                                                     {currentMemberProfile.display_name?.charAt(0).toUpperCase() || 'U'}
                                                 </div>
                                                 <div className="text-left min-w-0">
                                                     <div className="flex items-center gap-2">
-                                                        <p className="text-xs font-mono font-bold tracking-widest text-[#767673] uppercase leading-none">MEMBER ATTACHED</p>
+                                                        <p className="text-xs font-mono font-bold tracking-widest text-[var(--color-muted)] uppercase leading-none">MEMBER ATTACHED</p>
                                                         {attachedMemberCrm && (
-                                                            <span className="px-2 py-0.5 bg-[#1A1A1A] text-white text-xs font-mono font-bold rounded uppercase tracking-wider">
+                                                            <span className="px-2 py-0.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-xs font-mono font-bold rounded uppercase tracking-wider">
                                                                 {attachedMemberCrm.current_tier}
                                                             </span>
                                                         )}

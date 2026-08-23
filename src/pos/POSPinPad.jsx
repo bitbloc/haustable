@@ -67,10 +67,10 @@ export default function POSPinPad({ onComplete, title, subtitle }) {
     return (
         <div className="flex flex-col items-center w-full max-w-[280px] mx-auto select-none">
             {title && (
-                <h3 className="text-sm font-bold text-[#1A1A1A] mb-0.5 text-center">{title}</h3>
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1 text-center">{title}</h3>
             )}
             {subtitle && (
-                <p className="text-xs text-[#767673] mb-3 text-center">{subtitle}</p>
+                <p className="text-xs text-[var(--color-muted)] mb-3 text-center">{subtitle}</p>
             )}
 
             {/* PIN Dot Indicators */}
@@ -80,10 +80,10 @@ export default function POSPinPad({ onComplete, title, subtitle }) {
                     return (
                         <div
                             key={idx}
-                            className={`w-4 h-4 rounded-full border transition-all duration-150 ${
+                            className={`w-3.5 h-3.5 rounded-full border transition-all duration-150 ${
                                 isFilled
-                                    ? 'bg-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)] scale-110 shadow-sm'
-                                    : 'bg-white border-[#D1D1CD]'
+                                    ? 'bg-[var(--color-accent)] border-[var(--color-accent)] scale-110 shadow-xs'
+                                    : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
                             }`}
                         />
                     );
@@ -91,13 +91,13 @@ export default function POSPinPad({ onComplete, title, subtitle }) {
             </div>
 
             {/* Numeric Keypad Grid */}
-            <div className="grid grid-cols-3 gap-2.5 w-full touch-manipulation">
+            <div className="grid grid-cols-3 gap-2 w-full touch-manipulation">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                     <button
                         key={num}
                         type="button"
                         onClick={() => handleDigit(String(num))}
-                        className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#F4F4F0] active:scale-95 text-base font-mono font-bold text-[#1A1A1A] shadow-sm flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                        className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
                     >
                         {num}
                     </button>
@@ -105,21 +105,21 @@ export default function POSPinPad({ onComplete, title, subtitle }) {
                 <button
                     type="button"
                     onClick={handleClear}
-                    className="h-12 rounded-xl bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] hover:bg-[#FAD2D2] active:scale-95 text-[11px] font-bold text-[#D32F2F] shadow-sm flex items-center justify-center cursor-pointer uppercase transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-red-50 active:scale-95 text-[11px] font-mono font-bold text-red-700 shadow-xs flex items-center justify-center cursor-pointer uppercase transition-transform duration-75 select-none touch-manipulation"
                 >
                     ล้าง (C)
                 </button>
                 <button
                     type="button"
                     onClick={() => handleDigit('0')}
-                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#F4F4F0] active:scale-95 text-base font-mono font-bold text-[#1A1A1A] shadow-sm flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
                 >
                     0
                 </button>
                 <button
                     type="button"
                     onClick={handleBackspace}
-                    className="h-12 rounded-xl bg-white border border-[#D1D1CD] hover:bg-[#F4F4F0] active:scale-95 text-base font-mono font-bold text-[#1A1A1A] shadow-sm flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
                 >
                     ←
                 </button>

@@ -61,186 +61,203 @@ export default function AdsLandingPage() {
     const [showAllMenu, setShowAllMenu] = useState(false);
     const [activeSection, setActiveSection] = useState('menu'); // 'menu' | 'atmosphere' | 'connect'
 
-    useEffect(() => { fetchData(); }, []);
+    const processSettings = (settingsData) => {
+        if (!settingsData) return;
+        const map = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+        setSettings(map);
 
-    // Inject Google Tag Manager (GTM-NPVTXNM9) dynamically for this landing page
-    useEffect(() => {
-        // Inject GTM script to <head>
-        const script = document.createElement('script');
-        script.innerHTML = `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,'script','dataLayer','GTM-NPVTXNM9');`;
-        document.head.appendChild(script);
-
-        // Inject GTM noscript iframe to <body>
-        const noscript = document.createElement('noscript');
-        noscript.innerHTML = `<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
-height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
-        document.body.insertBefore(noscript, document.body.firstChild);
-
-        return () => {
-            // Clean up elements on unmount
-            if (document.head.contains(script)) {
-                document.head.removeChild(script);
-            }
-            if (document.body.contains(noscript)) {
-                document.body.removeChild(noscript);
-            }
-        };
-    }, []);
-
-    const handleDirectionsClick = () => {
-        try {
-            if (typeof window !== 'undefined') {
-                window.gtag = window.gtag || function() { (window.dataLayer = window.dataLayer || []).push(arguments); };
-                window.gtag('event', 'conversion', {
-                    'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
-                    'value': 1.0,
-                    'currency': 'THB'
+        // Load Menu Images (Booklet)
+        const menus = [];
+        for (let i = 1; i <= 10; i++) {
+            if (map[`link_menu_${i}`]) {
+                menus.push({
+                    key: `link_menu_${i}`,
+                    url: map[`link_menu_${i}`]
                 });
             }
+        }
+        setMenuImages(menus.map(m => m.url));
+
+        // Group menus into Promo vs Regular based on link_menu_promo_slots setting
+        const promoSlotString = map.link_menu_promo_slots || '5';
+        const promoSlotNumbers = promoSlotString.split(',').map(s => s.trim()).filter(Boolean);
+        const promoKeys = promoSlotNumbers.map(num => `link_menu_${num}`);
+        const promoUrls = menus.filter(m => promoKeys.includes(m.key)).map(m => m.url);
+        const regularUrls = menus.filter(m => !promoKeys.includes(m.key)).map(m => m.url);
+        
+        setPromoMenuImages(promoUrls);
+        setRegularMenuImages(regularUrls);
+
+        if (promoUrls.length > 0) {
+            setActiveTab(prev => (prev === 'promo' ? 'promo' : prev));
+        }
+
+        // Extract signatures
+        const sigs = [];
+        for (let i = 1; i <= 3; i++) {
+            if (map[`link_sig_img_${i}`]) {
+                sigs.push({
+                    img: map[`link_sig_img_${i}`],
+                    name: map[`link_sig_name_${i}`] || '',
+                    price: map[`link_sig_price_${i}`] || '',
+                });
+            }
+        }
+        setSignatures(sigs);
+
+        // Rearrange atmosphere images: put link_hero_url first
+        const atms = [];
+        if (map.link_hero_url) {
+            atms.push(map.link_hero_url);
+        }
+        for (let i = 1; i <= 10; i++) {
+            if (map[`link_atm_${i}`]) {
+                if (map[`link_atm_${i}`] !== map.link_hero_url) {
+                    atms.push(map[`link_atm_${i}`]);
+                }
+            }
+        }
+        setAtmImages(atms);
+    };
+
+    const processMenuItems = (itemsData) => {
+        if (!itemsData) return;
+        const sortedItems = (itemsData || []).sort((a, b) => {
+            const recA = a.is_recommended === true;
+            const recB = b.is_recommended === true;
+            if (recA !== recB) return recA ? -1 : 1;
+
+            const orderA = a.sort_order ?? a.display_order ?? 999999;
+            const orderB = b.sort_order ?? b.display_order ?? 999999;
+            if (orderA !== orderB) return orderA - orderB;
+
+            return (a.name || '').localeCompare(b.name || '');
+        });
+        setMenuItems(sortedItems);
+    };
+
+    const fetchSettingsOnly = async () => {
+        try {
+            const { data } = await supabase.from('app_settings').select('key, value').like('key', 'link_%');
+            if (data) processSettings(data);
         } catch (err) {
-            console.error('gtag error', err);
+            console.warn('[AdsLandingPage] Failed to fetch updated settings:', err);
         }
     };
 
-    const fetchData = async () => {
-        const criticalUrls = [];
+    const fetchMenuItemsOnly = async () => {
         try {
-            const [settingsRes, itemsRes, catsRes] = await Promise.all([
-                supabase.from('app_settings').select('*').like('key', 'link_%'),
-                supabase.from('menu_items').select('*').eq('is_available', true),
-                supabase.from('menu_categories').select('*').order('display_order')
+            const { data } = await supabase
+                .from('menu_items')
+                .select('id, name, price, description, image_url, is_available, is_recommended, sort_order, display_order, category_id')
+                .eq('is_available', true);
+            if (data) processMenuItems(data);
+        } catch (err) {
+            console.warn('[AdsLandingPage] Failed to fetch updated menu items:', err);
+        }
+    };
+
+    const fetchCategoriesOnly = async () => {
+        try {
+            const { data } = await supabase
+                .from('menu_categories')
+                .select('id, name, display_order')
+                .order('display_order');
+            if (data) setMenuCategories(data);
+        } catch (err) {
+            console.warn('[AdsLandingPage] Failed to fetch updated categories:', err);
+        }
+    };
+
+    const fetchCheckinsOnly = async () => {
+        try {
+            const { data } = await supabase
+                .from('haus_checkins')
+                .select('id, image_url, source, user_name, user_username, text, likes_count, is_visible, created_at')
+                .eq('is_visible', true)
+                .order('created_at', { ascending: false })
+                .limit(8);
+            if (data) setCustomerCheckins(data);
+        } catch (err) {
+            console.warn('[AdsLandingPage] Failed to fetch updated check-ins:', err);
+        }
+    };
+
+    const fetchData = async (silent = false) => {
+        if (!silent) setLoading(true);
+        try {
+            const [settingsRes, itemsRes, catsRes, checkinsRes] = await Promise.all([
+                supabase.from('app_settings').select('key, value').like('key', 'link_%'),
+                supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, sort_order, display_order, category_id').eq('is_available', true),
+                supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
+                supabase.from('haus_checkins').select('id, image_url, source, user_name, user_username, text, likes_count, is_visible, created_at').eq('is_visible', true).order('created_at', { ascending: false }).limit(8)
             ]);
 
-            if (settingsRes.data) {
-                const map = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-                setSettings(map);
-
-                if (map.link_logo_url) {
-                    criticalUrls.push(map.link_logo_url);
-                }
-                if (map.link_hero_url) {
-                    criticalUrls.push(map.link_hero_url);
-                }
-
-                // Load Menu Images (Booklet)
-                const menus = [];
-                for (let i = 1; i <= 10; i++) {
-                    if (map[`link_menu_${i}`]) {
-                        menus.push({
-                            key: `link_menu_${i}`,
-                            url: map[`link_menu_${i}`]
-                        });
-                    }
-                }
-                setMenuImages(menus.map(m => m.url));
-
-                // Group menus into Promo vs Regular based on link_menu_promo_slots setting
-                const promoSlotString = map.link_menu_promo_slots || '5';
-                const promoSlotNumbers = promoSlotString.split(',').map(s => s.trim()).filter(Boolean);
-                const promoKeys = promoSlotNumbers.map(num => `link_menu_${num}`);
-                const promoUrls = menus.filter(m => promoKeys.includes(m.key)).map(m => m.url);
-                const regularUrls = menus.filter(m => !promoKeys.includes(m.key)).map(m => m.url);
-                
-                setPromoMenuImages(promoUrls);
-                setRegularMenuImages(regularUrls);
-
-                if (promoUrls.length > 0) {
-                    criticalUrls.push(promoUrls[0]);
-                    setActiveTab('promo');
-                } else {
-                    setActiveTab('regular');
-                }
-                if (regularUrls.length > 0) {
-                    criticalUrls.push(regularUrls[0]);
-                }
-
-                // Extract signatures
-                const sigs = [];
-                for (let i = 1; i <= 3; i++) {
-                    if (map[`link_sig_img_${i}`]) {
-                        sigs.push({
-                            img: map[`link_sig_img_${i}`],
-                            name: map[`link_sig_name_${i}`] || '',
-                            price: map[`link_sig_price_${i}`] || '',
-                        });
-                        criticalUrls.push(map[`link_sig_img_${i}`]);
-                    }
-                }
-                setSignatures(sigs);
-
-                // Rearrange atmosphere images: put link_hero_url first
-                const atms = [];
-                if (map.link_hero_url) {
-                    atms.push(map.link_hero_url);
-                }
-                for (let i = 1; i <= 10; i++) {
-                    if (map[`link_atm_${i}`]) {
-                        if (map[`link_atm_${i}`] !== map.link_hero_url) {
-                            atms.push(map[`link_atm_${i}`]);
-                        }
-                    }
-                }
-                setAtmImages(atms);
-                
-                // Preload first 2 atmosphere images
-                atms.slice(0, 2).forEach(url => {
-                    if (url) criticalUrls.push(url);
-                });
-            }
-
-            if (itemsRes.data) {
-                // Sort items: recommended first, then sort_order / display_order / name
-                const sortedItems = itemsRes.data.sort((a, b) => {
-                    const recA = a.is_recommended === true;
-                    const recB = b.is_recommended === true;
-                    if (recA !== recB) return recA ? -1 : 1;
-
-                    const orderA = a.sort_order ?? a.display_order ?? 999999;
-                    const orderB = b.sort_order ?? b.display_order ?? 999999;
-                    if (orderA !== orderB) return orderA - orderB;
-
-                    return a.name.localeCompare(b.name);
-                });
-                setMenuItems(sortedItems);
-
-                // Preload first 3 recommended menu item images
-                const recommendedItems = sortedItems.filter(item => item.is_recommended).slice(0, 3);
-                recommendedItems.forEach(item => {
-                    if (item.image_url) criticalUrls.push(item.image_url);
-                });
-            }
-
-            if (catsRes.data) {
-                setMenuCategories(catsRes.data);
-            }
-
-            // Fetch latest visible check-ins for landing page stream preview
-            try {
-                const { data: checkins } = await supabase
-                    .from('haus_checkins')
-                    .select('*')
-                    .eq('is_visible', true)
-                    .order('created_at', { ascending: false })
-                    .limit(8);
-                if (checkins) {
-                    setCustomerCheckins(checkins);
-                }
-            } catch (checkinErr) {
-                console.error('Failed to fetch check-ins for landing page:', checkinErr);
-            }
-
-            // Raw image preloading removed to prevent downloading 20.9MB of raw original files
-
+            if (settingsRes.data) processSettings(settingsRes.data);
+            if (itemsRes.data) processMenuItems(itemsRes.data);
+            if (catsRes.data) setMenuCategories(catsRes.data);
+            if (checkinsRes.data) setCustomerCheckins(checkinsRes.data);
         } catch (err) {
             console.error('Failed to load link data:', err);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchData();
+
+        // ─── REALTIME CHANNEL FOR ADS LANDING PAGE ───
+        let debounceTimer = null;
+        const triggerDebounced = (fn) => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fn();
+            }, 250);
+        };
+
+        const channel = supabase.channel('ads_landing_page_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                const key = payload.new?.key || payload.old?.key;
+                if (!key || key.startsWith('link_')) {
+                    triggerDebounced(fetchSettingsOnly);
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => {
+                triggerDebounced(fetchMenuItemsOnly);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, () => {
+                triggerDebounced(fetchCategoriesOnly);
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'haus_checkins' }, () => {
+                triggerDebounced(fetchCheckinsOnly);
+            })
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
+                    console.warn(`[Ads Realtime] Channel status: ${status}`, err || '');
+                }
+            });
+
+        // Foreground wake-up & online reconnect listeners (critical for Mobile Ad Click traffic)
+        const handleWakeup = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData(true);
+            }
+        };
+        const handleOnline = () => {
+            fetchData(true);
+        };
+
+        document.addEventListener('visibilitychange', handleWakeup);
+        window.addEventListener('online', handleOnline);
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+            document.removeEventListener('visibilitychange', handleWakeup);
+            window.removeEventListener('online', handleOnline);
+        };
+    }, []);
 
     const logoUrl = settings.link_logo_url || '';
     const shopName = settings.link_shop_name || 'IN THE HAUS';
@@ -319,7 +336,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe>`;
                     {/* Top Marquee Bar (High Contrast) */}
                     <div className="w-full bg-[#E9F344] text-[var(--color-hallmark-ink)] border-b border-[var(--color-hallmark-rule)] py-1.5 px-3 flex items-center justify-center overflow-hidden">
                         <span className="font-mono text-[9px] font-black uppercase tracking-widest truncate">
-                            *** {subtitle} ***
+                            // {subtitle} //
                         </span>
                     </div>
 

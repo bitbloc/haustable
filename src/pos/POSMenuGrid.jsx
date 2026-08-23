@@ -187,22 +187,22 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     }, [itemsByCategoryMap, activeCategory, search]);
 
     if (loading) return (
-        <div className="flex h-full items-center justify-center bg-[#ECECE9]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[oklch(52%_0.16_28)]"></div>
+        <div className="flex h-full items-center justify-center bg-[var(--color-paper)]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#ECECE9] text-[#1A1A1A] font-sans select-none relative touch-manipulation">
+        <div className="h-full flex flex-col bg-[var(--color-paper)] text-[var(--color-ink)] font-sans select-none relative touch-manipulation">
             {/* Menu Header with Search, Categories & Update Button */}
-            <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] space-y-3 shadow-sm shrink-0">
+            <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] space-y-3 shadow-xs shrink-0">
                 <div className="flex gap-2 items-center">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={17} />
                         <input 
                             type="search" 
-                            placeholder="Search menu items (ค้นหารายการอาหาร/เครื่องดื่ม)..." 
-                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation shadow-2xs"
+                            placeholder="ค้นหารายการอาหาร / เครื่องดื่ม..." 
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-2.5 pl-10 pr-4 text-sm text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] font-medium transition-colors touch-manipulation shadow-xs min-h-[44px]"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
@@ -211,23 +211,23 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                     <button
                         type="button"
                         onClick={() => setShowEmergencyModal(true)}
-                        className="h-[46px] px-3.5 bg-[oklch(18%_0.012_28)] hover:bg-black active:scale-[0.97] text-[oklch(97%_0.008_28)] rounded-xl flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-sm"
+                        className="h-[44px] min-h-[44px] px-3.5 bg-[var(--color-ink)] hover:opacity-90 active:scale-[0.97] text-[var(--color-paper)] rounded-md flex items-center gap-1.5 text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-xs"
                     >
-                        <Plus size={16} className="shrink-0" />
-                        <span>+ เมนูเพิ่มเติม</span>
+                        <Plus size={15} className="shrink-0" />
+                        <span>+ เมนูพิเศษ</span>
                     </button>
 
                     <button
                         onClick={handleManualSync}
                         disabled={isSyncing}
                         title="อัพเดทรายการเมนูและรูปภาพจากฐานข้อมูลลงเครื่อง"
-                        className="h-[46px] px-3.5 bg-white hover:bg-[#F0F0ED] active:scale-[0.97] disabled:opacity-70 border border-[#D1D1CD] rounded-xl flex items-center gap-2 text-xs font-mono font-bold text-[#1A1A1A] uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-xs"
+                        className="h-[44px] min-h-[44px] px-3.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] active:scale-[0.97] disabled:opacity-70 border border-[var(--color-rule)] rounded-md flex items-center gap-2 text-xs font-mono font-bold text-[var(--color-ink)] uppercase tracking-wider transition-all cursor-pointer shrink-0 touch-manipulation shadow-xs"
                     >
-                        <RotateCw className={`shrink-0 ${isSyncing ? 'animate-spin text-[oklch(52%_0.16_28)]' : 'text-[#767673]'}`} size={16} />
+                        <RotateCw className={`shrink-0 ${isSyncing ? 'animate-spin text-[var(--color-accent)]' : 'text-[var(--color-muted)]'}`} size={15} />
                         <span className="hidden sm:inline">
                             {isSyncing 
-                                ? (syncProgress.total > 0 ? `กำลังอัพเดท (${syncProgress.completed}/${syncProgress.total})` : 'กำลังโหลด...') 
-                                : 'อัพเดทเมนู'}
+                                ? (syncProgress.total > 0 ? `กำลังโหลด (${syncProgress.completed}/${syncProgress.total})` : 'กำลังโหลด...') 
+                                : 'อัพเดท'}
                         </span>
                         <span className="sm:hidden">
                             {isSyncing ? `${syncProgress.completed}/${syncProgress.total}` : 'อัพเดท'}
@@ -235,7 +235,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                     </button>
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-none font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <CategoryButton 
                         label="ALL ITEMS" 
                         active={activeCategory === 'all'} 
@@ -254,7 +254,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
 
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                     {filteredItems.map(item => (
                         <MenuItemCard 
                             key={item.id}
@@ -300,33 +300,33 @@ const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
         <button
             type="button"
             onClick={() => onClick(item)}
-            className="bg-white rounded-xl border border-[#D1D1CD] p-3 flex flex-col gap-3 text-left group hover:border-[#B0B0AC] active:scale-[0.97] transition-transform duration-75 cursor-pointer shadow-sm relative select-none touch-manipulation"
+            className="bg-[var(--color-paper)] rounded-md border border-[var(--color-rule)] p-3 flex flex-col gap-2.5 text-left group hover:border-[var(--color-accent)] active:scale-[0.98] transition-all duration-75 cursor-pointer shadow-xs relative select-none touch-manipulation min-h-[140px]"
             style={{ contain: 'content' }}
         >
-            <div className="aspect-square rounded-lg bg-[#ECECE9] overflow-hidden relative border border-[#D1D1CD] shrink-0">
+            <div className="aspect-square rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] shrink-0">
                 {cachedImg ? (
                     <img src={cachedImg} alt={item.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 ) : (
-                    <div className="w-full h-full flex items-center justify-center text-[#767673] font-mono font-bold text-2xl uppercase">
+                    <div className="w-full h-full flex items-center justify-center text-[var(--color-muted)] font-mono font-bold text-2xl uppercase">
                         {item.name.charAt(0)}
                     </div>
                 )}
                 {hasOptions && (
-                    <div className="absolute top-2 left-2 bg-black/85 text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                        <span>มีตัวเลือก</span>
+                    <div className="absolute top-1.5 left-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs flex items-center gap-1">
+                        <span>OPTION</span>
                     </div>
                 )}
-                <div className="absolute bottom-2 right-2 w-10 h-10 rounded-xl bg-white border border-[#D1D1CD] flex items-center justify-center shadow-md group-hover:bg-[oklch(52%_0.16_28)] group-hover:text-white group-hover:border-[oklch(45%_0.16_28)] transition-colors">
-                    <Plus size={20} />
+                <div className="absolute bottom-1.5 right-1.5 w-8 h-8 rounded-sm bg-[var(--color-paper)] border border-[var(--color-rule)] flex items-center justify-center shadow-xs group-hover:bg-[var(--color-accent)] group-hover:text-white group-hover:border-[var(--color-accent)] transition-colors">
+                    <Plus size={16} />
                 </div>
             </div>
             
-            <div className="flex flex-col flex-1 min-h-[64px]">
-                <h4 className="font-bold text-base text-[#1A1A1A] line-clamp-2 leading-tight py-0.5 uppercase tracking-tight">{item.name}</h4>
-                <div className="mt-auto pt-2 flex items-center justify-between border-t border-black/5 text-sm font-mono font-bold uppercase tracking-wider">
-                    <span className="text-[oklch(52%_0.16_28)]">฿{item.price}</span>
+            <div className="flex flex-col flex-1 min-h-[56px] justify-between">
+                <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-tight py-0.5 tracking-tight">{item.name}</h4>
+                <div className="mt-1 pt-1.5 flex items-center justify-between border-t border-[var(--color-rule)] text-xs font-mono font-bold uppercase tracking-wider">
+                    <span className="text-[var(--color-accent)]">฿{item.price}</span>
                     {item.stock_quantity !== null && (
-                        <span className="text-[#767673] text-xs tracking-normal font-medium">QTY: {item.stock_quantity}</span>
+                        <span className="text-[var(--color-muted)] text-[10px] tracking-normal font-normal">QTY: {item.stock_quantity}</span>
                     )}
                 </div>
             </div>
@@ -338,10 +338,10 @@ const CategoryButton = memo(function CategoryButton({ label, active, onClick }) 
     return (
         <button 
             onClick={onClick}
-            className={`px-4.5 py-2.5 rounded-xl border transition-all cursor-pointer whitespace-nowrap text-xs font-bold uppercase select-none touch-manipulation ${
+            className={`min-h-[40px] px-3.5 py-2 rounded-md border transition-all cursor-pointer whitespace-nowrap text-xs font-mono font-bold uppercase select-none touch-manipulation ${
                 active 
-                ? 'bg-[#E0E0DC] text-[#1A1A1A] border-[#B0B0AC] shadow-inner font-black' 
-                : 'bg-white text-[#767673] border-[#D1D1CD] hover:text-[#1A1A1A] hover:bg-[#FDFDFD] shadow-sm'
+                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] shadow-xs' 
+                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border-[var(--color-rule)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] shadow-xs'
             }`}
         >
             {label}

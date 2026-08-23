@@ -10,6 +10,10 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
     if (!isSupported) {
       return;
     }
+    // Guard against redundant duplicate lock requests
+    if (wakeLockRef.current && !wakeLockRef.current.released) {
+      return;
+    }
     try {
       const lock = await navigator.wakeLock.request('screen');
       wakeLockRef.current = lock;

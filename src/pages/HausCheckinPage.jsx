@@ -342,92 +342,130 @@ export default function HausCheckinPage() {
         }
     }
 
-    useEffect(() => {
-        const fetchSettingsAndImages = async () => {
-            try {
-                // Fetch restaurant app settings from Supabase
-                const { data } = await supabase
-                    .from('app_settings')
-                    .select('*')
-                    .like('key', 'link_%')
+    const fetchSettingsAndImages = async (silent = false) => {
+        if (!silent) setLoading(true);
+        try {
+            // Fetch restaurant app settings from Supabase (only link_ keys)
+            const { data } = await supabase
+                .from('app_settings')
+                .select('key, value')
+                .like('key', 'link_%');
 
-                let map = {}
-                if (data) {
-                    map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
-                    setSettings(map)
+            let map = {};
+            if (data) {
+                map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                setSettings(map);
 
-                    // Collect all active images in settings
-                    const images = []
-                    
-                    // Atmosphere pictures
-                    for (let i = 1; i <= 10; i++) {
-                        if (map[`link_atm_${i}`]) {
-                            images.push(map[`link_atm_${i}`])
-                        }
+                // Collect all active images in settings
+                const images = [];
+                
+                // Atmosphere pictures
+                for (let i = 1; i <= 10; i++) {
+                    if (map[`link_atm_${i}`]) {
+                        images.push(map[`link_atm_${i}`]);
                     }
-                    
-                    // Menu booklet pictures
-                    for (let i = 1; i <= 10; i++) {
-                        if (map[`link_menu_${i}`]) {
-                            images.push(map[`link_menu_${i}`])
-                        }
-                    }
-
-                    // Signatures
-                    for (let i = 1; i <= 3; i++) {
-                        if (map[`link_sig_img_${i}`]) {
-                            images.push(map[`link_sig_img_${i}`])
-                        }
-                    }
-
-                    if (map.link_hero_url) {
-                        images.push(map.link_hero_url)
-                    }
-
-                    // Remove duplicates and filter empty
-                    const uniqueImages = [...new Set(images)].filter(Boolean)
-                    setStreamImages(uniqueImages)
                 }
-
-                // Single pass fetch for all active check-ins to prevent 800ms re-render loops
-                try {
-                    const { data: dbData, error: checkinErr } = await supabase
-                        .from('haus_checkins')
-                        .select('*')
-                        .eq('is_visible', true)
-                        .order('created_at', { ascending: false })
-                        .limit(250)
-
-                    if (!checkinErr && dbData) {
-                        setDbCheckins(dbData)
-                    }
-                } catch (dbErr) {
-                    console.warn('haus_checkins fetch error:', dbErr)
-                }
-
-                // Fetch third-party social feed (e.g. Elfsight, EmbedSocial widget data) if configured
-                if (map.link_social_feed_url) {
-                    try {
-                        const response = await fetch(map.link_social_feed_url)
-                        const feedData = await response.json()
-                        const parsed = parseSocialFeed(feedData)
-                        if (parsed && parsed.length > 0) {
-                            setFeedCheckins(parsed)
-                        }
-                    } catch (feedErr) {
-                        console.error('Failed to fetch third-party social feed:', feedErr)
+                
+                // Menu booklet pictures
+                for (let i = 1; i <= 10; i++) {
+                    if (map[`link_menu_${i}`]) {
+                        images.push(map[`link_menu_${i}`]);
                     }
                 }
 
-            } catch (err) {
-                console.error('Failed to fetch check-in stream images:', err)
-            } finally {
-                setLoading(false)
+                // Signatures
+                for (let i = 1; i <= 3; i++) {
+                    if (map[`link_sig_img_${i}`]) {
+                        images.push(map[`link_sig_img_${i}`]);
+                    }
+                }
+
+                if (map.link_hero_url) {
+                    images.push(map.link_hero_url);
+                }
+
+                // Remove duplicates and filter empty
+                const uniqueImages = [...new Set(images)].filter(Boolean);
+                setStreamImages(uniqueImages);
             }
-        }
 
-        fetchSettingsAndImages()
-    }, [])
+            // Fetch visible check-ins
+            try {
+                const { data: dbData, error: checkinErr } = await supabase
+                    .from('haus_checkins')
+                    .select('*')
+                    .eq('is_visible', true)
+                    .order('created_at', { ascending: false })
+                    .limit(250);
+
+                if (!checkinErr && dbData) {
+                    setDbCheckins(dbData);
+                }
+            } catch (dbErr) {
+                console.warn('haus_checkins fetch error:', dbErr);
+            }
+
+            // Fetch third-party social feed if configured
+            if (map.link_social_feed_url) {
+                try {
+                    const response = await fetch(map.link_social_feed_url);
+                    const feedData = await response.json();
+                    const parsed = parseSocialFeed(feedData);
+                    if (parsed && parsed.length > 0) {
+                        setFeedCheckins(parsed);
+                    }
+                } catch (feedErr) {
+                    console.error('Failed to fetch third-party social feed:', feedErr);
+                }
+            }
+
+        } catch (err) {
+            console.error('Failed to fetch check-in stream images:', err);
+        } finally {
+            if (!silent) setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSettingsAndImages();
+
+        // Realtime sync for live checkin stream & settings updates
+        let debounceTimer = null;
+        const triggerDebouncedSync = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchSettingsAndImages(true);
+            }, 300);
+        };
+
+        const channel = supabase.channel('haus_checkin_wall_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'haus_checkins' }, () => {
+                triggerDebouncedSync();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                const key = payload.new?.key || payload.old?.key;
+                if (!key || key.startsWith('link_')) {
+                    triggerDebouncedSync();
+                }
+            })
+            .subscribe();
+
+        const handleWakeup = () => {
+            if (document.visibilityState === 'visible') {
+                fetchSettingsAndImages(true);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleWakeup);
+        window.addEventListener('online', triggerDebouncedSync);
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+            document.removeEventListener('visibilitychange', handleWakeup);
+            window.removeEventListener('online', triggerDebouncedSync);
+        };
+    }, []);
 
     // Prepare grid items with matched images and combined sources
     const gridItems = useMemo(() => {

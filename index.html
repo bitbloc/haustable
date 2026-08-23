@@ -31,21 +31,34 @@
     <meta name="twitter:image" content="https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg" />
     <!-- DYNAMIC_OG_TAGS_END -->
     
-    <!-- Google Fonts for Ads Landing Page -->
+    <!-- Fast & Optimized Google Fonts (Dieter Rams + Thai Modern 2+1 Font System) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Inter:wght@400;500;600;700&family=League+Gothic&family=Press+Start+2P&family=Prompt:wght@400;500;600&family=Roboto+Flex:opsz,wdth,wght@8..144,25..151,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     
-    <script async defer charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-11227095880"></script>
+    <!-- Dynamic & Non-blocking External SDKs (Safe for Native APK & Offline Mode) -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+      (function() {
+        const isNative = window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:';
+        if (!isNative) {
+          // 1. Load LINE LIFF SDK on Web/Customer Browser only
+          const liffScript = document.createElement('script');
+          liffScript.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+          liffScript.async = true;
+          document.head.appendChild(liffScript);
 
-      gtag('config', 'AW-11227095880');
+          // 2. Load Google Tag Manager for web analytics
+          const gtagScript = document.createElement('script');
+          gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=AW-11227095880";
+          gtagScript.async = true;
+          document.head.appendChild(gtagScript);
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'AW-11227095880');
+        }
+      })();
     </script>
     
     <script>

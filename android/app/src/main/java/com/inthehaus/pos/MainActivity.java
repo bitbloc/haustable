@@ -62,6 +62,7 @@ public class MainActivity extends BridgeActivity {
         
         try {
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         } catch (Exception e) {
             e.printStackTrace();
         }

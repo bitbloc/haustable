@@ -97,6 +97,25 @@ button, a, select, input, textarea, [role="button"] {
   backface-visibility: hidden;
 }
 
+/* POS Theme Surface & Border Helper Utilities (Thai Modern OKLCH) */
+.pos-bg-paper { background-color: var(--color-paper); }
+.pos-bg-paper-2 { background-color: var(--color-paper-2); }
+.pos-border-rule { border-color: var(--color-rule); }
+.pos-text-ink { color: var(--color-ink); }
+.pos-text-muted { color: var(--color-muted); }
+.pos-text-neutral { color: var(--color-neutral); }
+.pos-accent { background-color: var(--color-accent); color: var(--color-paper); }
+.pos-accent-outline { border-color: var(--color-accent); color: var(--color-accent); }
+
+/* Touch Target Minimum Scale (44px) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

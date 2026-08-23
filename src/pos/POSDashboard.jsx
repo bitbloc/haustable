@@ -99,7 +99,16 @@ function formatDbOrderItemToCart(oi) {
 }
 
 export default function POSDashboard() {
-    const { request: requestWakeLock } = useWakeLock();
+    const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock();
+    
+    // Maintain active screen wake lock during POS operations
+    useEffect(() => {
+        requestWakeLock();
+        return () => {
+            if (releaseWakeLock) releaseWakeLock();
+        };
+    }, [requestWakeLock, releaseWakeLock]);
+
     const [view, setView] = useState('tables'); // 'tables' or 'menu'
     const [selectedTable, setSelectedTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);

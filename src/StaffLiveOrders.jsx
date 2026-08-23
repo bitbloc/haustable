@@ -58,7 +58,14 @@ function StaffLiveOrdersContent() {
     const [notification, setNotification] = useState({ visible: false, title: '', message: '', price: null })
 
     // Hooks
-    const { request, release } = useWakeLock()
+    const { request: requestWakeLock, release: releaseWakeLock } = useWakeLock()
+    useEffect(() => {
+        requestWakeLock();
+        return () => {
+            if (releaseWakeLock) releaseWakeLock();
+        };
+    }, [requestWakeLock, releaseWakeLock]);
+
     const activeSoundUrl = kdsSoundUrl || soundUrl; // Fallback to POS sound if KDS sound not uploaded yet
     const { play, stop, isPlaying } = useAudioAlert(activeSoundUrl)
     const { requestPermission: requestPush, triggerNotification, isSubscribed } = usePushNotifications()

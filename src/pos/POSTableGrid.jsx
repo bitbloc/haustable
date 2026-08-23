@@ -281,24 +281,24 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     }, [tables, searchQuery, statusFilter]);
 
     if (loading) return (
-        <div className="flex h-full items-center justify-center bg-[#ECECE9]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff0000]"></div>
+        <div className="flex h-full items-center justify-center bg-[var(--color-paper)]">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-accent)]"></div>
         </div>
     );
 
     return (
-        <div className="h-full flex flex-col bg-[#ECECE9] overflow-hidden select-none font-sans text-[#1A1A1A]">
+        <div className="h-full flex flex-col bg-[var(--color-paper)] overflow-hidden select-none font-sans text-[var(--color-ink)]">
             <style>{`
                 @keyframes pos-blink-red {
-                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
-                    50% { border-color: #ff0000; box-shadow: 0 0 16px rgba(255,0,0,0.6); }
+                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    50% { border-color: var(--color-accent); box-shadow: 0 0 16px rgba(190,40,20,0.4); }
                 }
                 @keyframes pos-blink-orange {
-                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
                     50% { border-color: #FFAA00; box-shadow: 0 0 16px rgba(255,170,0,0.6); }
                 }
                 @keyframes pos-blink-blue {
-                    0%, 100% { border-color: #2A2B2D; box-shadow: 0 0 2px rgba(0,0,0,0.1); }
+                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
                     50% { border-color: #0099FF; box-shadow: 0 0 16px rgba(0,153,255,0.6); }
                 }
                 .animate-pos-blink-red { animation: pos-blink-red 1.0s infinite ease-in-out !important; }
@@ -306,76 +306,76 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 .animate-pos-blink-blue { animation: pos-blink-blue 1.0s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
-            <div className="p-4 bg-[#F5F5F2] border-b border-[#D1D1CD] flex flex-col md:flex-row gap-4 items-center justify-between z-10 shrink-0 shadow-sm">
+            <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-col md:flex-row gap-3 items-center justify-between z-10 shrink-0 shadow-xs">
                 {/* Search and Filters */}
-                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
                     <div className="relative w-full sm:w-64">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={18} />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-muted)]" size={17} />
                         <input 
                             type="search" 
-                            placeholder="ค้นหาชื่อโต๊ะ..." 
-                            className="w-full bg-white border border-[#D1D1CD] rounded-xl py-3 pl-11 pr-4 text-sm text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-[oklch(52%_0.16_28)] font-medium transition-colors touch-manipulation"
+                            placeholder="ค้นหาชื่อโต๊ะ / คิว..." 
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-2.5 pl-10 pr-4 text-sm text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] font-medium transition-colors touch-manipulation min-h-[44px] shadow-xs"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] text-xs font-mono font-bold uppercase tracking-wider touch-manipulation">
+                    <div className="flex bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] text-xs font-mono font-bold uppercase tracking-wider touch-manipulation">
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${statusFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer touch-manipulation ${statusFilter === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             ทั้งหมด
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('free')}
-                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'free' ? 'bg-white text-emerald-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'free' ? 'bg-emerald-100 text-emerald-900 shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-[#00CC44]"></span>
+                            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
                             ว่าง
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('occupied')}
-                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'occupied' ? 'bg-white text-red-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'occupied' ? 'bg-[var(--color-accent)] text-white shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-[#FF3300]"></span>
+                            <span className="w-2 h-2 rounded-full bg-white"></span>
                             มีลูกค้า
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('pending')}
-                            className={`px-3.5 py-2 rounded-lg transition-all cursor-pointer flex items-center gap-2 touch-manipulation ${statusFilter === 'pending' ? 'bg-white text-amber-600 shadow-sm' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'pending' ? 'bg-amber-200 text-amber-900 shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-[#FFAA00] animate-pulse"></span>
+                            <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
                             รอรับออเดอร์
                         </button>
                     </div>
                 </div>
 
                 {/* Layout Mode Toggle */}
-                <div className="flex bg-[#E0E0DC] p-1 rounded-xl border border-[#D1D1CD] shrink-0 font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
+                <div className="flex bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] shrink-0 font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <button 
                         type="button"
                         onClick={() => setViewMode('floorplan')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${
+                        className={`min-h-[38px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-md transition-all cursor-pointer touch-manipulation ${
                             viewMode === 'floorplan' 
-                                ? 'bg-white text-[#1A1A1A] shadow-sm' 
-                                : 'text-[#767673] hover:text-[#1A1A1A]'
-                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-xs' 
+                                : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
+                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-xs' : ''}`}
                     >
                         <Map size={14} /> FLOORPLAN
                     </button>
                     <button 
                         type="button"
                         onClick={() => setViewMode('grid')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all cursor-pointer touch-manipulation ${
+                        className={`min-h-[38px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-md transition-all cursor-pointer touch-manipulation ${
                             viewMode === 'grid' 
-                                ? 'bg-white text-[#1A1A1A] shadow-sm' 
-                                : 'text-[#767673] hover:text-[#1A1A1A]'
-                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-800 border border-amber-300 font-extrabold shadow-sm' : ''}`}
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-xs' 
+                                : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
+                        } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-xs' : ''}`}
                     >
                         <LayoutGrid size={14} /> REGISTRY LIST
                     </button>
@@ -383,11 +383,11 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         <button 
                             type="button"
                             onClick={onOpenNotifDrawer} 
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg transition-all cursor-pointer touch-manipulation bg-white text-[#1A1A1A] border border-[#D1D1CD] hover:bg-[#F5F5F2] font-mono text-xs font-bold uppercase tracking-wider relative ml-1"
+                            className="min-h-[38px] flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer touch-manipulation bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:bg-[var(--color-paper)] font-mono text-xs font-bold uppercase tracking-wider relative ml-1"
                         >
                             NOTIFS
                             {unreadNotifCount > 0 && (
-                                <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full leading-none animate-pulse">
+                                <span className="bg-[var(--color-accent)] text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full leading-none animate-pulse">
                                     {unreadNotifCount}
                                 </span>
                             )}
@@ -713,24 +713,24 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
 
-    let cellBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A] hover:border-[#B0B0AC]';
-    let ledColor = 'bg-[#00CC44]';
+    let cellBgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-accent)] shadow-xs';
+    let ledColor = 'bg-emerald-500';
     
     if (isOccupied || isPending) {
-        cellBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+        cellBgClass = 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-xs';
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
-            cellBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+            cellBgClass = 'animate-pos-blink-blue border-2 shadow-sm';
             ledColor = 'bg-[#0099FF] animate-ping';
         }
         if (hasCallBill) {
-            cellBgClass = 'animate-pos-blink-orange border-2 shadow-md';
+            cellBgClass = 'animate-pos-blink-orange border-2 shadow-sm';
             ledColor = 'bg-[#FFAA00] animate-ping';
         }
         if (hasOrder) {
-            cellBgClass = 'animate-pos-blink-red border-2 shadow-md';
-            ledColor = 'bg-[#ff0000] animate-ping';
+            cellBgClass = 'animate-pos-blink-red border-2 shadow-sm';
+            ledColor = 'bg-red-500 animate-ping';
         }
     }
 
@@ -739,48 +739,48 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             key={table.id}
             type="button"
             onClick={() => onSelectTable(table)}
-            className={`min-h-[135px] rounded-xl p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.02] active:scale-[0.98] ${cellBgClass}`}
+            className={`min-h-[135px] rounded-md p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.01] active:scale-[0.98] ${cellBgClass}`}
         >
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">
                 <div className="flex gap-1 items-center flex-wrap">
                      {hasOrder && (
-                         <span className="bg-[#ff0000] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">ORDER</span>
+                         <span className="bg-red-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">ORDER</span>
                      )}
                      {isPending && table.booking?.booking_time && (Math.floor((Date.now() - new Date(table.booking.booking_time).getTime()) / 60000) >= 10) && (
-                         <span className="bg-red-700 text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">OVERDUE</span>
+                         <span className="bg-red-800 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">OVERDUE</span>
                      )}
                      {hasCallStaff && (
-                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">CALL</span>
+                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">CALL</span>
                      )}
                      {hasCallBill && (
-                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase animate-pulse">BILL</span>
+                         <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">BILL</span>
                      )}
                      {hasSlip && (
-                         <span className="bg-[#00CC44] text-white text-[8px] font-mono font-bold px-1 py-0.5 rounded tracking-normal leading-none uppercase">SLIP</span>
+                         <span className="bg-emerald-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">SLIP</span>
                      )}
                  </div>
                 <span className={`w-2 h-2 rounded-full border border-black/10 ${ledColor}`} />
             </div>
             
             {/* Center row: Table Info */}
-            <div className="flex flex-col items-center gap-1 my-3 select-none">
-                 <span className="font-mono font-black text-2xl tracking-tighter">{table.table_name}</span>
-                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[#767673]'}`}>
+            <div className="flex flex-col items-center gap-0.5 my-2.5 select-none">
+                 <span className="font-mono font-bold text-2xl tracking-tight">{table.table_name}</span>
+                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[var(--color-neutral)]'}`}>
                      {table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT'}
                  </span>
             </div>
             
             {/* Bottom row: Capacity / Timing */}
-            <div className="flex justify-between items-center w-full border-t border-black/5 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none text-[#767673]">
-                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAPACITY: ${table.capacity}P`}</span>
+            <div className="flex justify-between items-center w-full border-t border-black/10 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none opacity-80">
+                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAP: ${table.capacity}P`}</span>
                 {(isOccupied || isPending) ? (
-                    <div className="flex items-center gap-1 text-[#1A1A1A] dark:text-inherit">
+                    <div className="flex items-center gap-1">
                         <Clock size={10} />
                         <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
                 ) : table.upcomingReservation && (
-                    <div className="flex items-center gap-0.5 text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[8px] font-mono font-bold">
+                    <div className="flex items-center gap-0.5 text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-xs text-[8px] font-mono font-bold">
                         <Clock size={9} />
                         <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({table.upcomingReservation.pax || 2}p)</span>
                     </div>
