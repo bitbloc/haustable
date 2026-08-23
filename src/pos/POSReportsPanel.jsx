@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
     Printer as PrinterIcon, 
@@ -38,6 +38,7 @@ import {
     getShortBookingId 
 } from '../utils/printerHelper';
 import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction, getBookingPaymentBreakdown, calculateShiftMetrics } from '../utils/shiftHelper';
+import { isOnline } from '../utils/offlineHelper';
 
 export { getBookingPaymentBreakdown };
 
