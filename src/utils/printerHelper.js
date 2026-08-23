@@ -1,5 +1,6 @@
 import { logger } from './logger';
 import { supabase } from '../lib/supabaseClient';
+import { getBookingPaymentBreakdown } from './shiftHelper';
 
 let cachedPrinterConfig = null;
 let printerConfigChannel = null;
@@ -1711,34 +1712,26 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
     const otherDetailsMap = {};
 
     completedBookings.forEach(b => {
+        const breakdown = getBookingPaymentBreakdown(b);
         const remark = (b.staff_remark || '').toLowerCase();
         const note = (b.customer_note || '').toLowerCase();
-        const amt = Number(b.total_amount) || 0;
         const isLineman = remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man');
         
-        let isCash = true;
-        let isCredit = false;
-        let isQr = false;
-        
-        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
-            isCash = false;
-            isCredit = true;
-        } else if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
-            isCash = false;
-            isQr = true;
-        }
-        
-        if (isCash) {
+        if (breakdown.cash > 0) {
             cashCount++;
-            cashAmount += amt;
+            cashAmount += breakdown.cash;
             if (isLineman) {
                 linemanCashCount++;
-                linemanCashAmount += amt;
+                linemanCashAmount += breakdown.cash;
             }
-        } else if (isCredit) {
+        }
+        
+        if (breakdown.credit > 0) {
             creditCount++;
-            creditAmount += amt;
-        } else {
+            creditAmount += breakdown.credit;
+        }
+
+        if (breakdown.qr > 0) {
             let parsedBank = '';
             if (remark.includes('scb') || remark.includes('ไทยพาณิชย์')) {
                 parsedBank = 'ไทยพาณิชย์ พลัส';
@@ -1752,15 +1745,15 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
 
             if (parsedBank) {
                 otherCount++;
-                otherAmount += amt;
+                otherAmount += breakdown.qr;
                 if (!otherDetailsMap[parsedBank]) {
                     otherDetailsMap[parsedBank] = { name: parsedBank, count: 0, amount: 0 };
                 }
                 otherDetailsMap[parsedBank].count++;
-                otherDetailsMap[parsedBank].amount += amt;
+                otherDetailsMap[parsedBank].amount += breakdown.qr;
             } else {
                 qrCount++;
-                qrAmount += amt;
+                qrAmount += breakdown.qr;
             }
         }
     });

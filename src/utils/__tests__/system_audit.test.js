@@ -3,6 +3,7 @@ import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../tha
 import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData } from '../printerHelper';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
+import { calculateShiftMetrics, getBookingPaymentBreakdown } from '../shiftHelper';
 
 describe('System Audit - Phase 1 & 4: Thai Tax & Financial Calculation Engine', () => {
     it('should convert numbers to Thai Baht text correctly (thaiBahtText)', () => {
@@ -277,6 +278,85 @@ describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Al
         const lastLine = subLines[subLines.length - 1];
         expect(lastLine).toContain('80.00');
         expect(lastLine).toContain('4');
+    });
+
+    it('should accurately calculate shift metrics including bills seated before shift and decimal precision', () => {
+        // User's exact scenario from image:
+        // Cashier: Kanchanit Boonsuk, Shift opened: 18:07
+        // Opening Float: 3,917.00
+        // Completed bills:
+        // - Bill 1 (Seated 17:45, Completed 18:15): Cash 469.00
+        // - Bill 2 (Seated 18:10, Completed 18:30): Cash 935.00
+        // - Bill 3 (Seated 18:12, Completed 18:40): QR PromptPay 1,200.30
+        // - Bill 4 (Seated 18:15, Completed 18:50): QR PromptPay 1,456.00
+        // Cash Sales = 469 + 935 = 1,404.00
+        // QR Sales = 1,200.30 + 1,456.00 = 2,656.30
+        // Expected Cash = 3,917 + 1,404 = 5,321.00
+        const activeShift = {
+            id: 'shift_user_case',
+            staffName: 'Kanchanit Boonsuk',
+            openedAt: '2026-08-22T18:07:00.000Z',
+            openingFloat: 3917,
+            adjustments: []
+        };
+
+        const bookings = [
+            {
+                id: 'b1_early_seated',
+                status: 'completed',
+                total_amount: 469,
+                staff_remark: 'เงินสด',
+                booking_time: '2026-08-22T17:45:00.000Z',
+                updated_at: '2026-08-22T18:15:00.000Z'
+            },
+            {
+                id: 'b2_cash',
+                status: 'completed',
+                total_amount: 935,
+                staff_remark: 'เงินสด',
+                booking_time: '2026-08-22T18:10:00.000Z',
+                updated_at: '2026-08-22T18:30:00.000Z'
+            },
+            {
+                id: 'b3_qr_decimal',
+                status: 'completed',
+                total_amount: 1200.30,
+                staff_remark: 'QR PromptPay',
+                booking_time: '2026-08-22T18:12:00.000Z',
+                updated_at: '2026-08-22T18:40:00.000Z'
+            },
+            {
+                id: 'b4_qr',
+                status: 'completed',
+                total_amount: 1456.00,
+                payment_slip_url: 'https://example.com/slip.png',
+                booking_time: '2026-08-22T18:15:00.000Z',
+                updated_at: '2026-08-22T18:50:00.000Z'
+            }
+        ];
+
+        const metrics = calculateShiftMetrics(activeShift, bookings);
+
+        expect(metrics.cashSales).toBe(1404);
+        expect(metrics.qrSales).toBe(2656.30);
+        expect(metrics.totalSales).toBe(4060.30);
+        expect(metrics.openingFloat).toBe(3917);
+        expect(metrics.expectedCash).toBe(5321);
+        expect(metrics.completedBookingsCount).toBe(4);
+    });
+
+    it('should correctly parse split payment remarks with getBookingPaymentBreakdown', () => {
+        const splitBooking = {
+            id: 'b_split',
+            total_amount: 500,
+            staff_remark: '[SPLIT: CASH=200, QR=300, CREDIT=0]'
+        };
+
+        const breakdown = getBookingPaymentBreakdown(splitBooking);
+        expect(breakdown.isSplit).toBe(true);
+        expect(breakdown.cash).toBe(200);
+        expect(breakdown.qr).toBe(300);
+        expect(breakdown.credit).toBe(0);
     });
 });
 

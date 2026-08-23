@@ -3,6 +3,92 @@ import { supabase } from '../lib/supabaseClient';
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
+// Helper to breakdown booking payment methods accurately (handling split payments & remarks)
+export const getBookingPaymentBreakdown = (b) => {
+    if (!b) return { cash: 0, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+    const total = parseFloat(b.total_amount || b.total_price || 0);
+    const remark = (b.staff_remark || '').toLowerCase();
+    const note = (b.customer_note || '').toLowerCase();
+    
+    // Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
+    const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
+    if (splitMatch) {
+        const splitText = splitMatch[1];
+        let cash = 0, qr = 0, credit = 0;
+        
+        const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (cashM) cash = parseFloat(cashM[1]) || 0;
+        
+        const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (qrM) qr = parseFloat(qrM[1]) || 0;
+        
+        const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
+        if (creditM) credit = parseFloat(creditM[1]) || 0;
+        
+        return {
+            cash,
+            qr,
+            credit,
+            isSplit: true,
+            methodLabel: 'Split (ผสม)'
+        };
+    }
+    
+    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+        return { cash: 0, qr: 0, credit: total, isSplit: false, methodLabel: 'Credit Card' };
+    }
+    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
+    }
+    return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+};
+
+// Calculate unified, high-precision metrics for active or historical shift
+export function calculateShiftMetrics(shift, bookingsData = []) {
+    if (!shift) {
+        return {
+            cashSales: 0,
+            qrSales: 0,
+            creditSales: 0,
+            totalSales: 0,
+            openingFloat: 0,
+            totalIn: 0,
+            totalOut: 0,
+            expectedCash: 0,
+            completedBookingsCount: 0
+        };
+    }
+
+    const completed = (bookingsData || []).filter(b => b && b.status === 'completed');
+    let cashSales = 0;
+    let qrSales = 0;
+    let creditSales = 0;
+
+    completed.forEach(b => {
+        const breakdown = getBookingPaymentBreakdown(b);
+        cashSales += breakdown.cash;
+        qrSales += breakdown.qr;
+        creditSales += breakdown.credit;
+    });
+
+    const adjustments = Array.isArray(shift.adjustments) ? shift.adjustments : [];
+    const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
+    const openingFloat = Number(shift.openingFloat || 0);
+
+    return {
+        cashSales,
+        qrSales,
+        creditSales,
+        totalSales: cashSales + qrSales + creditSales,
+        openingFloat,
+        totalIn,
+        totalOut,
+        expectedCash: openingFloat + cashSales + totalIn - totalOut,
+        completedBookingsCount: completed.length
+    };
+}
+
 // Helper: Record immutable POS audit trail in cloud
 export async function logPosAudit(actionType, { bookingId = null, amount = 0, reason = '', metadata = {} } = {}) {
     try {

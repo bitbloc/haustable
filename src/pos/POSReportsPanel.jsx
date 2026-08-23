@@ -37,45 +37,9 @@ import {
     compileShiftReportData, 
     getShortBookingId 
 } from '../utils/printerHelper';
-import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction } from '../utils/shiftHelper';
+import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction, getBookingPaymentBreakdown, calculateShiftMetrics } from '../utils/shiftHelper';
 
-// Helper to breakdown booking payment methods accurately (handling split payments & remarks)
-export const getBookingPaymentBreakdown = (b) => {
-    const total = parseFloat(b.total_amount || b.total_price || 0);
-    const remark = (b.staff_remark || '').toLowerCase();
-    
-    // Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
-    const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
-    if (splitMatch) {
-        const splitText = splitMatch[1];
-        let cash = 0, qr = 0, credit = 0;
-        
-        const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (cashM) cash = parseFloat(cashM[1]) || 0;
-        
-        const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (qrM) qr = parseFloat(qrM[1]) || 0;
-        
-        const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (creditM) credit = parseFloat(creditM[1]) || 0;
-        
-        return {
-            cash,
-            qr,
-            credit,
-            isSplit: true,
-            methodLabel: 'Split (ผสม)'
-        };
-    }
-    
-    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
-        return { cash: 0, qr: 0, credit: total, isSplit: false, methodLabel: 'Credit Card' };
-    }
-    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) {
-        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
-    }
-    return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
-};
+export { getBookingPaymentBreakdown };
 
 export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     const [loading, setLoading] = useState(true);
@@ -126,84 +90,33 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         }
 
         try {
-            const txs = current.transactions || [];
-            let cashSales = 0;
-            let qrSales = 0;
-            let creditSales = 0;
-
-            if (txs.length > 0) {
-                txs.forEach(tx => {
-                    const amt = parseFloat(tx.amount || 0);
-                    if (tx.paymentMethod === 'cash') cashSales += amt;
-                    else if (tx.paymentMethod === 'credit') creditSales += amt;
-                    else qrSales += amt;
-                });
-            }
-
-            // Fetch bookings completed during the active shift (using updated_at with booking_time fallback)
-            let data = null;
-            let error = null;
-            
-            try {
-                const res = await supabase
-                    .from('bookings')
-                    .select(`
-                        id, 
-                        status, 
-                        total_amount, 
-                        staff_remark, 
-                        payment_slip_url,
-                        booking_time,
-                        updated_at,
-                        order_items (
-                            quantity,
-                            menu_items (
-                                name
-                            )
+            // Fetch bookings completed during the active shift (using booking_time OR updated_at)
+            const { data, error } = await supabase
+                .from('bookings')
+                .select(`
+                    id, 
+                    status, 
+                    total_amount, 
+                    discount_amount,
+                    staff_remark, 
+                    customer_note,
+                    payment_slip_url,
+                    booking_time,
+                    updated_at,
+                    order_items (
+                        quantity,
+                        custom_name,
+                        menu_items (
+                            name
                         )
-                    `)
-                    .eq('status', 'completed')
-                    .gte('updated_at', current.openedAt);
-                data = res.data;
-                error = res.error;
-            } catch (e) {
-                error = e;
-            }
-
-            // Fallback if updated_at column is not yet migrated in database
-            if (error) {
-                const fallbackRes = await supabase
-                    .from('bookings')
-                    .select(`
-                        id, 
-                        status, 
-                        total_amount, 
-                        staff_remark, 
-                        payment_slip_url,
-                        booking_time,
-                        order_items (
-                            quantity,
-                            menu_items (
-                                name
-                            )
-                        )
-                    `)
-                    .eq('status', 'completed')
-                    .gte('booking_time', current.openedAt);
-                data = fallbackRes.data;
-                error = fallbackRes.error;
-            }
+                    )
+                `)
+                .eq('status', 'completed')
+                .or(`booking_time.gte.${current.openedAt},updated_at.gte.${current.openedAt}`);
 
             if (!error && data) {
-                if (txs.length === 0) {
-                    cashSales = 0; qrSales = 0; creditSales = 0;
-                    data.forEach(b => {
-                        const breakdown = getBookingPaymentBreakdown(b);
-                        cashSales += breakdown.cash;
-                        qrSales += breakdown.qr;
-                        creditSales += breakdown.credit;
-                    });
-                }
+                const metrics = calculateShiftMetrics(current, data);
+                setActiveShiftSummary(metrics);
 
                 const itemCounts = {};
                 data.forEach(b => {
@@ -219,33 +132,27 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     .sort((a, b) => b.quantity - a.quantity)
                     .slice(0, 10);
                 setActiveShiftTopSellers(sortedSellers);
+            } else {
+                // Fallback to local transactions
+                const metrics = calculateShiftMetrics(current, []);
+                let fallbackCash = 0, fallbackQr = 0, fallbackCredit = 0;
+                (current.transactions || []).forEach(tx => {
+                    const amt = Number(tx.amount || 0);
+                    if (tx.paymentMethod === 'cash') fallbackCash += amt;
+                    else if (tx.paymentMethod === 'credit') fallbackCredit += amt;
+                    else fallbackQr += amt;
+                });
+                metrics.cashSales = Math.max(metrics.cashSales, fallbackCash);
+                metrics.qrSales = Math.max(metrics.qrSales, fallbackQr);
+                metrics.creditSales = Math.max(metrics.creditSales, fallbackCredit);
+                metrics.totalSales = metrics.cashSales + metrics.qrSales + metrics.creditSales;
+                metrics.expectedCash = metrics.openingFloat + metrics.cashSales + metrics.totalIn - metrics.totalOut;
+                setActiveShiftSummary(metrics);
             }
-
-            const adjustments = Array.isArray(current.adjustments) ? current.adjustments : [];
-            const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-            const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-            const openingFloat = Number(current.openingFloat || 0);
-
-            setActiveShiftSummary({
-                cashSales,
-                qrSales,
-                creditSales,
-                totalSales: cashSales + qrSales + creditSales,
-                totalIn,
-                totalOut,
-                expectedCash: openingFloat + cashSales + totalIn - totalOut
-            });
         } catch (err) {
             console.error("Failed to load active shift summary:", err);
-            setActiveShiftSummary({
-                cashSales: current.cashSales || 0,
-                qrSales: current.qrSales || 0,
-                creditSales: current.creditSales || 0,
-                totalSales: current.totalSales || 0,
-                totalIn: current.totalIn || 0,
-                totalOut: current.totalOut || 0,
-                expectedCash: current.expectedCash || ((current.openingFloat || 0) + (current.cashSales || 0) + (current.totalIn || 0) - (current.totalOut || 0))
-            });
+            const metrics = calculateShiftMetrics(current, []);
+            setActiveShiftSummary(metrics);
             setActiveShiftTopSellers([]);
         }
     };
@@ -281,8 +188,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         )
                     `)
                     .eq('status', 'completed')
-                    .gte('booking_time', openedAt)
-                    .lte('booking_time', closedAt);
+                    .or(`and(booking_time.gte.${openedAt},booking_time.lte.${closedAt}),and(updated_at.gte.${openedAt},updated_at.lte.${closedAt})`);
 
                 if (error) throw error;
 
@@ -698,8 +604,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             )
                         )
                     `)
-                    .gte('booking_time', shift.openedAt)
-                    .lte('booking_time', shift.closedAt || new Date().toISOString());
+                    .eq('status', 'completed')
+                    .or(`and(booking_time.gte.${shift.openedAt},booking_time.lte.${shift.closedAt || new Date().toISOString()}),and(updated_at.gte.${shift.openedAt},updated_at.lte.${shift.closedAt || new Date().toISOString()})`);
                 if (!error && data) {
                     bookingsData = data;
                 }
