@@ -57,6 +57,7 @@ export default function AdminTaxHub() {
     const [editingInvoice, setEditingInvoice] = useState(null);
     const [selectedBookingForInvoice, setSelectedBookingForInvoice] = useState(null);
     const [activePrintInvoice, setActivePrintInvoice] = useState(null);
+    const [printModalInitialEmail, setPrintModalInitialEmail] = useState(false);
     const [cancellationTarget, setCancellationTarget] = useState(null);
     const [cancellationReason, setCancellationReason] = useState('');
     const [voiding, setVoiding] = useState(false);
@@ -497,18 +498,24 @@ export default function AdminTaxHub() {
                                                     <td className="p-3 text-center">
                                                         <div className="flex items-center justify-center gap-1">
                                                             <button
-                                                                onClick={() => setActivePrintInvoice(inv)}
+                                                                onClick={() => {
+                                                                    setPrintModalInitialEmail(false);
+                                                                    setActivePrintInvoice(inv);
+                                                                }}
                                                                 className="px-2 py-1 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] font-bold text-[10px] flex items-center gap-1 cursor-pointer"
-                                                                title="View and print A4"
+                                                                title="เปิดดูและพิมพ์ A4 / ดาวน์โหลด PDF"
                                                             >
                                                                 <Printer size={11} />
                                                                 <span>A4</span>
                                                             </button>
 
                                                             <button
-                                                                onClick={() => setActivePrintInvoice(inv)}
+                                                                onClick={() => {
+                                                                    setPrintModalInitialEmail(true);
+                                                                    setActivePrintInvoice(inv);
+                                                                }}
                                                                 className="px-1.5 py-1 bg-blue-700 hover:bg-blue-600 text-white font-bold text-[10px] flex items-center gap-1 cursor-pointer"
-                                                                title="Send via Email or Copy Summary"
+                                                                title="ส่งเอกสาร PDF ให้ลูกค้าทางอีเมล"
                                                             >
                                                                 <Mail size={11} />
                                                             </button>
@@ -654,7 +661,11 @@ export default function AdminTaxHub() {
                 <TaxInvoicePrintView
                     invoice={activePrintInvoice}
                     companySettings={companySettings}
-                    onClose={() => setActivePrintInvoice(null)}
+                    initialShowEmail={printModalInitialEmail}
+                    onClose={() => {
+                        setActivePrintInvoice(null);
+                        setPrintModalInitialEmail(false);
+                    }}
                 />
             )}
 

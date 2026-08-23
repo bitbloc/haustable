@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
     Printer, 
     X, 
@@ -14,15 +14,21 @@ import {
     CheckCircle2, 
     Sparkles,
     Eye,
-    EyeOff
+    EyeOff,
+    Download,
+    Loader2,
+    Paperclip,
+    FileCheck
 } from 'lucide-react';
 import { thaiBahtText, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
+import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
 import { supabase } from '../../../lib/supabaseClient';
 import { toast } from 'sonner';
 
-export default function TaxInvoicePrintView({ invoice, companySettings, onClose }) {
+export default function TaxInvoicePrintView({ invoice, companySettings, onClose, initialShowEmail = false }) {
     const [copied, setCopied] = useState(false);
     const [activeCopyType, setActiveCopyType] = useState('original'); // 'original' | 'copy'
+    const printableSheetRef = useRef(null);
     
     // Digital Signature State
     const signatureImage = companySettings?.tax_signature_image || localStorage.getItem('onhaus_tax_signature_image') || invoice?.signature_url || '';
@@ -31,8 +37,12 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
         return Boolean(signatureImage);
     });
 
+    // PDF State
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [pdfDownloaded, setPdfDownloaded] = useState(false);
+
     // Email Modal State
-    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(Boolean(initialShowEmail));
     const [recipientEmail, setRecipientEmail] = useState(invoice?.customer_email || '');
     const [emailSubject, setEmailSubject] = useState('');
     const [copiedEmailText, setCopiedEmailText] = useState(false);
@@ -53,15 +63,16 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
         : new Date().toLocaleDateString('th-TH');
 
     const bahtWords = thaiBahtText(invoice.total_amount || invoice.net_payable || 0);
+    const pdfFileName = `${invoice.invoice_number || 'tax-invoice'}_${activeCopyType === 'original' ? 'ORIGINAL' : 'COPY'}.pdf`;
 
     // Prepare default Email Subject on load
     useEffect(() => {
-        const issuer = companySettings?.tax_company_name || invoice.issuer_name || 'IN THE HAUS';
+        const issuer = companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม';
         setEmailSubject(`[${docTitle}] เลขที่ ${invoice.invoice_number} - ${issuer}`);
         if (invoice?.customer_email && !recipientEmail) {
             setRecipientEmail(invoice.customer_email);
         }
-    }, [invoice, companySettings]);
+    }, [invoice, companySettings, docTitle]);
 
     const handlePrint = () => {
         window.print();
@@ -74,84 +85,113 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
         setTimeout(() => setCopied(false), 2000);
     };
 
-    // Generate formatted Plain Text Email Body
+    // Generate and Download PDF directly
+    const handleDownloadPdfOnly = async () => {
+        const sheetEl = printableSheetRef.current || document.getElementById('tax-invoice-printable-sheet');
+        if (!sheetEl) {
+            toast.error('ไม่พบส่วนแสดงเอกสารสำหรับสร้าง PDF');
+            return;
+        }
+
+        setIsGeneratingPdf(true);
+        const toastId = toast.loading('กำลังสร้างไฟล์ PDF คุณภาพสูง (A4)...');
+        try {
+            const { pdf, blob, fileName } = await generateTaxDocumentPdf(sheetEl, { fileName: pdfFileName });
+            downloadTaxPdf(blob, fileName);
+            setPdfDownloaded(true);
+            toast.success(`ดาวน์โหลดไฟล์ ${fileName} เรียบร้อยแล้ว`, { id: toastId });
+            setTimeout(() => setPdfDownloaded(false), 3000);
+        } catch (err) {
+            console.error('PDF Generation Error:', err);
+            toast.error('ไม่สามารถสร้างไฟล์ PDF ได้: ' + err.message, { id: toastId });
+        } finally {
+            setIsGeneratingPdf(false);
+        }
+    };
+
+    // Generate formatted Professional Email Body
     const generateEmailBodyText = () => {
         const issuerName = companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน (IN THE HAUS)';
-        const issuerTaxId = companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907';
-        const issuerBranch = formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code);
-        const issuerAddress = companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000';
         const issuerPhone = companySettings?.tax_phone || invoice.issuer_phone || '0961424663';
+        const customerName = invoice.customer_name || 'ลูกค้าผู้มีอุปการคุณ';
 
         const lines = [
-            `==================================================`,
-            `  ${docTitle.toUpperCase()} / ${docTitleEn}`,
-            `  ${issuerName.toUpperCase()}`,
-            `==================================================`,
-            `เลขที่เอกสาร: ${invoice.invoice_number}`,
-            `วันที่ออกเอกสาร: ${formattedDate}`,
-            invoice.booking_id ? `อ้างอิงบิล POS: #${String(invoice.booking_id).slice(0, 8)}` : '',
+            `เรียน ${customerName},`,
             ``,
-            `--- ข้อมูลผู้ขาย / สถานประกอบการ ---`,
-            `${issuerName}`,
-            `ที่อยู่: ${issuerAddress}`,
-            `เลขประจำตัวผู้เสียภาษี: ${formatTaxId(issuerTaxId)} (${issuerBranch})`,
-            `โทรศัพท์: ${issuerPhone}`,
+            `ทาง${issuerName} ขอส่งเอกสาร ${docTitle} เลขที่ ${invoice.invoice_number} ประจำวันที่ ${formattedDate} มาพร้อมกับอีเมลนี้เพื่อเป็นหลักฐาน`,
             ``,
-            `--- ข้อมูลผู้ซื้อ / ผู้รับบริการ ---`,
-            `ชื่อ: ${invoice.customer_name || 'ลูกค้าทั่วไป'}`,
-            `ที่อยู่: ${invoice.customer_address || '-'}`,
-            invoice.customer_tax_id ? `เลขประจำตัวผู้เสียภาษี: ${formatTaxId(invoice.customer_tax_id)} (${formatBranch(invoice.customer_branch_type, invoice.customer_branch_code)})` : '',
-            invoice.customer_phone ? `โทร: ${invoice.customer_phone}` : '',
+            `รายละเอียดเอกสาร:`,
+            `- เอกสาร: ${docTitle} (${copyLabel})`,
+            `- เลขที่เอกสาร: ${invoice.invoice_number}`,
+            `- วันที่ออกเอกสาร: ${formattedDate}`,
+            invoice.booking_id ? `- อ้างอิงบิล POS: #${String(invoice.booking_id).slice(0, 8)}` : '',
+            `- ผู้ซื้อ/ผู้รับบริการ: ${invoice.customer_name || 'ลูกค้าทั่วไป'}`,
+            invoice.customer_tax_id ? `- เลขประจำตัวผู้เสียภาษีผู้ซื้อ: ${formatTaxId(invoice.customer_tax_id)}` : '',
+            `- ยอดรวมทั้งสิ้น: ฿${Number(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท (${bahtWords})`,
+            Number(invoice.wht_amount || 0) > 0 ? `- หักภาษี ณ ที่จ่าย: -฿${Number(invoice.wht_amount).toFixed(2)} บาท (ยอดชำระสุทธิ: ฿${Number(invoice.net_payable).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท)` : '',
             ``,
-            `--- รายการสินค้าและบริการ ---`,
-            ...items.map((it, idx) => {
-                const qty = Number(it.quantity || 1);
-                const price = Number(it.price || it.price_at_time || 0);
-                const total = Number(it.amount || (qty * price));
-                return `${idx + 1}. ${it.name || it.item_name} x ${qty} @ ฿${price.toFixed(2)} = ฿${total.toFixed(2)}`;
-            }),
-            ``,
-            `--------------------------------------------------`,
-            `รวมเป็นเงิน (Subtotal): ฿${Number(invoice.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`,
-            Number(invoice.discount_amount || 0) > 0 ? `หักส่วนลด (Discount): -฿${Number(invoice.discount_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '',
-            isVat ? `มูลค่าก่อนภาษี (Pre-VAT): ฿${Number(invoice.pre_vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '',
-            isVat ? `ภาษีมูลค่าเพิ่ม 7% (VAT): ฿${Number(invoice.vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '',
-            `จำนวนเงินรวมทั้งสิ้น (Grand Total): ฿${Number(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท`,
-            `(${bahtWords})`,
-            Number(invoice.wht_amount || 0) > 0 ? `หักภาษี ณ ที่จ่าย ${invoice.wht_rate}%: -฿${Number(invoice.wht_amount).toFixed(2)} บาท` : '',
-            Number(invoice.net_payable || 0) > 0 ? `ยอดชำระสุทธิ (Net Payable): ฿${Number(invoice.net_payable).toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท` : '',
-            `--------------------------------------------------`,
+            `📎 ไฟล์แนบ: เอกสารฉบับเต็ม PDF (${pdfFileName})`,
             !isVat ? `* เอกสารนี้ไม่อยู่ในบังคับภาษีมูลค่าเพิ่ม (Non-VAT) / ใช้เป็นหลักฐานรายจ่ายได้ถูกต้องตามกฎหมาย` : `* ภาษีมูลค่าเพิ่มคำนวณตามประมวลรัษฎากร มาตรา 86/4`,
             ``,
-            `ขอขอบพระคุณที่ใช้บริการ`,
-            `${issuerName}`
+            `ขอแสดงความนับถือ,`,
+            `${issuerName}`,
+            issuerPhone ? `โทร: ${issuerPhone}` : ''
         ].filter(Boolean);
 
         return lines.join('\n');
     };
 
-    // 1. Open in Gmail Web
-    const handleOpenGmail = () => {
+    // Helper to ensure PDF is ready & downloaded for email attachment
+    const preparePdfForEmail = async () => {
+        const sheetEl = printableSheetRef.current || document.getElementById('tax-invoice-printable-sheet');
+        if (!sheetEl) return null;
+        try {
+            const result = await generateTaxDocumentPdf(sheetEl, { fileName: pdfFileName });
+            downloadTaxPdf(result.blob, result.fileName);
+            return result;
+        } catch (err) {
+            console.warn('Auto PDF download failed:', err);
+            return null;
+        }
+    };
+
+    // 1. Open in Gmail Web + Auto PDF Download
+    const handleOpenGmail = async () => {
+        setIsGeneratingPdf(true);
+        await preparePdfForEmail();
+        setIsGeneratingPdf(false);
+
         const body = generateEmailBodyText();
         const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(recipientEmail)}&su=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(body)}`;
         window.open(gmailUrl, '_blank', 'noopener,noreferrer');
         saveCustomerEmailToInvoice();
+        toast.info(`ดาวน์โหลด ${pdfFileName} แล้ว พร้อมลากแนบไฟล์ (Attach) ในหน้าต่าง Gmail`);
     };
 
-    // 2. Open in Outlook Web
-    const handleOpenOutlook = () => {
+    // 2. Open in Outlook Web + Auto PDF Download
+    const handleOpenOutlook = async () => {
+        setIsGeneratingPdf(true);
+        await preparePdfForEmail();
+        setIsGeneratingPdf(false);
+
         const body = generateEmailBodyText();
         const outlookUrl = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(recipientEmail)}&subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(body)}`;
         window.open(outlookUrl, '_blank', 'noopener,noreferrer');
         saveCustomerEmailToInvoice();
+        toast.info(`ดาวน์โหลด ${pdfFileName} แล้ว พร้อมแนบไฟล์ (Attach) ใน Outlook`);
     };
 
-    // 3. Open Default Mail Client (mailto:)
-    const handleOpenMailto = () => {
+    // 3. Open Default Mail Client (mailto:) + Auto PDF Download
+    const handleOpenMailto = async () => {
+        setIsGeneratingPdf(true);
+        await preparePdfForEmail();
+        setIsGeneratingPdf(false);
+
         const body = generateEmailBodyText();
         const mailtoUrl = `mailto:${encodeURIComponent(recipientEmail)}?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(body)}`;
         window.location.href = mailtoUrl;
         saveCustomerEmailToInvoice();
+        toast.info(`ดาวน์โหลด ${pdfFileName} แล้ว พร้อมแนบไฟล์ในโปรแกรม Mail`);
     };
 
     // 4. Copy Text for LINE / Chat
@@ -164,22 +204,45 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
         saveCustomerEmailToInvoice();
     };
 
-    // 5. Native Web Share API if supported
+    // 5. Native Web Share API with actual PDF File if supported
     const handleNativeShare = async () => {
-        if (navigator.share) {
-            try {
+        const sheetEl = printableSheetRef.current || document.getElementById('tax-invoice-printable-sheet');
+        setIsGeneratingPdf(true);
+        const toastId = toast.loading('กำลังจัดเตรียมไฟล์ PDF สำหรับแชร์...');
+        try {
+            let pdfFile = null;
+            if (sheetEl) {
+                const { file } = await generateTaxDocumentPdf(sheetEl, { fileName: pdfFileName });
+                pdfFile = file;
+            }
+
+            if (pdfFile && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                await navigator.share({
+                    title: emailSubject,
+                    text: generateEmailBodyText(),
+                    files: [pdfFile]
+                });
+                toast.success('แชร์ไฟล์เอกสาร PDF เรียบร้อยแล้ว', { id: toastId });
+            } else if (navigator.share) {
+                if (pdfFile) downloadTaxPdf(pdfFile, pdfFileName);
                 await navigator.share({
                     title: emailSubject,
                     text: generateEmailBodyText()
                 });
-                toast.success('แชร์เอกสารเรียบร้อยแล้ว');
-            } catch (err) {
-                if (err.name !== 'AbortError') {
-                    toast.error('ไม่สามารถแชร์ได้: ' + err.message);
-                }
+                toast.success('แชร์ข้อความและดาวน์โหลดไฟล์ PDF เรียบร้อยแล้ว', { id: toastId });
+            } else {
+                if (pdfFile) downloadTaxPdf(pdfFile, pdfFileName);
+                handleCopyEmailText();
+                toast.info(`ดาวน์โหลด ${pdfFileName} และคัดลอกข้อความแล้ว`, { id: toastId });
             }
-        } else {
-            handleCopyEmailText();
+        } catch (err) {
+            if (err.name !== 'AbortError') {
+                toast.error('ไม่สามารถแชร์ได้: ' + err.message, { id: toastId });
+            } else {
+                toast.dismiss(toastId);
+            }
+        } finally {
+            setIsGeneratingPdf(false);
         }
     };
 
@@ -274,7 +337,18 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
                         title={signatureImage ? 'เปิด/ปิดการแสดงลายเซ็นบนเอกสาร' : 'ยังไม่มีรูปลายเซ็นในระบบ'}
                     >
                         <PenTool size={11} />
-                        <span>{showSignature && signatureImage ? '✓ ลายเซ็นดิจิทัล: เปิด' : 'ลายเซ็น: ปิด'}</span>
+                        <span>{showSignature && signatureImage ? '✓ ลายเซ็น: เปิด' : 'ลายเซ็น: ปิด'}</span>
+                    </button>
+
+                    {/* Download PDF Button */}
+                    <button
+                        onClick={handleDownloadPdfOnly}
+                        disabled={isGeneratingPdf}
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px]"
+                        title="สร้างและดาวน์โหลดไฟล์ PDF ขนาด A4 ความละเอียดสูง"
+                    >
+                        {isGeneratingPdf ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                        <span>{pdfDownloaded ? 'ดาวน์โหลดแล้ว' : 'ดาวน์โหลด PDF'}</span>
                     </button>
 
                     {/* Send Email Action Button */}
@@ -283,7 +357,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
                         className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px]"
                     >
                         <Mail size={13} />
-                        <span>ส่งอีเมล (Email)</span>
+                        <span>ส่งอีเมล (Email / PDF)</span>
                     </button>
 
                     {/* Print Button */}
@@ -292,7 +366,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
                         className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px]"
                     >
                         <Printer size={13} />
-                        <span>พิมพ์ (Print / PDF)</span>
+                        <span>พิมพ์ (Print)</span>
                     </button>
 
                     {/* Copy JSON */}
@@ -319,6 +393,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
             {/* A4 Printable Document Sheet */}
             <div 
                 id="tax-invoice-printable-sheet"
+                ref={printableSheetRef}
                 className="w-full max-w-4xl bg-white text-zinc-900 p-5 sm:p-7 border border-zinc-300 shadow-2xl font-sans text-[11px] print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
             >
                 <div>
@@ -587,17 +662,22 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
 
             {/* SEND EMAIL MODAL */}
             {showEmailModal && (
-                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 font-sans text-xs">
-                    <div className="bg-white border border-zinc-300 shadow-2xl rounded-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 z-[250] flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 font-sans text-xs">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl rounded-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[92vh]">
                         {/* Modal Header */}
-                        <div className="bg-zinc-950 text-white px-5 py-4 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1 bg-blue-600 text-white rounded">
-                                    <Mail size={16} />
+                        <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-5 py-3.5 flex items-center justify-between border-b border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-1.5 bg-[oklch(52%_0.16_28)] text-white rounded">
+                                    <Mail size={15} />
                                 </div>
-                                <h3 className="font-mono font-bold text-sm uppercase">
-                                    ส่งเอกสารให้ลูกค้าทางอีเมล (Send via Email)
-                                </h3>
+                                <div>
+                                    <h3 className="font-mono font-bold text-sm uppercase tracking-tight">
+                                        ส่งเอกสารให้ลูกค้าทางอีเมล (Send PDF via Email)
+                                    </h3>
+                                    <p className="font-mono text-[10px] text-zinc-400">
+                                        แนบเอกสาร {docTitle} รูปแบบ PDF ขนาด A4 ตรงตามระเบียบสรรพากร
+                                    </p>
+                                </div>
                             </div>
                             <button 
                                 onClick={() => setShowEmailModal(false)}
@@ -608,121 +688,178 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose 
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-5 space-y-4 overflow-y-auto">
-                            <div>
-                                <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                    อีเมลผู้รับ (Customer Email Address) *
-                                </label>
-                                <input
-                                    type="email"
-                                    value={recipientEmail}
-                                    onChange={(e) => setRecipientEmail(e.target.value)}
-                                    placeholder="client@company.com หรือ customer@gmail.com"
-                                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-mono focus:border-zinc-950 focus:outline-none"
-                                    autoFocus
-                                />
+                        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto bg-[oklch(97%_0.008_28)]">
+                            {/* 1. PDF Attachment Status Card */}
+                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="p-2.5 bg-red-100 text-red-700 rounded-lg shrink-0 border border-red-200">
+                                        <FileText size={20} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 bg-red-700 text-white rounded">
+                                                PDF DOCUMENT
+                                            </span>
+                                            <span className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] truncate">
+                                                {pdfFileName}
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-0.5 font-mono">
+                                            A4 Portrait • ความละเอียดสูง • พร้อมหัวบิลและลายเซ็นดิจิทัล
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadPdfOnly}
+                                    disabled={isGeneratingPdf}
+                                    className="w-full sm:w-auto px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-50 text-[oklch(97%_0.008_28)] rounded-lg font-mono font-bold text-[11px] flex items-center justify-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                                >
+                                    {isGeneratingPdf ? (
+                                        <>
+                                            <Loader2 size={12} className="animate-spin" />
+                                            <span>กำลังเตรียม PDF...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Download size={12} />
+                                            <span>ดาวน์โหลดไฟล์ PDF</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
 
-                            <div>
-                                <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                    หัวข้ออีเมล (Subject)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={emailSubject}
-                                    onChange={(e) => setEmailSubject(e.target.value)}
-                                    className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-semibold focus:border-zinc-950 focus:outline-none"
-                                />
+                            {/* 2. Customer Email & Subject Inputs */}
+                            <div className="grid grid-cols-1 gap-3">
+                                <div>
+                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        อีเมลผู้รับ (Customer Email Address) *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={recipientEmail}
+                                        onChange={(e) => setRecipientEmail(e.target.value)}
+                                        placeholder="client@company.com หรือ customer@gmail.com"
+                                        className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-mono text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus:outline-none"
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        หัวข้ออีเมล (Subject)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={emailSubject}
+                                        onChange={(e) => setEmailSubject(e.target.value)}
+                                        className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-xs font-semibold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus:outline-none"
+                                    />
+                                </div>
                             </div>
 
-                            {/* Email Summary Preview Box */}
+                            {/* 3. Professional Email Message Preview */}
                             <div>
                                 <div className="flex items-center justify-between mb-1">
-                                    <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase">
-                                        ตัวอย่างเนื้อหาข้อความสรุปในอีเมล (Body Preview)
+                                    <label className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase">
+                                        ตัวอย่างเนื้อหาข้อความในอีเมล (Body Preview)
                                     </label>
                                     <button
                                         type="button"
                                         onClick={handleCopyEmailText}
-                                        className="text-blue-600 hover:text-blue-800 font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                                        className="text-blue-700 hover:text-blue-900 font-mono text-[10px] font-bold flex items-center gap-1 cursor-pointer"
                                     >
                                         {copiedEmailText ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
-                                        <span>{copiedEmailText ? 'คัดลอกแล้ว!' : 'คัดลอกข้อความ'}</span>
+                                        <span>{copiedEmailText ? 'คัดลอกข้อความแล้ว!' : 'คัดลอกข้อความ'}</span>
                                     </button>
                                 </div>
-                                <pre className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg font-mono text-[10px] text-zinc-700 max-h-40 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                                <pre className="p-3 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-[10px] text-zinc-800 max-h-36 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                                     {generateEmailBodyText()}
                                 </pre>
                             </div>
 
-                            {/* One-Click Send Options */}
-                            <div className="space-y-2 pt-2 border-t border-zinc-200">
-                                <span className="font-mono font-bold text-[10px] text-zinc-500 uppercase block">
-                                    เลือกช่องทางส่งเอกสาร (Choose Send Channel):
-                                </span>
+                            {/* 4. One-Click Send Options with Auto-Download PDF */}
+                            <div className="space-y-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                <div className="flex items-center justify-between">
+                                    <span className="font-mono font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block">
+                                        เลือกช่องทางส่งเอกสาร (Choose Send Channel):
+                                    </span>
+                                    <span className="font-mono text-[9.5px] text-[oklch(52%_0.16_28)]">
+                                        * ดาวน์โหลด PDF ให้อัตโนมัติพร้อมแนบส่ง
+                                    </span>
+                                </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 font-mono text-xs">
                                     {/* 1. Gmail Web */}
                                     <button
                                         type="button"
                                         onClick={handleOpenGmail}
-                                        className="p-2.5 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer"
+                                        disabled={isGeneratingPdf}
+                                        className="p-2.5 bg-red-50 hover:bg-red-100 text-red-900 border border-red-200 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         <div className="flex items-center gap-2">
                                             <ExternalLink size={14} />
                                             <span>เปิด Gmail Web</span>
                                         </div>
-                                        <span className="text-[9px] bg-red-200 px-1.5 py-0.5 rounded font-normal">ยอดนิยม</span>
+                                        <span className="text-[9px] bg-red-200 text-red-900 px-1.5 py-0.5 rounded font-normal">ยอดนิยม</span>
                                     </button>
 
                                     {/* 2. Outlook Web */}
                                     <button
                                         type="button"
                                         onClick={handleOpenOutlook}
-                                        className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer"
+                                        disabled={isGeneratingPdf}
+                                        className="p-2.5 bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         <div className="flex items-center gap-2">
                                             <ExternalLink size={14} />
                                             <span>เปิด Outlook Web</span>
                                         </div>
-                                        <span className="text-[9px] bg-blue-200 px-1.5 py-0.5 rounded font-normal">Microsoft</span>
+                                        <span className="text-[9px] bg-blue-200 text-blue-900 px-1.5 py-0.5 rounded font-normal">Microsoft</span>
                                     </button>
 
                                     {/* 3. Native Mail Client */}
                                     <button
                                         type="button"
                                         onClick={handleOpenMailto}
-                                        className="p-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer"
+                                        disabled={isGeneratingPdf}
+                                        className="p-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Send size={14} />
                                             <span>เปิด Mail App (เครื่อง)</span>
                                         </div>
-                                        <span className="text-[9px] bg-zinc-300 px-1.5 py-0.5 rounded font-normal">Default</span>
+                                        <span className="text-[9px] bg-zinc-300 text-zinc-900 px-1.5 py-0.5 rounded font-normal">Default</span>
                                     </button>
 
-                                    {/* 4. Copy Text / Share */}
+                                    {/* 4. Native Share PDF File / LINE */}
                                     <button
                                         type="button"
                                         onClick={handleNativeShare}
-                                        className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer"
+                                        disabled={isGeneratingPdf}
+                                        className="p-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl font-bold flex items-center justify-between transition-colors cursor-pointer disabled:opacity-50"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Share2 size={14} />
-                                            <span>แชร์ / ส่งใน LINE</span>
+                                            <span>แชร์ไฟล์ PDF / ส่งใน LINE</span>
                                         </div>
-                                        <span className="text-[9px] bg-emerald-200 px-1.5 py-0.5 rounded font-normal">Chat/LINE</span>
+                                        <span className="text-[9px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-normal">แชร์ไฟล์</span>
                                     </button>
+                                </div>
+
+                                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[10px] text-amber-900 leading-relaxed font-sans">
+                                    💡 <strong>คำแนะนำ:</strong> เมื่อกดเปิด Gmail หรือ Outlook ระบบจะบันทึกไฟล์ <strong>{pdfFileName}</strong> ลงในโฟลเดอร์ Downloads ให้ท่านทันที เพียงลากไฟล์มาวางหรือกดปุ่มแนบไฟล์ (Attachment) เพื่อส่งให้ลูกค้าได้อย่างเป็นทางการ
                                 </div>
                             </div>
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-3 bg-zinc-50 border-t border-zinc-200 flex justify-end">
+                        <div className="p-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex justify-end">
                             <button
                                 type="button"
                                 onClick={() => setShowEmailModal(false)}
-                                className="px-4 py-2 border border-zinc-300 text-zinc-700 hover:bg-zinc-100 rounded-lg font-mono font-bold text-xs cursor-pointer"
+                                className="px-4 py-2 border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-white rounded-lg font-mono font-bold text-xs cursor-pointer"
                             >
                                 ปิดหน้าต่าง (Close)
                             </button>
