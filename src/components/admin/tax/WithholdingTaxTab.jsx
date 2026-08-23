@@ -57,9 +57,27 @@ export default function WithholdingTaxTab({
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
 
-    // Sync from database
+    // Sync from database with Realtime
     React.useEffect(() => {
         fetchWhtRecords();
+
+        let debounceTimer = null;
+        const debouncedReload = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchWhtRecords();
+            }, 400);
+        };
+
+        const channel = supabase
+            .channel('admin-wht-records-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'withholding_tax_records' }, debouncedReload)
+            .subscribe();
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const fetchWhtRecords = async () => {
@@ -69,7 +87,7 @@ export default function WithholdingTaxTab({
                 .select('*')
                 .order('payment_date', { ascending: false });
 
-            if (!error && data && data.length > 0) {
+            if (!error && data) {
                 setRecords(data);
                 localStorage.setItem('onhaus_wht_records', JSON.stringify(data));
             }

@@ -36,11 +36,32 @@ export default function AdminMarketingPage({ defaultTab = 'members' }) {
 
     useEffect(() => {
         fetchMarketingStats()
+
+        let debounceTimer = null
+        const debouncedFetchStats = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchMarketingStats()
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-marketing-page-stats-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_codes' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'xhaus_rewards' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'song_requests' }, debouncedFetchStats)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
     }, [activeTab])
 
     const fetchMarketingStats = async () => {
         try {
-            const now = new Date().toISOString()
             const [profilesRes, vouchersRes, rewardsRes, itemsRes, songsRes] = await Promise.all([
                 supabase.from('profiles').select('id, role'),
                 supabase.from('promotion_codes').select('id, is_active, end_date'),

@@ -28,9 +28,9 @@ export default function PromoVoucherManager() {
         is_active: true
     })
 
-    const fetchCodes = async () => {
+    const fetchCodes = async (showLoadingState = false) => {
         try {
-            setLoading(true)
+            if (showLoadingState) setLoading(true)
             const { data, error } = await supabase
                 .from('promotion_codes')
                 .select('*')
@@ -40,15 +40,35 @@ export default function PromoVoucherManager() {
             setCodes(data || [])
         } catch (err) {
             console.error('Error fetching promotion codes:', err)
-            toast.error('ไม่สามารถโหลดข้อมูลโค้ดโปรโมชั่นได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลโค้ดโปรโมชั่นได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchCodes()
-    }, [])
+        fetchCodes(true)
+
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (!isModalOpen) {
+                    fetchCodes(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-promo-vouchers-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_codes' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [isModalOpen])
 
     const handleCopyCode = (codeStr, id) => {
         navigator.clipboard.writeText(codeStr)

@@ -26,9 +26,9 @@ export default function RewardsManager() {
         linked_menu_item_id: ''
     })
 
-    const fetchData = async () => {
+    const fetchData = async (showLoadingState = false) => {
         try {
-            setLoading(true)
+            if (showLoadingState) setLoading(true)
             const [rewardsRes, menuRes] = await Promise.all([
                 supabase
                     .from('xhaus_rewards')
@@ -46,15 +46,36 @@ export default function RewardsManager() {
             if (menuRes.data) setMenuItems(menuRes.data)
         } catch (err) {
             console.error('Failed to load rewards data:', err)
-            toast.error('ไม่สามารถโหลดข้อมูลของรางวัล xhaus ได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลของรางวัล xhaus ได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData(true)
+
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (!isModalOpen) {
+                    fetchData(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-rewards-manager-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'xhaus_rewards' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [isModalOpen])
 
     const handleCopyCode = (codeStr, id) => {
         navigator.clipboard.writeText(codeStr)

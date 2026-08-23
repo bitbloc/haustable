@@ -165,9 +165,10 @@ export default function AdminLayout() {
                     </button>
                     <Link to="/admin" className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold tracking-widest text-[oklch(18%_0.012_28)]">ONHAUS</span>
-                        <span className="font-mono text-[9px] bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm font-bold text-[oklch(45%_0.08_140)]">
-                            LIVE
-                        </span>
+                        <div className="flex items-center gap-1 bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.04_140)] px-1.5 py-0.5 rounded-sm font-mono text-[9px] font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)] animate-pulse" />
+                            <span>LIVE</span>
+                        </div>
                     </Link>
                 </div>
 
@@ -272,11 +273,15 @@ export default function AdminLayout() {
                 <div className="mb-6 pb-4 border-b border-gray-200">
                     <div className="flex items-center justify-between mb-1">
                         <span className="font-mono text-sm font-bold tracking-widest text-ink">ONHAUS</span>
-                        <span className="font-mono text-[9px] bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] px-1.5 py-0.5 rounded-sm font-bold">
-                            SYS 2.6
-                        </span>
+                        <div className="flex items-center gap-1.5 bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.04_140)] px-2 py-0.5 rounded-sm font-mono text-[9px] font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)] animate-pulse" />
+                            <span>LIVE SYNC</span>
+                        </div>
                     </div>
-                    <div className="text-[9px] font-mono text-gray-400 tracking-widest uppercase">ADMIN COCKPIT</div>
+                    <div className="flex items-center justify-between text-[9px] font-mono text-gray-400 tracking-widest uppercase">
+                        <span>ADMIN COCKPIT</span>
+                        <span>SYS 2.6</span>
+                    </div>
                 </div>
 
                 <nav className="flex-1 space-y-1.5 overflow-y-auto pr-1 no-scrollbar max-h-[calc(100vh-210px)]">

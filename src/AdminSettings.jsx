@@ -719,10 +719,32 @@ export default function AdminSettings() {
         setIsScanning(false);
     };
 
-    // Load Settings
+    // Load Settings & Realtime Subscriptions
     useEffect(() => { 
         fetchSettings();
         fetchStoreSettings();
+
+        let debounceTimer = null;
+        const debouncedReload = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetchSettings();
+                fetchStoreSettings();
+            }, 400);
+        };
+
+        const channel = supabase
+            .channel('admin-settings-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'store_settings' }, debouncedReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'blocked_dates' }, debouncedReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, debouncedReload)
+            .subscribe();
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+        };
     }, [])
 
     const fetchStoreSettings = async () => {

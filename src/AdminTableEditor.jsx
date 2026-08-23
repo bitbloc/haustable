@@ -128,11 +128,33 @@ export default function AdminTableEditor() {
     );
 
     useEffect(() => {
-        fetchData();
-    }, []);
+        fetchData(true);
 
-    const fetchData = async () => {
-        setLoading(true);
+        let debounceTimer = null;
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                // Don't disturb active saving or modal editing
+                if (!saving && !qrModalOpen && !batchQrModalOpen) {
+                    fetchData(false);
+                }
+            }, 400);
+        };
+
+        const channel = supabase
+            .channel('admin-table-editor-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetch)
+            .subscribe();
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+        };
+    }, [saving, qrModalOpen, batchQrModalOpen]);
+
+    const fetchData = async (showLoadingState = false) => {
+        if (showLoadingState) setLoading(true);
         try {
             // 1. Fetch tables
             const { data: tablesData, error: tErr } = await supabase
@@ -159,9 +181,9 @@ export default function AdminTableEditor() {
             }
         } catch (err) {
             console.error('Fetch error:', err);
-            toast.error('Failed to load table layout: ' + err.message);
+            if (showLoadingState) toast.error('Failed to load table layout: ' + err.message);
         } finally {
-            setLoading(false);
+            if (showLoadingState) setLoading(false);
         }
     };
 

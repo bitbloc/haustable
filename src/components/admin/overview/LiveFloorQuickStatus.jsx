@@ -17,27 +17,40 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     useEffect(() => {
         fetchFloorData()
 
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchFloorData()
+            }, 400)
+        }
+
         const channel = supabase
             .channel('overview-tables-live')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchFloorData()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
     }, [])
 
     const fetchFloorData = async () => {
         try {
-            // 1. Fetch tables
+            // 1. Fetch tables with natural table name sorting
             const { data: tablesData, error: tErr } = await supabase
                 .from('tables_layout')
                 .select('*')
-                .order('id')
 
             if (tErr) throw tErr
+
+            // Natural alphanumeric collation (e.g. T1, T2, T3 ... T10, T11)
+            const sortedTables = (tablesData || []).slice().sort((a, b) => 
+                (a.table_name || '').localeCompare(b.table_name || '', undefined, { numeric: true, sensitivity: 'base' })
+            )
 
             // 2. Fetch today's active bookings + any active seated bookings
             const today = getThaiDate()
@@ -46,17 +59,16 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
             const { data: bookingsData, error: bErr } = await supabase
                 .from('bookings')
-                .select('*, profiles(display_name, phone_number)')
+                .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', start)
                 .lte('booking_time', end)
 
             if (bErr) throw bErr
 
-            const activeTables = tablesData || []
             const activeBookings = bookingsData || []
 
-            setTables(activeTables)
+            setTables(sortedTables)
             setBookings(activeBookings)
 
             // Calculate occupancy for parent
@@ -65,7 +77,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 let occupiedCount = 0
                 let seatedGuests = 0
 
-                activeTables.forEach(table => {
+                sortedTables.forEach(table => {
                     const tBookings = activeBookings.filter(b => b.table_id === table.id)
                     const isOcc = tBookings.some(b => {
                         if (b.status === 'seated') return true
@@ -81,7 +93,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 })
 
                 onOccupancyChange({
-                    totalTables: activeTables.length,
+                    totalTables: sortedTables.length,
                     occupiedTables: occupiedCount,
                     totalGuests: seatedGuests
                 })
@@ -278,13 +290,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                         let statusTag = 'FREE'
                         let tagStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
 
+                        const hasCallStaff = state.booking?.staff_remark?.includes('[CALL_STAFF]')
+                        const hasCallBill = state.booking?.staff_remark?.includes('[CALL_BILL]')
+                        const orderItems = state.booking?.order_items || []
+                        const billTotal = orderItems.length > 0 
+                            ? orderItems.reduce((sum, item) => sum + (Number(item.price_at_time || 0) * Number(item.quantity || 1)), 0)
+                            : Number(state.booking?.total_amount || 0)
+
                         if (state.status === 'occupied') {
                             bgStyle = 'bg-[oklch(95%_0.02_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)]'
-                            statusTag = 'OCCUPIED'
+                            statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()}` : 'OCCUPIED'
                             tagStyle = 'bg-[oklch(52%_0.16_28)] text-white'
                         } else if (state.status === 'upcoming') {
                             bgStyle = 'bg-[oklch(96%_0.02_60)] text-[oklch(18%_0.012_28)] border-[oklch(60%_0.15_60)]'
-                            statusTag = 'RESERVED'
+                            const bTime = state.booking?.booking_time ? new Date(state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
+                            statusTag = bTime ? `RES ${bTime}` : 'RESERVED'
                             tagStyle = 'bg-[oklch(60%_0.15_60)] text-black'
                         } else if (state.status === 'blocked') {
                             bgStyle = 'bg-[oklch(30%_0.010_28)] text-white border-[oklch(20%_0.010_28)]'
@@ -297,7 +317,9 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                 key={table.id}
                                 onClick={() => handleTableClick(table, state)}
                                 disabled={actionLoading}
-                                className={`relative p-3 rounded-sm border transition-all text-left flex flex-col justify-between min-h-[84px] active:scale-95 select-none ${bgStyle}`}
+                                className={`relative p-3 rounded-sm border transition-all text-left flex flex-col justify-between min-h-[84px] active:scale-95 select-none ${bgStyle} ${
+                                    hasCallStaff || hasCallBill ? 'ring-2 ring-amber-500 animate-pulse' : ''
+                                }`}
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="font-mono text-xs md:text-sm font-bold tracking-tight">
@@ -308,11 +330,19 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                     </span>
                                 </div>
 
-                                <div className="mt-2">
-                                    <span className={`font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate ${tagStyle}`}>
-                                        {statusTag}
-                                    </span>
-                                </div>
+                                {hasCallStaff || hasCallBill ? (
+                                    <div className="mt-2">
+                                        <span className="font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate bg-amber-500 text-black">
+                                            {hasCallBill ? '💵 CALL BILL' : '🛎 CALL STAFF'}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="mt-2">
+                                        <span className={`font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate ${tagStyle}`}>
+                                            {statusTag}
+                                        </span>
+                                    </div>
+                                )}
                             </button>
                         )
                     })}

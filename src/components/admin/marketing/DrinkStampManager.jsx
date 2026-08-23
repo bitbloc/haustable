@@ -19,8 +19,8 @@ export default function DrinkStampManager() {
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
     const [eligibilityFilter, setEligibilityFilter] = useState('all') // 'all' | 'eligible' | 'non-eligible'
 
-    const fetchStampSettings = async () => {
-        setLoading(true)
+    const fetchStampSettings = async (showLoadingState = false) => {
+        if (showLoadingState) setLoading(true)
         try {
             const [catRes, itemRes] = await Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
@@ -38,15 +38,37 @@ export default function DrinkStampManager() {
             setHasUnsavedChanges(false)
         } catch (err) {
             console.error('Error loading stamp settings:', err)
-            toast.error('ไม่สามารถโหลดข้อมูลตั้งค่าสะสมแก้วได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลตั้งค่าสะสมแก้วได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchStampSettings()
-    }, [])
+        fetchStampSettings(true)
+
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                // Only reload if user hasn't made unsaved local toggles
+                if (!hasUnsavedChanges && !isSaving) {
+                    fetchStampSettings(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-drink-stamps-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [hasUnsavedChanges, isSaving])
 
     // Category Level Master Toggle
     const toggleCategoryEligibility = (category) => {

@@ -41,11 +41,13 @@ export default function AdminDashboard() {
             }, 300)
         }
 
-        // Real-time: Refresh on any booking or order items change
+        // Real-time: Refresh on any booking, order items, tables layout, or app settings change
         const subscription = supabase
             .channel('public:admin-dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchData)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetchData)
             .subscribe()
 
         return () => {

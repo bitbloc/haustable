@@ -269,11 +269,34 @@ export default function MenuItemList() {
     )
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData(true)
 
-    const fetchData = async () => {
-        setLoading(true)
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                // Don't disturb active editing/saving
+                if (!isModalOpen && !isSavingOrder) {
+                    fetchData(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-menu-item-list-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [isModalOpen, isSavingOrder])
+
+    const fetchData = async (showLoadingState = false) => {
+        if (showLoadingState) setLoading(true)
         try {
             const [menuRes, catRes, optRes] = await Promise.all([
                 supabase
@@ -293,9 +316,9 @@ export default function MenuItemList() {
             setOptionGroups(optRes.data || [])
         } catch (err) {
             console.error('Fetch data error:', err)
-            toast.error('ไม่สามารถโหลดข้อมูลเมนูได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลเมนูได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 

@@ -50,12 +50,16 @@ export default function AdminBookings() {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
                 fetchBookings(false) // Silent refresh without full skeleton
+                fetchTables()
             }, 400)
         }
 
         const channel = supabase
             .channel('admin-bookings-hub')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_codes' }, debouncedFetchBookings)
             .subscribe()
 
         return () => {

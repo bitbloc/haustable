@@ -30,11 +30,33 @@ export default function OptionGroupList() {
     const [choices, setChoices] = useState([])
 
     useEffect(() => {
-        fetchGroups()
-    }, [])
+        fetchGroups(true)
 
-    const fetchGroups = async () => {
-        setLoading(true)
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (!isModalOpen) {
+                    fetchGroups(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-option-groups-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [isModalOpen])
+
+    const fetchGroups = async (showLoadingState = false) => {
+        if (showLoadingState) setLoading(true)
         try {
             const [groupRes, linkRes] = await Promise.all([
                 supabase
@@ -59,9 +81,9 @@ export default function OptionGroupList() {
             setGroups(groupRes.data || [])
         } catch (error) {
             console.error('Fetch option groups error:', error)
-            toast.error('ไม่สามารถโหลดกลุ่มตัวเลือกได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดกลุ่มตัวเลือกได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 

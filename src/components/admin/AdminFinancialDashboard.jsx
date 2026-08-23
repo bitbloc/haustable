@@ -72,18 +72,24 @@ export default function AdminFinancialDashboard() {
     useEffect(() => {
         fetchRealFinancialData()
 
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchRealFinancialData()
+            }, 400)
+        }
+
         // Realtime subscription for instant POS & backoffice financial updates
         const channel = supabase
             .channel('financial-dashboard-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchRealFinancialData()
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
-                fetchRealFinancialData()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'store_expenses' }, debouncedFetch)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
     }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev])

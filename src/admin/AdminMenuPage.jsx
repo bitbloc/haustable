@@ -34,6 +34,26 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
 
     useEffect(() => {
         fetchHubStats()
+
+        let debounceTimer = null
+        const debouncedFetchStats = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchHubStats()
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-menu-page-stats-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, debouncedFetchStats)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, debouncedFetchStats)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
     }, [activeTab])
 
     const fetchHubStats = async () => {

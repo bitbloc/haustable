@@ -13,9 +13,9 @@ export default function AdminArcade() {
     const [drawingLoading, setDrawingLoading] = useState(false)
     const [drawResult, setDrawResult] = useState(null)
 
-    const fetchData = async () => {
+    const fetchData = async (showLoadingState = false) => {
         try {
-            setLoading(true)
+            if (showLoadingState) setLoading(true)
 
             // 1. Fetch Leaderboard
             const { data: lbData, error: lbError } = await supabase
@@ -55,15 +55,36 @@ export default function AdminArcade() {
 
         } catch (err) {
             console.error('Error fetching arcade details:', err)
-            toast.error('ไม่สามารถโหลดข้อมูลสถิติเกม Arcade ได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลสถิติเกม Arcade ได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData(true)
+
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (!drawingLoading) {
+                    fetchData(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-arcade-stats-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'arcade_rewards_log' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [drawingLoading])
 
     const handleRunDrawing = async () => {
         const confirmDraw = window.confirm(

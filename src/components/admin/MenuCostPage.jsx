@@ -107,8 +107,30 @@ export default function MenuCostPage({ isEmbedded = false }) {
     };
 
     useEffect(() => {
-        loadData();
-    }, []);
+        loadData(true);
+
+        let debounceTimer = null;
+        const debouncedReload = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (!isRecipeOpen) {
+                    loadData(false);
+                }
+            }, 400);
+        };
+
+        const channel = supabase
+            .channel('admin-menu-cost-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, debouncedReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'recipe_ingredients' }, debouncedReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedReload)
+            .subscribe();
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+        };
+    }, [isRecipeOpen]);
 
     const handleSort = (key) => {
         setSortConfig(current => ({

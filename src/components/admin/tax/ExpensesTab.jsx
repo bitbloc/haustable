@@ -69,8 +69,8 @@ export default function ExpensesTab({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [previewImage]);
 
-    const loadExpenses = useCallback(async () => {
-        setLoading(true);
+    const loadExpenses = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('store_expenses')
@@ -88,12 +88,30 @@ export default function ExpensesTab({
             const local = localStorage.getItem('onhaus_store_expenses');
             if (local) setExpenses(JSON.parse(local));
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        loadExpenses();
+        loadExpenses(false);
+
+        let debounceTimer = null;
+        const debouncedReload = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadExpenses(true);
+            }, 400);
+        };
+
+        const channel = supabase
+            .channel('admin-expenses-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'store_expenses' }, debouncedReload)
+            .subscribe();
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
+        };
     }, [loadExpenses]);
 
     // Duplicate Detection across entire ledger

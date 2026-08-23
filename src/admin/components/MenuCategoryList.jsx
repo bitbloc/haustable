@@ -21,11 +21,32 @@ export default function MenuCategoryList() {
     })
 
     useEffect(() => {
-        fetchData()
-    }, [])
+        fetchData(true)
 
-    const fetchData = async () => {
-        setLoading(true)
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (!isModalOpen && !isSaving) {
+                    fetchData(false)
+                }
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('admin-menu-categories-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
+    }, [isModalOpen, isSaving])
+
+    const fetchData = async (showLoadingState = false) => {
+        if (showLoadingState) setLoading(true)
         try {
             const [catRes, itemsRes] = await Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order', { ascending: true }),
@@ -48,9 +69,9 @@ export default function MenuCategoryList() {
             setItemCounts(counts)
         } catch (error) {
             console.error('Fetch categories error:', error)
-            toast.error('ไม่สามารถโหลดหมวดหมู่ได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดหมวดหมู่ได้')
         } finally {
-            setLoading(false)
+            if (showLoadingState) setLoading(false)
         }
     }
 

@@ -88,12 +88,13 @@ export default function AdminTaxHub() {
         }
     };
 
-    // Initial Load
+    // Initial Load & Realtime Sync
     useEffect(() => {
         let isMounted = true;
+        let debounceTimer = null;
         
-        const loadInitialData = async () => {
-            setLoading(true);
+        const loadInitialData = async (silent = false) => {
+            if (!silent) setLoading(true);
             try {
                 // 1. Fetch Company Tax Settings
                 const { data: settingsData } = await supabase
@@ -138,13 +139,30 @@ export default function AdminTaxHub() {
                 // Fallback
             }
 
-            if (isMounted) setLoading(false);
+            if (isMounted && !silent) setLoading(false);
         };
 
-        loadInitialData();
+        loadInitialData(false);
+
+        const debouncedSync = () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (isMounted) loadInitialData(true);
+            }, 400);
+        };
+
+        // Realtime Subscription: tax_invoices, app_settings, bookings
+        const channel = supabase
+            .channel('admin-tax-hub-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tax_invoices' }, debouncedSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedSync)
+            .subscribe();
 
         return () => {
             isMounted = false;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            supabase.removeChannel(channel);
         };
     }, []);
 

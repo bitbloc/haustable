@@ -55,6 +55,25 @@ export function useHausmadeAdmin() {
 
     useEffect(() => {
         fetchAdminData()
+
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchAdminData()
+            }, 400)
+        }
+
+        const channel = supabase
+            .channel('hausmade-admin-realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetch)
+            .subscribe()
+
+        return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+        }
     }, [fetchAdminData])
 
     // Update Shipping & Sender Settings
