@@ -41,10 +41,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                 return;
             }
 
+            const today = new Date();
+            const startOfYesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0, 0).toISOString();
+
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
-                .in('status', ['pending', 'confirmed', 'seated', 'ready', 'void', 'cancelled'])
+                .or(`status.in.(pending,confirmed,seated,ready),and(status.in.(void,cancelled),booking_time.gte.${startOfYesterday})`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;

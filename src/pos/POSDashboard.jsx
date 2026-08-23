@@ -448,62 +448,70 @@ export default function POSDashboard() {
         };
     }, []);
 
+    const activeShiftRef = useRef(activeShift);
     useEffect(() => {
-        if (!activeShift) {
+        activeShiftRef.current = activeShift;
+    }, [activeShift]);
+
+    const shiftSummaryDebounceRef = useRef(null);
+
+    const fetchRealtimeSummary = useCallback(async () => {
+        const currentShift = getCurrentShift() || activeShiftRef.current;
+        if (!currentShift || !currentShift.openedAt) {
             setRealtimeShiftSummary(null);
             return;
         }
+        try {
+            const openedAt = currentShift.openedAt;
+            const { data, error } = await supabase
+                .from('bookings')
+                .select('id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at')
+                .eq('status', 'completed')
+                .or(`booking_time.gte.${openedAt},updated_at.gte.${openedAt}`);
 
-        let isMounted = true;
-        const fetchRealtimeSummary = async () => {
-            const currentShift = getCurrentShift() || activeShift;
-            if (!currentShift || !currentShift.openedAt) return;
-            try {
-                const openedAt = currentShift.openedAt;
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .select('id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at')
-                    .eq('status', 'completed')
-                    .or(`booking_time.gte.${openedAt},updated_at.gte.${openedAt}`);
+            if (error) throw error;
 
-                if (error) throw error;
-                if (!isMounted) return;
+            const metrics = calculateShiftMetrics(currentShift, data || []);
+            setRealtimeShiftSummary(metrics);
+        } catch (err) {
+            console.error("Failed to fetch realtime shift summary:", err);
+            const currentShift = getCurrentShift() || activeShiftRef.current;
+            const metrics = calculateShiftMetrics(currentShift, []);
+            let fallbackCash = 0, fallbackQr = 0, fallbackCredit = 0;
+            (currentShift.transactions || []).forEach(tx => {
+                const amt = Number(tx.amount) || 0;
+                if (tx.paymentMethod === 'cash') fallbackCash += amt;
+                else if (tx.paymentMethod === 'credit') fallbackCredit += amt;
+                else fallbackQr += amt;
+            });
+            metrics.cashSales = Math.max(metrics.cashSales, fallbackCash);
+            metrics.qrSales = Math.max(metrics.qrSales, fallbackQr);
+            metrics.creditSales = Math.max(metrics.creditSales, fallbackCredit);
+            metrics.totalSales = metrics.cashSales + metrics.qrSales + metrics.creditSales;
+            metrics.expectedCash = metrics.openingFloat + metrics.cashSales + metrics.totalIn - metrics.totalOut;
+            setRealtimeShiftSummary(metrics);
+        }
+    }, []);
 
-                const metrics = calculateShiftMetrics(currentShift, data || []);
-                setRealtimeShiftSummary(metrics);
-            } catch (err) {
-                console.error("Failed to fetch realtime shift summary:", err);
-                if (!isMounted) return;
-                const currentShift = getCurrentShift() || activeShift;
-                const metrics = calculateShiftMetrics(currentShift, []);
-                // Fallback to local transactions if cloud query failed
-                let fallbackCash = 0, fallbackQr = 0, fallbackCredit = 0;
-                (currentShift.transactions || []).forEach(tx => {
-                    const amt = Number(tx.amount) || 0;
-                    if (tx.paymentMethod === 'cash') fallbackCash += amt;
-                    else if (tx.paymentMethod === 'credit') fallbackCredit += amt;
-                    else fallbackQr += amt;
-                });
-                metrics.cashSales = Math.max(metrics.cashSales, fallbackCash);
-                metrics.qrSales = Math.max(metrics.qrSales, fallbackQr);
-                metrics.creditSales = Math.max(metrics.creditSales, fallbackCredit);
-                metrics.totalSales = metrics.cashSales + metrics.qrSales + metrics.creditSales;
-                metrics.expectedCash = metrics.openingFloat + metrics.cashSales + metrics.totalIn - metrics.totalOut;
-                setRealtimeShiftSummary(metrics);
-            }
-        };
+    const triggerDebouncedShiftSummary = useCallback(() => {
+        if (shiftSummaryDebounceRef.current) clearTimeout(shiftSummaryDebounceRef.current);
+        shiftSummaryDebounceRef.current = setTimeout(() => {
+            fetchRealtimeSummary();
+        }, 500);
+    }, [fetchRealtimeSummary]);
 
+    useEffect(() => {
         fetchRealtimeSummary();
 
         // Realtime Subscription: Instant update when any booking or shift changes
         const shiftSyncChannel = supabase.channel('pos-shift-realtime-dashboard')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchRealtimeSummary();
+                triggerDebouncedShiftSummary();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, () => {
                 checkAndRestoreActiveShift().then(fresh => {
                     if (fresh) setActiveShift(fresh);
-                    fetchRealtimeSummary();
+                    triggerDebouncedShiftSummary();
                 });
             })
             .subscribe();
@@ -511,15 +519,15 @@ export default function POSDashboard() {
         const handleLocalTx = () => {
             const fresh = getCurrentShift();
             if (fresh) setActiveShift(fresh);
-            fetchRealtimeSummary();
+            triggerDebouncedShiftSummary();
         };
         window.addEventListener('pos-shift-changed', handleLocalTx);
         return () => {
-            isMounted = false;
+            if (shiftSummaryDebounceRef.current) clearTimeout(shiftSummaryDebounceRef.current);
             supabase.removeChannel(shiftSyncChannel);
             window.removeEventListener('pos-shift-changed', handleLocalTx);
         };
-    }, [activeShift, refreshKey]);
+    }, [fetchRealtimeSummary, triggerDebouncedShiftSummary]);
 
     // Force re-sync when opening Close Shift modal
     useEffect(() => {
@@ -827,15 +835,22 @@ export default function POSDashboard() {
             const today = new Date();
             const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
 
-            const { data: activeBookings, error } = await supabase
+            const { data: pendingData, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
-                .in('status', ['pending', 'seated'])
+                .select(`
+                    id, table_id, booking_type, booking_time, status, source, staff_remark,
+                    customer_name, customer_phone, pax, deposit_amount, total_amount, payment_slip_url,
+                    pickup_contact_name, pickup_contact_phone,
+                    profiles (display_name, phone_number),
+                    tables_layout (table_name),
+                    order_items (id, quantity, price_at_time, custom_name, menu_items (name))
+                `)
+                .eq('status', 'pending')
                 .gte('booking_time', startOfToday)
                 .order('booking_time', { ascending: false });
             
-            if (!error && activeBookings) {
-                const pendingOnly = activeBookings.filter(b => b.status === 'pending');
+            if (!error && pendingData) {
+                const pendingOnly = pendingData;
                 setPendingBookingsList(pendingOnly);
                 const count = pendingOnly.length;
                 const hasPending = count > 0;

@@ -69,15 +69,22 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     };
     const [filterDate, setFilterDate] = useState(getBangkokDate());
 
+    const isActiveRef = useRef(isActive);
+    useEffect(() => {
+        isActiveRef.current = isActive;
+    }, [isActive]);
+
     const loadShiftHistoryData = () => {
         const history = getShiftHistory();
         setShiftHistory(history);
 
-        syncShiftHistoryFromCloud().then(cloudHistory => {
-            if (cloudHistory) {
-                setShiftHistory(cloudHistory);
-            }
-        });
+        if (isActiveRef.current && isOnline()) {
+            syncShiftHistoryFromCloud().then(cloudHistory => {
+                if (cloudHistory) {
+                    setShiftHistory(cloudHistory);
+                }
+            });
+        }
     };
 
     const loadActiveShift = async () => {
@@ -86,6 +93,25 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         if (!current) {
             setActiveShiftSummary(null);
             setActiveShiftTopSellers([]);
+            return;
+        }
+
+        // If inactive or offline, calculate directly from local transactions to save bandwidth
+        if (!isActiveRef.current || !isOnline()) {
+            const metrics = calculateShiftMetrics(current, []);
+            let fallbackCash = 0, fallbackQr = 0, fallbackCredit = 0;
+            (current.transactions || []).forEach(tx => {
+                const amt = Number(tx.amount || 0);
+                if (tx.paymentMethod === 'cash') fallbackCash += amt;
+                else if (tx.paymentMethod === 'credit') fallbackCredit += amt;
+                else fallbackQr += amt;
+            });
+            metrics.cashSales = Math.max(metrics.cashSales, fallbackCash);
+            metrics.qrSales = Math.max(metrics.qrSales, fallbackQr);
+            metrics.creditSales = Math.max(metrics.creditSales, fallbackCredit);
+            metrics.totalSales = metrics.cashSales + metrics.qrSales + metrics.creditSales;
+            metrics.expectedCash = metrics.openingFloat + metrics.cashSales + metrics.totalIn - metrics.totalOut;
+            setActiveShiftSummary(metrics);
             return;
         }
 
@@ -223,6 +249,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     }, [expandedShiftId, shiftHistory]);
 
     const fetchReportData = async (showSpinner = true) => {
+        if (!isActiveRef.current) return;
         if (showSpinner) setLoading(true);
         try {
             const startOfDay = `${filterDate}T00:00:00+07:00`;
@@ -280,10 +307,27 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
             }
             setBookings(finalBookings);
 
+            // Load categories from cache if available to prevent excessive queries
+            try {
+                const cachedCats = localStorage.getItem('pos_cache_menu_categories');
+                if (cachedCats) {
+                    const parsed = JSON.parse(cachedCats);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setCategories(parsed);
+                        return;
+                    }
+                }
+            } catch (e) {}
+
             const { data: categoriesData } = await supabase
                 .from('menu_categories')
                 .select('id, name');
-            setCategories(categoriesData || []);
+            if (categoriesData) {
+                setCategories(categoriesData);
+                try {
+                    localStorage.setItem('pos_cache_menu_categories', JSON.stringify(categoriesData));
+                } catch (e) {}
+            }
 
         } catch (err) {
             console.error("Error fetching report data:", err);
@@ -293,34 +337,44 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     };
 
     useEffect(() => {
-        fetchReportData(true);
-        loadShiftHistoryData();
-        loadActiveShift();
-
-        const handleShiftChanged = () => {
+        if (isActive) {
+            fetchReportData(true);
             loadShiftHistoryData();
             loadActiveShift();
-            fetchReportData(false);
+        }
+
+        let debounceTimer = null;
+        const triggerDebouncedSync = () => {
+            if (!isActiveRef.current) return;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                loadShiftHistoryData();
+                loadActiveShift();
+                fetchReportData(false);
+            }, 500);
+        };
+
+        const handleShiftChanged = () => {
+            triggerDebouncedSync();
         };
         window.addEventListener('pos-shift-changed', handleShiftChanged);
 
         // Realtime Subscription: Instant update whenever any booking or shift changes
         const reportsRealtimeChannel = supabase.channel('pos-reports-realtime-sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-                fetchReportData(false);
-                loadActiveShift();
+                triggerDebouncedSync();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, () => {
-                loadShiftHistoryData();
-                loadActiveShift();
+                triggerDebouncedSync();
             })
             .subscribe();
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer);
             window.removeEventListener('pos-shift-changed', handleShiftChanged);
             supabase.removeChannel(reportsRealtimeChannel);
         };
-    }, [filterDate]);
+    }, [filterDate, isActive]);
 
     // Instant update when switching into reports tab or when a checkout happens
     useEffect(() => {

@@ -280,7 +280,6 @@ export async function syncShiftHistoryFromCloud() {
                 totalOut: parseFloat(item.total_out) || 0
             }));
             localStorage.setItem(SHIFT_HISTORY_KEY, JSON.stringify(history));
-            window.dispatchEvent(new Event('pos-shift-changed'));
             return history;
         }
     } catch (err) {
