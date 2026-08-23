@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getAppOrigin } from '../utils/urlHelper'
+import { sendPOSBroadcast } from '../utils/realtimeNotifier'
 
 export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -134,6 +135,34 @@ export function useOrderSubmission() {
             }
 
             if (resultData) {
+                // Instantly broadcast to all connected POS terminals (< 50ms)
+                try {
+                    const custName = resultData.pickup_contact_name || resultData.customer_name || 'Guest'
+                    const custPhone = resultData.pickup_contact_phone || resultData.customer_phone || ''
+                    sendPOSBroadcast('online_order_created', {
+                        booking_id: resultData.id,
+                        booking_type: resultData.booking_type,
+                        table_id: resultData.table_id || null,
+                        customer_name: custName,
+                        phone: custPhone,
+                        total_amount: resultData.total_amount || 0,
+                        has_slip: !!finalSlipUrl,
+                        booking_time: resultData.booking_time,
+                        items_count: orderItemsPayload?.length || 0
+                    })
+
+                    if (finalSlipUrl) {
+                        sendPOSBroadcast('payment_slip_uploaded', {
+                            booking_id: resultData.id,
+                            booking_type: resultData.booking_type,
+                            slip_url: finalSlipUrl,
+                            total_amount: resultData.total_amount || 0
+                        })
+                    }
+                } catch (bErr) {
+                    console.warn('[useOrderSubmission] POS broadcast error:', bErr)
+                }
+
                 try {
                     const profileId = resultData?.user_id
                     let lineUserId = null

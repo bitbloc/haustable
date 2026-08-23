@@ -15,7 +15,7 @@ import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHel
 import { getCurrentShift } from '../utils/shiftHelper';
 import { supabase } from '../lib/supabaseClient';
 
-const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack }) {
+const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack, onlinePendingCount = 0 }) {
     const [online, setOnline] = useState(isOnline());
     const [queueLength, setQueueLength] = useState(getOfflineQueue().length);
     const [activeShift, setActiveShift] = useState(getCurrentShift());
@@ -142,6 +142,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                             active={activeView === 'online_hub'} 
                             onClick={() => onViewChange('online_hub')} 
                             label="Online"
+                            badge={onlinePendingCount}
                         />
                         <NavIcon 
                             icon={Users} 
@@ -329,7 +330,7 @@ const POSHeaderClock = memo(function POSHeaderClock() {
 
 export default POSLayout;
 
-const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label }) {
+const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label, badge = 0 }) {
     return (
         <button 
             type="button"
@@ -347,10 +348,15 @@ const NavIcon = memo(function NavIcon({ icon: Icon, active, onClick, label }) {
                 {label}
             </span>
             
-            {/* Active Indicator LED Accent Dot */}
-            {active && (
+            {/* Number Badge Notification */}
+            {badge > 0 ? (
+                <span className="absolute top-1 right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-bold px-1 shadow-sm animate-pulse border border-white">
+                    {badge > 99 ? '99+' : badge}
+                </span>
+            ) : active ? (
+                /* Active Indicator LED Accent Dot */
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]"></span>
-            )}
+            ) : null}
         </button>
     );
 });

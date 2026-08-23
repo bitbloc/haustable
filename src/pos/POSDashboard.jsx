@@ -232,6 +232,7 @@ export default function POSDashboard() {
 
     // Pending Online Bookings Pop-up Modal State
     const [pendingBookingsList, setPendingBookingsList] = useState([]);
+    const [onlinePendingCount, setOnlinePendingCount] = useState(0);
     const [showPendingModal, setShowPendingModal] = useState(false);
     const prevPendingCountRef = useRef(0);
 
@@ -816,14 +817,12 @@ export default function POSDashboard() {
         try {
             const today = new Date();
             const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
-            const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
             const { data: activeBookings, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name))')
                 .in('status', ['pending', 'seated'])
                 .gte('booking_time', startOfToday)
-                .lte('booking_time', endOfToday)
                 .order('booking_time', { ascending: false });
             
             if (!error && activeBookings) {
@@ -832,6 +831,17 @@ export default function POSDashboard() {
                 const count = pendingOnly.length;
                 const hasPending = count > 0;
                 setHasPendingOrders(hasPending);
+
+                // Calculate online/pickup/slip pending count for sidebar badge
+                const onlineCount = pendingOnly.filter(b => {
+                    const sourceLower = (b.source || '').toLowerCase();
+                    const remarkLower = (b.staff_remark || '').toLowerCase();
+                    const nameLower = (b.customer_name || '').toLowerCase();
+                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man');
+                    const isOnline = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || b.booking_type === 'pickup' || !!b.payment_slip_url;
+                    return isOnline;
+                }).length;
+                setOnlinePendingCount(onlineCount);
 
                 // Auto trigger pop-up overlay if new pending bookings arrive
                 if (count !== prevPendingCountRef.current) {
@@ -1127,8 +1137,63 @@ export default function POSDashboard() {
                             <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} เรียกเช็คบิล</div>
                         </div>
                     ), { id: callBillKey, duration: 10000 });
-                    pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
+                    pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ {tName} เรียกเช็คบิล`, tId);
                     playBillAlert(callBillKey);
+                }
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            })
+            .on('broadcast', { event: 'online_order_created' }, async ({ payload }) => {
+                console.log('⚡ [Realtime POS] Instant broadcast online_order_created received:', payload);
+                const bId = payload?.booking_id;
+                const bType = payload?.booking_type || 'order';
+                const custName = payload?.customer_name || 'ลูกค้าออนไลน์';
+                const isPickup = bType === 'pickup';
+                const label = isPickup ? `รับกลับ: ${custName}` : `จองโต๊ะ: ${custName}`;
+                const eventKey = `online_order_${bId || Date.now()}`;
+
+                if (checkEventDeduplication(eventKey, 4500)) {
+                    playOrderAlert(eventKey, 600, 3.4);
+                    toast.custom((t) => (
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(18%_0.012_28)]" onClick={() => {
+                            toast.dismiss(t);
+                            setView('online_hub');
+                        }}>
+                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">
+                                    {isPickup ? 'Online Pickup · สั่งรับกลับ' : 'Online Booking · จองโต๊ะ'}
+                                </span>
+                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                            </div>
+                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">{label} เข้ามาใหม่ (฿{(payload?.total_amount || 0).toLocaleString()})</div>
+                            <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">กดเพื่อเปิดดูใน Online Hub</div>
+                        </div>
+                    ), { id: eventKey, duration: 10000 });
+                    pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่`, null);
+                }
+
+                checkPendingOrders();
+                setRefreshKey(prev => prev + 1);
+            })
+            .on('broadcast', { event: 'payment_slip_uploaded' }, async ({ payload }) => {
+                console.log('⚡ [Realtime POS] Instant broadcast payment_slip_uploaded received:', payload);
+                const bId = payload?.booking_id;
+                const slipEventKey = `slip_upload_${bId || Date.now()}`;
+                if (checkEventDeduplication(slipEventKey, 4500)) {
+                    playOrderAlert(slipEventKey, 600, 3.4);
+                    toast.custom((t) => (
+                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(45%_0.08_140)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
+                            toast.dismiss(t);
+                            setView('online_hub');
+                        }}>
+                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(45%_0.08_140)]">Payment Slip · มีสลิปใหม่รอตรวจ</span>
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            </div>
+                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">มีสลิปโอนเงินแนบเข้ามา (฿{(payload?.total_amount || 0).toLocaleString()})</div>
+                            <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">กดเพื่อเปิดตรวจสลิปใน Online Hub</div>
+                        </div>
+                    ), { id: slipEventKey, duration: 10000 });
                 }
                 checkPendingOrders();
                 setRefreshKey(prev => prev + 1);
@@ -1141,12 +1206,12 @@ export default function POSDashboard() {
                 checkPendingOrders();
                 setRefreshKey(prev => prev + 1);
                 const { eventType, new: newRow, old: oldRow } = payload;
-                const tableId = newRow?.table_id || oldRow?.table_id;
-                if (!tableId) return;
-
-                const tableName = tablesMap[tableId] || `Table #${tableId}`;
                 const bookingId = newRow?.id || oldRow?.id;
                 if (!bookingId) return;
+
+                const tableId = newRow?.table_id || oldRow?.table_id || null;
+                const isPickup = newRow?.booking_type === 'pickup' || (!tableId && (newRow?.source === 'online' || (newRow?.staff_remark || '').toLowerCase().includes('pickup')));
+                const tableName = tableId ? (tablesMap[tableId] || `Table #${tableId}`) : (isPickup ? 'รับกลับ (Pickup)' : 'Online Order');
 
                 const callBillKey = `${bookingId}_CALL_BILL`;
                 const callStaffKey = `${bookingId}_CALL_STAFF`;
@@ -1155,28 +1220,36 @@ export default function POSDashboard() {
 
                 if (eventType === 'INSERT') {
                     const remarkCheck = (newRow?.staff_remark || '').toLowerCase();
-                    if (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr') {
+                    if (tableId && (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr')) {
                         handleAutoPrintQROrder(bookingId, tableName);
                     }
 
-                    if (newRow.status === 'pending' || newRow.source === 'qr' || remarkCheck.includes('qr')) {
+                    if (newRow.status === 'pending' || newRow.source === 'qr' || remarkCheck.includes('qr') || isPickup) {
                         if (!activeNotificationsRef.current.has(pendingOrderKey)) {
                             activeNotificationsRef.current.add(pendingOrderKey);
                             toast.custom((t) => (
                                 <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
                                     toast.dismiss(t);
-                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
+                                    if (tableId) {
+                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    } else {
+                                        setView('online_hub');
+                                    }
                                 }}>
                                     <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">New Order · อาหารเข้าใหม่</span>
+                                        <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">
+                                            {isPickup ? 'Pickup Online · รับกลับ' : 'New Order · อาหารเข้าใหม่'}
+                                        </span>
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
-                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} สั่งอาหารเข้าห้องครัวแล้ว</div>
+                                    <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">
+                                        {isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`}
+                                    </div>
                                 </div>
                             ), { id: pendingOrderKey, duration: 10000 });
-                            pushNotifHistory('ORDER', 'New Order', `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
+                            pushNotifHistory('ORDER', isPickup ? 'Online Pickup' : 'New Order', isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)}` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
                             playOrderAlert(pendingOrderKey, 600, 3.4);
                         }
                     }
@@ -2766,6 +2839,7 @@ export default function POSDashboard() {
             
             <POSLayout 
                 activeView={view} 
+                onlinePendingCount={onlinePendingCount}
                 onViewChange={(v) => {
                     if (v === 'tables') {
                         handleBackToTables();

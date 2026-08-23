@@ -92,8 +92,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const isLineman = isOrderLineman(b);
                 const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman;
                 const hasSlip = !!b.payment_slip_url;
-                const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
-                return isOnlineSource || hasSlip || isOnlinePickup || isLineman;
+                const isPickup = b.booking_type === 'pickup';
+                return isOnlineSource || hasSlip || isPickup || isLineman;
             });
 
             setOrders(onlineRelevant);

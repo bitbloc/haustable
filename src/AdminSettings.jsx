@@ -12,6 +12,8 @@ import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { logger } from './utils/logger'
 import { getAppOrigin, safeTimestampUrl } from './utils/urlHelper'
+import VisualCalendarBlocker from './components/admin/settings/VisualCalendarBlocker'
+import TimeSlotStudio from './components/admin/settings/TimeSlotStudio'
 
 // PWA Install Button Component
 const InstallPWA = () => {
@@ -1015,93 +1017,49 @@ export default function AdminSettings() {
                 <div className="space-y-6 animate-fade-in">
                     
                     {/* Top Row: Master Switches & Status Controls */}
+                    {/* Row 1: Unified Shop Status Controls & Visual Calendar Blocker */}
                     <div className="grid lg:grid-cols-12 gap-6">
                         
-                        {/* Column 1: Switches & Shop Status (8 cols) */}
-                        <div className="lg:col-span-7 space-y-6">
+                        {/* Column 1: Unified Shop Status & Operating Hours (5 cols) */}
+                        <div className="lg:col-span-5 space-y-6">
                             
-                            {/* Master Toggle Cards */}
-                            <div className="grid sm:grid-cols-2 gap-4">
-                                {/* Booking System Toggle */}
-                                <label className={`bg-white p-5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${settings.is_menu_system_enabled === 'true' ? 'border-emerald-500/50 bg-emerald-50/10 ring-1 ring-emerald-500/20' : 'border-gray-200 hover:border-gray-300'}`}>
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-xl">
-                                            <Power size={20} />
-                                        </div>
-                                        <div className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-300 ${settings.is_menu_system_enabled === 'true' ? 'bg-emerald-500' : 'bg-gray-200'}`}>
-                                            <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.is_menu_system_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="block font-bold text-sm text-gray-900">
-                                            Booking System {settings.is_menu_system_enabled === 'true' ? 'Active' : 'Disabled'}
-                                        </span>
-                                        <span className="text-[11px] text-gray-500">Master switch for online ordering</span>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        className="hidden"
-                                        checked={settings.is_menu_system_enabled === 'true'}
-                                        onChange={(e) => handleSave('is_menu_system_enabled', e.target.checked ? 'true' : 'false')}
-                                    />
-                                </label>
-
-                                {/* Default VAT Toggle */}
-                                <label className={`bg-white p-5 rounded-2xl border transition-all cursor-pointer shadow-sm flex flex-col justify-between ${settings.default_vat_enabled === 'true' ? 'border-blue-500/50 bg-blue-50/10 ring-1 ring-blue-500/20' : 'border-gray-200 hover:border-gray-300'}`}>
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="p-2.5 bg-blue-100 text-blue-700 rounded-xl">
-                                            <TrendingUp size={20} />
-                                        </div>
-                                        <div className={`w-11 h-6 rounded-full p-0.5 transition-colors duration-300 ${settings.default_vat_enabled === 'true' ? 'bg-blue-500' : 'bg-gray-200'}`}>
-                                            <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${settings.default_vat_enabled === 'true' ? 'translate-x-5' : 'translate-x-0'}`} />
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="block font-bold text-sm text-gray-900">
-                                            Default VAT (7%) {settings.default_vat_enabled === 'true' ? 'Enabled' : 'Disabled'}
-                                        </span>
-                                        <span className="text-[11px] text-gray-500">ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน</span>
-                                    </div>
-                                    <input
-                                        type="checkbox"
-                                        className="hidden"
-                                        checked={settings.default_vat_enabled === 'true'}
-                                        onChange={(e) => handleSave('default_vat_enabled', e.target.checked ? 'true' : 'false')}
-                                    />
-                                </label>
-                            </div>
-
-                            {/* Shop Status Control Card */}
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm space-y-6">
-                                <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+                            {/* Unified Shop Status Control Card */}
+                            <div className="bg-white p-6 rounded-2xl border border-[oklch(85%_0.012_28)] shadow-2xs space-y-5">
+                                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2.5 bg-gray-100 text-gray-700 rounded-xl">
+                                        <div className="p-2.5 bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] rounded-xl">
                                             <Power size={18} />
                                         </div>
                                         <div>
-                                            <h2 className="text-base font-bold text-gray-900">Shop Status Controls</h2>
-                                            <p className="text-xs text-gray-500">จัดการสถานะเปิด-ปิดรับจองหน้าร้านและออนไลน์</p>
+                                            <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                                                SHOP STATUS CONTROLS
+                                            </h2>
+                                            <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                                                สถานะเปิด-ปิด 3 บริการหลักของร้าน
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Table Booking Status */}
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">🍽 Table Booking Status</label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider block">
+                                        🍽 Table Booking (จองโต๊ะทานที่ร้าน)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
                                         {[
-                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
-                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
-                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-800 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-800 border-red-300' }
                                         ].map(({ mode, label, color }) => (
                                             <button
                                                 key={mode}
                                                 type="button"
                                                 onClick={() => handleSave('shop_mode_table', mode)}
-                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                className={`py-2 px-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer text-center select-none ${
                                                     settings.shop_mode_table === mode
-                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
-                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                        ? `${color} ring-2 ring-black/10 shadow-xs font-extrabold`
+                                                        : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                                                 }`}
                                             >
                                                 {label}
@@ -1111,22 +1069,24 @@ export default function AdminSettings() {
                                 </div>
 
                                 {/* Pickup Status */}
-                                <div className="space-y-3 pt-2">
-                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">🛍 Pickup Status</label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <label className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider block">
+                                        🛍 Pickup Online (สั่งรับกลับบ้าน)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
                                         {[
-                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
-                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
-                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-800 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-800 border-red-300' }
                                         ].map(({ mode, label, color }) => (
                                             <button
                                                 key={mode}
                                                 type="button"
                                                 onClick={() => handleSave('shop_mode_pickup', mode)}
-                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                className={`py-2 px-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer text-center select-none ${
                                                     settings.shop_mode_pickup === mode
-                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
-                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                        ? `${color} ring-2 ring-black/10 shadow-xs font-extrabold`
+                                                        : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                                                 }`}
                                             >
                                                 {label}
@@ -1136,22 +1096,24 @@ export default function AdminSettings() {
                                 </div>
 
                                 {/* HAUSMADE Shop Status */}
-                                <div className="space-y-3 pt-2">
-                                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block">📦 HAUSMADE Shop Status</label>
-                                    <div className="grid grid-cols-3 gap-2">
+                                <div className="space-y-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                    <label className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider block">
+                                        📦 HAUSMADE Shop (สินค้าออนไลน์)
+                                    </label>
+                                    <div className="grid grid-cols-3 gap-1.5 font-mono text-xs">
                                         {[
-                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-700 border-emerald-300' },
-                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-700 border-blue-300' },
-                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-700 border-red-300' }
+                                            { mode: 'auto', label: 'Auto (ตามเวลา)', color: 'bg-emerald-50 text-emerald-800 border-emerald-300' },
+                                            { mode: 'manual_open', label: 'Manual Open', color: 'bg-blue-50 text-blue-800 border-blue-300' },
+                                            { mode: 'manual_close', label: 'Manual Close', color: 'bg-red-50 text-red-800 border-red-300' }
                                         ].map(({ mode, label, color }) => (
                                             <button
                                                 key={mode}
                                                 type="button"
                                                 onClick={() => handleSave('shop_mode_hausmade', mode)}
-                                                className={`py-3 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                                                className={`py-2 px-1.5 rounded-lg border text-[11px] font-bold transition-all cursor-pointer text-center select-none ${
                                                     (settings.shop_mode_hausmade || 'manual_close') === mode
-                                                        ? `${color} ring-2 ring-black/10 shadow-sm font-extrabold`
-                                                        : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                                                        ? `${color} ring-2 ring-black/10 shadow-xs font-extrabold`
+                                                        : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                                                 }`}
                                             >
                                                 {label}
@@ -1161,86 +1123,77 @@ export default function AdminSettings() {
                                 </div>
 
                                 {/* Schedule Hours */}
-                                <div className="pt-4 border-t border-gray-100">
-                                    <p className="text-xs text-gray-400 font-medium mb-3">* เวลาเปิด-ปิดสำหรับโหมด Auto</p>
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className="pt-3 border-t border-[oklch(85%_0.012_28)]">
+                                    <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mb-2">
+                                        * กำหนดเวลาเปิด-ปิดสำหรับโหมด Auto
+                                    </p>
+                                    <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-700 mb-1">เวลาเปิด (Opens at)</label>
-                                            <input type="time" value={settings.opening_time} onChange={(e) => handleSave('opening_time', e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black" />
+                                            <label className="block text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] uppercase mb-1">
+                                                เวลาเปิดร้าน (Opens)
+                                            </label>
+                                            <input
+                                                type="time"
+                                                value={settings.opening_time || '11:00'}
+                                                onChange={(e) => handleSave('opening_time', e.target.value)}
+                                                className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2 rounded-lg text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold text-gray-700 mb-1">เวลาปิด (Closes at)</label>
-                                            <input type="time" value={settings.closing_time} onChange={(e) => handleSave('closing_time', e.target.value)} className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-bold text-gray-900 outline-none focus:border-black" />
+                                            <label className="block text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] uppercase mb-1">
+                                                เวลาปิดร้าน (Closes)
+                                            </label>
+                                            <input
+                                                type="time"
+                                                value={settings.closing_time || '22:00'}
+                                                onChange={(e) => handleSave('closing_time', e.target.value)}
+                                                className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2 rounded-lg text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                            />
                                         </div>
                                     </div>
+                                </div>
+
+                                {/* Default VAT Toggle */}
+                                <div className="pt-3 border-t border-[oklch(85%_0.012_28)]">
+                                    <label className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${
+                                        settings.default_vat_enabled === 'true'
+                                            ? 'bg-blue-50/60 border-blue-300 ring-1 ring-blue-400'
+                                            : 'bg-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                    }`}>
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-1.5 bg-blue-100 text-blue-700 rounded-lg">
+                                                <TrendingUp size={16} />
+                                            </div>
+                                            <div>
+                                                <span className="block font-mono font-bold text-xs text-[oklch(18%_0.012_28)]">
+                                                    Default VAT 7%
+                                                </span>
+                                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    ภาษีมูลค่าเพิ่ม 7% เริ่มต้นของร้าน
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-300 ${settings.default_vat_enabled === 'true' ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                                            <div className={`w-4 h-4 rounded-full bg-white shadow-xs transform transition-transform duration-300 ${settings.default_vat_enabled === 'true' ? 'translate-x-4' : 'translate-x-0'}`} />
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            className="hidden"
+                                            checked={settings.default_vat_enabled === 'true'}
+                                            onChange={(e) => handleSave('default_vat_enabled', e.target.checked ? 'true' : 'false')}
+                                        />
+                                    </label>
                                 </div>
 
                             </div>
                         </div>
 
-                        {/* Column 2: Blocked Dates (5 cols) */}
-                        <div className="lg:col-span-5">
-                            <div className="bg-white p-6 rounded-2xl border border-gray-200/80 shadow-sm h-full flex flex-col justify-between">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-                                        <div className="p-2.5 bg-red-100 text-red-700 rounded-xl">
-                                            <Calendar size={18} />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-base font-bold text-gray-900">Blocked Dates</h2>
-                                            <p className="text-xs text-gray-500">ปิดรับจองเฉพาะวันพิเศษ/วันหยุด</p>
-                                        </div>
-                                    </div>
-
-                                    <form onSubmit={handleBlockDates} className="flex flex-col gap-3 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200/60">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 uppercase font-bold">วันที่เริ่มหยุด</label>
-                                                <input
-                                                    type="date"
-                                                    value={blockForm.startDate}
-                                                    onClick={(e) => e.target.showPicker?.()}
-                                                    onChange={e => setBlockForm({ ...blockForm, startDate: e.target.value })}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-gray-900 outline-none focus:border-black cursor-pointer"
-                                                    required
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] text-gray-500 uppercase font-bold">ถึงวันที่</label>
-                                                <input
-                                                    type="date"
-                                                    value={blockForm.endDate}
-                                                    min={blockForm.startDate}
-                                                    onClick={(e) => e.target.showPicker?.()}
-                                                    onChange={e => setBlockForm({ ...blockForm, endDate: e.target.value })}
-                                                    className="w-full bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs font-bold text-gray-900 outline-none focus:border-black cursor-pointer"
-                                                />
-                                            </div>
-                                        </div>
-                                        <input type="text" placeholder="สาเหตุ (เช่น วันหยุดนักขัตฤกษ์)" value={blockForm.reason} onChange={e => setBlockForm({ ...blockForm, reason: e.target.value })} className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 outline-none focus:border-black" />
-                                        <button className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-xl text-xs transition-colors cursor-pointer shadow-sm">
-                                            + เพิ่มวันหยุด (Block Date)
-                                        </button>
-                                    </form>
-
-                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                                        {blockedList.map(item => (
-                                            <div key={item.id} className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200/60 hover:border-gray-300 transition-colors">
-                                                <div>
-                                                    <div className="text-gray-900 text-xs font-bold">{new Date(item.blocked_date).toLocaleDateString('th-TH')}</div>
-                                                    <div className="text-[11px] text-gray-500">{item.reason || 'ปิดรับจอง'}</div>
-                                                </div>
-                                                <button onClick={() => handleDeleteBlockedDate(item.id)} className="text-red-500 hover:text-red-700 p-1.5 cursor-pointer rounded-lg hover:bg-red-50 transition-colors">
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                        {blockedList.length === 0 && (
-                                            <div className="text-center text-gray-400 text-xs font-mono py-8">ไม่มีวันหยุดที่ตั้งค่าไว้</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                        {/* Column 2: Blocked Dates Studio (7 cols) */}
+                        <div className="lg:col-span-7">
+                            <VisualCalendarBlocker
+                                blockedList={blockedList}
+                                onRefresh={fetchSettings}
+                            />
                         </div>
 
                     </div>
@@ -1354,43 +1307,13 @@ export default function AdminSettings() {
                             </div>
                         </div>
 
-                        <div>
-                            <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-bold text-gray-700">รอบเวลาให้บริการ (Comma separated)</label>
-                                <span className="text-[10px] text-gray-400 font-medium">💡 แนะนำ: รอบละ 1 ชม. ลดการชนคิวหน้าร้าน</span>
-                            </div>
-                            
-                            {/* Preset Buttons */}
-                            <div className="flex flex-wrap gap-1.5 mb-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 12:00, 13:00, 14:00, 17:00, 18:00, 19:00, 20:00, 21:00' }))}
-                                    className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-bold transition-all cursor-pointer"
-                                >
-                                    ⚡ ทุก 1 ชั่วโมง (แนะนำสำหรับร้านอาหาร)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 11:30, 12:00, 12:30, 13:00, 13:30, 14:00, 14:30, 15:00, 15:30, 16:00, 16:30, 17:00, 17:30, 18:00, 18:30, 19:00, 19:30, 20:00, 20:30, 21:00' }))}
-                                    className="px-2.5 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700 text-[11px] font-bold transition-all cursor-pointer"
-                                >
-                                    ⏱ ทุก 30 นาที (สำหรับหมุนเร็ว/คาเฟ่)
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSettings(prev => ({ ...prev, booking_time_slots: '11:00, 12:30, 14:00, 17:00, 18:30, 20:00' }))}
-                                    className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-800 text-[11px] font-bold transition-all cursor-pointer"
-                                >
-                                    🍷 ทุก 1.5 ชั่วโมง (สำหรับมื้อยาว)
-                                </button>
-                            </div>
-
-                            <input
-                                type="text"
+                        {/* Time Slot Studio */}
+                        <div className="pt-2">
+                            <TimeSlotStudio
                                 value={settings.booking_time_slots || ''}
-                                onChange={(e) => setSettings(prev => ({ ...prev, booking_time_slots: e.target.value }))}
-                                placeholder="11:00, 12:00, 13:00..."
-                                className="w-full bg-gray-50 border border-gray-200 p-2.5 rounded-xl text-sm font-mono text-gray-900 outline-none focus:border-black"
+                                openingTime={settings.opening_time || '11:00'}
+                                closingTime={settings.closing_time || '22:00'}
+                                onChange={(newSlots) => setSettings(prev => ({ ...prev, booking_time_slots: newSlots }))}
                             />
                         </div>
 
