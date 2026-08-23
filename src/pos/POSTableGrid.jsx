@@ -173,7 +173,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 // Fetch active pending, seated, confirmed, ready bookings for today only
                 const { data: activeBookings } = await supabase
                     .from('bookings')
-                    .select('id, table_id, status, booking_time, booking_type, staff_remark, customer_name, total_amount')
+                    .select('id, table_id, status, booking_time, booking_type, staff_remark, pickup_contact_name, total_amount, profiles(display_name, nickname, phone_number)')
                     .in('status', ['pending', 'seated', 'confirmed', 'ready'])
                     .gte('booking_time', startOfToday)
                     .lte('booking_time', endOfToday);
