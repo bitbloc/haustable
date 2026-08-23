@@ -277,6 +277,20 @@ export default function AdsLandingPage() {
     const fbUrl = (settings.link_url_3 && settings.link_url_3 !== 'https://facebook.com' && settings.link_url_3 !== 'https://www.facebook.com') ? settings.link_url_3 : defaultFbUrl;
     const mapUrl = (settings.link_url_4 && settings.link_url_4 !== 'https://maps.google.com') ? settings.link_url_4 : defaultMapUrl;
 
+    const handleDirectionsClick = () => {
+        try {
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'conversion', {
+                    'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
+                    'value': 1.0,
+                    'currency': 'THB'
+                });
+            }
+        } catch (err) {
+            console.error('gtag conversion error:', err);
+        }
+    };
+
     // ─── DYNAMIC SEO (Title & Meta) ───
     useEffect(() => {
         if (!loading) {
