@@ -359,7 +359,7 @@ export default function POSDashboard() {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, display_name, role')
-                .in('role', ['staff', 'admin']);
+                .in('role', ['staff', 'admin', 'manager', 'cashier', 'kitchen', 'owner']);
             
             if (!error && data && data.length > 0) {
                 setStaffList(data);

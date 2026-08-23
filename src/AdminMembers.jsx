@@ -398,11 +398,12 @@ export default function AdminMembers() {
 
             if (!matchSearch) return false
 
+            const isStaffMember = m.role && m.role !== 'customer'
             if (roleTab === 'staff') {
-                return m.role === 'staff' || m.role === 'admin'
+                return isStaffMember
             }
             if (roleTab === 'customer') {
-                return m.role !== 'staff' && m.role !== 'admin'
+                return !isStaffMember
             }
             return true
         })
@@ -432,8 +433,8 @@ export default function AdminMembers() {
         return result
     }, [members, searchTerm, roleTab, sortBy])
 
-    const staffCount = members.filter(m => m.role === 'staff' || m.role === 'admin').length
-    const customerCount = members.filter(m => m.role !== 'staff' && m.role !== 'admin').length
+    const staffCount = members.filter(m => m.role && m.role !== 'customer').length
+    const customerCount = members.filter(m => !m.role || m.role === 'customer').length
     const totalXhaus = members.reduce((sum, m) => sum + (Number(m.xhaus_balance) || 0), 0)
 
     return (

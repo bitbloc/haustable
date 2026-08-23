@@ -54,14 +54,17 @@ export default function StaffAuthLayout() {
                 .eq('id', session.user.id)
                 .single();
 
-            if (profileError || !profile || profile.role !== 'admin') {
+            const role = (profile?.role || '').toLowerCase();
+            const isAuthorizedStaff = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen'].includes(role);
+
+            if (profileError || !profile || !isAuthorizedStaff) {
                 localStorage.removeItem('staff_role');
                 localStorage.removeItem('staff_id');
                 setAuthStatus('unauthorized');
                 return;
             }
 
-            localStorage.setItem('staff_role', 'admin');
+            localStorage.setItem('staff_role', role);
             localStorage.setItem('staff_id', session.user.id);
             setAuthStatus('authorized');
 
