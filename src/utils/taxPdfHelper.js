@@ -1,8 +1,9 @@
 /**
  * Tax Invoice & Official Receipt PDF Generator Utility
- * Generates crisp A4 PDF documents from printable HTML sheets using html2canvas & jsPDF.
+ * Generates crisp A4 PDF documents from printable HTML sheets using html-to-image & jsPDF.
+ * Fully compatible with modern CSS (OKLCH, CSS Variables, Flex/Grid layouts).
  */
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 /**
@@ -19,29 +20,30 @@ export async function generateTaxDocumentPdf(element, options = {}) {
 
     const fileName = options.fileName || 'tax-invoice.pdf';
 
-    // 1. Capture high-resolution raster canvas (scale: 2 for crisp 300dpi-equivalent print quality)
-    const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        logging: false,
+    // 1. Wait for document fonts to be ready
+    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+        try {
+            await document.fonts.ready;
+        } catch {
+            // Non-fatal if font check is not available
+        }
+    }
+
+    // 2. Capture high-resolution raster image using html-to-image (supports OKLCH & all modern CSS)
+    const imgData = await toPng(element, {
+        pixelRatio: 2.5,
         backgroundColor: '#ffffff',
-        windowWidth: element.scrollWidth || 1024,
-        onclone: (clonedDoc) => {
-            // Ensure printable element is visible and properly styled in clone
-            const clonedEl = clonedDoc.getElementById(element.id) || clonedDoc.querySelector('[id="tax-invoice-printable-sheet"]');
-            if (clonedEl) {
-                clonedEl.style.transform = 'none';
-                clonedEl.style.boxShadow = 'none';
-                clonedEl.style.borderRadius = '0';
-                clonedEl.style.margin = '0';
-                clonedEl.style.width = '100%';
-                clonedEl.style.maxWidth = '100%';
+        cacheBust: true,
+        quality: 0.98,
+        filter: (node) => {
+            if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
+                return false;
             }
+            return true;
         }
     });
 
-    // 2. Initialize jsPDF in A4 Portrait mode
+    // 3. Initialize jsPDF in A4 Portrait mode
     const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -52,7 +54,6 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     const pdfWidth = pdf.internal.pageSize.getWidth(); // 210 mm
     const pdfHeight = pdf.internal.pageSize.getHeight(); // 297 mm
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.98);
     const imgProps = pdf.getImageProperties(imgData);
     const imgRatio = imgProps.height / imgProps.width;
 
@@ -61,7 +62,7 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     const renderWidth = pdfWidth - (margin * 2);
     let renderHeight = renderWidth * imgRatio;
 
-    // Constrain height if it slightly exceeds single A4 page
+    // Constrain height if it exceeds single A4 printable page
     if (renderHeight > (pdfHeight - (margin * 2))) {
         renderHeight = pdfHeight - (margin * 2);
     }
@@ -69,7 +70,7 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     // Top-aligned with clean margins
     pdf.addImage(
         imgData,
-        'JPEG',
+        'PNG',
         margin,
         margin,
         renderWidth,
@@ -78,7 +79,7 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         'FAST'
     );
 
-    // 3. Generate Blob and File instances
+    // 4. Generate Blob and File instances
     const blob = pdf.output('blob');
     const file = new File([blob], fileName, { type: 'application/pdf' });
     const dataUrl = URL.createObjectURL(blob);
@@ -94,11 +95,11 @@ export async function generateTaxDocumentPdf(element, options = {}) {
 
 /**
  * Downloads a generated PDF directly to the user's browser
- * @param {jsPDF|Blob} pdfOrBlob 
+ * @param {jsPDF|Blob|File} pdfOrBlob 
  * @param {string} fileName 
  */
 export function downloadTaxPdf(pdfOrBlob, fileName = 'tax-invoice.pdf') {
-    if (pdfOrBlob instanceof Blob) {
+    if (pdfOrBlob instanceof Blob || pdfOrBlob instanceof File) {
         const url = URL.createObjectURL(pdfOrBlob);
         const link = document.createElement('a');
         link.href = url;

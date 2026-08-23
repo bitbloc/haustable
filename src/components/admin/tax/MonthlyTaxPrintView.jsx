@@ -95,23 +95,40 @@ export default function MonthlyTaxPrintView({
                         <div>
                             {/* Header Section */}
                             <div className="border-b-2 border-zinc-950 pb-5 flex justify-between items-start gap-6">
-                                <div>
-                                    <div className="font-mono text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
-                                        [ OFFICIAL MONTHLY TAX DOSSIER &amp; EXPENSE SUMMARY ]
+                                <div className="flex items-start gap-4 flex-1 min-w-0">
+                                    {/* Small In The Haus Logo */}
+                                    <div className="shrink-0 pt-0.5">
+                                        <img 
+                                            src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                            alt="IN THE HAUS" 
+                                            className="w-14 h-14 object-contain rounded-md border border-zinc-300 p-0.5 bg-white shrink-0 shadow-2xs"
+                                            crossOrigin="anonymous"
+                                            onError={(e) => {
+                                                if (e.target.src !== `${window.location.origin}/logo.png`) {
+                                                    e.target.src = '/logo.png';
+                                                }
+                                            }}
+                                        />
                                     </div>
-                                    <h1 className="font-serif font-black text-2xl uppercase tracking-tight text-zinc-950">
-                                        {companySettings?.tax_company_name || 'IN THE HAUS'}
-                                    </h1>
-                                    {companySettings?.tax_company_name_en && (
-                                        <p className="font-mono text-xs text-zinc-600 font-semibold uppercase">
-                                            {companySettings.tax_company_name_en}
-                                        </p>
-                                    )}
-                                    <div className="mt-2 text-[11px] text-zinc-700 leading-relaxed max-w-lg">
-                                        <p>{companySettings?.tax_address || 'ที่อยู่สถานประกอบการจดทะเบียน'}</p>
-                                        <div className="flex flex-wrap gap-x-4 mt-1 font-mono font-medium">
-                                            <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id)}</strong></span>
-                                            <span>สาขา: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-mono text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                                            [ OFFICIAL MONTHLY TAX DOSSIER &amp; EXPENSE SUMMARY ]
+                                        </div>
+                                        <h1 className="font-serif font-black text-2xl uppercase tracking-tight text-zinc-950">
+                                            {companySettings?.tax_company_name || 'IN THE HAUS'}
+                                        </h1>
+                                        {companySettings?.tax_company_name_en && (
+                                            <p className="font-mono text-xs text-zinc-600 font-semibold uppercase">
+                                                {companySettings.tax_company_name_en}
+                                            </p>
+                                        )}
+                                        <div className="mt-2 text-[11px] text-zinc-700 leading-relaxed max-w-lg">
+                                            <p>{companySettings?.tax_address || 'ที่อยู่สถานประกอบการจดทะเบียน'}</p>
+                                            <div className="flex flex-wrap gap-x-4 mt-1 font-mono font-medium">
+                                                <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id)}</strong></span>
+                                                <span>สาขา: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -123,7 +140,7 @@ export default function MonthlyTaxPrintView({
                                     <span className="font-bold text-base text-zinc-950 block mt-0.5">
                                         ประจำงวดเดือน
                                     </span>
-                                    <span className="font-serif font-black text-sm text-[oklch(52%_0.16_28)] block mt-0.5">
+                                    <span className="font-serif font-black text-sm text-[#a33716] block mt-0.5">
                                         {formatThaiMonthYear(periodMonth)}
                                     </span>
                                     <span className="font-mono text-[10px] text-zinc-600 block mt-1 border-t border-zinc-200 pt-1">

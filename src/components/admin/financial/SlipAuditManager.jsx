@@ -5,7 +5,7 @@ import { getThaiDate } from '../../../utils/timeUtils';
 import { toast } from 'sonner';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import ViewSlipModal from '../../shared/ViewSlipModal';
 import {
     fetchPrinterConfigOnline, initPrinterConfigSync,
@@ -422,15 +422,12 @@ export default function SlipAuditManager({
         toast.info("กำลังประมวลผลการส่งออกภาพใบแจ้งยอด/สลิป...");
 
         try {
-            const canvas = await html2canvas(element, {
-                useCORS: true,
-                allowTaint: true,
-                scale: 3,
+            const image = await toPng(element, {
+                pixelRatio: 3,
                 backgroundColor: '#ffffff',
-                logging: false,
+                cacheBust: true
             });
 
-            const image = canvas.toDataURL('image/png');
             const link = document.createElement('a');
             const fileName = `bill_${token || orderId}_${selectedDate || 'audit'}.png`;
             link.href = image;

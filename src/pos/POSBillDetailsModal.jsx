@@ -68,7 +68,7 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
         supabase
             .from('app_settings')
             .select('key, value')
-            .like('key', 'tax_%')
+            .or('key.like.tax_%,key.eq.receipt_shop_logo_url,key.eq.shop_logo_url')
             .not('key', 'eq', 'tax_signature_image')
             .then(({ data }) => {
                 if (data && data.length > 0) {

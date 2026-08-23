@@ -400,24 +400,41 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                     {/* Header Section */}
                     <div className="flex justify-between items-start border-b-2 border-zinc-900 pb-3 gap-4">
                         {/* Company / Issuer Info */}
-                        <div className="flex-1">
-                            <h1 className="font-bold text-base sm:text-lg uppercase tracking-tight text-zinc-950 font-serif">
-                                {companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม'}
-                            </h1>
-                            {companySettings?.tax_company_name_en && (
-                                <p className="font-mono text-[11px] text-zinc-600 uppercase font-semibold">
-                                    {companySettings.tax_company_name_en}
-                                </p>
-                            )}
-                            <div className="mt-1 text-[10.5px] text-zinc-700 leading-relaxed max-w-lg">
-                                <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
-                                <div className="flex flex-wrap gap-x-3 mt-0.5 font-mono font-medium">
-                                    <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
-                                    <span>สถานประกอบการ: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
-                                </div>
-                                <div className="flex flex-wrap gap-x-3 font-mono text-zinc-600 mt-0.5">
-                                    {companySettings?.tax_phone && <span>โทร: {companySettings.tax_phone}</span>}
-                                    {companySettings?.tax_email && <span>อีเมล: {companySettings.tax_email}</span>}
+                        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                            {/* Small In The Haus Logo */}
+                            <div className="shrink-0 pt-0.5">
+                                <img 
+                                    src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                    alt="IN THE HAUS" 
+                                    className="w-13 h-13 sm:w-14 sm:h-14 object-contain rounded-md border border-zinc-300 p-0.5 bg-white shrink-0 shadow-2xs"
+                                    crossOrigin="anonymous"
+                                    onError={(e) => {
+                                        if (e.target.src !== `${window.location.origin}/logo.png`) {
+                                            e.target.src = '/logo.png';
+                                        }
+                                    }}
+                                />
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <h1 className="font-bold text-base sm:text-lg uppercase tracking-tight text-zinc-950 font-serif leading-tight">
+                                    {companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม'}
+                                </h1>
+                                {companySettings?.tax_company_name_en && (
+                                    <p className="font-mono text-[11px] text-zinc-600 uppercase font-semibold">
+                                        {companySettings.tax_company_name_en}
+                                    </p>
+                                )}
+                                <div className="mt-1 text-[10.5px] text-zinc-700 leading-relaxed max-w-lg">
+                                    <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
+                                    <div className="flex flex-wrap gap-x-3 mt-0.5 font-mono font-medium">
+                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
+                                        <span>สถานประกอบการ: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-x-3 font-mono text-zinc-600 mt-0.5">
+                                        {companySettings?.tax_phone && <span>โทร: {companySettings.tax_phone}</span>}
+                                        {companySettings?.tax_email && <span>อีเมล: {companySettings.tax_email}</span>}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -431,7 +448,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                 <span className="font-mono text-[9px] font-bold text-zinc-600 uppercase tracking-wider block">
                                     {docTitleEn}
                                 </span>
-                                <span className="font-mono text-[9px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block mt-0.5">
+                                <span className="font-mono text-[9px] font-bold text-[#a33716] uppercase tracking-wider block mt-0.5">
                                     {copyLabel}
                                 </span>
                             </div>
