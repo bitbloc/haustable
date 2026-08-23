@@ -28,6 +28,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
             return null;
         }
     });
+    const [ownerAnnouncement, setOwnerAnnouncement] = useState(null);
 
     useEffect(() => {
         const handleStatus = () => setOnline(isOnline());
@@ -57,6 +58,39 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
             setHasSession(!!session);
         });
 
+        // Fetch current active owner announcement
+        const fetchAnnouncement = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'pos_owner_broadcast')
+                    .single();
+
+                if (!error && data?.value) {
+                    try {
+                        setOwnerAnnouncement(JSON.parse(data.value));
+                    } catch {
+                        setOwnerAnnouncement({ text: data.value });
+                    }
+                }
+            } catch {}
+        };
+        fetchAnnouncement();
+
+        // Real-time listener for live owner broadcast
+        const broadcastChannel = supabase
+            .channel('pos-broadcast-live')
+            .on('broadcast', { event: 'owner-announcement' }, ({ payload }) => {
+                if (payload) {
+                    setOwnerAnnouncement(payload);
+                }
+            })
+            .on('broadcast', { event: 'owner-announcement-clear' }, () => {
+                setOwnerAnnouncement(null);
+            })
+            .subscribe();
+
         // Auto trigger sync on mount if online and queue has items
         if (isOnline() && getOfflineQueue().length > 0) {
             syncOfflineQueue();
@@ -68,6 +102,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
             window.removeEventListener('offline-queue-changed', handleQueue);
             window.removeEventListener('pos-shift-changed', handleShift);
             subscription.unsubscribe();
+            supabase.removeChannel(broadcastChannel);
         };
     }, []);
     return (
@@ -136,6 +171,31 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
 
             {/* Main Content wrapper */}
             <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Live Owner Announcement Banner */}
+                {ownerAnnouncement && (
+                    <div className="bg-[oklch(18%_0.012_28)] text-white px-6 py-2 flex items-center justify-between gap-4 font-mono text-xs border-b border-black shadow-inner shrink-0 animate-in slide-in-from-top duration-200">
+                        <div className="flex items-center gap-2.5 truncate">
+                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-xs tracking-wider shrink-0">
+                                OWNER BROADCAST
+                            </span>
+                            <span className="font-bold truncate text-[oklch(96%_0.008_28)]">
+                                "{ownerAnnouncement.text}"
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-[10px] text-gray-400">
+                                {ownerAnnouncement.timestamp ? new Date(ownerAnnouncement.timestamp).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
+                            <button 
+                                onClick={() => setOwnerAnnouncement(null)}
+                                className="text-gray-300 hover:text-white text-[10px] font-bold uppercase border border-gray-600 hover:border-white px-2 py-0.5 rounded-xs transition-colors"
+                            >
+                                รับทราบ
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Header Sub-bar */}
                 <header className="h-16 bg-[#F5F5F2] border-b border-[#D1D1CD] flex items-center justify-between px-8 shrink-0">
                     <div className="flex items-center gap-4">

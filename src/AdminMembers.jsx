@@ -5,11 +5,12 @@ import {
     Search, Shield, User, Phone, Edit2, X, Clock, Trash2, 
     Key, RefreshCw, Eye, EyeOff, Plus, Minus, Coins,
     Calendar, ArrowUpDown, CheckCircle2, ChevronRight,
-    Coffee, Award, Gift
+    Coffee, Award, Gift, Lock, CheckSquare, Square
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { ADMIN_MODULES, ROLE_PERMISSIONS } from './utils/rbacHelper'
 
 const THAI_MONTHS = [
     'มกราคม (Jan)', 'กุมภาพันธ์ (Feb)', 'มีนาคม (Mar)', 'เมษายน (Apr)',
@@ -221,6 +222,11 @@ export default function AdminMembers() {
     // Open Edit Modal
     const openEditModal = (member) => {
         setEditingMember(member)
+        const memberRole = (member.role || 'customer').toLowerCase()
+        const defaultPerms = Array.isArray(member.admin_permissions) && member.admin_permissions.length > 0
+            ? member.admin_permissions
+            : (ROLE_PERMISSIONS[memberRole] || [])
+
         setEditForm({
             display_name: member.display_name || '',
             nickname: member.nickname || '',
@@ -232,7 +238,9 @@ export default function AdminMembers() {
             gender: member.gender || '',
             pin: member.pin || '',
             drink_stamp_count: member.drink_stamp_count || 0,
-            free_drink_quota: member.free_drink_quota || 0
+            free_drink_quota: member.free_drink_quota || 0,
+            role: memberRole,
+            admin_permissions: defaultPerms
         })
     }
 
@@ -254,7 +262,9 @@ export default function AdminMembers() {
                 gender: editForm.gender || null,
                 pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
-                free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10))
+                free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
+                role: editForm.role || 'customer',
+                admin_permissions: (editForm.role === 'owner' || editForm.role === 'admin') ? ['*'] : (editForm.admin_permissions || [])
             }
 
             const { error } = await supabase
@@ -271,7 +281,7 @@ export default function AdminMembers() {
             } : m))
 
             setEditingMember(null)
-            toast.success('บันทึกข้อมูลสมาชิกเรียบร้อยแล้ว')
+            toast.success('บันทึกข้อมูลสมาชิกและสิทธิ์การเข้าถึงเรียบร้อยแล้ว')
         } catch (err) {
             console.error('Failed to save profile:', err)
             toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + err.message)
@@ -848,6 +858,92 @@ export default function AdminMembers() {
                                             ))}
                                         </select>
                                     </div>
+                                </div>
+
+                                {/* Role & Backoffice Permissions Matrix */}
+                                <div className="bg-[oklch(96%_0.015_28)] border border-[oklch(85%_0.02_28)] p-3.5 rounded-sm space-y-3">
+                                    <div>
+                                        <label className="text-[10px] font-bold uppercase text-[oklch(18%_0.012_28)] flex items-center justify-between">
+                                            <span className="flex items-center gap-1.5">
+                                                <Shield size={13} className="text-[oklch(52%_0.16_28)]" />
+                                                <span>USER ROLE & BACKOFFICE PERMISSIONS (บทบาทและสิทธิ์ระบบ)</span>
+                                            </span>
+                                            <span className="text-[9px] font-mono text-[oklch(52%_0.16_28)] uppercase font-bold">
+                                                {editForm.role}
+                                            </span>
+                                        </label>
+                                        <select
+                                            value={editForm.role}
+                                            onChange={e => {
+                                                const newRole = e.target.value
+                                                const defPerms = ROLE_PERMISSIONS[newRole] || []
+                                                setEditForm({
+                                                    ...editForm,
+                                                    role: newRole,
+                                                    admin_permissions: (newRole === 'owner' || newRole === 'admin') ? ['*'] : defPerms
+                                                })
+                                            }}
+                                            className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black mt-1"
+                                        >
+                                            <option value="customer">CUSTOMER / สมาชิกทั่วไป (ไม่มีสิทธิ์หลังบ้าน)</option>
+                                            <option value="staff">STAFF / พนักงานบริการ (เข้าได้เฉพาะ Floor, Bookings)</option>
+                                            <option value="cashier">CASHIER / แคชเชียร์ (เข้าได้ Overview, Floor, Bookings)</option>
+                                            <option value="kitchen">KITCHEN / ครัวและบาร์ (เข้าได้เฉพาะ Menu, Bookings)</option>
+                                            <option value="manager">MANAGER / ผู้จัดการร้าน (เข้าได้เกือบทุกหมวดหมู่ ยกเว้น Financial/Settings)</option>
+                                            <option value="owner">OWNER / เจ้าของร้าน (เข้าได้ทุกหมวดหมู่ 100%)</option>
+                                            <option value="admin">ADMIN / ผู้ดูแลระบบ (เข้าได้ทุกหมวดหมู่ 100%)</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Module Permissions Checkbox Grid */}
+                                    {editForm.role !== 'customer' && (
+                                        <div className="pt-2 border-t border-[oklch(88%_0.015_28)] space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase">
+                                                    สิทธิ์การเข้าถึง 8 หมวดหมู่หลังบ้าน (Custom Permissions):
+                                                </span>
+                                                {(editForm.role === 'owner' || editForm.role === 'admin') && (
+                                                    <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.2 rounded-xs">
+                                                        MASTER ACCESS (ทุกหมวดหมู่)
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                {ADMIN_MODULES.map((mod) => {
+                                                    const isOwnerOrAdmin = editForm.role === 'owner' || editForm.role === 'admin'
+                                                    const isChecked = isOwnerOrAdmin || (editForm.admin_permissions || []).includes(mod.key)
+
+                                                    return (
+                                                        <label 
+                                                            key={mod.key} 
+                                                            className={`flex items-center gap-2 p-2 bg-white rounded-xs border font-mono text-[11px] select-none transition-colors ${
+                                                                isChecked ? 'border-[oklch(52%_0.16_28)] font-bold text-[oklch(18%_0.012_28)]' : 'border-[oklch(88%_0.010_28)] text-[oklch(55%_0.010_28)]'
+                                                            } ${isOwnerOrAdmin ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-[oklch(52%_0.16_28)]'}`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                disabled={isOwnerOrAdmin}
+                                                                checked={isChecked}
+                                                                onChange={(e) => {
+                                                                    const current = editForm.admin_permissions || []
+                                                                    let next
+                                                                    if (e.target.checked) {
+                                                                        next = [...current.filter(k => k !== '*'), mod.key]
+                                                                    } else {
+                                                                        next = current.filter(k => k !== mod.key && k !== '*')
+                                                                    }
+                                                                    setEditForm({ ...editForm, admin_permissions: next })
+                                                                }}
+                                                                className="accent-[oklch(52%_0.16_28)]"
+                                                            />
+                                                            <span>{mod.label}</span>
+                                                        </label>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="bg-white border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2">

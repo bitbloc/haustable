@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
-import { X, Printer as PrinterIcon, Download, Check } from 'lucide-react'
+import { X, Printer as PrinterIcon, Download, Check, Copy } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
@@ -1073,6 +1074,8 @@ export default function SlipModal({ booking, type, onClose }) {
         }
     }
 
+    const [copiedImage, setCopiedImage] = useState(false)
+
     const handleSaveImage = async () => {
         if (!slipRef.current) return
         setSaving(true)
@@ -1086,10 +1089,34 @@ export default function SlipModal({ booking, type, onClose }) {
             link.href = dataUrl
             link.download = `${activeTab}-ticket-${getShortBookingId(booking)}.png`
             link.click()
+            toast.success(`บันทึกสลิป ${activeTab.toUpperCase()} เป็นไฟล์ PNG เรียบร้อยแล้ว`)
         } catch (err) {
-            console.error(err)
+            console.error('Save PNG error:', err)
+            toast.error('ไม่สามารถบันทึกรูปภาพได้: ' + err.message)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleCopyImage = async () => {
+        if (!slipRef.current) return
+        try {
+            const dataUrl = await toPng(slipRef.current, { 
+                cacheBust: true, 
+                backgroundColor: '#ffffff', 
+                pixelRatio: 3 
+            })
+            const res = await fetch(dataUrl)
+            const blob = await res.blob()
+            await navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ])
+            setCopiedImage(true)
+            toast.success('คัดลอกรูปสลิปลง Clipboard แล้ว (พร้อมส่งเข้า LINE)')
+            setTimeout(() => setCopiedImage(false), 2500)
+        } catch (err) {
+            console.error('Copy image error:', err)
+            toast.error('เบราว์เซอร์ไม่รองรับการคัดลอกรูปโดยตรง ให้กดปุ่ม Save PNG')
         }
     }
 
@@ -1491,12 +1518,16 @@ export default function SlipModal({ booking, type, onClose }) {
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 bg-[#F5F5F2] flex gap-3 border-t border-[#D1D1CD]">
-                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] cursor-pointer'} py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
+                <div className="p-4 bg-[#F5F5F2] flex flex-wrap gap-2.5 border-t border-[#D1D1CD]">
+                    <button onClick={handlePrint} disabled={isPrinting || isAutoPrinting} className={`flex-1 min-w-[140px] ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] cursor-pointer'} py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}>
                         <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
                     </button>
-                    <button onClick={handleSaveImage} className="flex-grow bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3.5 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
-                        {saving ? 'Saving...' : <><Download size={14} /> Save Image</>}
+                    <button onClick={handleCopyImage} className="px-4 bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" title="คัดลอกรูปลง Clipboard เพื่อส่งเข้า LINE">
+                        {copiedImage ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
+                        <span>{copiedImage ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}</span>
+                    </button>
+                    <button onClick={handleSaveImage} className="flex-1 min-w-[140px] bg-white border border-[#D1D1CD] text-[#1A1A1A] hover:bg-[#E0E0DC] py-3 rounded-xl font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer" disabled={saving}>
+                        {saving ? 'กำลังบันทึก...' : <><Download size={14} /> SAVE PNG</>}
                     </button>
                 </div>
             </div>

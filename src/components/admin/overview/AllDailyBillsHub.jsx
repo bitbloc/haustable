@@ -582,20 +582,20 @@ export default function AllDailyBillsHub({
                                             </button>
                                         )}
 
-                                        {/* Print Receipt */}
+                                        {/* Print / View Slip as PNG */}
                                         <button
                                             onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
-                                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors"
-                                            title="พิมพ์ใบเสร็จรับเงิน"
+                                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                            title="เปิดดูภาพสลิปใบเสร็จ (สามารถกด Save เป็นภาพ PNG หรือพิมพ์ได้)"
                                         >
-                                            <Printer size={13} />
-                                            <span>ใบเสร็จ</span>
+                                            <Receipt size={13} />
+                                            <span>ภาพสลิป/PNG</span>
                                         </button>
 
                                         {/* Print Kitchen */}
                                         <button
                                             onClick={() => onPrintSlip && onPrintSlip(b, 'kitchen')}
-                                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors"
+                                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded font-bold flex items-center gap-1 transition-colors cursor-pointer"
                                             title="พิมพ์ใบส่งครัว"
                                         >
                                             <ChefHat size={13} />

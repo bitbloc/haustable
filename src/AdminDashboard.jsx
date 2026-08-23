@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils } from 'lucide-react'
+import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
@@ -13,6 +13,8 @@ import { playOrderAlert } from './utils/audioHelper'
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
 import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
+import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
+import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
@@ -29,6 +31,7 @@ export default function AdminDashboard() {
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [taxInvoiceBooking, setTaxInvoiceBooking] = useState(null)
     const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
+    const [showDailySummaryModal, setShowDailySummaryModal] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -387,6 +390,17 @@ export default function AdminDashboard() {
                             <span className="hidden sm:inline">{soundMuted ? 'MUTED' : 'ALERT ON'}</span>
                         </button>
 
+                        {/* Export Daily Summary PNG Slip */}
+                        <button 
+                            type="button"
+                            onClick={() => setShowDailySummaryModal(true)}
+                            className="px-3.5 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
+                        >
+                            <FileText size={14} />
+                            <span>EXPORT สลิปปิดวัน (PNG)</span>
+                        </button>
+
                         {/* Direct POS Link */}
                         <a
                             href="/pos"
@@ -425,12 +439,17 @@ export default function AdminDashboard() {
                     loading={loading}
                 />
 
-                {/* 2. Interactive Live Floor & 1-Tap Table Block (Shown always for quick overview) */}
+                {/* 2. Owner Direct Broadcast to POS Screen */}
+                <div className="mb-6">
+                    <OwnerPosBroadcastBar />
+                </div>
+
+                {/* 3. Interactive Live Floor & 1-Tap Table Block (Shown always for quick overview) */}
                 <LiveFloorQuickStatus 
                     onOccupancyChange={setFloorOccupancy}
                 />
 
-                {/* 3. Segmented Filter Tabs */}
+                {/* 4. Segmented Filter Tabs */}
                 <div className="flex gap-1.5 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
                     {[
                         { key: 'bills', label: `ALL BILLS (บิลทั้งหมด ${dailyBookings.length})`, icon: Receipt },
@@ -458,11 +477,20 @@ export default function AdminDashboard() {
                     })}
                 </div>
 
-                {/* 4. Tab Content: Master Bills Hub / Inbox / Schedule */}
+                {/* 5. Tab Content: Master Bills Hub / Inbox / Schedule */}
                 <div>
                     {getTabContent()}
                 </div>
             </div>
+
+            {/* Daily Summary PNG Slip Modal */}
+            {showDailySummaryModal && (
+                <DailySummarySlipModal
+                    bookings={dailyBookings}
+                    selectedDate={selectedDate}
+                    onClose={() => setShowDailySummaryModal(false)}
+                />
+            )}
 
             {/* Slip Modal (Receipt / Kitchen / Bar printing) */}
             {slipData && (
@@ -476,7 +504,7 @@ export default function AdminDashboard() {
             {/* View Slip Modal */}
             {viewSlipUrl && (
                 <ViewSlipModal 
-                    url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
+                    slipUrl={viewSlipUrl}
                     onClose={() => setViewSlipUrl(null)} 
                 />
             )}
@@ -486,10 +514,9 @@ export default function AdminDashboard() {
                 <TaxInvoiceModal
                     booking={taxInvoiceBooking}
                     onClose={() => setTaxInvoiceBooking(null)}
-                    onSaveSuccess={() => {
+                    onSuccess={() => {
                         setTaxInvoiceBooking(null)
                         fetchData()
-                        toast.success('บันทึกใบกำกับภาษีเรียบร้อยแล้ว')
                     }}
                 />
             )}
