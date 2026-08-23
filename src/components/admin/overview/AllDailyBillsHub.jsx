@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { 
     Search, 
     Filter, 
@@ -23,12 +23,95 @@ import {
     Utensils,
     ShoppingBag,
     X,
-    ExternalLink
+    ExternalLink,
+    Timer
 } from 'lucide-react'
-import { formatThaiTimeOnly, getThaiDate } from '../../../utils/timeUtils'
+import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
+
+// Real-time Service Duration Badge Component
+function LiveServiceDurationBadge({ booking }) {
+    const [now, setNow] = useState(Date.now())
+    const status = (booking?.status || '').toLowerCase()
+    const isSeated = status === 'seated' || status === 'ready'
+    const isCompleted = status === 'completed' || status === 'paid' || status === 'success'
+    const isPending = status === 'pending'
+
+    useEffect(() => {
+        if (!isSeated && !isPending) return
+        const interval = setInterval(() => {
+            setNow(Date.now())
+        }, 10000) // Update every 10 seconds for real-time live ticking
+        return () => clearInterval(interval)
+    }, [isSeated, isPending])
+
+    const startTime = booking?.booking_time || booking?.created_at
+    if (!startTime) return null
+
+    if (isSeated) {
+        const start = new Date(startTime).getTime()
+        const elapsedMins = Math.max(0, Math.floor((now - start) / (1000 * 60)))
+        const formatted = formatThaiDuration(elapsedMins)
+
+        let colorClasses = 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] font-bold'
+        let dotColor = 'bg-[oklch(45%_0.08_140)]'
+
+        if (elapsedMins >= 90) {
+            colorClasses = 'bg-[oklch(96%_0.03_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)] font-bold'
+            dotColor = 'bg-[oklch(52%_0.16_28)]'
+        } else if (elapsedMins >= 60) {
+            colorClasses = 'bg-amber-50 text-amber-900 border-amber-300 font-bold'
+            dotColor = 'bg-amber-500'
+        }
+
+        return (
+            <span 
+                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm font-mono text-[10px] border ${colorClasses}`}
+                title={`เริ่มใช้บริการ: ${formatThaiTimeOnly(startTime)} (${elapsedMins} นาทีที่แล้ว)`}
+            >
+                <span className="relative flex h-1.5 w-1.5">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${dotColor} opacity-75`}></span>
+                    <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${dotColor}`}></span>
+                </span>
+                <span>ทานไปแล้ว {formatted}</span>
+            </span>
+        )
+    }
+
+    if (isCompleted) {
+        const endTime = booking?.end_time || booking?.updated_at
+        const start = new Date(startTime).getTime()
+        const end = endTime ? new Date(endTime).getTime() : start
+        const totalMins = Math.max(0, Math.floor((end - start) / (1000 * 60)))
+
+        if (totalMins <= 0) return null
+
+        return (
+            <span 
+                className="inline-flex items-center px-2 py-0.5 rounded-sm font-mono text-[10px] font-bold bg-[oklch(95%_0.008_28)] text-[oklch(42%_0.010_28)] border border-[oklch(88%_0.010_28)]"
+                title={`เริ่ม: ${formatThaiTimeOnly(startTime)} • ปิดบิล: ${formatThaiTimeOnly(endTime)}`}
+            >
+                <span>ใช้บริการ {formatThaiDuration(totalMins)}</span>
+            </span>
+        )
+    }
+
+    if (isPending) {
+        const start = new Date(startTime).getTime()
+        const waitMins = Math.max(0, Math.floor((now - start) / (1000 * 60)))
+        if (waitMins <= 0) return null
+
+        return (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm font-mono text-[10px] bg-amber-50 text-amber-900 border border-amber-300 font-bold">
+                <span>รอตรวจ {waitMins}น.</span>
+            </span>
+        )
+    }
+
+    return null
+}
 
 export default function AllDailyBillsHub({ 
     bookings = [], 
@@ -120,12 +203,23 @@ export default function AllDailyBillsHub({
         let seatedCount = 0
         let pendingCount = 0
         let cancelledCount = 0
+        let totalCompletedDurationMins = 0
+        let countWithDuration = 0
 
         ;(bookings || []).forEach(b => {
             const amt = parseFloat(b.total_amount || b.total_price || 0)
             if (b.status === 'completed' || b.status === 'paid' || b.status === 'success') {
                 totalRev += amt
                 completedCount++
+                const start = b.booking_time || b.created_at
+                const end = b.end_time || b.updated_at
+                if (start && end) {
+                    const dur = calculateDurationMinutes(start, end)
+                    if (dur > 0 && dur < 480) { // filter outliers > 8 hours
+                        totalCompletedDurationMins += dur
+                        countWithDuration++
+                    }
+                }
             } else if (b.status === 'seated') {
                 seatedCount++
             } else if (b.status === 'pending') {
@@ -135,6 +229,7 @@ export default function AllDailyBillsHub({
             }
         })
 
+        const avgDurationMins = countWithDuration > 0 ? Math.round(totalCompletedDurationMins / countWithDuration) : 0
         const filteredSum = filteredBookings.reduce((sum, b) => sum + parseFloat(b.total_amount || b.total_price || 0), 0)
 
         return {
@@ -144,7 +239,8 @@ export default function AllDailyBillsHub({
             pendingCount,
             cancelledCount,
             filteredCount: filteredBookings.length,
-            filteredSum
+            filteredSum,
+            avgDurationMins
         }
     }, [bookings, filteredBookings])
 
@@ -246,6 +342,12 @@ export default function AllDailyBillsHub({
                             <span className="text-[oklch(42%_0.010_28)]">ยอดขายบิลปิด: </span>
                             <span className="font-black text-[oklch(52%_0.16_28)] text-sm">฿{metrics.totalRev.toLocaleString()}</span>
                         </div>
+                        {metrics.avgDurationMins > 0 && (
+                            <div className="px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold">
+                                <span className="text-[oklch(42%_0.010_28)]">เวลาเฉลี่ย/โต๊ะ: </span>
+                                <span className="font-black text-[oklch(18%_0.012_28)] text-sm">{formatThaiDuration(metrics.avgDurationMins)}</span>
+                            </div>
+                        )}
                         <div className="px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold">
                             <span className="text-[oklch(42%_0.010_28)]">บิลทั้งหมด: </span>
                             <span className="font-black text-[oklch(18%_0.012_28)] text-sm">{bookings.length}</span>
@@ -413,6 +515,9 @@ export default function AllDailyBillsHub({
                                                 <span>PICKUP</span>
                                             </div>
                                         )}
+
+                                        {/* Real-time Service Duration Badge */}
+                                        <LiveServiceDurationBadge booking={b} />
 
                                         {/* Status Badge */}
                                         {getStatusBadge(b.status)}

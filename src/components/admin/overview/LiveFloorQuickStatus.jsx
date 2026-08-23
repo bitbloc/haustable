@@ -3,9 +3,9 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Lock, Unlock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw } from 'lucide-react'
+import { Lock, Unlock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw, Timer } from 'lucide-react'
 
-import { getThaiDate } from '../../../utils/timeUtils'
+import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 
 export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const [tables, setTables] = useState([])
@@ -13,6 +13,15 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const [loading, setLoading] = useState(true)
     const [selectedTableData, setSelectedTableData] = useState(null)
     const [actionLoading, setActionLoading] = useState(false)
+    const [currentTime, setCurrentTime] = useState(Date.now())
+
+    // Real-time ticking interval for live floor duration
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(Date.now())
+        }, 10000) // Update every 10s
+        return () => clearInterval(timer)
+    }, [])
 
     useEffect(() => {
         fetchFloorData()
@@ -297,10 +306,20 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                             ? orderItems.reduce((sum, item) => sum + (Number(item.price_at_time || 0) * Number(item.quantity || 1)), 0)
                             : Number(state.booking?.total_amount || 0)
 
+                        const startTime = state.booking?.booking_time || state.booking?.created_at
+                        const elapsedMins = calculateDurationMinutes(startTime, currentTime)
+                        const formattedDur = formatShortDuration(elapsedMins)
+                        const isLongStay = elapsedMins >= 90
+                        const isWarning = elapsedMins >= 60
+
                         if (state.status === 'occupied') {
-                            bgStyle = 'bg-[oklch(95%_0.02_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)]'
-                            statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()}` : 'OCCUPIED'
-                            tagStyle = 'bg-[oklch(52%_0.16_28)] text-white'
+                            bgStyle = isLongStay 
+                                ? 'bg-[oklch(96%_0.03_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]' 
+                                : isWarning 
+                                    ? 'bg-amber-50/70 text-[oklch(18%_0.012_28)] border-amber-300'
+                                    : 'bg-[oklch(95%_0.02_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)]'
+                            statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()} • ${formattedDur}` : `${formattedDur}`
+                            tagStyle = isLongStay ? 'bg-[oklch(52%_0.16_28)] text-white' : 'bg-[oklch(52%_0.16_28)] text-white'
                         } else if (state.status === 'upcoming') {
                             bgStyle = 'bg-[oklch(96%_0.02_60)] text-[oklch(18%_0.012_28)] border-[oklch(60%_0.15_60)]'
                             const bTime = state.booking?.booking_time ? new Date(state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''
@@ -333,7 +352,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                 {hasCallStaff || hasCallBill ? (
                                     <div className="mt-2">
                                         <span className="font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate bg-amber-500 text-black">
-                                            {hasCallBill ? '💵 CALL BILL' : '🛎 CALL STAFF'}
+                                            {hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
                                         </span>
                                     </div>
                                 ) : (
@@ -388,7 +407,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                     <div className="flex justify-between">
                                         <span className="text-[oklch(55%_0.010_28)]">START TIME</span>
                                         <span className="font-bold">
-                                            {new Date(selectedTableData.state.booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
+                                            {formatThaiTimeOnly(selectedTableData.state.booking.booking_time)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-[oklch(55%_0.010_28)]">ELAPSED (เวลาที่ใช้บริการ)</span>
+                                        <span className="font-bold font-mono text-[oklch(52%_0.16_28)]">
+                                            {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
                                         </span>
                                     </div>
                                     {selectedTableData.state.booking.customer_note && (

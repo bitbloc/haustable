@@ -63,3 +63,31 @@ export const formatThaiDateLong = (isoString) => {
     })
 }
 
+export const calculateDurationMinutes = (startTime, endTime = null) => {
+    if (!startTime) return 0
+    const start = new Date(startTime).getTime()
+    const end = endTime ? new Date(endTime).getTime() : Date.now()
+    if (isNaN(start) || isNaN(end)) return 0
+    return Math.max(0, Math.floor((end - start) / (1000 * 60)))
+}
+
+export const formatThaiDuration = (minutes) => {
+    if (minutes === undefined || minutes === null || isNaN(minutes) || minutes < 0) return '-'
+    if (minutes < 60) {
+        return `${minutes} นาที`
+    }
+    const hrs = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hrs} ชม. ${mins} น.` : `${hrs} ชม.`
+}
+
+export const formatShortDuration = (minutes) => {
+    if (minutes === undefined || minutes === null || isNaN(minutes) || minutes < 0) return '-'
+    if (minutes < 60) {
+        return `${minutes}m`
+    }
+    const hrs = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`
+}
+
