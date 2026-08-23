@@ -401,12 +401,12 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                     <div className="flex justify-between items-start border-b-2 border-zinc-900 pb-3 gap-4">
                         {/* Company / Issuer Info */}
                         <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                            {/* Small In The Haus Logo */}
-                            <div className="shrink-0 pt-0.5">
+                            {/* In The Haus Logo */}
+                            <div className="shrink-0">
                                 <img 
                                     src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                     alt="IN THE HAUS" 
-                                    className="w-13 h-13 sm:w-14 sm:h-14 object-contain rounded-md border border-zinc-300 p-0.5 bg-white shrink-0 shadow-2xs"
+                                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
                                     crossOrigin="anonymous"
                                     onError={(e) => {
                                         if (e.target.src !== `${window.location.origin}/logo.png`) {

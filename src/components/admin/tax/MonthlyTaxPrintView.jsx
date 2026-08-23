@@ -96,12 +96,12 @@ export default function MonthlyTaxPrintView({
                             {/* Header Section */}
                             <div className="border-b-2 border-zinc-950 pb-5 flex justify-between items-start gap-6">
                                 <div className="flex items-start gap-4 flex-1 min-w-0">
-                                    {/* Small In The Haus Logo */}
-                                    <div className="shrink-0 pt-0.5">
+                                    {/* In The Haus Logo */}
+                                    <div className="shrink-0">
                                         <img 
                                             src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                             alt="IN THE HAUS" 
-                                            className="w-14 h-14 object-contain rounded-md border border-zinc-300 p-0.5 bg-white shrink-0 shadow-2xs"
+                                            className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
                                             crossOrigin="anonymous"
                                             onError={(e) => {
                                                 if (e.target.src !== `${window.location.origin}/logo.png`) {
