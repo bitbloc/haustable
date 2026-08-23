@@ -27,15 +27,16 @@ export default function AdminLayout() {
 
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('id, role, display_name, nickname, phone_number, admin_permissions')
+                    .select('id, role, display_name, nickname, phone_number')
                     .eq('id', user.id)
                     .single()
 
                 const role = (profile?.role || '').toLowerCase()
-                const isStaffOrAdmin = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen'].includes(role) || 
-                                       (Array.isArray(profile?.admin_permissions) && profile.admin_permissions.length > 0)
+                // Owner & Admin have full master access; other staff roles also authorized
+                const isStaffOrAdmin = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen'].includes(role)
 
                 if (profileError || !profile || !isStaffOrAdmin) {
+                    console.warn("Backoffice Auth Blocked:", { profileError, profile, role, isStaffOrAdmin })
                     setAuthStatus('unauthorized')
                     return
                 }

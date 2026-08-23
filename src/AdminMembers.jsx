@@ -263,8 +263,7 @@ export default function AdminMembers() {
                 pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
                 free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
-                role: editForm.role || 'customer',
-                admin_permissions: (editForm.role === 'owner' || editForm.role === 'admin') ? ['*'] : (editForm.admin_permissions || [])
+                role: editForm.role || 'customer'
             }
 
             const { error } = await supabase
