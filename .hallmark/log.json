@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-08-24",
+    "macrostructure": "Workbench",
+    "theme": "Atelier",
+    "theme_axes": "light / mono / warm (terracotta ~28°)",
+    "vibe": "Dieter Rams neo-brutalist financial workbench, Thai modern OKLCH",
+    "enrichment": "none",
+    "brief": "Refactor /admin/financial dashboard with leak-proof realtime and Rams tabular grid"
+  },
+  {
     "date": "2026-07-14",
     "macrostructure": "Bento Grid",
     "theme": "custom",

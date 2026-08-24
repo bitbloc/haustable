@@ -1,14 +1,9 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabaseClient'
 import { getThaiDate } from '../../utils/timeUtils'
 import { toast } from 'sonner'
-import {
-    TrendingUp, DollarSign, Calendar, Filter, Download, ArrowUpRight, ArrowDownRight,
-    Users, Utensils, Receipt, Flame, Trophy, Sparkles, Layers, RefreshCw, BarChart2, ShieldCheck,
-    Smartphone, Database, AlertCircle, Clock, Zap
-} from 'lucide-react'
 
 // Sub-components
 import DatabaseVisualLedger from './financial/DatabaseVisualLedger'
@@ -22,16 +17,21 @@ import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '.
 
 export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
-    const [activeTab, setActiveTab] = useState('all') // 'all', 'ledger', 'summary', 'heatmap', 'top_menu', 'crm', 'casual'
+    const [activeTab, setActiveTab] = useState('master') // 'master', 'ledger', 'summary', 'heatmap', 'top_menu', 'crm', 'casual'
     const [dbLatencyMs, setDbLatencyMs] = useState(0)
     const [dbRecordCount, setDbRecordCount] = useState(0)
-    
+    const [isLiveConnected, setIsLiveConnected] = useState(false)
+
+    // Request sequence tracker to prevent race conditions during rapid filter changes
+    const fetchSeqRef = useRef(0)
+    const debounceTimerRef = useRef(null)
+
     const getCurrentBangkokMonth = () => {
-        const d = new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        return `${year}-${month}`;
-    };
+        const d = new Date()
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        return `${year}-${month}`
+    }
 
     // Filter States
     const [filterMode, setFilterMode] = useState('day') // 'day', 'month', 'year'
@@ -43,12 +43,16 @@ export default function AdminFinancialDashboard() {
     // Real Live Financial Metrics (Connected directly to POS & Supabase)
     const [liveMetrics, setLiveMetrics] = useState({
         totalGrossRevenue: 0,
-        netProfitEst: 0,
+        totalDiscounts: 0,
+        netRevenue: 0,
+        totalExpenses: 0,
+        netProfitReal: 0,
         netProfitMarginPct: 0,
+        hasRecordedExpenses: false,
         salesPerHead: 0,
         guestCount: 0,
         avgBillSize: 0,
-        tableTurnoverRate: 0,
+        tableTurnoverRate: '0.0',
         completedOrdersCount: 0,
         growthVsPrevPeriod: '0.0',
         prevPeriodGross: 0,
@@ -63,47 +67,27 @@ export default function AdminFinancialDashboard() {
     const [topMenuData, setTopMenuData] = useState([])
     const [heatmapMatrixData, setHeatmapMatrixData] = useState([])
     const [shiftMetricsData, setShiftMetricsData] = useState(null)
-    const [categoryRatioData, setCategoryRatioData] = useState(null)
     const [casualData, setCasualData] = useState(null)
     const [crmData, setCrmData] = useState(null)
     const [unmetNeedData, setUnmetNeedData] = useState(null)
     const [hasLiveData, setHasLiveData] = useState(false)
 
-    useEffect(() => {
-        fetchRealFinancialData()
-
-        let debounceTimer = null
-        const debouncedFetch = () => {
-            if (debounceTimer) clearTimeout(debounceTimer)
-            debounceTimer = setTimeout(() => {
-                fetchRealFinancialData()
-            }, 400)
-        }
-
-        // Realtime subscription for instant POS & backoffice financial updates
-        const channel = supabase
-            .channel('financial-dashboard-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'store_expenses' }, debouncedFetch)
-            .subscribe()
-
-        return () => {
-            if (debounceTimer) clearTimeout(debounceTimer)
-            supabase.removeChannel(channel)
-        }
-    }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev])
-
-    const fetchRealFinancialData = async () => {
+    // Master Fetch Function with Race Condition Guard & Strict Error Handling
+    const fetchRealFinancialData = useCallback(async () => {
+        const currentSeq = ++fetchSeqRef.current
         setLoading(true)
         const startTime = performance.now()
+
         try {
             let startIso, endIso
             let prevStartIso, prevEndIso
+            let expStartDate, expEndDate
 
             if (filterMode === 'day') {
                 startIso = `${selectedDate}T00:00:00+07:00`
                 endIso = `${selectedDate}T23:59:59+07:00`
+                expStartDate = selectedDate
+                expEndDate = selectedDate
 
                 // Calculate previous day for comparison
                 const curD = new Date(selectedDate)
@@ -112,10 +96,12 @@ export default function AdminFinancialDashboard() {
                 prevStartIso = `${prevDateStr}T00:00:00+07:00`
                 prevEndIso = `${prevDateStr}T23:59:59+07:00`
             } else if (filterMode === 'month') {
-                startIso = `${selectedMonth}-01T00:00:00+07:00`
                 const [y, m] = selectedMonth.split('-')
                 const lastDay = String(new Date(parseInt(y, 10), parseInt(m, 10), 0).getDate()).padStart(2, '0')
+                startIso = `${selectedMonth}-01T00:00:00+07:00`
                 endIso = `${selectedMonth}-${lastDay}T23:59:59+07:00`
+                expStartDate = `${selectedMonth}-01`
+                expEndDate = `${selectedMonth}-${lastDay}`
 
                 // Calculate previous month
                 const prevMDate = new Date(parseInt(y, 10), parseInt(m, 10) - 2, 1)
@@ -127,65 +113,79 @@ export default function AdminFinancialDashboard() {
             } else {
                 startIso = `${selectedYear}-01-01T00:00:00+07:00`
                 endIso = `${selectedYear}-12-31T23:59:59+07:00`
+                expStartDate = `${selectedYear}-01-01`
+                expEndDate = `${selectedYear}-12-31`
 
                 const prevY = parseInt(selectedYear, 10) - 1
                 prevStartIso = `${prevY}-01-01T00:00:00+07:00`
                 prevEndIso = `${prevY}-12-31T23:59:59+07:00`
             }
 
-            // 1. Query live Supabase POS bookings & order_items
-            const { data: bookingsData, error: bErr } = await supabase
-                .from('bookings')
-                .select(`
-                    id,
-                    booking_time,
-                    created_at,
-                    total_amount,
-                    discount_amount,
-                    status,
-                    pax,
-                    booking_type,
-                    payment_slip_url,
-                    staff_remark,
-                    customer_note,
-                    user_id,
-                    tables_layout (
+            // 1. Parallel queries: live bookings + store expenses
+            const [bookingsRes, expensesRes] = await Promise.all([
+                supabase
+                    .from('bookings')
+                    .select(`
                         id,
-                        table_name
-                    ),
-                    profiles (
-                        id,
-                        display_name,
-                        nickname,
-                        phone_number,
-                        current_tier
-                    ),
-                    order_items (
-                        id,
-                        quantity,
-                        price_at_time,
-                        custom_name,
-                        menu_items (
+                        booking_time,
+                        created_at,
+                        total_amount,
+                        discount_amount,
+                        xhaus_discount,
+                        status,
+                        pax,
+                        booking_type,
+                        payment_slip_url,
+                        staff_remark,
+                        customer_note,
+                        user_id,
+                        tables_layout (
                             id,
-                            name,
-                            price,
-                            category_id,
-                            menu_categories (
+                            table_name
+                        ),
+                        profiles (
+                            id,
+                            display_name,
+                            nickname,
+                            phone_number,
+                            current_tier
+                        ),
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            custom_name,
+                            menu_items (
                                 id,
-                                name
+                                name,
+                                price,
+                                category_id,
+                                menu_categories (
+                                    id,
+                                    name
+                                )
                             )
                         )
-                    )
-                `)
-                .gte('booking_time', startIso)
-                .lte('booking_time', endIso)
-                .order('booking_time', { ascending: false })
+                    `)
+                    .gte('booking_time', startIso)
+                    .lte('booking_time', endIso)
+                    .order('booking_time', { ascending: false }),
 
-            if (bErr) throw bErr
+                supabase
+                    .from('store_expenses')
+                    .select('id, amount, category, expense_date, title, doc_type')
+                    .gte('expense_date', expStartDate)
+                    .lte('expense_date', expEndDate)
+            ])
+
+            // If a newer request has started, abort this stale payload
+            if (currentSeq !== fetchSeqRef.current) return
+
+            if (bookingsRes.error) throw bookingsRes.error
 
             const elapsed = Math.round(performance.now() - startTime)
             setDbLatencyMs(elapsed)
-            setDbRecordCount(bookingsData?.length || 0)
+            setDbRecordCount((bookingsRes.data?.length || 0) + (expensesRes.data?.length || 0))
 
             // 2. Query previous period if comparison enabled
             let prevGross = 0
@@ -197,31 +197,45 @@ export default function AdminFinancialDashboard() {
                         .gte('booking_time', prevStartIso)
                         .lte('booking_time', prevEndIso)
 
-                    const prevValid = (prevData || []).filter(b => 
-                        ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
-                    )
-                    prevGross = prevValid.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0)
+                    if (currentSeq === fetchSeqRef.current && prevData) {
+                        const prevValid = prevData.filter(b => 
+                            ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
+                        )
+                        prevGross = prevValid.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0)
+                    }
                 } catch (e) {
                     console.warn('Could not query previous period:', e)
                 }
             }
 
-            // Filter for valid revenue-generating orders (completed / confirmed / paid)
-            const validOrders = (bookingsData || []).filter(b => 
+            // If sequence shifted during prev query, abort
+            if (currentSeq !== fetchSeqRef.current) return
+
+            // Calculate total real expenses
+            const expensesList = expensesRes.data || []
+            const totalExpensesReal = expensesList.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0)
+            const hasRecordedExpenses = expensesList.length > 0
+
+            // Filter for valid revenue-generating orders
+            const validOrders = (bookingsRes.data || []).filter(b => 
                 ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
             )
 
             if (!validOrders || validOrders.length === 0) {
-                // Real ZERO State
+                // Honest ZERO State
                 setHasLiveData(false)
                 setLiveMetrics({
                     totalGrossRevenue: 0,
-                    netProfitEst: 0,
+                    totalDiscounts: 0,
+                    netRevenue: 0,
+                    totalExpenses: totalExpensesReal,
+                    netProfitReal: -totalExpensesReal,
                     netProfitMarginPct: 0,
+                    hasRecordedExpenses,
                     salesPerHead: 0,
                     guestCount: 0,
                     avgBillSize: 0,
-                    tableTurnoverRate: 0,
+                    tableTurnoverRate: '0.0',
                     completedOrdersCount: 0,
                     growthVsPrevPeriod: '0.0',
                     prevPeriodGross: prevGross,
@@ -233,7 +247,6 @@ export default function AdminFinancialDashboard() {
                 setTopMenuData([])
                 setHeatmapMatrixData(Array(7).fill(0).map(() => Array(12).fill(0)))
                 setShiftMetricsData(null)
-                setCategoryRatioData(null)
                 setAuditReconciliationData(null)
                 setCasualData(null)
                 setCrmData(null)
@@ -243,15 +256,17 @@ export default function AdminFinancialDashboard() {
 
             setHasLiveData(true)
 
-            // --- 1. Core KPIs & Breakdown Aggregations ---
+            // --- 3. Core KPI & Breakdown Calculations ---
             let totalGross = 0
+            let totalDiscounts = 0
+            let discountCount = 0
             let totalGuests = 0
             let promptpayAmt = 0, creditAmt = 0, cashAmt = 0, walletAmt = 0
             let promptpayCount = 0, creditCount = 0, cashCount = 0, walletCount = 0
             let dineInAmt = 0, takeawayAmt = 0
             let dineInTables = 0, takeawayOrders = 0
 
-            // Casual dining breakdown aggregations (6 core categories)
+            // Casual dining breakdown (6 core categories)
             let foodRev = 0, snackRev = 0, setRev = 0, dessertRev = 0, bevRev = 0, alcRev = 0
             let soloCount = 0, soloRev = 0
             let coupleCount = 0, coupleRev = 0
@@ -271,22 +286,25 @@ export default function AdminFinancialDashboard() {
             const tierMap = {}
 
             const itemAgg = {}
-            const categoryAgg = {}
             const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, items: {} }))
             const dayHourAgg = Array(7).fill(0).map(() => Array(12).fill(0)) // 7 days x 12 intervals
 
-            // Raw Transactions for Visual Ledger
             const formattedRawTx = []
 
             validOrders.forEach(b => {
-                const amount = parseFloat(b.total_amount || b.total_price || 0)
-                const guests = parseInt(b.pax || 1)
+                const amount = parseFloat(b.total_amount || 0)
+                const discount = parseFloat(b.discount_amount || 0) + parseFloat(b.xhaus_discount || 0)
+                const guests = parseInt(b.pax || 1, 10)
                 const remark = (b.staff_remark || '').toLowerCase()
                 const bTime = new Date(b.booking_time)
                 const hour = bTime.getHours()
                 const dayIdx = (bTime.getDay() + 6) % 7 // Monday = 0
 
                 totalGross += amount
+                if (discount > 0) {
+                    totalDiscounts += discount
+                    discountCount += 1
+                }
                 totalGuests += guests
 
                 // Party Size breakdown
@@ -300,7 +318,7 @@ export default function AdminFinancialDashboard() {
                     largeCount++; largeRev += amount
                 }
 
-                // Payment Method detection (using accurate split parsing & remark detection)
+                // Payment Method detection (Split parsing & remarks)
                 const isRemarkCredit = remark.includes('credit') || remark.includes('card') || remark.includes('บัตร')
                 const isRemarkQr = b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')
                 const isRemarkWallet = remark.includes('wallet')
@@ -308,7 +326,6 @@ export default function AdminFinancialDashboard() {
                 let txPayMethod = 'Cash'
                 let txIsSplit = false
 
-                // Check split annotation
                 const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i)
                 if (splitMatch) {
                     txIsSplit = true
@@ -339,7 +356,7 @@ export default function AdminFinancialDashboard() {
                     cashAmt += amount; cashCount++
                 }
 
-                // Dining Channel detection (Strictly 2 channels: Dine-In & Pickup)
+                // Dining Channels
                 const bType = (b.booking_type || 'dine_in').toLowerCase()
                 const isTakeaway = bType.includes('pickup') || bType.includes('takeaway')
                 if (isTakeaway) {
@@ -454,9 +471,6 @@ export default function AdminFinancialDashboard() {
                     if (hour >= 0 && hour < 24) {
                         hourlyAgg[hour].items[itemName] = (hourlyAgg[hour].items[itemName] || 0) + qty
                     }
-
-                    // Accumulate Category
-                    categoryAgg[formattedCatLabel] = (categoryAgg[formattedCatLabel] || 0) + itemRev
                 })
 
                 // Shift food/drink accumulation
@@ -480,6 +494,7 @@ export default function AdminFinancialDashboard() {
                     payment_slip_url: b.payment_slip_url,
                     staff_remark: b.staff_remark,
                     total_amount: amount,
+                    discount_amount: discount,
                     status: b.status,
                     items: formattedItems
                 })
@@ -490,7 +505,10 @@ export default function AdminFinancialDashboard() {
             const completedOrdersCount = validOrders.length
             const salesPerHead = totalGuests > 0 ? Math.round(totalGross / totalGuests) : 0
             const avgBillSize = completedOrdersCount > 0 ? Math.round(totalGross / completedOrdersCount) : 0
-            const estProfit = Math.round(totalGross * 0.32) // ~32% est net margin
+            const netRev = totalGross - totalDiscounts
+            const netProfitReal = hasRecordedExpenses ? (netRev - totalExpensesReal) : netRev
+            const netProfitMarginPct = totalGross > 0 ? ((netProfitReal / totalGross) * 100).toFixed(1) : '0.0'
+            const tableTurnoverRate = (completedOrdersCount / 12).toFixed(1)
 
             let growthPct = '0.0'
             if (prevGross > 0) {
@@ -502,12 +520,16 @@ export default function AdminFinancialDashboard() {
 
             setLiveMetrics({
                 totalGrossRevenue: totalGross,
-                netProfitEst: estProfit,
-                netProfitMarginPct: 32.0,
+                totalDiscounts,
+                netRevenue: netRev,
+                totalExpenses: totalExpensesReal,
+                netProfitReal,
+                netProfitMarginPct: parseFloat(netProfitMarginPct),
+                hasRecordedExpenses,
                 salesPerHead,
                 guestCount: totalGuests,
                 avgBillSize,
-                tableTurnoverRate: Math.min(6, Math.max(1, (completedOrdersCount / 12).toFixed(1))),
+                tableTurnoverRate,
                 completedOrdersCount,
                 growthVsPrevPeriod: growthPct,
                 prevPeriodGross: prevGross,
@@ -516,16 +538,16 @@ export default function AdminFinancialDashboard() {
             // Format Payment Methods
             const totalPay = promptpayAmt + creditAmt + cashAmt + walletAmt || 1
             setPaymentMethodsData([
-                { name: 'PromptPay QR', amount: promptpayAmt, percent: Math.round((promptpayAmt / totalPay) * 100), count: promptpayCount, color: 'text-emerald-800 bg-emerald-100 border-emerald-300' },
-                { name: 'Credit / Debit Card', amount: creditAmt, percent: Math.round((creditAmt / totalPay) * 100), count: creditCount, color: 'text-indigo-800 bg-indigo-100 border-indigo-300' },
-                { name: 'Cash (เงินสด)', amount: cashAmt, percent: Math.round((cashAmt / totalPay) * 100), count: cashCount, color: 'text-amber-800 bg-amber-100 border-amber-300' },
-                { name: 'Member Wallet', amount: walletAmt, percent: Math.round((walletAmt / totalPay) * 100), count: walletCount, color: 'text-rose-800 bg-rose-100 border-rose-300' },
+                { name: 'PromptPay QR', amount: promptpayAmt, percent: Math.round((promptpayAmt / totalPay) * 100), count: promptpayCount, code: 'QR' },
+                { name: 'Credit / Debit Card', amount: creditAmt, percent: Math.round((creditAmt / totalPay) * 100), count: creditCount, code: 'CC' },
+                { name: 'Cash (เงินสด)', amount: cashAmt, percent: Math.round((cashAmt / totalPay) * 100), count: cashCount, code: 'CSH' },
+                { name: 'Member Wallet', amount: walletAmt, percent: Math.round((walletAmt / totalPay) * 100), count: walletCount, code: 'WAL' },
             ])
 
-            // Format Dining Channels (Strictly 2 channels)
+            // Format Dining Channels
             setDiningChannelsData([
-                { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: dineInAmt, percent: Math.round((dineInAmt / (totalGross || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0 },
-                { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: takeawayAmt, percent: Math.round((takeawayAmt / (totalGross || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0 },
+                { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: dineInAmt, percent: Math.round((dineInAmt / (totalGross || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0, code: 'DINE_IN' },
+                { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: takeawayAmt, percent: Math.round((takeawayAmt / (totalGross || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0, code: 'PICKUP' },
             ])
 
             // Format Top Selling Items from POS
@@ -539,31 +561,26 @@ export default function AdminFinancialDashboard() {
                     units: item.units,
                     revenue: item.revenue,
                     price: item.price,
-                    marginTier: 'Live POS Data',
-                    peakTime: 'POS Realtime',
-                    trend: '+Live',
                     isBestSeller: idx === 0,
                 }))
             setTopMenuData(topList)
 
-            // Format Reconciliation
-            const svc = Math.round(totalGross * 0.10)
-            const vat = Math.round(totalGross * 0.07)
+            // Format Mathematically Balanced Reconciliation
             setAuditReconciliationData({
                 grossSales: totalGross,
-                totalDiscounts: 0,
-                discountCount: 0,
-                taxableSubtotal: totalGross,
-                serviceCharge10: svc,
-                vat7: vat,
-                netPayable: totalGross,
+                totalDiscounts: totalDiscounts,
+                discountCount: discountCount,
+                taxableSubtotal: netRev,
+                netPayable: netRev,
                 avgTicket: avgBillSize,
+                totalExpenses: totalExpensesReal,
+                netOperatingIncome: netProfitReal,
             })
 
             // Format Hourly Velocity with actual peak item
             const formattedHourly = hourlyAgg
                 .map((h, hr) => {
-                    let peakItemName = '-'
+                    let peakItemName = '—'
                     if (h.items && Object.keys(h.items).length > 0) {
                         const sortedItems = Object.entries(h.items).sort((a, b) => b[1] - a[1])
                         if (sortedItems.length > 0) peakItemName = sortedItems[0][0]
@@ -589,7 +606,7 @@ export default function AdminFinancialDashboard() {
             // Dynamic Shift Metrics for Heatmap
             const formatRatio = (f, d) => {
                 const total = f + d || 1
-                return `${Math.round((f / total) * 100)}% Food / ${Math.round((d / total) * 100)}% Drink`
+                return `${Math.round((f / total) * 100)}% อาหาร / ${Math.round((d / total) * 100)}% เครื่องดื่ม`
             }
             setShiftMetricsData({
                 lunch: {
@@ -614,13 +631,13 @@ export default function AdminFinancialDashboard() {
                 }
             })
 
-            // Build Real Casual Dining Insights from POS data
+            // Build Casual Dining Insights from real POS data
             const totalOrdersCount = validOrders.length || 1
             const partySizeBreakdown = [
-                { size: 'Solo Diners (1 ท่าน)', share: Math.round((soloCount / totalOrdersCount) * 1000) / 10, count: soloCount, avgSpend: soloCount > 0 ? Math.round(soloRev / soloCount) : 0, turnTime: 30, tip: 'มักสั่งเมนูจานเดียวด่วน' },
-                { size: 'Couples (2 ท่าน)', share: Math.round((coupleCount / totalOrdersCount) * 1000) / 10, count: coupleCount, avgSpend: coupleCount > 0 ? Math.round(coupleRev / coupleCount) : 0, turnTime: 45, tip: 'มักสั่ง 2 อาหาร + 2 เครื่องดื่ม' },
-                { size: 'Medium Groups (3-4 ท่าน)', share: Math.round((mediumCount / totalOrdersCount) * 1000) / 10, count: mediumCount, avgSpend: mediumCount > 0 ? Math.round(mediumRev / mediumCount) : 0, turnTime: 60, tip: 'เน้นสั่งชุดเซตและเมนูแชร์' },
-                { size: 'Large Parties (5+ ท่าน)', share: Math.round((largeCount / totalOrdersCount) * 1000) / 10, count: largeCount, avgSpend: largeCount > 0 ? Math.round(largeRev / largeCount) : 0, turnTime: 80, tip: 'ช่วงยอดต่อบิลสูง' },
+                { size: 'Solo Diners (1 ท่าน)', share: Math.round((soloCount / totalOrdersCount) * 1000) / 10, count: soloCount, avgSpend: soloCount > 0 ? Math.round(soloRev / soloCount) : 0, note: 'ออเดอร์จานเดี่ยว' },
+                { size: 'Couples (2 ท่าน)', share: Math.round((coupleCount / totalOrdersCount) * 1000) / 10, count: coupleCount, avgSpend: coupleCount > 0 ? Math.round(coupleRev / coupleCount) : 0, note: 'เมนูคู่และเครื่องดื่ม' },
+                { size: 'Medium Groups (3-4 ท่าน)', share: Math.round((mediumCount / totalOrdersCount) * 1000) / 10, count: mediumCount, avgSpend: mediumCount > 0 ? Math.round(mediumRev / mediumCount) : 0, note: 'ชุดเซตและเมนูแชร์' },
+                { size: 'Large Parties (5+ ท่าน)', share: Math.round((largeCount / totalOrdersCount) * 1000) / 10, count: largeCount, avgSpend: largeCount > 0 ? Math.round(largeRev / largeCount) : 0, note: 'โต๊ะรวมยอดสูง' },
             ]
 
             const itemTotalRev = foodRev + snackRev + setRev + dessertRev + bevRev + alcRev || 1
@@ -630,19 +647,16 @@ export default function AdminFinancialDashboard() {
                 set: { percent: Math.round((setRev / itemTotalRev) * 1000) / 10, revenue: setRev, label: 'ชุดเซตสำรับ' },
                 dessert: { percent: Math.round((dessertRev / itemTotalRev) * 1000) / 10, revenue: dessertRev, label: 'ของหวาน' },
                 beverage: { percent: Math.round((bevRev / itemTotalRev) * 1000) / 10, revenue: bevRev, label: 'เครื่องดื่ม' },
-                alcohol: { percent: Math.round((alcRev / itemTotalRev) * 1000) / 10, revenue: alcRev, label: 'แอลกอฮอล์' },
-                // Backward compatibility alias for 4-segment gauge
-                dessertCombo: { percent: Math.round(((setRev + dessertRev) / itemTotalRev) * 1000) / 10, revenue: (setRev + dessertRev), margin: 'Set/Dessert' }
+                alcohol: { percent: Math.round((alcRev / itemTotalRev) * 1000) / 10, revenue: alcRev, label: 'แอลกอฮอล์' }
             }
 
             setCasualData({
                 categoryRatio,
                 partySizeBreakdown,
                 casualMetrics: {
-                    avgDwellTimeMins: completedOrdersCount > 0 ? 45 : 0,
-                    tableTurnsPerDay: completedOrdersCount > 0 ? (completedOrdersCount / 12).toFixed(1) : 0,
-                    sharingSetPenetration: completedOrdersCount > 0 ? Math.round((mediumCount / completedOrdersCount) * 100) : 0,
-                    bevAttachRate: completedOrdersCount > 0 ? Math.round(((bevRev + alcRev) > 0 ? 80 : 0)) : 0,
+                    tableTurnsPerDay: tableTurnoverRate,
+                    totalOrders: completedOrdersCount,
+                    totalGuests: totalGuests
                 }
             })
 
@@ -655,8 +669,6 @@ export default function AdminFinancialDashboard() {
                     memberPercent: Math.round((memberSales / totalMemberSum) * 1000) / 10,
                     nonMemberPercent: Math.round((nonMemberSales / totalMemberSum) * 1000) / 10,
                     totalMembersCount: memberCount,
-                    activeThisMonth: memberCount,
-                    repeatCustomerRate: memberCount > 0 ? 50 : 0,
                     avgSpendMember: memberCount > 0 ? Math.round(memberSales / memberCount) : 0,
                     avgSpendNonMember: nonMemberCount > 0 ? Math.round(nonMemberSales / nonMemberCount) : 0,
                 },
@@ -665,7 +677,6 @@ export default function AdminFinancialDashboard() {
                     members: t.members,
                     totalSales: t.totalSales,
                     avgPerVisit: t.members > 0 ? Math.round(t.totalSales / t.members) : 0,
-                    color: 'bg-amber-50 border-amber-300 text-amber-950'
                 })),
                 topSpenders: Object.values(spenderMap)
                     .sort((a, b) => b.totalLtv - a.totalLtv)
@@ -677,47 +688,76 @@ export default function AdminFinancialDashboard() {
                         totalLtv: s.totalLtv,
                         visits: s.visits,
                         avgTicket: s.visits > 0 ? Math.round(s.totalLtv / s.visits) : 0,
-                        lastVisit: 'ล่าสุด',
                     }))
             })
 
-            // Dynamic BCG Matrix calculation from live item list
+            // Dynamic Real BCG Matrix calculation from active item volume vs revenue
             const avgUnits = topList.length > 0 ? topList.reduce((s, i) => s + i.units, 0) / topList.length : 1
             const avgPrice = topList.length > 0 ? topList.reduce((s, i) => s + (i.price || 0), 0) / topList.length : 1
 
-            const stars = topList.filter(i => i.units >= avgUnits && i.price >= avgPrice).slice(0, 3).map(i => i.name)
-            const plowhorses = topList.filter(i => i.units >= avgUnits && i.price < avgPrice).slice(0, 3).map(i => i.name)
-            const puzzles = topList.filter(i => i.units < avgUnits && i.price >= avgPrice).slice(0, 3).map(i => i.name)
-            const dogs = topList.filter(i => i.units < avgUnits && i.price < avgPrice).slice(0, 3).map(i => i.name)
+            const stars = topList.filter(i => i.units >= avgUnits && i.price >= avgPrice).slice(0, 4).map(i => i.name)
+            const plowhorses = topList.filter(i => i.units >= avgUnits && i.price < avgPrice).slice(0, 4).map(i => i.name)
+            const puzzles = topList.filter(i => i.units < avgUnits && i.price >= avgPrice).slice(0, 4).map(i => i.name)
+            const dogs = topList.filter(i => i.units < avgUnits && i.price < avgPrice).slice(0, 4).map(i => i.name)
 
             setUnmetNeedData({
-                yieldLeakage: {
-                    estimatedLostRevenue: soloCount * 120, // estimated ฿120 lost seat opportunity per solo in prime hour
-                    soloInFourTopPct: soloCount > 0 ? Math.round((soloCount / totalOrdersCount) * 100) : 0,
-                    deadSeatCount: soloCount * 2,
-                    recommendation: 'ระบบวิเคราะห์ข้อมูลจากออเดอร์ POS ตามเวลาจริง แนะนำจัดโซน 2-Top เพิ่ม',
-                },
                 menuMatrix: [
-                    { quadrant: 'Stars (ดาวเด่น)', items: stars.length > 0 ? stars : ['-'], desc: 'ยอดขายและรายได้สูง', action: 'คงคุณภาพ & โฆษณาหลัก', bg: 'bg-emerald-50 border-2 border-emerald-300 text-emerald-950' },
-                    { quadrant: 'Plowhorses (ตัวทำเงิน)', items: plowhorses.length > 0 ? plowhorses : ['-'], desc: 'ขายดีปริมาณมาก', action: 'คุมต้นทุนวัตถุดิบ', bg: 'bg-blue-50 border-2 border-blue-300 text-blue-950' },
-                    { quadrant: 'Puzzles (ปริศนากำไรสูง)', items: puzzles.length > 0 ? puzzles : ['-'], desc: 'ราคาสูง ยอดขายรอเพิ่ม', action: 'จัดโปรแนะนำเมนู', bg: 'bg-purple-50 border-2 border-purple-300 text-purple-950' },
-                    { quadrant: 'Dogs (ภาระต้นทุน)', items: dogs.length > 0 ? dogs : ['-'], desc: 'ขายได้น้อย', action: 'พิจารณาปรับสูตรหรือเปลี่ยนเมนู', bg: 'bg-rose-50 border-2 border-rose-300 text-rose-950' },
-                ],
-                weatherPredictor: {
-                    currentWeather: 'สภาพอากาศปกติ',
-                    dineInImpact: '0%',
-                    pickupImpact: '0%',
-                    netRevenueImpact: '0%',
-                    paydaySurgeBonus: '0%',
-                }
+                    { quadrant: 'Stars (ดาวเด่น)', items: stars.length > 0 ? stars : ['—'], desc: 'ยอดขายและรายได้สูงกว่าเกณฑ์เฉลี่ย', action: 'รักษาคุณภาพและตำแหน่งหลักในเมนู', tag: 'STARS' },
+                    { quadrant: 'Plowhorses (ตัวทำปริมาณ)', items: plowhorses.length > 0 ? plowhorses : ['—'], desc: 'ขายดีปริมาณมาก ราคาสบายกระเป๋า', action: 'ควบคุมต้นทุนวัตถุดิบอย่างเคร่งครัด', tag: 'VOLUME' },
+                    { quadrant: 'Puzzles (ทำกำไรต่อจานสูง)', items: puzzles.length > 0 ? puzzles : ['—'], desc: 'ราคาสูง ปริมาณสั่งซื้อรอการผลักดัน', action: 'เพิ่มการแนะนำหรือทำโปรคู่เครื่องดื่ม', tag: 'MARGIN' },
+                    { quadrant: 'Dogs (รอทบทวน)', items: dogs.length > 0 ? dogs : ['—'], desc: 'ปริมาณสั่งซื้อและราคาต่ำกว่าเฉลี่ย', action: 'พิจารณาปรับสูตรหรือหมุนเวียนเมนูใหม่', tag: 'REVIEW' },
+                ]
             })
 
         } catch (err) {
             console.error('Error fetching live POS financial data:', err)
         } finally {
-            setLoading(false)
+            if (currentSeq === fetchSeqRef.current) {
+                setLoading(false)
+            }
         }
-    }
+    }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev])
+
+    // Leak-Proof Realtime & Visibility Change Subscriptions
+    useEffect(() => {
+        let isMounted = true
+        fetchRealFinancialData()
+
+        const debouncedFetch = () => {
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+            debounceTimerRef.current = setTimeout(() => {
+                if (isMounted) fetchRealFinancialData()
+            }, 300)
+        }
+
+        // Window Focus / Visibility Sync: Refetch when returning to tab
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && isMounted) {
+                debouncedFetch()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        // Unique Channel Name per mount to prevent channel collisions
+        const channelName = `financial-dashboard-realtime-${Date.now()}`
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'store_expenses' }, debouncedFetch)
+            .subscribe((status) => {
+                if (isMounted) {
+                    setIsLiveConnected(status === 'SUBSCRIBED')
+                }
+            })
+
+        return () => {
+            isMounted = false
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            supabase.removeChannel(channel)
+        }
+    }, [fetchRealFinancialData])
 
     const getTimeRangeLabel = () => {
         if (filterMode === 'day') return `ประจำวันที่ ${selectedDate}`
@@ -727,364 +767,293 @@ export default function AdminFinancialDashboard() {
     }
 
     const handleExportReport = () => {
-        toast.success(`ส่งออกรายงานทางการเงินจริง (${getTimeRangeLabel()}) เรียบร้อยแล้ว`)
+        toast.success(`ส่งออกรายงานทางการเงิน (${getTimeRangeLabel()}) เรียบร้อย`)
     }
 
     return (
-        <div className="space-y-4 md:space-y-8 animate-in fade-in duration-300 pb-20 text-[oklch(18%_0.012_28)]">
+        <div className="space-y-6 pb-20 text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]">
             
-            {/* Top Banner & Filter Card - Portrait Mobile Ultra Responsive */}
-            <div className="bg-[oklch(97%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-3.5 md:p-6 space-y-3.5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-[oklch(52%_0.16_28)] text-white shadow-sm shrink-0">
-                            <TrendingUp size={24} />
+            {/* 1. Master Tabular Header Bar (Neo-Brutalist 1px Border Grid) */}
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-y divide-[oklch(85%_0.012_28)]">
+                
+                {/* Header Row: Title & Realtime Connection Status */}
+                <div className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-widest bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                WORKBENCH // 05
+                            </span>
+                            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                                ระบบรายงานและการเงิน (Financial Cockpit)
+                            </h1>
+                            <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 font-bold border ${
+                                isLiveConnected
+                                    ? 'bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]/40'
+                                    : 'bg-[oklch(97%_0.008_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/40'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${isLiveConnected ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                                {isLiveConnected ? 'REALTIME SYNCED' : 'CONNECTING'}
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] font-bold border border-[oklch(85%_0.012_28)]">
+                                {dbLatencyMs}ms ({dbRecordCount} rows)
+                            </span>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-[oklch(18%_0.012_28)]">
-                                    Financial Dashboard (POS Realtime)
-                                </h1>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold border border-emerald-300">
-                                    <Database size={10} /> CONNECTED TO POS
-                                </span>
-                                <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-md bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-bold border border-[oklch(85%_0.012_28)]">
-                                    <Clock size={10} /> {dbLatencyMs}ms ({dbRecordCount} rows)
-                                </span>
-                            </div>
-                            <p className="text-xs text-[oklch(42%_0.010_28)] font-mono font-bold mt-0.5">
-                                สรุปการเงินเชื่อมฐานข้อมูลจริง // {getTimeRangeLabel()}
-                            </p>
-                        </div>
+                        <p className="text-xs font-mono text-[oklch(42%_0.010_28)] mt-1.5">
+                            ข้อมูลธุรกรรมจริงจากฐานข้อมูล POS // {getTimeRangeLabel()}
+                        </p>
                     </div>
 
-                    {/* Export / Compare Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1 sm:pt-0 flex-wrap">
+                    {/* Action Tools */}
+                    <div className="flex items-center gap-2 flex-wrap">
                         <button
                             onClick={() => {
                                 fetchRealFinancialData()
                                 toast.success('อัพเดทข้อมูลการเงินล่าสุดแล้ว')
                             }}
                             disabled={loading}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
-                            title="รีเฟรชข้อมูลการเงินจริง"
+                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold transition-all min-h-[38px] flex items-center gap-1.5 disabled:opacity-50"
                         >
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-                            <span>รีเฟรช</span>
+                            <span>{loading ? 'กำลังดึงข้อมูล…' : 'รีเฟรช [SYNC]'}</span>
                         </button>
 
                         <button
                             onClick={() => setCompareWithPrev(!compareWithPrev)}
-                            className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-mono text-xs transition-all border-2 min-h-[42px] ${
+                            className={`px-3.5 py-2 font-mono text-xs font-bold transition-all border min-h-[38px] ${
                                 compareWithPrev
-                                    ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] font-black'
-                                    : 'bg-white text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] font-bold'
+                                    ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-[oklch(18%_0.012_28)]'
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                             }`}
                         >
-                            <BarChart2 size={16} />
-                            <span>เทียบช่วงก่อน</span>
+                            <span>เทียบช่วงก่อน {compareWithPrev ? '[เปิด]' : '[ปิด]'}</span>
                         </button>
 
                         <Link
                             to="/admin/tax"
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
+                            className="px-3.5 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold transition-all min-h-[38px] flex items-center"
                         >
-                            <Receipt size={16} />
-                            <span>ระบบภาษี & ใบกำกับ</span>
+                            <span>ระบบภาษี & ใบกำกับ →</span>
                         </Link>
 
                         <button
                             onClick={handleExportReport}
-                            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-white border-2 border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-gray-50 rounded-xl font-mono text-xs font-black transition-all shadow-sm min-h-[42px]"
+                            className="px-3.5 py-2 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold transition-all min-h-[38px]"
                         >
-                            <Download size={16} />
-                            <span>ส่งออก</span>
+                            <span>ส่งออก [CSV]</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Filter Control Ribbon - Optimized for Portrait Mobile Screens */}
-                <div className="pt-3 border-t-2 border-[oklch(85%_0.012_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    {/* Mode selection buttons - Full width grid on mobile */}
-                    <div className="grid grid-cols-3 gap-1 bg-white p-1 rounded-xl border-2 border-[oklch(85%_0.012_28)] w-full sm:w-auto">
-                        <button
-                            onClick={() => setFilterMode('day')}
-                            className={`py-2 px-2 rounded-lg font-mono text-xs text-center transition-all min-h-[40px] flex items-center justify-center ${
-                                filterMode === 'day' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] font-extrabold hover:bg-gray-100'
-                            }`}
-                        >
-                            วัน (Day)
-                        </button>
-                        <button
-                            onClick={() => setFilterMode('month')}
-                            className={`py-2 px-2 rounded-lg font-mono text-xs text-center transition-all min-h-[40px] flex items-center justify-center ${
-                                filterMode === 'month' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] font-extrabold hover:bg-gray-100'
-                            }`}
-                        >
-                            เดือน (Month)
-                        </button>
-                        <button
-                            onClick={() => setFilterMode('year')}
-                            className={`py-2 px-2 rounded-lg font-mono text-xs text-center transition-all min-h-[40px] flex items-center justify-center ${
-                                filterMode === 'year' ? 'bg-[oklch(18%_0.012_28)] text-white font-black' : 'text-[oklch(42%_0.010_28)] font-extrabold hover:bg-gray-100'
-                            }`}
-                        >
-                            ปี (Year)
-                        </button>
+                {/* Filter Ribbon Row: Day / Month / Year Mode & Date Picker */}
+                <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+                    
+                    {/* Period Switcher */}
+                    <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                        {[
+                            { id: 'day', label: 'รายวัน [DAY]' },
+                            { id: 'month', label: 'รายเดือน [MONTH]' },
+                            { id: 'year', label: 'รายปี [YEAR]' },
+                        ].map(mode => (
+                            <button
+                                key={mode.id}
+                                onClick={() => setFilterMode(mode.id)}
+                                className={`px-3.5 py-1.5 font-bold transition-colors ${
+                                    filterMode === mode.id
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                }`}
+                            >
+                                {mode.label}
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Date Pickers & Quick Presets */}
-                    <div className="flex items-center justify-between sm:justify-end gap-2 font-mono text-xs w-full sm:w-auto">
+                    {/* Date Inputs & Quick Presets */}
+                    <div className="flex items-center gap-2 flex-wrap">
                         {filterMode === 'day' && (
-                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border-2 border-[oklch(85%_0.012_28)] w-full sm:w-auto min-h-[42px]">
-                                <Calendar size={16} className="text-[oklch(52%_0.16_28)] shrink-0" />
-                                <input
-                                    type="date"
-                                    value={selectedDate}
-                                    onChange={(e) => setSelectedDate(e.target.value)}
-                                    className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono font-black focus:outline-none w-full"
-                                />
-                            </div>
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                            />
                         )}
 
                         {filterMode === 'month' && (
-                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border-2 border-[oklch(85%_0.012_28)] w-full sm:w-auto min-h-[42px]">
-                                <Calendar size={16} className="text-[oklch(52%_0.16_28)] shrink-0" />
-                                <input
-                                    type="month"
-                                    value={selectedMonth}
-                                    onChange={(e) => setSelectedMonth(e.target.value)}
-                                    className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono font-black focus:outline-none w-full"
-                                />
-                            </div>
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                            />
                         )}
 
                         {filterMode === 'year' && (
-                            <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border-2 border-[oklch(85%_0.012_28)] w-full sm:w-auto min-h-[42px]">
-                                <Calendar size={16} className="text-[oklch(52%_0.16_28)] shrink-0" />
-                                <select
-                                    value={selectedYear}
-                                    onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono font-black focus:outline-none w-full cursor-pointer"
-                                >
-                                    <option value="2026">ปี 2026</option>
-                                    <option value="2025">ปี 2025</option>
-                                    <option value="2024">ปี 2024</option>
-                                </select>
-                            </div>
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)] cursor-pointer"
+                            >
+                                <option value="2026">ปี 2026</option>
+                                <option value="2025">ปี 2025</option>
+                                <option value="2024">ปี 2024</option>
+                            </select>
                         )}
 
-                        <div className="flex items-center gap-1.5 text-xs text-[oklch(42%_0.010_28)] font-black shrink-0">
-                            <button
-                                onClick={() => { setFilterMode('day'); setSelectedDate(getThaiDate()); }}
-                                className="px-2.5 py-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                            >
-                                วันนี้
-                            </button>
-                            <button
-                                onClick={() => { setFilterMode('month'); setSelectedMonth(getCurrentBangkokMonth()); }}
-                                className="px-2.5 py-1.5 bg-white border-2 border-[oklch(85%_0.012_28)] rounded-lg hover:bg-gray-50 active:bg-gray-100"
-                            >
-                                เดือนนี้
-                            </button>
-                        </div>
+                        <button
+                            onClick={() => { setFilterMode('day'); setSelectedDate(getThaiDate()); }}
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px]"
+                        >
+                            วันนี้
+                        </button>
+                        <button
+                            onClick={() => { setFilterMode('month'); setSelectedMonth(getCurrentBangkokMonth()); }}
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px]"
+                        >
+                            เดือนนี้
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Zero State Alert when no live orders found for selected period */}
+            {/* Zero State Alert (Clean Typography Enclosure) */}
             {!hasLiveData && !loading && (
-                <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl flex items-center gap-3 text-amber-950 font-sans text-xs sm:text-sm shadow-sm">
-                    <AlertCircle size={24} className="text-amber-600 shrink-0" />
-                    <div>
-                        <strong className="font-black text-sm block">ยังไม่มีรายการชำระเงินใน{getTimeRangeLabel()}</strong>
-                        <span>ระบบเชื่อมต่อฐานข้อมูล POS เรียบร้อยแล้ว เมื่อทำรายการผ่าน POS ข้อมูลจะแสดงผลที่นี่ทันทีโดยอัตโนมัติ</span>
+                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1">
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
+                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            ZERO TRANSACTIONS RECORDED // {getTimeRangeLabel()}
+                        </span>
                     </div>
+                    <p className="text-xs text-[oklch(42%_0.010_28)]">
+                        ยังไม่มีรายการชำระเงินที่สมบูรณ์ในช่วงเวลานี้ ข้อมูลจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีการชำระเงินผ่านระบบ POS
+                    </p>
                 </div>
             )}
 
-            {/* Core Financial KPI Cards - Single Column on Portrait Mobile, 2 Col on Tablet, 4 Col on Desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-                {/* Metric 1: Gross Sales */}
-                <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-1.5 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all">
-                    <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-[oklch(42%_0.010_28)] font-black uppercase tracking-wider">
-                            GROSS REVENUE
-                        </span>
-                        <div className="p-1.5 rounded-lg bg-[oklch(94%_0.010_28)] text-[oklch(52%_0.16_28)] shrink-0">
-                            <DollarSign size={18} />
-                        </div>
+            {/* 2. Core Financial KPI Tabular Grid (Dieter Rams 4-Cell Matrix) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[oklch(85%_0.012_28)] divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                
+                {/* Cell 1: Gross Sales */}
+                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                        <span>01 // GROSS REVENUE</span>
+                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.completedOrdersCount} บิล</span>
                     </div>
-                    <div className="font-mono text-2xl sm:text-3xl font-black text-[oklch(18%_0.012_28)] leading-tight">
+                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
                         ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
                     </div>
-                    <div className="font-sans text-xs font-bold text-[oklch(42%_0.010_28)]">
-                        ยอดขายรวมจริง ({liveMetrics.completedOrdersCount} บิล)
-                    </div>
-                    {compareWithPrev && (
-                        <div className={`flex items-center gap-0.5 font-mono text-xs font-black pt-0.5 ${
-                            liveMetrics.growthVsPrevPeriod.startsWith('-') ? 'text-rose-700' : 'text-emerald-700'
-                        }`}>
-                            {liveMetrics.growthVsPrevPeriod.startsWith('-') ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                            <span>{liveMetrics.growthVsPrevPeriod}% เทียบช่วงก่อน (฿{liveMetrics.prevPeriodGross.toLocaleString()})</span>
-                        </div>
-                    )}
-                </div>
-
-                {/* Metric 2: Sales Per Head */}
-                <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-1.5 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all">
-                    <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-[oklch(42%_0.010_28)] font-black uppercase tracking-wider">
-                            SPEND / HEAD
-                        </span>
-                        <div className="p-1.5 rounded-lg bg-amber-100 text-amber-900 shrink-0">
-                            <Users size={18} />
-                        </div>
-                    </div>
-                    <div className="font-mono text-2xl sm:text-3xl font-black text-[oklch(52%_0.16_28)] leading-tight">
-                        ฿{liveMetrics.salesPerHead} <span className="text-xs font-bold text-[oklch(42%_0.010_28)]">/คน</span>
-                    </div>
-                    <div className="font-sans text-xs font-bold text-[oklch(42%_0.010_28)]">
-                        ยอดต่อหัว (ลูกค้ารวม {liveMetrics.guestCount} คน)
+                    <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-[oklch(85%_0.012_28)]">
+                        <span className="text-[oklch(42%_0.010_28)]">ส่วนลดรวม: ฿{liveMetrics.totalDiscounts.toLocaleString()}</span>
+                        {compareWithPrev && (
+                            <span className={`font-bold ${liveMetrics.growthVsPrevPeriod.startsWith('-') ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(45%_0.08_140)]'}`}>
+                                {liveMetrics.growthVsPrevPeriod}%
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                {/* Metric 3: Net Profit Est. */}
-                <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-1.5 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all">
-                    <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-[oklch(42%_0.010_28)] font-black uppercase tracking-wider">
-                            NET MARGIN
-                        </span>
-                        <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-900 shrink-0">
-                            <Sparkles size={18} />
-                        </div>
+                {/* Cell 2: Spend Per Head */}
+                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                        <span>02 // SPEND / HEAD</span>
+                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.guestCount} ท่าน</span>
                     </div>
-                    <div className="font-mono text-2xl sm:text-3xl font-black text-emerald-800 leading-tight">
-                        ฿{liveMetrics.netProfitEst.toLocaleString()}
+                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
+                        ฿{liveMetrics.salesPerHead}
                     </div>
-                    <div className="font-mono text-xs text-emerald-700 font-black">
-                        ประมาณการกำไรสุทธิ ~{liveMetrics.netProfitMarginPct}%
+                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)]">
+                        เฉลี่ยต่อผู้ใช้บริการจริง
                     </div>
                 </div>
 
-                {/* Metric 4: Table Turnover */}
-                <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-2xl p-4 md:p-5 space-y-1.5 shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all">
-                    <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs text-[oklch(42%_0.010_28)] font-black uppercase tracking-wider">
-                            AVG BILL SIZE
-                        </span>
-                        <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-900 shrink-0">
-                            <RefreshCw size={18} />
-                        </div>
+                {/* Cell 3: Real Net Operating Income / Expenses */}
+                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                        <span>03 // NET OPERATING</span>
+                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.hasRecordedExpenses ? 'EXPENSE SYNC' : 'GROSS NET'}</span>
                     </div>
-                    <div className="font-mono text-2xl sm:text-3xl font-black text-[oklch(18%_0.012_28)] leading-tight">
-                        ฿{liveMetrics.avgBillSize.toLocaleString()} <span className="text-xs font-bold text-[oklch(42%_0.010_28)]">/บิล</span>
+                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        ฿{liveMetrics.netProfitReal.toLocaleString()}
                     </div>
-                    <div className="font-mono text-xs text-[oklch(42%_0.010_28)] font-black">
-                        เฉลี่ยต่อออเดอร์
+                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)] flex justify-between">
+                        <span>รายจ่ายจริง: ฿{liveMetrics.totalExpenses.toLocaleString()}</span>
+                        <span>~{liveMetrics.netProfitMarginPct}%</span>
+                    </div>
+                </div>
+
+                {/* Cell 4: Average Ticket & Table Turns */}
+                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
+                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                        <span>04 // AVG TICKET</span>
+                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.tableTurnoverRate} TURNS/TABLE</span>
+                    </div>
+                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
+                        ฿{liveMetrics.avgBillSize.toLocaleString()}
+                    </div>
+                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)]">
+                        ยอดเฉลี่ยต่อ 1 ออเดอร์
                     </div>
                 </div>
             </div>
 
-            {/* Touch Scrollable Navigation Tabs Bar */}
-            <div className="flex items-center gap-2 overflow-x-auto border-b-2 border-[oklch(85%_0.012_28)] pb-2.5 no-scrollbar scroll-smooth">
-                <button
-                    onClick={() => setActiveTab('all')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'all'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Layers size={16} />
-                    <span>ทั้งหมด (Master)</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('ledger')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'ledger'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Database size={16} />
-                    <span>Database Ledger ({rawTransactionsData.length})</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('summary')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'summary'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Receipt size={16} />
-                    <span>สรุปยอดขายจริง</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('heatmap')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'heatmap'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Flame size={16} />
-                    <span>Heatmap ช่วงเวลา</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('top_menu')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'top_menu'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Trophy size={16} />
-                    <span>อันดับเมนูขายดีจริง</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('crm')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'crm'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Users size={16} />
-                    <span>CRM ลูกค้า</span>
-                </button>
-
-                <button
-                    onClick={() => setActiveTab('casual')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-mono text-xs transition-all whitespace-nowrap min-h-[42px] border-2 ${
-                        activeTab === 'casual'
-                            ? 'bg-[oklch(18%_0.012_28)] text-white font-black border-[oklch(18%_0.012_28)] shadow'
-                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-bold hover:bg-white border-[oklch(85%_0.012_28)]'
-                    }`}
-                >
-                    <Sparkles size={16} />
-                    <span>Casual Insights & AI</span>
-                </button>
+            {/* 3. Segmented Tabular Navigation Strip */}
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] overflow-x-auto no-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
+                {[
+                    { id: 'master', label: 'ภาพรวม [MASTER COCKPIT]' },
+                    { id: 'ledger', label: `สมุดบัญชีธุรกรรม [LEDGER: ${rawTransactionsData.length}]` },
+                    { id: 'summary', label: 'สรุปยอดและกระทบยอด [RECONCILIATION]' },
+                    { id: 'heatmap', label: 'สถิติช่วงเวลา [HEATMAP 7x12]' },
+                    { id: 'top_menu', label: 'อันดับเมนูขายดี [MENU RANKING]' },
+                    { id: 'crm', label: 'สมาชิกและลูกค้าประจำ [CRM SHARE]' },
+                    { id: 'casual', label: 'วิเคราะห์เชิงลึก [OPERATIONAL INSIGHTS]' },
+                ].map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`px-4 py-3 whitespace-nowrap font-bold transition-colors min-h-[42px] ${
+                            activeTab === tab.id
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
-            {/* Sub-Components Render Viewport with Live Data */}
-            <div className="space-y-10">
+            {/* 4. Sub-Components Render Viewport */}
+            <div className="space-y-6">
 
-                {/* Database Visual Ledger Tab */}
-                {(activeTab === 'all' || activeTab === 'ledger') && (
+                {/* Master Tab: Compact High-Level Summary + Visual Ledger */}
+                {activeTab === 'master' && (
+                    <div className="space-y-6">
+                        <DetailedSalesSummary 
+                            data={{
+                                paymentMethods: paymentMethodsData,
+                                diningChannels: diningChannelsData,
+                                auditReconciliation: auditReconciliationData,
+                                hourlyVelocity: hourlyVelocityData,
+                            }}
+                            timeRangeLabel={getTimeRangeLabel()} 
+                        />
+
+                        <DatabaseVisualLedger
+                            rawTransactions={rawTransactionsData}
+                            timeRangeLabel={getTimeRangeLabel()}
+                        />
+                    </div>
+                )}
+
+                {/* Dedicated Ledger Tab */}
+                {activeTab === 'ledger' && (
                     <DatabaseVisualLedger
                         rawTransactions={rawTransactionsData}
                         timeRangeLabel={getTimeRangeLabel()}
                     />
                 )}
 
-                {(activeTab === 'all' || activeTab === 'summary') && (
+                {/* Dedicated Sales & Reconciliation Tab */}
+                {activeTab === 'summary' && (
                     <DetailedSalesSummary 
                         data={{
                             paymentMethods: paymentMethodsData,
@@ -1096,7 +1065,8 @@ export default function AdminFinancialDashboard() {
                     />
                 )}
 
-                {(activeTab === 'all' || activeTab === 'heatmap') && (
+                {/* Dedicated Heatmap Tab */}
+                {activeTab === 'heatmap' && (
                     <FinancialHeatmap
                         data={{
                             heatmapMatrix: heatmapMatrixData,
@@ -1105,19 +1075,22 @@ export default function AdminFinancialDashboard() {
                     />
                 )}
 
-                {(activeTab === 'all' || activeTab === 'top_menu') && (
+                {/* Dedicated Top Menu Tab */}
+                {activeTab === 'top_menu' && (
                     <TopMenuInfographic data={{ topMenuData }} />
                 )}
 
-                {(activeTab === 'all' || activeTab === 'crm') && (
+                {/* Dedicated CRM Tab */}
+                {activeTab === 'crm' && (
                     <CRMFinancialSummary data={crmData} />
                 )}
 
-                {(activeTab === 'all' || activeTab === 'casual') && (
-                    <>
+                {/* Dedicated Casual Insights Tab */}
+                {activeTab === 'casual' && (
+                    <div className="space-y-6">
                         <CasualDiningInsights data={casualData} />
                         <UnmetNeedAnalytics data={unmetNeedData} />
-                    </>
+                    </div>
                 )}
             </div>
         </div>
