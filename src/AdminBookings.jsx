@@ -1,12 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { 
-    Search, Calendar, ChevronDown, ChevronUp, Check, X, Phone, User, Clock, 
-    Printer, ChefHat, FileText, Trash2, ArrowUpDown, History, Image as ImageIcon, 
-    Edit3, RefreshCw, Layers, Filter, CheckCircle, AlertCircle, Eye, Utensils,
-    DollarSign, Sparkles, Receipt
-} from 'lucide-react'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
@@ -17,6 +11,11 @@ import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
 const formatOptionList = (options, note) => formatOrderItemOptions(options, note)
+
+// Precision Thai Currency Formatter
+const formatCurrency = (val) => {
+    return Number(val || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -148,8 +147,8 @@ export default function AdminBookings() {
                         type,
                         bookingDetails: {
                             id: booking.id,
-                            date: new Date(booking.booking_time).toLocaleDateString('th-TH'),
-                            time: new Date(booking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
+                            date: new Date(booking.booking_time).toLocaleDateString('th-TH', { timeZone: 'Asia/Bangkok' }),
+                            time: new Date(booking.booking_time).toLocaleTimeString('th-TH', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }),
                             tableName: booking.tables_layout?.table_name || 'N/A',
                             pax: booking.pax,
                             total: booking.total_amount,
@@ -193,7 +192,7 @@ export default function AdminBookings() {
                 const { error: storageError } = await supabase.storage
                     .from('slips')
                     .remove(slipsToDelete)
-                if (storageError) console.warn("Slip deletion warning:", storageError)
+                if (storageError) console.warn('Slip deletion warning:', storageError)
             }
 
             const targetIds = targets.map(b => b.id)
@@ -283,7 +282,7 @@ export default function AdminBookings() {
         }))
     }
 
-    // Date Filtering Logic
+    // Date Filtering Logic Normalized to Bangkok Timezone
     const isDateMatch = useCallback((bookingTimeStr) => {
         if (!bookingTimeStr) return true
         if (datePreset === 'all') return true
@@ -296,17 +295,17 @@ export default function AdminBookings() {
         }
 
         if (datePreset === 'tomorrow') {
-            const tomorrow = new Date()
+            const tomorrow = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
             tomorrow.setDate(tomorrow.getDate() + 1)
             const tomorrowStr = tomorrow.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             return bDate === tomorrowStr
         }
 
         if (datePreset === 'week') {
-            const now = new Date()
-            const dayOfWeek = now.getDay() || 7 // Monday = 1
-            const startOfWeek = new Date(now)
-            startOfWeek.setDate(now.getDate() - dayOfWeek + 1)
+            const nowBkk = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }))
+            const dayOfWeek = nowBkk.getDay() || 7 // Monday = 1
+            const startOfWeek = new Date(nowBkk)
+            startOfWeek.setDate(nowBkk.getDate() - dayOfWeek + 1)
             startOfWeek.setHours(0, 0, 0, 0)
 
             const endOfWeek = new Date(startOfWeek)
@@ -318,9 +317,8 @@ export default function AdminBookings() {
         }
 
         if (datePreset === 'month') {
-            const now = new Date()
-            const bDateObj = new Date(bookingTimeStr)
-            return bDateObj.getFullYear() === now.getFullYear() && bDateObj.getMonth() === now.getMonth()
+            const currentMonthPrefix = today.slice(0, 7) // "YYYY-MM"
+            return bDate.startsWith(currentMonthPrefix)
         }
 
         if (datePreset === 'custom') {
@@ -330,23 +328,27 @@ export default function AdminBookings() {
         return true
     }, [datePreset, customDate])
 
-    // Filter & Sort Pipeline
-    const filteredBookings = useMemo(() => {
+    // Date & Type Scoped Bookings (Used for accurate dynamic KPIs)
+    const dateAndTypeFilteredBookings = useMemo(() => {
         return bookings.filter(b => {
-            // 1. Status Filter
-            const matchesStatus = statusFilter === 'all' || b.status === statusFilter
-
-            // 2. Type Filter (Steak removed entirely)
             const matchesType = typeFilter === 'all' 
                 || (typeFilter === 'dine_in' && (b.booking_type === 'dine_in' || b.booking_type === 'walk_in'))
                 || (typeFilter === 'pickup' && b.booking_type === 'pickup')
                 || (typeFilter === 'shop' && (b.booking_type === 'shop' || b.booking_type === 'hausmade_shipping'))
                 || b.booking_type === typeFilter
 
-            // 3. Date Filter
             const matchesDate = isDateMatch(b.booking_time || b.created_at)
+            return matchesType && matchesDate
+        })
+    }, [bookings, typeFilter, isDateMatch])
 
-            // 4. Search Query Match
+    // Full Filter & Sort Pipeline (Including Search Term & Status)
+    const filteredBookings = useMemo(() => {
+        return dateAndTypeFilteredBookings.filter(b => {
+            // Status Filter
+            const matchesStatus = statusFilter === 'all' || b.status === statusFilter
+
+            // Search Query Match
             const shortId = getShortBookingId(b)
             const customerName = b.pickup_contact_name || b.profiles?.display_name || ''
             const customerPhone = b.pickup_contact_phone || b.profiles?.phone_number || ''
@@ -361,7 +363,7 @@ export default function AdminBookings() {
                 shortId.includes(query.toUpperCase()) ||
                 tableName.toLowerCase().includes(query)
 
-            return matchesStatus && matchesType && matchesDate && matchesSearch
+            return matchesStatus && matchesSearch
         }).sort((a, b) => {
             let aValue = a[sortConfig.key]
             let bValue = b[sortConfig.key]
@@ -381,24 +383,27 @@ export default function AdminBookings() {
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
             return 0
         })
-    }, [bookings, statusFilter, typeFilter, isDateMatch, searchTerm, sortConfig])
+    }, [dateAndTypeFilteredBookings, statusFilter, searchTerm, sortConfig])
 
-    // KPI Summary Metrics
+    // Dynamic KPI Summary Metrics Scoped to Current Filter Window
     const kpiSummary = useMemo(() => {
         let totalRevenue = 0
         let pendingCount = 0
-        let confirmedCount = 0
+        let activeQueueCount = 0
         let completedCount = 0
         let depositTotal = 0
 
-        bookings.forEach(b => {
+        dateAndTypeFilteredBookings.forEach(b => {
             if (b.status === 'pending') pendingCount++
-            if (b.status === 'confirmed' || b.status === 'seated' || b.status === 'preparing' || b.status === 'ready') confirmedCount++
+            if (b.status === 'confirmed' || b.status === 'seated' || b.status === 'preparing' || b.status === 'ready') {
+                activeQueueCount++
+            }
             if (b.status === 'completed' || b.status === 'paid') {
                 completedCount++
                 totalRevenue += Number(b.total_amount || 0)
             }
-            if (b.deposit_amount) {
+            // Exclude cancelled/void orders from deposits collected
+            if (b.deposit_amount && b.status !== 'cancelled' && b.status !== 'void') {
                 depositTotal += Number(b.deposit_amount || 0)
             }
         })
@@ -406,146 +411,158 @@ export default function AdminBookings() {
         return {
             totalRevenue,
             pendingCount,
-            confirmedCount,
+            activeQueueCount,
             completedCount,
             depositTotal
         }
-    }, [bookings])
+    }, [dateAndTypeFilteredBookings])
 
-    // Status Count helper for badges
+    // Status Count helper for badges within active date/type window
     const statusCounts = useMemo(() => {
-        const counts = { all: bookings.length }
-        bookings.forEach(b => {
+        const counts = { all: dateAndTypeFilteredBookings.length }
+        dateAndTypeFilteredBookings.forEach(b => {
             counts[b.status] = (counts[b.status] || 0) + 1
         })
         return counts
-    }, [bookings])
+    }, [dateAndTypeFilteredBookings])
 
-    const getStatusStyle = (st) => {
+    const getStatusBadgeClass = (st) => {
         switch (st) {
             case 'pending':
-                return 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-accent)]'
             case 'confirmed':
-                return 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border-[oklch(82%_0.08_140)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-accent-2)]'
             case 'seated':
-                return 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-ink)]'
             case 'preparing':
-                return 'bg-[oklch(94%_0.02_60)] text-[oklch(40%_0.12_60)] border-[oklch(85%_0.05_60)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-rule)]'
             case 'ready':
-                return 'bg-[oklch(90%_0.04_140)] text-[oklch(28%_0.12_140)] border-[oklch(75%_0.10_140)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-accent-2)]'
             case 'completed':
             case 'paid':
-                return 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                return 'bg-[var(--color-paper)] text-[var(--color-muted)] border-[var(--color-rule)]'
             case 'cancelled':
             case 'void':
-                return 'bg-[oklch(95%_0.03_25)] text-[oklch(45%_0.18_25)] border-[oklch(80%_0.05_25)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)] line-through'
             default:
-                return 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                return 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)]'
         }
     }
 
+    const getDateLabel = () => {
+        if (datePreset === 'today') return 'TODAY'
+        if (datePreset === 'tomorrow') return 'TOMORROW'
+        if (datePreset === 'week') return 'THIS WEEK'
+        if (datePreset === 'month') return 'THIS MONTH'
+        if (datePreset === 'custom') return customDate
+        return 'ALL TIME'
+    }
+
     return (
-        <div className="max-w-7xl mx-auto pb-24 animate-in fade-in duration-200">
-            {/* 1. Executive Top Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
-                <div>
+        <div className="max-w-7xl mx-auto pb-24 font-mono text-xs">
+            {/* 1. Header Block (Dieter Rams Tabular Header) */}
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 border-b border-[var(--color-rule)]">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold tracking-wider text-[var(--color-accent)] uppercase bg-[var(--color-paper-2)] px-2 py-0.5 border border-[var(--color-rule)]">
+                                SYS.ADMIN · 2026
+                            </span>
+                            <span className="text-[10px] text-[var(--color-neutral)]">
+                                {bookings.length} TOTAL IN MEMORY · SCOPE: {getDateLabel()}
+                            </span>
+                        </div>
+                        <h1 className="text-xl md:text-2xl font-bold text-[var(--color-ink)] tracking-tight mt-1 uppercase">
+                            Bookings & Orders Hub
+                        </h1>
+                    </div>
+
                     <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)]">
-                            RESERVATIONS & FULFILLMENT // 2026
-                        </span>
-                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                            {bookings.length} TOTAL RECORDS
-                        </span>
-                    </div>
-                    <h1 className="font-mono text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-1">
-                        BOOKINGS & ORDERS HUB
-                    </h1>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <button 
-                        type="button"
-                        onClick={() => fetchBookings(true)} 
-                        disabled={loading}
-                        className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
-                    >
-                        <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                        <span>REFRESH</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* 2. KPI Metrics Strip */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                <div className="p-4 bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold">TOTAL REVENUE (PAID)</div>
-                    <div className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)] mt-1">
-                        ฿{kpiSummary.totalRevenue.toLocaleString()}
-                    </div>
-                    <div className="font-mono text-[10px] text-[oklch(45%_0.08_140)] mt-0.5">
-                        {kpiSummary.completedCount} Completed Orders
+                        <button 
+                            type="button"
+                            onClick={() => fetchBookings(true)} 
+                            disabled={loading}
+                            className="px-4 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold uppercase transition-opacity flex items-center gap-2 border border-[var(--color-ink)]"
+                        >
+                            <span>{loading ? 'SYNCING…' : 'REFRESH'}</span>
+                        </button>
                     </div>
                 </div>
 
-                <div className="p-4 bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="font-mono text-[10px] uppercase text-[oklch(52%_0.16_28)] font-bold">PENDING INBOX</div>
-                    <div className="font-mono text-xl font-bold text-[oklch(52%_0.16_28)] mt-1">
-                        {kpiSummary.pendingCount}
+                {/* 2. Integrated KPI Instrument Strip (Connected Cellular Grid) */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
+                    <div className="p-4">
+                        <div className="text-[10px] uppercase text-[var(--color-neutral)] font-bold">TOTAL REVENUE (PAID)</div>
+                        <div className="text-lg md:text-xl font-bold text-[var(--color-ink)] tabular-nums mt-1">
+                            ฿{formatCurrency(kpiSummary.totalRevenue)}
+                        </div>
+                        <div className="text-[10px] text-[var(--color-accent-2)] mt-0.5 font-bold">
+                            {kpiSummary.completedCount} Completed Orders ({getDateLabel()})
+                        </div>
                     </div>
-                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
-                        Requires Action
-                    </div>
-                </div>
 
-                <div className="p-4 bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold">ACTIVE SERVICE QUEUE</div>
-                    <div className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)] mt-1">
-                        {kpiSummary.confirmedCount}
+                    <div className="p-4">
+                        <div className="text-[10px] uppercase text-[var(--color-accent)] font-bold">PENDING INBOX</div>
+                        <div className="text-lg md:text-xl font-bold text-[var(--color-accent)] tabular-nums mt-1">
+                            {String(kpiSummary.pendingCount).padStart(2, '0')}
+                        </div>
+                        <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
+                            Requires Immediate Action
+                        </div>
                     </div>
-                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
-                        Confirmed & In-House
-                    </div>
-                </div>
 
-                <div className="p-4 bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                    <div className="font-mono text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold">DEPOSITS COLLECTED</div>
-                    <div className="font-mono text-xl font-bold text-[oklch(35%_0.10_220)] mt-1">
-                        ฿{kpiSummary.depositTotal.toLocaleString()}
+                    <div className="p-4">
+                        <div className="text-[10px] uppercase text-[var(--color-neutral)] font-bold">ACTIVE SERVICE QUEUE</div>
+                        <div className="text-lg md:text-xl font-bold text-[var(--color-ink)] tabular-nums mt-1">
+                            {String(kpiSummary.activeQueueCount).padStart(2, '0')}
+                        </div>
+                        <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
+                            Confirmed, Seated & In-House
+                        </div>
                     </div>
-                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
-                        Advance Online Deposits
+
+                    <div className="p-4">
+                        <div className="text-[10px] uppercase text-[var(--color-neutral)] font-bold">DEPOSITS COLLECTED</div>
+                        <div className="text-lg md:text-xl font-bold text-[var(--color-ink)] tabular-nums mt-1">
+                            ฿{formatCurrency(kpiSummary.depositTotal)}
+                        </div>
+                        <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
+                            Active Online Advance Deposits
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 3. Multi-Tier Filter Control Bar */}
-            <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm space-y-4 mb-6">
-                {/* Search & Date Presets */}
-                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            {/* 3. Multi-Tier Control Panel (Modular Integrated Rows) */}
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] divide-y divide-[var(--color-rule)] mb-4">
+                {/* Row 1: Search & Date Presets */}
+                <div className="p-3 flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                     {/* Search Field */}
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-2.5 text-[oklch(55%_0.010_28)] w-4 h-4" />
+                    <div className="relative flex-1 flex items-center border border-[var(--color-rule)] bg-[var(--color-paper-2)] px-2.5 py-1.5">
+                        <span className="text-[10px] text-[var(--color-neutral)] font-bold uppercase mr-2 tracking-wider">
+                            SEARCH:
+                        </span>
                         <input
                             type="text"
-                            placeholder="Search Customer Name, Phone, ID (#ABCD), Table..."
+                            placeholder="Customer Name, Phone, #ID, Table…"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
-                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] pl-9 pr-4 py-2 rounded-sm text-xs font-mono text-[oklch(18%_0.012_28)] placeholder:text-[oklch(60%_0.010_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                            className="w-full bg-transparent text-xs text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus:outline-none"
                         />
                         {searchTerm && (
                             <button
                                 type="button"
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-2.5 text-[oklch(55%_0.010_28)] hover:text-black font-mono text-xs"
+                                className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] text-xs font-bold pl-2"
                             >
-                                ✕
+                                [✕]
                             </button>
                         )}
                     </div>
 
-                    {/* Date Range Presets */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs">
-                        <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold pr-1">DATE:</span>
+                    {/* Date Presets */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                        <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">DATE:</span>
                         {[
                             { key: 'today', label: 'TODAY' },
                             { key: 'tomorrow', label: 'TOMORROW' },
@@ -557,17 +574,17 @@ export default function AdminBookings() {
                                 key={d.key}
                                 type="button"
                                 onClick={() => setDatePreset(d.key)}
-                                className={`px-2.5 py-1.5 rounded-sm font-bold uppercase tracking-wider text-[11px] border transition-colors ${
+                                className={`px-2.5 py-1.5 font-bold uppercase tracking-wider text-[11px] border transition-colors ${
                                     datePreset === d.key
-                                        ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                        : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
                                 }`}
                             >
                                 {d.label}
                             </button>
                         ))}
 
-                        {/* Custom Date Picker */}
+                        {/* Custom Date Input */}
                         <input
                             type="date"
                             value={customDate}
@@ -575,18 +592,18 @@ export default function AdminBookings() {
                                 setCustomDate(e.target.value)
                                 setDatePreset('custom')
                             }}
-                            className={`px-2 py-1 bg-[oklch(94%_0.010_28)] border rounded-sm font-mono text-xs ${
+                            className={`px-2 py-1 bg-[var(--color-paper-2)] border text-xs font-mono ${
                                 datePreset === 'custom'
-                                    ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] font-bold'
-                                    : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]'
+                                    ? 'border-[var(--color-accent)] text-[var(--color-ink)] font-bold'
+                                    : 'border-[var(--color-rule)] text-[var(--color-neutral)]'
                             }`}
                         />
                     </div>
                 </div>
 
-                {/* Status Tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs border-t border-[oklch(90%_0.008_28)] pt-3">
-                    <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold pr-1">STATUS:</span>
+                {/* Row 2: Status Tabs */}
+                <div className="p-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">STATUS:</span>
                     {[
                         { key: 'all', label: 'ALL' },
                         { key: 'pending', label: 'PENDING' },
@@ -603,16 +620,16 @@ export default function AdminBookings() {
                                 key={st.key}
                                 type="button"
                                 onClick={() => setStatusFilter(st.key)}
-                                className={`px-2.5 py-1 rounded-sm font-bold uppercase text-[11px] border flex items-center gap-1.5 transition-colors ${
+                                className={`px-2.5 py-1 font-bold uppercase text-[11px] border flex items-center gap-1.5 transition-colors ${
                                     statusFilter === st.key
-                                        ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(92%_0.012_28)]'
+                                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]'
+                                        : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
                                 }`}
                             >
                                 <span>{st.label}</span>
                                 {count > 0 && (
-                                    <span className={`px-1 rounded-sm text-[9px] font-mono ${
-                                        statusFilter === st.key ? 'bg-white/20 text-white' : 'bg-[oklch(90%_0.012_28)] text-[oklch(35%_0.010_28)]'
+                                    <span className={`px-1 text-[9px] tabular-nums ${
+                                        statusFilter === st.key ? 'bg-white/20 text-white' : 'bg-[var(--color-paper)] text-[var(--color-neutral)] border border-[var(--color-rule)]'
                                     }`}>
                                         {count}
                                     </span>
@@ -622,9 +639,9 @@ export default function AdminBookings() {
                     })}
                 </div>
 
-                {/* Type Filter Tabs (Steak completely removed) */}
-                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs border-t border-[oklch(90%_0.008_28)] pt-3">
-                    <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)] font-bold pr-1">TYPE:</span>
+                {/* Row 3: Type Filter Tabs */}
+                <div className="p-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">TYPE:</span>
                     {[
                         { key: 'all', label: 'ALL TYPES' },
                         { key: 'dine_in', label: 'DINE-IN (TABLE & WALK-IN)' },
@@ -635,10 +652,10 @@ export default function AdminBookings() {
                             key={tp.key}
                             type="button"
                             onClick={() => setTypeFilter(tp.key)}
-                            className={`px-2.5 py-1 rounded-sm font-bold uppercase text-[10px] border transition-colors ${
+                            className={`px-2.5 py-1 font-bold uppercase text-[10px] border transition-colors ${
                                 typeFilter === tp.key
-                                    ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                                    ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)]'
+                                    : 'bg-[var(--color-paper-2)] text-[var(--color-muted)] border-[var(--color-rule)] hover:bg-[var(--color-paper)]'
                             }`}
                         >
                             {tp.label}
@@ -649,8 +666,8 @@ export default function AdminBookings() {
 
             {/* 4. Batch Action Bar */}
             {selectedIds.length > 0 && (
-                <div className="mb-4 p-3 bg-[oklch(95%_0.03_25)] border border-[oklch(80%_0.05_25)] rounded-sm flex items-center justify-between font-mono text-xs gap-4 shadow-sm animate-in slide-in-from-top-2">
-                    <span className="text-[oklch(45%_0.18_25)] font-bold pl-2">
+                <div className="mb-4 p-3 bg-[var(--color-paper-2)] border border-[var(--color-accent)] flex items-center justify-between gap-4 shadow-sm">
+                    <span className="text-[var(--color-accent)] font-bold pl-2">
                         {selectedIds.length} ORDERS SELECTED
                     </span>
                     
@@ -658,19 +675,19 @@ export default function AdminBookings() {
                         const validDeletable = bookings.filter(b => selectedIds.includes(b.id) && (b.status === 'completed' || b.status === 'cancelled' || b.status === 'void'))
                         
                         if (validDeletable.length === 0) return (
-                            <div className="text-[11px] text-[oklch(55%_0.010_28)]">
+                            <div className="text-[11px] text-[var(--color-neutral)]">
                                 Only Completed/Cancelled orders can be deleted
                             </div>
                         )
 
                         return (
                             <div className="flex items-center gap-2">
-                                <span className="text-[10px] uppercase text-[oklch(45%_0.18_25)] font-bold tracking-wider">
+                                <span className="text-[10px] uppercase text-[var(--color-accent)] font-bold tracking-wider">
                                     Hold 5s to Delete ({validDeletable.length})
                                 </span>
                                 <HoldToDeleteButton 
                                     onConfirm={() => executeDelete(validDeletable)}
-                                    className="px-3 py-1.5 bg-white text-[oklch(45%_0.18_25)] border border-[oklch(80%_0.05_25)] hover:bg-[oklch(95%_0.03_25)] rounded-sm font-bold text-xs shadow-sm transition-colors"
+                                    className="px-3 py-1.5 bg-[var(--color-paper)] text-[var(--color-accent)] border border-[var(--color-accent)] hover:bg-[var(--color-paper-2)] font-bold text-xs shadow-sm transition-colors"
                                 />
                             </div>
                         )
@@ -679,57 +696,63 @@ export default function AdminBookings() {
             )}
 
             {/* 5. Main Tabular Grid */}
-            <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden">
+            <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse font-mono text-xs">
                         <thead>
-                            <tr className="bg-[oklch(94%_0.010_28)] text-[10px] uppercase text-[oklch(42%_0.010_28)] font-bold tracking-wider border-b border-[oklch(85%_0.012_28)]">
-                                <th className="p-3.5 w-10 text-center">
+                            <tr className="bg-[var(--color-paper-2)] text-[10px] uppercase text-[var(--color-muted)] font-bold tracking-wider border-b border-[var(--color-rule)]">
+                                <th className="p-3 w-10 text-center border-r border-[var(--color-rule)]">
                                     <input 
                                         type="checkbox" 
-                                        className="rounded-sm border-[oklch(80%_0.012_28)] checked:bg-[oklch(18%_0.012_28)] focus:ring-0 cursor-pointer"
+                                        className="border-[var(--color-rule)] checked:bg-[var(--color-ink)] focus:ring-0 cursor-pointer"
                                         checked={filteredBookings.length > 0 && selectedIds.length === filteredBookings.length}
                                         onChange={() => toggleSelectAll(filteredBookings)}
                                     />
                                 </th>
-                                <th className="p-3.5 cursor-pointer hover:text-black transition-colors" onClick={() => handleSort('booking_time')}>
+                                <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('booking_time')}>
                                     <div className="flex items-center gap-1">
-                                        DATE & TIME
-                                        <ArrowUpDown size={11} className={sortConfig.key === 'booking_time' ? 'text-[oklch(52%_0.16_28)]' : 'opacity-30'} />
+                                        <span>DATE & TIME</span>
+                                        <span className="text-[9px] text-[var(--color-accent)]">
+                                            {sortConfig.key === 'booking_time' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
+                                        </span>
                                     </div>
                                 </th>
-                                <th className="p-3.5">TABLE / TYPE</th>
-                                <th className="p-3.5 cursor-pointer hover:text-black transition-colors" onClick={() => handleSort('customer')}>
+                                <th className="p-3 border-r border-[var(--color-rule)]">TABLE / TYPE</th>
+                                <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('customer')}>
                                     <div className="flex items-center gap-1">
-                                        CUSTOMER
-                                        <ArrowUpDown size={11} className={sortConfig.key === 'customer' ? 'text-[oklch(52%_0.16_28)]' : 'opacity-30'} />
+                                        <span>CUSTOMER</span>
+                                        <span className="text-[9px] text-[var(--color-accent)]">
+                                            {sortConfig.key === 'customer' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
+                                        </span>
                                     </div>
                                 </th>
-                                <th className="p-3.5 cursor-pointer hover:text-black transition-colors" onClick={() => handleSort('total')}>
+                                <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('total')}>
                                     <div className="flex items-center gap-1">
-                                        ORDER & VALUE
-                                        <ArrowUpDown size={11} className={sortConfig.key === 'total' ? 'text-[oklch(52%_0.16_28)]' : 'opacity-30'} />
+                                        <span>ORDER & VALUE</span>
+                                        <span className="text-[9px] text-[var(--color-accent)]">
+                                            {sortConfig.key === 'total' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '·'}
+                                        </span>
                                     </div>
                                 </th>
-                                <th className="p-3.5">STATUS</th>
-                                <th className="p-3.5 pr-5 text-right">ACTIONS</th>
+                                <th className="p-3 border-r border-[var(--color-rule)]">STATUS</th>
+                                <th className="p-3 pr-4 text-right">ACTIONS</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                        <tbody className="divide-y divide-[var(--color-rule)]">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="7" className="p-12 text-center text-[oklch(55%_0.010_28)] animate-pulse">
-                                        LOADING BOOKING RECORDS...
+                                    <td colSpan="7" className="p-12 text-center text-[var(--color-neutral)] font-bold">
+                                        LOADING BOOKING RECORDS…
                                     </td>
                                 </tr>
                             ) : filteredBookings.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" className="p-12 text-center">
-                                        <div className="flex flex-col items-center gap-2 text-[oklch(55%_0.010_28)]">
-                                            <div className="w-8 h-8 rounded-full border border-[oklch(80%_0.012_28)] flex items-center justify-center text-xs">
-                                                Ø
+                                        <div className="flex flex-col items-center gap-2 text-[var(--color-neutral)]">
+                                            <div className="border border-[var(--color-rule)] px-2.5 py-1 text-xs font-bold">
+                                                [ Ø ] NO RECORDS FOUND
                                             </div>
-                                            <p className="font-bold text-[oklch(18%_0.012_28)]">No bookings found for the selected criteria.</p>
+                                            <p className="font-bold text-[var(--color-ink)]">No bookings match the selected criteria.</p>
                                         </div>
                                     </td>
                                 </tr>
@@ -739,335 +762,205 @@ export default function AdminBookings() {
                                     const shortId = getShortBookingId(booking)
                                     const isDineIn = booking.booking_type === 'dine_in' || booking.booking_type === 'walk_in'
                                     const customerName = booking.pickup_contact_name || booking.profiles?.display_name || 'Guest Customer'
-                                    const customerPhone = booking.pickup_contact_phone || booking.profiles?.phone_number || '-'
+                                    const customerPhone = booking.pickup_contact_phone || booking.profiles?.phone_number || '—'
                                     const itemCount = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
 
                                     return (
-                                        <>
-                                            <tr 
-                                                key={booking.id} 
-                                                className={`hover:bg-[oklch(96%_0.006_28)] transition-colors ${
-                                                    selectedIds.includes(booking.id) ? 'bg-[oklch(94%_0.02_28)]/40' : ''
-                                                } ${isExpanded ? 'bg-[oklch(96%_0.006_28)]' : ''}`}
-                                            >
-                                                {/* Checkbox */}
-                                                <td className="p-3.5 text-center">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        className="rounded-sm border-[oklch(80%_0.012_28)] checked:bg-[oklch(18%_0.012_28)] focus:ring-0 cursor-pointer"
-                                                        checked={selectedIds.includes(booking.id)}
-                                                        onChange={() => toggleSelect(booking.id)}
-                                                    />
-                                                </td>
+                                        <tr 
+                                            key={booking.id} 
+                                            className={`hover:bg-[var(--color-paper-2)] transition-colors ${
+                                                selectedIds.includes(booking.id) ? 'bg-[var(--color-paper-2)]' : ''
+                                            } ${isExpanded ? 'bg-[var(--color-paper-2)]' : ''}`}
+                                        >
+                                            {/* Checkbox */}
+                                            <td className="p-3 text-center border-r border-[var(--color-rule)]">
+                                                <input 
+                                                    type="checkbox" 
+                                                    className="border-[var(--color-rule)] checked:bg-[var(--color-ink)] focus:ring-0 cursor-pointer"
+                                                    checked={selectedIds.includes(booking.id)}
+                                                    onChange={() => toggleSelect(booking.id)}
+                                                />
+                                            </td>
 
-                                                {/* Date & Time */}
-                                                <td className="p-3.5">
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="font-mono text-[10px] font-bold bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]">
-                                                                #{shortId}
-                                                            </span>
-                                                            <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                                                {formatThaiTimeOnly(booking.booking_time || booking.created_at)}
-                                                            </span>
-                                                        </div>
-                                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] flex items-center gap-1">
-                                                            <Calendar size={10} />
-                                                            <span>{formatThaiDateOnly(booking.booking_time || booking.created_at)}</span>
-                                                        </div>
-                                                        {booking.created_at && (
-                                                            <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
-                                                                สั่ง: {formatThaiTimeOnly(booking.created_at)}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Table / Type */}
-                                                <td className="p-3.5">
-                                                    <div className="flex flex-col gap-1">
-                                                        {isDineIn ? (
-                                                            <span className="inline-flex items-center gap-1 bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2 py-0.5 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.012_28)] max-w-fit">
-                                                                <Utensils size={11} />
-                                                                {booking.tables_layout?.table_name || 'Unassigned'} ({booking.pax || 2}P)
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-2 py-0.5 rounded-sm text-[10px] font-bold border border-[oklch(82%_0.02_220)] max-w-fit">
-                                                                {booking.booking_type?.toUpperCase()}
-                                                            </span>
-                                                        )}
-
-                                                        {booking.source && (
-                                                            <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
-                                                                VIA: {booking.source}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </td>
-
-                                                {/* Customer */}
-                                                <td className="p-3.5">
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] truncate max-w-[160px]">
-                                                            {customerName}
+                                            {/* Date & Time */}
+                                            <td className="p-3 border-r border-[var(--color-rule)]">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[10px] font-bold bg-[var(--color-paper-2)] px-1.5 py-0.2 border border-[var(--color-rule)] text-[var(--color-ink)]">
+                                                            #{shortId}
                                                         </span>
-                                                        <div className="flex items-center gap-1 text-[11px] text-[oklch(42%_0.010_28)]">
-                                                            <Phone size={10} />
-                                                            <span>{customerPhone}</span>
-                                                        </div>
-                                                        {booking.customer_note && (
-                                                            <span className="text-[10px] text-[oklch(52%_0.16_28)] italic truncate max-w-[160px]">
-                                                                "{booking.customer_note}"
-                                                            </span>
-                                                        )}
+                                                        <span className="font-bold text-xs text-[var(--color-ink)]">
+                                                            {formatThaiTimeOnly(booking.booking_time || booking.created_at)}
+                                                        </span>
                                                     </div>
-                                                </td>
-
-                                                {/* Order & Value */}
-                                                <td className="p-3.5">
-                                                    <div className="flex flex-col gap-0.5">
-                                                        <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                                            ฿{Number(booking.total_amount || 0).toLocaleString()}
-                                                        </div>
-
-                                                        <div className="flex items-center gap-1.5 text-[10px]">
-                                                            <span className="text-[oklch(55%_0.010_28)]">
-                                                                {itemCount > 0 ? `${itemCount} items` : 'Reservation only'}
-                                                            </span>
-
-                                                            {booking.deposit_amount > 0 && (
-                                                                <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-1 rounded-sm text-[9px] font-bold">
-                                                                    DEP: ฿{booking.deposit_amount}
-                                                                </span>
-                                                            )}
-
-                                                            {booking.discount_amount > 0 && (
-                                                                <span className="text-[oklch(45%_0.08_140)] text-[9px] font-bold">
-                                                                    -฿{booking.discount_amount}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                    <div className="text-[10px] text-[var(--color-neutral)]">
+                                                        {formatThaiDateOnly(booking.booking_time || booking.created_at)}
                                                     </div>
-                                                </td>
+                                                    {booking.created_at && (
+                                                        <div className="text-[9px] text-[var(--color-neutral)]">
+                                                            ORDERED: {formatThaiTimeOnly(booking.created_at)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                                {/* Status Badge */}
-                                                <td className="p-3.5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border ${getStatusStyle(booking.status)}`}>
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                        {booking.status}
+                                            {/* Table / Type */}
+                                            <td className="p-3 border-r border-[var(--color-rule)]">
+                                                <div className="flex flex-col gap-1">
+                                                    {isDineIn ? (
+                                                        <span className="inline-flex items-center bg-[var(--color-paper-2)] text-[var(--color-ink)] px-2 py-0.5 text-[11px] font-bold border border-[var(--color-rule)] max-w-fit">
+                                                            {booking.tables_layout?.table_name || 'UNASSIGNED'} · {booking.pax || 2}P
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center bg-[var(--color-paper-2)] text-[var(--color-accent)] px-2 py-0.5 text-[10px] font-bold border border-[var(--color-rule)] max-w-fit">
+                                                            {booking.booking_type?.toUpperCase()}
+                                                        </span>
+                                                    )}
+
+                                                    {booking.source && (
+                                                        <span className="text-[9px] text-[var(--color-neutral)] uppercase tracking-wider">
+                                                            VIA: {booking.source}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Customer */}
+                                            <td className="p-3 border-r border-[var(--color-rule)]">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="font-bold text-xs text-[var(--color-ink)] truncate max-w-[160px]">
+                                                        {customerName}
                                                     </span>
-                                                </td>
+                                                    <div className="text-[11px] text-[var(--color-muted)]">
+                                                        {customerPhone}
+                                                    </div>
+                                                    {booking.customer_note && (
+                                                        <span className="text-[10px] text-[var(--color-accent)] italic truncate max-w-[160px]">
+                                                            “{booking.customer_note}”
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
 
-                                                {/* Actions */}
-                                                <td className="p-3.5 pr-5 text-right">
-                                                    <div className="flex justify-end items-center gap-1.5">
-                                                        {/* Details Toggle */}
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => toggleExpand(booking.id)}
-                                                            className={`p-1.5 rounded-sm border text-xs font-bold transition-colors ${
-                                                                isExpanded 
-                                                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]' 
-                                                                    : 'bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border-[oklch(85%_0.012_28)] text-[oklch(35%_0.010_28)]'
-                                                            }`}
-                                                            title="Toggle Details"
-                                                        >
-                                                            {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                                                        </button>
+                                            {/* Order & Value */}
+                                            <td className="p-3 border-r border-[var(--color-rule)] tabular-nums">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="font-bold text-xs text-[var(--color-ink)]">
+                                                        ฿{formatCurrency(booking.total_amount)}
+                                                    </div>
 
-                                                        {/* Edit Modal Button */}
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => setEditingBooking(booking)}
-                                                            className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors"
-                                                            title="Edit Booking"
-                                                        >
-                                                            <Edit3 size={13} />
-                                                        </button>
+                                                    <div className="flex items-center gap-1.5 text-[10px]">
+                                                        <span className="text-[var(--color-neutral)]">
+                                                            {itemCount > 0 ? `${itemCount} items` : 'Reservation only'}
+                                                        </span>
 
-                                                        {/* View / Copy Slip as PNG */}
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => handlePrint(booking, booking.status === 'completed' ? 'receipt' : 'billing')} 
-                                                            className="p-1.5 bg-[oklch(98%_0.006_28)] hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-[oklch(35%_0.010_28)] transition-colors cursor-pointer" 
-                                                            title="เปิดดูภาพสลิป/PNG (คัดลอกรูปส่ง LINE หรือบันทึกรูป)"
-                                                        >
-                                                            <Receipt size={13} />
-                                                        </button>
-
-                                                        {/* View Payment Slip */}
-                                                        {booking.payment_slip_url && (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => setViewSlipUrl(booking.payment_slip_url)} 
-                                                                className="p-1.5 bg-[oklch(92%_0.02_220)] hover:bg-[oklch(88%_0.03_220)] border border-[oklch(82%_0.02_220)] text-[oklch(35%_0.10_220)] rounded-sm transition-colors" 
-                                                                title="View Slip"
-                                                            >
-                                                                <ImageIcon size={13} />
-                                                            </button>
+                                                        {booking.deposit_amount > 0 && (
+                                                            <span className="bg-[var(--color-paper-2)] text-[var(--color-ink)] px-1 border border-[var(--color-rule)] text-[9px] font-bold">
+                                                                DEP: ฿{formatCurrency(booking.deposit_amount)}
+                                                            </span>
                                                         )}
 
-                                                        {/* Quick Advance Status Action */}
-                                                        {booking.status === 'pending' && (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => updateStatus(booking, 'confirmed')}
-                                                                className="px-2 py-1 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white text-[10px] font-bold uppercase rounded-sm transition-colors"
-                                                                title="Accept Order"
-                                                            >
-                                                                ACCEPT
-                                                            </button>
-                                                        )}
-
-                                                        {booking.status === 'confirmed' && isDineIn && (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => updateStatus(booking, 'seated')}
-                                                                className="px-2 py-1 bg-[oklch(92%_0.02_220)] hover:bg-[oklch(88%_0.03_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[10px] font-bold uppercase rounded-sm transition-colors"
-                                                                title="Mark Seated"
-                                                            >
-                                                                SEAT
-                                                            </button>
-                                                        )}
-
-                                                        {(booking.status === 'confirmed' || booking.status === 'seated' || booking.status === 'ready') && (
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => updateStatus(booking, 'completed')}
-                                                                className="px-2 py-1 bg-[oklch(92%_0.012_140)] hover:bg-[oklch(85%_0.08_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.08_140)] text-[10px] font-bold uppercase rounded-sm transition-colors"
-                                                                title="Check Out / Complete"
-                                                            >
-                                                                COMPLETE
-                                                            </button>
+                                                        {booking.discount_amount > 0 && (
+                                                            <span className="text-[var(--color-accent-2)] text-[9px] font-bold">
+                                                                -฿{formatCurrency(booking.discount_amount)}
+                                                            </span>
                                                         )}
                                                     </div>
-                                                </td>
-                                            </tr>
+                                                </div>
+                                            </td>
 
-                                            {/* Expandable Order Detail Drawer */}
-                                            {isExpanded && (
-                                                <tr className="bg-[oklch(96%_0.008_28)] border-b border-[oklch(85%_0.012_28)]">
-                                                    <td colSpan="7" className="p-4 pl-12">
-                                                        <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm space-y-4">
-                                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-[oklch(90%_0.008_28)] pb-3">
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="font-bold text-xs uppercase text-[oklch(18%_0.012_28)]">
-                                                                        ORDER ITEMS & PREFERENCES BREAKDOWN
-                                                                    </span>
-                                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                                                        สั่งเมื่อ: {formatThaiTime(booking.created_at)} | นัดหมาย: {formatThaiTime(booking.booking_time)}
-                                                                    </span>
-                                                                </div>
+                                            {/* Status Badge */}
+                                            <td className="p-3 border-r border-[var(--color-rule)]">
+                                                <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
+                                                    {booking.status}
+                                                </span>
+                                            </td>
 
-                                                                <div className="flex items-center gap-2">
-                                                                    {booking.tracking_token && (
-                                                                        <span className="font-mono text-[10px] bg-[oklch(92%_0.012_28)] px-2 py-0.5 rounded-sm text-[oklch(42%_0.010_28)]">
-                                                                            TRACKING: {booking.tracking_token}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                            {/* Actions */}
+                                            <td className="p-3 pr-4 text-right">
+                                                <div className="flex justify-end items-center gap-1.5">
+                                                    {/* Details Toggle */}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => toggleExpand(booking.id)}
+                                                        className={`px-2 py-1 border text-[10px] font-bold transition-colors ${
+                                                            isExpanded 
+                                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)]' 
+                                                                : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
+                                                        }`}
+                                                        title="Toggle Order Details"
+                                                    >
+                                                        {isExpanded ? '[-] HIDE' : '[+] VIEW'}
+                                                    </button>
 
-                                                            {/* Items Table */}
-                                                            {booking.order_items && booking.order_items.length > 0 ? (
-                                                                <div className="space-y-2">
-                                                                    <div className="grid grid-cols-12 text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)] border-b border-[oklch(90%_0.008_28)] pb-1">
-                                                                        <div className="col-span-6">ITEM / OPTIONS</div>
-                                                                        <div className="col-span-2 text-center">QTY</div>
-                                                                        <div className="col-span-2 text-right">UNIT PRICE</div>
-                                                                        <div className="col-span-2 text-right">LINE TOTAL</div>
-                                                                    </div>
+                                                    {/* Edit Modal Button */}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => setEditingBooking(booking)}
+                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-[10px] font-bold transition-colors"
+                                                        title="Edit Booking"
+                                                    >
+                                                        [EDIT]
+                                                    </button>
 
-                                                                    {booking.order_items.map((item, idx) => {
-                                                                        const optList = formatOptionList(item.selected_options, item.item_note || item.special_instructions || item.notes || item.remark)
-                                                                        const unitPrice = Number(item.price_at_time || 0)
-                                                                        const lineTotal = unitPrice * item.quantity
+                                                    {/* View / Copy Slip as PNG */}
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => handlePrint(booking, booking.status === 'completed' ? 'receipt' : 'billing')} 
+                                                        className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] text-[10px] font-bold transition-colors cursor-pointer" 
+                                                        title="Open Slip / Receipt Modal"
+                                                    >
+                                                        [BILL]
+                                                    </button>
 
-                                                                        return (
-                                                                            <div key={idx} className="grid grid-cols-12 text-xs py-1.5 border-b border-[oklch(92%_0.008_28)] last:border-0 items-start">
-                                                                                <div className="col-span-6">
-                                                                                    <div className="font-bold text-[oklch(18%_0.012_28)]">
-                                                                                        {item.custom_name || item.menu_items?.name || item.name || 'Menu Item'}
-                                                                                    </div>
-                                                                                    {optList.length > 0 && (
-                                                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                                                            {optList.map((opt, oIdx) => (
-                                                                                                <span key={oIdx} className="bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[10px] text-[oklch(42%_0.010_28)] px-1.5 py-0.2 rounded-sm">
-                                                                                                    ▶ {opt}
-                                                                                                </span>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
-                                                                                <div className="col-span-2 text-center font-bold">
-                                                                                    x{item.quantity}
-                                                                                </div>
-                                                                                <div className="col-span-2 text-right text-[oklch(55%_0.010_28)]">
-                                                                                    ฿{unitPrice.toLocaleString()}
-                                                                                </div>
-                                                                                <div className="col-span-2 text-right font-bold text-[oklch(18%_0.012_28)]">
-                                                                                    ฿{lineTotal.toLocaleString()}
-                                                                                </div>
-                                                                            </div>
-                                                                        )
-                                                                    })}
-                                                                </div>
-                                                            ) : (
-                                                                <div className="text-xs text-[oklch(55%_0.010_28)] italic py-2">
-                                                                    Standard Table Reservation (No pre-ordered dishes).
-                                                                </div>
-                                                            )}
+                                                    {/* View Payment Slip */}
+                                                    {booking.payment_slip_url && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setViewSlipUrl(booking.payment_slip_url)} 
+                                                            className="px-2 py-1 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-accent)] text-[10px] font-bold transition-colors" 
+                                                            title="View Payment Slip Image"
+                                                        >
+                                                            [SLIP]
+                                                        </button>
+                                                    )}
 
-                                                            {/* Notes & Financial Breakdown */}
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[oklch(90%_0.008_28)] text-xs">
-                                                                <div className="space-y-2">
-                                                                    {booking.customer_note && (
-                                                                        <div className="p-2.5 bg-[oklch(95%_0.012_60)] border border-[oklch(88%_0.02_60)] rounded-sm">
-                                                                            <span className="font-bold text-[10px] text-[oklch(30%_0.05_60)] uppercase block mb-0.5">
-                                                                                CUSTOMER NOTE:
-                                                                            </span>
-                                                                            <p className="text-[oklch(30%_0.05_60)]">{booking.customer_note}</p>
-                                                                        </div>
-                                                                    )}
+                                                    {/* Quick Advance Status Actions */}
+                                                    {booking.status === 'pending' && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => updateStatus(booking, 'confirmed')}
+                                                            className="px-2.5 py-1 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] text-[10px] font-bold uppercase transition-opacity"
+                                                            title="Accept Order"
+                                                        >
+                                                            [ACCEPT]
+                                                        </button>
+                                                    )}
 
-                                                                    {booking.staff_remark && (
-                                                                        <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm">
-                                                                            <span className="font-bold text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-0.5">
-                                                                                STAFF INTERNAL REMARK:
-                                                                            </span>
-                                                                            <p className="text-[oklch(18%_0.012_28)]">{booking.staff_remark}</p>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                    {booking.status === 'confirmed' && isDineIn && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => updateStatus(booking, 'seated')}
+                                                            className="px-2.5 py-1 bg-[var(--color-paper-2)] text-[var(--color-ink)] border border-[var(--color-ink)] text-[10px] font-bold uppercase hover:bg-[var(--color-paper)] transition-colors"
+                                                            title="Mark Seated"
+                                                        >
+                                                            [SEAT]
+                                                        </button>
+                                                    )}
 
-                                                                <div className="bg-[oklch(95%_0.008_28)] p-3 rounded-sm border border-[oklch(88%_0.008_28)] space-y-1.5 text-xs font-mono">
-                                                                    <div className="flex justify-between text-[oklch(42%_0.010_28)]">
-                                                                        <span>SUBTOTAL:</span>
-                                                                        <span>฿{Number(booking.total_amount || 0) + Number(booking.discount_amount || 0)}</span>
-                                                                    </div>
-                                                                    {booking.discount_amount > 0 && (
-                                                                        <div className="flex justify-between text-[oklch(45%_0.08_140)]">
-                                                                            <span>DISCOUNT ({booking.promotion_codes?.code || 'PROMO'}):</span>
-                                                                            <span>-฿{booking.discount_amount}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {booking.deposit_amount > 0 && (
-                                                                        <div className="flex justify-between text-[oklch(35%_0.10_220)]">
-                                                                            <span>ADVANCE DEPOSIT PAID:</span>
-                                                                            <span>-฿{booking.deposit_amount}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="flex justify-between font-bold text-sm text-[oklch(18%_0.012_28)] pt-2 border-t border-[oklch(85%_0.012_28)]">
-                                                                        <span>FINAL AMOUNT DUE:</span>
-                                                                        <span>฿{Math.max(0, Number(booking.total_amount || 0) - Number(booking.deposit_amount || 0)).toLocaleString()}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </>
+                                                    {(booking.status === 'confirmed' || booking.status === 'seated' || booking.status === 'ready') && (
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => updateStatus(booking, 'completed')}
+                                                            className="px-2.5 py-1 bg-[var(--color-accent-2)] text-white border border-[var(--color-accent-2)] text-[10px] font-bold uppercase hover:opacity-90 transition-opacity"
+                                                            title="Check Out / Complete"
+                                                        >
+                                                            [COMPLETE]
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
                                     )
                                 })
                             )}
@@ -1075,6 +968,131 @@ export default function AdminBookings() {
                     </table>
                 </div>
             </div>
+
+            {/* Expandable Order Detail Drawer Container (Rendered under table for expanded rows) */}
+            {Array.from(expandedIds).map(id => {
+                const booking = bookings.find(b => b.id === id)
+                if (!booking) return null
+
+                return (
+                    <div key={id} className="mt-2 p-4 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-[var(--color-rule)] pb-3">
+                            <div className="flex items-center gap-3">
+                                <span className="font-bold text-xs uppercase text-[var(--color-ink)]">
+                                    ORDER BREAKDOWN · #{getShortBookingId(booking)}
+                                </span>
+                                <span className="text-[10px] text-[var(--color-neutral)]">
+                                    ORDERED: {formatThaiTime(booking.created_at)} | APPOINTMENT: {formatThaiTime(booking.booking_time)}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                {booking.tracking_token && (
+                                    <span className="text-[10px] bg-[var(--color-paper-2)] px-2 py-0.5 border border-[var(--color-rule)] text-[var(--color-muted)]">
+                                        TRACKING: {booking.tracking_token}
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Items Table */}
+                        {booking.order_items && booking.order_items.length > 0 ? (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-12 text-[10px] uppercase font-bold text-[var(--color-neutral)] border-b border-[var(--color-rule)] pb-1">
+                                    <div className="col-span-6">ITEM / OPTIONS</div>
+                                    <div className="col-span-2 text-center">QTY</div>
+                                    <div className="col-span-2 text-right">UNIT PRICE</div>
+                                    <div className="col-span-2 text-right">LINE TOTAL</div>
+                                </div>
+
+                                {booking.order_items.map((item, idx) => {
+                                    const optList = formatOptionList(item.selected_options, item.item_note || item.special_instructions || item.notes || item.remark)
+                                    const unitPrice = Number(item.price_at_time || 0)
+                                    const lineTotal = unitPrice * item.quantity
+
+                                    return (
+                                        <div key={idx} className="grid grid-cols-12 text-xs py-1.5 border-b border-[var(--color-rule)] last:border-0 items-start tabular-nums">
+                                            <div className="col-span-6">
+                                                <div className="font-bold text-[var(--color-ink)]">
+                                                    {item.custom_name || item.menu_items?.name || item.name || 'Menu Item'}
+                                                </div>
+                                                {optList.length > 0 && (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {optList.map((opt, oIdx) => (
+                                                            <span key={oIdx} className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[10px] text-[var(--color-muted)] px-1.5 py-0.2">
+                                                                ▶ {opt}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className="col-span-2 text-center font-bold">
+                                                x{item.quantity}
+                                            </div>
+                                            <div className="col-span-2 text-right text-[var(--color-neutral)]">
+                                                ฿{formatCurrency(unitPrice)}
+                                            </div>
+                                            <div className="col-span-2 text-right font-bold text-[var(--color-ink)]">
+                                                ฿{formatCurrency(lineTotal)}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <div className="text-xs text-[var(--color-neutral)] italic py-2">
+                                Standard Table Reservation (No pre-ordered dishes).
+                            </div>
+                        )}
+
+                        {/* Notes & Financial Breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-[var(--color-rule)] text-xs">
+                            <div className="space-y-2">
+                                {booking.customer_note && (
+                                    <div className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
+                                        <span className="font-bold text-[10px] text-[var(--color-accent)] uppercase block mb-0.5">
+                                            CUSTOMER NOTE:
+                                        </span>
+                                        <p className="text-[var(--color-ink)]">{booking.customer_note}</p>
+                                    </div>
+                                )}
+
+                                {booking.staff_remark && (
+                                    <div className="p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
+                                        <span className="font-bold text-[10px] text-[var(--color-muted)] uppercase block mb-0.5">
+                                            STAFF INTERNAL REMARK:
+                                        </span>
+                                        <p className="text-[var(--color-ink)]">{booking.staff_remark}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="bg-[var(--color-paper-2)] p-3 border border-[var(--color-rule)] space-y-1.5 text-xs font-mono tabular-nums">
+                                <div className="flex justify-between text-[var(--color-muted)]">
+                                    <span>SUBTOTAL:</span>
+                                    <span>฿{formatCurrency(Number(booking.total_amount || 0) + Number(booking.discount_amount || 0))}</span>
+                                </div>
+                                {booking.discount_amount > 0 && (
+                                    <div className="flex justify-between text-[var(--color-accent-2)] font-bold">
+                                        <span>DISCOUNT ({booking.promotion_codes?.code || 'PROMO'}):</span>
+                                        <span>-฿{formatCurrency(booking.discount_amount)}</span>
+                                    </div>
+                                )}
+                                {booking.deposit_amount > 0 && (
+                                    <div className="flex justify-between text-[var(--color-ink)] font-bold">
+                                        <span>ADVANCE DEPOSIT PAID:</span>
+                                        <span>-฿{formatCurrency(booking.deposit_amount)}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between font-bold text-sm text-[var(--color-ink)] pt-2 border-t border-[var(--color-rule)]">
+                                    <span>FINAL AMOUNT DUE:</span>
+                                    <span>฿{formatCurrency(Math.max(0, Number(booking.total_amount || 0) - Number(booking.deposit_amount || 0)))}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )
+            })}
 
             {/* Edit Booking Modal */}
             {editingBooking && (
@@ -1108,7 +1126,7 @@ export default function AdminBookings() {
 }
 
 // ----------------------------------------------------
-// EDIT BOOKING MODAL (Dieter Rams Structural Grid)
+// EDIT BOOKING MODAL (Dieter Rams Clean Minimalist Form)
 // ----------------------------------------------------
 function EditBookingModal({ booking, tablesList, onClose, onSave }) {
     const [tableName, setTableName] = useState(booking.table_id || '')
@@ -1138,7 +1156,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
         e.preventDefault()
         setSaving(true)
 
-        // Construct ISO Timestamp
+        // Construct ISO Timestamp with explicit Thailand offset (+07:00)
         const cleanTime = String(bookingTime).trim().replace('.', ':')
         const isoString = `${bookingDate}T${cleanTime}:00+07:00`
 
@@ -1160,23 +1178,23 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
 
     return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[oklch(98%_0.006_28)] border-2 border-[oklch(85%_0.012_28)] max-w-xl w-full rounded-sm p-6 font-mono text-xs shadow-2xl animate-in zoom-in-95 duration-150">
+            <div className="bg-[var(--color-paper)] border-2 border-[var(--color-rule)] max-w-xl w-full p-6 font-mono text-xs shadow-2xl">
                 {/* Header */}
-                <div className="flex justify-between items-center pb-4 mb-4 border-b border-[oklch(85%_0.012_28)]">
+                <div className="flex justify-between items-center pb-4 mb-4 border-b border-[var(--color-rule)]">
                     <div>
-                        <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block">
-                            EDIT RECORD // #{getShortBookingId(booking)}
+                        <span className="text-[10px] font-bold text-[var(--color-accent)] uppercase tracking-wider block">
+                            EDIT RECORD · #{getShortBookingId(booking)}
                         </span>
-                        <h2 className="text-base font-bold text-[oklch(18%_0.012_28)] uppercase mt-0.5">
-                            MODIFY RESERVATION & ORDER
+                        <h2 className="text-base font-bold text-[var(--color-ink)] uppercase mt-0.5">
+                            Modify Reservation & Order
                         </h2>
                     </div>
                     <button 
                         type="button" 
                         onClick={onClose} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-black border border-[oklch(85%_0.012_28)] rounded-sm"
+                        className="px-2 py-1 text-[var(--color-neutral)] hover:text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper-2)] font-bold text-xs"
                     >
-                        ✕
+                        [✕]
                     </button>
                 </div>
 
@@ -1184,15 +1202,15 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Table & Pax */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 ASSIGNED TABLE
                             </label>
                             <select
                                 value={tableName}
                                 onChange={(e) => setTableName(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             >
-                                <option value="">-- UNASSIGNED (NONE) --</option>
+                                <option value="">— UNASSIGNED —</option>
                                 {tablesList.map(t => (
                                     <option key={t.id} value={t.id}>
                                         {t.table_name} (Cap: {t.capacity}P)
@@ -1202,7 +1220,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 GUESTS (PAX)
                             </label>
                             <input
@@ -1211,7 +1229,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 max="50"
                                 value={pax}
                                 onChange={(e) => setPax(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1219,7 +1237,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Date & Time */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 SERVICE DATE
                             </label>
                             <input
@@ -1227,12 +1245,12 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 required
                                 value={bookingDate}
                                 onChange={(e) => setBookingDate(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 SERVICE TIME (HH:MM)
                             </label>
                             <input
@@ -1241,7 +1259,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="18:00"
                                 value={bookingTime}
                                 onChange={(e) => setBookingTime(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1249,26 +1267,26 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Grid: Customer Contact */}
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 CUSTOMER NAME
                             </label>
                             <input
                                 type="text"
                                 value={contactName}
                                 onChange={(e) => setContactName(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 PHONE NUMBER
                             </label>
                             <input
                                 type="text"
                                 value={contactPhone}
                                 onChange={(e) => setContactPhone(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1276,13 +1294,13 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Status & Financial Adjustments */}
                     <div className="grid grid-cols-3 gap-3">
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 STATUS
                             </label>
                             <select
                                 value={status}
                                 onChange={(e) => setStatus(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)] uppercase"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
                             >
                                 <option value="pending">PENDING</option>
                                 <option value="confirmed">CONFIRMED</option>
@@ -1296,28 +1314,30 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 TOTAL AMOUNT (฿)
                             </label>
                             <input
                                 type="number"
                                 min="0"
+                                step="0.01"
                                 value={totalAmount}
                                 onChange={(e) => setTotalAmount(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 DEPOSIT PAID (฿)
                             </label>
                             <input
                                 type="number"
                                 min="0"
+                                step="0.01"
                                 value={depositAmount}
                                 onChange={(e) => setDepositAmount(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                             />
                         </div>
                     </div>
@@ -1325,7 +1345,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     {/* Notes */}
                     <div className="space-y-2">
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 CUSTOMER NOTE
                             </label>
                             <input
@@ -1333,12 +1353,12 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="Customer's dietary or seating requests"
                                 value={customerNote}
                                 onChange={(e) => setCustomerNote(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                 STAFF INTERNAL REMARK
                             </label>
                             <textarea
@@ -1346,26 +1366,26 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                 placeholder="Internal instructions for kitchen / cashier"
                                 value={staffRemark}
                                 onChange={(e) => setStaffRemark(e.target.value)}
-                                className="w-full p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
                             />
                         </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex justify-end gap-2 pt-4 border-t border-[oklch(85%_0.012_28)]">
+                    <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-rule)]">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold text-xs uppercase rounded-sm transition-colors"
+                            className="px-4 py-2 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-bold text-xs uppercase transition-colors"
                         >
                             CANCEL
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-bold text-xs uppercase rounded-sm transition-colors flex items-center gap-1.5"
+                            className="px-5 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold text-xs uppercase transition-opacity flex items-center gap-1.5"
                         >
-                            {saving ? 'SAVING...' : 'SAVE CHANGES'}
+                            {saving ? 'SAVING…' : 'SAVE CHANGES'}
                         </button>
                     </div>
                 </form>
