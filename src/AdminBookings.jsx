@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
@@ -17,6 +17,72 @@ const formatCurrency = (val) => {
     return Number(val || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// Helper to classify order origin & channel cleanly (Online vs In-Store)
+export const getOrderOrigin = (b) => {
+    const sourceLower = (b.source || '').toLowerCase()
+    const remarkLower = (b.staff_remark || '').toLowerCase()
+    const noteLower = (b.customer_note || '').toLowerCase()
+
+    // 1. LINE MAN Delivery
+    if (sourceLower === 'lineman' || remarkLower.includes('lineman') || noteLower.includes('lineman')) {
+        return {
+            key: 'lineman',
+            label: 'LINE MAN DELIVERY',
+            shortTag: 'LINE MAN',
+            isOnline: true,
+            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-accent-2)]'
+        }
+    }
+
+    // 2. Hausmade Shop E-Commerce / Shipping
+    if (b.booking_type === 'shop' || b.booking_type === 'hausmade_shipping') {
+        return {
+            key: 'shop',
+            label: 'HAUSMADE SHOP',
+            shortTag: 'SHOP / PARCEL',
+            isOnline: true,
+            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent-2)] border-[var(--color-rule)]'
+        }
+    }
+
+    // 3. Online Pickup (Takeaway)
+    if (b.booking_type === 'pickup') {
+        return {
+            key: 'pickup',
+            label: 'ONLINE PICKUP',
+            shortTag: 'ONLINE PICKUP',
+            isOnline: true,
+            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-accent)]'
+        }
+    }
+
+    // 4. Online Dine-In Reservation vs In-House Walk-in
+    const hasOnlineSignal = sourceLower === 'online' 
+        || sourceLower === 'line' 
+        || Boolean(b.payment_slip_url) 
+        || Number(b.deposit_amount || 0) > 0
+        || (b.booking_type === 'dine_in' && sourceLower !== 'pos' && sourceLower !== 'walk_in')
+
+    if (hasOnlineSignal && b.booking_type !== 'walk_in') {
+        return {
+            key: 'online_booking',
+            label: 'ONLINE RESERVATION',
+            shortTag: 'ONLINE DINE-IN',
+            isOnline: true,
+            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-accent)]'
+        }
+    }
+
+    // 5. In-House / POS / Table QR Walk-in
+    return {
+        key: 'in_house',
+        label: 'IN-HOUSE DINE-IN',
+        shortTag: 'IN-HOUSE',
+        isOnline: false,
+        badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
+    }
+}
+
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
     const [tablesList, setTablesList] = useState([])
@@ -24,7 +90,7 @@ export default function AdminBookings() {
 
     // Filters
     const [statusFilter, setStatusFilter] = useState('all') // all, pending, confirmed, seated, preparing, ready, completed, cancelled
-    const [typeFilter, setTypeFilter] = useState('all') // all, dine_in, pickup, shop
+    const [typeFilter, setTypeFilter] = useState('all') // all, online_all, online_booking, pickup, shop, in_house, lineman
     const [datePreset, setDatePreset] = useState('today') // today, tomorrow, week, month, all, custom
     const [customDate, setCustomDate] = useState(getThaiDate())
     const [searchTerm, setSearchTerm] = useState('')
@@ -39,50 +105,35 @@ export default function AdminBookings() {
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [editingBooking, setEditingBooking] = useState(null) // Booking object being edited
 
-    // 1. Initial Load & Real-time Subscription
-    useEffect(() => {
-        fetchBookings()
-        fetchTables()
+    // Concurrency & Lifecycle Guards to prevent memory leaks and request storms
+    const isMountedRef = useRef(true)
+    const inFlightFetchRef = useRef(false)
+    const pendingRefetchRef = useRef(false)
+    const lastFetchTimeRef = useRef(Date.now())
 
-        let debounceTimer = null
-        const debouncedFetchBookings = () => {
-            if (debounceTimer) clearTimeout(debounceTimer)
-            debounceTimer = setTimeout(() => {
-                fetchBookings(false) // Silent refresh without full skeleton
-                fetchTables()
-            }, 400)
-        }
-
-        const channel = supabase
-            .channel('admin-bookings-hub')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchBookings)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchBookings)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchBookings)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_codes' }, debouncedFetchBookings)
-            .subscribe()
-
-        return () => {
-            if (debounceTimer) clearTimeout(debounceTimer)
-            supabase.removeChannel(channel)
-        }
-    }, [])
-
-    const fetchTables = async () => {
+    const fetchTables = useCallback(async () => {
         try {
             const { data, error } = await supabase
                 .from('tables_layout')
                 .select('id, table_name, capacity, is_active')
                 .order('table_name', { ascending: true })
-            if (!error && data) {
+            if (!error && data && isMountedRef.current) {
                 setTablesList(data)
             }
         } catch (e) {
             console.error('Failed to load tables:', e)
         }
-    }
+    }, [])
 
-    const fetchBookings = async (showLoadingState = true) => {
-        if (showLoadingState) setLoading(true)
+    const fetchBookings = useCallback(async (showLoadingState = true) => {
+        // Concurrency Guard: prevent multiple parallel fetches
+        if (inFlightFetchRef.current) {
+            pendingRefetchRef.current = true
+            return
+        }
+        inFlightFetchRef.current = true
+
+        if (showLoadingState && isMountedRef.current) setLoading(true)
         try {
             // 1. Fetch Bookings + Table Info + Order Items + Promos (Recent 200)
             const { data: bookingsData, error: bookingsError } = await supabase
@@ -127,14 +178,89 @@ export default function AdminBookings() {
                 profiles: profilesMap[b.user_id] || null
             }))
 
-            setBookings(merged)
+            if (isMountedRef.current) {
+                setBookings(merged)
+                lastFetchTimeRef.current = Date.now()
+            }
         } catch (err) {
             console.error('Error fetching bookings:', err)
-            toast.error('Error loading bookings: ' + err.message)
+            if (isMountedRef.current) {
+                toast.error('Error loading bookings: ' + err.message)
+            }
         } finally {
-            if (showLoadingState) setLoading(false)
+            inFlightFetchRef.current = false
+            if (showLoadingState && isMountedRef.current) {
+                setLoading(false)
+            }
+            // If another event was queued during in-flight fetch, execute it once
+            if (pendingRefetchRef.current && isMountedRef.current) {
+                pendingRefetchRef.current = false
+                fetchBookings(false)
+            }
         }
-    }
+    }, [])
+
+    // 1. Initial Load & Real-time Event Subscription (Zero-Leak WebSocket architecture)
+    useEffect(() => {
+        isMountedRef.current = true
+        fetchBookings(true)
+        fetchTables()
+
+        // Debounce timer for bookings/orders realtime events
+        let bookingsDebounceTimer = null
+        const debouncedFetchBookings = () => {
+            if (bookingsDebounceTimer) clearTimeout(bookingsDebounceTimer)
+            bookingsDebounceTimer = setTimeout(() => {
+                if (isMountedRef.current) {
+                    fetchBookings(false) // Silent background refresh
+                }
+            }, 350)
+        }
+
+        // Debounce timer for tables_layout changes only
+        let tablesDebounceTimer = null
+        const debouncedFetchTables = () => {
+            if (tablesDebounceTimer) clearTimeout(tablesDebounceTimer)
+            tablesDebounceTimer = setTimeout(() => {
+                if (isMountedRef.current) {
+                    fetchTables()
+                }
+            }, 500)
+        }
+
+        // Unique Channel instance to prevent cross-component subscription collisions
+        const channelId = `admin-bookings-hub-${Math.random().toString(36).slice(2, 8)}`
+        const channel = supabase
+            .channel(channelId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'promotion_codes' }, debouncedFetchBookings)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchTables)
+            .subscribe()
+
+        // Visibility & Window Focus Sync (Syncs on resume without running wasteful interval polling)
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === 'visible' && isMountedRef.current) {
+                const elapsed = Date.now() - lastFetchTimeRef.current
+                if (elapsed > 15000) { // If tab was inactive for > 15s, refresh cleanly
+                    fetchBookings(false)
+                    fetchTables()
+                }
+            }
+        }
+
+        window.addEventListener('focus', handleVisibilityOrFocus)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+
+        return () => {
+            isMountedRef.current = false
+            if (bookingsDebounceTimer) clearTimeout(bookingsDebounceTimer)
+            if (tablesDebounceTimer) clearTimeout(tablesDebounceTimer)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            supabase.removeChannel(channel)
+        }
+    }, [fetchBookings, fetchTables])
 
     // LINE Notification Trigger
     const sendNotification = async (booking, type) => {
@@ -210,7 +336,7 @@ export default function AdminBookings() {
             console.error(err)
             toast.error('Delete failed: ' + err.message)
         } finally {
-            setLoading(false)
+            if (isMountedRef.current) setLoading(false)
         }
     }
 
@@ -328,17 +454,24 @@ export default function AdminBookings() {
         return true
     }, [datePreset, customDate])
 
-    // Date & Type Scoped Bookings (Used for accurate dynamic KPIs)
+    // Date & Channel Scoped Bookings (Used for accurate dynamic KPIs)
     const dateAndTypeFilteredBookings = useMemo(() => {
         return bookings.filter(b => {
-            const matchesType = typeFilter === 'all' 
-                || (typeFilter === 'dine_in' && (b.booking_type === 'dine_in' || b.booking_type === 'walk_in'))
-                || (typeFilter === 'pickup' && b.booking_type === 'pickup')
-                || (typeFilter === 'shop' && (b.booking_type === 'shop' || b.booking_type === 'hausmade_shipping'))
-                || b.booking_type === typeFilter
+            const origin = getOrderOrigin(b)
+
+            const matchesChannel = (() => {
+                if (typeFilter === 'all') return true
+                if (typeFilter === 'online_all') return origin.isOnline
+                if (typeFilter === 'online_booking') return origin.key === 'online_booking'
+                if (typeFilter === 'pickup') return origin.key === 'pickup'
+                if (typeFilter === 'shop') return origin.key === 'shop'
+                if (typeFilter === 'in_house') return origin.key === 'in_house'
+                if (typeFilter === 'lineman') return origin.key === 'lineman'
+                return true
+            })()
 
             const matchesDate = isDateMatch(b.booking_time || b.created_at)
-            return matchesType && matchesDate
+            return matchesChannel && matchesDate
         })
     }, [bookings, typeFilter, isDateMatch])
 
@@ -385,22 +518,33 @@ export default function AdminBookings() {
         })
     }, [dateAndTypeFilteredBookings, statusFilter, searchTerm, sortConfig])
 
-    // Dynamic KPI Summary Metrics Scoped to Current Filter Window
+    // Dynamic KPI Summary Metrics Scoped to Current Filter Window with Channel Breakdown
     const kpiSummary = useMemo(() => {
         let totalRevenue = 0
+        let onlineRevenue = 0
+        let inHouseRevenue = 0
         let pendingCount = 0
         let activeQueueCount = 0
         let completedCount = 0
         let depositTotal = 0
+        let onlineCount = 0
+        let inHouseCount = 0
 
         dateAndTypeFilteredBookings.forEach(b => {
+            const origin = getOrderOrigin(b)
+            if (origin.isOnline) onlineCount++
+            else inHouseCount++
+
             if (b.status === 'pending') pendingCount++
             if (b.status === 'confirmed' || b.status === 'seated' || b.status === 'preparing' || b.status === 'ready') {
                 activeQueueCount++
             }
             if (b.status === 'completed' || b.status === 'paid') {
                 completedCount++
-                totalRevenue += Number(b.total_amount || 0)
+                const amt = Number(b.total_amount || 0)
+                totalRevenue += amt
+                if (origin.isOnline) onlineRevenue += amt
+                else inHouseRevenue += amt
             }
             // Exclude cancelled/void orders from deposits collected
             if (b.deposit_amount && b.status !== 'cancelled' && b.status !== 'void') {
@@ -410,14 +554,18 @@ export default function AdminBookings() {
 
         return {
             totalRevenue,
+            onlineRevenue,
+            inHouseRevenue,
             pendingCount,
             activeQueueCount,
             completedCount,
-            depositTotal
+            depositTotal,
+            onlineCount,
+            inHouseCount
         }
     }, [dateAndTypeFilteredBookings])
 
-    // Status Count helper for badges within active date/type window
+    // Status Count helper for badges within active date/channel window
     const statusCounts = useMemo(() => {
         const counts = { all: dateAndTypeFilteredBookings.length }
         dateAndTypeFilteredBookings.forEach(b => {
@@ -464,7 +612,7 @@ export default function AdminBookings() {
             <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] mb-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 gap-3 border-b border-[var(--color-rule)]">
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[10px] font-bold tracking-wider text-[var(--color-accent)] uppercase bg-[var(--color-paper-2)] px-2 py-0.5 border border-[var(--color-rule)]">
                                 SYS.ADMIN · 2026
                             </span>
@@ -489,7 +637,7 @@ export default function AdminBookings() {
                     </div>
                 </div>
 
-                {/* 2. Integrated KPI Instrument Strip (Connected Cellular Grid) */}
+                {/* 2. Integrated KPI Instrument Strip (Connected Cellular Grid with Channel Breakdown) */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
                     <div className="p-4">
                         <div className="text-[10px] uppercase text-[var(--color-neutral)] font-bold">TOTAL REVENUE (PAID)</div>
@@ -497,7 +645,7 @@ export default function AdminBookings() {
                             ฿{formatCurrency(kpiSummary.totalRevenue)}
                         </div>
                         <div className="text-[10px] text-[var(--color-accent-2)] mt-0.5 font-bold">
-                            {kpiSummary.completedCount} Completed Orders ({getDateLabel()})
+                            {kpiSummary.completedCount} Orders (Online: ฿{formatCurrency(kpiSummary.onlineRevenue)} · In-House: ฿{formatCurrency(kpiSummary.inHouseRevenue)})
                         </div>
                     </div>
 
@@ -517,7 +665,7 @@ export default function AdminBookings() {
                             {String(kpiSummary.activeQueueCount).padStart(2, '0')}
                         </div>
                         <div className="text-[10px] text-[var(--color-neutral)] mt-0.5">
-                            Confirmed, Seated & In-House
+                            Confirmed, Seated & In-House Dining
                         </div>
                     </div>
 
@@ -639,14 +787,17 @@ export default function AdminBookings() {
                     })}
                 </div>
 
-                {/* Row 3: Type Filter Tabs */}
+                {/* Row 3: Channel & Origin Filter Tabs (Online vs In-Store) */}
                 <div className="p-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">TYPE:</span>
+                    <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">CHANNEL:</span>
                     {[
-                        { key: 'all', label: 'ALL TYPES' },
-                        { key: 'dine_in', label: 'DINE-IN (TABLE & WALK-IN)' },
-                        { key: 'pickup', label: 'PICKUP (TAKEAWAY)' },
-                        { key: 'shop', label: 'HAUSMADE SHOP' }
+                        { key: 'all', label: 'ALL CHANNELS' },
+                        { key: 'online_all', label: 'ALL ONLINE (BOOKING, PICKUP, SHOP)' },
+                        { key: 'online_booking', label: 'ONLINE RESERVATION' },
+                        { key: 'pickup', label: 'ONLINE PICKUP (TAKEOUT)' },
+                        { key: 'shop', label: 'HAUSMADE SHOP (PARCEL)' },
+                        { key: 'in_house', label: 'IN-HOUSE DINE-IN / WALK-IN' },
+                        { key: 'lineman', label: 'LINE MAN DELIVERY' }
                     ].map(tp => (
                         <button
                             key={tp.key}
@@ -717,7 +868,7 @@ export default function AdminBookings() {
                                         </span>
                                     </div>
                                 </th>
-                                <th className="p-3 border-r border-[var(--color-rule)]">TABLE / TYPE</th>
+                                <th className="p-3 border-r border-[var(--color-rule)]">CHANNEL / TABLE</th>
                                 <th className="p-3 cursor-pointer hover:text-[var(--color-ink)] transition-colors border-r border-[var(--color-rule)]" onClick={() => handleSort('customer')}>
                                     <div className="flex items-center gap-1">
                                         <span>CUSTOMER</span>
@@ -760,6 +911,7 @@ export default function AdminBookings() {
                                 filteredBookings.map(booking => {
                                     const isExpanded = expandedIds.has(booking.id)
                                     const shortId = getShortBookingId(booking)
+                                    const origin = getOrderOrigin(booking)
                                     const isDineIn = booking.booking_type === 'dine_in' || booking.booking_type === 'walk_in'
                                     const customerName = booking.pickup_contact_name || booking.profiles?.display_name || 'Guest Customer'
                                     const customerPhone = booking.pickup_contact_phone || booking.profiles?.phone_number || '—'
@@ -804,18 +956,19 @@ export default function AdminBookings() {
                                                 </div>
                                             </td>
 
-                                            {/* Table / Type */}
+                                            {/* Channel / Table */}
                                             <td className="p-3 border-r border-[var(--color-rule)]">
                                                 <div className="flex flex-col gap-1">
-                                                    {isDineIn ? (
-                                                        <span className="inline-flex items-center bg-[var(--color-paper-2)] text-[var(--color-ink)] px-2 py-0.5 text-[11px] font-bold border border-[var(--color-rule)] max-w-fit">
-                                                            {booking.tables_layout?.table_name || 'UNASSIGNED'} · {booking.pax || 2}P
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className={`px-1.5 py-0.2 text-[9px] font-bold uppercase border ${origin.badgeClass}`}>
+                                                            {origin.shortTag}
                                                         </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center bg-[var(--color-paper-2)] text-[var(--color-accent)] px-2 py-0.5 text-[10px] font-bold border border-[var(--color-rule)] max-w-fit">
-                                                            {booking.booking_type?.toUpperCase()}
-                                                        </span>
-                                                    )}
+                                                        {isDineIn && (
+                                                            <span className="text-[11px] font-bold text-[var(--color-ink)]">
+                                                                {booking.tables_layout?.table_name || 'UNASSIGNED'} · {booking.pax || 2}P
+                                                            </span>
+                                                        )}
+                                                    </div>
 
                                                     {booking.source && (
                                                         <span className="text-[9px] text-[var(--color-neutral)] uppercase tracking-wider">
