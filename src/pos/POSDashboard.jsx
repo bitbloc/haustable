@@ -839,7 +839,7 @@ export default function POSDashboard() {
                 .from('bookings')
                 .select(`
                     id, table_id, booking_type, booking_time, status, source, staff_remark,
-                    customer_name, customer_phone, pax, deposit_amount, total_amount, payment_slip_url,
+                    customer_note, pax, deposit_amount, total_amount, payment_slip_url,
                     pickup_contact_name, pickup_contact_phone,
                     profiles (display_name, phone_number),
                     tables_layout (table_name),

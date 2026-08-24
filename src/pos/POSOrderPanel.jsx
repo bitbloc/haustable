@@ -224,7 +224,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             let query = supabase
                 .from('profiles')
-                .select('id, display_name, nickname, phone_number, avatar_url, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota')
+                .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota')
                 .order('display_name', { ascending: true })
                 .limit(50);
 

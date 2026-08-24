@@ -52,9 +52,7 @@ export default function ReceiptPickerModal({
                     payment_slip_url,
                     pickup_contact_name,
                     pickup_contact_phone,
-                    guest_name,
-                    phone_number,
-                    shipping_address,
+                    customer_note,
                     pax,
                     tables_layout (
                         id,

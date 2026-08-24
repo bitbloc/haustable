@@ -33,7 +33,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             } else {
                 const { data: directProfiles, error: profileError } = await supabase
                     .from('profiles')
-                    .select('id, display_name, nickname, phone_number, avatar_url, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
+                    .select('id, display_name, nickname, phone_number, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
                     .order('created_at', { ascending: false })
                     .limit(200);
 

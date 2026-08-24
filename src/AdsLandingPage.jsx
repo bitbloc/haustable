@@ -173,7 +173,7 @@ export default function AdsLandingPage() {
         try {
             const { data } = await supabase
                 .from('haus_checkins')
-                .select('id, image_url, source, user_name, user_username, text, likes_count, is_visible, created_at')
+                .select('id, image_url, source, user_name, user_handle, text, likes, is_visible, created_at')
                 .eq('is_visible', true)
                 .order('created_at', { ascending: false })
                 .limit(8);
@@ -190,7 +190,7 @@ export default function AdsLandingPage() {
                 supabase.from('app_settings').select('key, value').like('key', 'link_%'),
                 supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, sort_order, display_order, category_id').eq('is_available', true),
                 supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
-                supabase.from('haus_checkins').select('id, image_url, source, user_name, user_username, text, likes_count, is_visible, created_at').eq('is_visible', true).order('created_at', { ascending: false }).limit(8)
+                supabase.from('haus_checkins').select('id, image_url, source, user_name, user_handle, text, likes, is_visible, created_at').eq('is_visible', true).order('created_at', { ascending: false }).limit(8)
             ]);
 
             if (settingsRes.data) processSettings(settingsRes.data);
@@ -997,9 +997,9 @@ export default function AdsLandingPage() {
                                             <span className="text-xs font-bold font-mono tracking-tight leading-none">
                                                 {selectedLightbox.item.user_name || 'Customer'}
                                             </span>
-                                            {selectedLightbox.item.user_username && (
+                                            {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username) && (
                                                 <span className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-none mt-0.5">
-                                                    @{selectedLightbox.item.user_username}
+                                                    {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username).startsWith('@') ? (selectedLightbox.item.user_handle || selectedLightbox.item.user_username) : `@${selectedLightbox.item.user_handle || selectedLightbox.item.user_username}`}
                                                 </span>
                                             )}
                                         </div>
