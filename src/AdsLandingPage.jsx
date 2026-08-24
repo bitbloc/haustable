@@ -287,7 +287,27 @@ export default function AdsLandingPage() {
                 });
             }
         } catch (err) {
-            console.error('gtag conversion error:', err);
+            console.error('gtag directions conversion error:', err);
+        }
+    };
+
+    const handleCallClick = () => {
+        try {
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'contact', {
+                    'method': 'phone',
+                    'event_category': 'engagement',
+                    'event_label': '098-528-4217',
+                    'transport_type': 'beacon'
+                });
+                window.gtag('event', 'conversion', {
+                    'send_to': 'AW-11227095880',
+                    'value': 1.0,
+                    'currency': 'THB'
+                });
+            }
+        } catch (err) {
+            console.error('gtag call conversion error:', err);
         }
     };
 
@@ -666,6 +686,7 @@ export default function AdsLandingPage() {
                             
                             <LinkCard 
                                 href="tel:0985284217" 
+                                onClick={handleCallClick}
                                 title="098-528-4217 // โทรติดต่อร้าน" 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
@@ -749,7 +770,7 @@ export default function AdsLandingPage() {
                             <div className="p-4 bg-[var(--color-hallmark-paper)] font-mono text-xs text-[var(--color-hallmark-ink)] space-y-2">
                                 <p className="font-[var(--font-body)] font-bold text-sm leading-relaxed">{locationText}</p>
                                 <div className="pt-2 flex flex-col gap-1 text-[11px] text-[var(--color-hallmark-ink-muted)] font-bold">
-                                    <p>TEL: 098-528-4217</p>
+                                    <p>TEL: <a href="tel:0985284217" onClick={handleCallClick} className="underline hover:opacity-80">098-528-4217</a></p>
                                     <p>OPEN: {hours}</p>
                                 </div>
                             </div>
@@ -814,6 +835,7 @@ export default function AdsLandingPage() {
                 </a>
                 <a 
                     href="tel:0985284217" 
+                    onClick={handleCallClick}
                     className="flex-1 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
                     <Phone size={12} /> CALL / BOOK

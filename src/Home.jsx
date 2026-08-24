@@ -74,6 +74,26 @@ export default function Home({ session }) {
         }
     }
 
+    const handleCallClick = () => {
+        try {
+            if (typeof window !== 'undefined' && window.gtag) {
+                window.gtag('event', 'contact', {
+                    'method': 'phone',
+                    'event_category': 'engagement',
+                    'event_label': '098-528-4217',
+                    'transport_type': 'beacon'
+                });
+                window.gtag('event', 'conversion', {
+                    'send_to': 'AW-11227095880',
+                    'value': 1.0,
+                    'currency': 'THB'
+                });
+            }
+        } catch (err) {
+            console.error('gtag call conversion error:', err);
+        }
+    };
+
     const defaultMapUrl = "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
     const mapUrl = (settings?.link_url_4 && settings?.link_url_4 !== 'https://maps.google.com') 
         ? settings.link_url_4 
@@ -243,6 +263,7 @@ export default function Home({ session }) {
                                 </span>
                                 <a 
                                     href="tel:0985284217"
+                                    onClick={handleCallClick}
                                     className="font-bold underline hover:opacity-80 transition-opacity"
                                 >
                                     098-528-4217
