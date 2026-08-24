@@ -42,3 +42,10 @@ temp_*
 microlink_*.json
 notte_api.json
 
+# Database Backups
+backups/
+*.sql.gz
+*.tar.gz
+*.sql.zip
+
+

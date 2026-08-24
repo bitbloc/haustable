@@ -13,7 +13,8 @@
     "tauri:build": "tauri build",
     "cap:sync": "npm run build && npx cap sync",
     "build:apk": "npm run cap:sync && cd android && gradlew.bat assembleDebug",
-    "build:apk:release": "npm run cap:sync && cd android && gradlew.bat assembleRelease"
+    "build:apk:release": "npm run cap:sync && cd android && gradlew.bat assembleRelease",
+    "backup:db": "powershell -ExecutionPolicy Bypass -File ./scripts/backup-supabase.ps1"
   },
   "dependencies": {
     "@capacitor-community/bluetooth-le": "^7.3.2",
