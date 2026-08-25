@@ -39,6 +39,7 @@ import {
 } from '../utils/printerHelper';
 import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction, getBookingPaymentBreakdown, calculateShiftMetrics } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
+import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 
 export { getBookingPaymentBreakdown };
 
@@ -392,6 +393,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     }, [categories]);
 
     const completedBookings = useMemo(() => bookings.filter(b => b.status === 'completed'), [bookings]);
+    const mergedBookings = useMemo(() => bookings.filter(b => parseTableTransferInfo(b, bookings).isMergedSource), [bookings]);
+    const pureVoidedBookings = useMemo(() => bookings.filter(b => (b.status === 'void' || b.status === 'cancelled') && !parseTableTransferInfo(b, bookings).isMergedSource), [bookings]);
     const voidedBookings = useMemo(() => bookings.filter(b => b.status === 'void' || b.status === 'cancelled'), [bookings]);
     const activeBookings = useMemo(() => bookings.filter(b => b.status === 'seated' || b.status === 'confirmed'), [bookings]);
 
@@ -413,10 +416,15 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
 
     // Filter bookings based on payment method tab and search query
     const filteredForBreakdown = useMemo(() => {
-        const sourceList = payMethodFilter === 'void' ? voidedBookings : completedBookings;
+        let sourceList = completedBookings;
+        if (payMethodFilter === 'void') {
+            sourceList = pureVoidedBookings;
+        } else if (payMethodFilter === 'merged') {
+            sourceList = mergedBookings;
+        }
 
         return sourceList.filter(b => {
-            if (payMethodFilter !== 'all' && payMethodFilter !== 'void') {
+            if (payMethodFilter !== 'all' && payMethodFilter !== 'void' && payMethodFilter !== 'merged') {
                 const breakdown = getBookingPaymentBreakdown(b);
                 if (payMethodFilter === 'cash' && breakdown.cash <= 0) return false;
                 if (payMethodFilter === 'qr' && breakdown.qr <= 0) return false;
@@ -445,7 +453,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
             }
             return true;
         });
-    }, [completedBookings, voidedBookings, payMethodFilter, searchQuery]);
+    }, [completedBookings, voidedBookings, mergedBookings, pureVoidedBookings, payMethodFilter, searchQuery]);
 
     // Category sales compile
     const categoryList = useMemo(() => {
@@ -1042,11 +1050,12 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
 
                         <div className="flex items-center gap-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] p-0.5 rounded-lg w-full md:w-auto overflow-x-auto">
                             {[
-                                { id: 'all', label: 'ALL BILLS' },
+                                { id: 'all', label: `ALL (${completedBookings.length})` },
                                 { id: 'cash', label: 'CASH' },
                                 { id: 'qr', label: 'QR TRANSFER' },
                                 { id: 'credit', label: 'CREDIT' },
-                                { id: 'void', label: `VOIDED (${voidedBookings.length})` }
+                                { id: 'merged', label: `MERGED (${mergedBookings.length})` },
+                                { id: 'void', label: `VOIDED (${pureVoidedBookings.length})` }
                             ].map(btn => (
                                 <button
                                     key={btn.id}
@@ -1122,7 +1131,13 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         {/* Completed / Voided Bills Table */}
                         <div className="md:col-span-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-5 flex flex-col shadow-2xs">
                             <h4 className="font-mono font-bold text-xs text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-3 flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 select-none">
-                                <span>{payMethodFilter === 'void' ? 'VOIDED BILLS AUDIT TRAIL / รายการบิลยกเลิก' : "TODAY'S BILLS LOG / รายการบิล"}</span>
+                                <span>
+                                    {payMethodFilter === 'void' 
+                                        ? 'VOIDED BILLS AUDIT TRAIL / รายการบิลยกเลิก' 
+                                        : payMethodFilter === 'merged'
+                                            ? 'MERGED TABLE TRANSFERS / รายการโอนย้าย-รวมบิล'
+                                            : "TODAY'S BILLS LOG / รายการบิล"}
+                                </span>
                                 <span className="text-[10px] text-[oklch(55%_0.010_28)]">{filteredForBreakdown.length} RECORDS</span>
                             </h4>
 
@@ -1132,9 +1147,9 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                         <tr className="border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] font-mono font-bold text-[9px] uppercase tracking-wider select-none bg-[oklch(94%_0.010_28)]">
                                             <th className="py-2.5 px-3 w-16">BILL NO</th>
                                             <th className="py-2.5 px-3 w-16">TIME</th>
-                                            <th className="py-2.5 px-3 w-16 text-center">TABLE</th>
+                                            <th className="py-2.5 px-3 w-28 text-center">TABLE</th>
                                             <th className="py-2.5 px-3">CUSTOMER / สมาชิก</th>
-                                            <th className="py-2.5 px-3 w-28">PAY METHOD</th>
+                                            <th className="py-2.5 px-3 w-32">PAY METHOD</th>
                                             <th className="py-2.5 px-3 text-right">AMOUNT</th>
                                             <th className="py-2.5 px-3 text-right w-24">ACTION</th>
                                         </tr>
@@ -1147,21 +1162,42 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                             const isMember = !!(profileObj || b.user_id);
                                             const memberName = profileObj?.display_name || profileObj?.nickname || (b.customer_name && !defaultWalkIns.includes(b.customer_name.toLowerCase().trim()) ? b.customer_name : null);
                                             const guestName = (b.pickup_contact_name && !defaultWalkIns.includes(b.pickup_contact_name.toLowerCase().trim())) ? b.pickup_contact_name : 'ลูกค้าทั่วไป';
-                                            const isVoid = b.status === 'void' || b.status === 'cancelled';
+                                            const transfer = parseTableTransferInfo(b, bookings);
+                                            const isMerged = transfer.isMergedSource;
+                                            const isVoid = (b.status === 'void' || b.status === 'cancelled') && !isMerged;
                                             const paymentBreakdown = getBookingPaymentBreakdown(b);
 
                                             return (
                                                 <tr 
                                                     key={b.id} 
                                                     onClick={() => setActiveViewBooking(b)}
-                                                    className={`hover:bg-[oklch(94%_0.010_28)]/50 transition-colors cursor-pointer ${isVoid ? 'opacity-60 bg-red-50/20' : ''}`}
+                                                    className={`hover:bg-[oklch(94%_0.010_28)]/50 transition-colors cursor-pointer ${
+                                                        isMerged 
+                                                            ? 'bg-[oklch(98%_0.008_28)]' 
+                                                            : isVoid 
+                                                                ? 'opacity-60 bg-red-50/20' 
+                                                                : ''
+                                                    }`}
                                                 >
                                                     <td className="py-2.5 px-3 font-mono font-bold text-[oklch(18%_0.012_28)]">
                                                         #{getShortBookingId(b)}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-mono text-[oklch(55%_0.010_28)]">{timeStr}</td>
                                                     <td className="py-2.5 px-3 font-mono font-bold text-center text-[oklch(52%_0.16_28)]">
-                                                        {b.tables_layout?.table_name || 'PICK'}
+                                                        {isMerged ? (
+                                                            <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                                {b.tables_layout?.table_name || 'PICK'} ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
+                                                            </span>
+                                                        ) : (
+                                                            <span>
+                                                                {b.tables_layout?.table_name || 'PICK'}
+                                                                {transfer.isMergedTarget && (
+                                                                    <span className="ml-1 text-[8px] text-[oklch(30%_0.08_140)] font-bold">
+                                                                        (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(',')})
+                                                                    </span>
+                                                                )}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="py-2.5 px-3 font-sans">
                                                         {isMember ? (
@@ -1192,7 +1228,11 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         )}
                                                     </td>
                                                     <td className="py-2.5 px-3">
-                                                        {isVoid ? (
+                                                        {isMerged ? (
+                                                            <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)] whitespace-nowrap">
+                                                                MERGED ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
+                                                            </span>
+                                                        ) : isVoid ? (
                                                             <span className="px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase border bg-red-100 text-red-900 border-red-300">
                                                                 VOIDED
                                                             </span>
@@ -1215,7 +1255,16 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                                         )}
                                                     </td>
                                                     <td className="py-2.5 px-3 text-right font-mono font-bold">
-                                                        {isVoid ? (
+                                                        {isMerged ? (
+                                                            <div className="text-right">
+                                                                <span className="text-[11px] font-mono font-black text-[oklch(52%_0.16_28)] block">
+                                                                    โอนไป {transfer.targetTableDisplay || transfer.mergedToTable}
+                                                                </span>
+                                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                                                    {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : '฿0'}
+                                                                </span>
+                                                            </div>
+                                                        ) : isVoid ? (
                                                             <span className="line-through text-red-500">฿{b.total_amount?.toLocaleString()}</span>
                                                         ) : (
                                                             <span>฿{b.total_amount?.toLocaleString()}</span>

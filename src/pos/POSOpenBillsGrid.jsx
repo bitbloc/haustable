@@ -371,7 +371,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                         {filteredOrders.map((order) => {
-                            const transfer = parseTableTransferInfo(order);
+                            const transfer = parseTableTransferInfo(order, orders);
                             const isVoid = (order.status === 'void' || order.status === 'cancelled') && !transfer.isMergedSource;
                             const isMerged = transfer.isMergedSource;
                             const isTable = !!order.table_id;
@@ -410,7 +410,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {isMerged ? (
                                                 <span className="bg-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    <Layers size={10} /> MERGED ➔ {transfer.mergedToTable}
+                                                    <Layers size={10} /> MERGED ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                 </span>
                                             ) : isVoid ? (
                                                 <span className="bg-red-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
@@ -421,7 +421,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                     <Utensils size={10} /> โต๊ะ {tableName}
                                                     {transfer.isMergedTarget && (
                                                         <span className="ml-0.5 bg-[oklch(45%_0.08_140)] text-white text-[8px] px-1 py-0.2 rounded">
-                                                            +{transfer.mergedFromTables.join(',')}
+                                                            +{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(',')}
                                                         </span>
                                                     )}
                                                     {transfer.isMoved && (
@@ -477,7 +477,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                         </div>
                                         {isMerged ? (
                                             <p className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] truncate">
-                                                ➔ รวมรายการเข้า โต๊ะ {transfer.mergedToTable}
+                                                ➔ รวมรายการเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                             </p>
                                         ) : transfer.cleanRemark ? (
                                             <p className={`text-[10px] font-mono pl-5 font-medium truncate ${isVoid ? 'text-red-700 italic' : 'text-[#767673]'}`}>
@@ -490,7 +490,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     <div className="bg-[#F5F5F2] border border-[#E0E0DC] rounded-xl p-2.5 text-[11px] space-y-1 font-sans min-h-16 flex flex-col justify-center">
                                         {isMerged ? (
                                             <span className="text-[10px] font-mono text-[oklch(52%_0.16_28)] text-center font-bold">
-                                                โอนรายการอาหารไปที่ โต๊ะ {transfer.mergedToTable}
+                                                โอนรายการอาหารไปที่ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                             </span>
                                         ) : items.length === 0 ? (
                                             <span className="text-[10px] font-mono text-[#767673] text-center italic">ไม่มีรายการอาหารในคาร์ท</span>
@@ -526,7 +526,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 ? 'text-red-600 line-through' 
                                                 : 'text-[oklch(52%_0.16_28)]'
                                         }`}>
-                                            {isMerged ? `฿0 (โอนไป ${transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}`}
+                                            {isMerged ? `฿0 (โอนไป ${transfer.targetTableDisplay || transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}`}
                                         </span>
                                     </div>
 

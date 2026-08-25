@@ -59,7 +59,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                             </tr>
                         ) : (
                             bookings.map(booking => {
-                                const transfer = parseTableTransferInfo(booking)
+                                const transfer = parseTableTransferInfo(booking, bookings)
                                 const isDineIn = booking.booking_type === 'dine_in'
                                 const guestName = booking.booking_type === 'pickup' 
                                     ? (booking.pickup_contact_name || 'Guest') 
@@ -74,7 +74,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                         <td className="p-3.5">
                                             {transfer.isMergedSource ? (
                                                 <span className="bg-[oklch(94%_0.02_28)] text-[oklch(45%_0.14_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.04_28)]">
-                                                    โต๊ะ {booking.tables_layout?.table_name || '?'} ➔ รวมเข้า {transfer.mergedToTable}
+                                                    โต๊ะ {booking.tables_layout?.table_name || '?'} ➔ รวมเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                 </span>
                                             ) : isDineIn ? (
                                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -83,7 +83,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                     </span>
                                                     {transfer.isMergedTarget && (
                                                         <span className="bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] px-1.5 py-0.5 rounded-xs text-[10px] font-bold border border-[oklch(82%_0.04_140)]">
-                                                            +รวมจาก {transfer.mergedFromTables.join(', ')}
+                                                            +รวมจาก {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                                         </span>
                                                     )}
                                                     {transfer.isMoved && (
@@ -143,7 +143,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                             {transfer.isMergedSource ? (
                                                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(85%_0.04_28)]">
                                                     <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                    MERGED ➔ {transfer.mergedToTable}
+                                                    MERGED ➔ {transfer.targetTableDisplay || transfer.mergedToTable}
                                                 </span>
                                             ) : (
                                                 <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border ${

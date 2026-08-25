@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, X, Loader2, Receipt, Printer } from 'lucide-react';
 import { getShortBookingId, extractCashDetails } from '../utils/printerHelper';
 import { supabase } from '../lib/supabaseClient';
+import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 import TaxInvoiceModal from '../components/admin/tax/TaxInvoiceModal';
 import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
 
@@ -128,6 +129,8 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
     const tableObj = Array.isArray(booking.tables_layout) ? booking.tables_layout[0] : booking.tables_layout;
     const tableName = tableObj?.table_name || booking.table_name || (isPickup ? 'PICK' : '-');
 
+    const transfer = parseTableTransferInfo(booking);
+
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4 font-sans">
             <div className="bg-[#ECECE9] rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden border border-[#D1D1CD]">
@@ -151,6 +154,32 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+
+                    {/* Table Transfer High-Contrast Banner Strip */}
+                    {transfer.isMergedSource && (
+                        <div className="bg-[oklch(96%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] rounded-xl p-3.5 text-xs font-mono font-bold flex flex-col gap-1.5 shadow-xs">
+                            <div className="flex items-center gap-2">
+                                <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[9px] rounded-xs font-black uppercase tracking-wider">
+                                    MERGED TABLE
+                                </span>
+                                <span>โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> แล้ว</span>
+                            </div>
+                            {transfer.originalTotal > 0 && (
+                                <div className="text-[11px] text-[oklch(45%_0.10_28)] pl-1">
+                                    ยอดเงินเดิมก่อนรวมบิล: ฿{transfer.originalTotal.toLocaleString()}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {transfer.isMergedTarget && (
+                        <div className="bg-[oklch(95%_0.02_140)] border border-[oklch(80%_0.05_140)] text-[oklch(30%_0.08_140)] rounded-xl p-3 text-xs font-mono font-bold flex items-center gap-2 shadow-xs">
+                            <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white text-[9px] rounded-xs font-black uppercase tracking-wider">
+                                COMBINED BILL
+                            </span>
+                            <span>บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || `โต๊ะ ${transfer.mergedFromTables.join(', ')}`}</strong></span>
+                        </div>
+                    )}
                     
                     {/* Timestamp Details & Order Type */}
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm font-mono text-xs">
@@ -361,11 +390,15 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                         })()}
                     </div>
                     
-                    {booking.staff_remark && (
+                    {transfer.cleanRemark ? (
+                        <div className="text-[10px] text-[#767673] italic bg-white border border-[#ECECE9] p-2 rounded-lg">
+                            * Remark: {transfer.cleanRemark}
+                        </div>
+                    ) : booking.staff_remark && !transfer.isMergedSource && !transfer.isMergedTarget && !transfer.isMoved ? (
                         <div className="text-[10px] text-[#767673] italic bg-white border border-[#ECECE9] p-2 rounded-lg">
                             * Remark: {booking.staff_remark}
                         </div>
-                    )}
+                    ) : null}
                 </div>
                 
                 {/* Footer */}

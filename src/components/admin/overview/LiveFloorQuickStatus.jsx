@@ -404,13 +404,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                         </div>
 
                         {selectedTableData.state.booking && (() => {
-                            const modalTransfer = parseTableTransferInfo(selectedTableData.state.booking)
+                            const modalTransfer = parseTableTransferInfo(selectedTableData.state.booking, bookings)
                             return (
                                 <div className="my-4 space-y-3 font-mono text-xs">
                                     {modalTransfer.isMergedTarget && (
                                         <div className="bg-[oklch(94%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] p-2 rounded-sm font-bold flex items-center gap-1.5">
                                             <span>COMBINED BILL:</span>
-                                            <span>บิลนี้รวมรายการมาจาก โต๊ะ {modalTransfer.mergedFromTables.join(', ')}</span>
+                                            <span>บิลนี้รวมรายการมาจาก {modalTransfer.mergedFromTableDisplay || `โต๊ะ ${modalTransfer.mergedFromTables.join(', ')}`}</span>
                                         </div>
                                     )}
                                     {modalTransfer.isMoved && (

@@ -578,11 +578,20 @@ export async function syncOfflineQueue(isManual = false) {
                     .eq('id', sourceBookingId);
                 if (voidErr) throw voidErr;
 
-                // Update target booking remark if provided
-                if (targetRemark) {
+                // Update target booking remark and dominant CRM member if provided
+                const targetUpdate = {};
+                if (targetRemark) targetUpdate.staff_remark = targetRemark;
+                if (action.payload.dominantMember) {
+                    const dom = action.payload.dominantMember;
+                    const chosenId = dom.id || dom.user_id;
+                    if (chosenId) targetUpdate.user_id = chosenId;
+                    if (dom.display_name) targetUpdate.customer_name = dom.display_name;
+                    if (dom.phone_number) targetUpdate.pickup_contact_phone = dom.phone_number;
+                }
+                if (Object.keys(targetUpdate).length > 0) {
                     await supabase
                         .from('bookings')
-                        .update({ staff_remark: targetRemark })
+                        .update(targetUpdate)
                         .eq('id', targetBookingId);
                 }
             }

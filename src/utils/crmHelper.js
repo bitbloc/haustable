@@ -275,3 +275,82 @@ export function getTierVisualTheme(tierName = '', badgeTheme = '') {
         pillBg: 'bg-amber-700/10 text-amber-800 border-amber-700/20'
     };
 }
+
+/**
+ * Calculate comparable CRM score for a member profile or booking
+ * Score priority: Points Balance (คะแนนสะสมเยอะกว่า) > Tier Level (ระดับสมาชิก) > Accumulated Spend > Registered Member
+ * @param {Object} memberOrBooking - Member profile object or booking object
+ * @returns {number} Numeric CRM score for comparison
+ */
+export function calculateMemberCrmScore(memberOrBooking) {
+    if (!memberOrBooking) return 0;
+    
+    // Extract profile object
+    const profile = Array.isArray(memberOrBooking.profiles) 
+        ? memberOrBooking.profiles[0] 
+        : (memberOrBooking.profiles || memberOrBooking);
+
+    const hasUserId = !!(profile?.id || memberOrBooking.user_id || profile?.user_id);
+    if (!hasUserId) {
+        // Not a registered member / Walk-in guest
+        return 0;
+    }
+
+    const points = Math.max(0, parseFloat(profile.xhaus_coins || profile.points || profile.coins || memberOrBooking.xhaus_coins || 0) || 0);
+    const spent = Math.max(0, parseFloat(profile.total_spent_12m || profile.total_spent || profile.total_spent_all_time || 0) || 0);
+    const tier = String(profile.current_tier || profile.tier || memberOrBooking.current_tier || '').toLowerCase();
+
+    let tierWeight = 1000; // Base registered member
+    if (tier.includes('inner') || tier.includes('gold') || tier.includes('03')) {
+        tierWeight = 5000;
+    } else if (tier.includes('people') || tier.includes('silver') || tier.includes('02')) {
+        tierWeight = 3000;
+    } else if (tier.includes('common') || tier.includes('bronze') || tier.includes('01')) {
+        tierWeight = 1500;
+    }
+
+    // Points have primary priority, multiplied by 100,000 to ensure higher points always win
+    // Tier weight gives a secondary tie-breaker
+    // Total spent gives third tie-breaker
+    return (points * 100000) + (tierWeight * 10) + spent;
+}
+
+/**
+ * Resolves which CRM member should be attached to the target merged booking.
+ * Strictly selects the member with higher points / CRM score ("เลือกคนที่คะแนนเยอะกว่าเสมอ").
+ * @param {Object} sourceBooking - Source booking being merged
+ * @param {Object} targetBooking - Target booking receiving the merge
+ * @param {Object} attachedSourceMember - Optional attached member for source
+ * @param {Object} attachedTargetMember - Optional attached member for target
+ * @returns {Object} { dominantMember, dominantBooking, wasSourceChosen, reason }
+ */
+export function resolveDominantCrmMember(sourceBooking, targetBooking, attachedSourceMember = null, attachedTargetMember = null) {
+    const sourceProfile = attachedSourceMember || (Array.isArray(sourceBooking?.profiles) ? sourceBooking.profiles[0] : sourceBooking?.profiles) || (sourceBooking?.user_id ? { id: sourceBooking.user_id, display_name: sourceBooking.customer_name || sourceBooking.pickup_contact_name || 'Member' } : null);
+    const targetProfile = attachedTargetMember || (Array.isArray(targetBooking?.profiles) ? targetBooking.profiles[0] : targetBooking?.profiles) || (targetBooking?.user_id ? { id: targetBooking.user_id, display_name: targetBooking.customer_name || targetBooking.pickup_contact_name || 'Member' } : null);
+
+    const sourceScore = calculateMemberCrmScore(sourceProfile || sourceBooking);
+    const targetScore = calculateMemberCrmScore(targetProfile || targetBooking);
+
+    if (sourceScore > targetScore && sourceProfile) {
+        return {
+            dominantMember: sourceProfile,
+            dominantBooking: sourceBooking,
+            wasSourceChosen: true,
+            sourceScore,
+            targetScore,
+            reason: `เลือกสมาชิก ${sourceProfile.display_name || 'บิลต้นทาง'} เนื่องจากมีคะแนนสะสม/ระดับ CRM สูงกว่า (คะแนน: ${sourceProfile.xhaus_coins || sourceProfile.points || 0} pts)`
+        };
+    }
+
+    return {
+        dominantMember: targetProfile || null,
+        dominantBooking: targetBooking,
+        wasSourceChosen: false,
+        sourceScore,
+        targetScore,
+        reason: targetProfile 
+            ? `คงสมาชิก ${targetProfile.display_name || 'บิลปลายทาง'} (คะแนน: ${targetProfile.xhaus_coins || targetProfile.points || 0} pts)`
+            : 'ไม่มีสมาชิกที่เป็น Member ทั้งสองโต๊ะ'
+    };
+}
+

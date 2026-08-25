@@ -257,14 +257,14 @@ export default function AllDailyBillsHub({
     }, [bookings, filteredBookings])
 
     const getStatusBadge = (booking) => {
-        const transfer = parseTableTransferInfo(booking)
+        const transfer = parseTableTransferInfo(booking, bookings)
         
         // Distinct highlight for Source Merged Bills
         if (transfer.isMergedSource) {
             return (
                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-[10px] font-mono font-black bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] shadow-xs">
                     <Layers size={11} className="text-[oklch(52%_0.16_28)]" />
-                    <span>MERGED ➔ โต๊ะ {transfer.mergedToTable || 'เป้าหมาย'}</span>
+                    <span>MERGED ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'เป้าหมาย'}`}</span>
                 </span>
             )
         }
@@ -512,7 +512,7 @@ export default function AllDailyBillsHub({
                         const tier = b.profiles?.current_tier || ''
                         const totalAmt = parseFloat(b.total_amount || b.total_price || 0)
                         const itemsCount = (b.order_items || []).reduce((sum, item) => sum + (item.quantity || 1), 0)
-                        const transfer = parseTableTransferInfo(b)
+                        const transfer = parseTableTransferInfo(b, bookings)
 
                         return (
                             <div 
@@ -549,7 +549,7 @@ export default function AllDailyBillsHub({
                                                 <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
                                                 {transfer.isMergedTarget && (
                                                     <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[9px] font-mono font-black">
-                                                        + รวมจาก {transfer.mergedFromTables.join(', ')}
+                                                        + รวมจาก {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                                     </span>
                                                 )}
                                                 {transfer.isMoved && (
@@ -599,7 +599,7 @@ export default function AllDailyBillsHub({
                                             {transfer.isMergedSource ? (
                                                 <div>
                                                     <div className="font-mono text-sm md:text-base font-black text-[oklch(52%_0.16_28)] leading-tight">
-                                                        โอนไป โต๊ะ {transfer.mergedToTable || '?'}
+                                                        โอนไป {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || '?'}`}
                                                     </div>
                                                     <div className="font-mono text-[10px] text-[oklch(42%_0.010_28)] font-bold">
                                                         {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : 'ย้ายรายการแล้ว'}
@@ -626,7 +626,7 @@ export default function AllDailyBillsHub({
                                             <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[9px] uppercase tracking-wider font-mono font-black">
                                                 MERGED TABLE
                                             </span>
-                                            <span>➔ รายการอาหารและยอดเงินทั้งหมดถูกรวมไปที่ <strong>โต๊ะ {transfer.mergedToTable}</strong> แล้ว</span>
+                                            <span>➔ รายการอาหารและยอดเงินทั้งหมดถูกรวมไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> แล้ว</span>
                                         </div>
                                         {transfer.cleanRemark && (
                                             <span className="text-[oklch(42%_0.010_28)] italic">หมายเหตุเดิม: {transfer.cleanRemark}</span>
@@ -639,7 +639,7 @@ export default function AllDailyBillsHub({
                                         <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-white rounded-xs text-[9px] uppercase tracking-wider font-bold">
                                             COMBINED BILL
                                         </span>
-                                        <span className="font-bold">บิลนี้ได้รับรายการอาหารรวมมาจาก <strong>โต๊ะ {transfer.mergedFromTables.join(', ')}</strong></span>
+                                        <span className="font-bold">บิลนี้ได้รับรายการอาหารรวมมาจาก <strong>{transfer.mergedFromTableDisplay || `โต๊ะ ${transfer.mergedFromTables.join(', ')}`}</strong></span>
                                     </div>
                                 )}
 

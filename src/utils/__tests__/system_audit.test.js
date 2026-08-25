@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
 import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData } from '../printerHelper';
-import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS } from '../crmHelper';
+import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
 import { calculateShiftMetrics, getBookingPaymentBreakdown } from '../shiftHelper';
+import { parseTableTransferInfo, formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, stripInternalTransferTags } from '../tableTransferHelper';
 
 describe('System Audit - Phase 1 & 4: Thai Tax & Financial Calculation Engine', () => {
     it('should convert numbers to Thai Baht text correctly (thaiBahtText)', () => {
@@ -359,4 +360,197 @@ describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Al
         expect(breakdown.credit).toBe(0);
     });
 });
+
+describe('System Audit - Phase 5: Table Transfer & Merged Bills Architecture', () => {
+    it('should format and parse source merged bills with target short bill IDs', () => {
+        const remark = formatMergeSourceRemark('H4', '77F8', 851);
+        expect(remark).toContain('[MERGED_TO:H4#77F8]');
+        expect(remark).toContain('[TARGET_BILL:#77F8]');
+        expect(remark).toContain('Merged into Table H4 (#77F8)');
+        expect(remark).toContain('[ORIG_AMT:851]');
+
+        const sourceBooking = {
+            id: 'b_source_1234',
+            status: 'void',
+            staff_remark: remark,
+            tables_layout: { table_name: 'H3' },
+            total_amount: 0
+        };
+
+        const info = parseTableTransferInfo(sourceBooking);
+        expect(info.isMergedSource).toBe(true);
+        expect(info.mergedToTable).toBe('H4');
+        expect(info.mergedToBillId).toBe('77F8');
+        expect(info.targetTableDisplay).toBe('โต๊ะ H4 (#77F8)');
+        expect(info.originalTotal).toBe(851);
+    });
+
+    it('should auto-resolve target short bill ID from allBookings if not explicit in remarks', () => {
+        const sourceBooking = {
+            id: 'b_source_old',
+            status: 'void',
+            staff_remark: '[MERGED_TO:H4] Merged into Table H4 [ORIG_AMT:851]',
+            tables_layout: { table_name: 'H3' },
+            booking_time: '2026-08-25T19:19:00.000Z'
+        };
+
+        const allBookings = [
+            {
+                id: 'b_target_h4_77f8',
+                short_id: '77F8',
+                status: 'seated',
+                tables_layout: { table_name: 'H4' },
+                booking_time: '2026-08-25T19:20:00.000Z'
+            }
+        ];
+
+        const info = parseTableTransferInfo(sourceBooking, allBookings);
+        expect(info.isMergedSource).toBe(true);
+        expect(info.mergedToTable).toBe('H4');
+        expect(info.mergedToBillId).toBe('77F8');
+        expect(info.targetTableDisplay).toBe('โต๊ะ H4 (#77F8)');
+    });
+
+    it('should format and parse target combined bills with source short bill IDs', () => {
+        const targetRemark = formatMergeTargetRemark('หมายเหตุเดิมของลูกค้า', 'H3', 'AC4E');
+        expect(targetRemark).toContain('[MERGED_FROM:H3#AC4E]');
+
+        const targetBooking = {
+            id: 'b_target_h4_77f8',
+            status: 'seated',
+            staff_remark: targetRemark,
+            tables_layout: { table_name: 'H4' }
+        };
+
+        const info = parseTableTransferInfo(targetBooking);
+        expect(info.isMergedTarget).toBe(true);
+        expect(info.mergedFromTables).toEqual(['H3']);
+        expect(info.mergedFromBillIds).toEqual(['AC4E']);
+        expect(info.mergedFromTableDisplay).toBe('โต๊ะ H3 (#AC4E)');
+        expect(info.cleanRemark).toBe('หมายเหตุเดิมของลูกค้า');
+    });
+
+    it('should format and parse table move metadata', () => {
+        const moveRemark = formatMoveRemark('ขอโต๊ะติดหน้าต่าง', 'H1', 'H3');
+        expect(moveRemark).toContain('[MOVED:H1->H3@');
+
+        const movedBooking = {
+            id: 'b_moved',
+            status: 'seated',
+            staff_remark: moveRemark,
+            tables_layout: { table_name: 'H3' }
+        };
+
+        const info = parseTableTransferInfo(movedBooking);
+        expect(info.isMoved).toBe(true);
+        expect(info.movedFromTable).toBe('H1');
+        expect(info.movedToTable).toBe('H3');
+        expect(info.cleanRemark).toBe('ขอโต๊ะติดหน้าต่าง');
+    });
+
+    it('should strip all internal transfer tags for customer receipt printing', () => {
+        const dirtyRemark = '[MERGED_TO:H4#77F8] [TARGET_BILL:#77F8] [ORIG_AMT:851] หมายเหตุของลูกค้า [CALL_STAFF]';
+        const clean = stripInternalTransferTags(dirtyRemark);
+        expect(clean).toBe('หมายเหตุของลูกค้า');
+    });
+});
+
+describe('System Audit - Phase 6: CRM Loyalty Dominance on Merged Bills', () => {
+    it('should calculate member CRM scores prioritizing higher points, tier, and spend', () => {
+        const guest = { id: null, customer_name: 'Guest' };
+        const memberLow = { id: 'u1', xhaus_coins: 50, current_tier: 'Haus Common', total_spent: 1000 };
+        const memberHighPoints = { id: 'u2', xhaus_coins: 500, current_tier: 'Haus Common', total_spent: 1000 };
+        const memberHighTier = { id: 'u3', xhaus_coins: 500, current_tier: 'Inner Haus', total_spent: 15000 };
+
+        expect(calculateMemberCrmScore(guest)).toBe(0);
+        expect(calculateMemberCrmScore(memberHighPoints)).toBeGreaterThan(calculateMemberCrmScore(memberLow));
+        expect(calculateMemberCrmScore(memberHighTier)).toBeGreaterThan(calculateMemberCrmScore(memberHighPoints));
+    });
+
+    it('should always select the member with higher points when merging tables (Source > Target)', () => {
+        // Table A (Source) has 450 points, Table B (Target) has 120 points
+        const sourceBooking = {
+            id: 'b_source',
+            user_id: 'user_source_vip',
+            profiles: {
+                id: 'user_source_vip',
+                display_name: 'Khun Somchai (VIP)',
+                xhaus_coins: 450,
+                current_tier: 'Haus People'
+            }
+        };
+
+        const targetBooking = {
+            id: 'b_target',
+            user_id: 'user_target_regular',
+            profiles: {
+                id: 'user_target_regular',
+                display_name: 'Khun Somsak',
+                xhaus_coins: 120,
+                current_tier: 'Haus Common'
+            }
+        };
+
+        const result = resolveDominantCrmMember(sourceBooking, targetBooking);
+        expect(result.wasSourceChosen).toBe(true);
+        expect(result.dominantMember.id).toBe('user_source_vip');
+        expect(result.dominantMember.display_name).toBe('Khun Somchai (VIP)');
+    });
+
+    it('should retain target member if target has higher or equal points (Target >= Source)', () => {
+        // Table A (Source) has 80 points, Table B (Target) has 300 points
+        const sourceBooking = {
+            id: 'b_source',
+            user_id: 'user_a',
+            profiles: {
+                id: 'user_a',
+                display_name: 'Member A',
+                xhaus_coins: 80,
+                current_tier: 'Haus Common'
+            }
+        };
+
+        const targetBooking = {
+            id: 'b_target',
+            user_id: 'user_b',
+            profiles: {
+                id: 'user_b',
+                display_name: 'Member B',
+                xhaus_coins: 300,
+                current_tier: 'Haus People'
+            }
+        };
+
+        const result = resolveDominantCrmMember(sourceBooking, targetBooking);
+        expect(result.wasSourceChosen).toBe(false);
+        expect(result.dominantMember.id).toBe('user_b');
+        expect(result.dominantMember.display_name).toBe('Member B');
+    });
+
+    it('should pick registered member over walk-in guest when merging', () => {
+        // Source is registered member (15 points), Target is walk-in guest (0 points)
+        const sourceBooking = {
+            id: 'b_source_member',
+            user_id: 'user_registered',
+            profiles: {
+                id: 'user_registered',
+                display_name: 'Khun Ann',
+                xhaus_coins: 15,
+                current_tier: 'Haus Common'
+            }
+        };
+
+        const targetBooking = {
+            id: 'b_target_guest',
+            user_id: null,
+            profiles: null,
+            customer_name: 'Walk-in Guest'
+        };
+
+        const result = resolveDominantCrmMember(sourceBooking, targetBooking);
+        expect(result.wasSourceChosen).toBe(true);
+        expect(result.dominantMember.id).toBe('user_registered');
+    });
+});
+
 

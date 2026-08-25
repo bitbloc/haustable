@@ -131,7 +131,6 @@ function StaffLiveOrdersContent() {
     // --- System Init on Mount ---
     useEffect(() => {
         setSystemReady(true)
-        request() // Keep screen awake
         requestPush().catch(() => {})
 
         // Initial Data Fetch
@@ -143,10 +142,9 @@ function StaffLiveOrdersContent() {
 
         return () => {
             if (typeof cleanup === 'function') cleanup()
-            release()
             stop()
         }
-    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, handleNewOrderAlert, request, release, stop, requestPush])
+    }, [fetchLiveOrders, fetchScheduleOrders, subscribeRealtime, handleNewOrderAlert, stop, requestPush])
 
     // --- Update Handler Wrapper ---
     const handleUpdateStatus = (id, newStatus) => {

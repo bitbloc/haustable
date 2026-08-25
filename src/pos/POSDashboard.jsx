@@ -19,6 +19,7 @@ import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
+import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
@@ -2583,8 +2584,13 @@ export default function POSDashboard() {
         const toastId = toast.loading(`กำลังรวมบิลโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}...`);
 
         const sourceOriginalTotal = parseFloat(activeBooking.total_amount || activeBooking.total_price || 0);
-        const sourceRemark = formatMergeSourceRemark(targetTable.table_name, sourceOriginalTotal);
-        const targetUpdatedRemark = formatMergeTargetRemark(targetBooking.staff_remark, selectedTable.table_name);
+        const targetShortId = getShortBookingId(targetBooking);
+        const sourceShortId = getShortBookingId(activeBooking);
+        const sourceRemark = formatMergeSourceRemark(targetTable.table_name, targetShortId, sourceOriginalTotal);
+        const targetUpdatedRemark = formatMergeTargetRemark(targetBooking.staff_remark, selectedTable.table_name, sourceShortId);
+
+        // CRM Dominance Logic: Select the customer/member with higher points/CRM tier ("เลือกคนที่คะแนนเยอะกว่าเสมอ")
+        const dominantCrm = resolveDominantCrmMember(activeBooking, targetBooking, attachedMemberCrm, null);
 
         if (!isOnline()) {
             const cachedBookings = posCache.getBookings() || [];
@@ -2594,7 +2600,23 @@ export default function POSDashboard() {
                     const targetItems = b.order_items || [];
                     const mergedItems = [...targetItems, ...sourceItems.map(item => ({ ...item, booking_id: targetBooking.id }))];
                     const newTotal = (parseFloat(b.total_amount || 0) + sourceOriginalTotal);
-                    return { ...b, order_items: mergedItems, staff_remark: targetUpdatedRemark, total_amount: newTotal };
+                    const updatedTarget = { 
+                        ...b, 
+                        order_items: mergedItems, 
+                        staff_remark: targetUpdatedRemark, 
+                        total_amount: newTotal 
+                    };
+                    if (dominantCrm.wasSourceChosen && dominantCrm.dominantMember) {
+                        updatedTarget.user_id = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
+                        updatedTarget.profiles = dominantCrm.dominantMember;
+                        if (dominantCrm.dominantMember.display_name) {
+                            updatedTarget.customer_name = dominantCrm.dominantMember.display_name;
+                        }
+                        if (dominantCrm.dominantMember.phone_number) {
+                            updatedTarget.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
+                        }
+                    }
+                    return updatedTarget;
                 }
                 if (b.id === activeBooking.id) {
                     return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
@@ -2608,10 +2630,14 @@ export default function POSDashboard() {
                 targetBookingId: targetBooking.id,
                 sourceRemark,
                 targetRemark: targetUpdatedRemark,
-                sourceOriginalTotal
+                sourceOriginalTotal,
+                dominantMember: dominantCrm.wasSourceChosen ? dominantCrm.dominantMember : null
             });
             
-            toast.success(`⚠️ ออฟไลน์: รวมบิลสำเร็จ!`, { id: toastId });
+            const offlineSuccessMsg = dominantCrm.wasSourceChosen && dominantCrm.dominantMember
+                ? `⚠️ ออฟไลน์: รวมบิลสำเร็จ! (เลือกสมาชิก ${dominantCrm.dominantMember.display_name || 'บิลต้นทาง'} ที่มีคะแนนเยอะกว่า)`
+                : `⚠️ ออฟไลน์: รวมบิลสำเร็จ!`;
+            toast.success(offlineSuccessMsg, { id: toastId });
             setShowMergeModal(false);
             setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
@@ -2639,21 +2665,38 @@ export default function POSDashboard() {
                 
             if (voidErr) throw voidErr;
 
-            // 3. Update target booking remark & total amount to reflect merged items
+            // 3. Update target booking remark, total amount & dominant CRM member
             const newTargetTotal = parseFloat(targetBooking.total_amount || 0) + sourceOriginalTotal;
+            const targetUpdatePayload = {
+                staff_remark: targetUpdatedRemark,
+                total_amount: newTargetTotal
+            };
+
+            if (dominantCrm.wasSourceChosen && dominantCrm.dominantMember) {
+                const dominantId = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
+                if (dominantId) targetUpdatePayload.user_id = dominantId;
+                if (dominantCrm.dominantMember.display_name) {
+                    targetUpdatePayload.customer_name = dominantCrm.dominantMember.display_name;
+                }
+                if (dominantCrm.dominantMember.phone_number) {
+                    targetUpdatePayload.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
+                }
+            }
+
             const { error: targetErr } = await supabase
                 .from('bookings')
-                .update({
-                    staff_remark: targetUpdatedRemark,
-                    total_amount: newTargetTotal
-                })
+                .update(targetUpdatePayload)
                 .eq('id', targetBooking.id);
 
             if (targetErr) {
                 console.warn("Could not update target booking remark, continuing:", targetErr);
             }
             
-            toast.success(`รวมบิลเข้าโต๊ะ ${targetTable.table_name} สำเร็จ!`, { id: toastId });
+            const successMsg = dominantCrm.wasSourceChosen && dominantCrm.dominantMember
+                ? `รวมบิลสำเร็จ! ระบบเลือกสมาชิก ${dominantCrm.dominantMember.display_name || 'บิลต้นทาง'} (คะแนนสะสมเยอะกว่า) เป็นสมาชิกหลักของโต๊ะ ${targetTable.table_name}`
+                : `รวมบิลเข้าโต๊ะ ${targetTable.table_name} สำเร็จ!`;
+
+            toast.success(successMsg, { id: toastId, duration: 4500 });
             setShowMergeModal(false);
             setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
