@@ -110,11 +110,11 @@ export function formatTaxId(taxId) {
  * @param {string} branchCode '00000', '00001', etc.
  * @returns {string}
  */
-export function formatBranch(branchType, branchCode) {
+export function formatBranch(branchType, branchCode, short = false) {
     if (branchType === 'head_office' || branchCode === '00000' || !branchCode) {
-        return 'สำนักงานใหญ่ (Head Office)';
+        return short ? 'สนง.ใหญ่' : 'สำนักงานใหญ่ (00000)';
     }
-    return `สาขาที่ ${String(branchCode).padStart(5, '0')}`;
+    return short ? `สาขา ${branchCode}` : `สาขาที่ ${String(branchCode).padStart(5, '0')}`;
 }
 
 /**

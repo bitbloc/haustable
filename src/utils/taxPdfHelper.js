@@ -29,19 +29,9 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         }
     }
 
-    // 2. Capture high-resolution raster image using html-to-image (supports OKLCH & all modern CSS)
-    const imgData = await toPng(element, {
-        pixelRatio: 3.0,
-        backgroundColor: '#ffffff',
-        cacheBust: true,
-        quality: 1.0,
-        filter: (node) => {
-            if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
-                return false;
-            }
-            return true;
-        }
-    });
+    // 2. Find individual page sheets if present, or fallback to the root element
+    const pageSheets = element.querySelectorAll ? Array.from(element.querySelectorAll('.print-page-sheet')) : [];
+    const targets = pageSheets.length > 0 ? pageSheets : [element];
 
     // 3. Initialize jsPDF in A4 Portrait mode
     const pdf = new jsPDF({
@@ -53,33 +43,50 @@ export async function generateTaxDocumentPdf(element, options = {}) {
 
     const pdfWidth = pdf.internal.pageSize.getWidth(); // 210 mm
     const pdfHeight = pdf.internal.pageSize.getHeight(); // 297 mm
-
-    const imgProps = pdf.getImageProperties(imgData);
-    const imgRatio = imgProps.height / imgProps.width;
-
-    // Standard A4 Print Margin (6mm)
     const margin = 6;
     const renderWidth = pdfWidth - (margin * 2);
-    let renderHeight = renderWidth * imgRatio;
 
-    // Constrain height if it exceeds single A4 printable page
-    if (renderHeight > (pdfHeight - (margin * 2))) {
-        renderHeight = pdfHeight - (margin * 2);
+    // 4. Capture and append each page
+    for (let i = 0; i < targets.length; i++) {
+        if (i > 0) {
+            pdf.addPage('a4', 'portrait');
+        }
+
+        const target = targets[i];
+        const imgData = await toPng(target, {
+            pixelRatio: 2.8,
+            backgroundColor: '#ffffff',
+            cacheBust: true,
+            quality: 1.0,
+            filter: (node) => {
+                if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
+                    return false;
+                }
+                return true;
+            }
+        });
+
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgRatio = imgProps.height / imgProps.width;
+        let renderHeight = renderWidth * imgRatio;
+
+        if (renderHeight > (pdfHeight - (margin * 2))) {
+            renderHeight = pdfHeight - (margin * 2);
+        }
+
+        pdf.addImage(
+            imgData,
+            'PNG',
+            margin,
+            margin,
+            renderWidth,
+            renderHeight,
+            undefined,
+            'FAST'
+        );
     }
 
-    // Top-aligned with clean margins
-    pdf.addImage(
-        imgData,
-        'PNG',
-        margin,
-        margin,
-        renderWidth,
-        renderHeight,
-        undefined,
-        'FAST'
-    );
-
-    // 4. Generate Blob and File instances
+    // 5. Generate Blob and File instances
     const blob = pdf.output('blob');
     const file = new File([blob], fileName, { type: 'application/pdf' });
     const dataUrl = URL.createObjectURL(blob);

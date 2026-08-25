@@ -395,7 +395,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                 id="tax-invoice-printable-sheet"
                 ref={printableSheetRef}
                 style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                className="w-full max-w-4xl bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-2xl text-[12pt] leading-normal print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
+                className="print-page-sheet w-full max-w-4xl bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-2xl text-[12pt] leading-normal print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
             >
                 <div>
                     {/* Header Section */}
