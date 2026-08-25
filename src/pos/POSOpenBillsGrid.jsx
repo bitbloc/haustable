@@ -16,10 +16,12 @@ import {
     RefreshCw,
     Ban,
     FileText,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Layers
 } from 'lucide-react';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
+import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 
 export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
@@ -113,7 +115,12 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                               (!o.total_amount || o.total_amount === 0);
         return !isGhostPickup;
     });
+    
+    // Categorize void vs merged
+    const mergedOrders = orders.filter(o => parseTableTransferInfo(o).isMergedSource);
+    const pureVoidOrders = orders.filter(o => (o.status === 'void' || o.status === 'cancelled') && !parseTableTransferInfo(o).isMergedSource);
     const voidOrders = orders.filter(o => o.status === 'void' || o.status === 'cancelled');
+
     const staleOrders = activeOrders.filter(o => {
         const startMins = Math.max(0, Math.floor((Date.now() - new Date(o.booking_time).getTime()) / 60000));
         return startMins >= 2880; // >48h (2 days)
@@ -126,8 +133,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         return sum + (order.total_amount || itemsTotal);
     }, 0);
 
-    const totalVoidCount = voidOrders.length;
-    const totalVoidAmount = voidOrders.reduce((sum, order) => {
+    const totalVoidCount = pureVoidOrders.length;
+    const totalVoidAmount = pureVoidOrders.reduce((sum, order) => {
         const itemsTotal = (order.order_items || []).reduce((iSum, item) => iSum + ((item.price_at_time || item.price || 0) * (item.quantity || 1)), 0);
         return sum + (order.total_amount || itemsTotal);
     }, 0);
@@ -140,6 +147,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     }).length;
 
     const filteredOrders = orders.filter(order => {
+        const transfer = parseTableTransferInfo(order);
         const isVoid = order.status === 'void' || order.status === 'cancelled';
         const startMins = Math.max(0, Math.floor((Date.now() - new Date(order.booking_time).getTime()) / 60000));
         const isStale = startMins >= 2880;
@@ -150,7 +158,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
         // Status mode filter
         if (statusMode === 'active' && (isVoid || isGhostPickup)) return false;
-        if (statusMode === 'void' && !isVoid) return false;
+        if (statusMode === 'void' && (!isVoid || transfer.isMergedSource)) return false;
+        if (statusMode === 'merged' && !transfer.isMergedSource) return false;
         if (statusMode === 'stale' && (!isStale || isVoid)) return false;
 
         // Channel filter
@@ -252,7 +261,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
 
                     {/* Status & Channel Filters */}
                     <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto font-mono text-[10px] font-bold uppercase tracking-wider scrollbar-none">
-                        {/* Status Toggle (ACTIVE / STALE / VOID / ALL) */}
+                        {/* Status Toggle (ACTIVE / STALE / MERGED / VOID / ALL) */}
                         <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD]">
                             <button 
                                 type="button"
@@ -270,10 +279,17 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             </button>
                             <button 
                                 type="button"
+                                onClick={() => setStatusMode('merged')}
+                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'merged' ? 'bg-[oklch(52%_0.16_28)] text-white shadow-xs font-black' : 'text-[oklch(52%_0.16_28)] hover:text-black font-bold'}`}
+                            >
+                                <Layers size={10} /> MERGED ({mergedOrders.length})
+                            </button>
+                            <button 
+                                type="button"
                                 onClick={() => setStatusMode('void')}
                                 className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'void' ? 'bg-red-600 text-white shadow-xs' : 'text-red-700 hover:text-red-900'}`}
                             >
-                                <Ban size={10} /> VOID ({voidOrders.length})
+                                <Ban size={10} /> VOID ({pureVoidOrders.length})
                             </button>
                             <button 
                                 type="button"
@@ -355,7 +371,9 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
                         {filteredOrders.map((order) => {
-                            const isVoid = order.status === 'void' || order.status === 'cancelled';
+                            const transfer = parseTableTransferInfo(order);
+                            const isVoid = (order.status === 'void' || order.status === 'cancelled') && !transfer.isMergedSource;
+                            const isMerged = transfer.isMergedSource;
                             const isTable = !!order.table_id;
                             const isPickup = order.booking_type === 'pickup';
                             const tableName = order.tables_layout?.table_name || 'WALK-IN';
@@ -363,13 +381,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             const itemCount = items.reduce((sum, i) => sum + (i.quantity || 1), 0);
                             const itemsTotal = items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
                             const totalAmount = order.total_amount || itemsTotal;
-                            const hasUnsentItems = !isVoid && items.some(i => 
+                            const hasUnsentItems = !isVoid && !isMerged && items.some(i => 
                                 i.status === 'pending' || 
                                 (!i.db_id && typeof i.id === 'string' && i.id.startsWith('local_'))
                             );
 
-                             const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
-                             const customerName = order.profiles?.display_name 
+                            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+                            const customerName = order.profiles?.display_name 
                                  || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
                                  || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
                                  || 'Guest';
@@ -380,21 +398,37 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     whileHover={{ scale: 1.01 }}
                                     onClick={() => onSelectOrder && onSelectOrder(order)}
                                     className={`border rounded-2xl p-4 transition-all shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer ${
-                                        isVoid 
-                                        ? 'bg-red-50/50 border-red-200 hover:border-red-400 opacity-90' 
-                                        : 'bg-white border-[#D1D1CD] hover:border-[#1A1A1A]'
+                                        isMerged
+                                        ? 'bg-[oklch(99%_0.008_28)] border-[oklch(52%_0.16_28)]/50 hover:border-[oklch(52%_0.16_28)]'
+                                        : isVoid 
+                                            ? 'bg-red-50/50 border-red-200 hover:border-red-400 opacity-90' 
+                                            : 'bg-white border-[#D1D1CD] hover:border-[#1A1A1A]'
                                     }`}
                                 >
                                     {/* Card Header: Channel Badge, Status & Time */}
                                     <div className="flex items-center justify-between pb-2 border-b border-[#ECECE9]">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                            {isVoid ? (
+                                            {isMerged ? (
+                                                <span className="bg-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
+                                                    <Layers size={10} /> MERGED ➔ {transfer.mergedToTable}
+                                                </span>
+                                            ) : isVoid ? (
                                                 <span className="bg-red-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                                                     <Ban size={10} /> VOID / ยกเลิก
                                                 </span>
                                             ) : isTable ? (
                                                 <span className="bg-[#1A1A1A] text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
                                                     <Utensils size={10} /> โต๊ะ {tableName}
+                                                    {transfer.isMergedTarget && (
+                                                        <span className="ml-0.5 bg-[oklch(45%_0.08_140)] text-white text-[8px] px-1 py-0.2 rounded">
+                                                            +{transfer.mergedFromTables.join(',')}
+                                                        </span>
+                                                    )}
+                                                    {transfer.isMoved && (
+                                                        <span className="ml-0.5 bg-blue-600 text-white text-[8px] px-1 py-0.2 rounded">
+                                                            ย้ายจาก {transfer.movedFromTable}
+                                                        </span>
+                                                    )}
                                                 </span>
                                             ) : isPickup ? (
                                                 <span className="bg-amber-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
@@ -407,13 +441,13 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             )}
 
                                             {/* Advance Booking / Online indicator */}
-                                            {new Date(order.booking_time) > new Date(Date.now() + 2 * 3600 * 1000) && !isVoid && (
+                                            {new Date(order.booking_time) > new Date(Date.now() + 2 * 3600 * 1000) && !isVoid && !isMerged && (
                                                 <span className="bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
                                                     จองล่วงหน้า
                                                 </span>
                                             )}
 
-                                            {(order.staff_remark?.includes('[ONLINE]') || order.source === 'online') && !isVoid && (
+                                            {(order.staff_remark?.includes('[ONLINE]') || order.source === 'online') && !isVoid && !isMerged && (
                                                 <span className="bg-blue-50 text-blue-700 border border-blue-200 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
                                                     ONLINE
                                                 </span>
@@ -441,16 +475,24 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             <User size={13} className="text-[#767673] shrink-0" />
                                             <span className="truncate">{customerName}</span>
                                         </div>
-                                        {order.staff_remark && (
-                                            <p className={`text-[10px] font-mono pl-5 font-medium truncate ${isVoid ? 'text-red-700 italic' : 'text-[#767673]'}`}>
-                                                Note: {order.staff_remark}
+                                        {isMerged ? (
+                                            <p className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] truncate">
+                                                ➔ รวมรายการเข้า โต๊ะ {transfer.mergedToTable}
                                             </p>
-                                        )}
+                                        ) : transfer.cleanRemark ? (
+                                            <p className={`text-[10px] font-mono pl-5 font-medium truncate ${isVoid ? 'text-red-700 italic' : 'text-[#767673]'}`}>
+                                                Note: {transfer.cleanRemark}
+                                            </p>
+                                        ) : null}
                                     </div>
 
                                     {/* Items Preview */}
                                     <div className="bg-[#F5F5F2] border border-[#E0E0DC] rounded-xl p-2.5 text-[11px] space-y-1 font-sans min-h-16 flex flex-col justify-center">
-                                        {items.length === 0 ? (
+                                        {isMerged ? (
+                                            <span className="text-[10px] font-mono text-[oklch(52%_0.16_28)] text-center font-bold">
+                                                โอนรายการอาหารไปที่ โต๊ะ {transfer.mergedToTable}
+                                            </span>
+                                        ) : items.length === 0 ? (
                                             <span className="text-[10px] font-mono text-[#767673] text-center italic">ไม่มีรายการอาหารในคาร์ท</span>
                                         ) : (
                                             items.slice(0, 3).map((item, idx) => (
@@ -465,7 +507,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 </div>
                                             ))
                                         )}
-                                        {items.length > 3 && (
+                                        {items.length > 3 && !isMerged && (
                                             <div className="text-[9px] font-mono text-[#767673] pt-0.5 text-right font-bold">
                                                 + อีก {items.length - 3} รายการ...
                                             </div>
@@ -475,10 +517,16 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                     {/* Footer Total Amount */}
                                     <div className="flex items-center justify-between pt-1 border-t border-[#ECECE9]">
                                         <span className="text-[10px] font-mono font-bold text-[#767673] uppercase tracking-wider">
-                                            {itemCount} ITEMS TOTAL
+                                            {isMerged ? 'TRANSFERRED' : `${itemCount} ITEMS TOTAL`}
                                         </span>
-                                        <span className={`text-sm font-mono font-bold ${isVoid ? 'text-red-600 line-through' : 'text-[oklch(52%_0.16_28)]'}`}>
-                                            ฿{totalAmount.toLocaleString()}
+                                        <span className={`text-sm font-mono font-bold ${
+                                            isMerged 
+                                            ? 'text-[oklch(52%_0.16_28)]' 
+                                            : isVoid 
+                                                ? 'text-red-600 line-through' 
+                                                : 'text-[oklch(52%_0.16_28)]'
+                                        }`}>
+                                            {isMerged ? `฿0 (โอนไป ${transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}`}
                                         </span>
                                     </div>
 
@@ -516,12 +564,14 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 onSelectOrder && onSelectOrder(order);
                                             }}
                                             className={`w-full py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate ${
-                                                isVoid 
-                                                ? 'bg-red-100 hover:bg-red-200 border border-red-300 text-red-800' 
-                                                : 'bg-[#1A1A1A] hover:bg-black text-white'
+                                                isMerged
+                                                ? 'bg-[oklch(92%_0.02_28)] hover:bg-[oklch(88%_0.03_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-bold'
+                                                : isVoid 
+                                                    ? 'bg-red-100 hover:bg-red-200 border border-red-300 text-red-800' 
+                                                    : 'bg-[#1A1A1A] hover:bg-black text-white'
                                             }`}
                                         >
-                                            <span>{isVoid ? 'INSPECT' : 'MANAGE'}</span>
+                                            <span>{isMerged ? 'MERGED' : isVoid ? 'INSPECT' : 'MANAGE'}</span>
                                             <ChevronRight size={10} />
                                         </button>
                                     </div>

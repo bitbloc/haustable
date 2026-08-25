@@ -18,6 +18,7 @@ import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRe
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
+import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
@@ -2484,18 +2485,19 @@ export default function POSDashboard() {
     const handleExecuteMoveTable = async (targetTable) => {
         if (!activeBooking || !selectedTable) return;
         const toastId = toast.loading(`กำลังย้ายจากโต๊ะ ${selectedTable.table_name} ไปโต๊ะ ${targetTable.table_name}...`);
+        const updatedRemark = formatMoveRemark(activeBooking.staff_remark, selectedTable.table_name, targetTable.table_name);
         
         if (!isOnline()) {
             const cachedBookings = posCache.getBookings() || [];
             const updated = cachedBookings.map(b => {
                 if (b.id === activeBooking.id) {
-                    return { ...b, table_id: targetTable.id };
+                    return { ...b, table_id: targetTable.id, staff_remark: updatedRemark };
                 }
                 return b;
             });
             posCache.setBookings(updated);
             
-            addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id });
+            addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id, staff_remark: updatedRemark });
             
             toast.success(`⚠️ ออฟไลน์: ย้ายโต๊ะสำเร็จ!`, { id: toastId });
             setShowMoveModal(false);
@@ -2507,7 +2509,10 @@ export default function POSDashboard() {
         try {
             const { error } = await supabase
                 .from('bookings')
-                .update({ table_id: targetTable.id })
+                .update({ 
+                    table_id: targetTable.id,
+                    staff_remark: updatedRemark
+                })
                 .eq('id', activeBooking.id);
                 
             if (error) throw error;
@@ -2577,6 +2582,10 @@ export default function POSDashboard() {
 
         const toastId = toast.loading(`กำลังรวมบิลโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}...`);
 
+        const sourceOriginalTotal = parseFloat(activeBooking.total_amount || activeBooking.total_price || 0);
+        const sourceRemark = formatMergeSourceRemark(targetTable.table_name, sourceOriginalTotal);
+        const targetUpdatedRemark = formatMergeTargetRemark(targetBooking.staff_remark, selectedTable.table_name);
+
         if (!isOnline()) {
             const cachedBookings = posCache.getBookings() || [];
             const updatedBookings = cachedBookings.map(b => {
@@ -2584,13 +2593,23 @@ export default function POSDashboard() {
                     const sourceItems = activeBooking.order_items || [];
                     const targetItems = b.order_items || [];
                     const mergedItems = [...targetItems, ...sourceItems.map(item => ({ ...item, booking_id: targetBooking.id }))];
-                    return { ...b, order_items: mergedItems };
+                    const newTotal = (parseFloat(b.total_amount || 0) + sourceOriginalTotal);
+                    return { ...b, order_items: mergedItems, staff_remark: targetUpdatedRemark, total_amount: newTotal };
+                }
+                if (b.id === activeBooking.id) {
+                    return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
                 }
                 return b;
-            }).filter(b => b.id !== activeBooking.id);
+            });
             
             posCache.setBookings(updatedBookings);
-            addToOfflineQueue('merge_bills', { sourceBookingId: activeBooking.id, targetBookingId: targetBooking.id });
+            addToOfflineQueue('merge_bills', { 
+                sourceBookingId: activeBooking.id, 
+                targetBookingId: targetBooking.id,
+                sourceRemark,
+                targetRemark: targetUpdatedRemark,
+                sourceOriginalTotal
+            });
             
             toast.success(`⚠️ ออฟไลน์: รวมบิลสำเร็จ!`, { id: toastId });
             setShowMergeModal(false);
@@ -2600,6 +2619,7 @@ export default function POSDashboard() {
         }
 
         try {
+            // 1. Move all order items to target booking
             const { error: itemsErr } = await supabase
                 .from('order_items')
                 .update({ booking_id: targetBooking.id })
@@ -2607,12 +2627,31 @@ export default function POSDashboard() {
                 
             if (itemsErr) throw itemsErr;
 
+            // 2. Mark source booking as void with clean remark & clear total_amount
             const { error: voidErr } = await supabase
                 .from('bookings')
-                .update({ status: 'void', staff_remark: `Merged into Table ${targetTable.table_name}` })
+                .update({ 
+                    status: 'void', 
+                    staff_remark: sourceRemark,
+                    total_amount: 0
+                })
                 .eq('id', activeBooking.id);
                 
             if (voidErr) throw voidErr;
+
+            // 3. Update target booking remark & total amount to reflect merged items
+            const newTargetTotal = parseFloat(targetBooking.total_amount || 0) + sourceOriginalTotal;
+            const { error: targetErr } = await supabase
+                .from('bookings')
+                .update({
+                    staff_remark: targetUpdatedRemark,
+                    total_amount: newTargetTotal
+                })
+                .eq('id', targetBooking.id);
+
+            if (targetErr) {
+                console.warn("Could not update target booking remark, continuing:", targetErr);
+            }
             
             toast.success(`รวมบิลเข้าโต๊ะ ${targetTable.table_name} สำเร็จ!`, { id: toastId });
             setShowMergeModal(false);

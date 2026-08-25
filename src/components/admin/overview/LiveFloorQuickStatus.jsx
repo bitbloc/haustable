@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { Lock, Unlock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw, Timer } from 'lucide-react'
 
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
+import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
 
 export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const [tables, setTables] = useState([])
@@ -299,6 +300,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                         let statusTag = 'FREE'
                         let tagStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
 
+                        const transfer = parseTableTransferInfo(state.booking)
                         const hasCallStaff = state.booking?.staff_remark?.includes('[CALL_STAFF]')
                         const hasCallBill = state.booking?.staff_remark?.includes('[CALL_BILL]')
                         const orderItems = state.booking?.order_items || []
@@ -344,9 +346,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                     <span className="font-mono text-xs md:text-sm font-bold tracking-tight">
                                         {table.table_name}
                                     </span>
-                                    <span className="font-mono text-[9px] opacity-70">
-                                        {table.capacity}P
-                                    </span>
+                                    <div className="flex items-center gap-1">
+                                        {transfer.isMergedTarget && (
+                                            <span className="bg-[oklch(45%_0.08_140)] text-white text-[8px] font-mono font-bold px-1 rounded-xs">
+                                                +{transfer.mergedFromTables.join(',')}
+                                            </span>
+                                        )}
+                                        {transfer.isMoved && (
+                                            <span className="bg-blue-600 text-white text-[8px] font-mono font-bold px-1 rounded-xs">
+                                                ย้าย
+                                            </span>
+                                        )}
+                                        <span className="font-mono text-[9px] opacity-70">
+                                            {table.capacity}P
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {hasCallStaff || hasCallBill ? (
@@ -389,41 +403,61 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                             </button>
                         </div>
 
-                        {selectedTableData.state.booking && (
-                            <div className="my-4 space-y-3 font-mono text-xs">
-                                <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-sm border border-[oklch(88%_0.008_28)] space-y-1.5">
-                                    <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)]">GUEST NAME</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                            {selectedTableData.state.booking.pickup_contact_name || selectedTableData.state.booking.profiles?.display_name || 'Guest'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)]">TYPE</span>
-                                        <span className="font-bold uppercase text-[oklch(52%_0.16_28)]">
-                                            {selectedTableData.state.booking.booking_type}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)]">START TIME</span>
-                                        <span className="font-bold">
-                                            {formatThaiTimeOnly(selectedTableData.state.booking.booking_time)}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-[oklch(55%_0.010_28)]">ELAPSED (เวลาที่ใช้บริการ)</span>
-                                        <span className="font-bold font-mono text-[oklch(52%_0.16_28)]">
-                                            {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
-                                        </span>
-                                    </div>
-                                    {selectedTableData.state.booking.customer_note && (
-                                        <div className="pt-1 text-[11px] text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
-                                            Note: "{selectedTableData.state.booking.customer_note}"
+                        {selectedTableData.state.booking && (() => {
+                            const modalTransfer = parseTableTransferInfo(selectedTableData.state.booking)
+                            return (
+                                <div className="my-4 space-y-3 font-mono text-xs">
+                                    {modalTransfer.isMergedTarget && (
+                                        <div className="bg-[oklch(94%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] p-2 rounded-sm font-bold flex items-center gap-1.5">
+                                            <span>COMBINED BILL:</span>
+                                            <span>บิลนี้รวมรายการมาจาก โต๊ะ {modalTransfer.mergedFromTables.join(', ')}</span>
                                         </div>
                                     )}
+                                    {modalTransfer.isMoved && (
+                                        <div className="bg-[oklch(94%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.04_220)] p-2 rounded-sm font-bold flex items-center gap-1.5">
+                                            <span>MOVED:</span>
+                                            <span>ลูกค้าย้ายมาจาก โต๊ะ {modalTransfer.movedFromTable}</span>
+                                        </div>
+                                    )}
+                                    <div className="bg-[oklch(94%_0.010_28)] p-3 rounded-sm border border-[oklch(88%_0.008_28)] space-y-1.5">
+                                        <div className="flex justify-between">
+                                            <span className="text-[oklch(55%_0.010_28)]">GUEST NAME</span>
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                {selectedTableData.state.booking.pickup_contact_name || selectedTableData.state.booking.profiles?.display_name || 'Guest'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-[oklch(55%_0.010_28)]">TYPE</span>
+                                            <span className="font-bold uppercase text-[oklch(52%_0.16_28)]">
+                                                {selectedTableData.state.booking.booking_type}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-[oklch(55%_0.010_28)]">START TIME</span>
+                                            <span className="font-bold">
+                                                {formatThaiTimeOnly(selectedTableData.state.booking.booking_time)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-[oklch(55%_0.010_28)]">ELAPSED (เวลาที่ใช้บริการ)</span>
+                                            <span className="font-bold font-mono text-[oklch(52%_0.16_28)]">
+                                                {formatThaiDuration(calculateDurationMinutes(selectedTableData.state.booking.booking_time, currentTime))}
+                                            </span>
+                                        </div>
+                                        {selectedTableData.state.booking.customer_note && (
+                                            <div className="pt-1 text-[11px] text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                                Note: "{selectedTableData.state.booking.customer_note}"
+                                            </div>
+                                        )}
+                                        {modalTransfer.cleanRemark && (
+                                            <div className="pt-1 text-[11px] text-[oklch(42%_0.010_28)] border-t border-[oklch(88%_0.008_28)]">
+                                                Remark: "{modalTransfer.cleanRemark}"
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            )
+                        })()}
 
                         <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
                             {selectedTableData.state.booking && (

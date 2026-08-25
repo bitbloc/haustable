@@ -2,6 +2,7 @@
 import React from 'react'
 import { formatThaiTimeOnly } from '../../utils/timeUtils'
 import { Printer, CheckCircle, Image as ImageIcon, Receipt } from 'lucide-react'
+import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
 export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip }) {
     if (loading) {
@@ -58,22 +59,39 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                             </tr>
                         ) : (
                             bookings.map(booking => {
+                                const transfer = parseTableTransferInfo(booking)
                                 const isDineIn = booking.booking_type === 'dine_in'
                                 const guestName = booking.booking_type === 'pickup' 
                                     ? (booking.pickup_contact_name || 'Guest') 
                                     : (booking.profiles?.display_name || booking.pickup_contact_name || 'Guest')
 
                                 return (
-                                    <tr key={booking.id} className="hover:bg-[oklch(96%_0.006_28)] transition-colors">
+                                    <tr key={booking.id} className={`hover:bg-[oklch(96%_0.006_28)] transition-colors ${transfer.isMergedSource ? 'opacity-75 bg-[oklch(98%_0.01_28)]' : ''}`}>
                                         <td className="p-3.5 pl-5 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
                                             {formatThaiTimeOnly(booking.booking_time)}
                                         </td>
 
                                         <td className="p-3.5">
-                                            {isDineIn ? (
-                                                <span className="bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.012_28)]">
-                                                    {booking.tables_layout?.table_name || 'Table ?'} ({booking.pax || 2}P)
+                                            {transfer.isMergedSource ? (
+                                                <span className="bg-[oklch(94%_0.02_28)] text-[oklch(45%_0.14_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.04_28)]">
+                                                    โต๊ะ {booking.tables_layout?.table_name || '?'} ➔ รวมเข้า {transfer.mergedToTable}
                                                 </span>
+                                            ) : isDineIn ? (
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(85%_0.012_28)]">
+                                                        {booking.tables_layout?.table_name || 'Table ?'} ({booking.pax || 2}P)
+                                                    </span>
+                                                    {transfer.isMergedTarget && (
+                                                        <span className="bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] px-1.5 py-0.5 rounded-xs text-[10px] font-bold border border-[oklch(82%_0.04_140)]">
+                                                            +รวมจาก {transfer.mergedFromTables.join(', ')}
+                                                        </span>
+                                                    )}
+                                                    {transfer.isMoved && (
+                                                        <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-1.5 py-0.5 rounded-xs text-[10px] font-bold border border-[oklch(82%_0.02_220)]">
+                                                            ย้ายจาก {transfer.movedFromTable}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] px-2.5 py-1 rounded-sm text-[11px] font-bold border border-[oklch(82%_0.02_220)]">
                                                     PICKUP
@@ -122,16 +140,23 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                         </td>
 
                                         <td className="p-3.5">
-                                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border ${
-                                                booking.status === 'seated'
-                                                    ? 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
-                                                    : (booking.status === 'completed'
-                                                        ? 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
-                                                        : 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border-[oklch(85%_0.08_140)]')
-                                            }`}>
-                                                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                {booking.status || 'CONFIRMED'}
-                                            </span>
+                                            {transfer.isMergedSource ? (
+                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(85%_0.04_28)]">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                    MERGED ➔ {transfer.mergedToTable}
+                                                </span>
+                                            ) : (
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm text-[10px] font-bold uppercase border ${
+                                                    booking.status === 'seated'
+                                                        ? 'bg-[oklch(94%_0.02_220)] text-[oklch(35%_0.10_220)] border-[oklch(82%_0.02_220)]'
+                                                        : (booking.status === 'completed'
+                                                            ? 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                            : 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border-[oklch(85%_0.08_140)]')
+                                                }`}>
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                                                    {booking.status || 'CONFIRMED'}
+                                                </span>
+                                            )}
                                         </td>
 
                                         <td className="p-3.5 pr-5 text-right">

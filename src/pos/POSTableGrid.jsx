@@ -24,6 +24,7 @@ import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 import { posCache } from '../utils/offlineHelper';
+import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 
 const formatUpcomingResTime = (timeStr) => {
     if (!timeStr) return '';
@@ -576,6 +577,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
+    const transfer = parseTableTransferInfo(table.booking);
 
     let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
     let ledColor = 'bg-[#00CC44]';
@@ -618,7 +620,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                 style={{ transform: `rotate(${-rotation}deg)` }}
             >
                 {/* LED indicator light in top-right */}
-                <div className="absolute top-1 right-1 flex items-center justify-center gap-1">
+                <div className="absolute top-1 right-1 flex items-center justify-center gap-1 flex-wrap max-w-[85%] justify-end">
                     {table.upcomingConflict && (
                         <button
                             type="button"
@@ -627,6 +629,16 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         >
                             ⚠️ ชนคิว!
                         </button>
+                    )}
+                    {transfer.isMergedTarget && (
+                        <span className="bg-[oklch(45%_0.08_140)] text-white text-[7px] font-mono font-black px-1 py-0.5 rounded leading-none shadow-xs">
+                            +{transfer.mergedFromTables.join(',')}
+                        </span>
+                    )}
+                    {transfer.isMoved && (
+                        <span className="bg-blue-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none shadow-xs">
+                            ย้าย
+                        </span>
                     )}
                     {hasOrder && (
                         <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
@@ -712,6 +724,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
+    const transfer = parseTableTransferInfo(table.booking);
 
     let cellBgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-accent)] shadow-xs';
     let ledColor = 'bg-emerald-500';
@@ -744,6 +757,16 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">
                 <div className="flex gap-1 items-center flex-wrap">
+                     {transfer.isMergedTarget && (
+                         <span className="bg-[oklch(45%_0.08_140)] text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
+                             +{transfer.mergedFromTables.join(',')}
+                         </span>
+                     )}
+                     {transfer.isMoved && (
+                         <span className="bg-blue-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
+                             ย้ายจาก {transfer.movedFromTable}
+                         </span>
+                     )}
                      {hasOrder && (
                          <span className="bg-red-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">ORDER</span>
                      )}

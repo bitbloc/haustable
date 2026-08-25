@@ -373,10 +373,15 @@ export function getCleanStaffRemark(remark) {
     }
 
     const cleaned = r
-        .replace(/\[CALL_STAFF\]/g, '')
-        .replace(/\[CALL_BILL\]/g, '')
-        .replace(/\[CASH:[^\]]+\]/g, '')
-        .replace(/\[SPLIT:[^\]]+\]/g, '')
+        .replace(/\[CALL_STAFF\]/gi, '')
+        .replace(/\[CALL_BILL\]/gi, '')
+        .replace(/\[CASH:[^\]]+\]/gi, '')
+        .replace(/\[SPLIT:[^\]]+\]/gi, '')
+        .replace(/\[MERGED_TO:[^\]]+\]/gi, '')
+        .replace(/\[MERGED_FROM:[^\]]+\]/gi, '')
+        .replace(/\[MOVED:[^\]]+\]/gi, '')
+        .replace(/\[ORIG_AMT:[^\]]+\]/gi, '')
+        .replace(/Merged into Table\s+\w+/gi, '')
         .trim();
     return cleaned;
 }

@@ -529,22 +529,24 @@ export async function syncOfflineQueue(isManual = false) {
             }
 
             else if (action.type === 'move_table') {
-                let { bookingId, tableId } = action.payload;
+                let { bookingId, tableId, staff_remark } = action.payload;
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
                 }
                 if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
+                const updatePayload = { table_id: tableId };
+                if (staff_remark) updatePayload.staff_remark = staff_remark;
                 const { error } = await supabase
                     .from('bookings')
-                    .update({ table_id: tableId })
+                    .update(updatePayload)
                     .eq('id', bookingId);
                 if (error) throw error;
             }
             
             else if (action.type === 'merge_bills') {
-                let { sourceBookingId, targetBookingId } = action.payload;
+                let { sourceBookingId, targetBookingId, sourceRemark, targetRemark, sourceOriginalTotal } = action.payload;
                 if (idMapping[sourceBookingId]) {
                     sourceBookingId = idMapping[sourceBookingId];
                 }
@@ -565,12 +567,24 @@ export async function syncOfflineQueue(isManual = false) {
                     .eq('booking_id', sourceBookingId);
                 if (itemsErr) throw itemsErr;
                 
-                // Void source booking
+                // Void source booking with clear amount
                 const { error: voidErr } = await supabase
                     .from('bookings')
-                    .update({ status: 'void', staff_remark: 'Merged offline' })
+                    .update({ 
+                        status: 'void', 
+                        staff_remark: sourceRemark || 'Merged offline',
+                        total_amount: 0
+                    })
                     .eq('id', sourceBookingId);
                 if (voidErr) throw voidErr;
+
+                // Update target booking remark if provided
+                if (targetRemark) {
+                    await supabase
+                        .from('bookings')
+                        .update({ staff_remark: targetRemark })
+                        .eq('id', targetBookingId);
+                }
             }
 
             else if (action.type === 'toggle_item_check') {

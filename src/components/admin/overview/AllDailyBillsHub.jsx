@@ -30,6 +30,7 @@ import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDu
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
+import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
 
 // Real-time Service Duration Badge Component
 function LiveServiceDurationBadge({ booking }) {
@@ -149,12 +150,15 @@ export default function AllDailyBillsHub({
     // Filter & Search Logic
     const filteredBookings = useMemo(() => {
         return (bookings || []).filter(b => {
+            const transfer = parseTableTransferInfo(b)
+
             // 1. Status Filter
             if (statusFilter === 'completed' && !(b.status === 'completed' || b.status === 'paid' || b.status === 'success')) return false
             if (statusFilter === 'seated' && b.status !== 'seated') return false
             if (statusFilter === 'pending' && b.status !== 'pending') return false
             if (statusFilter === 'confirmed' && b.status !== 'confirmed') return false
-            if (statusFilter === 'cancelled' && !(b.status === 'cancelled' || b.status === 'void')) return false
+            if (statusFilter === 'merged' && !transfer.isMergedSource) return false
+            if (statusFilter === 'cancelled' && (!(b.status === 'cancelled' || b.status === 'void') || transfer.isMergedSource)) return false
 
             // 2. Channel Filter
             const bType = (b.booking_type || 'dine_in').toLowerCase()
@@ -163,6 +167,7 @@ export default function AllDailyBillsHub({
 
             // 3. Payment Filter
             if (paymentFilter !== 'all') {
+                if (transfer.isMergedSource) return false
                 const breakdown = getBookingPaymentBreakdown(b)
                 if (paymentFilter === 'cash' && breakdown.cash <= 0) return false
                 if (paymentFilter === 'qr' && breakdown.qr <= 0) return false
@@ -202,13 +207,18 @@ export default function AllDailyBillsHub({
         let completedCount = 0
         let seatedCount = 0
         let pendingCount = 0
-        let cancelledCount = 0
+        let pureCancelledCount = 0
+        let mergedCount = 0
         let totalCompletedDurationMins = 0
         let countWithDuration = 0
 
         ;(bookings || []).forEach(b => {
+            const transfer = parseTableTransferInfo(b)
             const amt = parseFloat(b.total_amount || b.total_price || 0)
-            if (b.status === 'completed' || b.status === 'paid' || b.status === 'success') {
+            
+            if (transfer.isMergedSource) {
+                mergedCount++
+            } else if (b.status === 'completed' || b.status === 'paid' || b.status === 'success') {
                 totalRev += amt
                 completedCount++
                 const start = b.booking_time || b.created_at
@@ -225,7 +235,7 @@ export default function AllDailyBillsHub({
             } else if (b.status === 'pending') {
                 pendingCount++
             } else if (b.status === 'cancelled' || b.status === 'void') {
-                cancelledCount++
+                pureCancelledCount++
             }
         })
 
@@ -237,15 +247,29 @@ export default function AllDailyBillsHub({
             completedCount,
             seatedCount,
             pendingCount,
-            cancelledCount,
+            pureCancelledCount,
+            mergedCount,
+            cancelledCount: pureCancelledCount + mergedCount,
             filteredCount: filteredBookings.length,
             filteredSum,
             avgDurationMins
         }
     }, [bookings, filteredBookings])
 
-    const getStatusBadge = (status) => {
-        const s = (status || '').toLowerCase()
+    const getStatusBadge = (booking) => {
+        const transfer = parseTableTransferInfo(booking)
+        
+        // Distinct highlight for Source Merged Bills
+        if (transfer.isMergedSource) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-[10px] font-mono font-black bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] shadow-xs">
+                    <Layers size={11} className="text-[oklch(52%_0.16_28)]" />
+                    <span>MERGED ➔ โต๊ะ {transfer.mergedToTable || 'เป้าหมาย'}</span>
+                </span>
+            )
+        }
+
+        const s = (booking?.status || '').toLowerCase()
         if (s === 'completed' || s === 'paid' || s === 'success') {
             return (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
@@ -285,6 +309,15 @@ export default function AllDailyBillsHub({
     }
 
     const getPaymentBadge = (booking) => {
+        const transfer = parseTableTransferInfo(booking)
+        if (transfer.isMergedSource) {
+            return (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)]">
+                    <span>โอนยอดไปบิลหลัก</span>
+                </span>
+            )
+        }
+
         const breakdown = getBookingPaymentBreakdown(booking)
         if (breakdown.isSplit) {
             return (
@@ -364,7 +397,8 @@ export default function AllDailyBillsHub({
                             { key: 'completed', label: `ชำระแล้ว (${metrics.completedCount})` },
                             { key: 'seated', label: `กำลังทาน (${metrics.seatedCount})` },
                             { key: 'pending', label: `รอตรวจ (${metrics.pendingCount})` },
-                            { key: 'cancelled', label: `ยกเลิก (${metrics.cancelledCount})` },
+                            { key: 'merged', label: `รวมโต๊ะ (${metrics.mergedCount})` },
+                            { key: 'cancelled', label: `ยกเลิก (${metrics.pureCancelledCount})` },
                         ].map(tab => (
                             <button
                                 key={tab.key}
@@ -478,11 +512,16 @@ export default function AllDailyBillsHub({
                         const tier = b.profiles?.current_tier || ''
                         const totalAmt = parseFloat(b.total_amount || b.total_price || 0)
                         const itemsCount = (b.order_items || []).reduce((sum, item) => sum + (item.quantity || 1), 0)
+                        const transfer = parseTableTransferInfo(b)
 
                         return (
                             <div 
                                 key={b.id} 
-                                className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl overflow-hidden shadow-sm hover:border-[oklch(52%_0.16_28)] transition-all"
+                                className={`bg-white border-2 rounded-xl overflow-hidden shadow-sm transition-all ${
+                                    transfer.isMergedSource 
+                                        ? 'border-[oklch(52%_0.16_28)]/50 bg-[oklch(99%_0.005_28)]' 
+                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                                }`}
                             >
                                 {/* Main Bill Row */}
                                 <div className="p-3.5 md:p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-[oklch(98%_0.006_28)]">
@@ -508,6 +547,16 @@ export default function AllDailyBillsHub({
                                             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-black rounded-sm">
                                                 <Utensils size={12} className="text-[oklch(52%_0.16_28)]" />
                                                 <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
+                                                {transfer.isMergedTarget && (
+                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[9px] font-mono font-black">
+                                                        + รวมจาก {transfer.mergedFromTables.join(', ')}
+                                                    </span>
+                                                )}
+                                                {transfer.isMoved && (
+                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] rounded-xs text-[9px] font-mono font-black">
+                                                        ย้ายจาก {transfer.movedFromTable}
+                                                    </span>
+                                                )}
                                             </div>
                                         ) : (
                                             <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)] font-mono text-xs font-black rounded-sm">
@@ -520,7 +569,7 @@ export default function AllDailyBillsHub({
                                         <LiveServiceDurationBadge booking={b} />
 
                                         {/* Status Badge */}
-                                        {getStatusBadge(b.status)}
+                                        {getStatusBadge(b)}
 
                                         {/* Payment Badge */}
                                         {getPaymentBadge(b)}
@@ -547,23 +596,69 @@ export default function AllDailyBillsHub({
                                         </div>
 
                                         <div className="text-right pl-3 border-l border-[oklch(85%_0.012_28)]">
-                                            <div className="font-mono text-base md:text-lg font-black text-[oklch(18%_0.012_28)] leading-tight">
-                                                ฿{totalAmt.toLocaleString()}
-                                            </div>
-                                            <div className="font-mono text-[10px] text-[oklch(42%_0.010_28)] font-bold">
-                                                {itemsCount} รายการ
-                                            </div>
+                                            {transfer.isMergedSource ? (
+                                                <div>
+                                                    <div className="font-mono text-sm md:text-base font-black text-[oklch(52%_0.16_28)] leading-tight">
+                                                        โอนไป โต๊ะ {transfer.mergedToTable || '?'}
+                                                    </div>
+                                                    <div className="font-mono text-[10px] text-[oklch(42%_0.010_28)] font-bold">
+                                                        {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : 'ย้ายรายการแล้ว'}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div className="font-mono text-base md:text-lg font-black text-[oklch(18%_0.012_28)] leading-tight">
+                                                        ฿{totalAmt.toLocaleString()}
+                                                    </div>
+                                                    <div className="font-mono text-[10px] text-[oklch(42%_0.010_28)] font-bold">
+                                                        {itemsCount} รายการ
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
 
+                                {/* Table Transfer High-Contrast Banner Strip */}
+                                {transfer.isMergedSource && (
+                                    <div className="px-3.5 py-2 bg-[oklch(96%_0.018_28)] border-t border-[oklch(85%_0.018_28)] flex items-center justify-between text-xs font-mono text-[oklch(35%_0.12_28)] flex-wrap gap-2">
+                                        <div className="flex items-center gap-2 font-bold">
+                                            <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[9px] uppercase tracking-wider font-mono font-black">
+                                                MERGED TABLE
+                                            </span>
+                                            <span>➔ รายการอาหารและยอดเงินทั้งหมดถูกรวมไปที่ <strong>โต๊ะ {transfer.mergedToTable}</strong> แล้ว</span>
+                                        </div>
+                                        {transfer.cleanRemark && (
+                                            <span className="text-[oklch(42%_0.010_28)] italic">หมายเหตุเดิม: {transfer.cleanRemark}</span>
+                                        )}
+                                    </div>
+                                )}
+
+                                {transfer.isMergedTarget && (
+                                    <div className="px-3.5 py-1.5 bg-[oklch(95%_0.02_140)] border-t border-[oklch(85%_0.04_140)] flex items-center gap-2 text-xs font-mono text-[oklch(30%_0.08_140)]">
+                                        <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-white rounded-xs text-[9px] uppercase tracking-wider font-bold">
+                                            COMBINED BILL
+                                        </span>
+                                        <span className="font-bold">บิลนี้ได้รับรายการอาหารรวมมาจาก <strong>โต๊ะ {transfer.mergedFromTables.join(', ')}</strong></span>
+                                    </div>
+                                )}
+
+                                {transfer.isMoved && (
+                                    <div className="px-3.5 py-1.5 bg-[oklch(95%_0.02_220)] border-t border-[oklch(85%_0.04_220)] flex items-center gap-2 text-xs font-mono text-[oklch(30%_0.08_220)]">
+                                        <span className="px-1.5 py-0.5 bg-[oklch(35%_0.10_220)] text-white rounded-xs text-[9px] uppercase tracking-wider font-bold">
+                                            MOVED TABLE
+                                        </span>
+                                        <span className="font-bold">ลูกค้าย้ายโต๊ะจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> ➔ <strong>โต๊ะ {transfer.movedToTable || b.tables_layout?.table_name}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
+                                    </div>
+                                )}
+
                                 {/* Quick Action Bar */}
                                 <div className="px-3.5 py-2 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                                     <div className="flex items-center gap-1.5 text-[11px] text-[oklch(42%_0.010_28)] truncate max-w-[280px]">
-                                        {b.staff_remark && (
-                                            <span className="truncate">Remark: <strong className="text-[oklch(18%_0.012_28)]">{b.staff_remark}</strong></span>
+                                        {transfer.cleanRemark && (
+                                            <span className="truncate">Remark: <strong className="text-[oklch(18%_0.012_28)]">{transfer.cleanRemark}</strong></span>
                                         )}
-                                        {b.customer_note && !b.staff_remark && (
+                                        {b.customer_note && !transfer.cleanRemark && (
                                             <span className="truncate">Note: <strong className="text-[oklch(18%_0.012_28)]">{b.customer_note}</strong></span>
                                         )}
                                     </div>
