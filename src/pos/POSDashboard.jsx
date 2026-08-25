@@ -3624,16 +3624,38 @@ export default function POSDashboard() {
                             {availableTables.length === 0 ? (
                                 <p className="text-[10px] text-center text-[#767673] py-8 uppercase font-mono tracking-wider">ไม่มีโต๊ะอื่นที่เปิดออเดอร์อยู่</p>
                             ) : (
-                                availableTables.map(t => (
-                                    <button
-                                        key={t.id}
-                                        onClick={() => handleExecuteMergeBill(t)}
-                                        className="w-full bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between font-bold text-xs text-[#1A1A1A] shadow-sm active:scale-99"
-                                    >
-                                        <span>โต๊ะ {t.table_name}</span>
-                                        <span className="text-[8px] font-mono text-[#ff0000] uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded border border-red-100">OCCUPIED</span>
-                                    </button>
-                                ))
+                                availableTables.map(t => {
+                                    const shortId = getShortBookingId(t.booking);
+                                    const targetAmt = parseFloat(t.booking?.total_amount || t.booking?.total_price || 0);
+                                    const memberName = t.booking?.profiles?.display_name || t.booking?.customer_name || '';
+                                    return (
+                                        <button
+                                            key={t.id}
+                                            onClick={() => handleExecuteMergeBill(t)}
+                                            className="w-full bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] p-3 rounded-xl transition-all cursor-pointer flex items-center justify-between font-bold text-xs text-[#1A1A1A] shadow-sm active:scale-99"
+                                        >
+                                            <div className="flex flex-col items-start gap-0.5 text-left">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span>โต๊ะ {t.table_name}</span>
+                                                    <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">({shortId})</span>
+                                                </div>
+                                                {memberName && (
+                                                    <span className="text-[10px] font-normal text-[oklch(42%_0.010_28)]">
+                                                        ลูกค้า: {memberName}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-mono text-xs text-[oklch(18%_0.012_28)]">
+                                                    ฿{targetAmt.toLocaleString()}
+                                                </span>
+                                                <span className="text-[8px] font-mono text-amber-700 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                    ACTIVE
+                                                </span>
+                                            </div>
+                                        </button>
+                                    );
+                                })
                             )}
                         </div>
                     </div>
