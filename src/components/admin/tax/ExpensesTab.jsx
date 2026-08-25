@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 export default function ExpensesTab({ 
     onOpenCreateModal, 
     onOpenEditModal,
+    allYearBookings = [],
     monthlyPosRevenue = 0 
 }) {
     const [expenses, setExpenses] = useState(() => {
@@ -165,6 +166,37 @@ export default function ExpensesTab({
         });
     }, [expenses, selectedMonth, selectedDate, periodMode, isAllPeriods, showOnlyDuplicates, duplicateIds, categoryFilter, searchQuery]);
 
+    // Dynamically calculate active period's POS Gross Revenue from all bookings
+    const activePosRevenue = useMemo(() => {
+        if (!allYearBookings || allYearBookings.length === 0) {
+            return Number(monthlyPosRevenue || 0);
+        }
+
+        return allYearBookings
+            .filter(b => {
+                const isCancelled = b.status === 'cancelled' || b.status === 'void' || b.status === 'deleted';
+                if (isCancelled) return false;
+
+                const rawDate = b.booking_time || b.created_at || '';
+                if (periodMode === 'day') {
+                    return rawDate.startsWith(selectedDate);
+                }
+                if (periodMode === 'month' && !isAllPeriods) {
+                    return rawDate.startsWith(selectedMonth);
+                }
+                if (isAllPeriods) {
+                    return true;
+                }
+                return rawDate.startsWith(selectedMonth);
+            })
+            .reduce((sum, b) => {
+                const amt = Number(b.total_amount !== undefined && b.total_amount !== null 
+                    ? b.total_amount 
+                    : (b.total_price !== undefined ? b.total_price : (b.deposit_amount || 0)));
+                return sum + amt;
+            }, 0);
+    }, [allYearBookings, monthlyPosRevenue, periodMode, selectedDate, selectedMonth, isAllPeriods]);
+
     // Monthly Aggregates
     const monthlyStats = useMemo(() => {
         const totalExpense = filteredExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
@@ -184,8 +216,8 @@ export default function ExpensesTab({
 
         // Real Net Profit
         const rawMaterialCost = byCategory['raw_material'] || 0;
-        const netProfit = Number(monthlyPosRevenue || 0) - totalExpense;
-        const foodCostPct = monthlyPosRevenue > 0 ? (rawMaterialCost / monthlyPosRevenue) * 100 : 0;
+        const netProfit = Number(activePosRevenue || 0) - totalExpense;
+        const foodCostPct = activePosRevenue > 0 ? (rawMaterialCost / activePosRevenue) * 100 : 0;
 
         return {
             totalExpense,
@@ -198,7 +230,7 @@ export default function ExpensesTab({
             foodCostPct,
             count: filteredExpenses.length
         };
-    }, [filteredExpenses, monthlyPosRevenue]);
+    }, [filteredExpenses, activePosRevenue]);
 
     // Delete Record
     const handleDelete = async (id, title) => {
@@ -248,25 +280,17 @@ export default function ExpensesTab({
                 `"${exp.doc_type || 'tax_invoice'}"`,
                 Number(exp.amount || 0).toFixed(2),
                 `"${exp.payment_method || 'TRANSFER'}"`,
-                `"${(exp.notes || '').replace(/"/g, '""')}"`,
-                exp.receipt_image_url ? '"YES"' : '"NO"'
+                `"${(exp.notes || '-').replace(/"/g, '""')}"`,
+                exp.receipt_image_url ? 'YES' : 'NO'
             ];
         });
 
+        const periodLabel = isAllPeriods ? 'ALL_TIME' : (periodMode === 'day' ? selectedDate : selectedMonth);
         const summaryRow = [
-            'รวมค่าใช้จ่ายทั้งสิ้น (TOTAL EXPENSES)',
-            '',
-            '',
-            '',
-            '',
-            '',
-            monthlyStats.totalExpense.toFixed(2),
-            '',
-            '',
-            `"รวม ${monthlyStats.count} รายการ"`
+            'รวมทั้งสิ้น', '', '', '', '', '',
+            monthlyStats.totalExpense.toFixed(2), '', '', ''
         ];
 
-        const periodLabel = showOnlyDuplicates ? 'DUPLICATES_ONLY' : (isAllPeriods ? 'ALL_PERIODS' : selectedMonth);
         const csvLines = [
             `"รายงานสรุปค่าใช้จ่ายและต้นทุนร้าน (Store Expenses & COGS Ledger) - ประจำงวด ${periodLabel}"`,
             headers.join(','),
@@ -290,11 +314,11 @@ export default function ExpensesTab({
                         [01] POS GROSS REVENUE
                     </span>
                     <div>
-                        <div className="font-mono font-black text-2xl tracking-tight">
-                            ฿{Number(monthlyPosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        <div className="font-mono font-black text-2xl tracking-tight text-[var(--color-ink)]">
+                            ฿{Number(activePosRevenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </div>
                         <span className="font-mono text-[10px] text-[var(--color-muted)] mt-0.5 block">
-                            PERIOD: {isAllPeriods ? 'ALL TIME' : selectedMonth}
+                            PERIOD: {isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth)}
                         </span>
                     </div>
                 </div>

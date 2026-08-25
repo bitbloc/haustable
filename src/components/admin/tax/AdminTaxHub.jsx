@@ -255,17 +255,21 @@ export default function AdminTaxHub() {
         return matchesTime && matchesStatus && matchesSearch;
     });
 
-    // Calculate current month's POS Revenue
+    // Calculate current month's POS Revenue (Excluding only cancelled/voided bookings)
     const currentMonthPosRevenue = React.useMemo(() => {
         if (!allYearBookings || allYearBookings.length === 0) return 0;
         return allYearBookings
             .filter(b => {
+                const isCancelled = b.status === 'cancelled' || b.status === 'void' || b.status === 'deleted';
+                if (isCancelled) return false;
                 const bDate = b.booking_time || b.created_at || '';
                 const bMonth = bDate.slice(0, 7);
-                const isPaid = b.status === 'completed' || b.status === 'confirmed';
-                return bMonth === monthFilter && isPaid;
+                return bMonth === monthFilter;
             })
-            .reduce((s, b) => s + Number(b.total_amount || b.deposit_amount || 0), 0);
+            .reduce((s, b) => {
+                const amt = Number(b.total_amount !== undefined && b.total_amount !== null ? b.total_amount : (b.total_price !== undefined ? b.total_price : (b.deposit_amount || 0)));
+                return s + amt;
+            }, 0);
     }, [allYearBookings, monthFilter]);
 
     // Handle Document Cancellation (with resilient DB fallback)
@@ -693,6 +697,7 @@ export default function AdminTaxHub() {
                 {activeTab === 'expenses' && (
                     <ExpensesTab
                         key={expensesKey}
+                        allYearBookings={allYearBookings}
                         monthlyPosRevenue={currentMonthPosRevenue}
                         onOpenCreateModal={() => {
                             setEditingExpense(null);
