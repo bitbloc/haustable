@@ -18,7 +18,9 @@ import {
     CreditCard,
     Coins,
     QrCode,
-    Loader2
+    Loader2,
+    Clock,
+    Sparkles
 } from 'lucide-react';
 import { 
     formatTaxId, 
@@ -27,7 +29,6 @@ import {
     downloadCsvFile,
     thaiBahtText 
 } from '../../../utils/thaiTaxHelper';
-import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
 import SalesTaxLedgerPrintView from './SalesTaxLedgerPrintView';
 import { toast } from 'sonner';
 
@@ -41,7 +42,15 @@ export default function SalesTaxReportTab({
 }) {
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
 
-    // Filters & States
+    // Time helper utilities
+    const getTodayDate = () => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
     const getCurrentMonth = () => {
         const d = new Date();
         const y = d.getFullYear();
@@ -49,37 +58,75 @@ export default function SalesTaxReportTab({
         return `${y}-${m}`;
     };
 
+    const getYesterdayDate = () => {
+        const d = new Date();
+        d.setDate(d.getDate() - 1);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    };
+
+    // Filter & Granularity States
+    const [timeFilterMode, setTimeFilterMode] = useState('month'); // 'day' | 'month' | 'all'
+    const [selectedDate, setSelectedDate] = useState(getTodayDate);
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'cancelled'
-    const [dataSourceMode, setDataSourceMode] = useState('invoices'); // 'invoices' | 'pos_bills' | 'all'
+    const [dataSourceMode, setDataSourceMode] = useState('all'); // 'all' | 'pos_bills' | 'invoices'
     const [showPrintModal, setShowPrintModal] = useState(false);
-    const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-    // Normalize & Compile POS Bookings of the selected month into sequential Bill items
-    const monthPosBills = useMemo(() => {
+    // Format display string for the active period
+    const activePeriodLabel = useMemo(() => {
+        const monthNames = [
+            'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+            'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'
+        ];
+        if (timeFilterMode === 'day') {
+            const [y, m, d] = selectedDate.split('-');
+            const mIdx = parseInt(m, 10) - 1;
+            const thYear = parseInt(y, 10) + 543;
+            return `วันที่ ${parseInt(d, 10)} ${monthNames[mIdx] || m} ${thYear}`;
+        }
+        if (timeFilterMode === 'month') {
+            const [year, month] = selectedMonth.split('-');
+            const mIdx = parseInt(month, 10) - 1;
+            const thYear = parseInt(year, 10) + 543;
+            return `เดือน ${monthNames[mIdx] || month} ${thYear}`;
+        }
+        return 'ทุกช่วงเวลา (All Time)';
+    }, [timeFilterMode, selectedDate, selectedMonth]);
+
+    // Normalize & Compile POS Bookings matching time filter into sequential Bill items
+    const compiledPosBills = useMemo(() => {
         if (!allYearBookings || allYearBookings.length === 0) return [];
         
-        // Filter bookings matching the selected month
-        const monthItems = allYearBookings.filter(b => {
+        // Filter bookings matching the active date/month filter
+        const timeFiltered = allYearBookings.filter(b => {
             const rawDate = b.booking_time || b.created_at || '';
-            return rawDate.startsWith(selectedMonth);
+            if (timeFilterMode === 'day') {
+                return rawDate.startsWith(selectedDate);
+            }
+            if (timeFilterMode === 'month') {
+                return rawDate.startsWith(selectedMonth);
+            }
+            return true; // 'all'
         });
 
         // Sort chronologically ascending
-        monthItems.sort((a, b) => {
+        timeFiltered.sort((a, b) => {
             const timeA = new Date(a.booking_time || a.created_at).getTime();
             const timeB = new Date(b.booking_time || b.created_at).getTime();
             return timeA - timeB;
         });
 
         // Map to structured bill records with running sequence
-        return monthItems.map((b, idx) => {
+        const ymCompact = (selectedMonth || getCurrentMonth()).replace('-', '');
+        return timeFiltered.map((b, idx) => {
             const total = Number(b.total_amount || b.total_price || 0);
             const preVat = isVatRegistered ? (total / 1.07) : total;
             const vat = isVatRegistered ? (total - preVat) : 0;
             const seqNumber = String(idx + 1).padStart(4, '0');
-            const ymCompact = selectedMonth.replace('-', '');
             const generatedBillNo = b.order_number || `BILL-${ymCompact}-${seqNumber}`;
 
             return {
@@ -102,27 +149,32 @@ export default function SalesTaxReportTab({
                 source_type: 'pos_bill'
             };
         });
-    }, [allYearBookings, selectedMonth, isVatRegistered]);
+    }, [allYearBookings, timeFilterMode, selectedDate, selectedMonth, isVatRegistered]);
 
     // Active Compiled Records based on Data Source Mode
     const activeRawRecords = useMemo(() => {
-        if (dataSourceMode === 'invoices') {
-            return invoices.filter(inv => {
-                const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
-                return !selectedMonth || invMonth === selectedMonth;
-            }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
-        } else if (dataSourceMode === 'pos_bills') {
-            return monthPosBills;
-        } else {
-            // Unified (All Invoices + POS Bills not already in invoices)
-            const invoiceBookingIds = new Set(invoices.map(i => i.booking_id).filter(Boolean));
-            const remainingBills = monthPosBills.filter(b => !invoiceBookingIds.has(b.booking_id));
-            const monthInvoices = invoices.filter(inv => {
-                const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
-                return !selectedMonth || invMonth === selectedMonth;
-            }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
+        // Filter invoices by time
+        const timeFilteredInvoices = invoices.filter(inv => {
+            const rawDate = inv.issued_at || inv.created_at || '';
+            if (timeFilterMode === 'day') {
+                return rawDate.startsWith(selectedDate);
+            }
+            if (timeFilterMode === 'month') {
+                return rawDate.startsWith(selectedMonth);
+            }
+            return true;
+        }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
 
-            const combined = [...monthInvoices, ...remainingBills];
+        if (dataSourceMode === 'invoices') {
+            return timeFilteredInvoices;
+        } else if (dataSourceMode === 'pos_bills') {
+            return compiledPosBills;
+        } else {
+            // Unified Mode (All POS Bills + Invoices that are standalone or linked)
+            const invoiceBookingIds = new Set(timeFilteredInvoices.map(i => i.booking_id).filter(Boolean));
+            const remainingBills = compiledPosBills.filter(b => !invoiceBookingIds.has(b.booking_id));
+
+            const combined = [...timeFilteredInvoices, ...remainingBills];
             combined.sort((a, b) => {
                 const timeA = new Date(a.issued_at || a.created_at).getTime();
                 const timeB = new Date(b.issued_at || b.created_at).getTime();
@@ -130,7 +182,7 @@ export default function SalesTaxReportTab({
             });
             return combined;
         }
-    }, [dataSourceMode, invoices, monthPosBills, selectedMonth]);
+    }, [dataSourceMode, invoices, compiledPosBills, timeFilterMode, selectedDate, selectedMonth]);
 
     // Filter by search query and status
     const filteredRecords = useMemo(() => {
@@ -151,8 +203,8 @@ export default function SalesTaxReportTab({
         });
     }, [activeRawRecords, searchQuery, statusFilter]);
 
-    // Monthly Calculations
-    const monthlyStats = useMemo(() => {
+    // Financial Aggregate Calculations for Active Selection
+    const periodStats = useMemo(() => {
         const activeOnly = filteredRecords.filter(i => i.status !== 'cancelled');
         const grossSales = activeOnly.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
         const preVatSales = activeOnly.reduce((sum, i) => sum + Number(i.pre_vat_amount || 0), 0);
@@ -171,7 +223,7 @@ export default function SalesTaxReportTab({
 
     // YTD Revenue & 1.8M Baht VAT Threshold Progress
     const ytdStats = useMemo(() => {
-        const currentYear = selectedMonth.split('-')[0] || String(new Date().getFullYear());
+        const currentYear = (selectedDate || selectedMonth).split('-')[0] || String(new Date().getFullYear());
         
         // Sum from invoices and POS bookings of current year
         const yearInvoices = invoices.filter(i => 
@@ -198,24 +250,21 @@ export default function SalesTaxReportTab({
             isNearThreshold,
             isExceeded
         };
-    }, [invoices, allYearBookings, selectedMonth]);
+    }, [invoices, allYearBookings, selectedDate, selectedMonth]);
 
     const handleExportCsv = () => {
         if (filteredRecords.length === 0) {
-            toast.warning('ไม่พบข้อมูลรายการขายในเดือนและเงื่อนไขที่เลือก');
+            toast.warning('ไม่พบข้อมูลรายการขายในช่วงเวลาที่เลือก');
             return;
         }
-        const csv = exportUnifiedSalesLedgerCsv(filteredRecords, selectedMonth, isVatRegistered, {
+        const timePeriodTag = timeFilterMode === 'day' ? selectedDate : (timeFilterMode === 'month' ? selectedMonth : 'all');
+        const csv = exportUnifiedSalesLedgerCsv(filteredRecords, timePeriodTag, isVatRegistered, {
             reportType: dataSourceMode
         });
         const prefix = isVatRegistered ? 'Sales_Tax_Report' : 'Sales_Bill_Ledger';
-        const filename = `${prefix}_${dataSourceMode}_${selectedMonth}.csv`;
+        const filename = `${prefix}_${dataSourceMode}_${timePeriodTag}.csv`;
         downloadCsvFile(csv, filename);
         toast.success(`ดาวน์โหลดรายงาน ${filename} เรียบร้อยแล้ว (พร้อมเปิดใน Excel)`);
-    };
-
-    const handleOpenPrintPreview = () => {
-        setShowPrintModal(true);
     };
 
     // Helper for rendering payment method badges
@@ -299,103 +348,183 @@ export default function SalesTaxReportTab({
                 </div>
             )}
 
-            {/* Controls Bar: Data Source Switcher, Month Picker, Filters, Export & Print */}
-            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shadow-sm">
+            {/* TOP CONTROL BAR: Granular Date Filter + Data Source Switcher + Actions */}
+            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-col gap-4 shadow-sm">
                 
-                {/* Left: Data Source Tabs & Filters */}
-                <div className="flex flex-wrap items-center gap-3">
-                    {/* Data Source Selector */}
-                    <div className="flex bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 text-xs font-mono">
-                        <button
-                            onClick={() => setDataSourceMode('invoices')}
-                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
-                        >
-                            <FileText size={13} />
-                            <span>เอกสารภาษี ({invoices.filter(i => (i.issued_at || '').startsWith(selectedMonth)).length})</span>
-                        </button>
-                        <button
-                            onClick={() => setDataSourceMode('pos_bills')}
-                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'pos_bills' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
-                        >
-                            <Receipt size={13} />
-                            <span>บิลขาย POS ({monthPosBills.length})</span>
-                        </button>
-                        <button
-                            onClick={() => setDataSourceMode('all')}
-                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'all' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
-                        >
-                            <Layers size={13} />
-                            <span>รวมทั้งหมด</span>
-                        </button>
+                {/* ROW 1: Time Range Filters (Day, Month, All + Date Pickers) */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 pb-3">
+                    
+                    {/* Time Filter Mode Pill Group */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 text-xs font-mono">
+                            <button
+                                onClick={() => {
+                                    setTimeFilterMode('day');
+                                    setSelectedDate(getTodayDate());
+                                }}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'day' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <Clock size={12} />
+                                <span>รายวัน (Day)</span>
+                            </button>
+
+                            <button
+                                onClick={() => setTimeFilterMode('month')}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'month' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <Calendar size={12} />
+                                <span>รายเดือน (Month)</span>
+                            </button>
+
+                            <button
+                                onClick={() => setTimeFilterMode('all')}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${timeFilterMode === 'all' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <span>ทุกช่วง (All)</span>
+                            </button>
+                        </div>
+
+                        {/* Granular Input depending on mode */}
+                        {timeFilterMode === 'day' && (
+                            <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 border border-zinc-300 rounded-xl px-2.5 py-1 bg-white">
+                                    <Calendar size={14} className="text-zinc-500" />
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="text-xs font-mono font-bold text-zinc-900 focus:outline-none bg-transparent cursor-pointer"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => setSelectedDate(getTodayDate())}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${selectedDate === getTodayDate() ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-200'}`}
+                                >
+                                    วันนี้
+                                </button>
+                                <button
+                                    onClick={() => setSelectedDate(getYesterdayDate())}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-200'}`}
+                                >
+                                    เมื่อวาน
+                                </button>
+                            </div>
+                        )}
+
+                        {timeFilterMode === 'month' && (
+                            <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 border border-zinc-300 rounded-xl px-2.5 py-1 bg-white">
+                                    <Calendar size={14} className="text-zinc-500" />
+                                    <input
+                                        type="month"
+                                        value={selectedMonth}
+                                        onChange={(e) => setSelectedMonth(e.target.value)}
+                                        className="text-xs font-mono font-bold text-zinc-900 focus:outline-none bg-transparent cursor-pointer"
+                                    />
+                                </div>
+                                <button
+                                    onClick={() => setSelectedMonth(getCurrentMonth())}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border transition-colors cursor-pointer ${selectedMonth === getCurrentMonth() ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border-zinc-200'}`}
+                                >
+                                    เดือนนี้
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Month Picker */}
-                    <div className="flex items-center gap-1.5 border border-zinc-300 rounded-xl px-2.5 py-1 bg-white">
-                        <Calendar size={14} className="text-zinc-500" />
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="text-xs font-mono font-bold text-zinc-900 focus:outline-none bg-transparent cursor-pointer"
-                        />
-                    </div>
-
-                    {/* Status Filter */}
-                    <div className="flex border border-zinc-300 rounded-xl overflow-hidden text-xs font-mono">
-                        <button
-                            onClick={() => setStatusFilter('active')}
-                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'active' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
-                        >
-                            ปกติ
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('cancelled')}
-                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'cancelled' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
-                        >
-                            ยกเลิก ({monthlyStats.cancelledCount})
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('all')}
-                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
-                        >
-                            ทั้งหมด
-                        </button>
-                    </div>
-
-                    {/* Search */}
-                    <div className="relative">
-                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-                        <input
-                            type="text"
-                            placeholder="ค้นหาเลขที่บิล / ลูกค้า / Tax ID..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-xl text-xs font-mono w-44 sm:w-56 focus:border-zinc-900 focus:outline-none bg-white"
-                        />
+                    {/* Active Period Label Tag */}
+                    <div className="text-xs font-mono text-zinc-700 bg-zinc-100 px-3 py-1 rounded-xl border border-zinc-200">
+                        ช่วงที่เลือก: <strong className="text-zinc-950 font-bold">{activePeriodLabel}</strong>
                     </div>
                 </div>
 
-                {/* Right: Export Excel & PDF Buttons */}
-                <div className="flex items-center gap-2 self-end lg:self-auto">
-                    <button
-                        onClick={handleExportCsv}
-                        className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer shadow-xs"
-                    >
-                        <FileSpreadsheet size={15} className="text-emerald-700" />
-                        <span>Export Excel (.csv)</span>
-                    </button>
+                {/* ROW 2: Data Source Switcher, Status Filter, Search & Export Actions */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                    
+                    {/* Left: Source Tabs & Status */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Data Source Selector */}
+                        <div className="flex bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 text-xs font-mono">
+                            <button
+                                onClick={() => setDataSourceMode('all')}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'all' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <Layers size={13} />
+                                <span>รวมทุกบิลขาย</span>
+                            </button>
+                            <button
+                                onClick={() => setDataSourceMode('pos_bills')}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'pos_bills' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <Receipt size={13} />
+                                <span>บิลขาย POS ({compiledPosBills.length})</span>
+                            </button>
+                            <button
+                                onClick={() => setDataSourceMode('invoices')}
+                                className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                            >
+                                <FileText size={13} />
+                                <span>เอกสารภาษี ({invoices.filter(i => (i.issued_at || '').startsWith(timeFilterMode === 'day' ? selectedDate : (timeFilterMode === 'month' ? selectedMonth : ''))).length})</span>
+                            </button>
+                        </div>
 
-                    <button
-                        onClick={handleOpenPrintPreview}
-                        className="px-4 py-2 bg-[#1A1A1A] hover:bg-black text-white rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
-                    >
-                        <Printer size={15} className="text-emerald-400" />
-                        <span>พิมพ์รายงาน / โหลด PDF (A4 Ledger)</span>
-                    </button>
+                        {/* Status Filter */}
+                        <div className="flex border border-zinc-300 rounded-xl overflow-hidden text-xs font-mono">
+                            <button
+                                onClick={() => setStatusFilter('active')}
+                                className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'active' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            >
+                                ปกติ
+                            </button>
+                            <button
+                                onClick={() => setStatusFilter('cancelled')}
+                                className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'cancelled' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            >
+                                ยกเลิก ({periodStats.cancelledCount})
+                            </button>
+                            <button
+                                onClick={() => setStatusFilter('all')}
+                                className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            >
+                                ทั้งหมด
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative">
+                            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                            <input
+                                type="text"
+                                placeholder="ค้นหาเลขบิล / ลูกค้า / Tax ID..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-xl text-xs font-mono w-40 sm:w-48 focus:border-zinc-900 focus:outline-none bg-white"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Right: Export & Print Action Buttons */}
+                    <div className="flex items-center gap-2 self-end lg:self-auto">
+                        <button
+                            onClick={handleExportCsv}
+                            className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer shadow-xs"
+                        >
+                            <FileSpreadsheet size={15} className="text-emerald-700" />
+                            <span>Export Excel (.csv)</span>
+                        </button>
+
+                        <button
+                            onClick={() => setShowPrintModal(true)}
+                            className="px-4 py-2 bg-[#1A1A1A] hover:bg-black text-white rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
+                        >
+                            <Printer size={15} className="text-emerald-400" />
+                            <span>พิมพ์รายงาน / โหลด PDF</span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Monthly Summary Metric Cards */}
+            {/* Metric KPI Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Card 1: Gross Sales */}
                 <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
@@ -403,10 +532,10 @@ export default function SalesTaxReportTab({
                         ยอดขายรวมทั้งสิ้น (Gross Sales)
                     </span>
                     <div className="font-mono font-black text-xl text-zinc-950 mt-1">
-                        ฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
-                        ประจำงวด {selectedMonth} ({monthlyStats.recordCount} รายการ)
+                        {activePeriodLabel} ({periodStats.recordCount} รายการ)
                     </span>
                 </div>
 
@@ -416,7 +545,7 @@ export default function SalesTaxReportTab({
                         มูลค่าฐานภาษี (Taxable Base)
                     </span>
                     <div className="font-mono font-black text-xl text-zinc-950 mt-1">
-                        ฿{monthlyStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        ฿{periodStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
                         {isVatRegistered ? 'ยอดขายก่อนคิด VAT 7%' : 'ยอดขายสุทธิ (ยังไม่เข้าระบบ VAT)'}
@@ -429,7 +558,7 @@ export default function SalesTaxReportTab({
                         ภาษีขายที่ต้องนำส่ง (Output VAT 7%)
                     </span>
                     <div className={`font-mono font-black text-xl mt-1 ${isVatRegistered ? 'text-[oklch(52%_0.16_28)]' : 'text-zinc-400'}`}>
-                        {isVatRegistered ? `฿${monthlyStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00 (Non-VAT)'}
+                        {isVatRegistered ? `฿${periodStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00 (Non-VAT)'}
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
                         {isVatRegistered ? 'สำหรับยื่นแบบ ภ.พ.30' : 'ยังไม่จด VAT ไม่ต้องนำส่งภาษีขาย'}
@@ -447,7 +576,7 @@ export default function SalesTaxReportTab({
                         </div>
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono">
-                        โหมด: {dataSourceMode === 'invoices' ? 'เอกสารภาษี' : (dataSourceMode === 'pos_bills' ? 'บิลขาย POS' : 'รวมทั้งหมด')}
+                        โหมด: {dataSourceMode === 'invoices' ? 'เอกสารภาษี' : (dataSourceMode === 'pos_bills' ? 'บิลขาย POS' : 'รวมทุกบิลขาย')}
                     </span>
                 </div>
             </div>
@@ -460,11 +589,11 @@ export default function SalesTaxReportTab({
                             {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับรายบิล (Sales & Bill Ledger)'}
                         </h3>
                         <p className="text-[11px] text-zinc-500 font-mono">
-                            งวดภาษี: {selectedMonth} • จำนวน {filteredRecords.length} รายการ (เรียงลำดับตามเวลาและเลขที่บิล)
+                            {activePeriodLabel} • จำนวน {filteredRecords.length} รายการ (เรียงลำดับตามเวลาและเลขที่บิล)
                         </p>
                     </div>
                     <div className="text-[11px] font-mono text-zinc-600 bg-white border border-zinc-200 px-3 py-1 rounded-lg">
-                        รวมทั้งสิ้น: <strong className="text-zinc-950">฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                        รวมทั้งสิ้น: <strong className="text-zinc-950">฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                     </div>
                 </div>
 
@@ -578,18 +707,18 @@ export default function SalesTaxReportTab({
                                         รวมทั้งสิ้น (TOTAL):
                                     </td>
                                     <td className="p-3 text-right">
-                                        ฿{monthlyStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        ฿{periodStats.preVatSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                     {isVatRegistered && (
                                         <td className="p-3 text-right text-emerald-400">
-                                            ฿{monthlyStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            ฿{periodStats.outputVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                         </td>
                                     )}
                                     <td className="p-3 text-right text-emerald-400 font-black">
-                                        ฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                        ฿{periodStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-3 text-center text-[10px] text-zinc-400">
-                                        {monthlyStats.recordCount} รายการ
+                                        {periodStats.recordCount} รายการ
                                     </td>
                                 </tr>
                             </tfoot>
@@ -602,6 +731,9 @@ export default function SalesTaxReportTab({
             {showPrintModal && (
                 <SalesTaxLedgerPrintView
                     periodMonth={selectedMonth}
+                    periodDate={selectedDate}
+                    filterMode={timeFilterMode}
+                    periodLabel={activePeriodLabel}
                     records={filteredRecords}
                     companySettings={companySettings}
                     isVatRegistered={isVatRegistered}

@@ -43,6 +43,14 @@ export default function AdminTaxHub() {
     // Filter & Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'issued' | 'cancelled'
+    const [invoiceTimeMode, setInvoiceTimeMode] = useState('month'); // 'month' | 'day' | 'all'
+    const [invoiceDateFilter, setInvoiceDateFilter] = useState(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    });
     const [monthFilter, setMonthFilter] = useState(() => {
         const d = new Date();
         const y = d.getFullYear();
@@ -171,8 +179,13 @@ export default function AdminTaxHub() {
 
     // Filter Invoices
     const filteredInvoices = invoices.filter(inv => {
-        const invMonth = (inv.issued_at || '').slice(0, 7);
-        const matchesMonth = !monthFilter || invMonth === monthFilter;
+        const rawDate = inv.issued_at || inv.created_at || '';
+        let matchesTime = true;
+        if (invoiceTimeMode === 'day') {
+            matchesTime = rawDate.startsWith(invoiceDateFilter);
+        } else if (invoiceTimeMode === 'month') {
+            matchesTime = !monthFilter || rawDate.startsWith(monthFilter);
+        }
 
         const matchesStatus = statusFilter === 'all' || inv.status === statusFilter;
 
@@ -183,7 +196,7 @@ export default function AdminTaxHub() {
             (inv.customer_tax_id || '').includes(q) ||
             (inv.booking_id || '').toLowerCase().includes(q);
 
-        return matchesMonth && matchesStatus && matchesSearch;
+        return matchesTime && matchesStatus && matchesSearch;
     });
 
     // Calculate current month's POS Revenue
@@ -335,6 +348,18 @@ export default function AdminTaxHub() {
                 {/* 2. Structural Tab Navigation Strip */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] font-mono text-xs font-bold">
                     <button
+                        onClick={() => setActiveTab('sales_tax')}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'sales_tax' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
+                    >
+                        <FileSpreadsheet size={14} />
+                        <span>ALL SALES &amp; BILLS (บิลขายทั้งหมด)</span>
+                    </button>
+
+                    <button
                         onClick={() => setActiveTab('invoices')}
                         className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                             activeTab === 'invoices' 
@@ -343,7 +368,7 @@ export default function AdminTaxHub() {
                         }`}
                     >
                         <Receipt size={14} />
-                        <span>INVOICES ({invoices.length})</span>
+                        <span>TAX INVOICES ({invoices.length})</span>
                     </button>
 
                     <button
@@ -356,18 +381,6 @@ export default function AdminTaxHub() {
                     >
                         <ShoppingCart size={14} />
                         <span>EXPENSES &amp; MAKRO</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('sales_tax')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
-                            activeTab === 'sales_tax' 
-                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
-                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
-                        }`}
-                    >
-                        <FileSpreadsheet size={14} />
-                        <span>{isVatRegistered ? 'ภ.พ.30 REPORT' : '1.8M TRACKER'}</span>
                     </button>
 
                     <button
@@ -403,14 +416,62 @@ export default function AdminTaxHub() {
                         {/* Control Toolbar */}
                         <div className="border border-[var(--color-rule)] p-3 bg-[var(--color-paper)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                             <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex border border-[var(--color-rule)]">
+                                    <button
+                                        type="button"
+                                        onClick={() => setInvoiceTimeMode('day')}
+                                        className={`px-3 py-1.5 transition-colors ${invoiceTimeMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                    >
+                                        รายวัน
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInvoiceTimeMode('month')}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${invoiceTimeMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                    >
+                                        รายเดือน
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInvoiceTimeMode('all')}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${invoiceTimeMode === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                    >
+                                        ทั้งหมด
+                                    </button>
+                                </div>
+
+                                {invoiceTimeMode === 'day' && (
+                                    <div className="flex items-center gap-1">
+                                        <input
+                                            type="date"
+                                            value={invoiceDateFilter}
+                                            onChange={(e) => setInvoiceDateFilter(e.target.value)}
+                                            className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const d = new Date();
+                                                const y = d.getFullYear();
+                                                const m = String(d.getMonth() + 1).padStart(2, '0');
+                                                const day = String(d.getDate()).padStart(2, '0');
+                                                setInvoiceDateFilter(`${y}-${m}-${day}`);
+                                            }}
+                                            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px]"
+                                        >
+                                            วันนี้
+                                        </button>
+                                    </div>
+                                )}
+
+                                {invoiceTimeMode === 'month' && (
                                     <input
                                         type="month"
                                         value={monthFilter}
                                         onChange={(e) => setMonthFilter(e.target.value)}
                                         className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                     />
-                                </div>
+                                )}
 
                                 <div className="flex border border-[var(--color-rule)]">
                                     <button

@@ -7,6 +7,9 @@ import { toast } from 'sonner';
 
 export default function SalesTaxLedgerPrintView({
     periodMonth = '',
+    periodDate = '',
+    filterMode = 'month', // 'day' | 'month' | 'all'
+    periodLabel = '',
     records = [],
     companySettings = {},
     isVatRegistered = false,
@@ -15,17 +18,26 @@ export default function SalesTaxLedgerPrintView({
 }) {
     const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-    // Format Month Thai string
-    const formatThaiMonthYear = (monthStr) => {
-        if (!monthStr) return '';
-        const [year, month] = monthStr.split('-');
+    // Format Date / Month Thai string
+    const formatThaiDatePeriod = () => {
+        if (periodLabel) return periodLabel;
         const monthNames = [
             'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
             'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
         ];
-        const mIdx = parseInt(month, 10) - 1;
-        const thYear = parseInt(year, 10) + 543;
-        return `${monthNames[mIdx] || month} พ.ศ. ${thYear}`;
+        if (filterMode === 'day' && periodDate) {
+            const [y, m, d] = periodDate.split('-');
+            const mIdx = parseInt(m, 10) - 1;
+            const thYear = parseInt(y, 10) + 543;
+            return `ประจำวันที่ ${parseInt(d, 10)} ${monthNames[mIdx] || m} พ.ศ. ${thYear}`;
+        }
+        if (periodMonth) {
+            const [year, month] = periodMonth.split('-');
+            const mIdx = parseInt(month, 10) - 1;
+            const thYear = parseInt(year, 10) + 543;
+            return `ประจำเดือน ${monthNames[mIdx] || month} พ.ศ. ${thYear}`;
+        }
+        return 'ทุกช่วงเวลา (All Periods)';
     };
 
     // Calculate Financial Aggregates
@@ -220,9 +232,9 @@ export default function SalesTaxLedgerPrintView({
                                         </div>
                                         <div className="col-span-2 sm:col-span-3 pt-1 border-t border-zinc-100 flex items-center justify-between">
                                             <div>
-                                                <span className="text-zinc-500 font-mono">ประจำเดือนภาษี: </span>
+                                                <span className="text-zinc-500 font-mono">งวดภาษี / ประจำวันที่: </span>
                                                 <strong className="text-zinc-950 font-bold font-mono">
-                                                    {formatThaiMonthYear(periodMonth)} ({periodMonth})
+                                                    {formatThaiDatePeriod()}
                                                 </strong>
                                             </div>
                                             <div className="font-mono text-[10px] text-zinc-500">

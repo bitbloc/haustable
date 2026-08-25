@@ -45,6 +45,15 @@ export default function ExpensesTab({
         return `${y}-${m}`;
     });
 
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    });
+    const [periodMode, setPeriodMode] = useState('month'); // 'month' | 'day' | 'all'
+
     const [isAllPeriods, setIsAllPeriods] = useState(false);
     const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
     const [showMonthlyExporter, setShowMonthlyExporter] = useState(false);
@@ -134,8 +143,15 @@ export default function ExpensesTab({
                 return false;
             }
 
-            const expMonth = (exp.expense_date || '').slice(0, 7);
-            const matchesMonth = isAllPeriods || showOnlyDuplicates || !selectedMonth || expMonth === selectedMonth;
+            const expDate = exp.expense_date || '';
+            let matchesPeriod = true;
+            if (!isAllPeriods && !showOnlyDuplicates) {
+                if (periodMode === 'day') {
+                    matchesPeriod = expDate === selectedDate;
+                } else {
+                    matchesPeriod = !selectedMonth || expDate.slice(0, 7) === selectedMonth;
+                }
+            }
 
             const matchesCategory = categoryFilter === 'all' || exp.category === categoryFilter;
 
@@ -145,9 +161,9 @@ export default function ExpensesTab({
                 (exp.vendor_name || '').toLowerCase().includes(q) ||
                 (exp.notes || '').toLowerCase().includes(q);
 
-            return matchesMonth && matchesCategory && matchesSearch;
+            return matchesPeriod && matchesCategory && matchesSearch;
         });
-    }, [expenses, selectedMonth, isAllPeriods, showOnlyDuplicates, duplicateIds, categoryFilter, searchQuery]);
+    }, [expenses, selectedMonth, selectedDate, periodMode, isAllPeriods, showOnlyDuplicates, duplicateIds, categoryFilter, searchQuery]);
 
     // Monthly Aggregates
     const monthlyStats = useMemo(() => {
@@ -412,11 +428,23 @@ export default function ExpensesTab({
                             type="button"
                             onClick={() => {
                                 setIsAllPeriods(false);
+                                setPeriodMode('day');
                                 setShowOnlyDuplicates(false);
                             }}
-                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            BY MONTH
+                            รายวัน (DAY)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsAllPeriods(false);
+                                setPeriodMode('month');
+                                setShowOnlyDuplicates(false);
+                            }}
+                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                        >
+                            รายเดือน (MONTH)
                         </button>
                         <button
                             type="button"
@@ -426,7 +454,7 @@ export default function ExpensesTab({
                             }}
                             className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            ALL TIME ({expenses.length})
+                            ทั้งหมด ({expenses.length})
                         </button>
                         {duplicateClusters.size > 0 && (
                             <button
@@ -440,7 +468,31 @@ export default function ExpensesTab({
                         )}
                     </div>
 
-                    {!isAllPeriods && !showOnlyDuplicates && (
+                    {!isAllPeriods && !showOnlyDuplicates && periodMode === 'day' && (
+                        <div className="flex items-center gap-1">
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const d = new Date();
+                                    const y = d.getFullYear();
+                                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                                    const day = String(d.getDate()).padStart(2, '0');
+                                    setSelectedDate(`${y}-${m}-${day}`);
+                                }}
+                                className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px]"
+                            >
+                                วันนี้
+                            </button>
+                        </div>
+                    )}
+
+                    {!isAllPeriods && !showOnlyDuplicates && periodMode === 'month' && (
                         <input
                             type="month"
                             value={selectedMonth}
