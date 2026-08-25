@@ -596,57 +596,60 @@ export default function WithholdingTaxTab({
                     </div>
 
                     {/* A4 50 ทวิ Certificate Sheet */}
-                    <div className="w-full max-w-3xl bg-white text-zinc-950 p-8 sm:p-12 border border-zinc-300 shadow-2xl font-sans text-xs print:m-0 print:p-8 print:border-none print:shadow-none space-y-5">
-                        <div className="text-center border-b-2 border-zinc-900 pb-4">
-                            <h1 className="font-bold text-base sm:text-lg">
+                    <div 
+                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
+                        className="w-full max-w-3xl bg-white text-zinc-950 p-8 sm:p-10 border border-zinc-300 shadow-2xl text-[11.5pt] print:m-0 print:p-8 print:border-none print:shadow-none space-y-4"
+                    >
+                        <div className="text-center border-b-2 border-zinc-950 pb-3.5">
+                            <h1 className="font-bold text-[18pt] sm:text-[20pt] text-zinc-950 leading-tight">
                                 หนังสือรับรองการหักภาษี ณ ที่จ่าย
                             </h1>
-                            <p className="font-mono text-[11px] text-zinc-600">
+                            <p className="font-mono text-[11.5pt] text-zinc-700 mt-0.5 font-medium">
                                 ตามมาตรา 50 ทวิ แห่งประมวลรัษฎากร (แบบยื่น {activePrintRecord.form_type})
                             </p>
-                            <span className="font-mono text-xs font-bold text-zinc-950 block mt-1">
+                            <span className="font-mono text-[11.5pt] font-bold text-zinc-950 block mt-1">
                                 เลขที่เอกสาร: {activePrintRecord.doc_number} • วันที่: {activePrintRecord.payment_date}
                             </span>
                         </div>
 
                         {/* Payer Box */}
-                        <div className="border border-zinc-900 p-3 bg-zinc-50 space-y-1 font-mono text-[11px]">
-                            <span className="font-bold text-zinc-500 uppercase text-[9px] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
-                            <div className="font-bold text-sm text-zinc-950">{companySettings?.tax_company_name || 'IN THE HAUS'}</div>
-                            <div>เลขประจำตัวผู้เสียภาษี: <strong>{formatTaxId(companySettings?.tax_id)}</strong></div>
-                            <div>ที่อยู่: {companySettings?.tax_address || '-'}</div>
+                        <div className="border-2 border-zinc-950 p-3.5 bg-zinc-50 space-y-1 font-mono text-[11.5pt]">
+                            <span className="font-bold text-zinc-600 uppercase text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
+                            <div className="font-bold text-[14pt] text-zinc-950">{companySettings?.tax_company_name || 'IN THE HAUS'}</div>
+                            <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id)}</strong></div>
+                            <div>ที่อยู่: {companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</div>
                         </div>
 
                         {/* Payee Box */}
-                        <div className="border border-zinc-900 p-3 bg-white space-y-1 font-mono text-[11px]">
-                            <span className="font-bold text-zinc-500 uppercase text-[9px] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee):</span>
-                            <div className="font-bold text-sm text-zinc-950">{activePrintRecord.payee_name}</div>
-                            <div>เลขประจำตัวผู้เสียภาษี: <strong>{formatTaxId(activePrintRecord.payee_tax_id)}</strong></div>
-                            <div>ที่อยู่: {activePrintRecord.payee_address}</div>
+                        <div className="border-2 border-zinc-950 p-3.5 bg-white space-y-1 font-mono text-[11.5pt]">
+                            <span className="font-bold text-zinc-600 uppercase text-[10pt] block">2. ผู้ถูกหักภาษี ณ ที่จ่าย (Payee):</span>
+                            <div className="font-bold text-[14pt] text-zinc-950">{activePrintRecord.payee_name}</div>
+                            <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(activePrintRecord.payee_tax_id)}</strong></div>
+                            <div>ที่อยู่: {activePrintRecord.payee_address || '-'}</div>
                         </div>
 
                         {/* Table of Income & Tax */}
-                        <table className="w-full border-collapse border border-zinc-900 text-[11px]">
+                        <table className="w-full border-collapse border-2 border-zinc-950 text-[11.5pt]">
                             <thead>
-                                <tr className="bg-zinc-100 border-b border-zinc-900 font-mono text-[10px]">
-                                    <th className="p-2.5 border-r border-zinc-900 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
-                                    <th className="p-2.5 border-r border-zinc-900 w-24 text-center">วันเดือนปีที่จ่าย</th>
-                                    <th className="p-2.5 border-r border-zinc-900 w-28 text-right">จำนวนเงินที่จ่าย</th>
-                                    <th className="p-2.5 w-28 text-right">ภาษีที่หักและนำส่ง</th>
+                                <tr className="bg-zinc-100 border-b-2 border-zinc-950 font-mono text-[11pt] font-bold text-zinc-900 uppercase">
+                                    <th className="p-2.5 border-r border-zinc-950 text-left">ประเภทเงินได้พึงประเมินที่จ่าย</th>
+                                    <th className="p-2.5 border-r border-zinc-950 w-28 text-center">วันเดือนปีที่จ่าย</th>
+                                    <th className="p-2.5 border-r border-zinc-950 w-32 text-right">จำนวนเงินที่จ่าย</th>
+                                    <th className="p-2.5 w-32 text-right">ภาษีที่หักและนำส่ง</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr className="border-b border-zinc-300">
-                                    <td className="p-2.5 border-r border-zinc-900 font-medium">{activePrintRecord.income_type}</td>
-                                    <td className="p-2.5 border-r border-zinc-900 text-center font-mono">{activePrintRecord.payment_date}</td>
-                                    <td className="p-2.5 border-r border-zinc-900 text-right font-mono">{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                    <td className="p-2.5 border-r border-zinc-950 font-medium text-zinc-950">{activePrintRecord.income_type}</td>
+                                    <td className="p-2.5 border-r border-zinc-950 text-center font-mono">{activePrintRecord.payment_date}</td>
+                                    <td className="p-2.5 border-r border-zinc-950 text-right font-mono font-semibold">{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td className="p-2.5 text-right font-mono font-bold text-[oklch(52%_0.16_28)]">{Number(activePrintRecord.tax_withheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 </tr>
                             </tbody>
                             <tfoot>
-                                <tr className="bg-zinc-100 font-mono font-bold">
-                                    <td colSpan={2} className="p-2.5 border-r border-zinc-900 text-right">รวมเงินภาษีที่หักและนำส่ง:</td>
-                                    <td className="p-2.5 border-r border-zinc-900 text-right">฿{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <tr className="bg-zinc-100 font-mono font-bold text-[12pt] text-zinc-950 border-t-2 border-zinc-950">
+                                    <td colSpan={2} className="p-2.5 border-r border-zinc-950 text-right">รวมเงินภาษีที่หักและนำส่ง:</td>
+                                    <td className="p-2.5 border-r border-zinc-950 text-right">฿{Number(activePrintRecord.gross_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                     <td className="p-2.5 text-right">฿{Number(activePrintRecord.tax_withheld).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 </tr>
                             </tfoot>

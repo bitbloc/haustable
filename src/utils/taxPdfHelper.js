@@ -31,10 +31,10 @@ export async function generateTaxDocumentPdf(element, options = {}) {
 
     // 2. Capture high-resolution raster image using html-to-image (supports OKLCH & all modern CSS)
     const imgData = await toPng(element, {
-        pixelRatio: 2.5,
+        pixelRatio: 3.0,
         backgroundColor: '#ffffff',
         cacheBust: true,
-        quality: 0.98,
+        quality: 1.0,
         filter: (node) => {
             if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
                 return false;

@@ -394,19 +394,20 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             <div 
                 id="tax-invoice-printable-sheet"
                 ref={printableSheetRef}
-                className="w-full max-w-4xl bg-white text-zinc-900 p-5 sm:p-7 border border-zinc-300 shadow-2xl font-sans text-[11px] print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
+                style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
+                className="w-full max-w-4xl bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-2xl text-[12pt] leading-normal print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
             >
                 <div>
                     {/* Header Section */}
-                    <div className="flex justify-between items-start border-b-2 border-zinc-900 pb-3 gap-4">
+                    <div className="flex justify-between items-start border-b-2 border-zinc-950 pb-3.5 gap-4">
                         {/* Company / Issuer Info */}
                         <div className="flex items-start gap-3.5 flex-1 min-w-0">
                             {/* In The Haus Logo */}
-                            <div className="shrink-0">
+                            <div className="shrink-0 pt-0.5">
                                 <img 
                                     src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                     alt="IN THE HAUS" 
-                                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
+                                    className="w-16 h-16 sm:w-20 sm:h-20 object-contain object-left-top shrink-0"
                                     crossOrigin="anonymous"
                                     onError={(e) => {
                                         if (e.target.src !== `${window.location.origin}/logo.png`) {
@@ -417,21 +418,21 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                             </div>
 
                             <div className="flex-1 min-w-0">
-                                <h1 className="font-bold text-base sm:text-lg uppercase tracking-tight text-zinc-950 font-serif leading-tight">
+                                <h1 className="font-bold text-[16pt] uppercase tracking-tight text-zinc-950 leading-tight">
                                     {companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม'}
                                 </h1>
                                 {companySettings?.tax_company_name_en && (
-                                    <p className="font-mono text-[11px] text-zinc-600 uppercase font-semibold">
+                                    <p className="font-mono text-[11pt] text-zinc-700 uppercase font-semibold mt-0.5">
                                         {companySettings.tax_company_name_en}
                                     </p>
                                 )}
-                                <div className="mt-1 text-[10.5px] text-zinc-700 leading-relaxed max-w-lg">
+                                <div className="mt-1 text-[11.5pt] text-zinc-800 leading-relaxed max-w-lg">
                                     <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
-                                    <div className="flex flex-wrap gap-x-3 mt-0.5 font-mono font-medium">
-                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
-                                        <span>สถานประกอบการ: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+                                    <div className="flex flex-wrap gap-x-3 mt-0.5 font-mono text-[11pt]">
+                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
+                                        <span>สถานประกอบการ: <strong className="text-zinc-950 font-bold">{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
                                     </div>
-                                    <div className="flex flex-wrap gap-x-3 font-mono text-zinc-600 mt-0.5">
+                                    <div className="flex flex-wrap gap-x-3 font-mono text-[10.5pt] text-zinc-600 mt-0.5">
                                         {companySettings?.tax_phone && <span>โทร: {companySettings.tax_phone}</span>}
                                         {companySettings?.tax_email && <span>อีเมล: {companySettings.tax_email}</span>}
                                     </div>
@@ -441,23 +442,23 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
                         {/* Document Title & Number Badge */}
                         <div className="text-right flex flex-col items-end shrink-0">
-                            <div className="border-2 border-zinc-900 px-3.5 py-1.5 bg-zinc-50 text-right min-w-[180px]">
-                                <span className="font-bold text-sm sm:text-base block text-zinc-950 leading-tight">
+                            <div className="border-2 border-zinc-950 px-4 py-2 bg-zinc-50 text-right min-w-[200px]">
+                                <span className="font-bold text-[15pt] sm:text-[17pt] block text-zinc-950 leading-tight">
                                     {docTitle}
                                 </span>
-                                <span className="font-mono text-[9px] font-bold text-zinc-600 uppercase tracking-wider block">
+                                <span className="font-mono text-[10pt] font-bold text-zinc-700 uppercase tracking-wider block mt-0.5">
                                     {docTitleEn}
                                 </span>
-                                <span className="font-mono text-[9px] font-bold text-[#a33716] uppercase tracking-wider block mt-0.5">
+                                <span className="font-mono text-[10pt] font-bold text-[#a33716] uppercase tracking-wider block mt-0.5">
                                     {copyLabel}
                                 </span>
                             </div>
 
-                            <div className="mt-1.5 font-mono text-[10.5px] space-y-0.5 text-right">
-                                <div><span className="text-zinc-500">เลขที่ / No:</span> <strong className="text-zinc-950 font-bold">{invoice.invoice_number}</strong></div>
-                                <div><span className="text-zinc-500">วันที่ / Date:</span> <span className="text-zinc-900">{formattedDate}</span></div>
+                            <div className="mt-2 font-mono text-[11.5pt] space-y-0.5 text-right">
+                                <div><span className="text-zinc-600">เลขที่ / No:</span> <strong className="text-zinc-950 font-bold">{invoice.invoice_number}</strong></div>
+                                <div><span className="text-zinc-600">วันที่ / Date:</span> <span className="text-zinc-950 font-semibold">{formattedDate}</span></div>
                                 {invoice.booking_id && (
-                                    <div className="text-[9.5px] text-zinc-500">
+                                    <div className="text-[10pt] text-zinc-500">
                                         อ้างอิงบิล POS: #{String(invoice.booking_id).slice(0, 8)}
                                     </div>
                                 )}
@@ -466,42 +467,42 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                     </div>
 
                     {/* Copy Subtitle Indicator */}
-                    <div className="text-right text-[9.5px] font-mono text-zinc-500 mt-0.5 italic">
+                    <div className="text-right text-[10.5pt] font-mono text-zinc-500 mt-1 italic">
                         {copySubtitle}
                     </div>
 
                     {/* Customer Info Box */}
-                    <div className="mt-2.5 border border-zinc-900 bg-zinc-50/70 p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="mt-3 border-2 border-zinc-950 bg-zinc-50/70 p-3.5 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11.5pt]">
                         <div>
-                            <div className="font-mono text-[9px] font-bold uppercase tracking-wider text-zinc-500 mb-0.5">
+                            <div className="font-mono text-[10pt] font-bold uppercase tracking-wider text-zinc-600 mb-0.5">
                                 [ ข้อมูลผู้ซื้อสินค้า / ผู้รับบริการ (CUSTOMER INFO) ]
                             </div>
-                            <div className="font-bold text-xs sm:text-sm text-zinc-950">
+                            <div className="font-bold text-[13pt] text-zinc-950">
                                 {invoice.customer_name || 'ลูกค้าทั่วไป (Cash Customer)'}
                             </div>
-                            <div className="text-[10.5px] text-zinc-700 leading-relaxed mt-0.5">
+                            <div className="text-[11.5pt] text-zinc-800 leading-relaxed mt-0.5">
                                 {invoice.customer_address || '-'}
                             </div>
                         </div>
 
-                        <div className="flex flex-col justify-end md:items-end font-mono text-[10.5px] space-y-0.5">
+                        <div className="flex flex-col justify-end md:items-end font-mono text-[11pt] space-y-0.5">
                             <div>
-                                <span className="text-zinc-500">เลขประจำตัวผู้เสียภาษี: </span>
-                                <strong className="text-zinc-950">{formatTaxId(invoice.customer_tax_id)}</strong>
+                                <span className="text-zinc-600">เลขประจำตัวผู้เสียภาษี: </span>
+                                <strong className="text-zinc-950 font-bold">{formatTaxId(invoice.customer_tax_id)}</strong>
                             </div>
                             <div>
-                                <span className="text-zinc-500">สถานประกอบการ: </span>
-                                <span className="text-zinc-900">{formatBranch(invoice.customer_branch_type, invoice.customer_branch_code)}</span>
+                                <span className="text-zinc-600">สถานประกอบการ: </span>
+                                <span className="text-zinc-950 font-semibold">{formatBranch(invoice.customer_branch_type, invoice.customer_branch_code)}</span>
                             </div>
                             {invoice.customer_phone && (
                                 <div>
-                                    <span className="text-zinc-500">เบอร์โทรศัพท์: </span>
+                                    <span className="text-zinc-600">เบอร์โทรศัพท์: </span>
                                     <span className="text-zinc-900">{invoice.customer_phone}</span>
                                 </div>
                             )}
                             {invoice.customer_email && (
                                 <div>
-                                    <span className="text-zinc-500">อีเมล: </span>
+                                    <span className="text-zinc-600">อีเมล: </span>
                                     <span className="text-zinc-900">{invoice.customer_email}</span>
                                 </div>
                             )}
@@ -509,15 +510,15 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                     </div>
 
                     {/* Items Table */}
-                    <div className="mt-3">
-                        <table className="w-full text-left border-collapse border border-zinc-900 text-[10.5px]">
+                    <div className="mt-3.5">
+                        <table className="w-full text-left border-collapse border-2 border-zinc-950 text-[11.5pt]">
                             <thead>
-                                <tr className="bg-zinc-100 border-b-2 border-zinc-900 font-mono text-[9.5px] uppercase">
-                                    <th className="p-2 border-r border-zinc-900 w-10 text-center">ลำดับ<br/>(No.)</th>
-                                    <th className="p-2 border-r border-zinc-900">รายการสินค้า / บริการ<br/>(Description)</th>
-                                    <th className="p-2 border-r border-zinc-900 w-16 text-center">จำนวน<br/>(Qty)</th>
-                                    <th className="p-2 border-r border-zinc-900 w-24 text-right">ราคาต่อหน่วย<br/>(Unit Price)</th>
-                                    <th className="p-2 w-24 text-right">จำนวนเงิน (บาท)<br/>(Amount THB)</th>
+                                <tr className="bg-zinc-100 border-b-2 border-zinc-950 font-mono text-[11pt] uppercase">
+                                    <th className="p-2.5 border-r border-zinc-950 w-12 text-center">ลำดับ<br/>(No.)</th>
+                                    <th className="p-2.5 border-r border-zinc-950">รายการสินค้า / บริการ<br/>(Description)</th>
+                                    <th className="p-2.5 border-r border-zinc-950 w-20 text-center">จำนวน<br/>(Qty)</th>
+                                    <th className="p-2.5 border-r border-zinc-950 w-28 text-right">ราคาต่อหน่วย<br/>(Unit Price)</th>
+                                    <th className="p-2.5 w-28 text-right">จำนวนเงิน (บาท)<br/>(Amount THB)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -527,24 +528,24 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                     const amount = Number(item.amount || (qty * unitPrice));
 
                                     return (
-                                        <tr key={idx} className="border-b border-zinc-300">
-                                            <td className="p-1.5 border-r border-zinc-900 text-center font-mono">{idx + 1}</td>
-                                            <td className="p-1.5 border-r border-zinc-900">
+                                        <tr key={idx} className="border-b border-zinc-400">
+                                            <td className="p-2 border-r border-zinc-950 text-center font-mono">{idx + 1}</td>
+                                            <td className="p-2 border-r border-zinc-950">
                                                 <div className="font-semibold text-zinc-950">{item.name || item.item_name}</div>
                                                 {item.selected_options && (
-                                                    <div className="text-[9.5px] text-zinc-500 font-mono">{item.selected_options}</div>
+                                                    <div className="text-[10pt] text-zinc-600 font-mono">{item.selected_options}</div>
                                                 )}
                                             </td>
-                                            <td className="p-1.5 border-r border-zinc-900 text-center font-mono">{qty}</td>
-                                            <td className="p-1.5 border-r border-zinc-900 text-right font-mono">{unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                            <td className="p-1.5 text-right font-mono font-semibold">{amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-2 border-r border-zinc-950 text-center font-mono">{qty}</td>
+                                            <td className="p-2 border-r border-zinc-950 text-right font-mono">{unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                            <td className="p-2 text-right font-mono font-semibold text-zinc-950">{amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                         </tr>
                                     );
                                 })}
 
                                 {items.length === 0 && (
                                     <tr className="border-b border-zinc-300">
-                                        <td colSpan={5} className="p-6 text-center text-zinc-400 italic">
+                                        <td colSpan={5} className="p-6 text-center text-zinc-500 italic">
                                             ไม่มีรายการย่อย
                                         </td>
                                     </tr>
@@ -553,11 +554,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                                 {/* Compact blank filler rows only if very few items */}
                                 {items.length < 3 && Array.from({ length: Math.max(0, 3 - items.length) }).map((_, i) => (
                                     <tr key={`filler-${i}`} className="border-b border-zinc-200 text-transparent select-none">
-                                        <td className="p-1 border-r border-zinc-900 text-center font-mono">-</td>
-                                        <td className="p-1 border-r border-zinc-900">-</td>
-                                        <td className="p-1 border-r border-zinc-900 text-center font-mono">-</td>
-                                        <td className="p-1 border-r border-zinc-900 text-right font-mono">-</td>
-                                        <td className="p-1 text-right font-mono">-</td>
+                                        <td className="p-1.5 border-r border-zinc-950 text-center font-mono">-</td>
+                                        <td className="p-1.5 border-r border-zinc-950">-</td>
+                                        <td className="p-1.5 border-r border-zinc-950 text-center font-mono">-</td>
+                                        <td className="p-1.5 border-r border-zinc-950 text-right font-mono">-</td>
+                                        <td className="p-1.5 text-right font-mono">-</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -565,21 +566,21 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                     </div>
 
                     {/* Summary & Totals Calculation Block */}
-                    <div className="mt-2.5 grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+                    <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3.5 items-start">
                         {/* Baht Text Box & Non-VAT Notice */}
-                        <div className="border border-zinc-900 p-2.5 bg-zinc-50 flex flex-col justify-between min-h-[90px]">
+                        <div className="border-2 border-zinc-950 p-3 bg-zinc-50 flex flex-col justify-between min-h-[105px]">
                             <div>
-                                <span className="font-mono text-[8.5px] font-bold text-zinc-500 uppercase tracking-wider block">
+                                <span className="font-mono text-[9.5pt] font-bold text-zinc-600 uppercase tracking-wider block">
                                     [ จำนวนเงินตัวอักษร / AMOUNT IN WORDS ]
                                 </span>
-                                <div className="font-bold text-zinc-950 text-xs sm:text-sm mt-0.5">
+                                <div className="font-bold text-zinc-950 text-[13pt] mt-1">
                                     ({bahtWords})
                                 </div>
                             </div>
 
-                            <div className="font-mono text-[8.5px] text-zinc-500 mt-1.5 pt-1.5 border-t border-zinc-200">
+                            <div className="font-mono text-[9.5pt] text-zinc-600 mt-2 pt-2 border-t border-zinc-300">
                                 {!isVat ? (
-                                    <span className="text-zinc-600 font-semibold">
+                                    <span className="text-zinc-700 font-semibold">
                                         * เอกสารนี้ไม่อยู่ในบังคับภาษีมูลค่าเพิ่ม (Non-VAT) / ใช้เป็นหลักฐานรายจ่ายได้ถูกต้องตามกฎหมาย
                                     </span>
                                 ) : (
@@ -591,14 +592,14 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         </div>
 
                         {/* Numeric Breakdown Table */}
-                        <div className="border border-zinc-900 divide-y divide-zinc-300 font-mono text-[10.5px]">
-                            <div className="flex justify-between p-1.5">
-                                <span className="text-zinc-600">รวมเป็นเงิน (Subtotal):</span>
+                        <div className="border-2 border-zinc-950 divide-y divide-zinc-300 font-mono text-[11.5pt]">
+                            <div className="flex justify-between p-2">
+                                <span className="text-zinc-700">รวมเป็นเงิน (Subtotal):</span>
                                 <span className="font-semibold text-zinc-950">฿{Number(invoice.subtotal || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                             </div>
 
                             {Number(invoice.discount_amount || 0) > 0 && (
-                                <div className="flex justify-between p-1.5 bg-amber-50/50 text-amber-900">
+                                <div className="flex justify-between p-2 bg-amber-50/50 text-amber-900">
                                     <span>หักส่วนลด (Discount):</span>
                                     <span className="font-semibold">-฿{Number(invoice.discount_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                 </div>
@@ -606,29 +607,29 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
                             {isVat && (
                                 <>
-                                    <div className="flex justify-between p-1.5">
-                                        <span className="text-zinc-600">มูลค่าสินค้าก่อนภาษี (Pre-VAT):</span>
+                                    <div className="flex justify-between p-2">
+                                        <span className="text-zinc-700">มูลค่าสินค้าก่อนภาษี (Pre-VAT):</span>
                                         <span className="font-semibold text-zinc-950">฿{Number(invoice.pre_vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="flex justify-between p-1.5">
-                                        <span className="text-zinc-600">ภาษีมูลค่าเพิ่ม 7% (VAT):</span>
+                                    <div className="flex justify-between p-2">
+                                        <span className="text-zinc-700">ภาษีมูลค่าเพิ่ม 7% (VAT):</span>
                                         <span className="font-semibold text-zinc-950">฿{Number(invoice.vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </>
                             )}
 
-                            <div className="flex justify-between p-2 bg-zinc-100 font-bold text-xs text-zinc-950">
+                            <div className="flex justify-between p-2.5 bg-zinc-100 font-bold text-[13.5pt] text-zinc-950">
                                 <span>จำนวนเงินรวมทั้งสิ้น (Grand Total):</span>
                                 <span>฿{Number(invoice.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                             </div>
 
                             {Number(invoice.wht_amount || 0) > 0 && (
                                 <>
-                                    <div className="flex justify-between p-1.5 text-zinc-600 bg-zinc-50">
+                                    <div className="flex justify-between p-2 text-zinc-700 bg-zinc-50">
                                         <span>หักภาษี ณ ที่จ่าย {invoice.wht_rate}% (WHT):</span>
                                         <span className="text-red-600 font-semibold">-฿{Number(invoice.wht_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
-                                    <div className="flex justify-between p-2 bg-zinc-900 text-white font-bold text-xs">
+                                    <div className="flex justify-between p-2.5 bg-zinc-900 text-white font-bold text-[13.5pt]">
                                         <span>ยอดชำระสุทธิ (Net Payable):</span>
                                         <span>฿{Number(invoice.net_payable || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
@@ -639,40 +640,36 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                 </div>
 
                 {/* Signatures & Footer Section */}
-                <div className="mt-5 pt-3 border-t-2 border-zinc-900 grid grid-cols-2 gap-6 font-mono text-[10.5px]">
+                <div className="mt-6 pt-3.5 border-t-2 border-zinc-950 grid grid-cols-2 gap-8 font-mono text-[11pt]">
                     {/* Left: Customer Signature */}
-                    <div className="flex flex-col items-center justify-end text-center p-2.5 border border-zinc-300">
-                        <div className="w-40 border-b border-zinc-900 pb-7 mb-1.5"></div>
-                        <div className="font-bold text-zinc-950 text-[11px]">ผู้รับสินค้าหรือบริการ</div>
-                        <div className="text-[9px] text-zinc-500">วันที่ / Date: ______/______/__________</div>
+                    <div className="flex flex-col items-center justify-end text-center p-3 border border-zinc-300">
+                        <div className="w-48 border-b border-zinc-950 pb-8 mb-2"></div>
+                        <div className="font-bold text-zinc-950 text-[12pt]">ผู้รับสินค้าหรือบริการ</div>
+                        <div className="text-[10pt] text-zinc-600">วันที่ / Date: ______/______/__________</div>
                     </div>
 
                     {/* Right: Issuer Authorized Signature with Overlay */}
-                    <div className="flex flex-col items-center justify-end text-center p-2.5 border border-zinc-300 relative">
-                        <div className="relative w-44 h-12 flex items-end justify-center mb-1">
+                    <div className="flex flex-col items-center justify-end text-center p-3 border border-zinc-300 relative">
+                        <div className="relative w-48 h-14 flex items-end justify-center mb-1">
                             {showSignature && signatureImage ? (
                                 <img
                                     src={signatureImage}
                                     alt="Authorized Signature"
-                                    className="max-h-11 max-w-full object-contain filter drop-shadow-xs mb-0.5"
+                                    className="max-h-12 max-w-full object-contain filter drop-shadow-xs mb-0.5"
                                 />
-                            ) : (
-                                <div className="text-[9px] text-zinc-300 italic pb-0.5">
-                                    {!signatureImage ? '' : ''}
-                                </div>
-                            )}
-                            <div className="absolute bottom-0 left-0 right-0 border-b border-zinc-900"></div>
+                            ) : null}
+                            <div className="absolute bottom-0 left-0 right-0 border-b border-zinc-950"></div>
                         </div>
 
-                        <div className="font-bold text-zinc-950 text-[11px]">
+                        <div className="font-bold text-zinc-950 text-[12pt]">
                             ( {companySettings?.tax_signature_name || invoice.signature_name || 'ผู้มีอำนาจลงนาม / ผู้รับเงิน'} )
                         </div>
                         {companySettings?.tax_signature_position && (
-                            <div className="text-[9.5px] text-zinc-600 font-sans">
+                            <div className="text-[10.5pt] text-zinc-700 font-sans">
                                 {companySettings.tax_signature_position}
                             </div>
                         )}
-                        <div className="text-[9px] text-zinc-500">วันที่ / Date: {formattedDate}</div>
+                        <div className="text-[10pt] text-zinc-600">วันที่ / Date: {formattedDate}</div>
                     </div>
                 </div>
             </div>

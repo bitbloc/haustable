@@ -190,54 +190,55 @@ export default function SalesTaxLedgerPrintView({
                     return (
                         <div 
                             key={`page-${pageIdx}`}
-                            className="bg-white text-zinc-950 p-8 sm:p-10 border border-zinc-300 shadow-xl font-sans text-xs min-h-[297mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
+                            style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
+                            className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[297mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
                         >
                             <div>
                                 {/* Header Section (Official Revenue Department Format) */}
-                                <div className="border-b-2 border-zinc-950 pb-4 mb-4">
+                                <div className="border-b-2 border-zinc-950 pb-3.5 mb-3.5">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <h1 className="font-bold text-base text-zinc-950 tracking-tight">
+                                            <h1 className="font-bold text-[16pt] sm:text-[18pt] text-zinc-950 tracking-tight leading-tight">
                                                 {reportTitle}
                                             </h1>
-                                            <p className="text-[10px] text-zinc-600 font-mono mt-0.5">
+                                            <p className="text-[11pt] text-zinc-700 font-mono mt-0.5 font-medium">
                                                 {formSubtitle}
                                             </p>
                                         </div>
-                                        <div className="text-right font-mono text-[10px] text-zinc-500">
-                                            <div>หน้า / Page: <strong>{pageIdx + 1} / {pages.length}</strong></div>
+                                        <div className="text-right font-mono text-[10.5pt] text-zinc-600">
+                                            <div>หน้า / Page: <strong className="text-zinc-950">{pageIdx + 1} / {pages.length}</strong></div>
                                             <div>พิมพ์เมื่อ: {new Date().toLocaleDateString('th-TH')} {new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</div>
                                         </div>
                                     </div>
 
                                     {/* Company Metadata Grid */}
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 mt-3 pt-3 border-t border-zinc-200 text-[11px]">
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1.5 mt-2.5 pt-2.5 border-t border-zinc-300 text-[11.5pt]">
                                         <div className="col-span-2 sm:col-span-2">
-                                            <span className="text-zinc-500 font-mono">ชื่อผู้ประกอบการ / สถานประกอบการ: </span>
-                                            <strong className="text-zinc-950">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</strong>
+                                            <span className="text-zinc-600 font-mono">ชื่อผู้ประกอบการ / สถานประกอบการ: </span>
+                                            <strong className="text-zinc-950 font-bold">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</strong>
                                         </div>
                                         <div>
-                                            <span className="text-zinc-500 font-mono">เลขประจำตัวผู้เสียภาษี: </span>
+                                            <span className="text-zinc-600 font-mono">เลขประจำตัวผู้เสียภาษี: </span>
                                             <strong className="font-mono text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || '1120100144907')}</strong>
                                         </div>
                                         <div className="col-span-2 sm:col-span-2">
-                                            <span className="text-zinc-500 font-mono">ที่อยู่: </span>
-                                            <span className="text-zinc-800">{companySettings?.tax_address || 'นครพนม'}</span>
+                                            <span className="text-zinc-600 font-mono">ที่อยู่: </span>
+                                            <span className="text-zinc-900">{companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</span>
                                         </div>
                                         <div>
-                                            <span className="text-zinc-500 font-mono">สถานประกอบการ: </span>
-                                            <strong className="text-zinc-900">
+                                            <span className="text-zinc-600 font-mono">สถานประกอบการ: </span>
+                                            <strong className="text-zinc-950 font-bold">
                                                 {companySettings?.tax_branch_type === 'head_office' ? 'สำนักงานใหญ่ (00000)' : `สาขาที่ ${companySettings?.tax_branch_code || '00001'}`}
                                             </strong>
                                         </div>
-                                        <div className="col-span-2 sm:col-span-3 pt-1 border-t border-zinc-100 flex items-center justify-between">
+                                        <div className="col-span-2 sm:col-span-3 pt-1 border-t border-zinc-200 flex items-center justify-between">
                                             <div>
-                                                <span className="text-zinc-500 font-mono">งวดภาษี / ประจำวันที่: </span>
+                                                <span className="text-zinc-600 font-mono">งวดภาษี / ประจำวันที่: </span>
                                                 <strong className="text-zinc-950 font-bold font-mono">
                                                     {formatThaiDatePeriod()}
                                                 </strong>
                                             </div>
-                                            <div className="font-mono text-[10px] text-zinc-500">
+                                            <div className="font-mono text-[10.5pt] text-zinc-600">
                                                 โหมดข้อมูล: {dataSourceMode === 'invoices' ? 'เอกสารใบกำกับภาษี/ใบเสร็จทางการ' : (dataSourceMode === 'pos_bills' ? 'บิลขายทั้งหมดจาก POS' : 'รวมทุกบิลขายและเอกสารภาษี')}
                                             </div>
                                         </div>
@@ -245,22 +246,22 @@ export default function SalesTaxLedgerPrintView({
                                 </div>
 
                                 {/* Table of Sequential Bills */}
-                                <table className="w-full border-collapse text-[10.5px]">
+                                <table className="w-full border-collapse text-[11pt]">
                                     <thead>
-                                        <tr className="bg-zinc-100 border-y border-zinc-950 font-mono text-[9.5px] uppercase text-zinc-800">
-                                            <th className="py-2 px-1 text-center w-8">ลำดับ</th>
-                                            <th className="py-2 px-1 text-left w-20">วัน/เดือน/ปี</th>
-                                            <th className="py-2 px-1 text-left w-28">เล่มที่/เลขที่เอกสาร</th>
-                                            <th className="py-2 px-1 text-left">ชื่อผู้ซื้อสินค้า / บริการ</th>
-                                            <th className="py-2 px-1 text-left w-28">เลขผู้เสียภาษี</th>
-                                            <th className="py-2 px-1 text-left w-16">สาขา</th>
-                                            <th className="py-2 px-1 text-right w-24">{isVatRegistered ? 'มูลค่าก่อนภาษี' : 'มูลค่าสินค้า'}</th>
-                                            {isVatRegistered && <th className="py-2 px-1 text-right w-20">ภาษี 7%</th>}
-                                            <th className="py-2 px-1 text-right w-24">รวมทั้งสิ้น</th>
-                                            <th className="py-2 px-1 text-center w-14">สถานะ</th>
+                                        <tr className="bg-zinc-100 border-y-2 border-zinc-950 font-mono text-[10.5pt] uppercase text-zinc-900 font-bold">
+                                            <th className="py-2 px-1.5 text-center w-10">ลำดับ</th>
+                                            <th className="py-2 px-1.5 text-left w-24">วัน/เดือน/ปี</th>
+                                            <th className="py-2 px-1.5 text-left w-32">เล่มที่/เลขที่เอกสาร</th>
+                                            <th className="py-2 px-1.5 text-left">ชื่อผู้ซื้อสินค้า / บริการ</th>
+                                            <th className="py-2 px-1.5 text-left w-32">เลขผู้เสียภาษี</th>
+                                            <th className="py-2 px-1.5 text-left w-16">สาขา</th>
+                                            <th className="py-2 px-1.5 text-right w-24">{isVatRegistered ? 'มูลค่าก่อนภาษี' : 'มูลค่าสินค้า'}</th>
+                                            {isVatRegistered && <th className="py-2 px-1.5 text-right w-20">ภาษี 7%</th>}
+                                            <th className="py-2 px-1.5 text-right w-24">รวมทั้งสิ้น</th>
+                                            <th className="py-2 px-1.5 text-center w-14">สถานะ</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-200 font-sans">
+                                    <tbody className="divide-y divide-zinc-300 font-sans">
                                         {pageRows.map((item, rowIdx) => {
                                             const globalIndex = (pageIdx * ROWS_PER_PAGE) + rowIdx + 1;
                                             const isCancelled = item.status === 'cancelled';
@@ -279,30 +280,30 @@ export default function SalesTaxLedgerPrintView({
 
                                             return (
                                                 <tr key={item.id || rowIdx} className={isCancelled ? 'bg-red-50/50 text-zinc-400 line-through' : ''}>
-                                                    <td className="py-1.5 px-1 text-center font-mono text-zinc-400">{globalIndex}</td>
-                                                    <td className="py-1.5 px-1 font-mono">{dateStr}</td>
-                                                    <td className="py-1.5 px-1 font-mono font-bold text-zinc-900">{docNo}</td>
-                                                    <td className="py-1.5 px-1 truncate max-w-[140px] font-medium text-zinc-900">
+                                                    <td className="py-2 px-1.5 text-center font-mono text-zinc-500">{globalIndex}</td>
+                                                    <td className="py-2 px-1.5 font-mono">{dateStr}</td>
+                                                    <td className="py-2 px-1.5 font-mono font-bold text-zinc-950">{docNo}</td>
+                                                    <td className="py-2 px-1.5 truncate max-w-[140px] font-medium text-zinc-950">
                                                         {item.customer_name || 'ลูกค้าทั่วไป (Walk-in)'}
                                                     </td>
-                                                    <td className="py-1.5 px-1 font-mono text-[10px] text-zinc-700">{formatTaxId(item.customer_tax_id)}</td>
-                                                    <td className="py-1.5 px-1 text-[10px] font-mono">{formatBranch(item.customer_branch_type, item.customer_branch_code)}</td>
-                                                    <td className="py-1.5 px-1 text-right font-mono font-semibold">
+                                                    <td className="py-2 px-1.5 font-mono text-[10.5pt] text-zinc-800">{formatTaxId(item.customer_tax_id)}</td>
+                                                    <td className="py-2 px-1.5 text-[10.5pt] font-mono">{formatBranch(item.customer_branch_type, item.customer_branch_code)}</td>
+                                                    <td className="py-2 px-1.5 text-right font-mono font-semibold text-zinc-900">
                                                         {isCancelled ? '0.00' : preVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
                                                     {isVatRegistered && (
-                                                        <td className="py-1.5 px-1 text-right font-mono font-semibold text-[oklch(52%_0.16_28)]">
+                                                        <td className="py-2 px-1.5 text-right font-mono font-semibold text-[oklch(52%_0.16_28)]">
                                                             {isCancelled ? '0.00' : vat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
                                                     )}
-                                                    <td className="py-1.5 px-1 text-right font-mono font-bold text-zinc-950">
+                                                    <td className="py-2 px-1.5 text-right font-mono font-bold text-zinc-950">
                                                         {isCancelled ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
-                                                    <td className="py-1.5 px-1 text-center font-mono text-[9px]">
+                                                    <td className="py-2 px-1.5 text-center font-mono text-[10pt]">
                                                         {isCancelled ? (
                                                             <span className="font-bold text-red-600">ยกเลิก</span>
                                                         ) : (
-                                                            <span className="text-zinc-600">ปกติ</span>
+                                                            <span className="text-zinc-600 font-semibold">ปกติ</span>
                                                         )}
                                                     </td>
                                                 </tr>
@@ -311,7 +312,7 @@ export default function SalesTaxLedgerPrintView({
 
                                         {pageRows.length === 0 && (
                                             <tr>
-                                                <td colSpan={isVatRegistered ? 10 : 9} className="py-12 text-center text-zinc-400 font-mono">
+                                                <td colSpan={isVatRegistered ? 10 : 9} className="py-12 text-center text-zinc-500 font-mono">
                                                     ไม่มีรายการขาย / เอกสารภาษี ในงวดภาษีที่เลือก
                                                 </td>
                                             </tr>
@@ -322,63 +323,54 @@ export default function SalesTaxLedgerPrintView({
 
                             {/* Summary & Signatures (Shown on the last page) */}
                             {isLastPage && (
-                                <div className="mt-6 pt-4 border-t-2 border-zinc-950 space-y-4">
+                                <div className="mt-5 pt-3.5 border-t-2 border-zinc-950 space-y-3.5">
                                     {/* Financial Summary Box */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-50 border border-zinc-200 p-3 rounded-xs font-mono text-xs">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-zinc-50 border-2 border-zinc-950 p-3.5 font-mono text-[11.5pt]">
                                         <div className="space-y-1">
-                                            <div className="text-[10px] text-zinc-500 uppercase font-bold">จำนวนเงินตัวอักษร / Thai Baht in Words:</div>
-                                            <div className="font-bold text-zinc-900 font-sans">({bahtWords})</div>
-                                            <div className="text-[10px] text-zinc-500 pt-1">
-                                                จำนวนรายการทั้งหมด: <strong>{records.length}</strong> ฉบับ (ปกติ: {activeRecords.length}, ยกเลิก: {cancelledCount})
+                                            <div className="text-[10pt] text-zinc-600 uppercase font-bold">จำนวนเงินตัวอักษร / Thai Baht in Words:</div>
+                                            <div className="font-bold text-zinc-950 font-sans text-[12.5pt]">({bahtWords})</div>
+                                            <div className="text-[10.5pt] text-zinc-600 pt-1">
+                                                จำนวนรายการทั้งหมด: <strong className="text-zinc-950 font-bold">{records.length}</strong> ฉบับ (ปกติ: {activeRecords.length}, ยกเลิก: {cancelledCount})
                                             </div>
                                         </div>
                                         <div className="space-y-1 sm:text-right">
                                             <div className="flex justify-between sm:justify-end gap-4">
-                                                <span className="text-zinc-500">มูลค่าฐานภาษีรวม:</span>
+                                                <span className="text-zinc-600">มูลค่าฐานภาษีรวม:</span>
                                                 <strong className="text-zinc-950 font-bold">฿{totalPreVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                             </div>
                                             {isVatRegistered && (
                                                 <div className="flex justify-between sm:justify-end gap-4">
-                                                    <span className="text-zinc-500">ภาษีมูลค่าเพิ่ม 7% รวม:</span>
+                                                    <span className="text-zinc-600">ภาษีมูลค่าเพิ่ม 7% รวม:</span>
                                                     <strong className="text-[oklch(52%_0.16_28)] font-bold">฿{totalVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                                 </div>
                                             )}
-                                            <div className="flex justify-between sm:justify-end gap-4 text-sm pt-1 border-t border-zinc-200">
+                                            <div className="flex justify-between sm:justify-end gap-4 text-[13pt] pt-1 border-t border-zinc-300">
                                                 <span className="font-bold text-zinc-900">ยอดรวมทั้งสิ้น (GRAND TOTAL):</span>
-                                                <strong className="text-zinc-950 font-black text-base">฿{grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                <strong className="text-zinc-950 font-black text-[14pt]">฿{grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Official Signature Lines */}
-                                    <div className="grid grid-cols-2 gap-8 pt-4 text-center font-sans text-xs">
-                                        <div className="space-y-1">
-                                            <div className="h-10 flex items-end justify-center">
-                                                <span className="border-b border-dotted border-zinc-400 w-48 block"></span>
-                                            </div>
-                                            <p className="font-medium text-zinc-800">
-                                                ( {companySettings?.tax_signature_name || '............................................................'} )
-                                            </p>
-                                            <p className="text-[10px] text-zinc-500 font-mono">ผู้จัดทำรายงาน / ผู้รับเงิน</p>
-                                            <p className="text-[10px] text-zinc-400 font-mono">วันที่ ........ / ........ / ................</p>
+                                    {/* Signatures */}
+                                    <div className="grid grid-cols-2 gap-8 font-mono text-[11pt] pt-2">
+                                        <div className="text-center">
+                                            <div className="w-52 border-b border-zinc-950 mx-auto pb-7 mb-1.5"></div>
+                                            <div className="font-bold text-zinc-950 text-[11.5pt]">ผู้จัดทำรายงาน</div>
+                                            <div className="text-[10pt] text-zinc-600">วันที่: {new Date().toLocaleDateString('th-TH')}</div>
                                         </div>
-
-                                        <div className="space-y-1">
-                                            <div className="h-10 flex items-end justify-center">
-                                                <span className="border-b border-dotted border-zinc-400 w-48 block"></span>
+                                        <div className="text-center">
+                                            <div className="w-52 border-b border-zinc-950 mx-auto pb-7 mb-1.5"></div>
+                                            <div className="font-bold text-zinc-950 text-[11.5pt]">
+                                                {companySettings?.tax_signature_name || 'ผู้มีอำนาจลงนาม / เจ้าของกิจการ'}
                                             </div>
-                                            <p className="font-medium text-zinc-800">
-                                                ( {companySettings?.tax_signature_position ? companySettings?.tax_signature_name : '............................................................'} )
-                                            </p>
-                                            <p className="text-[10px] text-zinc-500 font-mono">กรรมการผู้มีอำนาจ / ผู้ตรวจสอบบัญชี</p>
-                                            <p className="text-[10px] text-zinc-400 font-mono">วันที่ ........ / ........ / ................</p>
+                                            <div className="text-[10pt] text-zinc-600">วันที่: {new Date().toLocaleDateString('th-TH')}</div>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
                             {!isLastPage && (
-                                <div className="mt-4 pt-2 border-t border-zinc-200 text-right font-mono text-[10px] text-zinc-400">
+                                <div className="mt-4 pt-2 border-t border-zinc-200 text-right font-mono text-[10.5pt] text-zinc-500">
                                     ( มียอดรวมยกไปหน้าถัดไป ... )
                                 </div>
                             )}

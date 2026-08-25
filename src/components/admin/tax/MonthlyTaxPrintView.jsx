@@ -91,17 +91,20 @@ export default function MonthlyTaxPrintView({
                 
                 {/* PAGE 1: COVER SHEET (ใบปะหน้าสรุปเอกสารภาษีประจำเดือน) */}
                 {includeCover && (
-                    <div className="bg-white text-zinc-950 p-8 sm:p-10 border border-zinc-300 shadow-xl font-sans text-xs min-h-[297mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page">
+                    <div 
+                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
+                        className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[297mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
+                    >
                         <div>
                             {/* Header Section */}
-                            <div className="border-b-2 border-zinc-950 pb-5 flex justify-between items-start gap-6">
+                            <div className="border-b-2 border-zinc-950 pb-4 flex justify-between items-start gap-6">
                                 <div className="flex items-start gap-4 flex-1 min-w-0">
                                     {/* In The Haus Logo */}
-                                    <div className="shrink-0">
+                                    <div className="shrink-0 pt-1">
                                         <img 
                                             src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
                                             alt="IN THE HAUS" 
-                                            className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
+                                            className="w-16 h-16 sm:w-20 sm:h-20 object-contain object-left-top shrink-0"
                                             crossOrigin="anonymous"
                                             onError={(e) => {
                                                 if (e.target.src !== `${window.location.origin}/logo.png`) {
@@ -112,95 +115,95 @@ export default function MonthlyTaxPrintView({
                                     </div>
 
                                     <div className="flex-1 min-w-0">
-                                        <div className="font-mono text-[9px] font-bold text-zinc-500 uppercase tracking-widest mb-1">
+                                        <div className="font-mono text-[10pt] font-bold text-zinc-600 uppercase tracking-wider mb-0.5">
                                             [ OFFICIAL MONTHLY TAX DOSSIER &amp; EXPENSE SUMMARY ]
                                         </div>
-                                        <h1 className="font-serif font-black text-2xl uppercase tracking-tight text-zinc-950">
+                                        <h1 className="font-bold text-[18pt] sm:text-[20pt] uppercase tracking-tight text-zinc-950 leading-tight">
                                             {companySettings?.tax_company_name || 'IN THE HAUS'}
                                         </h1>
                                         {companySettings?.tax_company_name_en && (
-                                            <p className="font-mono text-xs text-zinc-600 font-semibold uppercase">
+                                            <p className="font-mono text-[11pt] text-zinc-600 font-semibold uppercase mt-0.5">
                                                 {companySettings.tax_company_name_en}
                                             </p>
                                         )}
-                                        <div className="mt-2 text-[11px] text-zinc-700 leading-relaxed max-w-lg">
-                                            <p>{companySettings?.tax_address || 'ที่อยู่สถานประกอบการจดทะเบียน'}</p>
-                                            <div className="flex flex-wrap gap-x-4 mt-1 font-mono font-medium">
-                                                <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950">{formatTaxId(companySettings?.tax_id)}</strong></span>
-                                                <span>สาขา: <strong>{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+                                        <div className="mt-1.5 text-[11.5pt] text-zinc-800 leading-relaxed max-w-lg">
+                                            <p>{companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
+                                            <div className="flex flex-wrap gap-x-4 mt-0.5 font-mono text-[11pt]">
+                                                <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id)}</strong></span>
+                                                <span>สาขา: <strong className="text-zinc-950 font-bold">{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="text-right shrink-0 border-2 border-zinc-950 p-3.5 bg-zinc-50 min-w-[200px]">
-                                    <span className="font-mono text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">
+                                <div className="text-right shrink-0 border-2 border-zinc-950 p-4 bg-zinc-50 min-w-[210px]">
+                                    <span className="font-mono text-[10pt] font-bold text-zinc-600 uppercase tracking-wider block">
                                         เอกสารหลักฐานประกอบภาษี
                                     </span>
-                                    <span className="font-bold text-base text-zinc-950 block mt-0.5">
+                                    <span className="font-bold text-[13pt] text-zinc-950 block mt-0.5">
                                         ประจำงวดเดือน
                                     </span>
-                                    <span className="font-serif font-black text-sm text-[#a33716] block mt-0.5">
+                                    <span className="font-bold text-[14pt] text-[#a33716] block mt-0.5">
                                         {formatThaiMonthYear(periodMonth)}
                                     </span>
-                                    <span className="font-mono text-[10px] text-zinc-600 block mt-1 border-t border-zinc-200 pt-1">
+                                    <span className="font-mono text-[10.5pt] text-zinc-600 block mt-1.5 border-t border-zinc-300 pt-1">
                                         รวมทั้งสิ้น {selectedExpenses.length} รายการ
                                     </span>
                                 </div>
                             </div>
 
                             {/* Summary Financial Metric Boxes */}
-                            <div className="mt-5 grid grid-cols-3 border border-zinc-950 divide-x divide-zinc-950 bg-zinc-50 text-center font-mono">
-                                <div className="p-3.5">
-                                    <span className="text-[9px] font-bold text-zinc-500 uppercase block">ยอดรวมค่าใช้จ่ายทั้งสิ้น</span>
-                                    <span className="font-black text-lg text-zinc-950 mt-1 block">
+                            <div className="mt-4 grid grid-cols-3 border-2 border-zinc-950 divide-x-2 divide-zinc-950 bg-zinc-50 text-center font-mono">
+                                <div className="p-3">
+                                    <span className="text-[10pt] font-bold text-zinc-600 uppercase block">ยอดรวมค่าใช้จ่ายทั้งสิ้น</span>
+                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
                                         ฿{totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
-                                <div className="p-3.5">
-                                    <span className="text-[9px] font-bold text-zinc-500 uppercase block">ภาษีมูลค่าเพิ่ม (VAT 7%)</span>
-                                    <span className="font-black text-lg text-zinc-950 mt-1 block">
+                                <div className="p-3">
+                                    <span className="text-[10pt] font-bold text-zinc-600 uppercase block">ภาษีมูลค่าเพิ่ม (VAT 7%)</span>
+                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
                                         ฿{totalVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </span>
                                 </div>
-                                <div className="p-3.5">
-                                    <span className="text-[9px] font-bold text-zinc-500 uppercase block">จำนวนชุดเอกสารแนบ</span>
-                                    <span className="font-black text-lg text-zinc-950 mt-1 block">
+                                <div className="p-3">
+                                    <span className="text-[10pt] font-bold text-zinc-600 uppercase block">จำนวนชุดเอกสารแนบ</span>
+                                    <span className="font-black text-[15pt] sm:text-[17pt] text-zinc-950 mt-0.5 block">
                                         {selectedExpenses.length} บิล
                                     </span>
                                 </div>
                             </div>
 
                             {/* Baht Text Banner */}
-                            <div className="mt-2 p-2.5 bg-zinc-100 border border-zinc-900 font-mono text-xs flex justify-between items-center">
-                                <span className="text-zinc-600 text-[10px] font-bold">จำนวนเงินตัวอักษร:</span>
-                                <span className="font-bold text-zinc-950">({bahtWords})</span>
+                            <div className="mt-2.5 p-3 bg-zinc-100 border-2 border-zinc-950 font-mono text-[11.5pt] flex justify-between items-center">
+                                <span className="text-zinc-600 text-[10.5pt] font-bold">จำนวนเงินตัวอักษร:</span>
+                                <span className="font-bold text-zinc-950 text-[12.5pt]">({bahtWords})</span>
                             </div>
 
                             {/* Proof Grade & Category Summary Grid */}
-                            <div className="mt-5 grid grid-cols-2 gap-4">
+                            <div className="mt-4 grid grid-cols-2 gap-4">
                                 {/* Proof Reliability Breakdown */}
-                                <div className="border border-zinc-900 p-3 bg-zinc-50 font-mono text-[11px] space-y-1.5">
-                                    <div className="font-bold text-[10px] uppercase text-zinc-500 border-b border-zinc-300 pb-1">
+                                <div className="border-2 border-zinc-950 p-3 bg-zinc-50 font-mono text-[11pt] space-y-1.5">
+                                    <div className="font-bold text-[10.5pt] uppercase text-zinc-700 border-b border-zinc-300 pb-1">
                                         [ การจำแนกตามชั้นหลักฐานภาษี (PROOF GRADES) ]
                                     </div>
                                     <div className="flex justify-between py-0.5">
                                         <span>GRADE A (ใบกำกับภาษีเต็มรูป):</span>
-                                        <strong className="text-zinc-950">฿{gradeA.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                        <strong className="text-zinc-950 font-bold">฿{gradeA.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                     </div>
                                     <div className="flex justify-between py-0.5">
                                         <span>GRADE B (บิลเงินสด + สลิปโอน):</span>
-                                        <strong className="text-zinc-950">฿{gradeB.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                        <strong className="text-zinc-950 font-bold">฿{gradeB.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                     </div>
                                     <div className="flex justify-between py-0.5">
                                         <span>GRADE C (ใบสำคัญจ่าย / สลิป):</span>
-                                        <strong className="text-zinc-950">฿{gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                        <strong className="text-zinc-950 font-bold">฿{gradeC.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                     </div>
                                 </div>
 
                                 {/* Top Categories */}
-                                <div className="border border-zinc-900 p-3 bg-zinc-50 font-mono text-[11px] space-y-1.5">
-                                    <div className="font-bold text-[10px] uppercase text-zinc-500 border-b border-zinc-300 pb-1">
+                                <div className="border-2 border-zinc-950 p-3 bg-zinc-50 font-mono text-[11pt] space-y-1.5">
+                                    <div className="font-bold text-[10.5pt] uppercase text-zinc-700 border-b border-zinc-300 pb-1">
                                         [ ค่าใช้จ่ายแยกตามหมวดหมู่งวด {periodMonth} ]
                                     </div>
                                     {EXPENSE_CATEGORIES.slice(0, 4).map(cat => {
@@ -209,9 +212,9 @@ export default function MonthlyTaxPrintView({
                                             .reduce((s, e) => s + Number(e.amount || 0), 0);
                                         if (catTotal === 0) return null;
                                         return (
-                                            <div key={cat.id} className="flex justify-between py-0.5 text-[10px]">
+                                            <div key={cat.id} className="flex justify-between py-0.5 text-[10.5pt]">
                                                 <span className="truncate max-w-[180px]">{cat.label}:</span>
-                                                <strong className="text-zinc-950">฿{catTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                <strong className="text-zinc-950 font-bold">฿{catTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                                             </div>
                                         );
                                     })}
@@ -219,34 +222,34 @@ export default function MonthlyTaxPrintView({
                             </div>
 
                             {/* Itemized Table Index */}
-                            <div className="mt-5">
-                                <div className="font-mono text-[10px] font-bold text-zinc-500 uppercase mb-1">
+                            <div className="mt-4">
+                                <div className="font-mono text-[10.5pt] font-bold text-zinc-700 uppercase mb-1">
                                     [ สารบัญและดัชนีรายการเอกสารแนบ (ATTACHED RECEIPT INDEX) ]
                                 </div>
-                                <table className="w-full text-left border-collapse border border-zinc-900 font-mono text-[10px]">
+                                <table className="w-full text-left border-collapse border-2 border-zinc-950 font-mono text-[10.5pt]">
                                     <thead>
-                                        <tr className="bg-zinc-100 border-b border-zinc-900 uppercase font-bold text-zinc-700">
-                                            <th className="p-1.5 border-r border-zinc-900 w-12 text-center">ลำดับ</th>
-                                            <th className="p-1.5 border-r border-zinc-900 w-24">วันที่</th>
-                                            <th className="p-1.5 border-r border-zinc-900">รายการ / ผู้ขาย (VENDOR)</th>
-                                            <th className="p-1.5 border-r border-zinc-900 w-24">หมวดหมู่</th>
-                                            <th className="p-1.5 border-r border-zinc-900 w-20 text-center">หลักฐาน</th>
-                                            <th className="p-1.5 text-right w-24">ยอดเงิน (บาท)</th>
+                                        <tr className="bg-zinc-100 border-b-2 border-zinc-950 uppercase font-bold text-zinc-900">
+                                            <th className="p-2 border-r border-zinc-950 w-14 text-center">ลำดับ</th>
+                                            <th className="p-2 border-r border-zinc-950 w-28">วันที่</th>
+                                            <th className="p-2 border-r border-zinc-950">รายการ / ผู้ขาย (VENDOR)</th>
+                                            <th className="p-2 border-r border-zinc-950 w-28">หมวดหมู่</th>
+                                            <th className="p-2 border-r border-zinc-950 w-24 text-center">หลักฐาน</th>
+                                            <th className="p-2 text-right w-28">ยอดเงิน (บาท)</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-zinc-200">
+                                    <tbody className="divide-y divide-zinc-300">
                                         {selectedExpenses.map((exp, idx) => {
                                             const catObj = EXPENSE_CATEGORIES.find(c => c.id === exp.category);
                                             return (
                                                 <tr key={exp.id || idx}>
-                                                    <td className="p-1.5 border-r border-zinc-900 text-center font-bold">#{idx + 1}</td>
-                                                    <td className="p-1.5 border-r border-zinc-900">{exp.expense_date || '-'}</td>
-                                                    <td className="p-1.5 border-r border-zinc-900">
+                                                    <td className="p-1.5 border-r border-zinc-950 text-center font-bold">#{idx + 1}</td>
+                                                    <td className="p-1.5 border-r border-zinc-950">{exp.expense_date || '-'}</td>
+                                                    <td className="p-1.5 border-r border-zinc-950">
                                                         <div className="font-bold text-zinc-950 truncate max-w-xs">{exp.title}</div>
-                                                        <div className="text-[9px] text-zinc-500 truncate">{exp.vendor_name || '-'}</div>
+                                                        <div className="text-[9.5pt] text-zinc-600 truncate">{exp.vendor_name || '-'}</div>
                                                     </td>
-                                                    <td className="p-1.5 border-r border-zinc-900 text-[9px]">{catObj?.label || exp.category}</td>
-                                                    <td className="p-1.5 border-r border-zinc-900 text-center text-[9px]">
+                                                    <td className="p-1.5 border-r border-zinc-950 text-[10pt]">{catObj?.label || exp.category}</td>
+                                                    <td className="p-1.5 border-r border-zinc-950 text-center text-[10pt]">
                                                         {exp.doc_type === 'tax_invoice' ? 'GRADE A' : (exp.doc_type === 'cash_bill' ? 'GRADE B' : 'GRADE C')}
                                                     </td>
                                                     <td className="p-1.5 text-right font-bold text-zinc-950">
@@ -261,17 +264,17 @@ export default function MonthlyTaxPrintView({
                         </div>
 
                         {/* Signatures Footer */}
-                        <div className="mt-8 pt-4 border-t-2 border-zinc-950 grid grid-cols-2 gap-8 font-mono text-[10px]">
+                        <div className="mt-6 pt-3.5 border-t-2 border-zinc-950 grid grid-cols-2 gap-8 font-mono text-[11pt]">
                             <div className="flex flex-col items-center text-center p-3 border border-zinc-300">
-                                <div className="w-44 border-b border-zinc-900 pb-8 mb-2"></div>
-                                <div className="font-bold text-zinc-950">ผู้จัดทำรายงาน / ฝ่ายบัญชี</div>
-                                <div className="text-[9px] text-zinc-500">วันที่: ______/______/__________</div>
+                                <div className="w-48 border-b border-zinc-950 pb-8 mb-2"></div>
+                                <div className="font-bold text-zinc-950 text-[11.5pt]">ผู้จัดทำรายงาน / ฝ่ายบัญชี</div>
+                                <div className="text-[10pt] text-zinc-600">วันที่: ______/______/__________</div>
                             </div>
 
                             <div className="flex flex-col items-center text-center p-3 border border-zinc-300">
-                                <div className="w-44 border-b border-zinc-900 pb-8 mb-2"></div>
-                                <div className="font-bold text-zinc-950">{companySettings?.tax_signature_name || 'ผู้มีอำนาจลงนาม / กรรมการผู้จัดการ'}</div>
-                                <div className="text-[9px] text-zinc-500">วันที่: ______/______/__________</div>
+                                <div className="w-48 border-b border-zinc-950 pb-8 mb-2"></div>
+                                <div className="font-bold text-zinc-950 text-[11.5pt]">{companySettings?.tax_signature_name || 'ผู้มีอำนาจลงนาม / กรรมการผู้จัดการ'}</div>
+                                <div className="text-[10pt] text-zinc-600">วันที่: ______/______/__________</div>
                             </div>
                         </div>
                     </div>
@@ -281,16 +284,17 @@ export default function MonthlyTaxPrintView({
                 {receiptPages.map((pageItems, pageIdx) => (
                     <div 
                         key={`page-${pageIdx}`}
-                        className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl font-sans text-xs min-h-[297mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
+                        style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
+                        className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11pt] min-h-[297mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
                     >
                         <div>
                             {/* Page Header Strip */}
-                            <div className="border-b border-zinc-900 pb-2 mb-4 flex justify-between items-center font-mono text-[10px] text-zinc-500">
+                            <div className="border-b-2 border-zinc-950 pb-2 mb-3.5 flex justify-between items-center font-mono text-[10.5pt] text-zinc-600">
                                 <div className="flex items-center gap-2">
-                                    <strong className="text-zinc-950 uppercase">{companySettings?.tax_company_name || 'IN THE HAUS'}</strong>
+                                    <strong className="text-zinc-950 uppercase font-bold">{companySettings?.tax_company_name || 'IN THE HAUS'}</strong>
                                     <span>• หลักฐานภาษีงวด {periodMonth}</span>
                                 </div>
-                                <div>
+                                <div className="font-bold text-zinc-950">
                                     ATTACHED SLIPS PAGE {pageIdx + 1} / {receiptPages.length}
                                 </div>
                             </div>
@@ -309,40 +313,40 @@ export default function MonthlyTaxPrintView({
                                     return (
                                         <div 
                                             key={exp.id || itemIdx}
-                                            className="border border-zinc-900 p-2.5 bg-zinc-50/50 flex flex-col justify-between font-mono"
+                                            className="border-2 border-zinc-950 p-3 bg-zinc-50/50 flex flex-col justify-between font-mono"
                                             style={{ minHeight: layoutMode === '1up' ? '700px' : (layoutMode === '4up' ? '340px' : '440px') }}
                                         >
                                             {/* Slip Info Header Box */}
-                                            <div className="bg-zinc-100 border border-zinc-900 p-2 mb-2">
+                                            <div className="bg-zinc-100 border border-zinc-950 p-2.5 mb-2">
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <span className="font-bold text-xs text-zinc-950 block">
+                                                        <span className="font-bold text-[11.5pt] text-zinc-950 block">
                                                             REF #{globalIndex} • {exp.title}
                                                         </span>
-                                                        <span className="text-[10px] text-zinc-600 block mt-0.5">
+                                                        <span className="text-[10.5pt] text-zinc-700 block mt-0.5 font-medium">
                                                             ร้านค้า: {exp.vendor_name || 'ไม่ระบุผู้ขาย'} {exp.vendor_tax_id ? `(TAX: ${exp.vendor_tax_id})` : ''}
                                                         </span>
                                                     </div>
                                                     <div className="text-right shrink-0">
-                                                        <span className="font-bold text-sm text-zinc-950 block">
+                                                        <span className="font-bold text-[13pt] text-zinc-950 block">
                                                             ฿{Number(exp.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                         </span>
-                                                        <span className="text-[9px] text-zinc-500 block">
+                                                        <span className="text-[10pt] text-zinc-600 block">
                                                             {exp.expense_date}
                                                         </span>
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-1 pt-1 border-t border-zinc-300 flex justify-between text-[9px] text-zinc-600">
+                                                <div className="mt-1.5 pt-1.5 border-t border-zinc-300 flex justify-between text-[10pt] text-zinc-700">
                                                     <span>หมวดหมู่: {catObj?.label || exp.category}</span>
-                                                    <span className="font-bold uppercase">
+                                                    <span className="font-bold uppercase text-zinc-950">
                                                         {exp.doc_type === 'tax_invoice' ? '[GRADE A: TAX INV]' : (exp.doc_type === 'cash_bill' ? '[GRADE B: CASH BILL]' : '[GRADE C: SLIP]')}
                                                     </span>
                                                 </div>
                                             </div>
 
                                             {/* Receipt Enhanced Image Display Viewport */}
-                                            <div className="flex-1 border border-zinc-300 bg-white flex items-center justify-center p-1 overflow-hidden min-h-[220px]">
+                                            <div className="flex-1 border border-zinc-400 bg-white flex items-center justify-center p-1.5 overflow-hidden min-h-[220px]">
                                                 {enhancedSrc ? (
                                                     <img 
                                                         src={enhancedSrc} 
@@ -351,7 +355,7 @@ export default function MonthlyTaxPrintView({
                                                         style={{ maxHeight: layoutMode === '1up' ? '650px' : (layoutMode === '4up' ? '260px' : '380px') }}
                                                     />
                                                 ) : (
-                                                    <div className="text-center text-zinc-400 p-4 text-[10px]">
+                                                    <div className="text-center text-zinc-500 p-4 text-[11pt]">
                                                         [ไม่มีรูปภาพใบเสร็จแนบ]
                                                     </div>
                                                 )}
@@ -363,7 +367,7 @@ export default function MonthlyTaxPrintView({
                         </div>
 
                         {/* Page Bottom Footer */}
-                        <div className="mt-4 pt-2 border-t border-zinc-300 flex justify-between text-[9px] font-mono text-zinc-400">
+                        <div className="mt-4 pt-2 border-t border-zinc-300 flex justify-between text-[10pt] font-mono text-zinc-500">
                             <span>IN THE HAUS TAX ENGINE • DOCUMENT ARCHIVE</span>
                             <span>CONFIDENTIAL FINANCIAL RECORDS</span>
                         </div>
