@@ -71,11 +71,11 @@ export default function SalesTaxLedgerPrintView({
     // Split records into pages for clean A4 printing (approx 18-20 rows per A4 page)
     const ROWS_PER_PAGE = 18;
     const pages = [];
-    if (records.length === 0) {
+    if (activeRecords.length === 0) {
         pages.push([]);
     } else {
-        for (let i = 0; i < records.length; i += ROWS_PER_PAGE) {
-            pages.push(records.slice(i, i + ROWS_PER_PAGE));
+        for (let i = 0; i < activeRecords.length; i += ROWS_PER_PAGE) {
+            pages.push(activeRecords.slice(i, i + ROWS_PER_PAGE));
         }
     }
 

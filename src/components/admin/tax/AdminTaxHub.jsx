@@ -129,23 +129,74 @@ export default function AdminTaxHub() {
 
             // 3. Fetch POS Bookings for Annual VAT Threshold & Sales Ledger
             try {
-                const currentYear = new Date().getFullYear();
-                const startOfYear = `${currentYear}-01-01T00:00:00.000Z`;
-                const endOfYear = `${currentYear}-12-31T23:59:59.999Z`;
-
-                const { data: bookingsData } = await supabase
+                const { data: bookingsData, error: bookingsErr } = await supabase
                     .from('bookings')
-                    .select('id, created_at, booking_time, customer_name, customer_phone, customer_tax_id, total_amount, total_price, deposit_amount, status, payment_method, order_number')
-                    .in('status', ['completed', 'cancelled', 'paid'])
-                    .gte('created_at', startOfYear)
-                    .lte('created_at', endOfYear)
-                    .order('created_at', { ascending: true });
+                    .select(`
+                        id, 
+                        created_at, 
+                        booking_time, 
+                        updated_at,
+                        customer_name, 
+                        customer_phone, 
+                        customer_tax_id, 
+                        total_amount, 
+                        total_price, 
+                        deposit_amount, 
+                        discount_amount,
+                        status, 
+                        payment_method, 
+                        staff_remark,
+                        payment_slip_url,
+                        pickup_contact_name,
+                        pickup_contact_phone,
+                        customer_note,
+                        pax,
+                        booking_type,
+                        order_number,
+                        tables_layout (
+                            id,
+                            table_name
+                        ),
+                        profiles (
+                            id,
+                            display_name,
+                            nickname,
+                            phone_number
+                        ),
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            custom_name,
+                            selected_options,
+                            menu_items (
+                                id,
+                                name,
+                                price
+                            )
+                        ),
+                        tax_invoices (
+                            id,
+                            invoice_number,
+                            doc_type,
+                            status
+                        )
+                    `)
+                    .order('created_at', { ascending: false })
+                    .limit(2000);
 
-                if (isMounted && bookingsData) {
+                if (!bookingsErr && bookingsData && isMounted) {
                     setAllYearBookings(bookingsData);
+                    localStorage.setItem('onhaus_tax_bookings_cache', JSON.stringify(bookingsData));
+                } else if (isMounted) {
+                    const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
+                    if (local) setAllYearBookings(JSON.parse(local));
                 }
             } catch {
-                // Fallback
+                if (isMounted) {
+                    const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
+                    if (local) setAllYearBookings(JSON.parse(local));
+                }
             }
 
             if (isMounted && !silent) setLoading(false);

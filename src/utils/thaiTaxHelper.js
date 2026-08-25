@@ -242,17 +242,18 @@ export function exportUnifiedSalesLedgerCsv(records = [], monthStr = '', isVatRe
         'ช่องทางชำระเงิน (Payment Method)',
         isVatRegistered ? 'มูลค่าสินค้าก่อนภาษี (Pre-VAT)' : 'มูลค่าสินค้า (Amount)',
         isVatRegistered ? 'ภาษีมูลค่าเพิ่ม 7% (VAT)' : 'ภาษีมูลค่าเพิ่ม (VAT Exempt)',
-        'จำนวนเงินรวมสุทธิ (Total Amount)',
-        'สถานะ (Status)'
+        'จำนวนเงินรวมสุทธิ (Total Amount)'
     ];
 
-    const rows = records.map((item, index) => {
+    // Completely filter out void / cancelled bills
+    const activeRecords = records.filter(item => item.status !== 'cancelled' && item.status !== 'void' && item.status !== 'deleted');
+
+    const rows = activeRecords.map((item, index) => {
         const rawDate = item.issued_at || item.created_at || item.booking_time;
         const dateObj = rawDate ? new Date(rawDate) : null;
         const dateStr = dateObj ? dateObj.toLocaleDateString('th-TH') : '-';
         const timeStr = dateObj ? dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-';
         
-        const isCancelled = item.status === 'cancelled';
         const docNo = item.invoice_number || item.bill_number || item.order_number || (item.id ? `POS-${String(item.id).slice(0, 8).toUpperCase()}` : '-');
         const posRef = item.booking_id || (item.invoice_number ? (item.id || '-') : '-');
         const customerName = item.customer_name || 'ลูกค้าทั่วไป (Walk-in)';
@@ -288,15 +289,13 @@ export function exportUnifiedSalesLedgerCsv(records = [], monthStr = '', isVatRe
             `"${taxId}"`,
             `"${branchStr}"`,
             `"${paymentStr}"`,
-            isCancelled ? '0.00' : preVat.toFixed(2),
-            isCancelled ? '0.00' : vat.toFixed(2),
-            isCancelled ? '0.00' : total.toFixed(2),
-            `"${isCancelled ? 'ยกเลิก (CANCELLED)' : 'ปกติ (ACTIVE)'}"`
+            preVat.toFixed(2),
+            vat.toFixed(2),
+            total.toFixed(2)
         ];
     });
 
     // Summary calculations
-    const activeRecords = records.filter(i => i.status !== 'cancelled');
     const totalPreVat = activeRecords.reduce((sum, item) => {
         const preVat = Number(item.pre_vat_amount !== undefined ? item.pre_vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
         return sum + preVat;
