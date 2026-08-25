@@ -74,7 +74,7 @@ export default function MonthlyTaxPrintView({
     };
 
     return (
-        <div className="fixed inset-0 z-[230] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:overflow-visible">
+        <div className="fixed inset-0 z-[230] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start p-2 sm:p-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible">
             
             {/* Embedded Print CSS */}
             <style dangerouslySetInnerHTML={{ __html: `
@@ -83,17 +83,50 @@ export default function MonthlyTaxPrintView({
                         size: A4 portrait;
                         margin: 6mm 6mm 6mm 6mm;
                     }
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
+                    html, body {
+                        background: #ffffff !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        height: auto !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    body > * {
+                        visibility: hidden !important;
+                    }
+                    #monthly-tax-printable-container,
+                    #monthly-tax-printable-container * {
+                        visibility: visible !important;
+                    }
+                    #monthly-tax-printable-container {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        display: block !important;
                     }
                     .print-page-sheet {
-                        page-break-after: always !important;
-                        break-after: page !important;
                         page-break-inside: avoid !important;
                         break-inside: avoid !important;
                         margin: 0 !important;
+                        padding: 2mm 3mm !important;
                         box-sizing: border-box !important;
+                        height: auto !important;
+                        min-height: 0 !important;
+                        max-height: none !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        overflow: visible !important;
+                    }
+                    .print-page-sheet:not(:last-child) {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                    }
+                    .print-page-sheet:last-child {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
                     }
                 }
             `}} />
