@@ -119,7 +119,7 @@ export default function AdminTaxHub() {
             // 2. Fetch Invoices
             await fetchInvoices();
 
-            // 3. Fetch POS Bookings for Annual VAT Threshold (1.8M Tracker)
+            // 3. Fetch POS Bookings for Annual VAT Threshold & Sales Ledger
             try {
                 const currentYear = new Date().getFullYear();
                 const startOfYear = `${currentYear}-01-01T00:00:00.000Z`;
@@ -127,10 +127,11 @@ export default function AdminTaxHub() {
 
                 const { data: bookingsData } = await supabase
                     .from('bookings')
-                    .select('id, created_at, total_amount, deposit_amount, status')
-                    .eq('status', 'completed')
+                    .select('id, created_at, booking_time, customer_name, customer_phone, customer_tax_id, total_amount, total_price, deposit_amount, status, payment_method, order_number')
+                    .in('status', ['completed', 'cancelled', 'paid'])
                     .gte('created_at', startOfYear)
-                    .lte('created_at', endOfYear);
+                    .lte('created_at', endOfYear)
+                    .order('created_at', { ascending: true });
 
                 if (isMounted && bookingsData) {
                     setAllYearBookings(bookingsData);

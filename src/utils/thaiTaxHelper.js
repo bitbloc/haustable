@@ -216,50 +216,102 @@ export function downloadCsvFile(csvContent, filename) {
 /**
  * Generates Thai Revenue Department compliant Sales Tax Report (รายงานภาษีขาย ภ.พ.30) or Non-VAT Sales Ledger CSV
  */
-export function exportSalesTaxReportCsv(invoices = [], monthStr = '', isVatRegistered = false) {
+export function exportSalesTaxReportCsv(invoices = [], monthStr = '', isVatRegistered = false, options = {}) {
+    return exportUnifiedSalesLedgerCsv(invoices, monthStr, isVatRegistered, options);
+}
+
+/**
+ * Generates Unified Sales & Bill Ledger CSV (รายงานภาษีขายและสมุดรายรับรายบิล)
+ * Supports both Official Tax Invoices and POS Transaction Bills
+ */
+export function exportUnifiedSalesLedgerCsv(records = [], monthStr = '', isVatRegistered = false, options = {}) {
+    const reportType = options.reportType || (isVatRegistered ? 'vat_report' : 'sales_ledger');
     const title = isVatRegistered 
         ? `"รายงานภาษีขาย (Sales Tax Report ภ.พ.30) - ประจำงวด ${monthStr || ''}"`
-        : `"รายงานสรุปยอดขายและรายรับ (Sales & Revenue Ledger) - ประจำงวด ${monthStr || ''}"`;
+        : `"รายงานสรุปยอดขายและสมุดรายรับรายบิล (Sales & Bill Ledger) - ประจำงวด ${monthStr || ''}"`;
 
     const headers = [
         'ลำดับ (No.)',
         'วัน เดือน ปี (Date)',
-        'เล่มที่/เลขที่เอกสาร (Doc No.)',
+        'เวลา (Time)',
+        'เล่มที่/เลขที่เอกสาร (Doc/Bill No.)',
+        'รหัสอ้างอิง POS (POS Ref)',
         'ชื่อผู้ซื้อสินค้า/บริการ (Customer Name)',
         'เลขประจำตัวผู้เสียภาษี (Tax ID)',
         'สถานประกอบการ (Branch)',
-        isVatRegistered ? 'มูลค่าสินค้า/บริการก่อนภาษี (Pre-VAT)' : 'มูลค่าสินค้า/บริการ (Amount)',
+        'ช่องทางชำระเงิน (Payment Method)',
+        isVatRegistered ? 'มูลค่าสินค้าก่อนภาษี (Pre-VAT)' : 'มูลค่าสินค้า (Amount)',
         isVatRegistered ? 'ภาษีมูลค่าเพิ่ม 7% (VAT)' : 'ภาษีมูลค่าเพิ่ม (VAT Exempt)',
-        'จำนวนเงินรวม (Total Amount)',
+        'จำนวนเงินรวมสุทธิ (Total Amount)',
         'สถานะ (Status)'
     ];
 
-    const rows = invoices.map((inv, index) => {
-        const dateStr = inv.issued_at ? new Date(inv.issued_at).toLocaleDateString('th-TH') : '-';
-        const isCancelled = inv.status === 'cancelled';
-        const branchStr = inv.customer_branch_type === 'head_office' || inv.customer_branch_code === '00000' 
+    const rows = records.map((item, index) => {
+        const rawDate = item.issued_at || item.created_at || item.booking_time;
+        const dateObj = rawDate ? new Date(rawDate) : null;
+        const dateStr = dateObj ? dateObj.toLocaleDateString('th-TH') : '-';
+        const timeStr = dateObj ? dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-';
+        
+        const isCancelled = item.status === 'cancelled';
+        const docNo = item.invoice_number || item.bill_number || item.order_number || (item.id ? `POS-${String(item.id).slice(0, 8).toUpperCase()}` : '-');
+        const posRef = item.booking_id || (item.invoice_number ? (item.id || '-') : '-');
+        const customerName = item.customer_name || 'ลูกค้าทั่วไป (Walk-in)';
+        const taxId = item.customer_tax_id ? formatTaxId(item.customer_tax_id) : '-';
+        
+        const branchStr = item.customer_branch_type === 'head_office' || item.customer_branch_code === '00000' 
             ? 'สำนักงานใหญ่' 
-            : `สาขาที่ ${inv.customer_branch_code || '00001'}`;
+            : (item.customer_branch_code ? `สาขาที่ ${item.customer_branch_code}` : 'สำนักงานใหญ่');
+
+        // Payment method mapping
+        const paymentMap = {
+            cash: 'เงินสด (Cash)',
+            promptpay: 'พร้อมเพย์ (PromptPay)',
+            credit_card: 'บัตรเครดิต (Credit Card)',
+            card: 'บัตรเครดิต/เดบิต',
+            transfer: 'โอนเงิน (Bank Transfer)',
+            online: 'ออนไลน์ (Online)',
+            qr: 'QR Code'
+        };
+        const paymentStr = paymentMap[item.payment_method] || (item.payment_method ? item.payment_method.toUpperCase() : 'เงินสด / โอน');
+
+        const preVat = Number(item.pre_vat_amount !== undefined ? item.pre_vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+        const vat = Number(item.vat_amount !== undefined ? item.vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) - preVat) : 0));
+        const total = Number(item.total_amount !== undefined ? item.total_amount : (item.total_price || 0));
 
         return [
             index + 1,
             `"${dateStr}"`,
-            `"${inv.invoice_number || '-'}"`,
-            `"${(inv.customer_name || 'ลูกค้าทั่วไป').replace(/"/g, '""')}"`,
-            `"${formatTaxId(inv.customer_tax_id)}"`,
+            `"${timeStr}"`,
+            `"${docNo}"`,
+            `"${posRef}"`,
+            `"${customerName.replace(/"/g, '""')}"`,
+            `"${taxId}"`,
             `"${branchStr}"`,
-            isCancelled ? '0.00' : (Number(inv.pre_vat_amount || 0)).toFixed(2),
-            isCancelled ? '0.00' : (Number(inv.vat_amount || 0)).toFixed(2),
-            isCancelled ? '0.00' : (Number(inv.total_amount || 0)).toFixed(2),
+            `"${paymentStr}"`,
+            isCancelled ? '0.00' : preVat.toFixed(2),
+            isCancelled ? '0.00' : vat.toFixed(2),
+            isCancelled ? '0.00' : total.toFixed(2),
             `"${isCancelled ? 'ยกเลิก (CANCELLED)' : 'ปกติ (ACTIVE)'}"`
         ];
     });
 
     // Summary calculations
-    const activeInvoices = invoices.filter(i => i.status !== 'cancelled');
-    const totalPreVat = activeInvoices.reduce((sum, i) => sum + Number(i.pre_vat_amount || 0), 0);
-    const totalVat = activeInvoices.reduce((sum, i) => sum + Number(i.vat_amount || 0), 0);
-    const grandTotal = activeInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
+    const activeRecords = records.filter(i => i.status !== 'cancelled');
+    const totalPreVat = activeRecords.reduce((sum, item) => {
+        const preVat = Number(item.pre_vat_amount !== undefined ? item.pre_vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+        return sum + preVat;
+    }, 0);
+
+    const totalVat = activeRecords.reduce((sum, item) => {
+        const preVat = Number(item.pre_vat_amount !== undefined ? item.pre_vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+        const vat = Number(item.vat_amount !== undefined ? item.vat_amount : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) - preVat) : 0));
+        return sum + vat;
+    }, 0);
+
+    const grandTotal = activeRecords.reduce((sum, item) => {
+        const total = Number(item.total_amount !== undefined ? item.total_amount : (item.total_price || 0));
+        return sum + total;
+    }, 0);
 
     const summaryRow = [
         'รวมทั้งสิ้น (TOTAL)',
@@ -268,10 +320,13 @@ export function exportSalesTaxReportCsv(invoices = [], monthStr = '', isVatRegis
         '',
         '',
         '',
+        '',
+        '',
+        '',
         totalPreVat.toFixed(2),
         totalVat.toFixed(2),
         grandTotal.toFixed(2),
-        `"รวม ${activeInvoices.length} ฉบับ"`
+        `"รวม ${activeRecords.length} รายการ"`
     ];
 
     const csvLines = [

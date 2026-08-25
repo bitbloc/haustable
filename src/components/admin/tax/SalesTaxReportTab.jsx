@@ -11,14 +11,24 @@ import {
     Calendar,
     Filter,
     ArrowUpRight,
-    Info
+    Info,
+    Receipt,
+    FileText,
+    Layers,
+    CreditCard,
+    Coins,
+    QrCode,
+    Loader2
 } from 'lucide-react';
 import { 
     formatTaxId, 
     formatBranch, 
-    exportSalesTaxReportCsv, 
-    downloadCsvFile 
+    exportUnifiedSalesLedgerCsv, 
+    downloadCsvFile,
+    thaiBahtText 
 } from '../../../utils/thaiTaxHelper';
+import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
+import SalesTaxLedgerPrintView from './SalesTaxLedgerPrintView';
 import { toast } from 'sonner';
 
 const VAT_THRESHOLD_ANNUAL = 1800000; // 1.8 Million THB per Revenue Code
@@ -31,7 +41,7 @@ export default function SalesTaxReportTab({
 }) {
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
 
-    // Filters
+    // Filters & States
     const getCurrentMonth = () => {
         const d = new Date();
         const y = d.getFullYear();
@@ -41,45 +51,123 @@ export default function SalesTaxReportTab({
 
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth);
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('active'); // 'all' | 'active' | 'cancelled'
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'cancelled'
+    const [dataSourceMode, setDataSourceMode] = useState('invoices'); // 'invoices' | 'pos_bills' | 'all'
+    const [showPrintModal, setShowPrintModal] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
 
-    // Filter invoices by month and query
-    const filteredInvoices = useMemo(() => {
-        return invoices.filter(inv => {
-            const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
-            const matchesMonth = !selectedMonth || invMonth === selectedMonth;
+    // Normalize & Compile POS Bookings of the selected month into sequential Bill items
+    const monthPosBills = useMemo(() => {
+        if (!allYearBookings || allYearBookings.length === 0) return [];
+        
+        // Filter bookings matching the selected month
+        const monthItems = allYearBookings.filter(b => {
+            const rawDate = b.booking_time || b.created_at || '';
+            return rawDate.startsWith(selectedMonth);
+        });
 
+        // Sort chronologically ascending
+        monthItems.sort((a, b) => {
+            const timeA = new Date(a.booking_time || a.created_at).getTime();
+            const timeB = new Date(b.booking_time || b.created_at).getTime();
+            return timeA - timeB;
+        });
+
+        // Map to structured bill records with running sequence
+        return monthItems.map((b, idx) => {
+            const total = Number(b.total_amount || b.total_price || 0);
+            const preVat = isVatRegistered ? (total / 1.07) : total;
+            const vat = isVatRegistered ? (total - preVat) : 0;
+            const seqNumber = String(idx + 1).padStart(4, '0');
+            const ymCompact = selectedMonth.replace('-', '');
+            const generatedBillNo = b.order_number || `BILL-${ymCompact}-${seqNumber}`;
+
+            return {
+                id: b.id,
+                booking_id: b.id,
+                bill_number: generatedBillNo,
+                invoice_number: generatedBillNo,
+                customer_name: b.customer_name || 'ลูกค้าทั่วไป (Walk-in)',
+                customer_phone: b.customer_phone || '',
+                customer_tax_id: b.customer_tax_id || '',
+                customer_branch_type: 'head_office',
+                customer_branch_code: '00000',
+                issued_at: b.booking_time || b.created_at,
+                created_at: b.created_at,
+                pre_vat_amount: preVat,
+                vat_amount: vat,
+                total_amount: total,
+                payment_method: b.payment_method || 'promptpay',
+                status: b.status === 'cancelled' ? 'cancelled' : 'active',
+                source_type: 'pos_bill'
+            };
+        });
+    }, [allYearBookings, selectedMonth, isVatRegistered]);
+
+    // Active Compiled Records based on Data Source Mode
+    const activeRawRecords = useMemo(() => {
+        if (dataSourceMode === 'invoices') {
+            return invoices.filter(inv => {
+                const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
+                return !selectedMonth || invMonth === selectedMonth;
+            }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
+        } else if (dataSourceMode === 'pos_bills') {
+            return monthPosBills;
+        } else {
+            // Unified (All Invoices + POS Bills not already in invoices)
+            const invoiceBookingIds = new Set(invoices.map(i => i.booking_id).filter(Boolean));
+            const remainingBills = monthPosBills.filter(b => !invoiceBookingIds.has(b.booking_id));
+            const monthInvoices = invoices.filter(inv => {
+                const invMonth = (inv.issued_at || inv.created_at || '').slice(0, 7);
+                return !selectedMonth || invMonth === selectedMonth;
+            }).map(inv => ({ ...inv, source_type: 'tax_invoice' }));
+
+            const combined = [...monthInvoices, ...remainingBills];
+            combined.sort((a, b) => {
+                const timeA = new Date(a.issued_at || a.created_at).getTime();
+                const timeB = new Date(b.issued_at || b.created_at).getTime();
+                return timeA - timeB;
+            });
+            return combined;
+        }
+    }, [dataSourceMode, invoices, monthPosBills, selectedMonth]);
+
+    // Filter by search query and status
+    const filteredRecords = useMemo(() => {
+        return activeRawRecords.filter(item => {
             const q = searchQuery.toLowerCase().trim();
             const matchesSearch = !q || 
-                (inv.invoice_number || '').toLowerCase().includes(q) ||
-                (inv.customer_name || '').toLowerCase().includes(q) ||
-                (inv.customer_tax_id || '').includes(q);
+                (item.invoice_number || '').toLowerCase().includes(q) ||
+                (item.bill_number || '').toLowerCase().includes(q) ||
+                (item.customer_name || '').toLowerCase().includes(q) ||
+                (item.customer_tax_id || '').includes(q) ||
+                (item.payment_method || '').toLowerCase().includes(q);
 
             const matchesStatus = statusFilter === 'all' 
                 ? true 
-                : (statusFilter === 'active' ? inv.status !== 'cancelled' : inv.status === 'cancelled');
+                : (statusFilter === 'active' ? item.status !== 'cancelled' : item.status === 'cancelled');
 
-            return matchesMonth && matchesSearch && matchesStatus;
+            return matchesSearch && matchesStatus;
         });
-    }, [invoices, selectedMonth, searchQuery, statusFilter]);
+    }, [activeRawRecords, searchQuery, statusFilter]);
 
     // Monthly Calculations
     const monthlyStats = useMemo(() => {
-        const activeOnly = filteredInvoices.filter(i => i.status !== 'cancelled');
+        const activeOnly = filteredRecords.filter(i => i.status !== 'cancelled');
         const grossSales = activeOnly.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
         const preVatSales = activeOnly.reduce((sum, i) => sum + Number(i.pre_vat_amount || 0), 0);
         const outputVat = activeOnly.reduce((sum, i) => sum + Number(i.vat_amount || 0), 0);
-        const invoiceCount = activeOnly.length;
-        const cancelledCount = filteredInvoices.filter(i => i.status === 'cancelled').length;
+        const recordCount = activeOnly.length;
+        const cancelledCount = filteredRecords.filter(i => i.status === 'cancelled').length;
 
         return {
             grossSales,
             preVatSales: isVatRegistered ? preVatSales : grossSales,
             outputVat: isVatRegistered ? outputVat : 0,
-            invoiceCount,
+            recordCount,
             cancelledCount
         };
-    }, [filteredInvoices, isVatRegistered]);
+    }, [filteredRecords, isVatRegistered]);
 
     // YTD Revenue & 1.8M Baht VAT Threshold Progress
     const ytdStats = useMemo(() => {
@@ -91,7 +179,7 @@ export default function SalesTaxReportTab({
         );
         const totalFromInvoices = yearInvoices.reduce((sum, i) => sum + Number(i.total_amount || 0), 0);
 
-        const yearBookings = allYearBookings.filter(b => 
+        const yearBookings = (allYearBookings || []).filter(b => 
             (b.booking_time || b.created_at || '').startsWith(currentYear) && b.status === 'completed'
         );
         const totalFromBookings = yearBookings.reduce((sum, b) => sum + Number(b.total_amount || b.total_price || 0), 0);
@@ -113,18 +201,52 @@ export default function SalesTaxReportTab({
     }, [invoices, allYearBookings, selectedMonth]);
 
     const handleExportCsv = () => {
-        if (filteredInvoices.length === 0) {
-            toast.warning('ไม่พบข้อมูลเอกสารในเดือนที่เลือก');
+        if (filteredRecords.length === 0) {
+            toast.warning('ไม่พบข้อมูลรายการขายในเดือนและเงื่อนไขที่เลือก');
             return;
         }
-        const csv = exportSalesTaxReportCsv(filteredInvoices, selectedMonth, isVatRegistered);
-        const filename = `Sales_Tax_Report_${selectedMonth}.csv`;
+        const csv = exportUnifiedSalesLedgerCsv(filteredRecords, selectedMonth, isVatRegistered, {
+            reportType: dataSourceMode
+        });
+        const prefix = isVatRegistered ? 'Sales_Tax_Report' : 'Sales_Bill_Ledger';
+        const filename = `${prefix}_${dataSourceMode}_${selectedMonth}.csv`;
         downloadCsvFile(csv, filename);
-        toast.success(`ดาวน์โหลดรายงานภาษี ${filename} เรียบร้อยแล้ว`);
+        toast.success(`ดาวน์โหลดรายงาน ${filename} เรียบร้อยแล้ว (พร้อมเปิดใน Excel)`);
     };
 
-    const handlePrintLedger = () => {
-        window.print();
+    const handleOpenPrintPreview = () => {
+        setShowPrintModal(true);
+    };
+
+    // Helper for rendering payment method badges
+    const renderPaymentBadge = (method) => {
+        switch (method) {
+            case 'promptpay':
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[9px] font-bold border border-blue-200">
+                        <QrCode size={10} /> พร้อมเพย์
+                    </span>
+                );
+            case 'cash':
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono text-[9px] font-bold border border-emerald-200">
+                        <Coins size={10} /> เงินสด
+                    </span>
+                );
+            case 'credit_card':
+            case 'card':
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-mono text-[9px] font-bold border border-purple-200">
+                        <CreditCard size={10} /> บัตรเครดิต
+                    </span>
+                );
+            default:
+                return (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-700 font-mono text-[9px] font-medium">
+                        {method ? method.toUpperCase() : 'ทั่วไป'}
+                    </span>
+                );
+        }
     };
 
     return (
@@ -177,37 +299,64 @@ export default function SalesTaxReportTab({
                 </div>
             )}
 
-            {/* Monthly Controls & Filters */}
-            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+            {/* Controls Bar: Data Source Switcher, Month Picker, Filters, Export & Print */}
+            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 shadow-sm">
+                
+                {/* Left: Data Source Tabs & Filters */}
                 <div className="flex flex-wrap items-center gap-3">
+                    {/* Data Source Selector */}
+                    <div className="flex bg-zinc-100 p-0.5 rounded-xl border border-zinc-200 text-xs font-mono">
+                        <button
+                            onClick={() => setDataSourceMode('invoices')}
+                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'invoices' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                        >
+                            <FileText size={13} />
+                            <span>เอกสารภาษี ({invoices.filter(i => (i.issued_at || '').startsWith(selectedMonth)).length})</span>
+                        </button>
+                        <button
+                            onClick={() => setDataSourceMode('pos_bills')}
+                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'pos_bills' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                        >
+                            <Receipt size={13} />
+                            <span>บิลขาย POS ({monthPosBills.length})</span>
+                        </button>
+                        <button
+                            onClick={() => setDataSourceMode('all')}
+                            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${dataSourceMode === 'all' ? 'bg-[#1A1A1A] text-white font-bold shadow-sm' : 'text-zinc-600 hover:text-zinc-950'}`}
+                        >
+                            <Layers size={13} />
+                            <span>รวมทั้งหมด</span>
+                        </button>
+                    </div>
+
                     {/* Month Picker */}
-                    <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-zinc-500" />
+                    <div className="flex items-center gap-1.5 border border-zinc-300 rounded-xl px-2.5 py-1 bg-white">
+                        <Calendar size={14} className="text-zinc-500" />
                         <input
                             type="month"
                             value={selectedMonth}
                             onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="px-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono font-bold focus:border-zinc-900 focus:outline-none bg-white"
+                            className="text-xs font-mono font-bold text-zinc-900 focus:outline-none bg-transparent cursor-pointer"
                         />
                     </div>
 
                     {/* Status Filter */}
-                    <div className="flex border border-zinc-300 rounded-lg overflow-hidden text-xs font-mono">
+                    <div className="flex border border-zinc-300 rounded-xl overflow-hidden text-xs font-mono">
                         <button
                             onClick={() => setStatusFilter('active')}
-                            className={`px-3 py-1.5 transition-colors ${statusFilter === 'active' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'active' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
                         >
-                            ปกติ (Active)
+                            ปกติ
                         </button>
                         <button
                             onClick={() => setStatusFilter('cancelled')}
-                            className={`px-3 py-1.5 transition-colors ${statusFilter === 'cancelled' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'cancelled' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
                         >
                             ยกเลิก ({monthlyStats.cancelledCount})
                         </button>
                         <button
                             onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1.5 transition-colors ${statusFilter === 'all' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
+                            className={`px-2.5 py-1.5 transition-colors cursor-pointer ${statusFilter === 'all' ? 'bg-[#1A1A1A] text-white font-bold' : 'bg-white text-zinc-600 hover:bg-zinc-100'}`}
                         >
                             ทั้งหมด
                         </button>
@@ -215,33 +364,33 @@ export default function SalesTaxReportTab({
 
                     {/* Search */}
                     <div className="relative">
-                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                         <input
                             type="text"
-                            placeholder="ค้นหาเลขที่ / ชื่อลูกค้า / Tax ID..."
+                            placeholder="ค้นหาเลขที่บิล / ลูกค้า / Tax ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-lg text-xs font-mono w-48 sm:w-64 focus:border-zinc-900 focus:outline-none bg-white"
+                            className="pl-8 pr-3 py-1.5 border border-zinc-300 rounded-xl text-xs font-mono w-44 sm:w-56 focus:border-zinc-900 focus:outline-none bg-white"
                         />
                     </div>
                 </div>
 
-                {/* Export & Print CTAs */}
-                <div className="flex items-center gap-2">
+                {/* Right: Export Excel & PDF Buttons */}
+                <div className="flex items-center gap-2 self-end lg:self-auto">
                     <button
                         onClick={handleExportCsv}
-                        className="px-3.5 py-1.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer"
+                        className="px-3.5 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 border border-zinc-300 transition-colors cursor-pointer shadow-xs"
                     >
-                        <FileSpreadsheet size={15} />
-                        <span>Export CSV / Excel</span>
+                        <FileSpreadsheet size={15} className="text-emerald-700" />
+                        <span>Export Excel (.csv)</span>
                     </button>
 
                     <button
-                        onClick={handlePrintLedger}
-                        className="px-3.5 py-1.5 bg-[#1A1A1A] hover:bg-black text-white rounded-lg font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+                        onClick={handleOpenPrintPreview}
+                        className="px-4 py-2 bg-[#1A1A1A] hover:bg-black text-white rounded-xl font-mono font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-md"
                     >
-                        <Printer size={15} />
-                        <span>พิมพ์สมุดรายงาน (Print Ledger)</span>
+                        <Printer size={15} className="text-emerald-400" />
+                        <span>พิมพ์รายงาน / โหลด PDF (A4 Ledger)</span>
                     </button>
                 </div>
             </div>
@@ -249,7 +398,7 @@ export default function SalesTaxReportTab({
             {/* Monthly Summary Metric Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Card 1: Gross Sales */}
-                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm">
+                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
                         ยอดขายรวมทั้งสิ้น (Gross Sales)
                     </span>
@@ -257,12 +406,12 @@ export default function SalesTaxReportTab({
                         ฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono mt-0.5 block">
-                        ประจำเดือน {selectedMonth} ({monthlyStats.invoiceCount} ฉบับ)
+                        ประจำงวด {selectedMonth} ({monthlyStats.recordCount} รายการ)
                     </span>
                 </div>
 
                 {/* Card 2: Taxable Base */}
-                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm">
+                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
                         มูลค่าฐานภาษี (Taxable Base)
                     </span>
@@ -275,7 +424,7 @@ export default function SalesTaxReportTab({
                 </div>
 
                 {/* Card 3: Output VAT 7% */}
-                <div className="bg-white border border-[#D1D1CD] rounded-xl p-4 shadow-sm">
+                <div className="bg-white border border-[#D1D1CD] rounded-2xl p-4 shadow-sm">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-500 block">
                         ภาษีขายที่ต้องนำส่ง (Output VAT 7%)
                     </span>
@@ -287,83 +436,117 @@ export default function SalesTaxReportTab({
                     </span>
                 </div>
 
-                {/* Card 4: Status Indicator */}
-                <div className="bg-[#1A1A1A] text-white rounded-xl p-4 shadow-sm flex flex-col justify-between">
+                {/* Card 4: Report Classification */}
+                <div className="bg-[#1A1A1A] text-white rounded-2xl p-4 shadow-sm flex flex-col justify-between">
                     <div>
                         <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-zinc-400 block">
-                            แบบแสดงรายการภาษี
+                            แบบแสดงรายการบัญชี
                         </span>
                         <div className="font-bold text-sm text-emerald-400 mt-1">
-                            {isVatRegistered ? 'แบบ ภ.พ.30 (VAT 7%)' : 'ภาษีเงินได้นิติบุคคล / บุคคลธรรมดา'}
+                            {isVatRegistered ? 'แบบ ภ.พ.30 (รายงานภาษีขาย)' : 'สมุดรายรับรายบิล (Sales Ledger)'}
                         </div>
                     </div>
                     <span className="text-[10px] text-zinc-400 font-mono">
-                        ยื่นภายในวันที่ 15 ของเดือนถัดไป
+                        โหมด: {dataSourceMode === 'invoices' ? 'เอกสารภาษี' : (dataSourceMode === 'pos_bills' ? 'บิลขาย POS' : 'รวมทั้งหมด')}
                     </span>
                 </div>
             </div>
 
-            {/* Official Tabular Sales Tax Ledger */}
+            {/* Official Tabular Sales Tax & Bill Ledger */}
             <div className="bg-white border border-[#D1D1CD] rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-4 border-b border-zinc-200 flex justify-between items-center bg-zinc-50/50">
+                <div className="px-5 py-4 border-b border-zinc-200 flex flex-wrap justify-between items-center bg-zinc-50/70 gap-2">
                     <div>
                         <h3 className="font-bold text-sm text-zinc-950 font-mono">
-                            {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับ (Sales & Income Ledger)'}
+                            {isVatRegistered ? 'รายงานภาษีขาย (Sales Tax Report ภ.พ.30)' : 'สมุดรายงานยอดขายและรายรับรายบิล (Sales & Bill Ledger)'}
                         </h3>
                         <p className="text-[11px] text-zinc-500 font-mono">
-                            งวดภาษี: {selectedMonth} • จำนวน {filteredInvoices.length} รายการ
+                            งวดภาษี: {selectedMonth} • จำนวน {filteredRecords.length} รายการ (เรียงลำดับตามเวลาและเลขที่บิล)
                         </p>
+                    </div>
+                    <div className="text-[11px] font-mono text-zinc-600 bg-white border border-zinc-200 px-3 py-1 rounded-lg">
+                        รวมทั้งสิ้น: <strong className="text-zinc-950">฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                         <thead>
-                            <tr className="bg-zinc-100 border-b border-zinc-300 font-mono text-[10px] uppercase text-zinc-700">
-                                <th className="p-3 w-12 text-center">ลำดับ</th>
-                                <th className="p-3 w-24">วันที่</th>
-                                <th className="p-3 w-36">เลขที่เอกสาร</th>
-                                <th className="p-3">ชื่อผู้ซื้อสินค้า / บริการ</th>
-                                <th className="p-3 w-36">เลขประจำตัวผู้เสียภาษี</th>
-                                <th className="p-3 w-28">สถานประกอบการ</th>
+                            <tr className="bg-zinc-100/90 border-b border-zinc-300 font-mono text-[10px] uppercase text-zinc-700">
+                                <th className="p-3 w-10 text-center">ลำดับ</th>
+                                <th className="p-3 w-28">วันที่ / เวลา</th>
+                                <th className="p-3 w-36">เลขที่บิล / เอกสาร</th>
+                                <th className="p-3">ชื่อผู้ซื้อสินค้า / ลูกค้า</th>
+                                <th className="p-3 w-32">เลขผู้เสียภาษี</th>
+                                <th className="p-3 w-24">ชำระเงิน</th>
                                 <th className="p-3 text-right w-28">{isVatRegistered ? 'มูลค่าก่อนภาษี' : 'มูลค่าสินค้า'}</th>
                                 {isVatRegistered && <th className="p-3 text-right w-24">ภาษี 7%</th>}
                                 <th className="p-3 text-right w-28">รวมทั้งสิ้น</th>
-                                <th className="p-3 text-center w-24">สถานะ</th>
+                                <th className="p-3 text-center w-20">สถานะ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-zinc-200">
-                            {filteredInvoices.map((inv, idx) => {
-                                const isCancelled = inv.status === 'cancelled';
-                                const dateStr = inv.issued_at ? new Date(inv.issued_at).toLocaleDateString('th-TH') : '-';
+                            {filteredRecords.map((item, idx) => {
+                                const isCancelled = item.status === 'cancelled';
+                                const rawDate = item.issued_at || item.created_at || item.booking_time;
+                                const dateObj = rawDate ? new Date(rawDate) : null;
+                                const dateStr = dateObj ? dateObj.toLocaleDateString('th-TH') : '-';
+                                const timeStr = dateObj ? dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '';
+                                
+                                const docNo = item.invoice_number || item.bill_number || (item.id ? `POS-${String(item.id).slice(0, 8).toUpperCase()}` : '-');
+
+                                const preVat = Number(item.pre_vat_amount !== undefined 
+                                    ? item.pre_vat_amount 
+                                    : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+                                const vat = Number(item.vat_amount !== undefined 
+                                    ? item.vat_amount 
+                                    : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) - preVat) : 0));
+                                const total = Number(item.total_amount !== undefined ? item.total_amount : (item.total_price || 0));
 
                                 return (
                                     <tr 
-                                        key={inv.id || idx}
-                                        onClick={() => onOpenInvoice && onOpenInvoice(inv)}
-                                        className={`hover:bg-zinc-50 transition-colors cursor-pointer ${isCancelled ? 'bg-red-50/40 text-zinc-400' : ''}`}
+                                        key={item.id || idx}
+                                        onClick={() => {
+                                            if (item.source_type === 'tax_invoice' && onOpenInvoice) {
+                                                onOpenInvoice(item);
+                                            }
+                                        }}
+                                        className={`hover:bg-zinc-50 transition-colors ${item.source_type === 'tax_invoice' ? 'cursor-pointer' : ''} ${isCancelled ? 'bg-red-50/40 text-zinc-400' : ''}`}
                                     >
                                         <td className="p-3 text-center font-mono text-zinc-400">{idx + 1}</td>
-                                        <td className="p-3 font-mono">{dateStr}</td>
+                                        <td className="p-3 font-mono">
+                                            <div>{dateStr}</div>
+                                            {timeStr && <div className="text-[10px] text-zinc-400">{timeStr}</div>}
+                                        </td>
                                         <td className="p-3 font-mono font-bold text-zinc-900">
-                                            {inv.invoice_number}
+                                            <div className="flex items-center gap-1.5">
+                                                <span>{docNo}</span>
+                                                {item.source_type === 'tax_invoice' && (
+                                                    <span className="px-1.5 py-0.2 rounded text-[8px] font-mono bg-blue-100 text-blue-800">
+                                                        TAX
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="p-3">
-                                            <div className="font-semibold text-zinc-900">{inv.customer_name}</div>
-                                            {inv.notes && <div className="text-[10px] text-zinc-400 font-mono">{inv.notes}</div>}
+                                            <div className="font-semibold text-zinc-900">{item.customer_name || 'ลูกค้าทั่วไป (Walk-in)'}</div>
+                                            {item.notes && <div className="text-[10px] text-zinc-400 font-mono">{item.notes}</div>}
                                         </td>
-                                        <td className="p-3 font-mono">{formatTaxId(inv.customer_tax_id)}</td>
-                                        <td className="p-3 font-mono text-[11px]">{formatBranch(inv.customer_branch_type, inv.customer_branch_code)}</td>
+                                        <td className="p-3 font-mono text-[11px]">
+                                            {item.customer_tax_id ? formatTaxId(item.customer_tax_id) : <span className="text-zinc-300">-</span>}
+                                        </td>
+                                        <td className="p-3">
+                                            {renderPaymentBadge(item.payment_method)}
+                                        </td>
                                         <td className="p-3 text-right font-mono font-semibold">
-                                            {isCancelled ? '0.00' : Number(inv.pre_vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            {isCancelled ? '0.00' : preVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         {isVatRegistered && (
                                             <td className="p-3 text-right font-mono font-semibold text-[oklch(52%_0.16_28)]">
-                                                {isCancelled ? '0.00' : Number(inv.vat_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                {isCancelled ? '0.00' : vat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </td>
                                         )}
                                         <td className="p-3 text-right font-mono font-bold text-zinc-950">
-                                            {isCancelled ? '0.00' : Number(inv.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                            {isCancelled ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="p-3 text-center">
                                             {isCancelled ? (
@@ -380,15 +563,15 @@ export default function SalesTaxReportTab({
                                 );
                             })}
 
-                            {filteredInvoices.length === 0 && (
+                            {filteredRecords.length === 0 && (
                                 <tr>
                                     <td colSpan={isVatRegistered ? 10 : 9} className="p-12 text-center text-zinc-400 font-mono">
-                                        ไม่พบรายการใบเสร็จ/ใบกำกับภาษีในเงื่อนไขที่เลือก
+                                        ไม่พบรายการบิลขาย/ใบกำกับภาษีในเงื่อนไขที่เลือก
                                     </td>
                                 </tr>
                             )}
                         </tbody>
-                        {filteredInvoices.length > 0 && (
+                        {filteredRecords.length > 0 && (
                             <tfoot>
                                 <tr className="bg-zinc-900 text-white font-mono font-bold text-xs">
                                     <td colSpan={6} className="p-3 text-right">
@@ -406,7 +589,7 @@ export default function SalesTaxReportTab({
                                         ฿{monthlyStats.grossSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                     <td className="p-3 text-center text-[10px] text-zinc-400">
-                                        {monthlyStats.invoiceCount} ฉบับ
+                                        {monthlyStats.recordCount} รายการ
                                     </td>
                                 </tr>
                             </tfoot>
@@ -414,6 +597,18 @@ export default function SalesTaxReportTab({
                     </table>
                 </div>
             </div>
+
+            {/* Printable A4 Modal (SalesTaxLedgerPrintView) */}
+            {showPrintModal && (
+                <SalesTaxLedgerPrintView
+                    periodMonth={selectedMonth}
+                    records={filteredRecords}
+                    companySettings={companySettings}
+                    isVatRegistered={isVatRegistered}
+                    dataSourceMode={dataSourceMode}
+                    onClose={() => setShowPrintModal(false)}
+                />
+            )}
         </div>
     );
 }
