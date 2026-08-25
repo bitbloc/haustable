@@ -153,6 +153,17 @@ export default function SalesTaxReportTab({
         }).join(', ');
     };
 
+    // In-memory lookup map of invoices by booking_id
+    const invoiceByBookingId = useMemo(() => {
+        const map = new Map();
+        (invoices || []).forEach(inv => {
+            if (inv.booking_id) {
+                map.set(inv.booking_id, inv);
+            }
+        });
+        return map;
+    }, [invoices]);
+
     // Normalize & Compile Real POS Bookings into sequential Bill items (Excluding Voided/Cancelled)
     const compiledPosBills = useMemo(() => {
         if (!allYearBookings || allYearBookings.length === 0) return [];
@@ -191,8 +202,8 @@ export default function SalesTaxReportTab({
             const customerName = getCustomerDisplayName(b);
             const itemsSummary = getItemsSummary(b);
 
-            // Check if full tax invoice already exists
-            const existingTaxInvoice = Array.isArray(b.tax_invoices) && b.tax_invoices.length > 0 ? b.tax_invoices[0] : null;
+            // Check if full tax invoice already exists via in-memory lookup
+            const existingTaxInvoice = invoiceByBookingId.get(b.id) || null;
 
             return {
                 id: b.id,

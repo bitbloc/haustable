@@ -133,26 +133,19 @@ export default function AdminTaxHub() {
                     .from('bookings')
                     .select(`
                         id, 
-                        created_at, 
                         booking_time, 
+                        created_at, 
                         updated_at,
-                        customer_name, 
-                        customer_phone, 
-                        customer_tax_id, 
                         total_amount, 
-                        total_price, 
-                        deposit_amount, 
-                        discount_amount,
+                        discount_amount, 
+                        xhaus_discount,
                         status, 
-                        payment_method, 
-                        staff_remark,
-                        payment_slip_url,
-                        pickup_contact_name,
-                        pickup_contact_phone,
-                        customer_note,
-                        pax,
-                        booking_type,
-                        order_number,
+                        pax, 
+                        booking_type, 
+                        payment_slip_url, 
+                        staff_remark, 
+                        customer_note, 
+                        user_id,
                         tables_layout (
                             id,
                             table_name
@@ -161,25 +154,19 @@ export default function AdminTaxHub() {
                             id,
                             display_name,
                             nickname,
-                            phone_number
+                            phone_number,
+                            current_tier
                         ),
                         order_items (
                             id,
                             quantity,
                             price_at_time,
                             custom_name,
-                            selected_options,
                             menu_items (
                                 id,
                                 name,
                                 price
                             )
-                        ),
-                        tax_invoices (
-                            id,
-                            invoice_number,
-                            doc_type,
-                            status
                         )
                     `)
                     .order('created_at', { ascending: false })
@@ -187,15 +174,27 @@ export default function AdminTaxHub() {
 
                 if (!bookingsErr && bookingsData && isMounted) {
                     setAllYearBookings(bookingsData);
-                    localStorage.setItem('onhaus_tax_bookings_cache', JSON.stringify(bookingsData));
-                } else if (isMounted) {
-                    const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
-                    if (local) setAllYearBookings(JSON.parse(local));
+                    try { localStorage.setItem('onhaus_tax_bookings_cache', JSON.stringify(bookingsData)); } catch {}
+                } else if (bookingsErr && isMounted) {
+                    console.warn('[AdminTaxHub] Primary query failed, using basic select fallback:', bookingsErr.message);
+                    const { data: fallbackData } = await supabase
+                        .from('bookings')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(2000);
+
+                    if (fallbackData && isMounted) {
+                        setAllYearBookings(fallbackData);
+                        try { localStorage.setItem('onhaus_tax_bookings_cache', JSON.stringify(fallbackData)); } catch {}
+                    }
                 }
-            } catch {
+            } catch (err) {
+                console.error('[AdminTaxHub] Error loading bookings:', err);
                 if (isMounted) {
-                    const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
-                    if (local) setAllYearBookings(JSON.parse(local));
+                    try {
+                        const local = localStorage.getItem('onhaus_tax_bookings_cache') || localStorage.getItem('pos_cache_active_bookings');
+                        if (local) setAllYearBookings(JSON.parse(local));
+                    } catch {}
                 }
             }
 
@@ -208,12 +207,13 @@ export default function AdminTaxHub() {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 if (isMounted) loadInitialData(true);
-            }, 400);
+            }, 600);
         };
 
-        // Realtime Subscription: tax_invoices, app_settings, bookings
+        // Realtime Subscription: tax_invoices, app_settings, bookings with safe unique channel name
+        const channelName = `admin-tax-hub-${Math.random().toString(36).substring(2, 9)}`;
         const channel = supabase
-            .channel('admin-tax-hub-realtime')
+            .channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tax_invoices' }, debouncedSync)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedSync)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedSync)
@@ -221,8 +221,13 @@ export default function AdminTaxHub() {
 
         return () => {
             isMounted = false;
-            if (debounceTimer) clearTimeout(debounceTimer);
-            supabase.removeChannel(channel);
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+                debounceTimer = null;
+            }
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
         };
     }, []);
 
