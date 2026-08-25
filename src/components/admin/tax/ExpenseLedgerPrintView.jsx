@@ -375,17 +375,17 @@ export default function ExpenseLedgerPrintView({
                                 </div>
 
                                 {/* Table of Sequential Expenses */}
-                                <table className="w-full table-fixed border-collapse text-[10pt]">
+                                <table className="w-full table-fixed border-collapse text-[9pt]">
                                     <thead>
-                                        <tr className="bg-zinc-100 border-y-2 border-zinc-950 font-mono text-[10pt] uppercase text-zinc-900 font-bold">
+                                        <tr className="bg-zinc-100 border-y-2 border-zinc-950 font-mono text-[9pt] uppercase text-zinc-900 font-bold">
                                             <th className="py-1.5 px-1 text-center w-[4%] whitespace-nowrap">ลำดับ</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[10%] whitespace-nowrap">วัน/เดือน/ปี</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[15%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[9.5%] whitespace-nowrap">วัน/เดือน/ปี</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[15.5%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
                                             <th className="py-1.5 px-1.5 text-left w-[20%]">รายการ / ผู้ขาย / ร้านค้า</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[15%] whitespace-nowrap">เลขผู้เสียภาษี</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[16%] whitespace-nowrap">เลขผู้เสียภาษี</th>
                                             <th className="py-1.5 px-1.5 text-left w-[17%] whitespace-nowrap">หมวดหมู่</th>
                                             <th className="py-1.5 px-1 text-center w-[6%] whitespace-nowrap">หลักฐาน</th>
-                                            <th className="py-1.5 pr-2.5 pl-1 text-right w-[13%] whitespace-nowrap">จำนวนเงิน</th>
+                                            <th className="py-1.5 pr-2.5 pl-1 text-right w-[12%] whitespace-nowrap">จำนวนเงิน</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-300 font-sans">
@@ -410,20 +410,20 @@ export default function ExpenseLedgerPrintView({
 
                                             return (
                                                 <tr key={item.id || rowIdx}>
-                                                    <td className="py-1.5 px-1 text-center font-mono text-zinc-500 whitespace-nowrap">{globalIndex}</td>
-                                                    <td className="py-1.5 px-1.5 font-mono whitespace-nowrap">{dateStr}</td>
-                                                    <td className="py-1.5 px-1.5 font-mono font-bold text-zinc-950 whitespace-nowrap truncate">{docNo}</td>
-                                                    <td className="py-1.5 px-1.5 truncate font-medium text-zinc-950">
+                                                    <td className="py-1.5 px-1 text-center font-mono text-zinc-500 text-[8.5pt] whitespace-nowrap">{globalIndex}</td>
+                                                    <td className="py-1.5 px-1.5 font-mono text-[8.5pt] whitespace-nowrap">{dateStr}</td>
+                                                    <td className="py-1.5 px-1.5 font-mono font-bold text-zinc-950 text-[8.5pt] whitespace-nowrap truncate">{docNo}</td>
+                                                    <td className="py-1.5 px-1.5 truncate font-medium text-zinc-950 text-[9pt]">
                                                         {item.vendor_name || item.title || 'ค่าใช้จ่ายทั่วไป'}
                                                     </td>
-                                                    <td className="py-1.5 px-1.5 font-mono text-[9pt] text-zinc-800 whitespace-nowrap">{formatTaxId(item.vendor_tax_id) || '-'}</td>
-                                                    <td className="py-1.5 px-1.5 text-[9.5pt] text-zinc-800 font-normal truncate">{catLabel}</td>
-                                                    <td className="py-1.5 px-1 text-center font-mono text-[8pt] whitespace-nowrap">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[7.5pt] ${proofClass}`}>
+                                                    <td className="py-1.5 px-1.5 font-mono text-[8pt] text-zinc-800 whitespace-nowrap tracking-tight">{formatTaxId(item.vendor_tax_id) || '-'}</td>
+                                                    <td className="py-1.5 px-1.5 text-[8.5pt] text-zinc-800 font-normal truncate">{catLabel}</td>
+                                                    <td className="py-1.5 px-1 text-center font-mono whitespace-nowrap">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[7pt] font-bold ${proofClass}`}>
                                                             {proofLabel}
                                                         </span>
                                                     </td>
-                                                    <td className="py-1.5 pr-2.5 pl-1 text-right font-mono font-bold text-zinc-950 whitespace-nowrap">
+                                                    <td className="py-1.5 pr-2.5 pl-1 text-right font-mono font-bold text-zinc-950 text-[9pt] whitespace-nowrap">
                                                         {amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                     </td>
                                                 </tr>
