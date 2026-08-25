@@ -368,20 +368,50 @@ export default function Home({ session }) {
                             {[
                                 { step: '01', title: 'เข้าสู่ระบบ LINE / เบอร์โทร', desc: 'ลงทะเบียนง่ายๆ ในหน้าแรกเพื่อบันทึกประวัติ ออเดอร์ และสะสมแต้ม xhaus' },
                                 { step: '02', title: 'เลือกบริการที่ต้องการ', desc: 'กดปุ่มจองโต๊ะอาหาร เลือกลาน/โซน หรือสั่งอาหารกลับบ้านล่วงหน้า' },
-                                { step: '03', title: 'ยืนยันคิว / ชำระเงินมัดจำ', desc: 'ตรวจสอบข้อมูลและยืนยัน ยอดมัดจำนำไปใช้เป็นส่วนลดค่าอาหาร 100%' },
+                                { 
+                                    step: '03', 
+                                    title: 'เงื่อนไขการจองและสั่งกลับ', 
+                                    custom: (
+                                        <div className="mt-1 flex flex-col gap-1.5 font-mono text-[11px]">
+                                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] p-2.5">
+                                                <span className="font-bold text-[var(--color-hallmark-ink)] block mb-1 text-[11px]">
+                                                    Dine-in Policy (การจองโต๊ะทานที่ร้าน):
+                                                </span>
+                                                <ul className="text-[var(--color-hallmark-ink-muted)] space-y-0.5 leading-relaxed text-[11px]">
+                                                    <li>• สั่งอาหารขั้นต่ำ 150 บาทต่อท่าน</li>
+                                                    <li>• ชำระมัดจำ 50% อัตโนมัติ (หักคืนให้อัตโนมัติจากบิลหน้าร้าน)</li>
+                                                    <li>• คืนมัดจำได้หากยกเลิกล่วงหน้าเกิน 24 ชั่วโมง</li>
+                                                </ul>
+                                            </div>
+                                            <div className="bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] p-2.5">
+                                                <span className="font-bold text-[var(--color-hallmark-ink)] block mb-1 text-[11px]">
+                                                    Pickup Policy (การสั่งกลับบ้าน):
+                                                </span>
+                                                <ul className="text-[var(--color-hallmark-ink-muted)] space-y-0.5 leading-relaxed text-[11px]">
+                                                    <li>• ชำระเงินเต็มจำนวน 100% เท่านั้น</li>
+                                                    <li>• ไม่สามารถยกเลิกออเดอร์และขอคืนเงินได้ทุกกรณี</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    )
+                                },
                                 { step: '04', title: 'ติดตามสถานะคำสั่งซื้อ', desc: 'ตรวจสอบสถานะอาหาร ตั๋วคิว และใบเสร็จได้แบบเรียลไทม์ผ่านเมนู TICKETS' }
                             ].map((item, idx) => (
                                 <div key={idx} className="flex gap-3.5 items-start">
                                     <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] w-7 h-7 flex items-center justify-center flex-shrink-0 mt-0.5">
                                         {item.step}
                                     </span>
-                                    <div className="flex flex-col text-left">
+                                    <div className="flex flex-col text-left flex-1 min-w-0">
                                         <span className="font-bold text-[13px] text-[var(--color-hallmark-ink)] leading-none mb-1">
                                             {item.title}
                                         </span>
-                                        <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
-                                            {item.desc}
-                                        </span>
+                                        {item.custom ? (
+                                            item.custom
+                                        ) : (
+                                            <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-relaxed">
+                                                {item.desc}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             ))}
