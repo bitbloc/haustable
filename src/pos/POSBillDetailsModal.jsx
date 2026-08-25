@@ -185,8 +185,23 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                     <div className="bg-white border border-[#D1D1CD] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm font-mono text-xs">
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] font-bold text-[#767673] uppercase tracking-wider">ประเภทบริการ / SERVICE</span>
-                            <span className="text-xs font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                {isPickup ? 'รับกลับบ้าน (PICKUP)' : `โต๊ะ ${tableName}`}
+                            <span className="text-xs font-bold text-[var(--color-accent)] bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1.5 flex-wrap">
+                                <span>{isPickup ? 'รับกลับบ้าน (PICKUP)' : `โต๊ะ ${tableName}`}</span>
+                                {transfer.isMergedSource && (
+                                    <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[10px] rounded-xs font-mono font-bold">
+                                        โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                    </span>
+                                )}
+                                {transfer.isMergedTarget && (
+                                    <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] text-[10px] rounded-xs font-mono font-bold">
+                                        โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
+                                    </span>
+                                )}
+                                {transfer.isMoved && (
+                                    <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[10px] rounded-xs font-mono font-bold">
+                                        ย้ายจาก โต๊ะ {transfer.movedFromTable}
+                                    </span>
+                                )}
                             </span>
                         </div>
 

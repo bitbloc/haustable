@@ -12,6 +12,7 @@ import {
     generateDivider, getShortBookingId, getCleanCustomerNote, getCleanStaffRemark
 } from '../../../utils/printerHelper';
 import { formatOrderItemOptions } from '../../../utils/menuHelper';
+import { parseTableTransferInfo } from '../../../utils/tableTransferHelper';
 import { posCache, getOfflineQueue } from '../../../utils/offlineHelper';
 import {
     Receipt, Calendar, Filter, Search, Download, ExternalLink,
@@ -691,6 +692,7 @@ export default function SlipAuditManager({
                         const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
                         const guestName = order.profiles?.display_name || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : 'Guest'));
                         const phone = order.profiles?.phone || order.pickup_contact_phone || '';
+                        const transfer = parseTableTransferInfo(order);
                         const tableName = order.tables_layout?.table_name || (order.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
                         const paid = isOrderPaid(order);
                         const payMethodLabel = getPaymentMethodLabel(order);
@@ -802,6 +804,21 @@ export default function SlipAuditManager({
                                             <span className="text-2xl font-black leading-none block uppercase">
                                                 {tableName}
                                             </span>
+                                            {transfer.isMergedSource && (
+                                                <span className="text-[9px] font-bold text-red-700 block uppercase mt-1">
+                                                    โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                </span>
+                                            )}
+                                            {transfer.isMergedTarget && (
+                                                <span className="text-[9px] font-bold text-emerald-700 block uppercase mt-1">
+                                                    โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
+                                                </span>
+                                            )}
+                                            {transfer.isMoved && (
+                                                <span className="text-[9px] font-bold text-blue-700 block uppercase mt-1">
+                                                    ย้ายจาก โต๊ะ {transfer.movedFromTable}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 

@@ -1,6 +1,7 @@
 import { logger } from './logger';
 import { supabase } from '../lib/supabaseClient';
 import { getBookingPaymentBreakdown } from './shiftHelper';
+import { parseTableTransferInfo } from './tableTransferHelper';
 
 let cachedPrinterConfig = null;
 let printerConfigChannel = null;
@@ -962,7 +963,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     }
 
     // Table Name & Queue Number
+    const transfer = parseTableTransferInfo(booking);
     const tableName = (booking.tables_layout?.table_name || (isPickupOrder ? 'PICKUP' : 'WALK-IN')).toUpperCase();
+    let tableDisplayTitle = isPickupOrder ? `รหัส: #${queueNo}` : `โต๊ะ ${tableName}`;
+    if (!isPickupOrder) {
+        if (transfer.isMergedSource) {
+            tableDisplayTitle = `โต๊ะ ${tableName} (รวมเข้า ${transfer.mergedToTable})`;
+        } else if (transfer.isMergedTarget) {
+            tableDisplayTitle = `โต๊ะ ${tableName} (โต๊ะรวม +${transfer.mergedFromTables.join(',')})`;
+        } else if (transfer.isMoved) {
+            tableDisplayTitle = `โต๊ะ ${tableName} (ย้ายจาก ${transfer.movedFromTable})`;
+        }
+    }
+
     const customerName = booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'ลูกค้าทั่วไป (Walk-in)';
     const customerPhone = booking.profiles?.phone_number || booking.pickup_contact_phone || booking.customer_phone || '';
     const depositAmt = Number(booking.deposit_amount) || 0;
@@ -986,7 +999,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(isPickupOrder ? `รหัส: #${queueNo}` : `โต๊ะ ${tableName}`)
+               .line(tableDisplayTitle)
                .size(0, 0)
                .line(divider)
                .align('left')
@@ -1014,7 +1027,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.align('center')
                .bold(true)
                .size(1, 1)
-               .line(isPickupOrder ? `รหัส: #${queueNo}` : `โต๊ะ ${tableName}`)
+               .line(tableDisplayTitle)
                .size(0, 0)
                .bold(false)
                .line(divider);

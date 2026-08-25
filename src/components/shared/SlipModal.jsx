@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
 import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
+import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
 const BAR_CATEGORIES = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -403,6 +404,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
     // Generate HTML for Print
     const getPrintHtml = () => {
+        const transfer = parseTableTransferInfo(booking);
         const orderPlacedAtRaw = booking.created_at || booking.order_time || (booking.booking_type !== 'dine_in' && booking.booking_type !== 'pickup' ? booking.booking_time : null) || new Date().toISOString()
         const orderPlacedStr = new Date(orderPlacedAtRaw).toLocaleString('th-TH', {
             year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
@@ -826,6 +828,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         <div class="queue-box">
                             <div class="queue-label">${isPickupOrder ? 'PICKUP QUEUE / รหัสสินค้า' : 'TABLE / โต๊ะ'}</div>
                             <div class="queue-val">${booking.tables_layout?.table_name || (isPickupOrder ? `#${queueNo}` : 'WALK-IN')}</div>
+                            ${transfer.isMergedSource ? `<div style="font-size: 9px; font-weight: bold; color: #b91c1c; margin-top: 3px; text-transform: uppercase;">(โต๊ะรวม ➔ ${transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`})</div>` : ''}
+                            ${transfer.isMergedTarget ? `<div style="font-size: 9px; font-weight: bold; color: #15803d; margin-top: 3px; text-transform: uppercase;">(โต๊ะรวม +${transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})</div>` : ''}
+                            ${transfer.isMoved ? `<div style="font-size: 9px; font-weight: bold; color: #1e40af; margin-top: 3px; text-transform: uppercase;">(ย้ายจาก โต๊ะ ${transfer.movedFromTable})</div>` : ''}
                         </div>
                     </div>
                     
@@ -1143,6 +1148,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr')
     
+    const transfer = parseTableTransferInfo(booking);
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
     const discountAmount = Number(booking.discount_amount) || 0;
     const depositAmount = Number(booking.deposit_amount) || 0;
@@ -1326,15 +1332,45 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                     <span className="text-[9px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase block leading-none">
                                         {booking.tables_layout ? 'TABLE / โต๊ะ' : 'ORDER TYPE / ประเภท'}
                                     </span>
-                                    <span className="text-xl font-black text-[oklch(18%_0.012_28)] leading-tight block mt-0.5">
-                                        {booking.tables_layout?.table_name || (isPickupOrder ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน')}
-                                    </span>
+                                    <div className="flex items-baseline gap-2 flex-wrap mt-0.5">
+                                        <span className="text-xl font-black text-[oklch(18%_0.012_28)] leading-tight">
+                                            {booking.tables_layout?.table_name || (isPickupOrder ? 'รับกลับ (PICKUP)' : 'ทานที่ร้าน')}
+                                        </span>
+                                        {transfer.isMergedSource && (
+                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold rounded-xs">
+                                                โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                            </span>
+                                        )}
+                                        {transfer.isMergedTarget && (
+                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] text-[9px] font-mono font-bold rounded-xs">
+                                                โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
+                                            </span>
+                                        )}
+                                        {transfer.isMoved && (
+                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[9px] font-mono font-bold rounded-xs">
+                                                ย้ายจาก โต๊ะ {transfer.movedFromTable}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="text-right font-mono text-xs">
                                     <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PAX / จำนวน</span>
                                     <span className="font-bold text-[oklch(18%_0.012_28)]">{booking.pax || 1} ท่าน</span>
                                 </div>
                             </div>
+
+                            {/* Table Transfer Banner Strip */}
+                            {transfer.isMergedSource && (
+                                <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] p-2.5 rounded-sm text-[10px] font-mono font-bold space-y-0.5">
+                                    <div>⚠️ โต๊ะรวม: โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</div>
+                                    {transfer.originalTotal > 0 && <div>ยอดเงินเดิมก่อนรวมบิล: ฿{transfer.originalTotal.toLocaleString()}</div>}
+                                </div>
+                            )}
+                            {transfer.isMergedTarget && (
+                                <div className="bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] p-2 rounded-sm text-[10px] font-mono font-bold">
+                                    🔗 โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
+                                </div>
+                            )}
                         </div>
 
                         {/* Order Metadata Grid */}

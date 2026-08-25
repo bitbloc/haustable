@@ -453,6 +453,31 @@ describe('System Audit - Phase 5: Table Transfer & Merged Bills Architecture', (
         const clean = stripInternalTransferTags(dirtyRemark);
         expect(clean).toBe('หมายเหตุของลูกค้า');
     });
+
+    it('should generate proper merged table indicator labels for backend Booking & Order UI', () => {
+        const sourceBooking = {
+            id: 'b_ac4e',
+            short_id: 'AC4E',
+            staff_remark: '[MERGED_TO:H4#77F8] [TARGET_BILL:#77F8] [ORIG_AMT:851] Merged into Table H4 (#77F8)',
+            tables_layout: { table_name: 'H3' }
+        };
+        const targetBooking = {
+            id: 'b_77f8',
+            short_id: '77F8',
+            staff_remark: '[MERGED_FROM:H3#AC4E]',
+            tables_layout: { table_name: 'H4' }
+        };
+
+        const srcInfo = parseTableTransferInfo(sourceBooking);
+        expect(srcInfo.isMergedSource).toBe(true);
+        expect(srcInfo.targetTableDisplay).toBe('โต๊ะ H4 (#77F8)');
+        expect(`โต๊ะรวม ➔ ${srcInfo.targetTableDisplay}`).toBe('โต๊ะรวม ➔ โต๊ะ H4 (#77F8)');
+
+        const tgtInfo = parseTableTransferInfo(targetBooking);
+        expect(tgtInfo.isMergedTarget).toBe(true);
+        expect(tgtInfo.mergedFromTableDisplay).toBe('โต๊ะ H3 (#AC4E)');
+        expect(`โต๊ะรวม (+${tgtInfo.mergedFromTableDisplay})`).toBe('โต๊ะรวม (+โต๊ะ H3 (#AC4E))');
+    });
 });
 
 describe('System Audit - Phase 6: CRM Loyalty Dominance on Merged Bills', () => {

@@ -7,6 +7,7 @@ import HoldToDeleteButton from './components/HoldToDeleteButton'
 import { formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime, getThaiDate } from './utils/timeUtils'
 import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
+import { parseTableTransferInfo } from './utils/tableTransferHelper'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
@@ -491,8 +492,15 @@ export default function AdminBookings() {
     // Full Filter & Sort Pipeline (Including Search Term & Status)
     const filteredBookings = useMemo(() => {
         return dateAndTypeFilteredBookings.filter(b => {
+            const transfer = parseTableTransferInfo(b, bookings)
+
             // Status Filter
-            const matchesStatus = statusFilter === 'all' || b.status === statusFilter
+            const matchesStatus = (() => {
+                if (statusFilter === 'all') return true
+                if (statusFilter === 'merged') return transfer.isMergedSource || transfer.isMergedTarget
+                if (statusFilter === 'cancelled') return (b.status === 'cancelled' || b.status === 'void') && !transfer.isMergedSource
+                return b.status === statusFilter
+            })()
 
             // Search Query Match
             const shortId = getShortBookingId(b)
@@ -501,13 +509,24 @@ export default function AdminBookings() {
             const tableName = b.tables_layout?.table_name || ''
             const query = searchTerm.toLowerCase().trim()
 
+            const isTransferMatch = query && (
+                ((query.includes('รวม') || query.includes('merge')) && (transfer.isMergedSource || transfer.isMergedTarget)) ||
+                (transfer.mergedToTable && transfer.mergedToTable.toLowerCase().includes(query)) ||
+                (transfer.mergedToBillId && transfer.mergedToBillId.toLowerCase().includes(query)) ||
+                (transfer.mergedFromTables && transfer.mergedFromTables.some(t => t.toLowerCase().includes(query))) ||
+                (transfer.mergedFromBillIds && transfer.mergedFromBillIds.some(id => id.toLowerCase().includes(query))) ||
+                (transfer.movedFromTable && transfer.movedFromTable.toLowerCase().includes(query)) ||
+                (transfer.movedToTable && transfer.movedToTable.toLowerCase().includes(query))
+            )
+
             const matchesSearch = !query ||
                 customerName.toLowerCase().includes(query) ||
                 customerPhone.includes(query) ||
                 (b.id || '').toLowerCase().includes(query) ||
                 (b.tracking_token || '').toLowerCase().includes(query) ||
                 shortId.includes(query.toUpperCase()) ||
-                tableName.toLowerCase().includes(query)
+                tableName.toLowerCase().includes(query) ||
+                isTransferMatch
 
             return matchesStatus && matchesSearch
         }).sort((a, b) => {
@@ -529,7 +548,7 @@ export default function AdminBookings() {
             if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
             return 0
         })
-    }, [dateAndTypeFilteredBookings, statusFilter, searchTerm, sortConfig])
+    }, [dateAndTypeFilteredBookings, bookings, statusFilter, searchTerm, sortConfig])
 
     // Dynamic KPI Summary Metrics Scoped to Current Filter Window with Channel Breakdown
     const kpiSummary = useMemo(() => {
@@ -580,12 +599,16 @@ export default function AdminBookings() {
 
     // Status Count helper for badges within active date/channel window
     const statusCounts = useMemo(() => {
-        const counts = { all: dateAndTypeFilteredBookings.length }
+        const counts = { all: dateAndTypeFilteredBookings.length, merged: 0 }
         dateAndTypeFilteredBookings.forEach(b => {
+            const transfer = parseTableTransferInfo(b, bookings)
+            if (transfer.isMergedSource || transfer.isMergedTarget) {
+                counts.merged = (counts.merged || 0) + 1
+            }
             counts[b.status] = (counts[b.status] || 0) + 1
         })
         return counts
-    }, [dateAndTypeFilteredBookings])
+    }, [dateAndTypeFilteredBookings, bookings])
 
     const getStatusBadgeClass = (st) => {
         switch (st) {
@@ -773,6 +796,7 @@ export default function AdminBookings() {
                         { key: 'preparing', label: 'PREPARING' },
                         { key: 'ready', label: 'READY' },
                         { key: 'completed', label: 'COMPLETED' },
+                        { key: 'merged', label: 'MERGED (รวมโต๊ะ)' },
                         { key: 'cancelled', label: 'CANCELLED' }
                     ].map(st => {
                         const count = statusCounts[st.key] || 0
@@ -929,6 +953,7 @@ export default function AdminBookings() {
                                     const customerName = booking.pickup_contact_name || booking.profiles?.display_name || 'Guest Customer'
                                     const customerPhone = booking.pickup_contact_phone || booking.profiles?.phone_number || '—'
                                     const itemCount = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
+                                    const transfer = parseTableTransferInfo(booking, bookings)
 
                                     return (
                                         <tr 
@@ -982,6 +1007,29 @@ export default function AdminBookings() {
                                                             </span>
                                                         )}
                                                     </div>
+
+                                                    {/* Merged & Transferred Table Indicator Badges */}
+                                                    {transfer.isMergedSource && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold rounded-xs">
+                                                                โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {transfer.isMergedTarget && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] text-[9px] font-mono font-bold rounded-xs">
+                                                                โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                    {transfer.isMoved && (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_220)] text-[oklch(30%_0.10_220)] border border-[oklch(82%_0.02_220)] text-[9px] font-mono font-bold rounded-xs">
+                                                                ย้ายจาก โต๊ะ {transfer.movedFromTable}
+                                                            </span>
+                                                        </div>
+                                                    )}
 
                                                     {booking.source && (
                                                         <span className="text-[9px] text-[var(--color-neutral)] uppercase tracking-wider">
@@ -1037,9 +1085,15 @@ export default function AdminBookings() {
 
                                             {/* Status Badge */}
                                             <td className="p-3 border-r border-[var(--color-rule)]">
-                                                <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
-                                                    {booking.status}
-                                                </span>
+                                                {transfer.isMergedSource ? (
+                                                    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
+                                                        MERGED (โต๊ะรวม)
+                                                    </span>
+                                                ) : (
+                                                    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
+                                                        {booking.status}
+                                                    </span>
+                                                )}
                                             </td>
 
                                             {/* Actions */}
@@ -1139,6 +1193,7 @@ export default function AdminBookings() {
             {Array.from(expandedIds).map(id => {
                 const booking = bookings.find(b => b.id === id)
                 if (!booking) return null
+                const transfer = parseTableTransferInfo(booking, bookings)
 
                 return (
                     <div key={id} className="mt-2 p-4 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-4">
@@ -1160,6 +1215,41 @@ export default function AdminBookings() {
                                 )}
                             </div>
                         </div>
+
+                        {/* Table Transfer Banner Strip */}
+                        {transfer.isMergedSource && (
+                            <div className="p-3 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-mono font-bold space-y-1">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-white text-[9px] uppercase font-black">
+                                        MERGED TABLE (โต๊ะรวม)
+                                    </span>
+                                    <span>บิลนี้ถูกรวมรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</span>
+                                </div>
+                                {transfer.originalTotal > 0 && (
+                                    <div className="text-[11px] text-[oklch(45%_0.10_28)] pl-1">
+                                        ยอดเงินเดิมก่อนรวมบิล: ฿{formatCurrency(transfer.originalTotal)}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {transfer.isMergedTarget && (
+                            <div className="p-3 bg-[oklch(92%_0.02_140)] border-2 border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs font-mono font-bold flex items-center gap-2">
+                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white text-[9px] uppercase font-black">
+                                    COMBINED TABLE (โต๊ะรวม)
+                                </span>
+                                <span>บิลนี้เป็นโต๊ะรวมที่รับการรวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong></span>
+                            </div>
+                        )}
+
+                        {transfer.isMoved && (
+                            <div className="p-3 bg-[oklch(92%_0.02_220)] border-2 border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs font-mono font-bold flex items-center gap-2">
+                                <span className="px-1.5 py-0.2 bg-[oklch(40%_0.12_220)] text-white text-[9px] uppercase font-black">
+                                    MOVED TABLE (ย้ายโต๊ะ)
+                                </span>
+                                <span>ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong> {transfer.moveTimestamp && `(${transfer.moveTimestamp})`}</span>
+                            </div>
+                        )}
 
                         {/* Items Table */}
                         {booking.order_items && booking.order_items.length > 0 ? (
@@ -1295,6 +1385,7 @@ export default function AdminBookings() {
 // EDIT BOOKING MODAL (Dieter Rams Clean Minimalist Form)
 // ----------------------------------------------------
 function EditBookingModal({ booking, tablesList, onClose, onSave }) {
+    const transfer = parseTableTransferInfo(booking)
     const [tableName, setTableName] = useState(booking.table_id || '')
     const [pax, setPax] = useState(booking.pax || 2)
     const [bookingDate, setBookingDate] = useState(() => {
@@ -1363,6 +1454,23 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                         [✕]
                     </button>
                 </div>
+
+                {/* Transfer Info Banner if Merged / Moved */}
+                {transfer.isMergedSource && (
+                    <div className="mb-4 p-2.5 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-mono font-bold">
+                        ⚠️ โต๊ะรวม: บิลนี้โอนรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว
+                    </div>
+                )}
+                {transfer.isMergedTarget && (
+                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs font-mono font-bold">
+                        🔗 โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
+                    </div>
+                )}
+                {transfer.isMoved && (
+                    <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_220)] border border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs font-mono font-bold">
+                        🔄 ย้ายโต๊ะ: ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong>
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     {/* Grid: Table & Pax */}
