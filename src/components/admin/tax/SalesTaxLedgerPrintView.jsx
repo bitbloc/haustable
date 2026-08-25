@@ -54,6 +54,25 @@ export default function SalesTaxLedgerPrintView({
         return sum + total;
     }, 0);
 
+    const totalPreVat = activeRecords.reduce((sum, item) => {
+        const preVat = Number(item.pre_vat_amount !== undefined 
+            ? item.pre_vat_amount 
+            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+        return sum + preVat;
+    }, 0);
+
+    const totalVat = activeRecords.reduce((sum, item) => {
+        const preVat = Number(item.pre_vat_amount !== undefined 
+            ? item.pre_vat_amount 
+            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
+        const vat = Number(item.vat_amount !== undefined 
+            ? item.vat_amount 
+            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) - preVat) : 0));
+        return sum + vat;
+    }, 0);
+
+    const bahtWords = thaiBahtText(grandTotal);
+
     // Dynamic A4 Pagination:
     // Normal pages (without footer summary) fit 20 rows densely & beautifully.
     // Last page (with financial summary box + signatures) fits 14 rows.
