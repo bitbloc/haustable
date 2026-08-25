@@ -861,8 +861,9 @@ export default function POSDashboard() {
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const nameLower = (b.customer_name || '').toLowerCase();
-                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man');
-                    const isOnline = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || b.booking_type === 'pickup' || !!b.payment_slip_url;
+                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
+                    const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                    const isOnline = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
                     return isOnline;
                 }).length;
                 setOnlinePendingCount(onlineCount);

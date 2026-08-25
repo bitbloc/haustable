@@ -22,9 +22,10 @@ export const getOrderOrigin = (b) => {
     const sourceLower = (b.source || '').toLowerCase()
     const remarkLower = (b.staff_remark || '').toLowerCase()
     const noteLower = (b.customer_note || '').toLowerCase()
+    const nameLower = (b.customer_name || b.pickup_contact_name || b.profiles?.display_name || '').toLowerCase()
 
     // 1. LINE MAN Delivery
-    if (sourceLower === 'lineman' || remarkLower.includes('lineman') || noteLower.includes('lineman')) {
+    if (sourceLower === 'lineman' || remarkLower.includes('lineman') || noteLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-')) {
         return {
             key: 'lineman',
             label: 'LINE MAN DELIVERY',
@@ -45,25 +46,37 @@ export const getOrderOrigin = (b) => {
         }
     }
 
-    // 3. Online Pickup (Takeaway)
-    if (b.booking_type === 'pickup') {
+    // Explicit In-House / POS Indicator
+    const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in'
+
+    // Online Source Signals
+    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || Boolean(b.payment_slip_url)) && !isExplicitInHouse
+
+    // 3. Pickup / Takeaway (Online Pickup vs In-House / POS Takeaway)
+    const isPickupOrder = b.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup')
+    if (isPickupOrder) {
+        if (isOnlineSource) {
+            return {
+                key: 'pickup',
+                label: 'ONLINE PICKUP',
+                shortTag: 'ONLINE PICKUP',
+                isOnline: true,
+                badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-accent)]'
+            }
+        }
         return {
-            key: 'pickup',
-            label: 'ONLINE PICKUP',
-            shortTag: 'ONLINE PICKUP',
-            isOnline: true,
-            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-accent)] border-[var(--color-accent)]'
+            key: 'in_house_pickup',
+            label: 'IN-HOUSE PICKUP',
+            shortTag: 'TAKEAWAY',
+            isOnline: false,
+            badgeClass: 'bg-[var(--color-paper-2)] text-[var(--color-ink)] border-[var(--color-rule)]'
         }
     }
 
     // 4. Online Dine-In Reservation vs In-House Walk-in
-    const hasOnlineSignal = sourceLower === 'online' 
-        || sourceLower === 'line' 
-        || Boolean(b.payment_slip_url) 
-        || Number(b.deposit_amount || 0) > 0
-        || (b.booking_type === 'dine_in' && sourceLower !== 'pos' && sourceLower !== 'walk_in')
+    const hasOnlineReservationSignal = (isOnlineSource || Number(b.deposit_amount || 0) > 0 || (b.booking_type === 'dine_in' && sourceLower !== 'pos' && sourceLower !== 'walk_in' && sourceLower !== 'qr')) && !isExplicitInHouse
 
-    if (hasOnlineSignal && b.booking_type !== 'walk_in') {
+    if (hasOnlineReservationSignal && b.booking_type !== 'walk_in') {
         return {
             key: 'online_booking',
             label: 'ONLINE RESERVATION',
@@ -463,9 +476,9 @@ export default function AdminBookings() {
                 if (typeFilter === 'all') return true
                 if (typeFilter === 'online_all') return origin.isOnline
                 if (typeFilter === 'online_booking') return origin.key === 'online_booking'
-                if (typeFilter === 'pickup') return origin.key === 'pickup'
+                if (typeFilter === 'pickup') return origin.key === 'pickup' || origin.key === 'in_house_pickup'
                 if (typeFilter === 'shop') return origin.key === 'shop'
-                if (typeFilter === 'in_house') return origin.key === 'in_house'
+                if (typeFilter === 'in_house') return origin.key === 'in_house' || origin.key === 'in_house_pickup' || !origin.isOnline
                 if (typeFilter === 'lineman') return origin.key === 'lineman'
                 return true
             })()
@@ -792,11 +805,11 @@ export default function AdminBookings() {
                     <span className="text-[10px] uppercase text-[var(--color-neutral)] font-bold pr-1">CHANNEL:</span>
                     {[
                         { key: 'all', label: 'ALL CHANNELS' },
-                        { key: 'online_all', label: 'ALL ONLINE (BOOKING, PICKUP, SHOP)' },
+                        { key: 'online_all', label: 'ALL ONLINE (BOOKING, PICKUP, SHOP, LINE MAN)' },
                         { key: 'online_booking', label: 'ONLINE RESERVATION' },
-                        { key: 'pickup', label: 'ONLINE PICKUP (TAKEOUT)' },
+                        { key: 'pickup', label: 'PICKUP / TAKEAWAY' },
                         { key: 'shop', label: 'HAUSMADE SHOP (PARCEL)' },
-                        { key: 'in_house', label: 'IN-HOUSE DINE-IN / WALK-IN' },
+                        { key: 'in_house', label: 'IN-HOUSE (DINE-IN & TAKEAWAY)' },
                         { key: 'lineman', label: 'LINE MAN DELIVERY' }
                     ].map(tp => (
                         <button

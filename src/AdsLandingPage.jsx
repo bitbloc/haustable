@@ -279,35 +279,28 @@ export default function AdsLandingPage() {
 
     const handleDirectionsClick = () => {
         try {
-            if (typeof window !== 'undefined' && window.gtag) {
-                window.gtag('event', 'conversion', {
-                    'send_to': 'AW-11227095880/uWqACPuDvOEcEMjGv-kp',
-                    'value': 1.0,
-                    'currency': 'THB'
+            if (typeof window !== 'undefined' && window.dataLayer) {
+                window.dataLayer.push({
+                    event: 'click_directions',
+                    page_location: '/link'
                 });
             }
         } catch (err) {
-            console.error('gtag directions conversion error:', err);
+            console.error('directions click tracking error:', err);
         }
     };
 
     const handleCallClick = () => {
         try {
-            if (typeof window !== 'undefined' && window.gtag) {
-                window.gtag('event', 'contact', {
-                    'method': 'phone',
-                    'event_category': 'engagement',
-                    'event_label': '098-528-4217',
-                    'transport_type': 'beacon'
-                });
-                window.gtag('event', 'conversion', {
-                    'send_to': 'AW-11227095880',
-                    'value': 1.0,
-                    'currency': 'THB'
+            if (typeof window !== 'undefined' && window.dataLayer) {
+                window.dataLayer.push({
+                    event: 'click_phone',
+                    phone_number: '098-528-4217',
+                    page_location: '/link'
                 });
             }
         } catch (err) {
-            console.error('gtag call conversion error:', err);
+            console.error('call click tracking error:', err);
         }
     };
 

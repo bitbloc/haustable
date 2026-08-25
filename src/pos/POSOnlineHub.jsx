@@ -90,10 +90,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const sourceLower = (b.source || '').toLowerCase();
                 const remarkLower = (b.staff_remark || '').toLowerCase();
                 const isLineman = isOrderLineman(b);
-                const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman;
+                const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
                 const hasSlip = !!b.payment_slip_url;
-                const isPickup = b.booking_type === 'pickup';
-                return isOnlineSource || hasSlip || isPickup || isLineman;
+                const isOnlinePickup = b.booking_type === 'pickup' && (isOnlineSource || hasSlip || !isExplicitInHouse);
+                return isOnlineSource || hasSlip || isOnlinePickup || isLineman;
             });
 
             setOrders(onlineRelevant);
@@ -122,9 +123,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const isLineman = isOrderLineman(b);
-                    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman;
+                    const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
                     const hasSlip = !!b.payment_slip_url;
-                    const isOnlinePickup = b.booking_type === 'pickup' && isOnlineSource;
+                    const isOnlinePickup = b.booking_type === 'pickup' && (isOnlineSource || hasSlip || !isExplicitInHouse);
                     
                     if (isOnlineSource || hasSlip || isOnlinePickup || isLineman) {
                         const eventKey = `online_hub_insert_${b.id}`;
