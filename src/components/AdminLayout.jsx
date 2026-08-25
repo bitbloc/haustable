@@ -202,6 +202,11 @@ export default function AdminLayout() {
                         <Menu size={20} />
                     </button>
                     <Link to="/admin" className="flex items-center gap-2">
+                        <img 
+                            src="/logo.png" 
+                            alt="ONHAUS Logo" 
+                            className="w-5 h-5 object-contain shrink-0" 
+                        />
                         <span className="font-mono text-xs font-bold tracking-widest text-[oklch(18%_0.012_28)]">ONHAUS</span>
                         <div className="flex items-center gap-1 bg-[oklch(94%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.04_140)] px-1.5 py-0.5 rounded-sm font-mono text-[9px] font-bold">
                             <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)] animate-pulse" />
@@ -251,14 +256,21 @@ export default function AdminLayout() {
                             className="fixed top-0 left-0 bottom-0 w-72 bg-paper z-50 p-6 flex flex-col border-r border-gray-200 md:hidden"
                         >
                             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono text-sm font-bold tracking-widest text-ink">ONHAUS SYSTEM</span>
-                                        <span className="px-1.5 py-0.2 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold rounded-sm">
-                                            {userRoleDisplay}
-                                        </span>
+                                <div className="flex items-center gap-3">
+                                    <img 
+                                        src="/logo.png" 
+                                        alt="ONHAUS Logo" 
+                                        className="w-8 h-8 object-contain shrink-0" 
+                                    />
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-sm font-bold tracking-widest text-ink">ONHAUS SYSTEM</span>
+                                            <span className="px-1.5 py-0.2 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold rounded-sm">
+                                                {userRoleDisplay}
+                                            </span>
+                                        </div>
+                                        <div className="text-[9px] font-mono text-gray-400 tracking-widest uppercase mt-0.5">EXECUTIVE CONTROL</div>
                                     </div>
-                                    <div className="text-[9px] font-mono text-gray-400 tracking-widest uppercase mt-0.5">EXECUTIVE CONTROL</div>
                                 </div>
                                 <button 
                                     type="button"
@@ -277,7 +289,7 @@ export default function AdminLayout() {
                                     if (!item.isAllowed) {
                                         return (
                                             <div 
-                                                key={item.path}
+                                                key={item.path} 
                                                 className="admin-sidebar-item flex items-center justify-between opacity-40 cursor-not-allowed bg-transparent select-none"
                                                 title="ไม่มีสิทธิ์เข้าถึงหมวดหมู่นี้"
                                             >
@@ -333,15 +345,24 @@ export default function AdminLayout() {
             {/* Sidebar: Dieter Rams Structural Grid (Desktop) */}
             <aside className="w-64 lg:w-72 bg-paper border-r border-gray-200 hidden md:flex flex-col p-6 fixed h-full z-40 admin-sidebar">
                 <div className="mb-6 pb-4 border-b border-gray-200">
-                    <div className="flex items-center justify-between mb-1">
-                        <span className="font-mono text-sm font-bold tracking-widest text-ink">ONHAUS</span>
-                        <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold rounded-sm tracking-wider">
-                            {userRoleDisplay}
-                        </span>
-                    </div>
-                    <div className="flex items-center justify-between text-[9px] font-mono text-gray-400 tracking-widest uppercase">
-                        <span>ADMIN COCKPIT</span>
-                        <span>SYS 2.6</span>
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src="/logo.png" 
+                            alt="ONHAUS Logo" 
+                            className="w-8 h-8 object-contain shrink-0" 
+                        />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-0.5">
+                                <span className="font-mono text-sm font-bold tracking-widest text-ink">ONHAUS</span>
+                                <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold rounded-sm tracking-wider">
+                                    {userRoleDisplay}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between text-[9px] font-mono text-gray-400 tracking-widest uppercase">
+                                <span>ADMIN COCKPIT</span>
+                                <span>SYS 2.6</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
