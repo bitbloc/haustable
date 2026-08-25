@@ -68,16 +68,42 @@ export default function SalesTaxLedgerPrintView({
 
     const bahtWords = thaiBahtText(grandTotal);
 
-    // Split records into pages for clean A4 printing (12 rows per page ensures headers, table, and summary fit perfectly on A4 without boundary splitting)
-    const ROWS_PER_PAGE = 12;
-    const pages = [];
-    if (activeRecords.length === 0) {
-        pages.push([]);
-    } else {
-        for (let i = 0; i < activeRecords.length; i += ROWS_PER_PAGE) {
-            pages.push(activeRecords.slice(i, i + ROWS_PER_PAGE));
+    // Dynamic A4 Pagination:
+    // Normal pages (without footer summary) fit 20 rows densely & beautifully.
+    // Last page (with financial summary box + signatures) fits 14 rows.
+    const pages = React.useMemo(() => {
+        if (!activeRecords || activeRecords.length === 0) return [[]];
+
+        const ROWS_NORMAL = 20;
+        const ROWS_LAST = 14;
+
+        if (activeRecords.length <= ROWS_LAST) {
+            return [activeRecords];
         }
-    }
+
+        const pagesList = [];
+        let remaining = [...activeRecords];
+
+        while (remaining.length > 0) {
+            if (remaining.length <= ROWS_LAST) {
+                pagesList.push(remaining);
+                break;
+            }
+
+            if (remaining.length <= ROWS_NORMAL) {
+                // E.g. 15 to 20 items: split so the last page has <= ROWS_LAST items
+                const p1 = Math.min(ROWS_NORMAL, remaining.length - Math.min(remaining.length, ROWS_LAST));
+                const count = p1 > 0 ? p1 : Math.ceil(remaining.length / 2);
+                pagesList.push(remaining.slice(0, count));
+                remaining = remaining.slice(count);
+            } else {
+                pagesList.push(remaining.slice(0, ROWS_NORMAL));
+                remaining = remaining.slice(ROWS_NORMAL);
+            }
+        }
+
+        return pagesList;
+    }, [activeRecords]);
 
     const handlePrint = () => {
         window.print();
@@ -215,12 +241,13 @@ export default function SalesTaxLedgerPrintView({
                 
                 {pages.map((pageRows, pageIdx) => {
                     const isLastPage = pageIdx === pages.length - 1;
+                    const pageStartOffset = pages.slice(0, pageIdx).reduce((sum, p) => sum + p.length, 0);
 
                     return (
                         <div 
                             key={`page-${pageIdx}`}
                             style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                            className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-7 border border-zinc-300 shadow-xl text-[10.5pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
+                            className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-7 border border-zinc-300 shadow-xl text-[10.5pt] flex flex-col justify-between print:m-0 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
                         >
                             <div>
                                 {/* Header Section (Official Revenue Department Format) */}
@@ -302,7 +329,7 @@ export default function SalesTaxLedgerPrintView({
                                     </thead>
                                     <tbody className="divide-y divide-zinc-300 font-sans">
                                         {pageRows.map((item, rowIdx) => {
-                                            const globalIndex = (pageIdx * ROWS_PER_PAGE) + rowIdx + 1;
+                                            const globalIndex = pageStartOffset + rowIdx + 1;
                                             const isCancelled = item.status === 'cancelled';
                                             const rawDate = item.issued_at || item.created_at || item.booking_time;
                                             const dateObj = rawDate ? new Date(rawDate) : null;

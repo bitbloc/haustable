@@ -539,15 +539,15 @@ export default function WithholdingTaxTab({
                                 <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 space-y-1.5 font-mono text-xs">
                                     <div className="flex justify-between text-zinc-600">
                                         <span>จำนวนเงินจ่าย (Gross):</span>
-                                        <span>฿{Number(grossAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        <span>฿{Number(grossAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between text-red-600 font-bold">
                                         <span>ภาษีหัก ณ ที่จ่าย {taxRate}%:</span>
-                                        <span>-฿{((Number(grossAmount) * taxRate) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        <span>-฿{((Number(grossAmount || 0) * taxRate) / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                     <div className="flex justify-between text-zinc-950 font-black border-t border-zinc-200 pt-1.5 text-sm">
                                         <span>ยอดจ่ายสุทธิ (Net Paid):</span>
-                                        <span className="text-emerald-700">฿{(Number(grossAmount) - ((Number(grossAmount) * taxRate) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        <span className="text-emerald-700">฿{(Number(grossAmount || 0) - ((Number(grossAmount || 0) * taxRate) / 100)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
                                     </div>
                                 </div>
                             )}
@@ -580,8 +580,21 @@ export default function WithholdingTaxTab({
                         <span>[ หนังสือรับรองการหักภาษี ณ ที่จ่าย 50 ทวิ // #{activePrintRecord.doc_number} ]</span>
                         <div className="flex gap-2">
                             <button
+                                onClick={async () => {
+                                    const sheet = document.getElementById('wht-50-tavi-printable-sheet');
+                                    if (!sheet) return;
+                                    const { blob } = await generateTaxDocumentPdf(sheet, { fileName: `WHT_50_TAVI_${activePrintRecord.doc_number}.pdf` });
+                                    downloadTaxPdf(blob, `WHT_50_TAVI_${activePrintRecord.doc_number}.pdf`);
+                                    toast.success('ดาวน์โหลดหนังสือ 50 ทวิ เรียบร้อยแล้ว');
+                                }}
+                                className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded flex items-center gap-1.5 cursor-pointer text-xs"
+                            >
+                                <Download size={14} />
+                                <span>ดาวน์โหลด PDF</span>
+                            </button>
+                            <button
                                 onClick={() => window.print()}
-                                className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded flex items-center gap-1.5 cursor-pointer"
+                                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded flex items-center gap-1.5 cursor-pointer text-xs"
                             >
                                 <Printer size={14} />
                                 <span>พิมพ์ใบ 50 ทวิ</span>
@@ -597,8 +610,9 @@ export default function WithholdingTaxTab({
 
                     {/* A4 50 ทวิ Certificate Sheet */}
                     <div 
+                        id="wht-50-tavi-printable-sheet"
                         style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="w-full max-w-3xl bg-white text-zinc-950 p-8 sm:p-10 border border-zinc-300 shadow-2xl text-[11.5pt] print:m-0 print:p-8 print:border-none print:shadow-none space-y-4"
+                        className="print-page-sheet w-full max-w-3xl bg-white text-zinc-950 p-8 sm:p-10 border border-zinc-300 shadow-2xl text-[11.5pt] print:m-0 print:p-8 print:border-none print:shadow-none space-y-4"
                     >
                         <div className="text-center border-b-2 border-zinc-950 pb-3.5">
                             <h1 className="font-bold text-[18pt] sm:text-[20pt] text-zinc-950 leading-tight">
@@ -615,7 +629,7 @@ export default function WithholdingTaxTab({
                         {/* Payer Box */}
                         <div className="border-2 border-zinc-950 p-3.5 bg-zinc-50 space-y-1 font-mono text-[11.5pt]">
                             <span className="font-bold text-zinc-600 uppercase text-[10pt] block">1. ผู้มีหน้าที่หักภาษี ณ ที่จ่าย (Payer):</span>
-                            <div className="font-bold text-[14pt] text-zinc-950">{companySettings?.tax_company_name || 'IN THE HAUS'}</div>
+                            <div className="font-bold text-[14pt] text-zinc-950">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</div>
                             <div>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id)}</strong></div>
                             <div>ที่อยู่: {companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</div>
                         </div>
@@ -656,9 +670,9 @@ export default function WithholdingTaxTab({
                         </table>
 
                         {/* Baht Text */}
-                        <div className="border border-zinc-900 p-2.5 bg-zinc-50 font-mono text-[11px]">
-                            <span className="text-zinc-500">จำนวนเงินภาษีที่หักและนำส่ง (ตัวอักษร): </span>
-                            <strong className="text-zinc-950">({thaiBahtText(activePrintRecord.tax_withheld)})</strong>
+                        <div className="border-2 border-zinc-950 p-3 bg-zinc-50 font-mono text-[11.5pt]">
+                            <span className="text-zinc-600">จำนวนเงินภาษีที่หักและนำส่ง (ตัวอักษร): </span>
+                            <strong className="text-zinc-950 font-bold text-[12.5pt]">({thaiBahtText(activePrintRecord.tax_withheld)})</strong>
                         </div>
 
                         {/* Signatures */}

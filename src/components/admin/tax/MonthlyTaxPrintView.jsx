@@ -1,8 +1,10 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React from 'react';
-import { Printer, X, Download, FileText, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { Printer, X, Download, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText } from '../../../utils/thaiTaxHelper';
+import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
 import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
+import { toast } from 'sonner';
 
 export default function MonthlyTaxPrintView({
     periodMonth,
@@ -13,8 +15,32 @@ export default function MonthlyTaxPrintView({
     includeCover = true,
     onClose
 }) {
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+
     const handlePrint = () => {
         window.print();
+    };
+
+    const handleDownloadPdf = async () => {
+        const sheetElement = document.getElementById('monthly-tax-printable-container');
+        if (!sheetElement) {
+            toast.error('ไม่พบเนื้อหาเอกสารสำหรับสร้าง PDF');
+            return;
+        }
+
+        setDownloadingPdf(true);
+        const toastId = toast.loading('กำลังสร้างชุดเอกสาร PDF คุณภาพสูง...');
+        try {
+            const fileName = `Monthly_Tax_Dossier_${periodMonth || 'Period'}.pdf`;
+            const { blob } = await generateTaxDocumentPdf(sheetElement, { fileName });
+            downloadTaxPdf(blob, fileName);
+            toast.success(`ดาวน์โหลดเอกสาร ${fileName} เรียบร้อยแล้ว`, { id: toastId });
+        } catch (err) {
+            console.error('Failed to generate monthly tax PDF:', err);
+            toast.error('เกิดข้อผิดพลาดในการสร้าง PDF กรุณาลองใช้ปุ่มพิมพ์รายงาน (Print)', { id: toastId });
+        } finally {
+            setDownloadingPdf(false);
+        }
     };
 
     // Calculate Totals
@@ -50,6 +76,28 @@ export default function MonthlyTaxPrintView({
     return (
         <div className="fixed inset-0 z-[230] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:overflow-visible">
             
+            {/* Embedded Print CSS */}
+            <style dangerouslySetInnerHTML={{ __html: `
+                @media print {
+                    @page {
+                        size: A4 portrait;
+                        margin: 6mm 6mm 6mm 6mm;
+                    }
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
+                    .print-page-sheet {
+                        page-break-after: always !important;
+                        break-after: page !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        margin: 0 !important;
+                        box-sizing: border-box !important;
+                    }
+                }
+            `}} />
+
             {/* Top Toolbar (Hidden on Print) */}
             <div className="w-full max-w-5xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 sm:px-6 py-3 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-4 print:hidden gap-3 shadow-2xl shrink-0">
                 <div className="flex items-center gap-3">
@@ -70,11 +118,20 @@ export default function MonthlyTaxPrintView({
 
                 <div className="flex items-center gap-2">
                     <button
+                        onClick={handleDownloadPdf}
+                        disabled={downloadingPdf}
+                        className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors flex items-center gap-1.5 cursor-pointer rounded-xs shadow-md disabled:opacity-50"
+                    >
+                        {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                        <span>DOWNLOAD PDF</span>
+                    </button>
+
+                    <button
                         onClick={handlePrint}
                         className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase transition-colors flex items-center gap-2 cursor-pointer rounded-xs shadow-md"
                     >
                         <Printer size={15} />
-                        <span>PRINT / SAVE AS PDF (พิมพ์ชุดหลักฐาน)</span>
+                        <span>PRINT / SAVE AS PDF</span>
                     </button>
 
                     <button
@@ -87,13 +144,13 @@ export default function MonthlyTaxPrintView({
             </div>
 
             {/* Printable Container (A4 Multi-page Stack) */}
-            <div className="w-full max-w-4xl space-y-8 print:space-y-0 print:w-full print:max-w-none">
+            <div id="monthly-tax-printable-container" className="w-full max-w-4xl space-y-8 print:space-y-0 print:w-full print:max-w-none">
                 
                 {/* PAGE 1: COVER SHEET (ใบปะหน้าสรุปเอกสารภาษีประจำเดือน) */}
                 {includeCover && (
                     <div 
                         style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[297mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
+                        className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11.5pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-8 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
                     >
                         <div>
                             {/* Header Section */}
@@ -285,7 +342,7 @@ export default function MonthlyTaxPrintView({
                     <div 
                         key={`page-${pageIdx}`}
                         style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                        className="bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11pt] min-h-[297mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:min-h-screen print:page-break-after-always print:break-after-page"
+                        className="print-page-sheet bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-xl text-[11pt] min-h-[285mm] flex flex-col justify-between print:m-0 print:p-6 print:border-none print:shadow-none print:page-break-after-always print:break-after-page"
                     >
                         <div>
                             {/* Page Header Strip */}
