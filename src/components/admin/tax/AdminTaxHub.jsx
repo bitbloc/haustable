@@ -699,6 +699,8 @@ export default function AdminTaxHub() {
                         key={expensesKey}
                         allYearBookings={allYearBookings}
                         monthlyPosRevenue={currentMonthPosRevenue}
+                        companySettings={companySettings}
+                        isVatRegistered={isVatRegistered}
                         onOpenCreateModal={() => {
                             setEditingExpense(null);
                             setShowExpenseModal(true);

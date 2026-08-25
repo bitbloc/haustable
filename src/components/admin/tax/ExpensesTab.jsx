@@ -20,13 +20,16 @@ import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
 import { findDuplicateClusters } from '../../../utils/duplicateDetector';
 import { parseReceiptUrls } from '../../../utils/receiptImageHelper';
 import MonthlyTaxReceiptsExporter from './MonthlyTaxReceiptsExporter';
+import ExpenseLedgerPrintView from './ExpenseLedgerPrintView';
 import { toast } from 'sonner';
 
 export default function ExpensesTab({ 
     onOpenCreateModal, 
     onOpenEditModal,
     allYearBookings = [],
-    monthlyPosRevenue = 0 
+    monthlyPosRevenue = 0,
+    companySettings = {},
+    isVatRegistered = false
 }) {
     const [expenses, setExpenses] = useState(() => {
         try {
@@ -58,6 +61,7 @@ export default function ExpensesTab({
     const [isAllPeriods, setIsAllPeriods] = useState(false);
     const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
     const [showMonthlyExporter, setShowMonthlyExporter] = useState(false);
+    const [showLedgerPrintView, setShowLedgerPrintView] = useState(false);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [previewImage, setPreviewImage] = useState(null);
@@ -568,8 +572,17 @@ export default function ExpensesTab({
                     </button>
 
                     <button
+                        onClick={() => setShowLedgerPrintView(true)}
+                        className="px-3.5 py-1.5 bg-blue-700 hover:bg-blue-600 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm rounded-xs"
+                        title="เปิดสมุดรายงานค่าใช้จ่ายและรายจ่ายประจำเดือน (A4 Table Print & PDF)"
+                    >
+                        <FileText size={13} className="text-blue-200" />
+                        <span>📑 สรุปสมุดค่าใช้จ่าย (LEDGER PDF)</span>
+                    </button>
+
+                    <button
                         onClick={() => setShowMonthlyExporter(true)}
-                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm"
+                        className="px-3.5 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-colors cursor-pointer text-[11px] shadow-sm rounded-xs"
                         title="เปิดระบบจัดการพิมพ์หลักฐานใบเสร็จทั้งเดือน (A4 Print / B&W Enhanced)"
                     >
                         <Printer size={13} className="text-emerald-300" />
@@ -838,6 +851,21 @@ export default function ExpensesTab({
                         setShowMonthlyExporter(false);
                         loadExpenses();
                     }}
+                />
+            )}
+
+            {/* EXPENSE LEDGER A4 PRINT / PDF VIEW */}
+            {showLedgerPrintView && (
+                <ExpenseLedgerPrintView
+                    periodMonth={isAllPeriods ? '' : (periodMode === 'month' ? selectedMonth : '')}
+                    periodDate={isAllPeriods ? '' : (periodMode === 'day' ? selectedDate : '')}
+                    filterMode={isAllPeriods ? 'all' : periodMode}
+                    periodLabel={isAllPeriods ? 'ค่าใช้จ่ายทั้งหมดตลอดกาล' : ''}
+                    expenses={filteredExpenses}
+                    companySettings={companySettings}
+                    isVatRegistered={isVatRegistered}
+                    categoryFilter={categoryFilter}
+                    onClose={() => setShowLedgerPrintView(false)}
                 />
             )}
         </div>
