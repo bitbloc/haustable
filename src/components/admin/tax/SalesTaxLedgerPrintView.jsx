@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, X, Download, ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText, exportUnifiedSalesLedgerCsv, downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
@@ -29,7 +30,7 @@ export default function SalesTaxLedgerPrintView({
             const [y, m, d] = periodDate.split('-');
             const mIdx = parseInt(m, 10) - 1;
             const thYear = parseInt(y, 10) + 543;
-            return `ประจำวันที่ ${parseInt(d, 10)} ${monthNames[mIdx] || m} พ.ศ. ${thYear}`;
+            return `${parseInt(d, 10)} ${monthNames[mIdx] || m} พ.ศ. ${thYear}`;
         }
         if (periodMonth) {
             const [year, month] = periodMonth.split('-');
@@ -37,36 +38,21 @@ export default function SalesTaxLedgerPrintView({
             const thYear = parseInt(year, 10) + 543;
             return `ประจำเดือน ${monthNames[mIdx] || month} พ.ศ. ${thYear}`;
         }
-        return 'ทุกช่วงเวลา (All Periods)';
+        return 'ยอดขายทั้งหมดตลอดกาล';
     };
 
-    // Calculate Financial Aggregates
-    const activeRecords = records.filter(r => r.status !== 'cancelled');
-    const cancelledCount = records.filter(r => r.status === 'cancelled').length;
+    // Filter out void / cancelled / deleted bookings
+    const activeRecords = records.filter(item => {
+        const s = String(item.status || '').toLowerCase();
+        return s !== 'cancelled' && s !== 'void' && s !== 'voided' && s !== 'deleted';
+    });
+    const cancelledCount = records.length - activeRecords.length;
 
-    const totalPreVat = activeRecords.reduce((sum, item) => {
-        const preVat = Number(item.pre_vat_amount !== undefined 
-            ? item.pre_vat_amount 
-            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
-        return sum + preVat;
-    }, 0);
-
-    const totalVat = activeRecords.reduce((sum, item) => {
-        const preVat = Number(item.pre_vat_amount !== undefined 
-            ? item.pre_vat_amount 
-            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) / 1.07) : (item.total_amount || item.total_price || 0)));
-        const vat = Number(item.vat_amount !== undefined 
-            ? item.vat_amount 
-            : (isVatRegistered ? (Number(item.total_amount || item.total_price || 0) - preVat) : 0));
-        return sum + vat;
-    }, 0);
-
+    // Financial calculations
     const grandTotal = activeRecords.reduce((sum, item) => {
         const total = Number(item.total_amount !== undefined ? item.total_amount : (item.total_price || 0));
         return sum + total;
     }, 0);
-
-    const bahtWords = thaiBahtText(grandTotal);
 
     // Dynamic A4 Pagination:
     // Normal pages (without footer summary) fit 20 rows densely & beautifully.
@@ -148,7 +134,7 @@ export default function SalesTaxLedgerPrintView({
         : 'สมุดรายงานยอดขายและรายรับรายบิล (SALES & BILL LEDGER)';
     const formSubtitle = isVatRegistered ? '(ตามมาตรา 87(1) แห่งประมวลรัษฎากร - แบบ ภ.พ.30)' : '(หลักฐานประกอบการยื่นแบบแสดงรายการภาษีเงินได้)';
 
-    return (
+    const content = (
         <div className="fixed inset-0 z-[230] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start p-2 sm:p-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible">
             
             {/* Embedded Print CSS to guarantee exact A4 pagination */}
@@ -166,22 +152,16 @@ export default function SalesTaxLedgerPrintView({
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    /* Isolate printable container and hide background app tree */
-                    body > * {
-                        visibility: hidden !important;
+                    /* Completely hide the entire background React application tree in print */
+                    #root {
+                        display: none !important;
                     }
-                    #sales-tax-ledger-printable-container,
-                    #sales-tax-ledger-printable-container * {
-                        visibility: visible !important;
-                    }
-                    #sales-tax-ledger-printable-container {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 100% !important;
+                    #print-portal-root {
+                        display: block !important;
+                        position: static !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        display: block !important;
+                        width: 100% !important;
                     }
                     .print-page-sheet {
                         page-break-inside: avoid !important;
@@ -298,28 +278,26 @@ export default function SalesTaxLedgerPrintView({
                                         </div>
                                     </div>
 
-                                    {/* Company Metadata Grid (Balanced 2-Column Tabular Layout) */}
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 mt-2.5 pt-2.5 border-t border-zinc-300 text-[10.5pt]">
+                                    {/* Company Metadata Grid (Balanced 2-Column Tabular Layout - Revenue Dept Standard) */}
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-1.5 mt-2.5 pt-2.5 border-t border-zinc-300 text-[10.5pt]">
                                         <div className="space-y-1">
                                             <div>
                                                 <span className="text-zinc-600 font-mono">ชื่อผู้ประกอบการ: </span>
                                                 <strong className="text-zinc-950 font-bold">{companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'}</strong>
                                             </div>
-                                            <div className="truncate">
-                                                <span className="text-zinc-600 font-mono">ที่อยู่: </span>
-                                                <span className="text-zinc-900">{companySettings?.tax_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</span>
-                                            </div>
                                             <div>
-                                                <span className="text-zinc-600 font-mono">งวดภาษี / ประจำวันที่: </span>
-                                                <strong className="text-zinc-950 font-bold font-mono">
-                                                    {formatThaiDatePeriod()}
-                                                </strong>
+                                                <span className="text-zinc-600 font-mono">ชื่อสถานประกอบการ: </span>
+                                                <strong className="text-zinc-950 font-bold">{companySettings?.tax_company_name_en ? `${companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม'} (${companySettings.tax_company_name_en})` : (companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม')}</strong>
+                                            </div>
+                                            <div className="leading-snug">
+                                                <span className="text-zinc-600 font-mono">ที่อยู่สถานประกอบการ: </span>
+                                                <span className="text-zinc-900 font-normal">{companySettings?.tax_address || '788/1 ถ.สุนทรวิจิตร ต.ในเมือง อ.เมือง นครพนม 48000'}</span>
                                             </div>
                                         </div>
 
                                         <div className="space-y-1 sm:text-right">
                                             <div>
-                                                <span className="text-zinc-600 font-mono">เลขประจำตัวผู้เสียภาษี: </span>
+                                                <span className="text-zinc-600 font-mono">เลขประจำตัวผู้เสียภาษีอากร: </span>
                                                 <strong className="font-mono text-zinc-950 font-bold whitespace-nowrap">{formatTaxId(companySettings?.tax_id || '1120100144907')}</strong>
                                             </div>
                                             <div>
@@ -328,9 +306,15 @@ export default function SalesTaxLedgerPrintView({
                                                     {companySettings?.tax_branch_type === 'head_office' ? 'สำนักงานใหญ่ (00000)' : `สาขาที่ ${companySettings?.tax_branch_code || '00001'}`}
                                                 </strong>
                                             </div>
-                                            <div className="font-mono text-[10pt] text-zinc-600">
+                                            <div>
+                                                <span className="text-zinc-600 font-mono">งวดภาษี / ประจำวันที่: </span>
+                                                <strong className="text-zinc-950 font-bold font-mono">
+                                                    {formatThaiDatePeriod()}
+                                                </strong>
+                                            </div>
+                                            <div className="font-mono text-[9.5pt] text-zinc-500">
                                                 <span>โหมดข้อมูล: </span>
-                                                <span className="text-zinc-800">{dataSourceMode === 'invoices' ? 'ใบกำกับภาษี/ใบเสร็จทางการ' : (dataSourceMode === 'pos_bills' ? 'บิลขายทั้งหมดจาก POS' : 'รวมทุกบิลขายและเอกสารภาษี')}</span>
+                                                <span className="text-zinc-800 font-medium">{dataSourceMode === 'invoices' ? 'ใบกำกับภาษี/ใบเสร็จทางการ' : (dataSourceMode === 'pos_bills' ? 'บิลขายทั้งหมดจาก POS' : 'รวมทุกบิลขายและเอกสารภาษี')}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -340,22 +324,22 @@ export default function SalesTaxLedgerPrintView({
                                 <table className="w-full table-fixed border-collapse text-[10pt]">
                                     <thead>
                                         <tr className="bg-zinc-100 border-y-2 border-zinc-950 font-mono text-[10pt] uppercase text-zinc-900 font-bold">
-                                            <th className="py-1.5 px-1 text-center w-[5%] whitespace-nowrap">ลำดับ</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[11%] whitespace-nowrap">วัน/เดือน/ปี</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[20%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
+                                            <th className="py-1.5 px-1 text-center w-[4%] whitespace-nowrap">ลำดับ</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[10%] whitespace-nowrap">วัน/เดือน/ปี</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[18%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
                                             <th className="py-1.5 px-1.5 text-left w-[23%]">ชื่อผู้ซื้อสินค้า / บริการ</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[15%] whitespace-nowrap">เลขผู้เสียภาษี</th>
-                                            <th className="py-1.5 px-1 text-center w-[7%] whitespace-nowrap">สาขา</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[14%] whitespace-nowrap">เลขผู้เสียภาษี</th>
+                                            <th className="py-1.5 px-1 text-center w-[10%] whitespace-nowrap">สาขา</th>
                                             {isVatRegistered ? (
                                                 <>
                                                     <th className="py-1.5 px-1.5 text-right w-[10%] whitespace-nowrap">ก่อนภาษี</th>
                                                     <th className="py-1.5 px-1 text-right w-[9%] whitespace-nowrap">ภาษี 7%</th>
-                                                    <th className="py-1.5 px-1.5 text-right w-[10%] whitespace-nowrap">รวมทั้งสิ้น</th>
+                                                    <th className="py-1.5 px-1.5 text-right w-[11%] whitespace-nowrap">รวมทั้งสิ้น</th>
                                                 </>
                                             ) : (
-                                                <th className="py-1.5 px-1.5 text-right w-[12%] whitespace-nowrap">มูลค่าสินค้า</th>
+                                                <th className="py-1.5 pr-2.5 pl-1 text-right w-[15%] whitespace-nowrap">มูลค่าสินค้า</th>
                                             )}
-                                            <th className="py-1.5 px-1 text-center w-[7%] whitespace-nowrap">สถานะ</th>
+                                            <th className="py-1.5 px-1 text-center w-[6%] whitespace-nowrap">สถานะ</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-300 font-sans">
@@ -398,7 +382,7 @@ export default function SalesTaxLedgerPrintView({
                                                             </td>
                                                         </>
                                                     ) : (
-                                                        <td className="py-1.5 px-1.5 text-right font-mono font-bold text-zinc-950 whitespace-nowrap">
+                                                        <td className="py-1.5 pr-2.5 pl-1 text-right font-mono font-bold text-zinc-950 whitespace-nowrap">
                                                             {isCancelled ? '0.00' : total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </td>
                                                     )}
@@ -483,4 +467,7 @@ export default function SalesTaxLedgerPrintView({
             </div>
         </div>
     );
+
+    const portalTarget = typeof document !== 'undefined' ? (document.getElementById('print-portal-root') || document.body) : null;
+    return portalTarget ? createPortal(content, portalTarget) : content;
 }

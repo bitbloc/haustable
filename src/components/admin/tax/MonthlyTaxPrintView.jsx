@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, X, Download, FileText, ArrowLeft, Loader2 } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
@@ -73,7 +74,7 @@ export default function MonthlyTaxPrintView({
         return `${monthNames[mIdx] || month} พ.ศ. ${thYear}`;
     };
 
-    return (
+    const content = (
         <div className="fixed inset-0 z-[230] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start p-2 sm:p-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible">
             
             {/* Embedded Print CSS */}
@@ -91,21 +92,16 @@ export default function MonthlyTaxPrintView({
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                     }
-                    body > * {
-                        visibility: hidden !important;
+                    /* Completely hide the entire background React application tree in print */
+                    #root {
+                        display: none !important;
                     }
-                    #monthly-tax-printable-container,
-                    #monthly-tax-printable-container * {
-                        visibility: visible !important;
-                    }
-                    #monthly-tax-printable-container {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 100% !important;
+                    #print-portal-root {
+                        display: block !important;
+                        position: static !important;
                         margin: 0 !important;
                         padding: 0 !important;
-                        display: block !important;
+                        width: 100% !important;
                     }
                     .print-page-sheet {
                         page-break-inside: avoid !important;
@@ -466,4 +462,7 @@ export default function MonthlyTaxPrintView({
             </div>
         </div>
     );
+
+    const portalTarget = typeof document !== 'undefined' ? (document.getElementById('print-portal-root') || document.body) : null;
+    return portalTarget ? createPortal(content, portalTarget) : content;
 }

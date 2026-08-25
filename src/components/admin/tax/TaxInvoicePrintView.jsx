@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     Printer, 
     X, 
@@ -262,8 +263,8 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[200] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start py-4 sm:py-6 px-2 sm:px-4 overflow-y-auto print:p-0 print:m-0 print:bg-white print:overflow-visible font-sans text-xs">
+    const content = (
+        <div className="fixed inset-0 z-[200] flex flex-col bg-zinc-950/85 backdrop-blur-md items-center justify-start py-4 sm:py-6 px-2 sm:px-4 overflow-y-auto print:static print:p-0 print:m-0 print:bg-white print:overflow-visible font-sans text-xs">
             {/* Custom Print Style Tag for Guaranteed 1-Page A4 Precision */}
             <style>{`
                 @page {
@@ -279,6 +280,17 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         width: 100% !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
+                    }
+                    /* Completely hide the entire background React application tree in print */
+                    #root {
+                        display: none !important;
+                    }
+                    #print-portal-root {
+                        display: block !important;
+                        position: static !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
                     }
                     #tax-invoice-printable-sheet {
                         width: 100% !important;
@@ -883,4 +895,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             )}
         </div>
     );
+
+    const portalTarget = typeof document !== 'undefined' ? (document.getElementById('print-portal-root') || document.body) : null;
+    return portalTarget ? createPortal(content, portalTarget) : content;
 }
