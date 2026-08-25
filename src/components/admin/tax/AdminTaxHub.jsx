@@ -712,6 +712,12 @@ export default function AdminTaxHub() {
                         companySettings={companySettings}
                         onOpenInvoice={(inv) => setActivePrintInvoice(inv)}
                         allYearBookings={allYearBookings}
+                        onDeleteBooking={(bookingId) => {
+                            setAllYearBookings(prev => prev.filter(b => b.id !== bookingId));
+                        }}
+                        onDeleteInvoice={(invoiceId) => {
+                            setInvoices(prev => prev.filter(i => i.id !== invoiceId));
+                        }}
                     />
                 )}
 

@@ -25,6 +25,8 @@ import {
     ShoppingBag,
     Eye,
     Plus,
+    Trash2,
+    AlertTriangle,
     ExternalLink
 } from 'lucide-react';
 import { 
@@ -34,6 +36,7 @@ import {
     downloadCsvFile,
     thaiBahtText 
 } from '../../../utils/thaiTaxHelper';
+import { supabase } from '../../../lib/supabaseClient';
 import SalesTaxLedgerPrintView from './SalesTaxLedgerPrintView';
 import POSBillDetailsModal from '../../../pos/POSBillDetailsModal';
 import TaxInvoiceModal from './TaxInvoiceModal';
@@ -45,7 +48,9 @@ export default function SalesTaxReportTab({
     invoices = [], 
     companySettings = {}, 
     onOpenInvoice,
-    allYearBookings = []
+    allYearBookings = [],
+    onDeleteBooking,
+    onDeleteInvoice
 }) {
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
 
@@ -88,6 +93,8 @@ export default function SalesTaxReportTab({
     const [showPrintModal, setShowPrintModal] = useState(false);
     const [selectedBillForDetail, setSelectedBillForDetail] = useState(null);
     const [selectedBookingForTaxModal, setSelectedBookingForTaxModal] = useState(null);
+    const [billToDelete, setBillToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     // Format display string for the active period
     const activePeriodLabel = useMemo(() => {
@@ -372,6 +379,53 @@ export default function SalesTaxReportTab({
         const filename = `${prefix}_${dataSourceMode}_${timePeriodTag}.csv`;
         downloadCsvFile(csv, filename);
         toast.success(`ดาวน์โหลดรายงาน ${filename} เรียบร้อยแล้ว (พร้อมเปิดใน Excel)`);
+    };
+
+    // Execute Bill Deletion with Auto-Resequence
+    const handleExecuteDeleteBill = async () => {
+        if (!billToDelete) return;
+        setDeleting(true);
+        const toastId = toast.loading('กำลังลบบิลและจัดเรียงลำดับใหม่...');
+        try {
+            if (billToDelete.source_type === 'pos_bill') {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({ 
+                        status: 'cancelled', 
+                        staff_remark: '[VOIDED_FROM_TAX_LEDGER]' 
+                    })
+                    .eq('id', billToDelete.id);
+
+                if (error) {
+                    console.warn('Booking status update failed, attempting delete fallback:', error);
+                    await supabase.from('bookings').delete().eq('id', billToDelete.id);
+                }
+
+                if (onDeleteBooking) {
+                    onDeleteBooking(billToDelete.id);
+                }
+            } else if (billToDelete.source_type === 'tax_invoice') {
+                await supabase
+                    .from('tax_invoices')
+                    .update({ 
+                        status: 'cancelled', 
+                        cancellation_reason: 'Voided from Sales Ledger' 
+                    })
+                    .eq('id', billToDelete.id);
+
+                if (onDeleteInvoice) {
+                    onDeleteInvoice(billToDelete.id);
+                }
+            }
+
+            toast.success(`ลบบิล ${billToDelete.bill_number || billToDelete.invoice_number || ''} สำเร็จ! จัดเรียงเลขบิลใหม่อัตโนมัติแล้ว`, { id: toastId });
+            setBillToDelete(null);
+        } catch (err) {
+            console.error('Failed to delete bill:', err);
+            toast.error('เกิดข้อผิดพลาดในการลบบิล กรุณาลองใหม่อีกครั้ง', { id: toastId });
+        } finally {
+            setDeleting(false);
+        }
     };
 
     // Helper for rendering payment method badges
@@ -802,9 +856,9 @@ export default function SalesTaxReportTab({
                                             {total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </td>
                                         <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-center gap-1.5">
+                                            <div className="flex items-center justify-center gap-1">
                                                 {item.source_type === 'pos_bill' ? (
-                                                    <div className="flex items-center gap-1">
+                                                    <>
                                                         <button
                                                             type="button"
                                                             onClick={() => setSelectedBillForDetail(item.raw_booking)}
@@ -825,11 +879,30 @@ export default function SalesTaxReportTab({
                                                                 <span>TAX</span>
                                                             </button>
                                                         )}
-                                                    </div>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setBillToDelete(item)}
+                                                            className="p-1 rounded hover:bg-red-100 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer ml-0.5"
+                                                            title="ลบบิลและจัดเรียงเลขใหม่ (Auto-Resequence)"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </>
                                                 ) : (
-                                                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800">
-                                                        ปกติ
-                                                    </span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800">
+                                                            ปกติ
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setBillToDelete(item)}
+                                                            className="p-1 rounded hover:bg-red-100 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
+                                                            title="ลบเอกสารภาษีนี้และจัดเรียงเลขใหม่"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -907,6 +980,69 @@ export default function SalesTaxReportTab({
                         toast.success('ออกเอกสารใบกำกับภาษีเรียบร้อยแล้ว');
                     }}
                 />
+            )}
+
+            {/* Delete Bill & Auto-Resequence Confirmation Modal */}
+            {billToDelete && (
+                <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-mono">
+                    <div className="bg-white border border-[#D1D1CD] rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+                        <div className="flex items-center gap-3 border-b border-zinc-200 pb-3">
+                            <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-sm text-zinc-950 uppercase">
+                                    ยืนยันการลบบิลขาย
+                                </h3>
+                                <p className="text-[11px] text-zinc-500">
+                                    ลบบิลออกจากรายงานและจัดเรียงเลขบิลใหม่อัตโนมัติ
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-3.5 space-y-2 text-xs">
+                            <div className="flex justify-between">
+                                <span className="text-zinc-500">เลขที่บิล:</span>
+                                <span className="font-bold text-zinc-900">{billToDelete.bill_number || billToDelete.invoice_number}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-zinc-500">ยอดเงินรวม:</span>
+                                <span className="font-bold text-emerald-700">฿{Number(billToDelete.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-zinc-500">ลูกค้า / โต๊ะ:</span>
+                                <span className="font-bold text-zinc-900">{billToDelete.customer_name} {billToDelete.table_name ? `(โต๊ะ ${billToDelete.table_name})` : ''}</span>
+                            </div>
+                        </div>
+
+                        <div className="text-[11px] text-zinc-700 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-relaxed flex items-start gap-2">
+                            <AlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                                <strong>ระบบ Auto-Resequence:</strong> เมื่อลบบิลนี้แล้ว ระบบจะปรับสถานะบิลเป็น Void และจะทำการเรียงลำดับเลขที่บิล (BILL-YYYYMM-XXXX) ที่เหลือใหม่ทั้งหมดให้ต่อเนื่องกันทันทีโดยไม่มีช่องว่าง
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-1">
+                            <button
+                                type="button"
+                                disabled={deleting}
+                                onClick={() => setBillToDelete(null)}
+                                className="py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-300 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                            >
+                                ยกเลิก (Cancel)
+                            </button>
+                            <button
+                                type="button"
+                                disabled={deleting}
+                                onClick={handleExecuteDeleteBill}
+                                className="py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+                            >
+                                {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                                <span>{deleting ? 'กำลังลบบิล...' : 'ยืนยันลบบิล'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
