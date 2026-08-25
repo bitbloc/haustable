@@ -64,7 +64,7 @@ export default function Home({ session }) {
         try {
             if (typeof window !== 'undefined' && window.gtag) {
                 window.gtag('event', 'conversion', {
-                    'send_to': 'AW-11227095880/QU1qCJHHvcocEMjGv-kp',
+                    'send_to': 'AW-11227095880/uWqACPuDvOEcEMjGv-kp',
                     'value': 1.0,
                     'currency': 'THB'
                 })
