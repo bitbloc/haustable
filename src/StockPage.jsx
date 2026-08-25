@@ -127,20 +127,31 @@ export default function StockPage() {
         }
     };
 
-    // Real-time Subscription
-    // FIX: Skip items currently being adjusted (pendingAdjustIds) to prevent
-    // intermediate values from overwriting the verification fetch.
+    // Real-time Subscriptions (Full Event Lifecycle: INSERT, UPDATE, DELETE & Category sync)
     useEffect(() => {
+        const channelId = `stock-realtime-${Date.now()}`;
         const channel = supabase
-            .channel('public:stock_items')
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'stock_items' }, (payload) => {
-                // Skip if this item has a pending adjustment in flight
-                if (pendingAdjustIds.current.has(payload.new.id)) return;
-                setItems(currentItems => 
-                    currentItems.map(item => 
-                        item.id === payload.new.id ? { ...item, ...payload.new } : item
-                    )
-                );
+            .channel(channelId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_items' }, (payload) => {
+                if (payload.eventType === 'INSERT') {
+                    setItems(currentItems => {
+                        if (currentItems.some(i => i.id === payload.new.id)) return currentItems;
+                        return [...currentItems, payload.new].sort((a, b) => a.name.localeCompare(b.name, 'th'));
+                    });
+                } else if (payload.eventType === 'UPDATE') {
+                    // Skip if this item has a pending adjustment in flight
+                    if (pendingAdjustIds.current.has(payload.new.id)) return;
+                    setItems(currentItems => 
+                        currentItems.map(item => 
+                            item.id === payload.new.id ? { ...item, ...payload.new } : item
+                        )
+                    );
+                } else if (payload.eventType === 'DELETE') {
+                    setItems(currentItems => currentItems.filter(item => item.id !== payload.old.id));
+                }
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_categories' }, () => {
+                fetchCategories();
             })
             .subscribe();
 

@@ -55,6 +55,14 @@ export default function StockListItem({
         item.conversion_factor
     );
 
+    const successTimerRef = useRef(null);
+
+    React.useEffect(() => {
+        return () => {
+            if (successTimerRef.current) clearTimeout(successTimerRef.current);
+        };
+    }, []);
+
     const triggerUpdate = async (newQty) => {
         if (!onUpdate || lockRef.current) return; // Skip if already saving
         lockRef.current = true;
@@ -65,7 +73,8 @@ export default function StockListItem({
                 note: `ตรวจนับด่วน (List): ${Math.floor(newQty)} ${item.unit || 'ชิ้น'} (เต็ม) ${newQty % 1 > 0 ? `+ เปิดแล้ว ${Math.round((newQty % 1) * 100)}%` : ''}`
             });
             setSuccess(true);
-            setTimeout(() => setSuccess(false), 1500);
+            if (successTimerRef.current) clearTimeout(successTimerRef.current);
+            successTimerRef.current = setTimeout(() => setSuccess(false), 1500);
         } catch (e) {
             console.error(e);
         } finally {
