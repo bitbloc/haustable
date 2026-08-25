@@ -27,6 +27,9 @@ Deno.serve(async (req) => {
             Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         )
 
+        let userId = null
+        let isNewlyCreated = false
+
         // 1. Create User (Auto Confirm)
         const { data: userData, error: createError } = await adminClient.auth.admin.createUser({
             email,
@@ -35,28 +38,54 @@ Deno.serve(async (req) => {
             user_metadata: { full_name: profileData.display_name }
         })
 
-        if (createError) throw createError
-        if (!userData.user) throw new Error("Failed to create user object")
+        if (!createError && userData?.user) {
+            userId = userData.user.id
+            isNewlyCreated = true
+        } else {
+            // Check if profile or user already exists
+            const { data: existingProfile } = await adminClient
+                .from('profiles')
+                .select('id')
+                .eq('phone_number', profileData.phone_number)
+                .maybeSingle()
 
-        const userId = userData.user.id
+            if (existingProfile?.id) {
+                userId = existingProfile.id
+            } else {
+                try {
+                    const { data: usersList } = await adminClient.auth.admin.listUsers({ perPage: 1000 })
+                    const matchedUser = usersList?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
+                    if (matchedUser?.id) {
+                        userId = matchedUser.id
+                    } else {
+                        throw createError || new Error("Failed to create user object")
+                    }
+                } catch {
+                    throw createError || new Error("Failed to create user object")
+                }
+            }
+        }
+
+        if (!userId) throw new Error("Failed to determine user ID")
 
         // 2. Upsert Profile
         const { error: upsertError } = await adminClient.from('profiles').upsert({
             id: userId,
             display_name: profileData.display_name,
-            nickname: profileData.nickname,
+            nickname: profileData.nickname || null,
             phone_number: profileData.phone_number,
-            birth_day: profileData.birth_day,
-            birth_month: profileData.birth_month,
-            gender: profileData.gender,
+            birth_day: profileData.birth_day || null,
+            birth_month: profileData.birth_month || null,
+            gender: profileData.gender || null,
             line_user_id: profileData.line_user_id || null, 
             role: 'customer'
         })
 
         if (upsertError) {
-            // Rollback? Hard to delete user, but let's try or just throw
-             await adminClient.auth.admin.deleteUser(userId)
-             throw upsertError
+            if (isNewlyCreated) {
+                await adminClient.auth.admin.deleteUser(userId)
+            }
+            throw upsertError
         }
 
         return new Response(JSON.stringify({ success: true, userId }), { 

@@ -540,38 +540,73 @@ export default function CustomerOrderLanding() {
 
     const handleRegisterMember = async (e) => {
         if (e) e.preventDefault();
-        if (!newMemberForm.display_name.trim()) {
+        const nameTrim = newMemberForm.display_name?.trim();
+        const cleanPhone = (newMemberForm.phone_number || '').trim().replace(/\D/g, '');
+
+        if (!nameTrim) {
             toast.error('กรุณาระบุชื่อของคุณ');
             return;
         }
+        if (cleanPhone.length < 9) {
+            toast.error('กรุณาระบุเบอร์โทรศัพท์อย่างน้อย 9-10 หลัก');
+            return;
+        }
+
         setMemberLookupLoading(true);
         try {
-            const newId = crypto.randomUUID();
-            const newPayload = {
-                id: newId,
-                display_name: newMemberForm.display_name.trim(),
-                phone_number: newMemberForm.phone_number.trim(),
-                role: 'customer',
-                xhaus_balance: 0,
-                drink_stamp_count: 0,
-                free_drink_quota: 0
-            };
+            const defaultEmail = `${cleanPhone}@inthehaus.com`;
+            const defaultPassword = 'inthehaus';
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .insert(newPayload)
-                .select()
-                .single();
+            const { data: resData, error: fnError } = await supabase.functions.invoke('manage-booking', {
+                body: {
+                    action: 'register_account',
+                    email: defaultEmail,
+                    password: defaultPassword,
+                    profileData: {
+                        display_name: nameTrim,
+                        phone_number: cleanPhone
+                    }
+                }
+            });
 
-            if (error) throw error;
+            if (fnError) throw fnError;
+            if (resData?.error || resData?.success === false) {
+                throw new Error(resData?.error || 'Failed to register member');
+            }
 
-            const savedProfile = data || newPayload;
+            const newUserId = resData?.userId;
+            let savedProfile = null;
+            if (newUserId) {
+                const { data: createdProf } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', newUserId)
+                    .maybeSingle();
+                savedProfile = createdProf;
+            }
+
+            if (!savedProfile) {
+                savedProfile = {
+                    id: newUserId || Date.now().toString(),
+                    display_name: nameTrim,
+                    phone_number: cleanPhone,
+                    role: 'customer',
+                    xhaus_balance: 0,
+                    drink_stamp_count: 0,
+                    free_drink_quota: 0
+                };
+            }
+
             setMemberProfile(savedProfile);
             localStorage.setItem('customer_member_profile', JSON.stringify(savedProfile));
             window.dispatchEvent(new Event('customer_profile_updated'));
             if (activeBooking) {
-                await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id);
-                setActiveBooking(prev => prev ? { ...prev, user_id: savedProfile.id } : null);
+                try {
+                    await supabase.from('bookings').update({ user_id: savedProfile.id }).eq('id', activeBooking.id);
+                    setActiveBooking(prev => prev ? { ...prev, user_id: savedProfile.id } : null);
+                } catch (bErr) {
+                    console.warn('Booking user_id update warning:', bErr);
+                }
             }
             toast.success(`สมัครสมาชิกสำเร็จ! ยินดีต้อนรับคุณ ${savedProfile.display_name}`);
             setShowMemberModal(false);
