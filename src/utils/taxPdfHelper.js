@@ -41,10 +41,8 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         compress: true
     });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth(); // 210 mm
-    const pdfHeight = pdf.internal.pageSize.getHeight(); // 297 mm
-    const margin = 6;
-    const renderWidth = pdfWidth - (margin * 2);
+    const pdfWidth = 210; // Exact A4 mm
+    const pdfHeight = 297; // Exact A4 mm
 
     // 4. Capture and append each page
     for (let i = 0; i < targets.length; i++) {
@@ -66,21 +64,13 @@ export async function generateTaxDocumentPdf(element, options = {}) {
             }
         });
 
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgRatio = imgProps.height / imgProps.width;
-        let renderHeight = renderWidth * imgRatio;
-
-        if (renderHeight > (pdfHeight - (margin * 2))) {
-            renderHeight = pdfHeight - (margin * 2);
-        }
-
         pdf.addImage(
             imgData,
             'PNG',
-            margin,
-            margin,
-            renderWidth,
-            renderHeight,
+            0,
+            0,
+            pdfWidth,
+            pdfHeight,
             undefined,
             'FAST'
         );
