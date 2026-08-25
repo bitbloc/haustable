@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Printer, X, Download, ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText, downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
-import { EXPENSE_CATEGORIES } from '../../../utils/expenseConstants';
+import { EXPENSE_CATEGORIES, getCleanCategoryLabel } from '../../../utils/expenseConstants';
 import { toast } from 'sonner';
 
 export default function ExpenseLedgerPrintView({
@@ -154,7 +154,7 @@ export default function ExpenseLedgerPrintView({
         ];
 
         const rows = expenses.map((exp, idx) => {
-            const catLabel = EXPENSE_CATEGORIES.find(c => c.id === exp.category)?.label || exp.category;
+            const catLabel = getCleanCategoryLabel(exp.category);
             const docGrade = exp.doc_type === 'tax_invoice' ? 'Grade A (ใบกำกับภาษี)' : (exp.doc_type === 'cash_bill' ? 'Grade B (บิลเงินสด)' : 'Grade C (สลิปโอน)');
             return [
                 idx + 1,
@@ -368,7 +368,7 @@ export default function ExpenseLedgerPrintView({
                                             </div>
                                             <div className="font-mono text-[9.5pt] text-zinc-500">
                                                 <span>หมวดหมู่: </span>
-                                                <span className="text-zinc-800 font-medium">{categoryFilter === 'all' ? 'ทุกหมวดหมู่ค่าใช้จ่าย' : (EXPENSE_CATEGORIES.find(c => c.id === categoryFilter)?.label || categoryFilter)}</span>
+                                                <span className="text-zinc-800 font-medium">{categoryFilter === 'all' ? 'ทุกหมวดหมู่ค่าใช้จ่าย' : getCleanCategoryLabel(categoryFilter, false)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -380,12 +380,12 @@ export default function ExpenseLedgerPrintView({
                                         <tr className="bg-zinc-100 border-y-2 border-zinc-950 font-mono text-[10pt] uppercase text-zinc-900 font-bold">
                                             <th className="py-1.5 px-1 text-center w-[4%] whitespace-nowrap">ลำดับ</th>
                                             <th className="py-1.5 px-1.5 text-left w-[10%] whitespace-nowrap">วัน/เดือน/ปี</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[16%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[22%]">รายการ / ผู้ขาย / ร้านค้า</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[14%] whitespace-nowrap">เลขผู้เสียภาษี</th>
-                                            <th className="py-1.5 px-1.5 text-left w-[13%] whitespace-nowrap">หมวดหมู่</th>
-                                            <th className="py-1.5 px-1 text-center w-[7%] whitespace-nowrap">หลักฐาน</th>
-                                            <th className="py-1.5 pr-2.5 pl-1 text-right w-[14%] whitespace-nowrap">จำนวนเงิน</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[15%] whitespace-nowrap">เลขที่เอกสาร / บิล</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[20%]">รายการ / ผู้ขาย / ร้านค้า</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[15%] whitespace-nowrap">เลขผู้เสียภาษี</th>
+                                            <th className="py-1.5 px-1.5 text-left w-[17%] whitespace-nowrap">หมวดหมู่</th>
+                                            <th className="py-1.5 px-1 text-center w-[6%] whitespace-nowrap">หลักฐาน</th>
+                                            <th className="py-1.5 pr-2.5 pl-1 text-right w-[13%] whitespace-nowrap">จำนวนเงิน</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-300 font-sans">
@@ -395,7 +395,7 @@ export default function ExpenseLedgerPrintView({
                                             const dateObj = rawDate ? new Date(rawDate) : null;
                                             const dateStr = dateObj ? dateObj.toLocaleDateString('th-TH') : '-';
                                             const docNo = item.receipt_number || item.invoice_number || item.doc_no || (item.id ? `EXP-${String(item.id).slice(0, 6).toUpperCase()}` : '-');
-                                            const catLabel = EXPENSE_CATEGORIES.find(c => c.id === item.category)?.label || item.category || 'ทั่วไป';
+                                            const catLabel = getCleanCategoryLabel(item.category);
                                             const amount = Number(item.amount || 0);
 
                                             let proofLabel = 'Slip';
@@ -416,10 +416,10 @@ export default function ExpenseLedgerPrintView({
                                                     <td className="py-1.5 px-1.5 truncate font-medium text-zinc-950">
                                                         {item.vendor_name || item.title || 'ค่าใช้จ่ายทั่วไป'}
                                                     </td>
-                                                    <td className="py-1.5 px-1.5 font-mono text-[9.5pt] text-zinc-800 whitespace-nowrap">{formatTaxId(item.vendor_tax_id) || '-'}</td>
-                                                    <td className="py-1.5 px-1.5 truncate text-[9.5pt] text-zinc-700 font-medium">{catLabel}</td>
-                                                    <td className="py-1.5 px-1 text-center font-mono text-[8.5pt] whitespace-nowrap">
-                                                        <span className={`px-1.5 py-0.5 rounded text-[8pt] ${proofClass}`}>
+                                                    <td className="py-1.5 px-1.5 font-mono text-[9pt] text-zinc-800 whitespace-nowrap">{formatTaxId(item.vendor_tax_id) || '-'}</td>
+                                                    <td className="py-1.5 px-1.5 text-[9.5pt] text-zinc-800 font-normal truncate">{catLabel}</td>
+                                                    <td className="py-1.5 px-1 text-center font-mono text-[8pt] whitespace-nowrap">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[7.5pt] ${proofClass}`}>
                                                             {proofLabel}
                                                         </span>
                                                     </td>
