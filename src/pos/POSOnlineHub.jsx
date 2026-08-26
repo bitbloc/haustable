@@ -24,6 +24,7 @@ import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
+import POSVolumeControl from './POSVolumeControl';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
@@ -31,7 +32,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const [hubTab, setHubTab] = useState('active'); // 'active' | 'completed' | 'cancelled'
     const [channelFilter, setChannelFilter] = useState('all'); // 'all' | 'slips' | 'bookings' | 'pickups'
     const [searchQuery, setSearchQuery] = useState('');
-    const [soundEnabled, setSoundEnabled] = useState(true);
     const [persistentAlert, setPersistentAlert] = useState(null);
     const [approvingId, setApprovingId] = useState(null);
     const [showWmaGuideModal, setShowWmaGuideModal] = useState(false);
@@ -40,7 +40,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const alertIntervalRef = useRef(null);
 
     const playAlert = (eventKey = null) => {
-        if (!soundEnabled) return;
         playOrderAlert(eventKey, 600, 3.4);
         if (!alertIntervalRef.current) {
             alertIntervalRef.current = setInterval(() => {
@@ -187,7 +186,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             window.removeEventListener('online', fetchOnlineData);
             supabase.removeChannel(channel);
         };
-    }, [soundEnabled, isActive]);
+    }, [isActive]);
 
     // Fast-path listener for local native WMA bridge interception
     useEffect(() => {
@@ -207,7 +206,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         return () => {
             window.removeEventListener('wma_order_received', handleWmaOrder);
         };
-    }, [soundEnabled, isActive]);
+    }, [isActive]);
 
     useEffect(() => {
         if (isActive && refreshKey > 0) {
@@ -757,19 +756,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             </button>
                         </div>
 
-                        {/* Sound Toggle */}
-                        <button
-                            type="button"
-                            onClick={() => setSoundEnabled(prev => !prev)}
-                            className={`p-2 rounded-lg border transition-all cursor-pointer ${
-                                soundEnabled 
-                                    ? 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-2xs' 
-                                    : 'bg-red-50 border-red-200 text-red-700'
-                            }`}
-                            title={soundEnabled ? 'ปิดเสียงแจ้งเตือน' : 'เปิดเสียงแจ้งเตือน'}
-                        >
-                            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-                        </button>
+                        {/* POS Audio Volume Control */}
+                        <POSVolumeControl />
 
                         <button
                             type="button"

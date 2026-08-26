@@ -5,10 +5,11 @@
  * Features:
  * - Native Android APK & Sunmi POS Zero-Stutter Optimization (Cached AudioBuffer in memory)
  * - Acoustic Tuning: 220Hz High-Pass + 2.8kHz Presence EQ + Fast Compressor/Limiter + 3.2x (+14dB) Make-up Gain + WaveShaper
+ * - Volume Management: Adjustable (0% - 100%), Mute control, Persistent in localStorage & multi-tab sync
  * - Primary: High-Gain `/noti1.mp3` Web Audio playback (Loud & piercing like Grab/LINE MAN)
- * - Fallback 1: HTML5 Audio with maximum gain
+ * - Fallback 1: HTML5 Audio with adjustable volume gain
  * - Fallback 2: High-Impact Synthesized Bell Chime (100% offline & zero-dependency guarantee)
- * - Android Lifecycle Auto-Resumer (visibilitychange, focus, pageshow, touchstart)
+ * - Android Lifecycle Auto-Resumer (visibilitychange, focus, pageshow, resume, touchstart)
  * - Centralized Sliding-Window Event Deduplicator (4.5s window) & Global Throttle (800ms)
  */
 
@@ -20,6 +21,149 @@ let isPreloadingNoti1 = false;
 let lastAlertPlayedTime = 0;
 let isAudioEngineUnlocked = false;
 const eventDeduplicationMap = new Map(); // key -> timestamp
+
+const STORAGE_KEY_VOLUME = 'pos_audio_volume';
+const STORAGE_KEY_MUTED = 'pos_audio_muted';
+const DEFAULT_VOLUME = 80;
+
+let cachedVolume = null;
+let cachedMuted = null;
+
+function loadSettingsFromStorage() {
+    if (typeof window === 'undefined') {
+        cachedVolume = DEFAULT_VOLUME;
+        cachedMuted = false;
+        return;
+    }
+    try {
+        const savedVol = localStorage.getItem(STORAGE_KEY_VOLUME);
+        if (savedVol !== null) {
+            const parsed = parseInt(savedVol, 10);
+            cachedVolume = (!isNaN(parsed) && parsed >= 0 && parsed <= 100) ? parsed : DEFAULT_VOLUME;
+        } else {
+            cachedVolume = DEFAULT_VOLUME;
+        }
+
+        const savedMute = localStorage.getItem(STORAGE_KEY_MUTED);
+        cachedMuted = savedMute === 'true';
+    } catch (e) {
+        cachedVolume = DEFAULT_VOLUME;
+        cachedMuted = false;
+    }
+}
+
+// Initial storage load
+loadSettingsFromStorage();
+
+// Storage event listener to sync across tabs/windows
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (e.key === STORAGE_KEY_VOLUME || e.key === STORAGE_KEY_MUTED) {
+            loadSettingsFromStorage();
+            window.dispatchEvent(new CustomEvent('pos-audio-volume-changed', {
+                detail: {
+                    volume: cachedVolume,
+                    isMuted: cachedMuted,
+                    effectiveVolume: getEffectiveAudioVolume()
+                }
+            }));
+        }
+    });
+}
+
+/**
+ * Get current POS audio volume (0 - 100)
+ */
+export function getAudioVolume() {
+    if (cachedVolume === null) loadSettingsFromStorage();
+    return cachedVolume ?? DEFAULT_VOLUME;
+}
+
+/**
+ * Set POS audio volume (0 - 100)
+ */
+export function setAudioVolume(volumePercent) {
+    const clamped = Math.max(0, Math.min(100, Math.round(Number(volumePercent) || 0)));
+    cachedVolume = clamped;
+    
+    // Auto-unmute if volume is adjusted > 0
+    if (clamped > 0 && cachedMuted) {
+        cachedMuted = false;
+        try {
+            localStorage.setItem(STORAGE_KEY_MUTED, 'false');
+        } catch (e) {}
+    } else if (clamped === 0) {
+        cachedMuted = true;
+        try {
+            localStorage.setItem(STORAGE_KEY_MUTED, 'true');
+        } catch (e) {}
+    }
+
+    try {
+        localStorage.setItem(STORAGE_KEY_VOLUME, String(clamped));
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pos-audio-volume-changed', {
+            detail: {
+                volume: clamped,
+                isMuted: cachedMuted,
+                effectiveVolume: getEffectiveAudioVolume()
+            }
+        }));
+    }
+}
+
+/**
+ * Check if audio is muted
+ */
+export function isAudioMuted() {
+    if (cachedMuted === null) loadSettingsFromStorage();
+    return Boolean(cachedMuted);
+}
+
+/**
+ * Set mute state
+ */
+export function setAudioMuted(muted) {
+    const boolMuted = Boolean(muted);
+    cachedMuted = boolMuted;
+    try {
+        localStorage.setItem(STORAGE_KEY_MUTED, String(boolMuted));
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('pos-audio-volume-changed', {
+            detail: {
+                volume: getAudioVolume(),
+                isMuted: boolMuted,
+                effectiveVolume: getEffectiveAudioVolume()
+            }
+        }));
+    }
+}
+
+/**
+ * Toggle mute state
+ */
+export function toggleAudioMute() {
+    setAudioMuted(!isAudioMuted());
+}
+
+/**
+ * Get effective audio volume (0 - 100, returns 0 if muted)
+ */
+export function getEffectiveAudioVolume() {
+    if (isAudioMuted()) return 0;
+    return getAudioVolume();
+}
+
+/**
+ * Get effective gain multiplier (0.0 to 1.0)
+ */
+export function getEffectiveGainFactor() {
+    return getEffectiveAudioVolume() / 100;
+}
 
 /**
  * Generate soft-clipping saturation curve to maximize SPL without digital harshness
@@ -181,7 +325,7 @@ export function initAudioUnlocker() {
     window.addEventListener('click', handleUnlockEvent, { once: true, passive: true });
     window.addEventListener('mousedown', handleUnlockEvent, { once: true, passive: true });
 
-    // Android APK Lifecycle Watcher: Resume audio context when returning to foreground
+    // Android APK & PWA Lifecycle Watcher: Resume audio context when returning to foreground
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
             const ctx = getSharedAudioContext();
@@ -193,6 +337,7 @@ export function initAudioUnlocker() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleVisibilityChange);
     window.addEventListener('pageshow', handleVisibilityChange);
+    document.addEventListener('resume', handleVisibilityChange);
 
     // Initial preload trigger
     preloadNotificationAudio();
@@ -205,12 +350,13 @@ if (typeof window !== 'undefined') {
 
 /**
  * Master High-Gain Mastering Chain for POS, Sunmi & Mobile Hardware:
- * Source -> High-Pass (220Hz) -> Presence EQ (2.8kHz +5.0dB) -> Dynamics Compressor -> Make-up Gain (3.2x / +14dB) -> WaveShaper -> Destination
- * Guarantees piercing loudness ("ลั่นๆ เทียบเท่า Grab/LINE MAN") without digital clipping.
+ * Source -> High-Pass (220Hz) -> Presence EQ (2.8kHz +5.0dB) -> Dynamics Compressor -> Make-up Gain -> WaveShaper -> Destination
+ * Scaled dynamically with effective volume setting.
  */
 function createMasterOutputChain(ctx, boostFactor = 3.2) {
     try {
         const now = ctx.currentTime;
+        const effectiveGain = getEffectiveGainFactor();
 
         // 1. High-Pass Filter (220Hz) - Cut low frequency energy that drains speaker wattage & causes distortion
         const hpFilter = ctx.createBiquadFilter();
@@ -240,9 +386,9 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
         compressor.attack.setValueAtTime(0.002, now);
         compressor.release.setValueAtTime(0.06, now);
 
-        // 5. High-Output Make-up Gain (+14dB boost)
+        // 5. High-Output Make-up Gain (Scaled with volume)
         const masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(boostFactor, now);
+        masterGain.gain.setValueAtTime(boostFactor * effectiveGain, now);
 
         // 6. Soft Waveshaper Saturation (prevents harsh digital clipping)
         if (!softDistortionCurve) {
@@ -268,9 +414,6 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
 
 /**
  * Check and record event deduplication key within a cooldown window
- * @param {string} eventKey - Unique event identifier (e.g., "order_123_pending")
- * @param {number} cooldownMs - Cooldown duration in ms (default: 4500ms)
- * @returns {boolean} - True if allowed to trigger, false if duplicate/throttled
  */
 export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
     if (!eventKey) return true;
@@ -297,6 +440,9 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
  */
 function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
     try {
+        const effectiveGain = getEffectiveGainFactor();
+        if (effectiveGain <= 0) return true; // Silent/Muted, early exit cleanly
+
         const ctx = getSharedAudioContext();
         if (!ctx) return false;
         if (ctx.state === 'suspended') {
@@ -306,7 +452,7 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(boostFactor, ctx.currentTime);
+        gainNode.gain.setValueAtTime(boostFactor * effectiveGain, ctx.currentTime);
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
         source.start(0);
@@ -321,6 +467,9 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
  * Helper to synthesize an acoustic bell note with transient strike + multi-harmonic body
  */
 function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel = 1.0) {
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) return;
+
     // 1. Fundamental Warm Body (Triangle Wave)
     const oscBody = ctx.createOscillator();
     const gainBody = ctx.createGain();
@@ -384,6 +533,7 @@ function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel
  * 4-Note Ascending Arpeggio + Climax Ring (E6 -> G#6 -> B6 -> E7)
  */
 export function playSynthChime() {
+    if (getEffectiveGainFactor() <= 0) return;
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
@@ -412,6 +562,7 @@ export function playSynthChime() {
  * Play Doorbell Chime (Ding-Dong: G6 -> E6 -> C6) for customer arrivals / walk-ins
  */
 export function playDoorbellChime() {
+    if (getEffectiveGainFactor() <= 0) return;
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
@@ -434,6 +585,7 @@ export function playDoorbellChime() {
  * Play Urgent Siren Tone (For critical staff call / table call)
  */
 export function playUrgentTone() {
+    if (getEffectiveGainFactor() <= 0) return;
     try {
         const ctx = getSharedAudioContext();
         if (!ctx) return;
@@ -473,10 +625,15 @@ export function playUrgentTone() {
  * 
  * @param {string|null} eventKey - Deduplication identifier (e.g. "order_123_pending")
  * @param {number} throttleMs - Minimum interval between alerts (default: 800ms)
- * @param {number} boostLevel - Output gain multiplier (default: 3.2x / +14dB)
+ * @param {number} boostLevel - Output gain multiplier (default: 3.4x / +14dB)
  * @returns {boolean} - Whether audio playback was triggered
  */
 export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.4) {
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) {
+        return false; // Sound muted or volume 0
+    }
+
     const now = Date.now();
 
     // 1. Check Event Deduplication Key
@@ -490,7 +647,7 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
     }
     lastAlertPlayedTime = now;
 
-    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio Mastering Chain
+    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
     if (noti1AudioBuffer) {
         const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
         if (played) return true;
@@ -505,7 +662,7 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
     try {
         const soundSrc = noti1SoundUrl || '/noti1.mp3';
         const audio = new Audio(soundSrc);
-        audio.volume = 1.0;
+        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
         const promise = audio.play();
         if (promise !== undefined) {
             promise.catch((e) => {
@@ -515,6 +672,72 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
         return true;
     } catch (e) {
         console.warn('[AudioEngine] HTML5 Audio error:', e);
+        return false;
+    }
+}
+
+/**
+ * Test play alert sound for immediate auditory feedback during volume adjustment
+ * Unlocks engine and plays noti1.mp3 at preview volume (or current effective volume)
+ */
+export function testPlayAlertSound(previewVol = null) {
+    unlockAudioEngine();
+    
+    let factor;
+    if (previewVol !== null) {
+        factor = Math.max(0, Math.min(100, Number(previewVol))) / 100;
+    } else {
+        factor = getEffectiveGainFactor();
+    }
+
+    if (factor <= 0) {
+        console.log('[AudioEngine] Test sound muted (0% gain)');
+        return true;
+    }
+
+    // Play buffer directly with custom gain
+    if (noti1AudioBuffer) {
+        try {
+            const ctx = getSharedAudioContext();
+            if (ctx) {
+                if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+                const source = ctx.createBufferSource();
+                source.buffer = noti1AudioBuffer;
+                const gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(3.2 * factor, ctx.currentTime);
+                source.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                source.start(0);
+                return true;
+            }
+        } catch (e) {
+            console.warn('[AudioEngine] testPlayAlertSound buffer error:', e);
+        }
+    }
+
+    // Fallback chime
+    try {
+        const ctx = getSharedAudioContext();
+        if (ctx) {
+            if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+            const now = ctx.currentTime;
+            const masterOut = createMasterOutputChain(ctx, 3.2 * factor);
+            synthesizeBellNote(ctx, masterOut, 1568.00, now, 0.25, 1.2 * factor);
+            synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.12, 0.35, 1.3 * factor);
+            return true;
+        }
+    } catch (e) {
+        console.warn('[AudioEngine] testPlayAlertSound chime fallback error:', e);
+    }
+
+    // HTML5 fallback
+    try {
+        const soundSrc = noti1SoundUrl || '/noti1.mp3';
+        const audio = new Audio(soundSrc);
+        audio.volume = Math.max(0, Math.min(1.0, factor));
+        audio.play().catch(() => {});
+        return true;
+    } catch (e) {
         return false;
     }
 }

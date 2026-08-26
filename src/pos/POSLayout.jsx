@@ -14,6 +14,7 @@ import {
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 import { getCurrentShift } from '../utils/shiftHelper';
 import { supabase } from '../lib/supabaseClient';
+import POSVolumeControl from './POSVolumeControl';
 
 const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack, onlinePendingCount = 0 }) {
     const [online, setOnline] = useState(isOnline());
@@ -298,6 +299,9 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                             ONHAUS SYSTEM ©
                         </span>
                         
+                        {/* POS Audio Volume Control */}
+                        <POSVolumeControl />
+
                         {/* Isolated Header Clock */}
                         <POSHeaderClock />
                     </div>

@@ -1,12 +1,13 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState } from 'react';
-import { Printer, Save, RefreshCw, Radio, Search, Check, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, Save, RefreshCw, Radio, Search, Check, Trash2, ArrowRight, ArrowLeft, Volume2, Volume1, VolumeX, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { BleClient } from '@capacitor-community/bluetooth-le';
 import { Capacitor } from '@capacitor/core';
 import { Printer as CapgoPrinter } from '@capgo/capacitor-printer';
 import { printToBluetoothDirect, encodeShiftReportData, printToRawBTWebSocket, printToSunmiBuiltIn, generateDivider } from '../../../utils/printerHelper';
 import { simulateWmaOrder } from '../../../utils/wmaNativeBridge';
+import { getAudioVolume, setAudioVolume, isAudioMuted, setAudioMuted, toggleAudioMute, testPlayAlertSound, unlockAudioEngine } from '../../../utils/audioHelper';
 
 const ASCII_ART_PRESETS = [
     {
@@ -51,6 +52,24 @@ export default function HardwarePrintersTab({
     const [scanningTargetType, setScanningTargetType] = useState('cashier'); // 'cashier' | 'kitchen' | 'bar'
     const [scannedDevices, setScannedDevices] = useState([]);
     const [draggedOverColumn, setDraggedOverColumn] = useState(null);
+
+    const [audioVolume, setAudioVolumeState] = useState(() => getAudioVolume());
+    const [audioMuted, setAudioMutedState] = useState(() => isAudioMuted());
+    const [isTestingAudio, setIsTestingAudio] = useState(false);
+
+    useEffect(() => {
+        const handleVolumeChange = (e) => {
+            if (e.detail) {
+                if (typeof e.detail.volume === 'number') setAudioVolumeState(e.detail.volume);
+                if (typeof e.detail.isMuted === 'boolean') setAudioMutedState(e.detail.isMuted);
+            } else {
+                setAudioVolumeState(getAudioVolume());
+                setAudioMutedState(isAudioMuted());
+            }
+        };
+        window.addEventListener('pos-audio-volume-changed', handleVolumeChange);
+        return () => window.removeEventListener('pos-audio-volume-changed', handleVolumeChange);
+    }, []);
 
     const handleCategoryDragStart = (e, catId) => {
         e.dataTransfer.setData('text/plain', catId);
@@ -516,6 +535,137 @@ export default function HardwarePrintersTab({
                             className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2.5 rounded-xl font-mono text-xs font-bold transition-colors cursor-pointer"
                         >
                             Test Kitchen Slip Print
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* POS Alert Audio & Volume Engine Card */}
+            <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-6 rounded-2xl space-y-4">
+                <div className="flex flex-wrap justify-between items-center border-b border-[var(--color-rule)] pb-3 gap-2">
+                    <div>
+                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-2">
+                            {audioMuted || audioVolume === 0 ? (
+                                <VolumeX size={16} className="text-amber-700" />
+                            ) : (
+                                <Volume2 size={16} className="text-[var(--color-accent)]" />
+                            )}
+                            POS Audio & Notification Engine (ระดับเสียงแจ้งเตือน POS & APK)
+                        </h2>
+                        <p className="text-[11px] font-mono text-[var(--color-neutral)] mt-0.5">
+                            ปรับความดังของเสียงเตือนออเดอร์ใหม่, QR Order, LINE MAN, เรียกพนักงาน และเช็คบิล (บันทึกลงเครื่องอัตโนมัติ)
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className={`px-2.5 py-1 rounded-md font-mono text-[10px] font-bold uppercase tracking-wider border ${
+                            audioMuted || audioVolume === 0 
+                                ? 'bg-amber-50 border-amber-300 text-amber-900' 
+                                : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
+                        }`}>
+                            {audioMuted || audioVolume === 0 ? 'MUTED (0%)' : `VOLUME: ${audioVolume}%`}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                unlockAudioEngine();
+                                toggleAudioMute();
+                            }}
+                            className={`px-3 py-1 text-[10px] font-mono font-bold uppercase rounded-md border transition-colors cursor-pointer touch-manipulation ${
+                                audioMuted 
+                                    ? 'bg-amber-600 text-white border-amber-700 hover:bg-amber-700' 
+                                    : 'bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
+                            }`}
+                        >
+                            {audioMuted ? 'เปิดเสียงเตือน' : 'Mute'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Volume Slider & Presets */}
+                    <div className="bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] space-y-3">
+                        <div className="flex justify-between items-center text-xs font-mono">
+                            <span className="text-[var(--color-neutral)] uppercase font-bold text-[10px]">ระดับความดังของเสียง</span>
+                            <span className="font-bold text-[var(--color-ink)] text-sm">{audioVolume}%</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            step="5"
+                            value={audioVolume}
+                            onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                setAudioVolumeState(val);
+                                setAudioVolume(val);
+                            }}
+                            className="w-full h-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"
+                        />
+                        <div className="flex justify-between text-[9px] font-mono text-[var(--color-muted)]">
+                            <span>0% (ปิดเสียง)</span>
+                            <span>50%</span>
+                            <span>100% (ดังสุด)</span>
+                        </div>
+
+                        {/* Presets */}
+                        <div className="grid grid-cols-4 gap-1.5 pt-1">
+                            {[
+                                { label: 'ปิดเสียง', val: 0 },
+                                { label: 'เบา 30%', val: 30 },
+                                { label: 'กลาง 60%', val: 60 },
+                                { label: 'ดังสุด 100%', val: 100 }
+                            ].map((preset) => {
+                                const isSelected = (!audioMuted && audioVolume === preset.val) || (preset.val === 0 && (audioMuted || audioVolume === 0));
+                                return (
+                                    <button
+                                        key={preset.val}
+                                        type="button"
+                                        onClick={() => {
+                                            unlockAudioEngine();
+                                            setAudioVolumeState(preset.val);
+                                            setAudioVolume(preset.val);
+                                            if (preset.val > 0) testPlayAlertSound(preset.val);
+                                        }}
+                                        className={`py-1.5 px-1 rounded-md border text-center text-[10px] font-mono font-bold uppercase transition-all cursor-pointer touch-manipulation active:scale-95 ${
+                                            isSelected 
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] shadow-xs' 
+                                                : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border-[var(--color-rule)]'
+                                        }`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Test Audio & Engine Info */}
+                    <div className="bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)] flex flex-col justify-between space-y-3">
+                        <div>
+                            <h3 className="font-mono font-bold uppercase text-[10px] text-[var(--color-ink)] mb-1">
+                                Android APK & Sunmi POS Zero-Stutter Mastering
+                            </h3>
+                            <p className="text-[11px] font-mono text-[var(--color-neutral)] leading-relaxed">
+                                ระบบเสียงถูกปรับแต่ง EQ 2.8kHz Presence Boost และ Dynamic Limiter เพื่อให้ได้ยินชัดเจนแม้อยู่ในครัวหรือหน้าร้านที่มีเสียงดัง
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                unlockAudioEngine();
+                                setIsTestingAudio(true);
+                                testPlayAlertSound();
+                                setTimeout(() => setIsTestingAudio(false), 500);
+                            }}
+                            className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation shadow-xs ${
+                                isTestingAudio
+                                    ? 'bg-[var(--color-accent)] text-white'
+                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)]'
+                            }`}
+                        >
+                            <Play size={13} className={isTestingAudio ? 'animate-ping' : 'text-[var(--color-accent)]'} />
+                            <span>{isTestingAudio ? 'กำลังทดสอบเสียง...' : 'ทดสอบเล่นเสียงแจ้งเตือน (Test Sound)'}</span>
                         </button>
                     </div>
                 </div>
