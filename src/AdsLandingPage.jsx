@@ -4,6 +4,14 @@ import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navig
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
 import { Analytics } from '@vercel/analytics/react';
+import {
+    trackDirectionsClick,
+    trackPhoneClick,
+    trackLineClick,
+    trackLinemanClick,
+    trackBookletClick,
+    trackEvent
+} from './utils/analyticsHelper';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
@@ -278,30 +286,23 @@ export default function AdsLandingPage() {
     const mapUrl = (settings.link_url_4 && settings.link_url_4 !== 'https://maps.google.com') ? settings.link_url_4 : defaultMapUrl;
 
     const handleDirectionsClick = () => {
-        try {
-            if (typeof window !== 'undefined' && window.dataLayer) {
-                window.dataLayer.push({
-                    event: 'click_directions',
-                    page_location: '/link'
-                });
-            }
-        } catch (err) {
-            console.error('directions click tracking error:', err);
-        }
+        trackDirectionsClick('/link');
     };
 
     const handleCallClick = () => {
-        try {
-            if (typeof window !== 'undefined' && window.dataLayer) {
-                window.dataLayer.push({
-                    event: 'click_phone',
-                    phone_number: '098-528-4217',
-                    page_location: '/link'
-                });
-            }
-        } catch (err) {
-            console.error('call click tracking error:', err);
-        }
+        trackPhoneClick('098-528-4217', '/link');
+    };
+
+    const handleLineClick = () => {
+        trackLineClick('/link');
+    };
+
+    const handleLinemanClick = () => {
+        trackLinemanClick('/link');
+    };
+
+    const handleBookletClick = () => {
+        trackBookletClick('/link');
     };
 
     // ─── DYNAMIC SEO (Title & Meta) ───
@@ -564,6 +565,7 @@ export default function AdsLandingPage() {
                             <section className="border-b border-[var(--color-hallmark-rule)]">
                                 <button
                                     onClick={() => {
+                                        handleBookletClick();
                                         setSelectedLightbox({
                                             type: 'booklet_slider',
                                             urls: activeTab === 'promo' ? promoMenuImages : regularMenuImages
@@ -672,6 +674,7 @@ export default function AdsLandingPage() {
                             
                             <LinkCard 
                                 href={lineUrl} 
+                                onClick={handleLineClick}
                                 title={settings?.link_title_1 || "LINE OA // จองโต๊ะ หรือ สั่งอาหาร"} 
                                 bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
                                 wide 
@@ -718,6 +721,7 @@ export default function AdsLandingPage() {
                             </div>
                             <LinkCard 
                                 href="https://lin.ee/8uqmIzZ" 
+                                onClick={handleLinemanClick}
                                 title="ORDER DIRECT ON LINEMAN ➔" 
                                 bg="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800" 
                                 wide 
@@ -813,6 +817,7 @@ export default function AdsLandingPage() {
                     href={lineUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
+                    onClick={handleLineClick}
                     className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
                     <MessageCircle size={12} /> LINE CHAT

@@ -15,6 +15,7 @@ import HomeActions from './components/home/HomeActions'
 import HomeNavigation from './components/home/HomeNavigation'
 import AuthModal from './components/AuthModal'
 import HistoryModal from './components/history/HistoryModal'
+import { trackDirectionsClick, trackPhoneClick, trackLineClick } from './utils/analyticsHelper'
 
 export default function Home({ session }) {
     // 1. Logic & App State
@@ -61,30 +62,15 @@ export default function Home({ session }) {
     }
 
     const handleDirectionsClick = () => {
-        try {
-            if (typeof window !== 'undefined' && window.dataLayer) {
-                window.dataLayer.push({
-                    event: 'click_directions',
-                    page_location: '/'
-                });
-            }
-        } catch (err) {
-            console.error('directions click tracking error:', err);
-        }
+        trackDirectionsClick('/');
     };
 
     const handleCallClick = () => {
-        try {
-            if (typeof window !== 'undefined' && window.dataLayer) {
-                window.dataLayer.push({
-                    event: 'click_phone',
-                    phone_number: '098-528-4217',
-                    page_location: '/'
-                });
-            }
-        } catch (err) {
-            console.error('call click tracking error:', err);
-        }
+        trackPhoneClick('098-528-4217', '/');
+    };
+
+    const handleLineClick = () => {
+        trackLineClick('/');
     };
 
     const defaultMapUrl = "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
@@ -279,6 +265,7 @@ export default function Home({ session }) {
                                 href="https://lin.ee/EuzwG7c"
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={handleLineClick}
                                 className="p-3 text-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] transition-colors flex items-center justify-center gap-1.5"
                             >
                                 <span>[ LINE OA ➔ ]</span>

@@ -51,13 +51,15 @@
           liffScript.async = true;
           document.head.appendChild(liffScript);
 
-          // 2. Load Google Tag / GTM for web analytics
+          // 2. Load Google Tag / GA4 & Google Ads for web analytics
           const gtagScript = document.createElement('script');
-          gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=GT-WKP3BT8G";
+          gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=G-D1M18Z54LM";
           gtagScript.async = true;
           document.head.appendChild(gtagScript);
 
           gtag('js', new Date());
+          gtag('config', 'G-D1M18Z54LM');
+          gtag('config', 'AW-11227095880');
           gtag('config', 'GT-WKP3BT8G');
         }
       })();
