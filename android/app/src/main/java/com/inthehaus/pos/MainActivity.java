@@ -3,6 +3,7 @@ package com.inthehaus.pos;
 import android.os.Bundle;
 import android.util.Base64;
 import android.util.Log;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -30,6 +31,33 @@ public class MainActivity extends BridgeActivity {
 
     public static MainActivity getInstance() {
         return instance;
+    }
+
+    public class AndroidCfdBridge {
+        @JavascriptInterface
+        public void sendCfdEvent(String jsonPayload) {
+            dispatchCfdEventToSecondary(jsonPayload);
+        }
+    }
+
+    public static void dispatchCfdEventToSecondary(final String jsonPayload) {
+        if (instance != null && instance.presentation != null) {
+            instance.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        WebView secWebView = instance.presentation.getWebView();
+                        if (secWebView != null) {
+                            String base64Data = Base64.encodeToString(jsonPayload != null ? jsonPayload.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
+                            String js = String.format("try { var _data = JSON.parse(decodeURIComponent(escape(atob('%s')))); if (window.onCfdNativeEvent) { window.onCfdNativeEvent(_data); } window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: _data })); } catch (e) { console.error('CFD Dispatch error', e); }", base64Data);
+                            secWebView.evaluateJavascript(js, null);
+                        }
+                    } catch (Exception e) {
+                        Log.e("MainActivity", "Failed to dispatch CFD event to secondary display", e);
+                    }
+                }
+            });
+        }
     }
 
     public static void dispatchWmaNotification(final String title, final String text, final String pkg) {
@@ -77,8 +105,13 @@ public class MainActivity extends BridgeActivity {
                 settings.setJavaScriptEnabled(true);
                 settings.setDomStorageEnabled(true);
                 settings.setDatabaseEnabled(true);
+                settings.setAllowFileAccess(true);
+                settings.setAllowContentAccess(true);
                 settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setEnableSmoothTransition(true);
+                
+                // Expose Direct Native CFD bridge to primary WebView JavaScript
+                webView.addJavascriptInterface(new AndroidCfdBridge(), "AndroidCfdBridge");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -203,21 +236,31 @@ public class MainActivity extends BridgeActivity {
     }
 
     private static class SecondaryDisplayPresentation extends Presentation {
+        private WebView webView;
+
         public SecondaryDisplayPresentation(Context outerContext, Display display) {
             super(outerContext, display);
+        }
+
+        public WebView getWebView() {
+            return webView;
         }
 
         @Override
         protected void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
             
-            WebView webView = new WebView(getContext());
+            webView = new WebView(getContext());
             webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
             webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
             settings.setDatabaseEnabled(true);
+            settings.setAllowFileAccess(true);
+            settings.setAllowContentAccess(true);
+            settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+            settings.setEnableSmoothTransition(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {

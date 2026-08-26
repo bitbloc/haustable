@@ -170,12 +170,18 @@ export default function POSSplitPaymentModal({
     }, []);
 
     const broadcastToCFD = (payload) => {
+        const enriched = { ...payload, timestamp: payload.timestamp || Date.now() };
         if (cfdChannel.current) {
-            try { cfdChannel.current.postMessage(payload); } catch (e) {}
+            try { cfdChannel.current.postMessage(enriched); } catch (e) {}
         }
-        window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: payload }));
         try {
-            localStorage.setItem('pos_cfd_last_event', JSON.stringify(payload));
+            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(enriched));
+            }
+        } catch (e) {}
+        window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: enriched }));
+        try {
+            localStorage.setItem('pos_cfd_last_event', JSON.stringify(enriched));
         } catch (e) {}
     };
 

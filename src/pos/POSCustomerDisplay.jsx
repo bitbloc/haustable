@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Utensils, CheckCircle2, Smartphone, QrCode, Sparkles, Receipt, ShieldCheck } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -31,6 +31,9 @@ export default function POSCustomerDisplay() {
     const [storePromptpayId, setStorePromptpayId] = useState('0985284217');
     const [storePromptpayName, setStorePromptpayName] = useState('IN THE HAUS');
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
+
+    const autoResetTimerRef = useRef(null);
+    const expireAtRef = useRef(null);
 
     // Fetch shop logo & PromptPay settings from app_settings
     useEffect(() => {
@@ -191,7 +194,44 @@ export default function POSCustomerDisplay() {
         return () => clearInterval(interval);
     }, [slideshowImages.length]);
 
-    // Resilient Broadcast Channel + Supabase Realtime + Cold Start Handshake
+    const resetToIdle = () => {
+        if (autoResetTimerRef.current) {
+            clearTimeout(autoResetTimerRef.current);
+            autoResetTimerRef.current = null;
+        }
+        expireAtRef.current = null;
+        setMode('IDLE');
+        setOrderData({ 
+            items: [], 
+            subtotal: 0, 
+            total: 0, 
+            tax: 0, 
+            discount: 0, 
+            customer: null, 
+            memberProfile: null, 
+            tableName: null,
+            paymentMethod: 'cash',
+            cashReceived: 0,
+            changeDue: 0,
+            pointsEarned: 0
+        });
+        setQrPayload(null);
+        try {
+            localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type: 'IDLE', timestamp: Date.now() }));
+        } catch (e) {}
+    };
+
+    // Watchdog interval to ensure screens return to IDLE even if background timer throttling occurs on Android Presentation WebView
+    useEffect(() => {
+        const watchdog = setInterval(() => {
+            if (expireAtRef.current && Date.now() >= expireAtRef.current) {
+                resetToIdle();
+            }
+        }, 1000);
+        return () => clearInterval(watchdog);
+    }, []);
+
+    // Resilient Broadcast Channel + Supabase Realtime + Android Native Bridge + Cold Start Handshake
     useEffect(() => {
         const handleMsg = (data) => {
             if (!data) return;
@@ -199,28 +239,39 @@ export default function POSCustomerDisplay() {
             
             switch (type) {
                 case 'IDLE':
-                    setMode('IDLE');
-                    setOrderData({ items: [], subtotal: 0, total: 0, tax: 0, discount: 0, customer: null, memberProfile: null, tableName: null });
-                    setQrPayload(null);
+                    resetToIdle();
                     break;
 
                 case 'UPDATE_CART':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                        autoResetTimerRef.current = null;
+                    }
+                    expireAtRef.current = null;
                     setMode('CART');
                     setOrderData(prev => ({ ...prev, ...payload }));
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
                     break;
 
                 case 'SHOW_QR':
                 case 'SHOW_CHECKOUT':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                        autoResetTimerRef.current = null;
+                    }
+                    expireAtRef.current = null;
                     setMode('CHECKOUT');
-                    if (payload.orderData) {
+                    if (payload?.orderData) {
                         setOrderData(prev => ({ ...prev, ...payload.orderData, ...payload }));
                     } else {
                         setOrderData(prev => ({ ...prev, ...payload }));
                     }
                     
                     // Generate PromptPay QR if total exists
-                    const totalAmt = parseFloat(payload.total || payload.orderData?.total || 0);
-                    const promptpayId = normalizePromptPayId(payload.promptpayId || storePromptpayId);
+                    const totalAmt = parseFloat(payload?.total || payload?.orderData?.total || 0);
+                    const promptpayId = normalizePromptPayId(payload?.promptpayId || storePromptpayId);
                     if (totalAmt > 0) {
                         try {
                             const qr = generatePayload(promptpayId, { amount: totalAmt });
@@ -229,9 +280,17 @@ export default function POSCustomerDisplay() {
                             console.error("QR Generation error:", e);
                         }
                     }
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
                     break;
 
                 case 'SPLIT_CHECKOUT':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                        autoResetTimerRef.current = null;
+                    }
+                    expireAtRef.current = null;
                     setMode('SPLIT_CHECKOUT');
                     if (payload) {
                         setOrderData(prev => ({ ...prev, ...payload }));
@@ -248,30 +307,52 @@ export default function POSCustomerDisplay() {
                             console.error("Split QR Generation error:", e);
                         }
                     }
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
                     break;
 
                 case 'SPLIT_SUCCESS':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                    }
                     setMode('SPLIT_SUCCESS');
                     if (payload) {
                         setOrderData(prev => ({ ...prev, ...payload }));
                     }
-                    setTimeout(() => {
+                    const splitDuration = 5000;
+                    expireAtRef.current = Date.now() + splitDuration;
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
+
+                    autoResetTimerRef.current = setTimeout(() => {
                         if (payload?.remainingBalance > 0) {
+                            expireAtRef.current = null;
                             setMode('CART');
                         } else {
-                            setMode('IDLE');
+                            resetToIdle();
                         }
-                    }, 5000);
+                    }, splitDuration);
                     break;
 
                 case 'PAYMENT_SUCCESS':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                    }
                     setMode('SUCCESS');
                     if (payload) {
                         setOrderData(prev => ({ ...prev, ...payload }));
                     }
-                    setTimeout(() => {
-                        setMode('IDLE');
-                    }, 6000);
+                    const successDuration = 6000;
+                    expireAtRef.current = Date.now() + successDuration;
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
+
+                    autoResetTimerRef.current = setTimeout(() => {
+                        resetToIdle();
+                    }, successDuration);
                     break;
 
                 default:
@@ -279,21 +360,32 @@ export default function POSCustomerDisplay() {
             }
         };
 
-        // 1. Initial hydration from localStorage
+        // 1. Initial hydration from localStorage with stale cache expiration check
         try {
             const cached = localStorage.getItem('pos_cfd_last_event');
             if (cached) {
                 const parsed = JSON.parse(cached);
-                if (parsed) handleMsg(parsed);
+                if (parsed) {
+                    if (parsed.type === 'PAYMENT_SUCCESS' || parsed.type === 'SPLIT_SUCCESS') {
+                        const age = Date.now() - (parsed.timestamp || 0);
+                        const maxAge = parsed.type === 'PAYMENT_SUCCESS' ? 6000 : 5000;
+                        if (!parsed.timestamp || age >= maxAge) {
+                            resetToIdle();
+                        } else {
+                            handleMsg(parsed);
+                        }
+                    } else {
+                        handleMsg(parsed);
+                    }
+                }
             }
         } catch (e) {}
 
         // 2. Local BroadcastChannel
-        const channel = new BroadcastChannel('pos_cfd_channel');
-        channel.onmessage = (event) => handleMsg(event.data);
-
-        // Handshake: Request current POS state immediately
+        let channel = null;
         try {
+            channel = new BroadcastChannel('pos_cfd_channel');
+            channel.onmessage = (event) => handleMsg(event.data);
             channel.postMessage({ type: 'REQUEST_CFD_STATE' });
         } catch (e) {}
 
@@ -315,16 +407,47 @@ export default function POSCustomerDisplay() {
         const handleStorage = (e) => {
             if (e.key === 'pos_cfd_last_event' && e.newValue) {
                 try {
-                    handleMsg(JSON.parse(e.newValue));
+                    const parsed = JSON.parse(e.newValue);
+                    if (parsed.type === 'PAYMENT_SUCCESS' || parsed.type === 'SPLIT_SUCCESS') {
+                        const age = Date.now() - (parsed.timestamp || 0);
+                        const maxAge = parsed.type === 'PAYMENT_SUCCESS' ? 6000 : 5000;
+                        if (parsed.timestamp && age < maxAge) {
+                            handleMsg(parsed);
+                        } else {
+                            resetToIdle();
+                        }
+                    } else {
+                        handleMsg(parsed);
+                    }
                 } catch {}
             }
         };
         window.addEventListener('storage', handleStorage);
 
+        // 5. Android Direct Native Event Listener (0ms offline bridge from MainActivity)
+        const handleNativeCfdEvent = (e) => {
+            if (e.detail) {
+                handleMsg(e.detail);
+            }
+        };
+        window.addEventListener('pos_cfd_native_event', handleNativeCfdEvent);
+        window.onCfdNativeEvent = (data) => {
+            handleMsg(data);
+        };
+
         return () => {
-            channel.close();
+            if (channel) {
+                try { channel.close(); } catch (e) {}
+            }
             supabase.removeChannel(sbChannel);
             window.removeEventListener('storage', handleStorage);
+            window.removeEventListener('pos_cfd_native_event', handleNativeCfdEvent);
+            if (window.onCfdNativeEvent) {
+                delete window.onCfdNativeEvent;
+            }
+            if (autoResetTimerRef.current) {
+                clearTimeout(autoResetTimerRef.current);
+            }
         };
     }, [storePromptpayId]);
 

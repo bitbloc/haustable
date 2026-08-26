@@ -629,19 +629,37 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const lastBroadcastMsgRef = React.useRef('');
     const cfdDebounceTimerRef = React.useRef(null);
+    const lastPaymentSuccessTimeRef = React.useRef(0);
 
     const broadcastCFD = React.useCallback((msg) => {
         if (!msg) return;
-        const msgStr = JSON.stringify(msg);
+        const enrichedMsg = { ...msg, timestamp: msg.timestamp || Date.now() };
+        const msgStr = JSON.stringify(enrichedMsg);
         if (msgStr === lastBroadcastMsgRef.current) return;
         lastBroadcastMsgRef.current = msgStr;
 
-        // Instant local channel broadcast (zero lag for local secondary monitors)
-        if (cfdChannel.current) {
-            try { cfdChannel.current.postMessage(msg); } catch (e) {}
+        if (msg.type === 'PAYMENT_SUCCESS') {
+            lastPaymentSuccessTimeRef.current = Date.now();
         }
+
+        // 1. Instant local BroadcastChannel (same origin / same window)
+        if (cfdChannel.current) {
+            try { cfdChannel.current.postMessage(enrichedMsg); } catch (e) {}
+        }
+
+        // 2. Android Direct Native Bridge for POS APK (Capacitor -> MainActivity -> Secondary Presentation WebView)
+        try {
+            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                window.AndroidCfdBridge.sendCfdEvent(msgStr);
+            }
+        } catch (e) {}
+
+        // 3. Local CustomEvent for in-app listeners
+        try {
+            window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: enrichedMsg }));
+        } catch (e) {}
         
-        // Debounce cloud realtime broadcast and storage write to prevent UI thread lock
+        // 4. Debounce cloud realtime broadcast and storage write
         if (cfdDebounceTimerRef.current) {
             clearTimeout(cfdDebounceTimerRef.current);
         }
@@ -654,7 +672,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 supabaseCfdRef.current.send({
                     type: 'broadcast',
                     event: 'cfd_event',
-                    payload: msg
+                    payload: enrichedMsg
                 }).catch(() => {});
             }
             try {
@@ -670,15 +688,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     broadcastCFDRef.current = broadcastCFD;
 
     React.useEffect(() => {
-        cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
-        
-        // Handle incoming handshake requests from CFD
-        cfdChannel.current.onmessage = (event) => {
-            if (event.data?.type === 'REQUEST_CFD_STATE') {
-                const currentMsg = computeCurrentCFDPayloadRef.current ? computeCurrentCFDPayloadRef.current() : null;
-                if (currentMsg) broadcastCFDRef.current?.(currentMsg);
-            }
-        };
+        try {
+            cfdChannel.current = new BroadcastChannel('pos_cfd_channel');
+            
+            // Handle incoming handshake requests from CFD
+            cfdChannel.current.onmessage = (event) => {
+                if (event.data?.type === 'REQUEST_CFD_STATE') {
+                    const currentMsg = computeCurrentCFDPayloadRef.current ? computeCurrentCFDPayloadRef.current() : null;
+                    if (currentMsg) broadcastCFDRef.current?.(currentMsg);
+                }
+            };
+        } catch (e) {}
 
         supabaseCfdRef.current = supabase.channel('pos_cfd_room');
         supabaseCfdRef.current.on('broadcast', { event: 'cfd_handshake' }, () => {
@@ -688,7 +708,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
         return () => {
             if (cfdDebounceTimerRef.current) clearTimeout(cfdDebounceTimerRef.current);
-            if (cfdChannel.current) cfdChannel.current.close();
+            if (cfdChannel.current) {
+                try { cfdChannel.current.close(); } catch (e) {}
+            }
             if (supabaseCfdRef.current) supabase.removeChannel(supabaseCfdRef.current);
         };
     }, []);
@@ -696,6 +718,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     React.useEffect(() => {
         const handleCfdCustomEvent = (e) => {
             if (e.detail) {
+                if (e.detail.type === 'PAYMENT_SUCCESS') {
+                    lastPaymentSuccessTimeRef.current = Date.now();
+                }
                 broadcastCFD(e.detail);
             }
         };
@@ -708,6 +733,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     React.useEffect(() => {
         const timer = setTimeout(() => {
             const currentMsg = computeCurrentCFDPayload();
+            // If we just completed a payment within 6.5s, do NOT abruptly send IDLE to overwrite the celebration screen unless new items were added
+            if (currentMsg?.type === 'IDLE' && Date.now() - lastPaymentSuccessTimeRef.current < 6500) {
+                return;
+            }
             broadcastCFD(currentMsg);
         }, 80);
         return () => clearTimeout(timer);

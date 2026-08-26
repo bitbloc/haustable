@@ -2416,20 +2416,25 @@ export default function POSDashboard() {
             }
 
             // Broadcast PAYMENT_SUCCESS to CFD screen
-            window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', {
-                detail: {
-                    type: 'PAYMENT_SUCCESS',
-                    payload: {
-                        total: finalTotal,
-                        pointsEarned,
-                        paymentMethod,
-                        cashReceived: paymentMethod === 'cash' ? numCashRecv : 0,
-                        changeDue: paymentMethod === 'cash' ? numChangeDue : 0,
-                        tableName: selectedTable?.table_name || currentBooking?.tables_layout?.table_name || null,
-                        customer: currentBooking?.customer_name || 'Walk-in Guest'
-                    }
+            const cfdSuccessDetail = {
+                type: 'PAYMENT_SUCCESS',
+                payload: {
+                    total: finalTotal,
+                    pointsEarned,
+                    paymentMethod,
+                    cashReceived: paymentMethod === 'cash' ? numCashRecv : 0,
+                    changeDue: paymentMethod === 'cash' ? numChangeDue : 0,
+                    tableName: selectedTable?.table_name || currentBooking?.tables_layout?.table_name || null,
+                    customer: currentBooking?.customer_name || 'Walk-in Guest'
+                },
+                timestamp: Date.now()
+            };
+            window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdSuccessDetail }));
+            try {
+                if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                    window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdSuccessDetail));
                 }
-            }));
+            } catch (e) {}
 
             const printBookingData = {
                 ...(completedBooking || currentBooking),
