@@ -12,18 +12,20 @@ export function BookingProvider({ children }) {
 
     const [isLiffReady, setIsLiffReady] = useState(false)
 
-    // Initial Data Load
+    // Initial Data Load & Realtime Sync
     useEffect(() => {
+        let isMounted = true
+
         // LIFF Init with tracking prevention & storage access fallback
         const initLiff = async () => {
             try {
                 if (window.liff) {
                     await window.liff.init({ liffId: "2008674756-hTEWodVj", withLoginOnExternalBrowser: false });
-                    setIsLiffReady(true);
+                    if (isMounted) setIsLiffReady(true);
                 }
             } catch (e) {
                 console.warn("LIFF Init warning (tracking/storage blocked):", e);
-                setIsLiffReady(false);
+                if (isMounted) setIsLiffReady(false);
             }
         };
         initLiff();
@@ -35,13 +37,15 @@ export function BookingProvider({ children }) {
                     { data: tables },
                     { data: settingsData },
                     { data: { user } },
-                    { data: blockedDates } // New
+                    { data: blockedDates }
                 ] = await Promise.all([
                     supabase.from('tables_layout').select('*'),
                     supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")'),
                     supabase.auth.getUser(),
-                    supabase.from('blocked_dates').select('blocked_date, reason') // New
+                    supabase.from('blocked_dates').select('blocked_date, reason')
                 ])
+
+                if (!isMounted) return
 
                 // Parse Settings
                 const settings = initialState.settings
@@ -88,23 +92,82 @@ export function BookingProvider({ children }) {
                     }
                 })
 
-                // 2. BACKGROUND LOAD (Heavy Menu Data)
-                const { menuItems: sortedMenu, categories } = await fetchAndSortMenu()
-
-                dispatch({
-                    type: 'LOAD_MENU_SUCCESS',
-                    payload: {
-                        menuItems: sortedMenu,
-                        categories: categories || []
-                    }
-                })
+                await loadMenu(false)
 
             } catch (error) {
                 console.error("Failed to load booking data", error)
             }
         }
 
+        const loadMenu = async (force = false) => {
+            try {
+                if (force) {
+                    const { invalidateMenuCache } = await import('../utils/menuHelper')
+                    invalidateMenuCache()
+                }
+                const { menuItems: sortedMenu, categories } = await fetchAndSortMenu(force)
+                if (isMounted) {
+                    dispatch({
+                        type: 'LOAD_MENU_SUCCESS',
+                        payload: {
+                            menuItems: sortedMenu || [],
+                            categories: categories || []
+                        }
+                    })
+                }
+            } catch (err) {
+                console.error("Failed to reload menu in BookingContext:", err)
+            }
+        }
+
         loadData()
+
+        // Realtime Subscriptions
+        let menuDebounceTimer = null
+        const handleMenuChange = () => {
+            if (menuDebounceTimer) clearTimeout(menuDebounceTimer)
+            menuDebounceTimer = setTimeout(() => {
+                if (isMounted) loadMenu(true)
+            }, 300)
+        }
+
+        let dataDebounceTimer = null
+        const handleDataChange = () => {
+            if (dataDebounceTimer) clearTimeout(dataDebounceTimer)
+            dataDebounceTimer = setTimeout(() => {
+                if (isMounted) loadData()
+            }, 350)
+        }
+
+        const channelId = `booking-context-live-${Math.random().toString(36).slice(2, 8)}`
+        const channel = supabase.channel(channelId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, handleMenuChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, handleMenuChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, handleMenuChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, handleMenuChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleMenuChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, handleDataChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'blocked_dates' }, handleDataChange)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleDataChange)
+            .subscribe()
+
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === 'visible' && isMounted) {
+                loadMenu(true)
+            }
+        }
+
+        window.addEventListener('focus', handleVisibilityOrFocus)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+
+        return () => {
+            isMounted = false
+            if (menuDebounceTimer) clearTimeout(menuDebounceTimer)
+            if (dataDebounceTimer) clearTimeout(dataDebounceTimer)
+            supabase.removeChannel(channel)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+        }
     }, [])
 
 

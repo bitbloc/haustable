@@ -15,6 +15,12 @@ export const optimizeImageUrl = (url, width = 400) => {
     return url;
 }
 
+export const invalidateMenuCache = () => {
+    cachedMenu = null;
+    cachedCategories = null;
+    lastFetchTime = 0;
+};
+
 export const fetchAndSortMenu = async (forceRefresh = false) => {
     const now = Date.now();
     if (!forceRefresh && cachedMenu && cachedCategories && (now - lastFetchTime < CACHE_TTL)) {
