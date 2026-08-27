@@ -339,11 +339,11 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
     };
 
     useEffect(() => {
-        if (isActive) {
-            fetchReportData(true);
-            loadShiftHistoryData();
-            loadActiveShift();
-        }
+        if (!isActive) return;
+
+        fetchReportData(true);
+        loadShiftHistoryData();
+        loadActiveShift();
 
         let debounceTimer = null;
         const triggerDebouncedSync = () => {

@@ -153,12 +153,30 @@ export async function syncShiftToCloud(shift) {
     }
 }
 
+// Helper: Validate if a shift was opened recently (within last 20 hours) to prevent restoring stale zombie shifts
+export const isShiftRecent = (openedAtIso) => {
+    if (!openedAtIso) return false;
+    try {
+        const openedTime = new Date(openedAtIso).getTime();
+        if (isNaN(openedTime)) return false;
+        const now = Date.now();
+        const hoursDiff = (now - openedTime) / (1000 * 60 * 60);
+        // Valid if opened within the last 20 hours and not into future by > 1h
+        return hoursDiff >= -1 && hoursDiff < 20;
+    } catch {
+        return false;
+    }
+};
+
 // 1. Get current active shift from localStorage
 export function getCurrentShift() {
     try {
         const shift = JSON.parse(localStorage.getItem(CURRENT_SHIFT_KEY));
-        if (shift && shift.status === 'open') {
+        if (shift && shift.status === 'open' && isShiftRecent(shift.openedAt)) {
             return shift;
+        }
+        if (shift && (!isShiftRecent(shift.openedAt) || shift.status !== 'open')) {
+            localStorage.removeItem(CURRENT_SHIFT_KEY);
         }
         return null;
     } catch {
@@ -169,17 +187,40 @@ export function getCurrentShift() {
 // Check and restore active open shift from Supabase cloud if wiped locally or stale
 export async function checkAndRestoreActiveShift() {
     try {
-        // Query Supabase for any active open shift (using limit(1) array check to avoid maybeSingle errors)
+        // Query Supabase for all open shifts
         const { data, error } = await supabase
             .from('pos_shifts')
             .select('*')
             .eq('status', 'open')
-            .order('opened_at', { ascending: false })
-            .limit(1);
+            .order('opened_at', { ascending: false });
 
         if (!error && data) {
-            if (data.length > 0) {
-                const shiftData = data[0];
+            // Find recent open shifts vs stale open shifts
+            const validOpenShifts = data.filter(s => isShiftRecent(s.opened_at));
+            const staleOpenShifts = data.filter(s => !isShiftRecent(s.opened_at));
+
+            // Auto-close any stale open shifts in the cloud
+            if (staleOpenShifts.length > 0) {
+                const staleIds = staleOpenShifts.map(s => s.id);
+                console.log('[Shift Sync] Auto-closing stale orphaned shifts:', staleIds);
+                await supabase
+                    .from('pos_shifts')
+                    .update({ status: 'closed', closed_at: new Date().toISOString() })
+                    .in('id', staleIds);
+            }
+
+            // If there is more than 1 valid open shift, keep only the newest one and close previous ones
+            if (validOpenShifts.length > 1) {
+                const duplicateIds = validOpenShifts.slice(1).map(s => s.id);
+                console.log('[Shift Sync] Auto-closing duplicate open shifts:', duplicateIds);
+                await supabase
+                    .from('pos_shifts')
+                    .update({ status: 'closed', closed_at: new Date().toISOString() })
+                    .in('id', duplicateIds);
+            }
+
+            if (validOpenShifts.length > 0) {
+                const shiftData = validOpenShifts[0];
                 const restoredShift = {
                     id: shiftData.id,
                     staffName: shiftData.staff_name,
@@ -214,12 +255,18 @@ export async function checkAndRestoreActiveShift() {
                 }
                 return restoredShift;
             } else {
-                // If cloud has no open shift, BUT local shift is active, TRUST and RE-SYNC local shift to cloud!
+                // If cloud has no valid open shift, check if local shift is valid and recent
                 const localShift = getCurrentShift();
-                if (localShift) {
-                    console.log('[Shift Sync] Local active shift exists. Re-syncing local shift to cloud:', localShift);
+                if (localShift && isShiftRecent(localShift.openedAt)) {
+                    console.log('[Shift Sync] Local active shift is recent. Re-syncing to cloud:', localShift);
                     syncShiftToCloud(localShift);
                     return localShift;
+                } else if (localShift) {
+                    // Stale local shift -> clean up
+                    console.log('[Shift Sync] Cleaning up stale local shift:', localShift.id);
+                    localStorage.removeItem(CURRENT_SHIFT_KEY);
+                    window.dispatchEvent(new Event('pos-shift-changed'));
+                    return null;
                 }
                 return null;
             }
@@ -229,7 +276,11 @@ export async function checkAndRestoreActiveShift() {
     }
     
     // Fallback if offline or error
-    return getCurrentShift();
+    const localShift = getCurrentShift();
+    if (localShift && isShiftRecent(localShift.openedAt)) {
+        return localShift;
+    }
+    return null;
 }
 
 // Clean up all active open shifts in cloud and local storage
@@ -289,8 +340,19 @@ export async function syncShiftHistoryFromCloud() {
 }
 
 // 2. Start a new shift
-export function startShift(staffName, openingFloat) {
+export async function startShift(staffName, openingFloat) {
     const floatAmount = parseFloat(openingFloat) || 0;
+    
+    // Close any lingering open shifts in cloud before starting new shift
+    try {
+        await supabase
+            .from('pos_shifts')
+            .update({ status: 'closed', closed_at: new Date().toISOString() })
+            .eq('status', 'open');
+    } catch (err) {
+        console.warn('[Shift Management] Error closing prior open shifts in cloud:', err);
+    }
+
     const newShift = {
         id: `shift_${Date.now()}`,
         staffName,

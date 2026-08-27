@@ -78,6 +78,7 @@ export default function OwnerPosBroadcastBar() {
                 event: 'owner-announcement',
                 payload
             })
+            supabase.removeChannel(channel)
 
             // 2. Persist in app_settings
             const { error } = await supabase
@@ -115,6 +116,7 @@ export default function OwnerPosBroadcastBar() {
                 event: 'owner-announcement-clear',
                 payload: {}
             })
+            supabase.removeChannel(channel)
 
             setActiveBroadcast(null)
             toast.success('ลบประกาศออกจากหน้าจอ POS แล้ว')
