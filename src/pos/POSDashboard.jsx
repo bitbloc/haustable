@@ -581,7 +581,8 @@ export default function POSDashboard() {
             toast.error('กรุณาระบุชื่อพนักงานเพื่อเปิดรอบ');
             return;
         }
-        startShift(openShiftForm.staffName.trim(), openShiftForm.openingFloat);
+        const newShift = startShift(openShiftForm.staffName.trim(), openShiftForm.openingFloat);
+        if (newShift) setActiveShift(newShift);
         toast.success(`เปิดรอบการขายสำเร็จ: พนักงาน ${openShiftForm.staffName}`);
     };
 
@@ -3745,7 +3746,8 @@ export default function POSDashboard() {
                                 <form 
                                     onSubmit={(e) => {
                                         e.preventDefault();
-                                        startShift(selectedStaffForLogin.display_name, openShiftForm.openingFloat);
+                                        const newShift = startShift(selectedStaffForLogin.display_name, openShiftForm.openingFloat);
+                                        if (newShift) setActiveShift(newShift);
                                         toast.success(`เปิดรอบการขายสำเร็จ: พนักงาน ${selectedStaffForLogin.display_name}`);
                                         setSelectedStaffForLogin(null);
                                         setPinInput('');

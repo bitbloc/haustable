@@ -340,18 +340,20 @@ export async function syncShiftHistoryFromCloud() {
 }
 
 // 2. Start a new shift
-export async function startShift(staffName, openingFloat) {
+export function startShift(staffName, openingFloat) {
     const floatAmount = parseFloat(openingFloat) || 0;
     
     // Close any lingering open shifts in cloud before starting new shift
-    try {
-        await supabase
-            .from('pos_shifts')
-            .update({ status: 'closed', closed_at: new Date().toISOString() })
-            .eq('status', 'open');
-    } catch (err) {
-        console.warn('[Shift Management] Error closing prior open shifts in cloud:', err);
-    }
+    supabase
+        .from('pos_shifts')
+        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .eq('status', 'open')
+        .then(() => {
+            console.log('[Shift Management] Prior open shifts in cloud marked closed');
+        })
+        .catch(err => {
+            console.warn('[Shift Management] Error closing prior open shifts in cloud:', err);
+        });
 
     const newShift = {
         id: `shift_${Date.now()}`,
