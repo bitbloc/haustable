@@ -46,21 +46,34 @@ export function useTrackingLogic(token) {
     }
   }, [token])
 
-  // Realtime Postgres Changes Subscription + Polling Fallback
+  // Realtime Broadcast Room + Postgres Changes Subscription + Polling Fallback
   useEffect(() => {
     fetchTrackingInfo()
 
     if (!token) return
 
-    // 1. Direct Realtime Subscription on Booking Token
+    // 1. Dedicated Instant Realtime Broadcast Room for this tracking token (< 50ms)
     const channel = supabase
-      .channel(`tracking-realtime-${token}`)
+      .channel(`tracking_room_${token}`)
+      .on('broadcast', { event: 'order_status_updated' }, (payload) => {
+        console.log('⚡ [Realtime Tracking] Instant broadcast received:', payload)
+        const newStatus = payload?.payload?.status
+        if (newStatus) {
+          // Instant optimistic UI transition
+          setData(prev => prev ? { ...prev, status: newStatus } : prev)
+        }
+        fetchTrackingInfo()
+      })
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'bookings',
         filter: `tracking_token=eq.${token}`
       }, (payload) => {
+        const newRow = payload?.new
+        if (newRow?.status) {
+          setData(prev => prev ? { ...prev, status: newRow.status } : prev)
+        }
         fetchTrackingInfo()
       })
       .on('postgres_changes', {
@@ -70,12 +83,27 @@ export function useTrackingLogic(token) {
       }, () => {
         fetchTrackingInfo()
       })
-      .subscribe()
+      .subscribe((status, err) => {
+        if (status === 'CHANNEL_ERROR' || err) {
+          console.warn('[Realtime Tracking] Channel error:', status, err)
+        }
+      })
 
-    // 2. Backup Polling (every 30s) in case of websocket drop
-    const interval = setInterval(fetchTrackingInfo, 30000)
+    // 2. Active Tab Focus / Visibility Listener (Instant sync on resume)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTrackingInfo()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleVisibilityChange)
+
+    // 3. Backup Polling (every 10s for active orders)
+    const interval = setInterval(fetchTrackingInfo, 10000)
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleVisibilityChange)
       supabase.removeChannel(channel)
       clearInterval(interval)
     }

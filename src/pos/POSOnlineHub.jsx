@@ -24,6 +24,7 @@ import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
+import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import POSVolumeControl from './POSVolumeControl';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey, isActive = true }) {
@@ -41,11 +42,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     const playAlert = (eventKey = null) => {
         playOrderAlert(eventKey, 600, 3.4);
-        if (!alertIntervalRef.current) {
-            alertIntervalRef.current = setInterval(() => {
-                playOrderAlert('online_hub_repeat', 1000, 3.4);
-            }, 12000);
+        if (alertIntervalRef.current) {
+            clearInterval(alertIntervalRef.current);
+            alertIntervalRef.current = null;
         }
+        alertIntervalRef.current = setInterval(() => {
+            playOrderAlert('online_hub_repeat', 1000, 3.4);
+        }, 12000);
     };
 
     const stopAlert = () => {
@@ -89,10 +92,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const sourceLower = (b.source || '').toLowerCase();
                 const remarkLower = (b.staff_remark || '').toLowerCase();
                 const isLineman = isOrderLineman(b);
-                const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
                 const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
                 const hasSlip = !!b.payment_slip_url;
-                const isOnlinePickup = b.booking_type === 'pickup' && (isOnlineSource || hasSlip || !isExplicitInHouse);
+                const isOnlinePickup = b.booking_type === 'pickup';
                 return isOnlineSource || hasSlip || isOnlinePickup || isLineman;
             });
 
@@ -111,6 +114,29 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
         const channel = supabase.channel('online_orders_hub')
             .on(
+                'broadcast',
+                { event: 'online_order_created' },
+                async ({ payload }) => {
+                    const bId = payload?.booking_id;
+                    const eventKey = `online_hub_broadcast_${bId || Date.now()}`;
+                    if (checkEventDeduplication(eventKey, 4500)) {
+                        if (payload) {
+                            setPersistentAlert({
+                                id: bId,
+                                booking_type: payload.booking_type || 'pickup',
+                                customer_name: payload.customer_name,
+                                pickup_contact_name: payload.customer_name,
+                                total_amount: payload.total_amount,
+                                payment_slip_url: payload.has_slip ? 'slip' : null,
+                                tracking_token: payload.tracking_token
+                            });
+                        }
+                        playAlert(eventKey);
+                    }
+                    if (isActive) fetchOnlineData();
+                }
+            )
+            .on(
                 'postgres_changes',
                 {
                     event: 'INSERT',
@@ -122,14 +148,14 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const isLineman = isOrderLineman(b);
-                    const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
                     const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
                     const hasSlip = !!b.payment_slip_url;
-                    const isOnlinePickup = b.booking_type === 'pickup' && (isOnlineSource || hasSlip || !isExplicitInHouse);
+                    const isOnlinePickup = b.booking_type === 'pickup';
                     
                     if (isOnlineSource || hasSlip || isOnlinePickup || isLineman) {
                         const eventKey = `online_hub_insert_${b.id}`;
-                        if (checkEventDeduplication(eventKey, 6000)) {
+                        if (checkEventDeduplication(eventKey, 4500)) {
                             setPersistentAlert(b);
                             playAlert(eventKey);
                         }
@@ -163,11 +189,22 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     // Only trigger alert for NEW payment slip upload
                     if (updated.payment_slip_url && updated.payment_slip_url !== payload.old?.payment_slip_url) {
                         const eventKey = `online_hub_slip_${updated.id}`;
-                        if (checkEventDeduplication(eventKey, 6000)) {
+                        if (checkEventDeduplication(eventKey, 4500)) {
                             setPersistentAlert(updated);
                             playAlert(eventKey);
                         }
                     }
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'order_items',
+                },
+                () => {
+                    if (isActive) fetchOnlineData();
                 }
             )
             .subscribe();
@@ -227,6 +264,22 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 .eq('id', id);
             if (error) throw error;
             toast.success(`อัปเดตสถานะเป็น [${newStatus.toUpperCase()}] สำเร็จ`);
+
+            // Instant Realtime Broadcast to customer tracking page (< 50ms)
+            const targetOrder = orders.find(o => o.id === id);
+            const trackingToken = targetOrder?.tracking_token || customData.tracking_token;
+            if (trackingToken) {
+                sendTrackingBroadcast(trackingToken, 'order_status_updated', {
+                    status: newStatus,
+                    booking_id: id,
+                    ...customData
+                });
+            }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: id,
+                status: newStatus
+            });
+
             fetchOnlineData();
         } catch (err) {
             console.error(err);
@@ -252,6 +305,14 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
             if (error) throw error;
             toast.success(`อนุมัติสลิปออเดอร์ #${getShortBookingId(order)} สำเร็จ`);
+
+            // Instant Realtime Broadcast to tracking page
+            if (order.tracking_token) {
+                sendTrackingBroadcast(order.tracking_token, 'order_status_updated', {
+                    status: updates.status,
+                    booking_id: order.id
+                });
+            }
 
             // Auto-trigger kitchen order print if items exist
             if (order.order_items && order.order_items.length > 0 && onOpenSlipModal) {

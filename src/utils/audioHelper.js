@@ -428,7 +428,11 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
 
     const lastTime = eventDeduplicationMap.get(eventKey);
     if (lastTime && (now - lastTime < cooldownMs)) {
-        return false; // Suppress duplicate
+        // If called within 350ms with the SAME key, this is the exact same execution chain (e.g. caller check -> playOrderAlert)
+        if (now - lastTime < 350) {
+            return true;
+        }
+        return false; // Suppress true duplicate bursts
     }
 
     eventDeduplicationMap.set(eventKey, now);

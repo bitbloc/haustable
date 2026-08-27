@@ -104,7 +104,18 @@ export default function CustomerOrderStatus() {
 
         initStatus();
 
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchActiveOrder(true);
+                fetchSettings();
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleVisibilityChange);
+
         return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleVisibilityChange);
             if (channelSub) supabase.removeChannel(channelSub);
             if (settingsSub) supabase.removeChannel(settingsSub);
         };

@@ -129,8 +129,29 @@ export function useBooking() {
                 throw new Error(`ยอดขั้นต่ำต่อท่านคือ ${MIN_SPEND_PER_PAX} บาท (ขาดอีก ${requiredSpend - cartTotal} บาท)`)
             }
 
-            // Prepare Payload (Dine-in)
+            // Pre-flight Conflict Check (Double-Booking Prevention)
             const bookingDateTime = toThaiISO(state.date, state.time)
+            const requestedStart = new Date(bookingDateTime)
+            const requestedEnd = new Date(requestedStart.getTime() + (2 * 60 * 60 * 1000))
+
+            const { data: conflictBookings } = await supabase
+                .from('bookings')
+                .select('id, booking_time, end_time')
+                .eq('table_id', state.selectedTable.id)
+                .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
+                .gte('booking_time', `${state.date}T00:00:00+07:00`)
+                .lte('booking_time', `${state.date}T23:59:59+07:00`)
+
+            if (conflictBookings && conflictBookings.length > 0) {
+                const hasOverlap = conflictBookings.some(b => {
+                    const bStart = new Date(b.booking_time)
+                    const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + (2 * 60 * 60 * 1000))
+                    return (requestedStart < bEnd) && (requestedEnd > bStart)
+                })
+                if (hasOverlap) {
+                    throw new Error('ขออภัย โต๊ะนี้เพิ่งมีผู้ทำรายการจองเข้ามาในช่วงเวลาดังกล่าว กรุณาเลือกโต๊ะอื่น (Table was just reserved by another guest)')
+                }
+            }
             
             const customerNoteContent = `Booking ${state.selectedTable?.table_name || ''} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
 
@@ -138,6 +159,7 @@ export function useBooking() {
             const finalTotal = Math.max(0, cartTotal - discountAmount)
 
             const bookingPayload = {
+                source: 'online',
                 booking_type: 'dine_in',
                 status: 'pending',
                 booking_time: bookingDateTime,

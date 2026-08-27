@@ -222,12 +222,14 @@ export default function PickupPage() {
             const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
 
             const bookingPayload = {
+                source: 'online',
                 booking_type: 'pickup',
                 status: 'pending',
                 booking_time: bookingDateTime,
                 pickup_contact_name: contactName,
                 pickup_contact_phone: contactPhone,
                 customer_note: customerNoteContent,
+                staff_remark: '[ONLINE_PICKUP] สั่งรับกลับ',
                 promotion_code_id: appliedPromo?.id || null, 
                 discount_amount: appliedPromo?.discountAmount || 0,
                 total_amount: finalTotal,

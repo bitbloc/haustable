@@ -54,3 +54,47 @@ export async function sendPOSBroadcast(event, payload = {}) {
         return null;
     }
 }
+
+/**
+ * Send an instant Realtime Broadcast signal directly to a customer's tracking room (< 50ms).
+ * @param {string} trackingToken - UUID tracking token for the booking
+ * @param {string} event - e.g. 'order_status_updated'
+ * @param {object} payload - Metadata including status, booking_id
+ */
+export async function sendTrackingBroadcast(trackingToken, event = 'order_status_updated', payload = {}) {
+    if (!trackingToken) return null;
+    try {
+        const channelName = `tracking_room_${trackingToken}`;
+        const channel = supabase.channel(channelName);
+        const fullPayload = {
+            ...payload,
+            tracking_token: trackingToken,
+            timestamp: Date.now()
+        };
+
+        if (channel.state !== 'joined') {
+            await new Promise((resolve) => {
+                const timeout = setTimeout(resolve, 1500);
+                channel.subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        clearTimeout(timeout);
+                        resolve();
+                    }
+                });
+            });
+        }
+
+        const res = await channel.send({
+            type: 'broadcast',
+            event: event,
+            payload: fullPayload
+        });
+
+        console.log(`⚡ [RealtimeNotifier] Tracking Broadcast "${event}" sent to ${channelName}:`, res);
+        return res;
+    } catch (err) {
+        console.warn(`[RealtimeNotifier] Failed to broadcast tracking event "${event}":`, err);
+        return null;
+    }
+}
+

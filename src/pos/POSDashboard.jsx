@@ -20,6 +20,7 @@ import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
+import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
@@ -3526,6 +3527,16 @@ export default function POSDashboard() {
                                                 onClick={async () => {
                                                     const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
                                                     if (!error) {
+                                                        if (item.tracking_token) {
+                                                            sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
+                                                                status: 'cancelled',
+                                                                booking_id: item.id
+                                                            });
+                                                        }
+                                                        sendPOSBroadcast('online_order_status_updated', {
+                                                            booking_id: item.id,
+                                                            status: 'cancelled'
+                                                        });
                                                         toast.success("ยกเลิกรายการเรียบร้อยแล้ว");
                                                         checkPendingOrders();
                                                     }
@@ -3540,12 +3551,28 @@ export default function POSDashboard() {
                                                     if (isPickup) {
                                                         const { error } = await supabase.from('bookings').update({ status: 'ready' }).eq('id', item.id);
                                                         if (!error) {
+                                                            if (item.tracking_token) {
+                                                                sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
+                                                                    status: 'ready',
+                                                                    booking_id: item.id
+                                                                });
+                                                            }
+                                                            sendPOSBroadcast('online_order_status_updated', {
+                                                                booking_id: item.id,
+                                                                status: 'ready'
+                                                            });
                                                             toast.success("อนุมัติออเดอร์ Pickup เรียบร้อยแล้ว!");
                                                             checkPendingOrders();
                                                         }
                                                     } else {
                                                         const success = await acceptOrder(item.id);
                                                         if (success) {
+                                                            if (item.tracking_token) {
+                                                                sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
+                                                                    status: 'confirmed',
+                                                                    booking_id: item.id
+                                                                });
+                                                            }
                                                             toast.success("อนุมัติคิวจองเรียบร้อยแล้ว!");
                                                             checkPendingOrders();
                                                         }

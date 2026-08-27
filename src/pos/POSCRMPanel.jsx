@@ -331,11 +331,31 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 )}
                                             </td>
                                             <td className="py-3 px-4">
-                                                <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider ${
-                                                    m.role === 'admin' ? 'bg-[#ff0000]/10 text-[#ff0000] border border-[#ff0000]/20' : 'bg-[#E0E0DC] text-[#1A1A1A] border border-[#B0B0AC]'
-                                                }`}>
-                                                    {m.role || 'GUEST'}
-                                                </span>
+                                                {(() => {
+                                                    const tierName = m.current_tier || 'Haus Common';
+                                                    const isInner = tierName.toLowerCase().includes('inner') || tierName.toLowerCase().includes('gold') || tierName.toLowerCase().includes('vip');
+                                                    const isPeople = tierName.toLowerCase().includes('people') || tierName.toLowerCase().includes('silver');
+
+                                                    let tierStyle = 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/30';
+                                                    if (isInner) {
+                                                        tierStyle = 'bg-amber-500/15 text-amber-700 border-amber-500/30 font-extrabold';
+                                                    } else if (isPeople) {
+                                                        tierStyle = 'bg-slate-600/10 text-slate-700 border-slate-400/40';
+                                                    }
+
+                                                    return (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider border ${tierStyle}`}>
+                                                                {tierName}
+                                                            </span>
+                                                            {m.role === 'admin' && (
+                                                                <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-700 border border-red-500/20">
+                                                                    ADMIN
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs">{m.total_bookings}</td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs text-emerald-600">{m.completed_bookings}</td>
@@ -384,7 +404,34 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                 {selectedMember.phone_number && (
                                     <span className="font-mono text-[10px] text-[#1A1A1A] mt-1.5 flex items-center gap-1"><Phone size={10} className="text-[#767673]" /> {selectedMember.phone_number}</span>
                                 )}
-                                <span className="font-mono text-[9px] font-bold text-[#767673] uppercase tracking-widest mt-1 block">REGISTRATION DETAIL</span>
+                                <div className="flex items-center gap-1.5 mt-2">
+                                    {(() => {
+                                        const tierName = selectedMember.current_tier || 'Haus Common';
+                                        const isInner = tierName.toLowerCase().includes('inner') || tierName.toLowerCase().includes('gold') || tierName.toLowerCase().includes('vip');
+                                        const isPeople = tierName.toLowerCase().includes('people') || tierName.toLowerCase().includes('silver');
+
+                                        let tierStyle = 'bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]/30';
+                                        if (isInner) {
+                                            tierStyle = 'bg-amber-500/15 text-amber-700 border-amber-500/30 font-extrabold';
+                                        } else if (isPeople) {
+                                            tierStyle = 'bg-slate-600/10 text-slate-700 border-slate-400/40';
+                                        }
+
+                                        return (
+                                            <>
+                                                <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider border ${tierStyle}`}>
+                                                    {tierName}
+                                                </span>
+                                                {selectedMember.role === 'admin' && (
+                                                    <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-700 border border-red-500/20">
+                                                        ADMIN
+                                                    </span>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                                <span className="font-mono text-[9px] font-bold text-[#767673] uppercase tracking-widest mt-2 block">REGISTRATION DETAIL</span>
 
                                 {/* Stats grid */}
                                 <div className="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t border-[#ECECE9]">

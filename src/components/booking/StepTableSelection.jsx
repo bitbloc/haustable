@@ -32,15 +32,15 @@ export default function StepTableSelection() {
     useEffect(() => {
         refreshAvailability()
 
-        // 1. Database Real-time (Bookings)
+        // 1. Database Real-time (Bookings) with unique channel ID
         const dbChannel = supabase
-            .channel('public:bookings')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+            .channel(`booking-table-realtime-${sessionId}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
                 refreshAvailability()
             })
             .subscribe()
 
-        // 2. Presence Real-time (Table Locks)
+        // 2. Presence Real-time (Table Locks scoped to Date & Time)
         const presenceChannel = supabase.channel('table_locks', {
             config: { presence: { key: sessionId } }
         })
@@ -52,11 +52,24 @@ export default function StepTableSelection() {
                 for (const key in state) {
                     if (key !== sessionId) { // Don't lock our own selected table
                         state[key].forEach(presence => {
-                            if (presence.table_id) lockedIds.push(presence.table_id)
+                            if (presence.table_id && presence.date === date) {
+                                // If same date, check if time slot overlaps (within 2-hour window)
+                                if (!presence.time || !time) {
+                                    lockedIds.push(presence.table_id)
+                                } else {
+                                    const [h1, m1] = String(presence.time).split(':').map(Number)
+                                    const [h2, m2] = String(time).split(':').map(Number)
+                                    const t1 = (h1 || 0) * 60 + (m1 || 0)
+                                    const t2 = (h2 || 0) * 60 + (m2 || 0)
+                                    if (Math.abs(t1 - t2) < 120) {
+                                        lockedIds.push(presence.table_id)
+                                    }
+                                }
+                            }
                         })
                     }
                 }
-                setLockedTableIds(lockedIds)
+                setLockedTableIds([...new Set(lockedIds)])
             })
             .subscribe()
 
@@ -73,7 +86,7 @@ export default function StepTableSelection() {
         let idleTimer = null;
         if (channelRef.current && channelRef.current.state === 'joined') {
             if (selectedTable) {
-                channelRef.current.track({ table_id: selectedTable.id })
+                channelRef.current.track({ table_id: selectedTable.id, date, time })
                 
                 // 5-minute (300,000ms) Auto-Release Timeout
                 idleTimer = setTimeout(() => {
@@ -86,7 +99,7 @@ export default function StepTableSelection() {
         return () => {
             if (idleTimer) clearTimeout(idleTimer)
         }
-    }, [selectedTable])
+    }, [selectedTable, date, time])
 
     // Toggle Expanded
     const toggleExpanded = () => dispatch({ type: 'TOGGLE_EXPAND' })
