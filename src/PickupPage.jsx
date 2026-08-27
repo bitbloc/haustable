@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -195,6 +195,13 @@ export default function PickupPage() {
          await applyCode(promoCode, cartTotal, 'ordering')
      }
 
+    // Filter Category Tabs to only show categories that contain pickup items
+    const availableCategories = useMemo(() => {
+        return categories.filter(cat => 
+            menuItems.some(item => item.category_id === cat.id || item.category === cat.name)
+        )
+    }, [categories, menuItems])
+
     const filteredMenu = menuItems.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase())
         const matchesCategory = activeCategory === 'All'
@@ -314,7 +321,7 @@ export default function PickupPage() {
 
                             <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide mb-2 border-b border-[var(--color-rule)]">
                                 <button onClick={() => setActiveCategory('All')} className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono transition-all border ${activeCategory === 'All' ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}>All</button>
-                                {categories.map(cat => (
+                                {availableCategories.map(cat => (
                                     <button key={cat.id} onClick={() => setActiveCategory(cat.name)} className={`whitespace-nowrap px-4 py-2 rounded-none text-xs font-mono transition-all border ${activeCategory === cat.name ? 'bg-ink text-paper border-ink' : 'bg-paper text-subInk border-[var(--color-rule)] hover:border-ink'}`}>{cat.name}</button>
                                 ))}
                             </div>
@@ -324,6 +331,12 @@ export default function PickupPage() {
                                     {filteredMenu.map(item => (
                                         <MenuCard key={item.id} item={item} mode={viewMode} onAdd={() => handleItemClick(item)} onRemove={() => { }} qty={0} t={t} />
                                     ))}
+                                    {filteredMenu.length === 0 && (
+                                        <div className="col-span-full py-16 text-center text-subInk font-mono text-xs uppercase tracking-wider flex flex-col items-center justify-center gap-2">
+                                            <Search size={24} className="opacity-30" />
+                                            <span>{t('noMenuItems') || 'ไม่พบรายการอาหาร'}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
