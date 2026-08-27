@@ -27,7 +27,9 @@ jobs:
       - name: Generate Timestamp
         id: timestamp
         run: |
-          echo "TIMESTAMP=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
+          TIMESTAMP=$(date +'%Y%m%d_%H%M%S')
+          echo "timestamp=${TIMESTAMP}" >> "$GITHUB_OUTPUT"
+          echo "TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
           mkdir -p ./backups
 
       - name: Dump Database Schema & Roles
@@ -38,10 +40,10 @@ jobs:
         run: |
           echo "Dumping Schema and Roles for Project $PROJECT_REF..."
           # Dump Schema (Public + Extensions)
-          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" -f "./backups/schema_${{ env.TIMESTAMP }}.sql"
+          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" -f "./backups/schema_${TIMESTAMP}.sql"
           
           # Dump Roles & Permissions
-          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --role-only -f "./backups/roles_${{ env.TIMESTAMP }}.sql"
+          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --role-only -f "./backups/roles_${TIMESTAMP}.sql"
 
       - name: Dump Database Data (All Records)
         env:
@@ -51,21 +53,21 @@ jobs:
         run: |
           echo "Dumping Data..."
           # Dump Public Schema Data (POS, Bookings, Orders, Tables, etc.)
-          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --data-only -f "./backups/data_public_${{ env.TIMESTAMP }}.sql"
+          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --data-only -f "./backups/data_public_${TIMESTAMP}.sql"
           
           # Optional: Dump Auth schema users data if needed
-          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --data-only --schema auth -f "./backups/data_auth_${{ env.TIMESTAMP }}.sql" || true
+          supabase db dump --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD" --data-only --schema auth -f "./backups/data_auth_${TIMESTAMP}.sql" || true
 
       - name: Compress Backups
         run: |
           cd ./backups
-          tar -czvf "supabase_backup_${{ env.TIMESTAMP }}.tar.gz" *.sql
+          tar -czvf "supabase_backup_${TIMESTAMP}.tar.gz" *.sql
           rm -f *.sql
           ls -lh
 
       - name: Upload Backup Artifact to GitHub
         uses: actions/upload-artifact@v4
         with:
-          name: supabase-backup-${{ env.TIMESTAMP }}
-          path: ./backups/supabase_backup_${{ env.TIMESTAMP }}.tar.gz
+          name: supabase-backup-${{ steps.timestamp.outputs.timestamp }}
+          path: ./backups/supabase_backup_${{ steps.timestamp.outputs.timestamp }}.tar.gz
           retention-days: 60 # เก็บไฟล์ไว้ย้อนหลัง 60 วัน (ประมาณ 8 สัปดาห์)
