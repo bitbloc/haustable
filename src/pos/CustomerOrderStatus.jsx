@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { isValidUuid } from '../utils/urlHelper';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
@@ -192,7 +193,8 @@ export default function CustomerOrderStatus() {
             }
 
             // Find active token from local storage first to query exact booking
-            const savedToken = localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${numericTableId}_token`);
+            const rawToken = localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${numericTableId}_token`);
+            const savedToken = (rawToken && rawToken !== 'null' && rawToken !== 'undefined' && isValidUuid(rawToken)) ? rawToken.trim() : null;
             
             let query = supabase
                 .from('bookings')

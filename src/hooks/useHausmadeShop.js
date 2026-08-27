@@ -41,13 +41,12 @@ export function useHausmadeShop() {
         }
     }, [cart])
 
-    // Load HAUSMADE Items & Settings
+    // Load HAUSMADE Items & Settings + Realtime Sync
     useEffect(() => {
         let isMounted = true
+
         async function fetchShopData() {
             try {
-                setLoading(true)
-
                 // 1. Fetch Categories, Menu Items with Options, and Settings
                 const [catsRes, itemsRes, settingsRes] = await Promise.all([
                     supabase.from('menu_categories').select('*').order('display_order', { ascending: true }),
@@ -104,7 +103,41 @@ export function useHausmadeShop() {
         }
 
         fetchShopData()
-        return () => { isMounted = false }
+
+        let debounceTimer = null
+        const handleRealtimeSync = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                if (isMounted) fetchShopData()
+            }, 300)
+        }
+
+        const channelId = `hausmade-shop-live-${Math.random().toString(36).slice(2, 8)}`
+        const channel = supabase.channel(channelId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, handleRealtimeSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, handleRealtimeSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, handleRealtimeSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, handleRealtimeSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeSync)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleRealtimeSync)
+            .subscribe()
+
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === 'visible' && isMounted) {
+                fetchShopData()
+            }
+        }
+
+        window.addEventListener('focus', handleVisibilityOrFocus)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+
+        return () => {
+            isMounted = false
+            if (debounceTimer) clearTimeout(debounceTimer)
+            supabase.removeChannel(channel)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+        }
     }, [])
 
     // Derive Sub-Categories with item counts

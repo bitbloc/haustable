@@ -18,6 +18,7 @@ import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { isValidUuid, safeUuid } from '../utils/urlHelper';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Haversine Distance Formula
@@ -143,7 +144,7 @@ export default function CustomerOrderLanding() {
 
     // Live Realtime listener for member profile changes (points, drink stamps, free quota)
     useEffect(() => {
-        if (!memberProfile?.id) return;
+        if (!memberProfile?.id || !isValidUuid(memberProfile.id)) return;
 
         const channel = supabase
             .channel(`realtime_landing_profile_${memberProfile.id}`)
@@ -1041,11 +1042,12 @@ export default function CustomerOrderLanding() {
 
             // 1. Primary Ultra-Fast Path: Atomic PostgreSQL RPC
             try {
-                const existingToken = activeBooking?.tracking_token || localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${effectiveNumericTableId}_token`);
+                const rawExistingToken = activeBooking?.tracking_token || localStorage.getItem(`table_${tableId}_token`) || localStorage.getItem(`table_${effectiveNumericTableId}_token`);
+                const existingToken = safeUuid(rawExistingToken);
                 const { data: rpcResult, error: rpcError } = await supabase.rpc('submit_customer_qr_order', {
                     p_table_id: effectiveNumericTableId,
                     p_items: itemsToInsert,
-                    p_user_id: memberProfile?.id || null,
+                    p_user_id: safeUuid(memberProfile?.id),
                     p_pax: paxCount || table?.capacity || 2,
                     p_customer_note: tableRemarkInput.trim(),
                     p_tracking_token: existingToken || null
@@ -1173,7 +1175,7 @@ export default function CustomerOrderLanding() {
             setTableRemarkInput('');
             
             // Save active tracking token to local storage
-            if (finalTrackingToken) {
+            if (finalTrackingToken && isValidUuid(finalTrackingToken)) {
                 if (tableId) localStorage.setItem(`table_${tableId}_token`, finalTrackingToken);
                 localStorage.setItem(`table_${effectiveNumericTableId}_token`, finalTrackingToken);
             }

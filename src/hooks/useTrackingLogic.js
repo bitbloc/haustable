@@ -1,6 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { isValidUuid } from '../utils/urlHelper'
 
 export function useTrackingLogic(token) {
   const [data, setData] = useState(null)
@@ -11,12 +12,18 @@ export function useTrackingLogic(token) {
   const isFetchingRef = useRef(false)
 
   const fetchTrackingInfo = useCallback(async () => {
-    if (!token || isFetchingRef.current) return
+    if (!token || !isValidUuid(token) || isFetchingRef.current) {
+      if (token && !isValidUuid(token)) {
+        setError('ไม่พบรหัสติดตามออเดอร์ที่ถูกต้อง (Invalid Tracking Link)')
+        setLoading(false)
+      }
+      return
+    }
     isFetchingRef.current = true
 
     try {
       const { data: resData, error: apiError } = await supabase.functions.invoke('get-tracking-info', {
-        body: { token },
+        body: { token: token.trim() },
       })
 
       if (apiError) {
@@ -50,11 +57,12 @@ export function useTrackingLogic(token) {
   useEffect(() => {
     fetchTrackingInfo()
 
-    if (!token) return
+    if (!token || !isValidUuid(token)) return
 
     // 1. Dedicated Instant Realtime Broadcast Room for this tracking token (< 50ms)
+    const cleanToken = token.trim()
     const channel = supabase
-      .channel(`tracking_room_${token}`)
+      .channel(`tracking_room_${cleanToken}`)
       .on('broadcast', { event: 'order_status_updated' }, (payload) => {
         console.log('⚡ [Realtime Tracking] Instant broadcast received:', payload)
         const newStatus = payload?.payload?.status
@@ -68,7 +76,7 @@ export function useTrackingLogic(token) {
         event: '*', 
         schema: 'public', 
         table: 'bookings',
-        filter: `tracking_token=eq.${token}`
+        filter: `tracking_token=eq.${cleanToken}`
       }, (payload) => {
         const newRow = payload?.new
         if (newRow?.status) {

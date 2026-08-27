@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { isValidUuid } from '../utils/urlHelper'
 
 export function useUserHistory(session) {
     const [orders, setOrders] = useState([])
@@ -16,7 +17,8 @@ export function useUserHistory(session) {
     const hasActiveOrder = activeOrders.length > 0
 
     useEffect(() => {
-        if (!session?.user) {
+        const userId = session?.user?.id
+        if (!userId || !isValidUuid(userId)) {
             setOrders([])
             setLoading(false)
             return
@@ -25,7 +27,6 @@ export function useUserHistory(session) {
         const fetchHistory = async () => {
             try {
                 setLoading(true)
-                // Corrected: Use 'user_id' instead of 'customer_id' as per schema
                 const { data, error } = await supabase
                     .from('bookings')
                     .select(`
@@ -39,7 +40,7 @@ export function useUserHistory(session) {
                             menu_items (id, name, price)
                         )
                     `)
-                    .eq('user_id', session.user.id)
+                    .eq('user_id', userId)
                     .order('created_at', { ascending: false })
 
                 if (error) throw error
@@ -55,14 +56,15 @@ export function useUserHistory(session) {
 
         fetchHistory()
 
-        // Realtime subscription for updates
+        // Realtime subscription for updates with unique channel ID
+        const channelId = `user-bookings-history-${userId.slice(0, 8)}-${Math.random().toString(36).slice(2, 6)}`
         const subscription = supabase
-            .channel('public:bookings:history')
+            .channel(channelId)
             .on('postgres_changes', { 
                 event: '*', 
                 schema: 'public', 
                 table: 'bookings',
-                filter: `user_id=eq.${session.user.id}`
+                filter: `user_id=eq.${userId}`
             }, (payload) => {
                 // Determine action
                 if (payload.eventType === 'INSERT') {

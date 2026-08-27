@@ -62,3 +62,23 @@ export function safeCssUrl(url) {
   const clean = url.trim().replace(/"/g, '\\"');
   return `url("${clean}")`;
 }
+
+export const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Checks if a value is a valid UUID string, rejecting 'null', 'undefined', objects, and malformed strings.
+ */
+export function isValidUuid(val) {
+  if (!val || typeof val !== 'string') return false;
+  const trimmed = val.trim();
+  if (trimmed === 'null' || trimmed === 'undefined' || trimmed === '[object Object]') return false;
+  return UUID_REGEX.test(trimmed);
+}
+
+/**
+ * Returns the UUID string if valid, otherwise returns null.
+ */
+export function safeUuid(val) {
+  return isValidUuid(val) ? val.trim() : null;
+}
+

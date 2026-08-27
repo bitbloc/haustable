@@ -11,6 +11,7 @@ import QRCode from 'qrcode'
 import { LogOut, QrCode, Coins, Award, Clock, ChevronRight, User, Phone, LogIn, Sparkles, ShieldCheck, Edit2, Check, X, Calendar, UserCheck, Gift, ArrowUpRight } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { isValidUuid } from '../utils/urlHelper'
 import { DEFAULT_CRM_SETTINGS, DEFAULT_CRM_TIERS, parseTiersConfig, getTierVisualTheme, calculateMemberTier } from '../utils/crmHelper'
 
 export default function MemberCard() {
@@ -187,7 +188,8 @@ export default function MemberCard() {
 
     // Realtime live update subscription for member profile and bookings (silent refresh without full-page spinner)
     useEffect(() => {
-        const targetId = user?.id || profile?.id;
+        const rawTargetId = user?.id || profile?.id;
+        const targetId = (rawTargetId && isValidUuid(rawTargetId)) ? rawTargetId : null;
         if (!targetId) return;
 
         const channel = supabase

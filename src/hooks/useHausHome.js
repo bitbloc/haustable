@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useLanguage } from '../context/LanguageContext'
 import { useBookingContext } from '../context/BookingContext'
+import { isValidUuid } from '../utils/urlHelper'
 
 export const useHausHome = (session) => {
     const { t } = useLanguage()
@@ -89,7 +90,8 @@ export const useHausHome = (session) => {
 
     // Effect: Fetch Profile & Role + Realtime
     useEffect(() => {
-        if (!session?.user) {
+        const userId = session?.user?.id
+        if (!userId || !isValidUuid(userId)) {
             setUserRole(null)
             setProfile(null)
             return
@@ -100,12 +102,12 @@ export const useHausHome = (session) => {
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('*')
-                    .eq('id', session.user.id)
+                    .eq('id', userId)
                     .single()
                 
-                if (data) {
+                if (data && !error) {
                     setProfile(data)
-                    setUserRole(data.role || 'customer')
+                    if (data.role) setUserRole(data.role)
                 }
             } catch (err) {
                 console.error("Error fetching home user profile:", err)
@@ -116,12 +118,12 @@ export const useHausHome = (session) => {
 
         // Realtime subscription on user profile (for live xhaus_balance, tier, etc.)
         const profileSub = supabase
-            .channel(`home_profile_${session.user.id}`)
+            .channel(`home_profile_${userId}`)
             .on('postgres_changes', { 
                 event: '*', 
                 schema: 'public', 
                 table: 'profiles', 
-                filter: `id=eq.${session.user.id}` 
+                filter: `id=eq.${userId}` 
             }, (payload) => {
                 if (payload.new) {
                     setProfile(payload.new)

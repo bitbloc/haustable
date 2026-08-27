@@ -27,13 +27,15 @@ serve(async (req) => {
     let token;
     try {
       const body = await req.json();
-      token = body.token;
+      token = typeof body.token === 'string' ? body.token.trim() : body.token;
     } catch {
       throw new Error("Invalid request body");
     }
 
-    if (!token) {
-      return new Response(JSON.stringify({ error: "Token is required", code: "MISSING_TOKEN" }), {
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!token || token === "null" || token === "undefined" || !UUID_REGEX.test(token)) {
+      return new Response(JSON.stringify({ error: "ข้อมูลไม่ถูกต้อง (Invalid Token)", code: "INVALID_TOKEN" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

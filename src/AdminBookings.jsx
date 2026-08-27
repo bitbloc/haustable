@@ -8,6 +8,7 @@ import { formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime, getThaiDate } f
 import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
 import { parseTableTransferInfo } from './utils/tableTransferHelper'
+import { isValidUuid } from './utils/urlHelper'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
@@ -172,7 +173,7 @@ export default function AdminBookings() {
             if (bookingsError) throw bookingsError
 
             // 2. Fetch Profiles for display name and phone
-            const userIds = [...new Set((bookingsData || []).map(b => b.user_id).filter(Boolean))]
+            const userIds = [...new Set((bookingsData || []).map(b => b.user_id).filter(id => id && isValidUuid(id)))]
             let profilesMap = {}
 
             if (userIds.length > 0) {
