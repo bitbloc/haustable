@@ -94,50 +94,30 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             {/* 1. Primary Service Dials (Full Width Stack) */}
             <div className="flex flex-col w-full divide-y divide-[var(--color-hallmark-rule)]">
                 {primaryActions.map((act) => {
-                    const dialContent = (
-                        <div className="flex items-center justify-between w-full p-4">
-                            <div className="flex items-center gap-3.5 sm:gap-4 flex-grow min-w-0 pr-3">
-                                {/* Dieter Rams Precision Rotary Dial */}
-                                <div className="relative flex items-center justify-center w-10 h-10 border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex-shrink-0 transition-transform group-hover:scale-105">
-                                    <div 
-                                        className="w-3.5 h-3.5 rounded-full transition-all duration-300"
-                                        style={{
-                                            backgroundColor: act.isOpen ? 'oklch(64% 0.22 140)' : 'oklch(60% 0.005 70)',
-                                            boxShadow: act.isOpen ? '0 0 10px rgba(16,185,129,0.7)' : 'none'
-                                        }} 
-                                    />
-                                    {/* Dial rotary marker notch */}
-                                    <div 
-                                        className="absolute top-1 w-0.5 h-2 bg-[var(--color-hallmark-ink-muted)] transform origin-bottom transition-transform duration-300" 
-                                        style={{
-                                            transform: act.isOpen ? 'rotate(45deg)' : 'rotate(0deg)'
-                                        }} 
-                                    />
-                                </div>
-
-                                <div className="flex flex-col text-left min-w-0">
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
-                                            {act.num} // {act.labelEn}
-                                        </span>
-                                    </div>
-                                    <span className="font-bold text-[15px] sm:text-[16px] text-[var(--color-hallmark-ink)] leading-snug mt-0.5 truncate">
-                                        {act.label}
-                                    </span>
-                                    <span className="text-[11px] text-[var(--color-hallmark-ink-muted)] leading-tight mt-0.5 line-clamp-1">
-                                        {act.desc}
+                    const rowContent = (
+                        <div className="flex items-center justify-between w-full p-4 sm:p-4.5">
+                            <div className="flex flex-col text-left min-w-0 pr-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="font-mono text-[10px] sm:text-[11px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
+                                        {act.num} // {act.labelEn}
                                     </span>
                                 </div>
+                                <span className="font-bold text-[16px] sm:text-[17px] text-[var(--color-hallmark-ink)] leading-snug mt-0.5 truncate">
+                                    {act.label}
+                                </span>
+                                <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-tight mt-0.5 line-clamp-1">
+                                    {act.desc}
+                                </span>
                             </div>
 
                             {/* Action CTA indicator */}
                             <div className="flex items-center flex-shrink-0">
                                 {act.isOpen ? (
-                                    <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] px-2.5 py-1 border border-[var(--color-hallmark-rule)] group-hover:bg-[var(--color-hallmark-ink)] group-hover:text-[var(--color-hallmark-paper)] transition-all">
+                                    <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink)] px-3 py-1.5 border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] group-hover:bg-[var(--color-hallmark-ink)] group-hover:text-[var(--color-hallmark-paper)] group-hover:border-[var(--color-hallmark-ink)] transition-all">
                                         [ ENGAGE ➔ ]
                                     </span>
                                 ) : (
-                                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[var(--color-accent-red)] text-white">
+                                    <span className="font-mono text-[10px] font-bold px-2.5 py-1 bg-[var(--color-accent-red)] text-white">
                                         OFFLINE
                                     </span>
                                 )}
@@ -156,7 +136,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                                 !act.isOpen ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
                             }`}
                         >
-                            {dialContent}
+                            {rowContent}
                         </Link>
                     )
                 })}
