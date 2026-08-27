@@ -20,6 +20,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             labelEn: 'Table Booking',
             desc: 'จองโต๊ะล่วงหน้า เลือกลาน/โซน มัดจำหักเป็นเครดิต 100%',
             path: '/booking',
+            cta: 'จองเลย',
             statusText: tableStatus.isOpen ? 'เปิดรับจองโต๊ะออนไลน์' : 'ปิดรับจองชั่วคราว',
             isOpen: tableStatus.isOpen,
             accent: 'var(--color-brand)'
@@ -31,6 +32,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             labelEn: 'Order Pickup',
             desc: 'สั่งล่วงหน้า เลือกเวลารับ จัดเตรียมสดใหม่พร้อมรับหน้าร้าน',
             path: '/pickup',
+            cta: 'สั่งเลย',
             statusText: pickupStatus.isOpen ? 'สั่งล่วงหน้ารับหน้าร้าน' : 'บริการปิดชั่วคราว',
             isOpen: pickupStatus.isOpen,
             accent: 'var(--color-brand)'
@@ -42,6 +44,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             labelEn: 'Craft & Retail Store',
             desc: 'เครื่องแกง น้ำพริก สินค้าพรีเมียม สั่งจัดส่งทั่วประเทศ',
             path: '/hausmade',
+            cta: 'ซื้อสินค้า',
             statusText: hausmadeStatus.isOpen ? 'ช้อปออนไลน์ จัดส่งทั่วไทย' : 'บริการปิดชั่วคราว',
             isOpen: hausmadeStatus.isOpen,
             accent: 'oklch(52% 0.16 28)'
@@ -87,7 +90,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                     [ CONTROL PANEL // SERVICES ]
                 </span>
                 <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                    SELECT SERVICE TO ENGAGE
+                    SELECT SERVICE // เลือกบริการ
                 </span>
             </div>
 
@@ -114,7 +117,7 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                             <div className="flex items-center flex-shrink-0">
                                 {act.isOpen ? (
                                     <span className="font-mono text-[11px] font-bold text-[var(--color-hallmark-ink)] px-3 py-1.5 border border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] group-hover:bg-[var(--color-hallmark-ink)] group-hover:text-[var(--color-hallmark-paper)] group-hover:border-[var(--color-hallmark-ink)] transition-all">
-                                        [ ENGAGE ➔ ]
+                                        [ {act.cta} ➔ ]
                                     </span>
                                 ) : (
                                     <span className="font-mono text-[10px] font-bold px-2.5 py-1 bg-[var(--color-accent-red)] text-white">

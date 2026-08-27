@@ -344,7 +344,7 @@ export default function Home({ session }) {
                     <div className="w-full bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-xl overflow-hidden p-4 flex flex-col gap-3 font-[var(--font-body)]">
                         <div className="flex items-center justify-between border-b border-[var(--color-hallmark-rule)] pb-2">
                             <span className="font-mono text-[11px] font-black text-[var(--color-hallmark-ink)] uppercase tracking-wider">
-                                [ 02 // HOW TO ENGAGE ]
+                                [ 02 // HOW IT WORKS ]
                             </span>
                             <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
                                 4 SIMPLE STEPS
