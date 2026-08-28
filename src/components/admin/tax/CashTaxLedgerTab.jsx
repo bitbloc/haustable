@@ -226,6 +226,9 @@ export default function CashTaxLedgerTab({
                 const dateStr = getLocalDateString(b.booking_time || b.created_at || b.booking_date);
                 const docNo = b.order_number || b.invoice_number || `POS-${(b.id ? String(b.id).slice(0, 8) : String(idx + 1).padStart(4, '0'))}`;
                 const desc = getBookingTitle(b);
+                const hasSlip = !!(b.payment_slip_url || b.slip_url);
+                const proofUrl = b.payment_slip_url || b.slip_url || null;
+                const proofType = hasSlip ? 'สลิปโอนเงิน' : 'ใบเสร็จ POS';
 
                 return {
                     id: `rev_${b.id || idx}`,
@@ -238,13 +241,25 @@ export default function CashTaxLedgerTab({
                     inAmount: total,
                     outAmount: 0,
                     vatAmount: vatAmt,
-                    hasProof: !!(b.slip_url || b.payment_slip_url || b.order_number),
-                    proofUrl: b.slip_url || b.payment_slip_url || null,
+                    hasProof: true,
+                    proofType: proofType,
+                    proofUrl: proofUrl,
                     isDeductible: true,
                     referenceType: 'POS_BILL'
                 };
             });
     }, [allYearBookings, periodMode, selectedDate, selectedMonth, selectedYear, isVatRegistered]);
+
+    // Helper: Determine expense proof document type
+    const getExpenseProofType = (e) => {
+        if (e.doc_type === 'tax_invoice') return 'ใบกำกับภาษี';
+        if (e.doc_type === 'cash_bill') return 'บิลเงินสด';
+        if (e.doc_type === 'slip') return 'สลิปโอนเงิน';
+        if (e.doc_type === 'receipt_voucher') return 'ใบสำคัญจ่าย';
+        if (e.receipt_number) return `ใบเสร็จ (${e.receipt_number})`;
+        if (e.receipt_url || e.image_url) return 'ใบเสร็จรับเงิน';
+        return 'บิลเงินสด';
+    };
 
     // 2. Process Expense Items (Outflow from Store Expenses / Makro / Utilities)
     const expenseItems = useMemo(() => {
@@ -268,6 +283,8 @@ export default function CashTaxLedgerTab({
                 const dateStr = getLocalDateString(e.expense_date || e.created_at);
                 const docNo = e.receipt_number || e.invoice_number || `EXP-${String(e.id).slice(0, 8)}`;
                 const catLabel = getCleanCategoryLabel(e.category) || 'ต้นทุนสินค้าและค่าใช้จ่ายดำเนินงาน';
+                const proofType = getExpenseProofType(e);
+                const proofUrl = e.receipt_url || e.image_url || null;
 
                 return {
                     id: `exp_${e.id}`,
@@ -280,8 +297,9 @@ export default function CashTaxLedgerTab({
                     inAmount: 0,
                     outAmount: total,
                     vatAmount: vatAmt,
-                    hasProof: !!(e.receipt_url || e.image_url),
-                    proofUrl: e.receipt_url || e.image_url || null,
+                    hasProof: true,
+                    proofType: proofType,
+                    proofUrl: proofUrl,
                     isDeductible: e.is_tax_deductible !== false,
                     referenceType: 'EXPENSE_DOC'
                 };
@@ -376,7 +394,7 @@ export default function CashTaxLedgerTab({
 
     // Export CSV Handler
     const handleExportCsv = () => {
-        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'เลขที่เอกสาร', 'ประเภท', 'รายการ', 'หมวดหมู่', 'รายรับ (บาท)', 'รายจ่าย (บาท)', 'ยอดคงเหลือสะสม (บาท)', 'VAT 7%', 'สถานะหลักฐาน'];
+        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'เลขที่เอกสาร', 'ประเภท', 'รายการ', 'หมวดหมู่', 'รายรับ (บาท)', 'รายจ่าย (บาท)', 'ยอดคงเหลือสะสม (บาท)', 'VAT 7%', 'เอกสารหลักฐานอ้างอิง'];
         const rows = ledgerWithRunningBalance.map((item, idx) => [
             idx + 1,
             item.date,
@@ -388,7 +406,7 @@ export default function CashTaxLedgerTab({
             item.outAmount ? Number(item.outAmount).toFixed(2) : '0.00',
             item.runningBalance !== undefined ? Number(item.runningBalance).toFixed(2) : '0.00',
             item.vatAmount ? Number(item.vatAmount).toFixed(2) : '0.00',
-            item.hasProof ? 'เอกสารสมบูรณ์' : 'ไม่มีหลักฐานแนบ'
+            `"${item.proofType || 'ใบเสร็จรับเงิน'}"`
         ]);
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -740,15 +758,24 @@ export default function CashTaxLedgerTab({
                                             {item.proofUrl ? (
                                                 <button
                                                     onClick={() => setPreviewImage(item.proofUrl)}
-                                                    className="inline-flex items-center gap-1 text-emerald-700 hover:text-emerald-900 text-[11px] font-bold cursor-pointer"
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 text-[11px] font-bold cursor-pointer transition-colors"
+                                                    title="คลิกเพื่อดูภาพหลักฐาน / สลิปโอน"
                                                 >
-                                                    <CheckCircle2 size={13} />
-                                                    <span>ดูหลักฐาน</span>
+                                                    <CheckCircle2 size={12} className="text-emerald-600" />
+                                                    <span>{item.proofType || 'ดูหลักฐาน'}</span>
+                                                </button>
+                                            ) : item.referenceType === 'POS_BILL' && item.rawBooking ? (
+                                                <button
+                                                    onClick={() => setSelectedBillForDetail(item.rawBooking)}
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-100 text-zinc-800 border border-zinc-300 hover:bg-zinc-200 text-[11px] font-bold cursor-pointer transition-colors"
+                                                    title="คลิกเพื่อดูใบเสร็จรับเงิน POS"
+                                                >
+                                                    <FileText size={12} className="text-zinc-600" />
+                                                    <span>{item.proofType || 'ใบเสร็จ POS'}</span>
                                                 </button>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1 text-[var(--color-muted)] text-[10px]">
-                                                    <AlertCircle size={12} className="text-amber-500" />
-                                                    <span>ไม่มีแนบ</span>
+                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-zinc-50 text-zinc-600 border border-zinc-200 text-[10px] font-mono">
+                                                    <span>{item.proofType || 'บิลเงินสด'}</span>
                                                 </span>
                                             )}
                                         </td>

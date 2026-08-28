@@ -59,16 +59,16 @@ export default function CashTaxLedgerPrintView({
     const netProfit = grandRevenue - grandExpense;
     const bahtWords = thaiBahtText(netProfit);
 
-    // Dynamic A4 Smart Pagination:
-    // Single page mode: Fits up to 24 rows + financial summary + signatures seamlessly on 1 page!
-    // Multi-page mode: Normal pages fit up to 30 rows; Last page fits up to 20 rows + summary + signatures.
+    // Dynamic A4 Smart Pagination (Calibrated for Standard A4 Height):
+    // Single page mode: Fits up to 28 rows + financial summary + signatures seamlessly on 1 single sheet!
+    // Multi-page mode: Normal pages fit up to 38 rows; Last page fits up to 24 rows + summary + signatures.
     const pages = React.useMemo(() => {
         if (!recordsWithBalance || recordsWithBalance.length === 0) return [[]];
 
         const totalCount = recordsWithBalance.length;
-        const ROWS_SINGLE_PAGE = 24;
-        const ROWS_NORMAL = 30;
-        const ROWS_LAST = 20;
+        const ROWS_SINGLE_PAGE = 28;
+        const ROWS_NORMAL = 38;
+        const ROWS_LAST = 24;
 
         // 1. Single Page: Everything fits on 1 sheet
         if (totalCount <= ROWS_SINGLE_PAGE) {
@@ -77,7 +77,6 @@ export default function CashTaxLedgerPrintView({
 
         // 2. Exactly 2 Pages: Balanced distribution so both pages look filled & proportional
         if (totalCount <= (ROWS_NORMAL + ROWS_LAST)) {
-            // Allocate at most ROWS_LAST to page 2, and balance the rest
             const page2Count = Math.min(ROWS_LAST, Math.max(Math.ceil(totalCount / 2), totalCount - ROWS_NORMAL));
             const page1Count = totalCount - page2Count;
             return [
@@ -86,7 +85,7 @@ export default function CashTaxLedgerPrintView({
             ];
         }
 
-        // 3. 3+ Pages: Fill normal pages, and balance the last 2 pages to avoid orphan rows
+        // 3. 3+ Pages: Fill normal pages with 38 rows, and balance the last 2 pages to avoid orphan rows
         const pagesList = [];
         let remaining = [...recordsWithBalance];
 
@@ -106,7 +105,7 @@ export default function CashTaxLedgerPrintView({
                 break;
             }
 
-            // Normal full page
+            // Normal full page (38 rows)
             pagesList.push(remaining.slice(0, ROWS_NORMAL));
             remaining = remaining.slice(ROWS_NORMAL);
         }
@@ -328,16 +327,16 @@ export default function CashTaxLedgerPrintView({
                                     <table className="w-full text-left border-collapse text-[10px]">
                                         <thead>
                                             <tr className="bg-zinc-100 border-b border-zinc-900 font-bold text-zinc-900 text-center">
-                                                <th className="p-1.5 border-r border-zinc-300 w-8">ลำดับ</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-18">วัน/เดือน/ปี</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-24">เลขที่เอกสาร</th>
-                                                <th className="p-1.5 border-r border-zinc-300 text-left pl-2">รายการ</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-22 text-left pl-2">หมวดหมู่</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินรับ</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินจ่าย</th>
-                                                <th className="p-1.5 border-r border-zinc-300 w-22 text-right pr-2">ยอดคงเหลือ</th>
-                                                {isVatRegistered && <th className="p-1.5 border-r border-zinc-300 w-16 text-right pr-1.5">VAT</th>}
-                                                <th className="p-1.5 w-14">หลักฐาน</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-8">ลำดับ</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-18">วัน/เดือน/ปี</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-24">เลขที่เอกสาร</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 text-left pl-2">รายการ</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-22 text-left pl-2">หมวดหมู่</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินรับ</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินจ่าย</th>
+                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-22 text-right pr-2">ยอดคงเหลือ</th>
+                                                {isVatRegistered && <th className="py-1.5 px-1 border-r border-zinc-300 w-16 text-right pr-1.5">VAT</th>}
+                                                <th className="py-1.5 px-1 w-14">หลักฐาน</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -345,37 +344,37 @@ export default function CashTaxLedgerPrintView({
                                                 const globalIndex = pageStartIdx + rIdx + 1;
                                                 return (
                                                     <tr key={row.id} className="border-b border-zinc-200 hover:bg-zinc-50 leading-tight">
-                                                        <td className="p-1 border-r border-zinc-200 text-center font-mono text-zinc-600">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-center font-mono text-zinc-600">
                                                             {globalIndex}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-center font-mono text-zinc-800">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-center font-mono text-zinc-800">
                                                             {row.date}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 font-mono text-zinc-900 truncate max-w-[90px]">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 font-mono text-zinc-900 truncate max-w-[90px]">
                                                             {row.docNo}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-zinc-900 truncate max-w-[150px] pl-1.5 font-medium">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-zinc-900 truncate max-w-[150px] pl-1.5 font-medium">
                                                             {row.title}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-zinc-600 text-[9px] truncate max-w-[85px] pl-1.5">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-zinc-600 text-[9px] truncate max-w-[85px] pl-1.5">
                                                             {row.category}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
                                                             {row.inAmount > 0 ? Number(row.inAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
                                                             {row.outAmount > 0 ? Number(row.outAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                                         </td>
-                                                        <td className="p-1 border-r border-zinc-200 text-right font-mono font-semibold text-zinc-700 pr-1.5">
+                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-semibold text-zinc-700 pr-1.5">
                                                             {Number(row.runningBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                         </td>
                                                         {isVatRegistered && (
-                                                            <td className="p-1 border-r border-zinc-200 text-right font-mono text-zinc-500 pr-1 text-[9px]">
+                                                            <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono text-zinc-500 pr-1 text-[9px]">
                                                                 {row.vatAmount > 0 ? Number(row.vatAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                                             </td>
                                                         )}
-                                                        <td className="p-1 text-center font-mono text-[9px] text-zinc-600">
-                                                            {row.hasProof ? 'สมบูรณ์' : 'ไม่มีแนบ'}
+                                                        <td className="py-1.5 px-1 text-center font-mono text-[9px] text-zinc-800 font-medium">
+                                                            {row.proofType || 'ใบเสร็จรับเงิน'}
                                                         </td>
                                                     </tr>
                                                 );
