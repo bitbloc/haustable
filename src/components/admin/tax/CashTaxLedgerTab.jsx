@@ -155,27 +155,53 @@ export default function CashTaxLedgerTab({
         }
     };
 
-    // Helper: Extract accurate booking revenue total
+    // Helper: Extract accurate booking revenue total (Net after CRM, Member Tier, xHaus & Coupon Discounts)
     const calculateBookingTotal = (b) => {
-        if (b.total_amount !== undefined && b.total_amount !== null && !isNaN(Number(b.total_amount)) && Number(b.total_amount) > 0) {
-            return Number(b.total_amount);
-        }
-        if (b.total_price !== undefined && b.total_price !== null && !isNaN(Number(b.total_price)) && Number(b.total_price) > 0) {
-            return Number(b.total_price);
-        }
-        if (b.final_total_price !== undefined && b.final_total_price !== null && !isNaN(Number(b.final_total_price)) && Number(b.final_total_price) > 0) {
-            return Number(b.final_total_price);
-        }
-        // Fallback: calculate from order_items
+        // 1. Calculate raw order items subtotal if available
+        let subtotal = 0;
         if (b.order_items && Array.isArray(b.order_items) && b.order_items.length > 0) {
-            const itemSum = b.order_items.reduce((acc, it) => {
+            subtotal = b.order_items.reduce((acc, it) => {
                 const price = Number(it.price_at_time !== undefined ? it.price_at_time : (it.price || it.menu_items?.price || 0));
                 const qty = Number(it.quantity || 1);
                 return acc + (price * qty);
             }, 0);
-            const discount = Number(b.discount_amount || 0) + Number(b.xhaus_discount || 0);
-            return Math.max(0, itemSum - discount);
         }
+
+        // 2. Identify all CRM & Promotion Discounts
+        const discountAmt = Number(b.discount_amount || 0);
+        const xhausDisc = Number(b.xhaus_discount || 0);
+        const totalDiscount = Math.max(discountAmt, xhausDisc > 0 ? (discountAmt >= xhausDisc ? discountAmt : discountAmt + xhausDisc) : discountAmt);
+
+        // 3. Evaluate total_amount from DB (which is typically already net of discount)
+        const bookedTotal = (b.total_amount !== undefined && b.total_amount !== null && !isNaN(Number(b.total_amount)))
+            ? Number(b.total_amount)
+            : null;
+
+        if (bookedTotal !== null && bookedTotal > 0) {
+            // Guard against edge cases where total_amount was stored before applying discount
+            if (totalDiscount > 0 && subtotal > 0 && Math.abs(bookedTotal - subtotal) < 2) {
+                return Math.max(0, subtotal - totalDiscount);
+            }
+            return bookedTotal;
+        }
+
+        // 4. Fallback: Subtotal minus full CRM discount
+        if (subtotal > 0) {
+            return Math.max(0, subtotal - totalDiscount);
+        }
+
+        if (b.total_price !== undefined && b.total_price !== null && !isNaN(Number(b.total_price)) && Number(b.total_price) > 0) {
+            const tp = Number(b.total_price);
+            if (totalDiscount > 0 && subtotal > 0 && Math.abs(tp - subtotal) < 2) {
+                return Math.max(0, tp - totalDiscount);
+            }
+            return tp;
+        }
+
+        if (b.final_total_price !== undefined && b.final_total_price !== null && !isNaN(Number(b.final_total_price)) && Number(b.final_total_price) > 0) {
+            return Number(b.final_total_price);
+        }
+
         return 0;
     };
 
@@ -374,6 +400,15 @@ export default function CashTaxLedgerTab({
         const totalExpenseCount = expenseItems.length;
         const proofHealthPercent = totalExpenseCount > 0 ? Math.round((verifiedExpenseCount / totalExpenseCount) * 100) : 100;
 
+        // Total CRM & Promo Discounts Deducted
+        const totalCrmDiscounts = incomeItems.reduce((acc, it) => {
+            const b = it.rawBooking;
+            if (!b) return acc;
+            const disc = Number(b.discount_amount || 0);
+            const xhaus = Number(b.xhaus_discount || 0);
+            return acc + Math.max(disc, xhaus > 0 ? (disc >= xhaus ? disc : disc + xhaus) : disc);
+        }, 0);
+
         return {
             totalRevenue,
             totalExpense,
@@ -388,7 +423,8 @@ export default function CashTaxLedgerTab({
             netVat,
             verifiedExpenseCount,
             totalExpenseCount,
-            proofHealthPercent
+            proofHealthPercent,
+            totalCrmDiscounts
         };
     }, [incomeItems, expenseItems]);
 
@@ -475,15 +511,19 @@ export default function CashTaxLedgerTab({
                 {/* Total Cash In (Revenue) */}
                 <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] p-4 space-y-1.5 shadow-2xs">
                     <div className="flex items-center justify-between text-[11px] font-mono text-[var(--color-neutral)] uppercase font-bold">
-                        <span>TOTAL CASH IN (รายรับ)</span>
+                        <span>TOTAL CASH IN (รายรับสุทธิ)</span>
                         <TrendingUp size={15} className="text-emerald-600" />
                     </div>
                     <div className="text-2xl font-bold font-mono text-emerald-800">
                         ฿{totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                     </div>
                     <div className="text-[10px] font-mono text-[var(--color-muted)] flex items-center justify-between">
-                        <span>ยอดขาย POS &amp; จองโต๊ะ:</span>
-                        <span className="font-bold text-[var(--color-ink)]">{incomeItems.length} รายการ</span>
+                        <span>บิลขาย ({incomeItems.length} รายการ):</span>
+                        {totals.totalCrmDiscounts > 0 ? (
+                            <span className="font-bold text-emerald-700">หักส่วนลด CRM -฿{totals.totalCrmDiscounts.toLocaleString()}</span>
+                        ) : (
+                            <span className="font-bold text-[var(--color-ink)]">ไม่มีส่วนลด</span>
+                        )}
                     </div>
                 </div>
 

@@ -415,15 +415,8 @@ export default function CashTaxLedgerPrintView({
                                             </div>
                                         </div>
 
-                                        {/* Tax Strategy Note */}
-                                        <div className="border border-zinc-300 p-2 bg-amber-50/50 text-[10px] text-zinc-700 leading-relaxed font-mono">
-                                            <span className="font-bold text-zinc-900">หมายเหตุทางภาษี (ภ.ง.ด.90/94 ม.40(8) บุคคลธรรมดา): </span>
-                                            รายจ่ายตามจริงที่นำมาหักลดหย่อนได้ต้องเป็นรายจ่ายที่เกี่ยวข้องกับการประกอบกิจการโดยตรง มีเอกสารหลักฐานระบุผู้รับเงินชัดเจน 
-                                            (เปรียบเทียบหักเหมา 60% = ฿{(grandRevenue * 0.6).toLocaleString('en-US', { minimumFractionDigits: 2 })})
-                                        </div>
-
                                         {/* Signatures Strip */}
-                                        <div className="grid grid-cols-2 gap-6 pt-4 border-t border-zinc-200 text-center text-xs">
+                                        <div className="grid grid-cols-2 gap-6 pt-5 border-t border-zinc-200 text-center text-xs">
                                             <div className="space-y-6">
                                                 <div className="border-b border-zinc-400 w-44 mx-auto"></div>
                                                 <div>
