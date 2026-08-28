@@ -137,36 +137,98 @@ export default function CashTaxLedgerTab({
         return 'รายการทั้งหมดตลอดกาล';
     }, [periodMode, selectedDate, selectedMonth, selectedYear]);
 
+    // Helper: Safe Local Date extraction (YYYY-MM-DD)
+    const getLocalDateString = (rawDate) => {
+        if (!rawDate) return '';
+        try {
+            if (typeof rawDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+                return rawDate;
+            }
+            const d = new Date(rawDate);
+            if (isNaN(d.getTime())) return String(rawDate).slice(0, 10);
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        } catch {
+            return String(rawDate).slice(0, 10);
+        }
+    };
+
+    // Helper: Extract accurate booking revenue total
+    const calculateBookingTotal = (b) => {
+        if (b.total_amount !== undefined && b.total_amount !== null && !isNaN(Number(b.total_amount)) && Number(b.total_amount) > 0) {
+            return Number(b.total_amount);
+        }
+        if (b.total_price !== undefined && b.total_price !== null && !isNaN(Number(b.total_price)) && Number(b.total_price) > 0) {
+            return Number(b.total_price);
+        }
+        if (b.final_total_price !== undefined && b.final_total_price !== null && !isNaN(Number(b.final_total_price)) && Number(b.final_total_price) > 0) {
+            return Number(b.final_total_price);
+        }
+        // Fallback: calculate from order_items
+        if (b.order_items && Array.isArray(b.order_items) && b.order_items.length > 0) {
+            const itemSum = b.order_items.reduce((acc, it) => {
+                const price = Number(it.price_at_time !== undefined ? it.price_at_time : (it.price || it.menu_items?.price || 0));
+                const qty = Number(it.quantity || 1);
+                return acc + (price * qty);
+            }, 0);
+            const discount = Number(b.discount_amount || 0) + Number(b.xhaus_discount || 0);
+            return Math.max(0, itemSum - discount);
+        }
+        return 0;
+    };
+
+    // Helper: Format in-store sales title (ยอดขายหน้าร้าน)
+    const getBookingTitle = (b) => {
+        const tableName = b.tables_layout?.table_name || b.table_name || b.table_number;
+        if (tableName) {
+            return `ยอดขายหน้าร้าน (โต๊ะ ${tableName})`;
+        }
+        if (b.pickup_contact_name) {
+            return `ยอดขายหน้าร้าน (รับกลับบ้าน - ${b.pickup_contact_name})`;
+        }
+        if (b.booking_type === 'pickup') {
+            return `ยอดขายหน้าร้าน (รับกลับบ้าน / Takeaway)`;
+        }
+        if (b.profiles?.display_name) {
+            return `ยอดขายหน้าร้าน (${b.profiles.display_name})`;
+        }
+        if (b.customer_name && b.customer_name !== 'Walk-in Customer' && b.customer_name !== 'Walk-in Guest') {
+            return `ยอดขายหน้าร้าน (${b.customer_name})`;
+        }
+        return `ยอดขายหน้าร้าน (POS Walk-in)`;
+    };
+
     // 1. Process Income Items (Inflow from Bookings / POS Bills)
     const incomeItems = useMemo(() => {
         return allYearBookings
             .filter(b => {
                 const s = String(b.status || '').toLowerCase();
-                const ps = String(b.payment_status || '').toLowerCase();
-                if (s === 'cancelled' || s === 'void' || s === 'voided' || s === 'deleted') return false;
-                if (ps !== 'paid' && s !== 'completed' && s !== 'seated') return false;
+                const isCancelled = ['cancelled', 'void', 'voided', 'deleted'].includes(s);
+                if (isCancelled) return false;
 
-                const rawDate = b.created_at || b.booking_date || '';
+                const dateStr = getLocalDateString(b.booking_time || b.created_at || b.booking_date);
+                if (!dateStr) return false;
+
                 if (periodMode === 'day') {
-                    return rawDate.startsWith(selectedDate);
+                    return dateStr === selectedDate;
                 } else if (periodMode === 'month') {
-                    return rawDate.startsWith(selectedMonth);
+                    return dateStr.startsWith(selectedMonth);
                 } else if (periodMode === 'year') {
-                    return rawDate.startsWith(selectedYear);
+                    return dateStr.startsWith(selectedYear);
                 }
                 return true;
             })
-            .map(b => {
-                const total = parseFloat(b.final_total_price || b.total_price || 0);
+            .map((b, idx) => {
+                const total = calculateBookingTotal(b);
                 const vatAmt = isVatRegistered ? (total * 7 / 107) : 0;
-                const dateStr = (b.created_at || b.booking_date || '').slice(0, 10);
-                const docNo = b.invoice_number || `POS-${String(b.id).slice(0, 8)}`;
-                const desc = b.table_name || b.table_number 
-                    ? `ยอดขายอาหารและเครื่องดื่ม (${b.table_name || `โต๊ะ ${b.table_number}`})` 
-                    : `ยอดขาย Takeaway / Online Order`;
+                const dateStr = getLocalDateString(b.booking_time || b.created_at || b.booking_date);
+                const docNo = b.order_number || b.invoice_number || `POS-${(b.id ? String(b.id).slice(0, 8) : String(idx + 1).padStart(4, '0'))}`;
+                const desc = getBookingTitle(b);
 
                 return {
-                    id: `rev_${b.id}`,
+                    id: `rev_${b.id || idx}`,
                     rawBooking: b,
                     date: dateStr,
                     docNo: docNo,
@@ -176,7 +238,7 @@ export default function CashTaxLedgerTab({
                     inAmount: total,
                     outAmount: 0,
                     vatAmount: vatAmt,
-                    hasProof: !!(b.slip_url || b.payment_slip_url),
+                    hasProof: !!(b.slip_url || b.payment_slip_url || b.order_number),
                     proofUrl: b.slip_url || b.payment_slip_url || null,
                     isDeductible: true,
                     referenceType: 'POS_BILL'
@@ -188,20 +250,22 @@ export default function CashTaxLedgerTab({
     const expenseItems = useMemo(() => {
         return expenses
             .filter(e => {
-                const rawDate = e.expense_date || e.created_at || '';
+                const dateStr = getLocalDateString(e.expense_date || e.created_at);
+                if (!dateStr) return false;
+
                 if (periodMode === 'day') {
-                    return rawDate.startsWith(selectedDate);
+                    return dateStr === selectedDate;
                 } else if (periodMode === 'month') {
-                    return rawDate.startsWith(selectedMonth);
+                    return dateStr.startsWith(selectedMonth);
                 } else if (periodMode === 'year') {
-                    return rawDate.startsWith(selectedYear);
+                    return dateStr.startsWith(selectedYear);
                 }
                 return true;
             })
             .map(e => {
                 const total = parseFloat(e.amount || 0);
                 const vatAmt = parseFloat(e.vat_amount || (e.has_vat ? (total * 7 / 107) : 0));
-                const dateStr = (e.expense_date || e.created_at || '').slice(0, 10);
+                const dateStr = getLocalDateString(e.expense_date || e.created_at);
                 const docNo = e.receipt_number || e.invoice_number || `EXP-${String(e.id).slice(0, 8)}`;
                 const catLabel = getCleanCategoryLabel(e.category) || 'ต้นทุนสินค้าและค่าใช้จ่ายดำเนินงาน';
 
@@ -255,6 +319,20 @@ export default function CashTaxLedgerTab({
         });
     }, [combinedLedger, auditFilter, searchQuery]);
 
+    // 5. Ledger with Cumulative Running Balance (ยอดคงเหลือสะสม)
+    const ledgerWithRunningBalance = useMemo(() => {
+        let currentRunning = 0;
+        return filteredLedger.map(item => {
+            const inVal = Number(item.inAmount || 0);
+            const outVal = Number(item.outAmount || 0);
+            currentRunning = currentRunning + inVal - outVal;
+            return {
+                ...item,
+                runningBalance: currentRunning
+            };
+        });
+    }, [filteredLedger]);
+
     // 5. Totals & Tax Strategy Calculations
     const totals = useMemo(() => {
         const totalRevenue = incomeItems.reduce((s, r) => s + r.inAmount, 0);
@@ -298,8 +376,8 @@ export default function CashTaxLedgerTab({
 
     // Export CSV Handler
     const handleExportCsv = () => {
-        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'เลขที่เอกสาร', 'ประเภท', 'รายการ', 'หมวดหมู่', 'รายรับ (บาท)', 'รายจ่าย (บาท)', 'VAT 7%', 'สถานะหลักฐาน'];
-        const rows = filteredLedger.map((item, idx) => [
+        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'เลขที่เอกสาร', 'ประเภท', 'รายการ', 'หมวดหมู่', 'รายรับ (บาท)', 'รายจ่าย (บาท)', 'ยอดคงเหลือสะสม (บาท)', 'VAT 7%', 'สถานะหลักฐาน'];
+        const rows = ledgerWithRunningBalance.map((item, idx) => [
             idx + 1,
             item.date,
             `"${item.docNo}"`,
@@ -308,6 +386,7 @@ export default function CashTaxLedgerTab({
             `"${item.category || ''}"`,
             item.inAmount ? Number(item.inAmount).toFixed(2) : '0.00',
             item.outAmount ? Number(item.outAmount).toFixed(2) : '0.00',
+            item.runningBalance !== undefined ? Number(item.runningBalance).toFixed(2) : '0.00',
             item.vatAmount ? Number(item.vatAmount).toFixed(2) : '0.00',
             item.hasProof ? 'เอกสารสมบูรณ์' : 'ไม่มีหลักฐานแนบ'
         ]);
@@ -336,9 +415,11 @@ export default function CashTaxLedgerTab({
                     <div className="text-xs text-[var(--color-neutral)] font-mono flex items-center gap-2 flex-wrap">
                         <span>รอบระยะเวลา: <strong className="text-[var(--color-ink)]">{activePeriodLabel}</strong></span>
                         <span>•</span>
-                        <span>ผู้เสียภาษี: <strong className="text-[var(--color-ink)]">{formatTaxId(companySettings.tax_id || '0105566012341')}</strong></span>
+                        <span>ผู้มีเงินได้ / ร้านค้า: <strong className="text-[var(--color-ink)]">{companySettings.tax_company_name || companySettings.company_name || 'ร้านในบ้าน นครพนม'}</strong></span>
                         <span>•</span>
-                        <span>สาขา: <strong className="text-[var(--color-ink)]">{formatBranch(companySettings.branch_number || '00000', companySettings.is_head_office !== 'false')}</strong></span>
+                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-[var(--color-ink)]">{formatTaxId(companySettings.tax_id || '1120100144907')}</strong></span>
+                        <span>•</span>
+                        <span>สถานะภาษี: <strong className="text-[var(--color-ink)]">{isVatRegistered ? '[จดทะเบียน VAT 7%]' : '[บุคคลธรรมดา (NON-VAT)]'}</strong></span>
                     </div>
                 </div>
 
@@ -604,15 +685,16 @@ export default function CashTaxLedgerTab({
                                 <th className="p-3 w-36">หมวดหมู่สรรพากร</th>
                                 <th className="p-3 w-28 text-right text-emerald-800 font-bold">รายรับ (บาท)</th>
                                 <th className="p-3 w-28 text-right text-rose-800 font-bold">รายจ่าย (บาท)</th>
+                                <th className="p-3 w-28 text-right text-[var(--color-ink)] font-bold">ยอดคงเหลือ</th>
                                 {isVatRegistered && <th className="p-3 w-24 text-right">VAT (7%)</th>}
-                                <th className="p-3 w-28 text-center">หลักฐานแนบ</th>
-                                <th className="p-3 w-16 text-center">ดูบิล</th>
+                                <th className="p-3 w-24 text-center">หลักฐานแนบ</th>
+                                <th className="p-3 w-14 text-center">ดูบิล</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-rule)]">
-                            {filteredLedger.length === 0 ? (
+                            {ledgerWithRunningBalance.length === 0 ? (
                                 <tr>
-                                    <td colSpan={isVatRegistered ? 10 : 9} className="p-10 text-center text-[var(--color-neutral)]">
+                                    <td colSpan={isVatRegistered ? 11 : 10} className="p-10 text-center text-[var(--color-neutral)]">
                                         <div className="space-y-1">
                                             <div className="text-sm font-bold font-mono text-[var(--color-ink)]">ไม่พบรายการเงินสดรับ-จ่ายในรอบระยะเวลานี้</div>
                                             <div className="text-xs text-[var(--color-muted)]">ลองปรับเลือกช่วงวันที่หรือเงื่อนไขการค้นหาใหม่</div>
@@ -620,7 +702,7 @@ export default function CashTaxLedgerTab({
                                     </td>
                                 </tr>
                             ) : (
-                                filteredLedger.map((item, idx) => (
+                                ledgerWithRunningBalance.map((item, idx) => (
                                     <tr key={item.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
                                         <td className="p-3 text-center text-[var(--color-muted)] font-mono text-[11px]">
                                             {idx + 1}
@@ -645,6 +727,9 @@ export default function CashTaxLedgerTab({
                                         </td>
                                         <td className="p-3 text-right font-bold font-mono text-rose-800">
                                             {item.outAmount > 0 ? item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                                        </td>
+                                        <td className="p-3 text-right font-bold font-mono text-[var(--color-ink)]">
+                                            {item.runningBalance !== undefined ? Number(item.runningBalance).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                         </td>
                                         {isVatRegistered && (
                                             <td className="p-3 text-right font-mono text-[var(--color-muted)] text-[11px]">
@@ -695,6 +780,9 @@ export default function CashTaxLedgerTab({
                                 <td className="p-3 text-right font-mono text-rose-800 text-sm">
                                     ฿{totals.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
+                                <td className="p-3 text-right font-mono text-[var(--color-ink)] text-sm">
+                                    ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </td>
                                 {isVatRegistered && (
                                     <td className="p-3 text-right font-mono text-[var(--color-ink)] text-xs">
                                         ฿{totals.netVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
@@ -714,7 +802,7 @@ export default function CashTaxLedgerTab({
                     periodDate={selectedDate}
                     filterMode={periodMode}
                     periodLabel={activePeriodLabel}
-                    records={filteredLedger}
+                    records={ledgerWithRunningBalance}
                     totals={totals}
                     companySettings={companySettings}
                     isVatRegistered={isVatRegistered}

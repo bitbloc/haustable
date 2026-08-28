@@ -283,26 +283,26 @@ export default function CashTaxLedgerPrintView({
                                     </div>
                                 </div>
 
-                                {/* 2. Business & Tax Registration Information */}
+                                {/* 2. Business & Tax Registration Information (Sole Proprietorship / Trade Name) */}
                                 <div className="grid grid-cols-2 gap-y-1 text-xs border border-zinc-300 p-2.5 mb-3 bg-zinc-50/50">
                                     <div>
-                                        <span className="text-zinc-500 font-medium">ชื่อผู้ประกอบการ / สถานประกอบการ: </span>
-                                        <span className="font-bold text-zinc-900">{companySettings.company_name || 'IN THE HAUS CO., LTD.'}</span>
+                                        <span className="text-zinc-500 font-medium">ชื่อผู้มีเงินได้ / ชื่อร้านค้า: </span>
+                                        <span className="font-bold text-zinc-900">{companySettings.tax_company_name || companySettings.company_name || 'ร้านในบ้าน นครพนม (IN THE HAUS)'}</span>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-zinc-500 font-medium">เลขประจำตัวผู้เสียภาษีอากร: </span>
+                                        <span className="text-zinc-500 font-medium">เลขประจำตัวผู้เสียภาษี: </span>
                                         <span className="font-mono font-bold text-zinc-900 tracking-wider">
-                                            {formatTaxId(companySettings.tax_id || '0105566012341')}
+                                            {formatTaxId(companySettings.tax_id || '1120100144907')}
                                         </span>
                                     </div>
                                     <div className="col-span-2">
                                         <span className="text-zinc-500 font-medium">ที่ตั้งสถานประกอบการ: </span>
-                                        <span className="text-zinc-800">{companySettings.company_address || '123/45 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110'}</span>
+                                        <span className="text-zinc-800">{companySettings.tax_address || companySettings.company_address || '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000'}</span>
                                     </div>
                                     <div>
-                                        <span className="text-zinc-500 font-medium">สถานะสาขา: </span>
+                                        <span className="text-zinc-500 font-medium">สถานะ: </span>
                                         <span className="font-mono font-bold text-zinc-900">
-                                            {formatBranch(companySettings.branch_number || '00000', companySettings.is_head_office !== 'false')}
+                                            {isVatRegistered ? '[จดทะเบียน VAT 7%]' : '[บุคคลธรรมดา / ไม่จดทะเบียนภาษีมูลค่าเพิ่ม]'}
                                         </span>
                                     </div>
                                     <div className="text-right font-mono text-[11px] text-zinc-500">
@@ -405,7 +405,7 @@ export default function CashTaxLedgerPrintView({
 
                                         {/* Tax Strategy Note */}
                                         <div className="border border-zinc-300 p-2 bg-amber-50/50 text-[10px] text-zinc-700 leading-relaxed font-mono">
-                                            <span className="font-bold text-zinc-900">หมายเหตุทางภาษี (ภ.ง.ด.90/94 ม.40(8)): </span>
+                                            <span className="font-bold text-zinc-900">หมายเหตุทางภาษี (ภ.ง.ด.90/94 ม.40(8) บุคคลธรรมดา): </span>
                                             รายจ่ายตามจริงที่นำมาหักลดหย่อนได้ต้องเป็นรายจ่ายที่เกี่ยวข้องกับการประกอบกิจการโดยตรง มีเอกสารหลักฐานระบุผู้รับเงินชัดเจน 
                                             (เปรียบเทียบหักเหมา 60% = ฿{(grandRevenue * 0.6).toLocaleString('en-US', { minimumFractionDigits: 2 })})
                                         </div>
@@ -424,8 +424,8 @@ export default function CashTaxLedgerPrintView({
                                             <div className="space-y-6">
                                                 <div className="border-b border-zinc-400 w-44 mx-auto"></div>
                                                 <div>
-                                                    <div className="font-bold text-zinc-900">(........................................................)</div>
-                                                    <div className="text-zinc-500 text-[11px] mt-0.5">ผู้มีเงินได้ / กรรมการผู้จัดการ</div>
+                                                    <div className="font-bold text-zinc-900">({companySettings.tax_signature_name || '........................................................'})</div>
+                                                    <div className="text-zinc-500 text-[11px] mt-0.5">ผู้มีเงินได้ / เจ้าของสถานประกอบการ</div>
                                                     <div className="text-zinc-400 text-[10px] font-mono">วันที่ .......... / .......... / ..........</div>
                                                 </div>
                                             </div>
