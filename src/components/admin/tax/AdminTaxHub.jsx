@@ -13,7 +13,8 @@ import {
     BookOpen,
     ShoppingCart,
     ShieldAlert,
-    Mail
+    Mail,
+    Scale
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
@@ -24,6 +25,7 @@ import SalesTaxReportTab from './SalesTaxReportTab';
 import WithholdingTaxTab from './WithholdingTaxTab';
 import TaxSettingsTab from './TaxSettingsTab';
 import ExpensesTab from './ExpensesTab';
+import CashTaxLedgerTab from './CashTaxLedgerTab';
 import TaxInvoiceModal from './TaxInvoiceModal';
 import TaxInvoicePrintView from './TaxInvoicePrintView';
 import ExpenseModal from './ExpenseModal';
@@ -406,7 +408,19 @@ export default function AdminTaxHub() {
                 </div>
 
                 {/* 2. Structural Tab Navigation Strip */}
-                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] grid grid-cols-2 sm:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-[var(--color-rule)] font-mono text-xs font-bold">
+                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0 divide-[var(--color-rule)] font-mono text-xs font-bold">
+                    <button
+                        onClick={() => setActiveTab('cash_ledger')}
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
+                            activeTab === 'cash_ledger' 
+                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
+                                : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
+                        }`}
+                    >
+                        <Scale size={14} className="text-amber-500" />
+                        <span>CASH &amp; TAX P&amp;L (เงินสดรับ-จ่าย)</span>
+                    </button>
+
                     <button
                         onClick={() => setActiveTab('sales_tax')}
                         className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
@@ -457,7 +471,7 @@ export default function AdminTaxHub() {
 
                     <button
                         onClick={() => setActiveTab('settings')}
-                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 col-span-2 sm:col-span-1 ${
+                        className={`p-3 text-center transition-colors cursor-pointer flex items-center justify-center gap-2 ${
                             activeTab === 'settings' 
                                 ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' 
                                 : 'bg-[var(--color-paper)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]'
@@ -469,6 +483,23 @@ export default function AdminTaxHub() {
                 </div>
 
                 {/* 3. SUB-TAB VIEWPORT */}
+
+                {/* TAB 0: CASH & TAX P&L (รายงานเงินสดรับ-จ่าย ตาม ม.161) */}
+                {activeTab === 'cash_ledger' && (
+                    <CashTaxLedgerTab
+                        companySettings={companySettings}
+                        allYearBookings={allYearBookings}
+                        onOpenCreateExpense={() => {
+                            setEditingExpense(null);
+                            setShowExpenseModal(true);
+                        }}
+                        onOpenCreateInvoice={() => {
+                            setEditingInvoice(null);
+                            setSelectedBookingForInvoice(null);
+                            setShowInvoiceModal(true);
+                        }}
+                    />
+                )}
 
                 {/* TAB 1: INVOICES ARCHIVE LEDGER */}
                 {activeTab === 'invoices' && (
