@@ -342,12 +342,6 @@ input[type="range"]::-moz-range-thumb {
   overscroll-behavior: contain;
 }
 
-/* Fast image decoding and paint isolation */
-.pos-view-container img,
-.cfd-container img {
-  content-visibility: auto;
-}
-
 /* Sonner Toasts Styling for 1920x1080 POS */
 [data-sonner-toaster] {
   font-family: 'IBM Plex Sans Thai', 'Inter', sans-serif !important;
