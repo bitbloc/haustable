@@ -161,9 +161,14 @@ export default function POSDashboard() {
         }
     };
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
-    const [activeSlipType, setActiveSlipType] = useState('billing');
-    const [viewSlipImageUrl, setViewSlipImageUrl] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
+    const refreshDebounceRef = useRef(null);
+    const triggerDebouncedRefresh = useCallback(() => {
+        if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
+        refreshDebounceRef.current = setTimeout(() => {
+            setRefreshKey(prev => prev + 1);
+        }, 350);
+    }, []);
 
     // Move / Merge / Split States
     const [showMoveModal, setShowMoveModal] = useState(false);
@@ -928,14 +933,14 @@ export default function POSDashboard() {
                 console.log('⚡ [POS Lifecycle] App foregrounded. Synchronizing data & audio...');
                 unlockAudioEngine();
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             }
         };
 
         const handleOnlineStatus = () => {
             console.log('⚡ [POS Network] Network restored online. Synchronizing...');
             checkPendingOrders();
-            setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
         };
 
         document.addEventListener('visibilitychange', handleForegroundWakeup);
@@ -1110,7 +1115,7 @@ export default function POSDashboard() {
                 }
 
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             })
             .on('broadcast', { event: 'call_staff' }, async ({ payload }) => {
                 console.log('⚡ [Realtime POS] Instant broadcast call_staff received:', payload);
@@ -1140,7 +1145,7 @@ export default function POSDashboard() {
                     playStaffCallAlert(callStaffKey);
                 }
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             })
             .on('broadcast', { event: 'call_bill' }, async ({ payload }) => {
                 console.log('⚡ [Realtime POS] Instant broadcast call_bill received:', payload);
@@ -1170,7 +1175,7 @@ export default function POSDashboard() {
                     playBillAlert(callBillKey);
                 }
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             })
             .on('broadcast', { event: 'online_order_created' }, async ({ payload }) => {
                 console.log('⚡ [Realtime POS] Instant broadcast online_order_created received:', payload);
@@ -1202,7 +1207,7 @@ export default function POSDashboard() {
                 }
 
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             })
             .on('broadcast', { event: 'payment_slip_uploaded' }, async ({ payload }) => {
                 console.log('⚡ [Realtime POS] Instant broadcast payment_slip_uploaded received:', payload);
@@ -1225,7 +1230,7 @@ export default function POSDashboard() {
                     ), { id: slipEventKey, duration: 10000 });
                 }
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
             })
             .on('postgres_changes', { 
                 event: '*', 
@@ -1233,7 +1238,7 @@ export default function POSDashboard() {
                 table: 'bookings' 
             }, async (payload) => {
                 checkPendingOrders();
-                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
                 const { eventType, new: newRow, old: oldRow } = payload;
                 const bookingId = newRow?.id || oldRow?.id;
                 if (!bookingId) return;
@@ -1485,7 +1490,7 @@ export default function POSDashboard() {
                         }, 500);
                     }
 
-                    setRefreshKey(prev => prev + 1);
+                    triggerDebouncedRefresh();
                 }
             })
             .subscribe();

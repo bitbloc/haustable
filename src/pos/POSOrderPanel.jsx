@@ -967,7 +967,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             </div>
 
             {/* Items List */}
-            <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-2 scrollbar-none touch-manipulation">
+            <div className="flex-1 overflow-y-auto px-3 py-1.5 space-y-2 scrollbar-none touch-manipulation pos-cart-list-scroll">
                 {order.items.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-[#767673] gap-3 opacity-90 font-mono text-xs font-bold uppercase tracking-wider py-8">
                         <Utensils size={32} strokeWidth={1.5} className="opacity-40" />
@@ -2291,6 +2291,7 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
     return (
         <div 
             className="bg-white border border-[#D1D1CD] p-3 rounded-xl flex items-center justify-between shadow-sm select-none"
+            style={{ contain: 'content', transform: 'translateZ(0)' }}
         >
             <div className="flex-1 min-w-0 mr-3">
                 <div className="flex items-center gap-1.5 flex-wrap">

@@ -262,13 +262,24 @@ public class MainActivity extends BridgeActivity {
             settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
             settings.setEnableSmoothTransition(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
+            settings.setCacheMode(WebSettings.LOAD_DEFAULT);
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
             }
             
-            webView.setWebViewClient(new WebViewClient());
-            webView.loadUrl("https://haustable.vercel.app/pos/cfd");
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    if (failingUrl != null && failingUrl.startsWith("http://localhost")) {
+                        Log.w("MainActivity", "Local CFD load failed, falling back to online CFD URL: " + description);
+                        view.loadUrl("https://haustable.vercel.app/pos/cfd");
+                    }
+                }
+            });
+
+            // Fast local 0ms load directly from Capacitor local web server
+            webView.loadUrl("http://localhost/pos/cfd");
             setContentView(webView);
         }
     }

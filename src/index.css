@@ -311,8 +311,42 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* ==========================================================================
-   POS & Customer Display Optimization (15.6" 1920x1080 & 10.1" 1024x600)
+   POS & Customer Display Optimization (Sunmi D2s Plus Dual-Screen & APK)
    ========================================================================== */
+
+/* Hardware Performance Guard for Low-Power Mali GPUs (Sunmi D2s Plus) */
+.pos-view-container, .pos-container, .cfd-container {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeSpeed;
+  contain: strict;
+  transform: translateZ(0);
+}
+
+/* Eliminate expensive backdrop-filter blur on low-end mobile POS GPUs */
+.pos-view-container .glass,
+.pos-container .glass,
+.cfd-container .glass,
+.pos-panel-layer .glass {
+  background: var(--color-paper-2);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Sub-tree containment for Table Grid, Menu Grid and Cart List */
+.pos-table-grid-scroll,
+.pos-menu-grid-scroll,
+.pos-cart-list-scroll {
+  contain: content;
+  transform: translateZ(0);
+  will-change: transform;
+  overscroll-behavior: contain;
+}
+
+/* Fast image decoding and paint isolation */
+.pos-view-container img,
+.cfd-container img {
+  content-visibility: auto;
+}
 
 /* Sonner Toasts Styling for 1920x1080 POS */
 [data-sonner-toaster] {

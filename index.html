@@ -106,9 +106,9 @@
         }
       })();
 
-      // Inject Eruda for Mobile Debugging (Wait for body)
+      // Inject Eruda for Mobile Debugging ONLY if explicitly requested via query param (e.g. ?debug=eruda)
       window.addEventListener('DOMContentLoaded', () => {
-          if (window.location.pathname.startsWith('/staff') || window.location.search.includes('mode=staff')) {
+          if (window.location.search.includes('debug=eruda')) {
               var script = document.createElement('script');
               script.src = "https://cdn.jsdelivr.net/npm/eruda";
               document.body.appendChild(script);

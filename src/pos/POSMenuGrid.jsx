@@ -253,7 +253,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
             </div>
 
             {/* Menu Items Grid */}
-            <div className="flex-1 overflow-y-auto p-4 scrollbar-none">
+            <div className="flex-1 overflow-y-auto p-4 scrollbar-none pos-menu-grid-scroll">
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                     {filteredItems.map(item => (
                         <MenuItemCard 
