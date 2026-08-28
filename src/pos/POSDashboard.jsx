@@ -161,6 +161,8 @@ export default function POSDashboard() {
         }
     };
     const [activeSlipBooking, setActiveSlipBooking] = useState(null);
+    const [activeSlipType, setActiveSlipType] = useState('billing');
+    const [viewSlipImageUrl, setViewSlipImageUrl] = useState(null);
     const [refreshKey, setRefreshKey] = useState(0);
     const refreshDebounceRef = useRef(null);
     const triggerDebouncedRefresh = useCallback(() => {
