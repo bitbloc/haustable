@@ -59,41 +59,54 @@ export default function CashTaxLedgerPrintView({
     const netProfit = grandRevenue - grandExpense;
     const bahtWords = thaiBahtText(netProfit);
 
-    // Dynamic A4 Pagination:
-    // Regular pages fit 18 rows.
-    // Last page (with summary box & signatures) fits 12 rows.
+    // Dynamic A4 Smart Pagination:
+    // Single page mode: Fits up to 24 rows + financial summary + signatures seamlessly on 1 page!
+    // Multi-page mode: Normal pages fit up to 30 rows; Last page fits up to 20 rows + summary + signatures.
     const pages = React.useMemo(() => {
         if (!recordsWithBalance || recordsWithBalance.length === 0) return [[]];
 
-        const ROWS_NORMAL = 18;
-        const ROWS_LAST = 12;
+        const totalCount = recordsWithBalance.length;
+        const ROWS_SINGLE_PAGE = 24;
+        const ROWS_NORMAL = 30;
+        const ROWS_LAST = 20;
 
-        if (recordsWithBalance.length <= ROWS_LAST) {
+        // 1. Single Page: Everything fits on 1 sheet
+        if (totalCount <= ROWS_SINGLE_PAGE) {
             return [recordsWithBalance];
         }
 
+        // 2. Exactly 2 Pages: Balanced distribution so both pages look filled & proportional
+        if (totalCount <= (ROWS_NORMAL + ROWS_LAST)) {
+            // Allocate at most ROWS_LAST to page 2, and balance the rest
+            const page2Count = Math.min(ROWS_LAST, Math.max(Math.ceil(totalCount / 2), totalCount - ROWS_NORMAL));
+            const page1Count = totalCount - page2Count;
+            return [
+                recordsWithBalance.slice(0, page1Count),
+                recordsWithBalance.slice(page1Count)
+            ];
+        }
+
+        // 3. 3+ Pages: Fill normal pages, and balance the last 2 pages to avoid orphan rows
         const pagesList = [];
         let remaining = [...recordsWithBalance];
 
         while (remaining.length > 0) {
+            // If remaining fits on last page
             if (remaining.length <= ROWS_LAST) {
                 pagesList.push(remaining);
                 break;
             }
 
-            if (remaining.length <= ROWS_NORMAL) {
-                const p1 = Math.min(ROWS_NORMAL, remaining.length - Math.min(remaining.length, ROWS_LAST));
-                if (p1 > 0) {
-                    pagesList.push(remaining.slice(0, p1));
-                    pagesList.push(remaining.slice(p1));
-                } else {
-                    const half = Math.ceil(remaining.length / 2);
-                    pagesList.push(remaining.slice(0, half));
-                    pagesList.push(remaining.slice(half));
-                }
+            // If remaining fits in 2 pages, balance them
+            if (remaining.length <= (ROWS_NORMAL + ROWS_LAST)) {
+                const lastCount = Math.min(ROWS_LAST, Math.max(Math.ceil(remaining.length / 2), remaining.length - ROWS_NORMAL));
+                const firstCount = remaining.length - lastCount;
+                pagesList.push(remaining.slice(0, firstCount));
+                pagesList.push(remaining.slice(firstCount));
                 break;
             }
 
+            // Normal full page
             pagesList.push(remaining.slice(0, ROWS_NORMAL));
             remaining = remaining.slice(ROWS_NORMAL);
         }
@@ -264,7 +277,7 @@ export default function CashTaxLedgerPrintView({
                     return (
                         <div 
                             key={`page-${pageIndex}`}
-                            className="print-page-sheet w-[210mm] min-h-[297mm] bg-white text-zinc-900 p-8 shadow-2xl flex flex-col justify-between box-border border border-zinc-200 print:border-none print:shadow-none"
+                            className="print-page-sheet w-[210mm] min-h-[297mm] bg-white text-zinc-900 p-6 sm:p-7 shadow-2xl flex flex-col justify-between box-border border border-zinc-200 print:border-none print:shadow-none print:p-0"
                             style={{ fontFamily: "'IBM Plex Sans Thai', 'Sarabun', sans-serif" }}
                         >
                             {/* Page Content */}
