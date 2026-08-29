@@ -250,20 +250,21 @@ export default function AdminMembers() {
         if (!editingMember) return
 
         try {
-            const cleanPin = editForm.pin ? editForm.pin.trim() : null
+            const cleanPin = editForm.pin ? String(editForm.pin).trim() : null
             const payload = {
-                display_name: editForm.display_name.trim(),
-                nickname: editForm.nickname.trim(),
-                phone_number: editForm.phone_number.trim(),
-                line_user_id: editForm.line_user_id.trim() || null,
-                admin_notes: editForm.admin_notes.trim() || null,
+                display_name: editForm.display_name ? String(editForm.display_name).trim() : '',
+                nickname: editForm.nickname ? String(editForm.nickname).trim() : '',
+                phone_number: editForm.phone_number ? String(editForm.phone_number).trim() : '',
+                line_user_id: editForm.line_user_id ? String(editForm.line_user_id).trim() : null,
+                admin_notes: editForm.admin_notes ? String(editForm.admin_notes).trim() : null,
                 birth_day: editForm.birth_day ? parseInt(editForm.birth_day, 10) : null,
                 birth_month: editForm.birth_month ? parseInt(editForm.birth_month, 10) : null,
                 gender: editForm.gender || null,
                 pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
                 free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
-                role: editForm.role || 'customer'
+                role: editForm.role || 'customer',
+                admin_permissions: editForm.admin_permissions || []
             }
 
             const { error } = await supabase
@@ -283,7 +284,7 @@ export default function AdminMembers() {
             toast.success('บันทึกข้อมูลสมาชิกและสิทธิ์การเข้าถึงเรียบร้อยแล้ว')
         } catch (err) {
             console.error('Failed to save profile:', err)
-            toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + err.message)
+            toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + (err.message || 'เกิดข้อผิดพลาดในการบันทึก'))
         }
     }
 

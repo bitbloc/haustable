@@ -105,22 +105,42 @@ export default function DrinkStampManager() {
                 c.is_drink_stamp_eligible !== initialAllItemsList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible
             )
 
+            const promises = []
+
             // 1. Update Categories
             for (const cat of changedCats) {
-                const { error } = await supabase
-                    .from('menu_categories')
-                    .update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible })
-                    .eq('id', cat.id)
-                if (error) throw error
+                promises.push(
+                    supabase
+                        .from('menu_categories')
+                        .update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible })
+                        .eq('id', cat.id)
+                )
             }
 
-            // 2. Update Items
-            for (const item of changedItems) {
-                const { error } = await supabase
-                    .from('menu_items')
-                    .update({ is_drink_stamp_eligible: item.is_drink_stamp_eligible })
-                    .eq('id', item.id)
-                if (error) throw error
+            // 2. Update Items efficiently by grouping true and false IDs
+            const trueItemIds = changedItems.filter(i => i.is_drink_stamp_eligible).map(i => i.id)
+            const falseItemIds = changedItems.filter(i => !i.is_drink_stamp_eligible).map(i => i.id)
+
+            if (trueItemIds.length > 0) {
+                promises.push(
+                    supabase
+                        .from('menu_items')
+                        .update({ is_drink_stamp_eligible: true })
+                        .in('id', trueItemIds)
+                )
+            }
+            if (falseItemIds.length > 0) {
+                promises.push(
+                    supabase
+                        .from('menu_items')
+                        .update({ is_drink_stamp_eligible: false })
+                        .in('id', falseItemIds)
+                )
+            }
+
+            const results = await Promise.all(promises)
+            for (const res of results) {
+                if (res.error) throw res.error
             }
 
             setInitialCategoriesList(JSON.parse(JSON.stringify(categoriesList)))
@@ -129,7 +149,7 @@ export default function DrinkStampManager() {
             toast.success('บันทึกการตั้งค่าสะสมแก้ว 10 แถม 1 สำเร็จแล้ว')
         } catch (err) {
             console.error('Failed to save stamp settings:', err)
-            toast.error('บันทึกไม่สำเร็จ: ' + err.message)
+            toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'เกิดข้อผิดพลาดในการบันทึก'))
             fetchStampSettings()
         } finally {
             setIsSaving(false)

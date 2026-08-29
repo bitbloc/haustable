@@ -97,7 +97,15 @@ function formatDbOrderItemToCart(oi) {
         destination: resolvedDest,
         is_custom: isCustom,
         is_emergency: isCustom,
-        is_drink_stamp_eligible: oi.menu_items?.is_drink_stamp_eligible || oi.is_drink_stamp_eligible || false
+        is_drink_stamp_eligible: typeof oi.menu_items?.is_drink_stamp_eligible === 'boolean' 
+            ? oi.menu_items.is_drink_stamp_eligible 
+            : (typeof oi.is_drink_stamp_eligible === 'boolean' 
+                ? oi.is_drink_stamp_eligible 
+                : (typeof oi.menu_items?.menu_categories?.is_drink_stamp_eligible === 'boolean' 
+                    ? oi.menu_items.menu_categories.is_drink_stamp_eligible 
+                    : (typeof oi.menu_categories?.is_drink_stamp_eligible === 'boolean' 
+                        ? oi.menu_categories.is_drink_stamp_eligible 
+                        : false)))
     };
 }
 
@@ -341,7 +349,7 @@ export default function POSDashboard() {
                 } else if (!String(bookingId).startsWith('local_')) {
                     const { data } = await supabase
                         .from('bookings')
-                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                         .eq('id', bookingId)
                         .maybeSingle();
                     updatedBooking = data;
@@ -748,7 +756,7 @@ export default function POSDashboard() {
         try {
             const { data: fullBooking } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                 .eq('id', bookingId)
                 .maybeSingle();
 
@@ -816,7 +824,7 @@ export default function POSDashboard() {
         try {
             const { data: latestBooking, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                 .eq('id', bookingId)
                 .maybeSingle();
 
@@ -1576,7 +1584,7 @@ export default function POSDashboard() {
                 if (isOnline()) {
                     const { data } = await supabase
                         .from('bookings')
-                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, menu_categories(name)))')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, menu_categories(name, is_drink_stamp_eligible)))')
                         .eq('id', bookingId)
                         .maybeSingle();
                     updatedBooking = data;
@@ -1713,7 +1721,7 @@ export default function POSDashboard() {
             try {
                 const { data } = await supabase
                     .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                     .eq('id', booking.id)
                     .maybeSingle();
                 if (data) fullBooking = data;
@@ -2243,18 +2251,14 @@ export default function POSDashboard() {
 
         let freeDrinkDiscVal = 0;
         if (useFreeDrinkQuota) {
-            const eligibleItems = currentOrder.items.filter(item => 
-                item.is_drink_stamp_eligible || 
-                item.menu_items?.is_drink_stamp_eligible || 
-                (item.category || '').toLowerCase().includes('coffee') || 
-                (item.category || '').toLowerCase().includes('tea') || 
-                (item.category || '').toLowerCase().includes('beverage') || 
-                (item.category || '').toLowerCase().includes('drink') || 
-                (item.category || '').toLowerCase().includes('soda') || 
-                (item.category || '').toLowerCase().includes('ชา') || 
-                (item.category || '').toLowerCase().includes('กาแฟ') || 
-                (item.category || '').toLowerCase().includes('เครื่องดื่ม')
-            );
+            const eligibleItems = currentOrder.items.filter(item => {
+                if (!item || item.is_reward) return false;
+                if (typeof item.is_drink_stamp_eligible === 'boolean') return item.is_drink_stamp_eligible;
+                if (typeof item.menu_items?.is_drink_stamp_eligible === 'boolean') return item.menu_items.is_drink_stamp_eligible;
+                if (typeof item.menu_items?.menu_categories?.is_drink_stamp_eligible === 'boolean') return item.menu_items.menu_categories.is_drink_stamp_eligible;
+                if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') return item.menu_categories.is_drink_stamp_eligible;
+                return false;
+            });
             if (eligibleItems.length > 0) {
                 freeDrinkDiscVal = Math.min(...eligibleItems.map(i => parseFloat(i.price) || 0));
             }
@@ -2309,20 +2313,24 @@ export default function POSDashboard() {
 
                     let eligibleDrinkCount = itemsToCheck.reduce((sum, item) => {
                         // Reward items (free items) do not earn stamps
-                        if (item.is_reward) return sum;
+                        if (!item || item.is_reward) return sum;
 
-                        // Primary: check DB-level flags (most reliable)
                         const menuItem = item.menu_items || item;
-                        const isDbEligible = item.is_drink_stamp_eligible === true || menuItem.is_drink_stamp_eligible === true;
-                        const isCatEligible = menuItem.menu_categories?.is_drink_stamp_eligible === true || item.menu_categories?.is_drink_stamp_eligible === true;
+                        let isEligible = false;
 
-                        // Secondary: keyword fallback for items without DB flags
-                        const catName = (menuItem.menu_categories?.name || item.category || item.category_name || item.category_title || '').toLowerCase();
-                        const itemName = (menuItem.name || item.item_name || item.name || '').toLowerCase();
-                        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
-                        const isKeywordEligible = drinkRegex.test(catName) || drinkRegex.test(itemName);
+                        // Priority 1: Direct item-level eligibility from DB
+                        if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = menuItem.is_drink_stamp_eligible;
+                        } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = item.is_drink_stamp_eligible;
+                        }
+                        // Priority 2: Category-level eligibility from DB
+                        else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
+                        } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                            isEligible = item.menu_categories.is_drink_stamp_eligible;
+                        }
 
-                        const isEligible = isDbEligible || isCatEligible || isKeywordEligible;
                         return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
                     }, 0);
 
@@ -2381,18 +2389,21 @@ export default function POSDashboard() {
                     }
                 } catch (err) {
                     console.error("Error updating drink stamps on checkout:", err);
-                    // BUG #4 FIX: Queue stamp update for offline sync
-                    // Use local cart items to compute eligible count as fallback
+                    // Queue stamp update for offline sync
                     try {
                         let offlineEligibleCount = currentOrder.items.reduce((sum, item) => {
-                            if (item.is_reward) return sum;
-                            const catName = (item.category || item.category_name || '').toLowerCase();
-                            const itemName = (item.name || item.item_name || '').toLowerCase();
-                            const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
-                            const isEligible = item.is_drink_stamp_eligible || 
-                                item.menu_items?.is_drink_stamp_eligible || 
-                                drinkRegex.test(catName) ||
-                                drinkRegex.test(itemName);
+                            if (!item || item.is_reward) return sum;
+                            const menuItem = item.menu_items || item;
+                            let isEligible = false;
+                            if (typeof menuItem.is_drink_stamp_eligible === 'boolean') {
+                                isEligible = menuItem.is_drink_stamp_eligible;
+                            } else if (typeof item.is_drink_stamp_eligible === 'boolean') {
+                                isEligible = item.is_drink_stamp_eligible;
+                            } else if (typeof menuItem.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                                isEligible = menuItem.menu_categories.is_drink_stamp_eligible;
+                            } else if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+                                isEligible = item.menu_categories.is_drink_stamp_eligible;
+                            }
                             return isEligible ? sum + (parseInt(item.quantity) || 1) : sum;
                         }, 0);
                         if (useFreeDrinkQuota && offlineEligibleCount > 0) {
@@ -2416,7 +2427,7 @@ export default function POSDashboard() {
             try {
                 const { data } = await supabase
                     .from('bookings')
-                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                     .eq('id', bookingId)
                     .single();
                 completedBooking = data;
@@ -3062,7 +3073,7 @@ export default function POSDashboard() {
                                         if (selectedTable) {
                                             updatedBooking = await getActiveBooking(selectedTable.id);
                                         } else {
-                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))').eq('id', activeBooking.id).single();
+                                            const { data } = await supabase.from('bookings').select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))').eq('id', activeBooking.id).single();
                                             updatedBooking = data;
                                         }
                                         
@@ -3135,7 +3146,7 @@ export default function POSDashboard() {
                                         } else if (!String(bookingId).startsWith('local_')) {
                                             const { data } = await supabase
                                                 .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                                                 .eq('id', bookingId)
                                                 .maybeSingle();
                                             updatedBooking = data;
@@ -3159,7 +3170,7 @@ export default function POSDashboard() {
                                         } else if (!String(activeBooking.id).startsWith('local_')) {
                                             const { data } = await supabase
                                                 .from('bookings')
-                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                                                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                                                 .eq('id', activeBooking.id)
                                                 .maybeSingle();
                                             if (data) setActiveBooking({ ...data, user_id: null, profiles: null });
@@ -3178,7 +3189,7 @@ export default function POSDashboard() {
                                     } else {
                                         const { data } = await supabase
                                             .from('bookings')
-                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                                            .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                                             .eq('id', activeBooking.id)
                                             .maybeSingle();
                                         if (data) setActiveBooking(data);

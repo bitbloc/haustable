@@ -519,15 +519,24 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const maxAllowedDiscountBaht = (subtotal * (parseFloat(crmSettings.crm_max_redeem_percent) || 100)) / 100;
     const xhausDiscount = Math.min(rawXhausDiscount, maxAllowedDiscountBaht);
     
-    // 5. Drink 10 Free 1 Discount Calculation
+    // 5. Drink 10 Free 1 Discount Calculation (Strict DB-Configured Eligibility)
     const isItemDrinkStampEligible = React.useCallback((item) => {
-        if (item.is_drink_stamp_eligible === true) return true;
-        if (item.menu_items?.is_drink_stamp_eligible === true) return true;
-        if (item.menu_items?.menu_categories?.is_drink_stamp_eligible === true) return true;
-        const catName = (item.menu_items?.menu_categories?.name || item.category || item.category_name || item.category_title || '').toLowerCase();
-        const itemName = (item.menu_items?.name || item.item_name || item.name || '').toLowerCase();
-        const drinkRegex = /coffee|tea|beverage|drink|soda|matcha|cocoa|latte|espresso|brew|smoothie|frappe|juice|milk|non-coffee|shot|ชา|กาแฟ|เครื่องดื่ม|นมสด|มัทฉะ|โกโก้|น้ำผลไม้|โซดา|ช็อต|เอสเพรสโซ|เอสเพรสโซ่/i;
-        return drinkRegex.test(catName) || drinkRegex.test(itemName);
+        if (!item || item.is_reward) return false;
+        // Priority 1: Check explicit menu_item eligibility
+        if (typeof item.menu_items?.is_drink_stamp_eligible === 'boolean') {
+            return item.menu_items.is_drink_stamp_eligible;
+        }
+        if (typeof item.is_drink_stamp_eligible === 'boolean') {
+            return item.is_drink_stamp_eligible;
+        }
+        // Priority 2: Check explicit category eligibility
+        if (typeof item.menu_items?.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+            return item.menu_items.menu_categories.is_drink_stamp_eligible;
+        }
+        if (typeof item.menu_categories?.is_drink_stamp_eligible === 'boolean') {
+            return item.menu_categories.is_drink_stamp_eligible;
+        }
+        return false;
     }, []);
 
     const freeDrinkDiscount = React.useMemo(() => {

@@ -30,7 +30,7 @@ export function usePOSOrder() {
         try {
             const { data: candidates, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name)))')
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                 .eq('table_id', tableId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .order('booking_time', { ascending: false });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Search, Shield, User, Phone, Clock, RefreshCw, FileText, ShoppingBag } from 'lucide-react';
+import { Search, Shield, User, Phone, Clock, RefreshCw, FileText, ShoppingBag, Coffee } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
@@ -14,7 +14,6 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const [memberHistory, setMemberHistory] = useState([]);
     const [historyLoading, setHistoryLoading] = useState(false);
     const [activeViewBooking, setActiveViewBooking] = useState(null);
-
     const [hasSession, setHasSession] = useState(true);
     
     // In-memory cache for instant 0ms history switching
@@ -33,7 +32,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             } else {
                 const { data: directProfiles, error: profileError } = await supabase
                     .from('profiles')
-                    .select('id, display_name, nickname, phone_number, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at')
+                    .select('id, display_name, nickname, phone_number, role, current_tier, xhaus_balance, drink_stamp_count, free_drink_quota, created_at, admin_notes')
                     .order('created_at', { ascending: false })
                     .limit(200);
 
@@ -194,7 +193,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             }
         });
 
-        // Supabase Realtime subscription for live CRM updates (does NOT depend on selectedMember)
+        // Supabase Realtime subscription for live CRM updates
         const channel = supabase
             .channel('pos_crm_panel_realtime')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
@@ -217,6 +216,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
         };
     }, [isActive, fetchMembers, handleSelectMember]);
 
+    // Live Local Filtering
     const filteredMembers = useMemo(() => {
         if (!searchTerm.trim()) return members;
         const term = searchTerm.toLowerCase().trim();
@@ -273,10 +273,11 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                             />
                         </div>
                         <button 
-                            onClick={fetchMembers}
+                            onClick={() => fetchMembers(true)}
                             className="p-2 bg-white hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg text-[#1A1A1A] cursor-pointer"
+                            title="Refresh Member List"
                         >
-                            <RefreshCw size={14} />
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </div>
@@ -360,13 +361,13 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs">{m.total_bookings}</td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs text-emerald-600">{m.completed_bookings}</td>
                                             <td className="py-3 px-4 text-right font-mono font-bold text-xs text-[oklch(52%_0.16_28)]">
-                                                {Number(m.xhaus_balance || 0).toFixed(2)}
+                                                {Number(m.xhaus_balance || 0).toFixed(0)}
                                             </td>
                                         </tr>
                                     ))}
                                     {filteredMembers.length === 0 && (
                                         <tr>
-                                            <td colSpan="5" className="py-10 text-center font-mono text-[10px] text-[#767673] italic uppercase">
+                                            <td colSpan="6" className="py-10 text-center font-mono text-[10px] text-[#767673] italic uppercase">
                                                 No member profiles match filter query
                                             </td>
                                         </tr>
@@ -422,16 +423,10 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 <span className={`px-2.5 py-0.5 rounded font-mono text-[9px] font-bold uppercase tracking-wider border ${tierStyle}`}>
                                                     {tierName}
                                                 </span>
-                                                {selectedMember.role === 'admin' && (
-                                                    <span className="px-1.5 py-0.5 rounded font-mono text-[8px] font-bold uppercase tracking-wider bg-red-500/10 text-red-700 border border-red-500/20">
-                                                        ADMIN
-                                                    </span>
-                                                )}
                                             </>
                                         );
                                     })()}
                                 </div>
-                                <span className="font-mono text-[9px] font-bold text-[#767673] uppercase tracking-widest mt-2 block">REGISTRATION DETAIL</span>
 
                                 {/* Stats grid */}
                                 <div className="grid grid-cols-3 gap-2 w-full mt-3 pt-3 border-t border-[#ECECE9]">
@@ -457,7 +452,9 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                     return (
                                         <div className="w-full mt-3 pt-3 border-t border-[#ECECE9]">
                                             <div className="flex justify-between items-center mb-1.5">
-                                                <span className="font-mono text-[8px] font-bold text-[#767673] uppercase tracking-wider">Drink Stamps</span>
+                                                <span className="font-mono text-[8px] font-bold text-[#767673] uppercase tracking-wider flex items-center gap-1">
+                                                    <Coffee size={10} className="text-[oklch(52%_0.16_28)]" /> Drink Stamps (10+1)
+                                                </span>
                                                 <span className="font-mono text-[9px] font-bold text-[#1A1A1A]">{stamps} / {maxStamps}</span>
                                             </div>
                                             <div className="flex gap-1">
@@ -471,8 +468,8 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 ))}
                                             </div>
                                             {freeDrinks > 0 && (
-                                                <p className="font-mono text-[9px] font-bold text-emerald-600 mt-1.5 text-center uppercase">
-                                                    {freeDrinks} FREE DRINK AVAILABLE
+                                                <p className="font-mono text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 py-0.5 px-2 rounded-sm mt-2 text-center uppercase">
+                                                    🎁 มีสิทธิ์แลกเครื่องดื่มฟรี {freeDrinks} แก้ว
                                                 </p>
                                             )}
                                         </div>
@@ -504,7 +501,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                         memberHistory.map((h, i) => (
                                             <div key={i} className="bg-white border border-[#D1D1CD] rounded-lg p-3 space-y-1.5 shadow-sm text-[10px] font-mono">
                                                 <div className="flex justify-between items-center font-bold text-[#1A1A1A]">
-                                                    <span className="uppercase text-[9px]">VISIT #{getShortBookingId(h)} {h.is_offline && <span className="text-amber-500 bg-amber-50 px-1 rounded ml-1 lowercase">(offline)</span>}</span>
+                                                    <span className="uppercase text-[9px]">VISIT #{getShortBookingId(h)}</span>
                                                     <span className={`px-1.5 py-0.5 rounded text-[8px] uppercase ${
                                                         h.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                                                     }`}>
@@ -559,7 +556,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                         <span className="text-[#767673] italic">No items ordered</span>
                                                     )}
                                                     
-                                                    {/* Add View Bill Details Button */}
+                                                    {/* View Bill Details Button */}
                                                     <div className="pt-2 mt-2 border-t border-dashed border-[#ECECE9]">
                                                         <button
                                                             type="button"
