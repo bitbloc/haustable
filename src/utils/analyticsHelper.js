@@ -1,15 +1,29 @@
 /**
  * Analytics and Conversion Tracking Helper
- * Integrates Google Analytics 4 (G-D1M18Z54LM), Google Ads (AW-11227095880), and GTM (dataLayer)
+ * Integrates Google Analytics 4 (G-D1M18Z54LM) and Google Ads (AW-11227095880)
+ * Optimized for clean single-dispatch, beacon transport, and debounce protection.
  */
 
 export const GA_MEASUREMENT_ID = 'G-D1M18Z54LM';
 export const GOOGLE_ADS_ID = 'AW-11227095880';
-export const GOOGLE_TAG_ID = 'GT-WKP3BT8G';
 export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/uWqACPuDvOEcEMjGv-kp';
 
+// Timestamp cache for anti-spam click debouncing (2000ms cooldown)
+const lastEventTimestamps = new Map();
+
+const isDebounced = (key, cooldownMs = 2000) => {
+    const now = Date.now();
+    const last = lastEventTimestamps.get(key) || 0;
+    if (now - last < cooldownMs) {
+        return true;
+    }
+    lastEventTimestamps.set(key, now);
+    return false;
+};
+
 /**
- * Universal event tracker for GA4, Google Ads, and GTM dataLayer
+ * Universal single-dispatch event tracker for GA4 & Google Ads
+ * Uses beacon transport for reliable background delivery on outbound navigation.
  * @param {string} eventName 
  * @param {object} params 
  */
@@ -17,17 +31,14 @@ export const trackEvent = (eventName, params = {}) => {
     try {
         if (typeof window === 'undefined') return;
 
-        // 1. Dispatch to window.gtag (GA4 & Google Ads)
-        if (typeof window.gtag === 'function') {
-            window.gtag('event', eventName, params);
-        }
+        const eventParams = {
+            transport_type: 'beacon',
+            ...params
+        };
 
-        // 2. Dispatch to window.dataLayer (GTM container)
-        if (Array.isArray(window.dataLayer)) {
-            window.dataLayer.push({
-                event: eventName,
-                ...params
-            });
+        // Dispatch cleanly to window.gtag (automatically manages dataLayer without manual duplicate pushes)
+        if (typeof window.gtag === 'function') {
+            window.gtag('event', eventName, eventParams);
         }
     } catch (err) {
         console.warn('[Analytics] trackEvent failed:', err);
@@ -35,20 +46,22 @@ export const trackEvent = (eventName, params = {}) => {
 };
 
 /**
- * Track Google Ads Conversion
- * @param {string} sendTo - Conversion label or ID
+ * Track Google Ads Conversion with label validation
+ * @param {string} sendTo - Conversion label e.g. 'AW-11227095880/uWqACPuDvOEcEMjGv-kp'
  * @param {number} value - Conversion value
  * @param {string} currency - Currency code
  */
 export const trackConversion = (sendTo, value = 1.0, currency = 'THB') => {
     try {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !sendTo) return;
 
+        // Ensure sendTo includes valid conversion action label format (AW-XXXXXXXXX/YYYYYYYY)
         if (typeof window.gtag === 'function') {
             window.gtag('event', 'conversion', {
                 send_to: sendTo,
                 value,
-                currency
+                currency,
+                transport_type: 'beacon'
             });
         }
     } catch (err) {
@@ -56,50 +69,56 @@ export const trackConversion = (sendTo, value = 1.0, currency = 'THB') => {
     }
 };
 
+// ─── FLOATING BAR CONVERSIONS (EXCLUSIVELY 3 BUTTONS ON /link) ───
+
 /**
- * Track Map / Directions Click
+ * 1. Float Bar: Track LINE Official Account Click (generate_lead)
  * @param {string} pageLocation 
  */
-export const trackDirectionsClick = (pageLocation = '/link') => {
-    trackEvent('click_directions', {
-        page_location: pageLocation,
-        target_destination: 'Google Maps'
+export const trackLineClick = (pageLocation = '/link') => {
+    if (isDebounced('float_line_click')) return;
+
+    trackEvent('generate_lead', {
+        method: 'line_oa',
+        event_category: 'engagement',
+        event_label: 'line_official',
+        target_destination: 'LINE OA',
+        page_location: pageLocation
     });
-    trackConversion(GOOGLE_ADS_DIRECTIONS_CONVERSION, 1.0, 'THB');
 };
 
 /**
- * Track Phone Call Click
+ * 2. Float Bar: Track Map / Directions Click (find_location & Google Ads Conversion)
+ * @param {string} pageLocation 
+ */
+export const trackDirectionsClick = (pageLocation = '/link') => {
+    if (isDebounced('float_directions_click')) return;
+
+    trackEvent('find_location', {
+        event_category: 'engagement',
+        event_label: 'google_maps_directions',
+        target_destination: 'Google Maps',
+        page_location: pageLocation
+    });
+
+    if (GOOGLE_ADS_DIRECTIONS_CONVERSION) {
+        trackConversion(GOOGLE_ADS_DIRECTIONS_CONVERSION, 1.0, 'THB');
+    }
+};
+
+/**
+ * 3. Float Bar: Track Phone Call Click (contact)
  * @param {string} phoneNumber 
  * @param {string} pageLocation 
  */
 export const trackPhoneClick = (phoneNumber = '098-528-4217', pageLocation = '/link') => {
-    trackEvent('click_phone', {
-        phone_number: phoneNumber,
-        page_location: pageLocation
-    });
+    if (isDebounced('float_phone_click')) return;
+
     trackEvent('contact', {
         method: 'phone',
         event_category: 'engagement',
         event_label: phoneNumber,
-        transport_type: 'beacon',
-        page_location: pageLocation
-    });
-    trackConversion(GOOGLE_ADS_ID, 1.0, 'THB');
-};
-
-/**
- * Track LINE Official Account Click
- * @param {string} pageLocation 
- */
-export const trackLineClick = (pageLocation = '/link') => {
-    trackEvent('click_line', {
-        page_location: pageLocation,
-        target_destination: 'LINE OA'
-    });
-    trackEvent('generate_lead', {
-        event_category: 'engagement',
-        event_label: 'line_oa',
+        phone_number: phoneNumber,
         page_location: pageLocation
     });
 };
@@ -109,6 +128,8 @@ export const trackLineClick = (pageLocation = '/link') => {
  * @param {string} pageLocation 
  */
 export const trackLinemanClick = (pageLocation = '/link') => {
+    if (isDebounced('lineman_click')) return;
+
     trackEvent('click_lineman', {
         page_location: pageLocation,
         target_destination: 'LINE MAN'
@@ -120,6 +141,8 @@ export const trackLinemanClick = (pageLocation = '/link') => {
  * @param {string} pageLocation 
  */
 export const trackBookletClick = (pageLocation = '/link') => {
+    if (isDebounced('booklet_click')) return;
+
     trackEvent('view_booklet_menu', {
         page_location: pageLocation
     });
