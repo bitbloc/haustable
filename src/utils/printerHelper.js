@@ -63,9 +63,27 @@ export function getShortBookingId(booking) {
 export function getBookingPaymentMethod(booking) {
     if (!booking) return 'CASH';
     const remark = (booking.staff_remark || '').toLowerCase();
-    if (remark.includes('credit') || remark.includes('บัตรเครดิต') || booking.payment_method === 'credit') return 'CREDIT';
-    if (booking.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || booking.payment_method === 'qr') return 'QR';
-    return booking.payment_method ? booking.payment_method.toUpperCase() : 'CASH';
+    const explicitMethod = (booking.payment_method || '').toLowerCase();
+
+    // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+        return 'CASH';
+    }
+
+    // 2. Explicit Credit Card Check
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+        return 'CREDIT';
+    }
+
+    // 3. QR / PromptPay / Bank Transfer Check
+    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
+        return 'QR';
+    }
+
+    // 4. Online Deposit / Slip (Only if not cash settled)
+    if (booking.payment_slip_url) return 'QR';
+
+    return explicitMethod ? explicitMethod.toUpperCase() : 'CASH';
 }
 
 export const fetchPrinterConfigOnline = async () => {
@@ -445,7 +463,7 @@ export function extractCashDetails(booking, fallbackTotal = 0) {
     // 5. Fallback for cash payment when no specific tender was recorded (exact cash)
     const methodStr = (booking.payment_method || '').toLowerCase();
     const remarkLower = (booking.staff_remark || '').toLowerCase();
-    const isCash = methodStr === 'cash' || remarkLower.includes('cash') || (!remarkLower.includes('qr') && !remarkLower.includes('credit') && !booking.payment_slip_url);
+    const isCash = methodStr === 'cash' || remarkLower.includes('paid by cash') || remarkLower.includes('เงินสด') || (getBookingPaymentMethod(booking) === 'CASH');
     if (isCash) {
         const total = Number(booking.total_amount || fallbackTotal);
         if (total > 0) {

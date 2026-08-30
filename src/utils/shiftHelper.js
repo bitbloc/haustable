@@ -3,14 +3,14 @@ import { supabase } from '../lib/supabaseClient';
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
-// Helper to breakdown booking payment methods accurately (handling split payments & remarks)
+// Helper to breakdown booking payment methods accurately (handling split payments, cash, credit, qr & slips)
 export const getBookingPaymentBreakdown = (b) => {
     if (!b) return { cash: 0, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
     const total = parseFloat(b.total_amount || b.total_price || 0);
     const remark = (b.staff_remark || '').toLowerCase();
-    const note = (b.customer_note || '').toLowerCase();
+    const explicitMethod = (b.payment_method || '').toLowerCase();
     
-    // Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
+    // 1. Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
     const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
     if (splitMatch) {
         const splitText = splitMatch[1];
@@ -33,13 +33,28 @@ export const getBookingPaymentBreakdown = (b) => {
             methodLabel: 'Split (ผสม)'
         };
     }
-    
-    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+
+    // 2. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+        return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+    }
+
+    // 3. Explicit Credit Card Check
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
         return { cash: 0, qr: 0, credit: total, isSplit: false, methodLabel: 'Credit Card' };
     }
-    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+
+    // 4. QR / PromptPay / Bank Transfer Check
+    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
         return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
     }
+
+    // 5. Online Deposit / Booking Slip (Only if not settled by in-store cash/credit)
+    if (b.payment_slip_url) {
+        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
+    }
+
+    // 6. Default In-store Fallback
     return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
 };
 

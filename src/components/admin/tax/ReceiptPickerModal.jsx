@@ -124,10 +124,25 @@ export default function ReceiptPickerModal({
     const detectPaymentMethod = (b) => {
         if (!b) return { label: 'CASH', icon: Banknote };
         const remark = (b.staff_remark || '').toLowerCase();
-        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) {
+        const explicitMethod = (b.payment_method || '').toLowerCase();
+
+        // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+        if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+            return { label: 'CASH', icon: Banknote };
+        }
+
+        // 2. Explicit Credit Card Check
+        if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
             return { label: 'CREDIT', icon: CreditCard };
         }
-        if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+
+        // 3. QR / PromptPay / Bank Transfer Check
+        if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
+            return { label: 'QR', icon: QrCode };
+        }
+
+        // 4. Online Deposit / Slip
+        if (b.payment_slip_url) {
             return { label: 'QR', icon: QrCode };
         }
         return { label: 'CASH', icon: Banknote };

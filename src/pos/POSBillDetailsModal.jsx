@@ -9,8 +9,26 @@ import TaxInvoicePrintView from '../components/admin/tax/TaxInvoicePrintView';
 const getBookingPaymentMethod = (b) => {
     if (!b) return 'CASH';
     const remark = (b.staff_remark || '').toLowerCase();
-    if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'CREDIT CARD';
-    if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'QR TRANSFER';
+    const explicitMethod = (b.payment_method || '').toLowerCase();
+
+    // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+        return 'CASH';
+    }
+
+    // 2. Explicit Credit Card Check
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+        return 'CREDIT CARD';
+    }
+
+    // 3. QR / PromptPay / Bank Transfer Check
+    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
+        return 'QR TRANSFER';
+    }
+
+    // 4. Online Deposit / Slip
+    if (b.payment_slip_url) return 'QR TRANSFER';
+
     return 'CASH';
 };
 

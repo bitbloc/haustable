@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData, getBookingPaymentMethod } from '../printerHelper';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
 import { calculateShiftMetrics, getBookingPaymentBreakdown } from '../shiftHelper';
@@ -358,6 +358,57 @@ describe('System Audit - Phase 4: Shift Report Sales Reconciliation & ESC/POS Al
         expect(breakdown.cash).toBe(200);
         expect(breakdown.qr).toBe(300);
         expect(breakdown.credit).toBe(0);
+    });
+
+    it('should NOT misclassify cash payments as QR even when QR-order tags or reservation slips exist', () => {
+        // Case 1: Table ordered via QR menu, but guest paid CASH at counter
+        const qrTableCashBooking = {
+            id: 'b_qr_cash',
+            total_amount: 450,
+            staff_remark: '[QR] Walk-in Guest Paid by CASH [CASH: RECV=500, CHANGE=50]'
+        };
+        const breakdown1 = getBookingPaymentBreakdown(qrTableCashBooking);
+        expect(breakdown1.cash).toBe(450);
+        expect(breakdown1.qr).toBe(0);
+        expect(breakdown1.methodLabel).toBe('Cash');
+        expect(getBookingPaymentMethod(qrTableCashBooking)).toBe('CASH');
+
+        // Case 2: Online booking had initial deposit slip, but final checkout was CASH
+        const depositSlipCashBooking = {
+            id: 'b_slip_cash',
+            total_amount: 1200,
+            payment_slip_url: 'https://example.com/reservation_slip.jpg',
+            staff_remark: 'Paid by CASH'
+        };
+        const breakdown2 = getBookingPaymentBreakdown(depositSlipCashBooking);
+        expect(breakdown2.cash).toBe(1200);
+        expect(breakdown2.qr).toBe(0);
+        expect(breakdown2.methodLabel).toBe('Cash');
+        expect(getBookingPaymentMethod(depositSlipCashBooking)).toBe('CASH');
+
+        // Case 3: Paid by QR Transfer
+        const qrBooking = {
+            id: 'b_qr',
+            total_amount: 600,
+            staff_remark: 'Paid by QR'
+        };
+        const breakdown3 = getBookingPaymentBreakdown(qrBooking);
+        expect(breakdown3.cash).toBe(0);
+        expect(breakdown3.qr).toBe(600);
+        expect(breakdown3.methodLabel).toBe('QR Transfer');
+        expect(getBookingPaymentMethod(qrBooking)).toBe('QR');
+
+        // Case 4: Paid by Credit Card
+        const creditBooking = {
+            id: 'b_credit',
+            total_amount: 800,
+            staff_remark: 'Paid by CREDIT'
+        };
+        const breakdown4 = getBookingPaymentBreakdown(creditBooking);
+        expect(breakdown4.cash).toBe(0);
+        expect(breakdown4.credit).toBe(800);
+        expect(breakdown4.methodLabel).toBe('Credit Card');
+        expect(getBookingPaymentMethod(creditBooking)).toBe('CREDIT');
     });
 });
 

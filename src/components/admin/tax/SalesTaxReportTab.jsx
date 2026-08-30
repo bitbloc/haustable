@@ -120,20 +120,28 @@ export default function SalesTaxReportTab({
     // Helper: Detect Payment Method from booking & remark
     const detectPaymentMethod = (b) => {
         if (!b) return 'cash';
-        if (b.payment_method) {
-            const pm = String(b.payment_method).toLowerCase();
-            if (pm.includes('credit') || pm.includes('card')) return 'credit_card';
-            if (pm.includes('promptpay') || pm.includes('qr') || pm.includes('transfer')) return 'promptpay';
-            if (pm.includes('cash')) return 'cash';
-            return pm;
-        }
         const remark = String(b.staff_remark || '').toLowerCase();
-        if (remark.includes('credit') || remark.includes('บัตรเครดิต')) return 'credit_card';
-        if (b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')) {
+        const explicitMethod = String(b.payment_method || '').toLowerCase();
+
+        // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+        if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+            return 'cash';
+        }
+
+        // 2. Explicit Credit Card Check
+        if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+            return 'credit_card';
+        }
+
+        // 3. QR / PromptPay / Bank Transfer Check
+        if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
             return 'promptpay';
         }
-        if (remark.includes('cash') || remark.includes('เงินสด')) return 'cash';
-        return 'promptpay';
+
+        // 4. Online Deposit / Slip
+        if (b.payment_slip_url) return 'promptpay';
+
+        return 'cash';
     };
 
     // Helper: Extract Customer / Guest Name
