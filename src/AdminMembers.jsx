@@ -150,10 +150,9 @@ export default function AdminMembers() {
                     .from('bookings')
                     .select(`
                         *,
+                        tables_layout (table_name),
                         order_items (
-                            id,
-                            quantity,
-                            price_at_time,
+                            *,
                             menu_items (name)
                         )
                     `)
@@ -1324,13 +1323,19 @@ export default function AdminMembers() {
                                 ) : (
                                     memberHistory.map((booking) => {
                                         const isCompleted = booking.status === 'completed' || booking.status === 'confirmed'
+                                        const rawItems = (booking.order_items && booking.order_items.length > 0)
+                                            ? booking.order_items
+                                            : (Array.isArray(booking.items) ? booking.items : (typeof booking.items === 'string' ? (() => { try { return JSON.parse(booking.items); } catch { return []; } })() : []))
+
+                                        const tableName = booking.table_name || booking.tables_layout?.table_name
+
                                         return (
                                             <div 
                                                 key={booking.id} 
                                                 className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
                                             >
-                                                <div>
-                                                    <div className="flex items-center gap-2 mb-1">
+                                                <div className="space-y-1">
+                                                    <div className="flex flex-wrap items-center gap-2">
                                                         <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-xs uppercase border ${
                                                             isCompleted
                                                                 ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
@@ -1339,17 +1344,48 @@ export default function AdminMembers() {
                                                             {booking.status}
                                                         </span>
                                                         <span className="text-[11px] text-[oklch(55%_0.010_28)]">
-                                                            {format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm')}
+                                                            {booking.created_at ? format(new Date(booking.created_at), 'dd MMM yyyy, HH:mm') : '-'}
                                                         </span>
                                                         {booking.booking_type && (
                                                             <span className="text-[10px] uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-1 rounded-xs">
                                                                 {booking.booking_type}
                                                             </span>
                                                         )}
+                                                        {tableName && (
+                                                            <span className="text-[10px] uppercase text-[oklch(45%_0.08_140)] bg-[oklch(94%_0.02_140)] px-1 rounded-xs font-bold border border-[oklch(45%_0.08_140)/30]">
+                                                                {tableName}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <div className="text-xs font-bold text-[oklch(18%_0.012_28)]">
-                                                        {booking.order_items?.map(i => `${i.menu_items?.name || 'Item'} (x${i.quantity})`).join(', ') || 'ไม่มีรายการเมนูย่อย'}
+                                                        {rawItems && rawItems.length > 0
+                                                            ? rawItems.map(i => {
+                                                                const name = i.name || i.item_name || i.custom_name || i.menu_items?.name || (typeof i === 'string' ? i : 'รายการสินค้า')
+                                                                const qty = i.quantity || i.qty || 1
+                                                                return `${name} (x${qty})`
+                                                            }).join(', ')
+                                                            : 'ไม่มีรายการเมนูย่อย'
+                                                        }
                                                     </div>
+                                                    {(Number(booking.xhaus_earned || 0) > 0 || Number(booking.xhaus_redeemed || 0) > 0 || Number(booking.xhaus_discount || 0) > 0) && (
+                                                        <div className="flex flex-wrap gap-1.5 pt-0.5 text-[10px] font-bold">
+                                                            {Number(booking.xhaus_earned || 0) > 0 && (
+                                                                <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1 py-0.2 rounded-xs">
+                                                                    +{Number(booking.xhaus_earned)} xHAUS
+                                                                </span>
+                                                            )}
+                                                            {Number(booking.xhaus_redeemed || 0) > 0 && (
+                                                                <span className="text-amber-700 bg-amber-50 border border-amber-200 px-1 py-0.2 rounded-xs">
+                                                                    -{Number(booking.xhaus_redeemed)} xHAUS
+                                                                </span>
+                                                            )}
+                                                            {Number(booking.xhaus_discount || 0) > 0 && (
+                                                                <span className="text-purple-700 bg-purple-50 border border-purple-200 px-1 py-0.2 rounded-xs">
+                                                                    -฿{Number(booking.xhaus_discount).toLocaleString()} ส่วนลดแต้ม
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
 
                                                 <div className="text-right sm:self-center shrink-0">

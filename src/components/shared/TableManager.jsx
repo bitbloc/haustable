@@ -1058,7 +1058,7 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                                             <div key={item.id || idx} className="flex justify-between items-center bg-[oklch(94%_0.010_28)] p-2 rounded-sm">
                                                 <div>
                                                     <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                                        {item.quantity}x {item.menu_items?.name || 'Item'}
+                                                        {item.quantity}x {item.custom_name || item.name || item.item_name || item.menu_items?.name || 'รายการสินค้า'}
                                                     </span>
                                                     <span className="text-[10px] text-[oklch(55%_0.010_28)] ml-2">
                                                         ฿{(item.price * item.quantity).toLocaleString()}

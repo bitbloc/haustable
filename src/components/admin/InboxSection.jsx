@@ -104,7 +104,7 @@ export default function InboxSection({ bookings, onUpdateStatus, onViewSlip }) {
                                         const lineTotal = Number(item.price_at_time || 0) * (item.quantity || 1)
                                         return (
                                             <div key={i} className="flex justify-between text-xs font-mono text-[oklch(42%_0.010_28)] py-0.5 border-b border-[oklch(90%_0.008_28)] last:border-0">
-                                                <span className="truncate max-w-[140px]">{item.quantity}x {item.menu_items?.name || 'Item'}</span>
+                                                <span className="truncate max-w-[140px]">{item.quantity}x {item.custom_name || item.name || item.item_name || item.menu_items?.name || 'รายการสินค้า'}</span>
                                                 <span className="font-bold text-[oklch(18%_0.012_28)]">฿{lineTotal.toLocaleString()}</span>
                                             </div>
                                         )

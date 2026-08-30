@@ -1,5 +1,5 @@
 // Enhanced Service Worker for PWA (Network First for HTML & Runtime Cache for Assets)
-const CACHE_NAME = 'haus-table-v5';
+const CACHE_NAME = 'haus-table-v6';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -64,8 +64,14 @@ self.addEventListener('fetch', event => {
           }
           return networkResponse;
         })
-        .catch(() => {
-          return caches.match('/index.html');
+        .catch(async () => {
+          const cachedIndex = (await caches.match('/index.html')) || (await caches.match('/'));
+          if (cachedIndex) return cachedIndex;
+          return new Response('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Offline</title></head><body><p>Offline. Please check your network connection and reload.</p></body></html>', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+          });
         })
     );
     return;
@@ -123,7 +129,9 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
         }
         return networkResponse;
-      }).catch(() => cachedResponse);
+      }).catch(() => {
+        return cachedResponse || new Response('', { status: 408, statusText: 'Request Timeout' });
+      });
 
       return cachedResponse || fetchPromise;
     })

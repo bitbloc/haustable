@@ -183,7 +183,7 @@ let softDistortionCurve = null;
 /**
  * Obtain or resume the singleton Web Audio Context
  */
-export function getSharedAudioContext() {
+export function getSharedAudioContext(shouldResume = false) {
     if (typeof window === 'undefined') return null;
     try {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -193,7 +193,7 @@ export function getSharedAudioContext() {
                 latencyHint: 'interactive'
             });
         }
-        if (sharedAudioContext.state === 'suspended') {
+        if (shouldResume && sharedAudioContext.state === 'suspended') {
             sharedAudioContext.resume().catch(() => {});
         }
         return sharedAudioContext;

@@ -118,7 +118,7 @@ export default function ScheduleSection({ bookings, loading, onPrint, onViewSlip
                                                             const lineTotal = Number(item.price_at_time || 0) * (item.quantity || 1)
                                                             return (
                                                                 <div key={i} className="text-[11px] text-[oklch(42%_0.010_28)] flex justify-between gap-2">
-                                                                    <span className="truncate max-w-[140px]">{item.quantity}x {item.menu_items?.name || 'Item'}</span>
+                                                                    <span className="truncate max-w-[140px]">{item.quantity}x {item.custom_name || item.name || item.item_name || item.menu_items?.name || 'รายการสินค้า'}</span>
                                                                     <span className="font-bold text-[oklch(18%_0.012_28)]">฿{lineTotal.toLocaleString()}</span>
                                                                 </div>
                                                             )

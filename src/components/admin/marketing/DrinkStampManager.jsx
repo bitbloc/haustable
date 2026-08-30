@@ -1,8 +1,8 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
-import { Search, Tag, Check, AlertCircle, Save, RotateCcw, Filter } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Search, Save, RotateCcw, Filter, AlertCircle, Check, CheckCircle2, Zap } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 
 export default function DrinkStampManager() {
@@ -14,12 +14,18 @@ export default function DrinkStampManager() {
     const [isSaving, setIsSaving] = useState(false)
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
+    // Refs for stable Realtime handler access without re-triggering effect
+    const hasUnsavedChangesRef = useRef(false)
+    hasUnsavedChangesRef.current = hasUnsavedChanges
+    const isSavingRef = useRef(false)
+    isSavingRef.current = isSaving
+
     // Filters
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all')
     const [eligibilityFilter, setEligibilityFilter] = useState('all') // 'all' | 'eligible' | 'non-eligible'
 
-    const fetchStampSettings = async (showLoadingState = false) => {
+    const fetchStampSettings = useCallback(async (showLoadingState = false) => {
         if (showLoadingState) setLoading(true)
         try {
             const [catRes, itemRes] = await Promise.all([
@@ -27,23 +33,26 @@ export default function DrinkStampManager() {
                 supabase.from('menu_items').select('*, menu_categories(name)').order('name')
             ])
 
-            if (catRes.data) {
-                setCategoriesList(catRes.data)
-                setInitialCategoriesList(JSON.parse(JSON.stringify(catRes.data)))
-            }
-            if (itemRes.data) {
-                setAllItemsList(itemRes.data)
-                setInitialAllItemsList(JSON.parse(JSON.stringify(itemRes.data)))
-            }
+            if (catRes.error) throw catRes.error
+            if (itemRes.error) throw itemRes.error
+
+            const cats = catRes.data || []
+            const items = itemRes.data || []
+
+            setCategoriesList(cats)
+            setInitialCategoriesList(JSON.parse(JSON.stringify(cats)))
+            setAllItemsList(items)
+            setInitialAllItemsList(JSON.parse(JSON.stringify(items)))
             setHasUnsavedChanges(false)
         } catch (err) {
             console.error('Error loading stamp settings:', err)
-            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลตั้งค่าสะสมแก้วได้')
+            if (showLoadingState) toast.error('ไม่สามารถโหลดข้อมูลตั้งค่าสะสมแก้วได้: ' + (err.message || ''))
         } finally {
             if (showLoadingState) setLoading(false)
         }
-    }
+    }, [])
 
+    // Fetch once on mount & set up single realtime subscription
     useEffect(() => {
         fetchStampSettings(true)
 
@@ -51,11 +60,11 @@ export default function DrinkStampManager() {
         const debouncedFetch = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
-                // Only reload if user hasn't made unsaved local toggles
-                if (!hasUnsavedChanges && !isSaving) {
+                // Only reload if user does NOT have unsaved local edits
+                if (!hasUnsavedChangesRef.current && !isSavingRef.current) {
                     fetchStampSettings(false)
                 }
-            }, 400)
+            }, 600)
         }
 
         const channel = supabase
@@ -68,7 +77,7 @@ export default function DrinkStampManager() {
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
-    }, [hasUnsavedChanges, isSaving])
+    }, [fetchStampSettings])
 
     // Category Level Master Toggle
     const toggleCategoryEligibility = (category) => {
@@ -90,20 +99,21 @@ export default function DrinkStampManager() {
         setCategoriesList(JSON.parse(JSON.stringify(initialCategoriesList)))
         setAllItemsList(JSON.parse(JSON.stringify(initialAllItemsList)))
         setHasUnsavedChanges(false)
-        toast.info('คืนค่าการตั้งค่าเดิมเรียบร้อย')
+        toast.info('คืนค่าการตั้งค่าเดิมเรียบร้อยแล้ว')
     }
 
     // Batch Save Changes
     const handleSaveStampSettings = async () => {
-        if (!hasUnsavedChanges) return
         setIsSaving(true)
         try {
-            const changedCats = categoriesList.filter(c => 
-                c.is_drink_stamp_eligible !== initialCategoriesList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible
-            )
-            const changedItems = allItemsList.filter(c => 
-                c.is_drink_stamp_eligible !== initialAllItemsList.find(ic => ic.id === c.id)?.is_drink_stamp_eligible
-            )
+            const changedCats = categoriesList.filter(c => {
+                const initial = initialCategoriesList.find(ic => ic.id === c.id)
+                return Boolean(c.is_drink_stamp_eligible) !== Boolean(initial?.is_drink_stamp_eligible)
+            })
+            const changedItems = allItemsList.filter(i => {
+                const initial = initialAllItemsList.find(ic => ic.id === i.id)
+                return Boolean(i.is_drink_stamp_eligible) !== Boolean(initial?.is_drink_stamp_eligible)
+            })
 
             const promises = []
 
@@ -112,7 +122,7 @@ export default function DrinkStampManager() {
                 promises.push(
                     supabase
                         .from('menu_categories')
-                        .update({ is_drink_stamp_eligible: cat.is_drink_stamp_eligible })
+                        .update({ is_drink_stamp_eligible: Boolean(cat.is_drink_stamp_eligible) })
                         .eq('id', cat.id)
                 )
             }
@@ -138,19 +148,20 @@ export default function DrinkStampManager() {
                 )
             }
 
-            const results = await Promise.all(promises)
-            for (const res of results) {
-                if (res.error) throw res.error
+            if (promises.length > 0) {
+                const results = await Promise.all(promises)
+                for (const res of results) {
+                    if (res.error) throw res.error
+                }
             }
 
             setInitialCategoriesList(JSON.parse(JSON.stringify(categoriesList)))
             setInitialAllItemsList(JSON.parse(JSON.stringify(allItemsList)))
             setHasUnsavedChanges(false)
-            toast.success('บันทึกการตั้งค่าสะสมแก้ว 10 แถม 1 สำเร็จแล้ว')
+            toast.success(`บันทึกการตั้งค่าสะสมแก้ว 10 แถม 1 เรียบร้อยแล้ว (อัปเดต ${changedCats.length} หมวดหมู่, ${changedItems.length} เมนู)`)
         } catch (err) {
             console.error('Failed to save stamp settings:', err)
             toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'เกิดข้อผิดพลาดในการบันทึก'))
-            fetchStampSettings()
         } finally {
             setIsSaving(false)
         }
@@ -184,8 +195,8 @@ export default function DrinkStampManager() {
 
     return (
         <div className="space-y-6 font-mono">
-            {/* Info Banner */}
-            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Info & Action Header */}
+            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-4 rounded-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <div className="flex items-center gap-2">
                         <span className="font-bold text-[10px] uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)]">
@@ -196,47 +207,67 @@ export default function DrinkStampManager() {
                         ระบบสะสมแก้ว 10 แถม 1 (Drink Stamp Punchcard)
                     </h2>
                     <p className="text-xs text-[oklch(55%_0.010_28)] mt-0.5">
-                        กำหนดหมวดหมู่และเครื่องดื่มที่เข้าร่วมรายการสะสมแต้ม เมื่อลูกค้าสั่งซื้อครบ 10 แก้วจะได้รับสิทธิ์แลกฟรี 1 แก้วในระบบ
+                        กำหนดหมวดหมู่และเครื่องดื่มที่เข้าร่วมรายการสะสมแต้ม เมื่อลูกค้าสั่งซื้อครบ 10 แก้วจะได้รับสิทธิ์แลกฟรี 1 แก้ว
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3 self-start sm:self-auto shrink-0 bg-white border border-[oklch(85%_0.012_28)] px-3 py-2 rounded-sm text-xs">
-                    <span className="text-[oklch(55%_0.010_28)] uppercase text-[10px]">สถานะ:</span>
-                    <strong className="text-[oklch(52%_0.16_28)]">{totalEligibleItems} / {allItemsList.length} เมนูร่วมรายการ</strong>
+                <div className="flex items-center gap-2.5 shrink-0">
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] px-3 py-2 rounded-sm text-xs">
+                        <span className="text-[oklch(55%_0.010_28)] uppercase text-[10px] mr-1">สถานะ:</span>
+                        <strong className="text-[oklch(52%_0.16_28)]">{totalEligibleItems} / {allItemsList.length} เมนูร่วม</strong>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleSaveStampSettings}
+                        disabled={isSaving || !hasUnsavedChanges}
+                        className={`px-4 py-2 rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all ${
+                            hasUnsavedChanges
+                                ? 'bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white ring-2 ring-[oklch(52%_0.16_28)]/30'
+                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] cursor-not-allowed opacity-70'
+                        }`}
+                    >
+                        <Save size={14} />
+                        {isSaving ? 'กำลังบันทึก...' : hasUnsavedChanges ? 'บันทึกการตั้งค่า *' : 'บันทึกแล้ว'}
+                    </button>
                 </div>
             </div>
 
-            {/* Floating / Sticky Save Bar */}
-            {hasUnsavedChanges && (
-                <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-3 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm"
-                >
-                    <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold text-xs">
-                        <AlertCircle size={16} className="shrink-0" />
-                        <span>มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก (Unsaved Changes)</span>
-                    </div>
-                    <div className="flex items-center gap-2 self-end sm:self-auto">
-                        <button
-                            type="button"
-                            onClick={handleDiscardChanges}
-                            className="px-3 py-1.5 bg-white text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)] text-xs font-bold cursor-pointer transition-colors"
-                        >
-                            ยกเลิก
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleSaveStampSettings}
-                            disabled={isSaving}
-                            className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 transition-colors"
-                        >
-                            <Save size={13} />
-                            {isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (Save Changes)'}
-                        </button>
-                    </div>
-                </motion.div>
-            )}
+            {/* Floating / Sticky Save Bar on Changes */}
+            <AnimatePresence>
+                {hasUnsavedChanges && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="p-3.5 bg-[oklch(94%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-md sticky top-4 z-20"
+                    >
+                        <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold text-xs">
+                            <AlertCircle size={18} className="shrink-0 animate-pulse" />
+                            <span>มีการปรับเปลี่ยนสิทธิ์สะสมแก้วที่ยังไม่ได้บันทึก (Unsaved Changes)</span>
+                        </div>
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <button
+                                type="button"
+                                onClick={handleDiscardChanges}
+                                disabled={isSaving}
+                                className="px-3.5 py-1.5 bg-white text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm border border-[oklch(85%_0.012_28)] text-xs font-bold cursor-pointer transition-colors"
+                            >
+                                <RotateCcw size={12} className="inline mr-1" /> ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleSaveStampSettings}
+                                disabled={isSaving}
+                                className="px-4.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm disabled:opacity-50 transition-colors"
+                            >
+                                <Save size={13} />
+                                {isSaving ? 'กำลังบันทึก...' : 'บันทึกการตั้งค่า (Save Changes)'}
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {loading ? (
                 <div className="text-center py-16 bg-white border border-[oklch(85%_0.012_28)] rounded-sm">
@@ -249,8 +280,8 @@ export default function DrinkStampManager() {
                     <div className="bg-white border border-[oklch(85%_0.012_28)] p-4 rounded-sm shadow-2xs">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
                             <div>
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                    📁 เปิด/ปิดสิทธิ์ระดับหมวดหมู่ (Category Master Toggles)
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                    📁 เปิด/ปิดสิทธิ์ระดับหมวดหมู่ (CATEGORY MASTER TOGGLES)
                                 </h3>
                                 <p className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5">
                                     คลิกปุ่มเพื่อเปิดหรือปิดสิทธิ์สะสม 10 แถม 1 ทั้งหมวดหมู่ในครั้งเดียว
@@ -275,7 +306,7 @@ export default function DrinkStampManager() {
                                     >
                                         <div className="min-w-0">
                                             <p className="font-bold text-xs text-[oklch(18%_0.012_28)] truncate">{cat.name}</p>
-                                            <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                            <p className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5 font-mono">
                                                 {eligibleCount} / {catItems.length} เมนูร่วม
                                             </p>
                                         </div>
@@ -283,9 +314,9 @@ export default function DrinkStampManager() {
                                         <button
                                             type="button"
                                             onClick={() => toggleCategoryEligibility(cat)}
-                                            className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase transition-colors cursor-pointer shrink-0 border ${
+                                            className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase transition-colors cursor-pointer shrink-0 border ${
                                                 isEligible
-                                                    ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
+                                                    ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] shadow-xs'
                                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-black'
                                             }`}
                                         >
@@ -301,8 +332,8 @@ export default function DrinkStampManager() {
                     <div className="bg-white border border-[oklch(85%_0.012_28)] p-4 rounded-sm shadow-2xs">
                         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4 pb-3 border-b border-[oklch(85%_0.012_28)]">
                             <div>
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
-                                    ☕ สิทธิ์รายเมนู (Individual Item Eligibility)
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                    ☕ สิทธิ์รายเมนู (INDIVIDUAL ITEM ELIGIBILITY)
                                 </h3>
                                 <p className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5">
                                     เปิดหรือปิดสิทธิ์สะสมแต้ม 10 แถม 1 เฉพาะเมนูที่ต้องการ
@@ -339,7 +370,7 @@ export default function DrinkStampManager() {
                                         placeholder="ค้นชื่อเมนู..."
                                         value={searchTerm}
                                         onChange={e => setSearchTerm(e.target.value)}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black"
+                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm pl-8 pr-3 py-1.5 text-xs text-[oklch(18%_0.012_28)] outline-none focus:border-black font-mono"
                                     />
                                 </div>
                             </div>
@@ -374,15 +405,15 @@ export default function DrinkStampManager() {
                                                     )}
                                                 </div>
                                                 <p className="font-bold text-xs text-[oklch(18%_0.012_28)] truncate">{item.name}</p>
-                                                <p className="text-[11px] text-[oklch(55%_0.010_28)]">฿{parseFloat(item.price || 0).toLocaleString()}</p>
+                                                <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono">฿{parseFloat(item.price || 0).toLocaleString()}</p>
                                             </div>
 
                                             <button
                                                 type="button"
                                                 onClick={() => toggleItemEligibility(item)}
-                                                className={`px-2.5 py-1 rounded-sm text-[10px] font-bold uppercase transition-colors cursor-pointer shrink-0 border ${
+                                                className={`px-3 py-1.5 rounded-sm text-[10px] font-bold uppercase transition-colors cursor-pointer shrink-0 border ${
                                                     isEligible
-                                                        ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
+                                                        ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] shadow-xs'
                                                         : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:border-black'
                                                 }`}
                                             >
