@@ -122,7 +122,37 @@ function App() {
 
   return (
     <div className="app-container">
-      <Toaster position="top-center" maxToasts={3} visibleToasts={3} closeButton />
+      <Toaster 
+        position="top-center" 
+        maxToasts={3} 
+        visibleToasts={3} 
+        closeButton 
+        toastOptions={{
+          className: 'font-sans border border-[oklch(85%_0.012_28)] shadow-lg rounded-xl text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]',
+          style: {
+            fontFamily: 'Switzer, Geist, sans-serif',
+            background: 'oklch(97% 0.008 28)',
+            color: 'oklch(18% 0.012 28)',
+            borderColor: 'oklch(85% 0.012 28)',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            fontSize: '13px',
+            fontWeight: 500,
+          },
+          classNames: {
+            toast: 'bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-md',
+            title: 'font-bold text-sm text-[oklch(18%_0.012_28)]',
+            description: 'text-xs text-[oklch(42%_0.010_28)]',
+            actionButton: 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs px-3 py-1 rounded-lg',
+            cancelButton: 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] font-mono text-xs px-3 py-1 rounded-lg',
+            closeButton: 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]',
+            success: 'border-[oklch(45%_0.08_140)]/40 text-[oklch(18%_0.012_28)]',
+            error: 'border-[oklch(52%_0.16_28)]/40 text-[oklch(18%_0.012_28)]',
+            info: 'border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]',
+            warning: 'border-[oklch(52%_0.16_28)]/40 text-[oklch(18%_0.012_28)]',
+          }
+        }}
+      />
       <Router>
         <ErrorBoundary>
           <Suspense fallback={<FallbackLoader />}>

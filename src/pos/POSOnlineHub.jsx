@@ -20,7 +20,7 @@ import {
     AlertCircle,
     CheckCircle2
 } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
@@ -754,8 +754,6 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     return (
         <div className="h-full flex flex-col bg-[oklch(94%_0.010_28)] overflow-hidden select-none font-sans text-[oklch(18%_0.012_28)]">
-            <Toaster position="top-center" />
-
             {/* Header & Sub-Bar */}
             <div className="p-4 bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col gap-3 shrink-0 shadow-2xs">
                 <div className="flex flex-col md:flex-row gap-3 items-center justify-between">

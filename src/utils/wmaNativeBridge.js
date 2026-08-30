@@ -61,7 +61,7 @@ export async function saveWmaOrderToSupabase(order, rawBytes = null) {
         playOrderAlert(`wma_order_${order.short_id || Date.now()}`, 1200, 3.4);
     } catch (e) {}
 
-    toast.info(`🛵 ได้รับออเดอร์ LINE MAN #${order.short_id} (฿${order.total_amount})`, {
+    toast.info(`LINE MAN #${order.short_id} (฿${order.total_amount}) เข้ามาแล้ว`, {
         duration: 8000
     });
 

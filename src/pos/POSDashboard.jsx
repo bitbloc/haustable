@@ -1041,6 +1041,50 @@ export default function POSDashboard() {
         playDoorbellAlert('qr_doorbell');
     };
 
+    const renderPosToast = (t, {
+        badge,
+        title,
+        subtitle = 'แตะเพื่อเปิดดูข้อมูล',
+        dot = 'emerald',
+        onClick
+    }) => {
+        const dotColor = dot === 'terracotta'
+            ? 'bg-[oklch(52%_0.16_28)]'
+            : dot === 'neutral'
+                ? 'bg-[oklch(42%_0.010_28)]'
+                : 'bg-emerald-500';
+
+        const hoverBorder = dot === 'terracotta'
+            ? 'hover:border-[oklch(52%_0.16_28)]'
+            : 'hover:border-[oklch(45%_0.08_140)]';
+
+        return (
+            <div 
+                className={`w-full max-w-[340px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans select-none transition-all duration-150 cursor-pointer active:scale-[0.98] ${hoverBorder}`}
+                onClick={() => {
+                    toast.dismiss(t);
+                    if (onClick) onClick();
+                }}
+            >
+                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)]/80 pb-1.5">
+                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">
+                        {badge}
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${dotColor} animate-pulse shrink-0`} />
+                </div>
+                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] leading-snug">
+                    {title}
+                </div>
+                {subtitle && (
+                    <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)] flex items-center justify-between pt-0.5">
+                        <span>{subtitle}</span>
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] opacity-60">✕ ปิด</span>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     useEffect(() => {
         let tablesMap = {};
         let activeChannel = null;
@@ -1078,22 +1122,19 @@ export default function POSDashboard() {
                     if (checkEventDeduplication(qrItemAlertKey, 4500)) {
                         console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}`);
                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
-                        toast.custom((t) => (
-                            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
-                                toast.dismiss(t);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'QR ORDER · ออเดอร์เข้าใหม่',
+                            title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
+                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                            dot: 'emerald',
+                            onClick: () => {
                                 if (tId) {
                                     supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }
-                            }}>
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">QR Order · ออเดอร์เข้าใหม่</span>
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                </div>
-                                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว</div>
-                            </div>
-                        ), { id: qrItemAlertKey, duration: 10000 });
+                            }
+                        }), { id: qrItemAlertKey, duration: 10000 });
                         pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
                     } else {
                         // Still trigger single chime for simultaneous burst if cooldown hasn't sounded
@@ -1125,22 +1166,19 @@ export default function POSDashboard() {
                     const callStaffKey = `${bId}_CALL_STAFF`;
 
                     if (checkEventDeduplication(callStaffKey, 5000)) {
-                        toast.custom((t) => (
-                            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                toast.dismiss(t);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'CALL STAFF · เรียกพนักงาน',
+                            title: `โต๊ะ ${tName} เรียกพนักงาน`,
+                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                            dot: 'terracotta',
+                            onClick: () => {
                                 if (tId) {
                                     supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }
-                            }}>
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Staff · เรียกพนักงาน</span>
-                                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                </div>
-                                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} เรียกพนักงาน</div>
-                            </div>
-                        ), { id: callStaffKey, duration: 10000 });
+                            }
+                        }), { id: callStaffKey, duration: 10000 });
                         pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
                         playStaffCallAlert(callStaffKey);
                     }
@@ -1155,22 +1193,19 @@ export default function POSDashboard() {
                     const callBillKey = `${bId}_CALL_BILL`;
 
                     if (checkEventDeduplication(callBillKey, 5000)) {
-                        toast.custom((t) => (
-                            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                toast.dismiss(t);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'CALL BILL · เรียกเช็คบิล',
+                            title: `โต๊ะ ${tName} เรียกเช็คบิล`,
+                            subtitle: 'แตะเพื่อเปิดดูและเตรียมบิล',
+                            dot: 'terracotta',
+                            onClick: () => {
                                 if (tId) {
                                     supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                         if (data) handleSelectTable(data);
                                     });
                                 }
-                            }}>
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Bill · เรียกเช็คบิล</span>
-                                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                </div>
-                                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} เรียกเช็คบิล</div>
-                            </div>
-                        ), { id: callBillKey, duration: 10000 });
+                            }
+                        }), { id: callBillKey, duration: 10000 });
                         pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
                         playBillAlert(callBillKey);
                     }
@@ -1188,21 +1223,15 @@ export default function POSDashboard() {
 
                     if (checkEventDeduplication(eventKey, 4500)) {
                         playOrderAlert(eventKey, 1200, 3.4);
-                        toast.custom((t) => (
-                            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(18%_0.012_28)]" onClick={() => {
-                                toast.dismiss(t);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: isPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : 'ONLINE BOOKING · จองโต๊ะ',
+                            title: `${label} เข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`,
+                            subtitle: 'แตะเพื่อเปิดดูใน Online Hub',
+                            dot: 'terracotta',
+                            onClick: () => {
                                 setView('online_hub');
-                            }}>
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">
-                                        {isPickup ? 'Online Pickup · สั่งรับกลับ' : 'Online Booking · จองโต๊ะ'}
-                                    </span>
-                                    <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                </div>
-                                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">{label} เข้ามาใหม่ (฿{(payload?.total_amount || 0).toLocaleString()})</div>
-                                <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">กดเพื่อเปิดดูใน Online Hub</div>
-                            </div>
-                        ), { id: eventKey, duration: 10000 });
+                            }
+                        }), { id: eventKey, duration: 10000 });
                         pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่`, null);
                     } else {
                         playOrderAlert(eventKey, 1200, 3.4);
@@ -1217,19 +1246,15 @@ export default function POSDashboard() {
                     const slipEventKey = `slip_upload_${bId || Date.now()}`;
                     if (checkEventDeduplication(slipEventKey, 4500)) {
                         playSlipAlert(slipEventKey);
-                        toast.custom((t) => (
-                            <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(45%_0.08_140)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                toast.dismiss(t);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'PAYMENT SLIP · มีสลิปใหม่รอตรวจ',
+                            title: `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`,
+                            subtitle: 'แตะเพื่อเปิดตรวจสลิปใน Online Hub',
+                            dot: 'emerald',
+                            onClick: () => {
                                 setView('online_hub');
-                            }}>
-                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(45%_0.08_140)]">Payment Slip · มีสลิปใหม่รอตรวจ</span>
-                                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                </div>
-                                <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">มีสลิปโอนเงินแนบเข้ามา (฿{(payload?.total_amount || 0).toLocaleString()})</div>
-                                <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">กดเพื่อเปิดตรวจสลิปใน Online Hub</div>
-                            </div>
-                        ), { id: slipEventKey, duration: 10000 });
+                            }
+                        }), { id: slipEventKey, duration: 10000 });
                         pushNotifHistory('SLIP', 'Payment Uploaded', `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
                     }
                     checkPendingOrders();
@@ -1263,9 +1288,12 @@ export default function POSDashboard() {
 
                         if (newRow.status === 'pending' || newRow.source === 'qr' || remarkCheck.includes('qr') || isPickup) {
                             if (checkEventDeduplication(pendingOrderKey, 4500)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
-                                        toast.dismiss(t);
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: isPickup ? 'PICKUP ONLINE · รับกลับ' : 'NEW ORDER · อาหารเข้าใหม่',
+                                    title: isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`,
+                                    subtitle: isPickup ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    dot: 'emerald',
+                                    onClick: () => {
                                         if (tableId) {
                                             supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                                 if (data) handleSelectTable(data);
@@ -1273,18 +1301,8 @@ export default function POSDashboard() {
                                         } else {
                                             setView('online_hub');
                                         }
-                                    }}>
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">
-                                                {isPickup ? 'Pickup Online · รับกลับ' : 'New Order · อาหารเข้าใหม่'}
-                                            </span>
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">
-                                            {isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`}
-                                        </div>
-                                    </div>
-                                ), { id: pendingOrderKey, duration: 10000 });
+                                    }
+                                }), { id: pendingOrderKey, duration: 10000 });
                                 pushNotifHistory('ORDER', isPickup ? 'Online Pickup' : 'New Order', isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)}` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
                             }
@@ -1298,20 +1316,19 @@ export default function POSDashboard() {
                         // 1. Pending Order Alert (New / Additional)
                         if (newRow?.status === 'pending') {
                             if (checkEventDeduplication(pendingOrderKey, 4500)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-blue-500" onClick={() => {
-                                        toast.dismiss(t);
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }}>
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">Add Order · สั่งเพิ่ม</span>
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} สั่งอาหารเพิ่มเติม</div>
-                                    </div>
-                                ), { id: pendingOrderKey, duration: 10000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'ADD ORDER · สั่งเพิ่ม',
+                                    title: `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`,
+                                    subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    dot: 'emerald',
+                                    onClick: () => {
+                                        if (tableId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }
+                                }), { id: pendingOrderKey, duration: 10000 });
                                 pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
                             }
@@ -1320,20 +1337,19 @@ export default function POSDashboard() {
                         // 2. Call Bill Alert (Strict diffing: only fire if newly added)
                         if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {
                             if (checkEventDeduplication(callBillKey, 5000)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                        toast.dismiss(t);
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }}>
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Bill · เรียกเช็คบิล</span>
-                                            <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} เรียกเช็คบิล</div>
-                                    </div>
-                                ), { id: callBillKey, duration: 10000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'CALL BILL · เรียกเช็คบิล',
+                                    title: `โต๊ะ ${tableName} เรียกเช็คบิล`,
+                                    subtitle: 'แตะเพื่อเปิดดูและเตรียมบิล',
+                                    dot: 'terracotta',
+                                    onClick: () => {
+                                        if (tableId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }
+                                }), { id: callBillKey, duration: 10000 });
                                 pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tableName} เรียกเช็คบิล`, tableId);
                                 playBillAlert(callBillKey);
                             }
@@ -1343,15 +1359,12 @@ export default function POSDashboard() {
                         const cancelKey = `${bookingId}_CANCELLED`;
                         if (newRow?.status === 'cancelled' && oldRow?.status !== 'cancelled') {
                             if (checkEventDeduplication(cancelKey, 8000)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px]">
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">Cancelled · ยกเลิก</span>
-                                            <span className="w-2 h-2 rounded-full bg-[oklch(18%_0.012_28)]" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">ลูกค้ายกเลิกการจอง: โต๊ะ {tableName}</div>
-                                    </div>
-                                ), { id: cancelKey, duration: 15000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'CANCELLED · ยกเลิกการจอง',
+                                    title: `ลูกค้ายกเลิกการจอง: โต๊ะ ${tableName}`,
+                                    subtitle: 'แตะเพื่อปิดการแจ้งเตือน',
+                                    dot: 'neutral',
+                                }), { id: cancelKey, duration: 15000 });
                                 playDoorbellAlert(cancelKey);
                             }
                         }
@@ -1361,15 +1374,12 @@ export default function POSDashboard() {
                         if (newRemark.includes('[CUSTOMER_ARRIVED]') && !oldRemark.includes('[CUSTOMER_ARRIVED]')) {
                             if (checkEventDeduplication(arrivedKey, 8000)) {
                                 const customerName = newRow?.pickup_contact_name || newRow?.customer_name || 'ลูกค้า';
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px]">
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-700">Customer Arrived · ลูกค้ามาถึง</span>
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">ลูกค้า {customerName} มาถึงหน้าร้านแล้ว</div>
-                                    </div>
-                                ), { id: arrivedKey, duration: 15000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'CUSTOMER ARRIVED · ลูกค้ามาถึง',
+                                    title: `ลูกค้า ${customerName} มาถึงหน้าร้านแล้ว`,
+                                    subtitle: 'แตะเพื่อปิดการแจ้งเตือน',
+                                    dot: 'emerald',
+                                }), { id: arrivedKey, duration: 15000 });
                                 playDoorbellAlert(arrivedKey);
                             }
                         }
@@ -1377,20 +1387,19 @@ export default function POSDashboard() {
                         // 5. Call Staff Alert (Strict diffing: only fire if newly added)
                         if (newRemark.includes('[CALL_STAFF]') && !oldRemark.includes('[CALL_STAFF]')) {
                             if (checkEventDeduplication(callStaffKey, 5000)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                        toast.dismiss(t);
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }}>
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)]">Call Staff · เรียกพนักงาน</span>
-                                            <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} เรียกพนักงาน</div>
-                                    </div>
-                                ), { id: callStaffKey, duration: 10000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'CALL STAFF · เรียกพนักงาน',
+                                    title: `โต๊ะ ${tableName} เรียกพนักงาน`,
+                                    subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    dot: 'terracotta',
+                                    onClick: () => {
+                                        if (tableId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }
+                                }), { id: callStaffKey, duration: 10000 });
                                 pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
                                 playStaffCallAlert(callStaffKey);
                             }
@@ -1399,20 +1408,19 @@ export default function POSDashboard() {
                         // 6. Payment Slip Alert (Strict diffing: only fire if new slip URL was uploaded)
                         if (newSlip && newSlip !== oldSlip) {
                             if (checkEventDeduplication(slipReceivedKey, 5000)) {
-                                toast.custom((t) => (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-blue-400 rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all" onClick={() => {
-                                        toast.dismiss(t);
-                                        supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }}>
-                                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                            <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-700">Payment · ส่งสลิปโอนเงิน</span>
-                                            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                        </div>
-                                        <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tableName} ส่งหลักฐานโอนเงินแล้ว</div>
-                                    </div>
-                                ), { id: slipReceivedKey, duration: 10000 });
+                                toast.custom((t) => renderPosToast(t, {
+                                    badge: 'PAYMENT · ส่งสลิปโอนเงิน',
+                                    title: `โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว`,
+                                    subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    dot: 'emerald',
+                                    onClick: () => {
+                                        if (tableId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }
+                                }), { id: slipReceivedKey, duration: 10000 });
                                 pushNotifHistory('SLIP', 'Payment Uploaded', `โต๊ะ ${tableName} ส่งหลักฐานโอนเงินแล้ว`, tableId);
                                 playSlipAlert(slipReceivedKey);
                             }
@@ -1437,22 +1445,19 @@ export default function POSDashboard() {
                                 supabase.from('bookings').select('table_id, staff_remark, source, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
                                     const tName = bData?.tables_layout?.table_name || tablesMap[bData?.table_id] || `โต๊ะ #${bData?.table_id || ''}`;
                                     const tId = bData?.table_id;
-                                    toast.custom((t) => (
-                                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans min-w-[290px] cursor-pointer active:scale-98 transition-all hover:border-[oklch(52%_0.16_28)]" onClick={() => {
-                                            toast.dismiss(t);
+                                    toast.custom((t) => renderPosToast(t, {
+                                        badge: 'QR ORDER · ออเดอร์เข้าใหม่',
+                                        title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
+                                        subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                        dot: 'emerald',
+                                        onClick: () => {
                                             if (tId) {
                                                 supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                                     if (data) handleSelectTable(data);
                                                 });
                                             }
-                                        }}>
-                                            <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1.5">
-                                                <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[oklch(42%_0.010_28)]">QR Order · ออเดอร์เข้าใหม่</span>
-                                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                            </div>
-                                            <div className="text-sm font-bold text-[oklch(18%_0.012_28)] pt-0.5">โต๊ะ {tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว</div>
-                                        </div>
-                                    ), { id: qrItemAlertKey, duration: 10000 });
+                                        }
+                                    }), { id: qrItemAlertKey, duration: 10000 });
                                     pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
                                 });
                             } else {
