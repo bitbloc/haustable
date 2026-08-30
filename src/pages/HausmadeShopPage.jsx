@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { useHausmadeShop } from '../hooks/useHausmadeShop'
+import { useHausmadeShop, isPreOrderItem, getPreOrderEta } from '../hooks/useHausmadeShop'
 import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
 import HausmadeCartDrawer from '../components/hausmade/HausmadeCartDrawer'
@@ -24,6 +24,8 @@ export default function HausmadeShopPage() {
         sortBy,
         setSortBy,
         cartItemCount,
+        hasPreOrderInCart,
+        preOrderItemsInCart,
         totalAmount,
         addToCart,
         settings,
