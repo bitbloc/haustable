@@ -14,6 +14,7 @@ import BookingSlip from './components/tracking/BookingSlip'
 import StatusTracker from './components/tracking/StatusTracker'
 import OrderSummary from './components/tracking/OrderSummary'
 import SlipPreviewModal from './components/tracking/SlipPreviewModal'
+import HausmadeShippingTracker from './components/tracking/HausmadeShippingTracker'
 
 export default function TrackingPage() {
   const { token } = useParams()
@@ -190,6 +191,7 @@ export default function TrackingPage() {
   if (!data) return null
 
   const isPickup = data.booking_type === 'pickup'
+  const isShippingOrder = data.order_type === 'hausmade_shipping' || (data.booking_type === 'hausmade' && data.shipping_address && data.shipping_address !== 'รับหน้าร้าน IN THE HAUS')
   const steps = getSteps(isPickup)
   const currentStatus = data.status?.toLowerCase() || 'pending'
   const currentStepIndex = steps.findIndex(s => s.key === currentStatus)
@@ -237,101 +239,115 @@ export default function TrackingPage() {
           </p>
       </div>
 
-      {/* 2. Highlight Box (The "Realize" Section) */}
-      <div className="px-6 mb-8">
-          <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-[oklch(85%_0.012_28)] text-center relative overflow-hidden">
-             {/* Decorative background blob */}
-             <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-[oklch(52%_0.16_28)]/10'}`} />
-             
-             <p className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest mb-2">{t('yourShortId')}</p>
-             <div className="text-5xl font-mono font-bold tracking-tighter text-[oklch(18%_0.012_28)] mb-4">
-                 #{data.short_id}
-             </div>
-             
-             {/* 📍 One-Tap Check-in Button */}
-             {!isCancelled && !['completed'].includes(currentStatus) && (
-                 <div className="mb-4">
-                     {arrivedNotified || data?.customer_note?.includes('[CUSTOMER_ARRIVED]') ? (
-                         <div className="bg-emerald-50 text-emerald-700 font-bold px-4 py-3 rounded-xl text-xs border border-emerald-200 flex items-center justify-center gap-2">
-                             <CheckCircle size={16} />
-                             แจ้งพนักงานแล้วว่ามาถึงร้านแล้ว! (Staff Notified)
-                         </div>
-                     ) : (
-                         <button 
-                             onClick={handleNotifyArrival}
-                             disabled={notifyingArrival}
-                             className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-bold py-3.5 px-4 rounded-xl shadow-md text-sm transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
-                         >
-                             {notifyingArrival ? (
-                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
-                             ) : (
-                                 <>
-                                     <MapPin size={18} />
-                                     📍 ฉันมาถึงร้านแล้ว (กดแจ้งพนักงานหน้าร้าน)
-                                 </>
-                             )}
-                         </button>
-                     )}
-                 </div>
-             )}
-             
-             <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 border border-gray-100">
-                 <div className="flex-1 min-w-0">
-                     <p className="text-[10px] text-gray-400 text-left mb-0.5 uppercase font-bold">{t('trackingLink')}</p>
-                     <p className="text-xs text-blue-600 truncate font-mono text-left">{getAppOrigin()}/t/{data.tracking_token}</p>
-                 </div>
-                 <button onClick={handleCopyLink} className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-100 transition-colors text-gray-600">
-                     <Copy size={16} />
-                 </button>
-             </div>
-
-             <div className={`${isCancelled ? 'bg-red-50 text-red-600' : 'bg-red-50 text-red-600'} px-4 py-3 rounded-xl text-xs font-medium flex gap-2 items-start text-left`}>
-                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                 {isCancelled 
-                    ? t('cancelledWarning')
-                    : t('keepLinkWarning')
-                 }
-             </div>
+      {/* 2. Tracking Content (Shipping Order vs Dine-In/Pickup Order) */}
+      {isShippingOrder ? (
+          <div className="px-6 mb-8">
+              <HausmadeShippingTracker data={data} settings={settings} />
+              
+              <div className="mt-6 bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-bold text-gray-900 mb-3 font-mono text-xs uppercase">[ รายการสินค้าในออเดอร์ ]</h3>
+                  <OrderSummary data={data} optionMap={optionMap} />
+              </div>
           </div>
-      </div>
-
-       {/* 2.5 Order Summary & Table */}
-       {!isCancelled && (
-        <div className="px-6 mb-8">
-            <h3 className="font-bold text-gray-900 mb-4">{t('bookingInfo')}</h3>
-            <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
-                {/* Table Name */}
-                {!isPickup && (
-                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
-                        <span className="text-sm font-medium text-gray-500">{t('tableNumber')}</span>
-                        <span className="text-2xl font-bold bg-black text-white px-4 py-2 rounded-xl">
-                            {data.table_name || 'TBA'}
-                        </span>
+      ) : (
+          <>
+            {/* 2. Highlight Box (The "Realize" Section) */}
+            <div className="px-6 mb-8">
+                <div className="bg-white rounded-3xl p-6 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-[oklch(85%_0.012_28)] text-center relative overflow-hidden">
+                    {/* Decorative background blob */}
+                    <div className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-3xl ${isCancelled ? 'bg-red-400/10' : 'bg-[oklch(52%_0.16_28)]/10'}`} />
+                    
+                    <p className="text-xs font-bold text-[oklch(55%_0.010_28)] uppercase tracking-widest mb-2">{t('yourShortId')}</p>
+                    <div className="text-5xl font-mono font-bold tracking-tighter text-[oklch(18%_0.012_28)] mb-4">
+                        #{data.short_id}
                     </div>
-                )}
-
-                {/* Date & Time */}
-                <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-gray-100">
-                    <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        <span className="block text-xs font-bold text-gray-500">{isPickup ? 'วันที่ทำรายการ (Order Date)' : 'วันที่จอง (Booking Made)'}</span>
-                        <div className="text-right">
-                             <span className="block text-sm font-bold text-gray-900">{new Date(data.created_at || data.booking_time).toLocaleDateString('th-TH')}</span>
-                             <span className="block text-[10px] text-gray-500">{new Date(data.created_at || data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
+                    
+                    {/* 📍 One-Tap Check-in Button */}
+                    {!isCancelled && !['completed'].includes(currentStatus) && (
+                        <div className="mb-4">
+                            {arrivedNotified || data?.customer_note?.includes('[CUSTOMER_ARRIVED]') ? (
+                                <div className="bg-emerald-50 text-emerald-700 font-bold px-4 py-3 rounded-xl text-xs border border-emerald-200 flex items-center justify-center gap-2">
+                                    <CheckCircle size={16} />
+                                    แจ้งพนักงานแล้วว่ามาถึงร้านแล้ว! (Staff Notified)
+                                </div>
+                            ) : (
+                                <button 
+                                    onClick={handleNotifyArrival}
+                                    disabled={notifyingArrival}
+                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-bold py-3.5 px-4 rounded-xl shadow-md text-sm transition-all flex items-center justify-center gap-2 active:scale-95 cursor-pointer"
+                                >
+                                    {notifyingArrival ? (
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/>
+                                    ) : (
+                                        <>
+                                            <MapPin size={18} />
+                                            📍 ฉันมาถึงร้านแล้ว (กดแจ้งพนักงานหน้าร้าน)
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </div>
+                    )}
+                    
+                    <div className="bg-gray-50 rounded-xl p-3 mb-4 flex items-center justify-between gap-3 border border-gray-100">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-gray-400 text-left mb-0.5 uppercase font-bold">{t('trackingLink')}</p>
+                            <p className="text-xs text-blue-600 truncate font-mono text-left">{getAppOrigin()}/t/{data.tracking_token}</p>
+                        </div>
+                        <button onClick={handleCopyLink} className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-100 transition-colors text-gray-600">
+                            <Copy size={16} />
+                        </button>
                     </div>
-                    <div className="flex justify-between items-center bg-[oklch(97%_0.008_28)] p-3 rounded-xl border border-[oklch(85%_0.012_28)]">
-                        <span className="block text-xs font-bold text-[oklch(18%_0.012_28)]">{isPickup ? 'เวลารับของ (Pickup Time)' : 'เวลานัดหมาย (Reservation)'}</span>
-                        <div className="text-right">
-                             <span className="block text-sm font-bold text-[oklch(52%_0.16_28)]">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
-                             <span className="block text-[10px] text-[oklch(52%_0.16_28)] font-bold">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
-                        </div>
+
+                    <div className={`${isCancelled ? 'bg-red-50 text-red-600' : 'bg-red-50 text-red-600'} px-4 py-3 rounded-xl text-xs font-medium flex gap-2 items-start text-left`}>
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        {isCancelled 
+                            ? t('cancelledWarning')
+                            : t('keepLinkWarning')
+                        }
                     </div>
                 </div>
-
-                <OrderSummary data={data} optionMap={optionMap} />
             </div>
-        </div>
-       )}
+
+            {/* 2.5 Order Summary & Table */}
+            {!isCancelled && (
+                <div className="px-6 mb-8">
+                    <h3 className="font-bold text-gray-900 mb-4">{t('bookingInfo')}</h3>
+                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                        {/* Table Name */}
+                        {!isPickup && (
+                            <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-100">
+                                <span className="text-sm font-medium text-gray-500">{t('tableNumber')}</span>
+                                <span className="text-2xl font-bold bg-black text-white px-4 py-2 rounded-xl">
+                                    {data.table_name || 'TBA'}
+                                </span>
+                            </div>
+                        )}
+
+                        {/* Date & Time */}
+                        <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-gray-100">
+                            <div className="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                <span className="block text-xs font-bold text-gray-500">{isPickup ? 'วันที่ทำรายการ (Order Date)' : 'วันที่จอง (Booking Made)'}</span>
+                                <div className="text-right">
+                                    <span className="block text-sm font-bold text-gray-900">{new Date(data.created_at || data.booking_time).toLocaleDateString('th-TH')}</span>
+                                    <span className="block text-[10px] text-gray-500">{new Date(data.created_at || data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center bg-[oklch(97%_0.008_28)] p-3 rounded-xl border border-[oklch(85%_0.012_28)]">
+                                <span className="block text-xs font-bold text-[oklch(18%_0.012_28)]">{isPickup ? 'เวลารับของ (Pickup Time)' : 'เวลานัดหมาย (Reservation)'}</span>
+                                <div className="text-right">
+                                    <span className="block text-sm font-bold text-[oklch(52%_0.16_28)]">{new Date(data.booking_time).toLocaleDateString('th-TH')}</span>
+                                    <span className="block text-[10px] text-[oklch(52%_0.16_28)] font-bold">{new Date(data.booking_time).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})} น.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <OrderSummary data={data} optionMap={optionMap} />
+                    </div>
+                </div>
+            )}
+          </>
+      )}
 
       {/* 3. Action Buttons */}
       <div className="px-6 mb-10 space-y-3">

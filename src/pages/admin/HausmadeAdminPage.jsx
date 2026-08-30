@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useHausmadeAdmin } from '../../hooks/useHausmadeAdmin'
 import HausmadeDocumentPrinter from '../../components/hausmade/HausmadeDocumentPrinter'
+import HausmadeOnlineBillModal from '../../components/hausmade/HausmadeOnlineBillModal'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function HausmadeAdminPage() {
@@ -18,6 +19,7 @@ export default function HausmadeAdminPage() {
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedOrderForPrint, setSelectedOrderForPrint] = useState(null)
+    const [selectedOrderForPngBill, setSelectedOrderForPngBill] = useState(null)
     const [printDocType, setPrintDocType] = useState('label') // 'label' | 'receipt'
     const [slipModalUrl, setSlipModalUrl] = useState(null)
 
@@ -102,8 +104,13 @@ export default function HausmadeAdminPage() {
     }
 
     const filteredOrders = orders.filter(o => {
-        // Status filter
-        if (statusFilter !== 'ALL' && o.status !== statusFilter) return false
+        // Pre-order special filter
+        if (statusFilter === 'preorder') {
+            const isPreOrder = o.is_preorder === true || (o.customer_note || '').includes('PRE-ORDER')
+            if (!isPreOrder) return false
+        } else if (statusFilter !== 'ALL' && o.status !== statusFilter) {
+            return false
+        }
 
         // Search query filter
         if (searchQuery.trim()) {
@@ -141,7 +148,7 @@ export default function HausmadeAdminPage() {
                                 : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        [ FULFILLMENT QUEUE ({orders.length}) ]
+                        [ FULFILLMENT QUEUE ]
                     </button>
                     <button
                         onClick={() => setActiveTab('settings')}
@@ -164,7 +171,7 @@ export default function HausmadeAdminPage() {
                     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-[oklch(85%_0.012_28)] pb-4">
                         {/* Status Tabs */}
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                            {['ALL', 'pending', 'confirmed', 'packing', 'shipped', 'cancelled'].map((st) => (
+                            {['ALL', 'pending', 'confirmed', 'packing', 'shipped', 'preorder', 'cancelled'].map((st) => (
                                 <button
                                     key={st}
                                     onClick={() => setStatusFilter(st)}
@@ -174,7 +181,7 @@ export default function HausmadeAdminPage() {
                                             : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                     }`}
                                 >
-                                    [ {st.toUpperCase()} ]
+                                    {st === 'preorder' ? '⏳ PRE-ORDER' : `[ ${st.toUpperCase()} ]`}
                                 </button>
                             ))}
                         </div>
@@ -230,7 +237,12 @@ export default function HausmadeAdminPage() {
                                                 </span>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {(order.is_preorder || (order.customer_note && order.customer_note.includes('PRE-ORDER'))) && (
+                                                    <span className="px-2.5 py-1 text-[10px] font-bold uppercase border bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)]">
+                                                        ⏳ PRE-ORDER
+                                                    </span>
+                                                )}
                                                 <span className={`px-2.5 py-1 text-[10px] font-bold uppercase border ${
                                                     order.status === 'confirmed' || order.status === 'shipped'
                                                         ? 'bg-[oklch(45%_0.08_140)]/10 text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
@@ -356,14 +368,21 @@ export default function HausmadeAdminPage() {
                                                 </button>
                                             </div>
 
-                                            {/* Document Print Buttons */}
-                                            <div className="flex items-center gap-2">
+                                            {/* Document & Bill Actions */}
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <button
+                                                    onClick={() => setSelectedOrderForPngBill(order)}
+                                                    className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] text-white text-xs font-bold uppercase hover:opacity-90 transition-opacity whitespace-nowrap shadow-2xs cursor-pointer flex items-center gap-1"
+                                                    title="ออกบิลรูปภาพ PNG คมชัดสูง ปรับค่าส่งได้ ส่งทาง LINE/IG"
+                                                >
+                                                    <span>🖼️ ออกบิล PNG</span>
+                                                </button>
                                                 <button
                                                     onClick={() => {
                                                         setSelectedOrderForPrint(order)
                                                         setPrintDocType('label')
                                                     }}
-                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors whitespace-nowrap"
+                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                                                 >
                                                     [ พิมพ์ใบจ่าหน้า ]
                                                 </button>
@@ -372,7 +391,7 @@ export default function HausmadeAdminPage() {
                                                         setSelectedOrderForPrint(order)
                                                         setPrintDocType('receipt')
                                                     }}
-                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors whitespace-nowrap"
+                                                    className="px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors whitespace-nowrap cursor-pointer"
                                                 >
                                                     [ พิมพ์ใบเสร็จ ]
                                                 </button>
@@ -568,6 +587,16 @@ export default function HausmadeAdminPage() {
                     senderInfo={settings}
                     docType={printDocType}
                     onClose={() => setSelectedOrderForPrint(null)}
+                />
+            )}
+
+            {/* Online PNG Bill Generator Modal */}
+            {selectedOrderForPngBill && (
+                <HausmadeOnlineBillModal
+                    order={selectedOrderForPngBill}
+                    senderInfo={settings}
+                    onClose={() => setSelectedOrderForPngBill(null)}
+                    onOrderUpdated={() => fetchAdminData()}
                 />
             )}
         </div>

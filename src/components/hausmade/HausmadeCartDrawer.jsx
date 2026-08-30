@@ -13,9 +13,12 @@ export default function HausmadeCartDrawer({
     shopState
 }) {
     const {
+        // Cart state & actions
         cart,
         cartItemCount,
         cartSubtotal,
+        hasPreOrderInCart,
+        preOrderItemsInCart,
         calculatedShippingFee,
         isFreeShipping,
         itemsNeededForFreeShipping,
@@ -24,7 +27,18 @@ export default function HausmadeCartDrawer({
         updateQuantity,
         removeFromCart,
         clearCart,
-        settings
+        settings,
+
+        // CRM xhaus Loyalty
+        memberProfile,
+        memberTierInfo,
+        availableXhausBalance,
+        projectedCoinsEarned,
+        redeemedCoinsInput,
+        setRedeemedCoinsInput,
+        xhausDiscountAmount,
+        effectiveXhausRedeemed,
+        xhausDiscountCalculation
     } = shopState
 
     const { submitOrder, isSubmitting, error: submitError } = useOrderSubmission()
@@ -61,10 +75,11 @@ export default function HausmadeCartDrawer({
         applyCode, removePromo, revalidatePromo 
     } = usePromotion()
 
-    // Final total calculation with discount
-    const discountAmount = appliedPromo?.discountAmount || 0
+    // Final total calculation with discount (Promo + xhaus)
+    const promoDiscount = appliedPromo?.discountAmount || 0
+    const totalDiscountAmount = promoDiscount + (xhausDiscountAmount || 0)
     const activeShippingFee = fulfilmentMode === 'pickup' ? 0 : calculatedShippingFee
-    const finalTotalAmount = Math.max(0, (cartSubtotal - discountAmount) + activeShippingFee)
+    const finalTotalAmount = Math.max(0, (cartSubtotal - totalDiscountAmount) + activeShippingFee)
 
     // Revalidate promo code when cartSubtotal changes
     useEffect(() => {
@@ -206,14 +221,18 @@ export default function HausmadeCartDrawer({
             status: 'pending',
             deposit_amount: finalTotalAmount,
             total_amount: finalTotalAmount,
-            discount_amount: discountAmount,
+            discount_amount: totalDiscountAmount,
             promotion_code_id: appliedPromo?.id || null,
-            customer_note: specialRequest ? `[HAUSMADE ${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${fulfilmentMode.toUpperCase()}]`,
+            customer_note: specialRequest ? `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}]`,
             order_type: fulfilmentMode === 'shipping' ? 'hausmade_shipping' : 'hausmade_pickup',
             booking_type: 'hausmade',
+            is_preorder: hasPreOrderInCart,
             tracking_token: trackingToken,
             shipping_address: fullShippingAddress,
-            shipping_fee: activeShippingFee
+            shipping_fee: activeShippingFee,
+            xhaus_earned: projectedCoinsEarned || 0,
+            xhaus_redeemed: effectiveXhausRedeemed || 0,
+            xhaus_discount: xhausDiscountAmount || 0
         }
 
         const orderItemsPayload = cart.map(item => ({
@@ -236,7 +255,8 @@ export default function HausmadeCartDrawer({
                     trackingToken,
                     totalAmount: finalTotalAmount,
                     fulfilmentMode,
-                    shippingAddress: fullShippingAddress
+                    shippingAddress: fullShippingAddress,
+                    isPreOrder: hasPreOrderInCart
                 })
                 clearCart()
             }
@@ -295,7 +315,10 @@ export default function HausmadeCartDrawer({
                                         ขอบคุณสำหรับคำสั่งซื้อ HAUSMADE
                                     </h3>
                                     <p className="text-xs text-[oklch(42%_0.010_28)] mt-1 leading-relaxed">
-                                        ระบบได้รับสลิปการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการแพ็คสินค้าและจัดส่งให้โดยเร็วที่สุด
+                                        {submittedOrder.isPreOrder 
+                                            ? 'ระบบได้รับสลิปคำสั่งซื้อพรีออเดอร์เรียบร้อยแล้ว ทีมงานจะจัดเตรียมผลิตและจัดส่งตามรอบที่กำหนด'
+                                            : 'ระบบได้รับสลิปการชำระเงินเรียบร้อยแล้ว ทีมงานจะดำเนินการแพ็คสินค้าและจัดส่งให้โดยเร็วที่สุด'
+                                        }
                                     </p>
                                 </div>
 
@@ -423,6 +446,19 @@ export default function HausmadeCartDrawer({
                                         [ ITEMS SUMMARY // รายการสินค้า ]
                                     </span>
 
+                                    {/* Pre-Order Notice in Cart */}
+                                    {hasPreOrderInCart && (
+                                        <div className="p-3 bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)] font-mono text-xs flex flex-col gap-1">
+                                            <div className="flex items-center gap-1.5 text-[oklch(45%_0.08_140)] font-bold">
+                                                <span>⏳</span>
+                                                <span className="uppercase">[ มีสินค้าพรีออเดอร์ในคำสั่งซื้อ ]</span>
+                                            </div>
+                                            <p className="text-[11px] text-[oklch(18%_0.012_28)] font-sans leading-relaxed">
+                                                พัสดุในออเดอร์นี้จะจัดส่งพร้อมกันตามรอบสินค้าพรีออเดอร์ ({preOrderItemsInCart.map(i => i.preOrderEta || '5-7 วัน').filter(Boolean)[0] || 'ตามรอบการผลิต'})
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {cart.length === 0 ? (
                                         <div className="p-8 border border-dashed border-[oklch(85%_0.012_28)] text-center font-mono text-xs text-[oklch(55%_0.010_28)] uppercase">
                                             [ CART IS EMPTY // ตะกร้าสินค้าว่างเปล่า ]
@@ -435,12 +471,24 @@ export default function HausmadeCartDrawer({
                                                     className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex items-center justify-between gap-3"
                                                 >
                                                     <div className="flex flex-col">
-                                                        <span className="font-bold text-[13px] text-[oklch(18%_0.012_28)]">
-                                                            {item.name}
-                                                        </span>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-[13px] text-[oklch(18%_0.012_28)]">
+                                                                {item.name}
+                                                            </span>
+                                                            {item.isPreOrder && (
+                                                                <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white font-mono text-[9px] font-bold uppercase rounded-2xs">
+                                                                    ⏳ PRE-ORDER
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         {item.optionsText && (
                                                             <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
                                                                 {item.optionsText}
+                                                            </span>
+                                                        )}
+                                                        {item.preOrderEta && (
+                                                            <span className="font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold mt-0.5">
+                                                                รอบส่ง: {item.preOrderEta}
                                                             </span>
                                                         )}
                                                         <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] mt-1">
@@ -528,6 +576,117 @@ export default function HausmadeCartDrawer({
                                     )}
                                 </div>
 
+                                {/* CRM xhaus Loyalty & Rewards Card */}
+                                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3.5 flex flex-col gap-3 font-mono">
+                                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                                                // XHAUS LOYALTY & REWARDS
+                                            </span>
+                                            {memberTierInfo && (
+                                                <span
+                                                    className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded-2xs"
+                                                    style={{ backgroundColor: memberTierInfo.color_accent || '#C84B31', color: '#FFF' }}
+                                                >
+                                                    {memberTierInfo.name}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {memberProfile ? (
+                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)]">
+                                                {availableXhausBalance.toLocaleString()} xhaus
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                [ GUEST ]
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Projected Earn */}
+                                    <div className="flex items-center justify-between text-xs bg-[oklch(97%_0.008_28)] p-2 border border-[oklch(85%_0.012_28)]">
+                                        <span className="text-[oklch(42%_0.010_28)]">
+                                            ✨ ช้อปครั้งนี้รับแต้ม ({memberTierInfo?.multiplier || 1.0}x):
+                                        </span>
+                                        <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                            +{projectedCoinsEarned} xhaus
+                                        </span>
+                                    </div>
+
+                                    {/* Coin Redemption Controls (If member logged in & has coins) */}
+                                    {memberProfile && availableXhausBalance > 0 && (
+                                        <div className="flex flex-col gap-2 pt-1">
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <span className="text-[oklch(55%_0.010_28)]">
+                                                    ใช้แต้ม xhaus แลกส่วนลด (1 xhaus = ฿1.-):
+                                                </span>
+                                                {xhausDiscountAmount > 0 && (
+                                                    <span className="text-[oklch(45%_0.08_140)] font-bold">
+                                                        -฿{xhausDiscountAmount}.-
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max={availableXhausBalance}
+                                                    step="1"
+                                                    value={redeemedCoinsInput || ''}
+                                                    onChange={(e) => setRedeemedCoinsInput(Math.max(0, parseInt(e.target.value) || 0))}
+                                                    placeholder="จำนวนแต้มที่จะแลก"
+                                                    className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs font-mono focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                                />
+                                                {redeemedCoinsInput > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRedeemedCoinsInput(0)}
+                                                        className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] text-[10px] font-bold uppercase"
+                                                    >
+                                                        [ ล้าง ]
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/* Quick Pick Buttons */}
+                                            <div className="flex gap-1.5 flex-wrap">
+                                                {availableXhausBalance >= 50 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRedeemedCoinsInput(50)}
+                                                        className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                    >
+                                                        [ 50 xhaus ]
+                                                    </button>
+                                                )}
+                                                {availableXhausBalance >= 100 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRedeemedCoinsInput(100)}
+                                                        className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                    >
+                                                        [ 100 xhaus ]
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRedeemedCoinsInput(Math.min(availableXhausBalance, cartSubtotal))}
+                                                    className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white text-[9px] font-bold uppercase transition-colors"
+                                                >
+                                                    [ แลกสูงสุด ]
+                                                </button>
+                                            </div>
+
+                                            {xhausDiscountCalculation?.error && (
+                                                <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                    [ ! ]: {xhausDiscountCalculation.error}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
                                 {/* Form Inputs Section */}
                                 <form onSubmit={handleSubmitOrder} className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-5">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
@@ -563,18 +722,19 @@ export default function HausmadeCartDrawer({
                                         </div>
                                     </div>
 
+                                    {/* Shipping Address Inputs */}
                                     {fulfilmentMode === 'shipping' ? (
                                         <div className="flex flex-col gap-3">
                                             <div>
                                                 <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                                                    ที่อยู่จัดส่ง (บ้านเลขที่ / อาคาร / ซอย / ถนน) *
+                                                    ที่อยู่จัดส่ง (บ้านเลขที่ / ถนน / ซอย / หมู่บ้าน) *
                                                 </label>
                                                 <input
                                                     type="text"
                                                     required
                                                     value={addressLine}
                                                     onChange={(e) => setAddressLine(e.target.value)}
-                                                    placeholder="เช่น 123/45 ถนนสุนทรวิจิตร"
+                                                    placeholder="123/45 ถ.สุนทรวิจิตร..."
                                                     className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                                 />
                                             </div>
@@ -582,25 +742,25 @@ export default function HausmadeCartDrawer({
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                                                        แขวง / ตำบล
+                                                        ตำบล / แขวง
                                                     </label>
                                                     <input
                                                         type="text"
                                                         value={subDistrict}
                                                         onChange={(e) => setSubDistrict(e.target.value)}
-                                                        placeholder="ตำบล ในเมือง"
+                                                        placeholder="ในเมือง"
                                                         className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                                     />
                                                 </div>
                                                 <div>
                                                     <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                                                        เขต / อำเภอ
+                                                        อำเภอ / เขต
                                                     </label>
                                                     <input
                                                         type="text"
                                                         value={district}
                                                         onChange={(e) => setDistrict(e.target.value)}
-                                                        placeholder="อำเภอ เมือง"
+                                                        placeholder="เมืองนครพนม"
                                                         className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                                     />
                                                 </div>
@@ -713,15 +873,15 @@ export default function HausmadeCartDrawer({
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleCopy(finalTotalAmount.toString(), 'คัดลอกยอดเงินแล้ว!')}
+                                                    onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
                                                     className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
                                                 >
-                                                    [ COPY ฿{finalTotalAmount} ]
+                                                    [ COPY ฿{finalTotalAmount.toLocaleString()} ]
                                                 </button>
                                             </div>
 
                                             {copyFeedback && (
-                                                <span className="font-mono text-[10px] font-bold text-[oklch(45%_0.08_140)]">
+                                                <span className="font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold">
                                                     ✓ {copyFeedback}
                                                 </span>
                                             )}
@@ -766,10 +926,16 @@ export default function HausmadeCartDrawer({
                                             <span>ยอดรวมสินค้า ({cartItemCount} ชิ้น):</span>
                                             <span>฿{cartSubtotal.toLocaleString()}.-</span>
                                         </div>
-                                        {discountAmount > 0 && (
+                                        {promoDiscount > 0 && (
                                             <div className="flex justify-between text-[oklch(45%_0.08_140)] font-bold">
-                                                <span>ส่วนลดโปรโมชั่น ({appliedPromo?.code}):</span>
-                                                <span>-฿{discountAmount.toLocaleString()}.-</span>
+                                                <span>ส่วนลดโค้ดโปรโมชั่น ({appliedPromo?.code}):</span>
+                                                <span>-฿{promoDiscount.toLocaleString()}.-</span>
+                                            </div>
+                                        )}
+                                        {xhausDiscountAmount > 0 && (
+                                            <div className="flex justify-between text-[oklch(52%_0.16_28)] font-bold">
+                                                <span>ส่วนลดแต้ม xhaus ({effectiveXhausRedeemed} xhaus):</span>
+                                                <span>-฿{xhausDiscountAmount.toLocaleString()}.-</span>
                                             </div>
                                         )}
                                         <div className="flex justify-between text-[oklch(42%_0.010_28)]">
