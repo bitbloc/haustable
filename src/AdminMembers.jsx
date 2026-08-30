@@ -262,8 +262,7 @@ export default function AdminMembers() {
                 pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
                 free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
-                role: editForm.role || 'customer',
-                admin_permissions: editForm.admin_permissions || []
+                role: editForm.role || 'customer'
             }
 
             const { error } = await supabase
@@ -280,7 +279,7 @@ export default function AdminMembers() {
             } : m))
 
             setEditingMember(null)
-            toast.success('บันทึกข้อมูลสมาชิกและสิทธิ์การเข้าถึงเรียบร้อยแล้ว')
+            toast.success('บันทึกข้อมูลสมาชิกเรียบร้อยแล้ว')
         } catch (err) {
             console.error('Failed to save profile:', err)
             toast.error('ไม่สามารถบันทึกข้อมูลได้: ' + (err.message || 'เกิดข้อผิดพลาดในการบันทึก'))
