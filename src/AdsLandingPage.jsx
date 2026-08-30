@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ExternalLink, MapPin, MessageCircle, Utensils, HelpCircle, Clock, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Maximize2, RefreshCw, ZoomIn as ZoomInIcon, Compass, Instagram, Facebook, Star } from 'lucide-react';
+import { MessageCircle, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RefreshCw, Compass, Instagram, Facebook, Star } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
 import { Analytics } from '@vercel/analytics/react';
@@ -8,9 +8,7 @@ import {
     trackDirectionsClick,
     trackPhoneClick,
     trackLineClick,
-    trackLinemanClick,
-    trackBookletClick,
-    trackEvent
+    trackBookletClick
 } from './utils/analyticsHelper';
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
@@ -295,10 +293,6 @@ export default function AdsLandingPage() {
 
     const handleLineClick = () => {
         trackLineClick('/link');
-    };
-
-    const handleLinemanClick = () => {
-        trackLinemanClick('/link');
     };
 
     const handleBookletClick = () => {
