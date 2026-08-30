@@ -56,18 +56,19 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [isOpen, onClose])
 
-    if (!isOpen || !product) return null
-
     // Determine Maximum Available Stock for current combination
     const maxAvailableStock = useMemo(() => {
+        if (!product) return 999
         let maxLimit = product.stock_quantity ?? product.remaining_stock ?? 999
         Object.values(selectedOptions).forEach(opt => {
-            if (opt.stock !== null && opt.stock !== undefined) {
+            if (opt?.stock !== null && opt?.stock !== undefined) {
                 maxLimit = Math.min(maxLimit, Number(opt.stock))
             }
         })
         return maxLimit
     }, [product, selectedOptions])
+
+    if (!isOpen || !product) return null
 
     const handleOptionChange = (group, choice) => {
         const isSoldOut = choice.is_available === false || (choice.stock_quantity !== undefined && choice.stock_quantity <= 0) || (choice.remaining_stock !== undefined && choice.remaining_stock <= 0)

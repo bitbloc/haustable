@@ -14,28 +14,34 @@ export default function HausmadeOnlineBillModal({
     onClose,
     onOrderUpdated
 }) {
-    if (!order) return null
-
     const billRef = useRef(null)
     const [isExporting, setIsExporting] = useState(false)
     const [isCopyingImage, setIsCopyingImage] = useState(false)
     const [isSavingDb, setIsSavingDb] = useState(false)
 
     // Dynamic Shipping Fee (Initialized from order or default)
-    const initialShippingFee = order.shipping_fee !== undefined ? Number(order.shipping_fee) : (senderInfo.shippingFee || 50)
+    const initialShippingFee = order?.shipping_fee !== undefined ? Number(order.shipping_fee) : (senderInfo.shippingFee || 50)
     const [customShippingFee, setCustomShippingFee] = useState(initialShippingFee)
 
+    // Sync customShippingFee when order changes
+    React.useEffect(() => {
+        if (order?.shipping_fee !== undefined) {
+            setCustomShippingFee(Number(order.shipping_fee))
+        }
+    }, [order?.shipping_fee])
+
     // Customer & Order Data Normalization
-    const customerName = order.pickup_contact_name || order.guest_name || order.customer_name || 'ลูกค้า HAUSMADE'
-    const customerPhone = order.pickup_contact_phone || order.phone_number || '-'
-    const shippingAddress = order.shipping_address || 'รับหน้าร้าน IN THE HAUS (นครพนม)'
-    const trackingToken = order.tracking_token || order.id || `HM-${Date.now().toString(36).toUpperCase()}`
-    const courierName = order.courier_name || 'Flash Express'
-    const trackingNumber = order.tracking_number || ''
-    const orderDate = new Date(order.created_at || Date.now())
+    const customerName = order?.pickup_contact_name || order?.guest_name || order?.customer_name || 'ลูกค้า HAUSMADE'
+    const customerPhone = order?.pickup_contact_phone || order?.phone_number || '-'
+    const shippingAddress = order?.shipping_address || 'รับหน้าร้าน IN THE HAUS (นครพนม)'
+    const trackingToken = order?.tracking_token || order?.id || `HM-${Date.now().toString(36).toUpperCase()}`
+    const courierName = order?.courier_name || 'Flash Express'
+    const trackingNumber = order?.tracking_number || ''
+    const orderDate = new Date(order?.created_at || Date.now())
 
     // Financial Computations
     const subtotal = useMemo(() => {
+        if (!order) return 0
         if (order.order_items && order.order_items.length > 0) {
             return order.order_items.reduce((sum, item) => {
                 const price = Number(item.price_at_time || item.menu_items?.price || item.price || 0)
@@ -48,7 +54,7 @@ export default function HausmadeOnlineBillModal({
         return Math.max(0, Number(order.total_amount || 0) - origShipping)
     }, [order])
 
-    const discountAmount = Number(order.discount_amount || order.xhaus_discount || 0)
+    const discountAmount = Number(order?.discount_amount || order?.xhaus_discount || 0)
     const finalTotal = Math.max(0, (subtotal - discountAmount) + Number(customShippingFee))
 
     // PromptPay QR Payload Generation
@@ -65,6 +71,8 @@ export default function HausmadeOnlineBillModal({
         }
         return ''
     }, [sanitizedPromptpay, finalTotal])
+
+    if (!order) return null
 
     // Save custom shipping fee to database
     const handleSaveShippingFeeToDb = async () => {
