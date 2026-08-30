@@ -412,8 +412,26 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
     }
 }
 
+let primedHtml5Audio = null;
+
+function getPrimedHtml5Audio() {
+    if (typeof window === 'undefined') return null;
+    try {
+        if (!primedHtml5Audio) {
+            const soundSrc = noti1SoundUrl || '/noti1.mp3';
+            primedHtml5Audio = new Audio(soundSrc);
+            primedHtml5Audio.preload = 'auto';
+            primedHtml5Audio.load();
+        }
+        return primedHtml5Audio;
+    } catch (e) {
+        return null;
+    }
+}
+
 /**
- * Check and record event deduplication key within a cooldown window
+ * Check and record event deduplication key within a cooldown window.
+ * Returns true if this event is NEW (not seen within cooldownMs), false if it's a duplicate.
  */
 export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
     if (!eventKey) return true;
@@ -428,11 +446,7 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
 
     const lastTime = eventDeduplicationMap.get(eventKey);
     if (lastTime && (now - lastTime < cooldownMs)) {
-        // If called within 350ms with the SAME key, this is the exact same execution chain (e.g. caller check -> playOrderAlert)
-        if (now - lastTime < 350) {
-            return true;
-        }
-        return false; // Suppress true duplicate bursts
+        return false; // Already handled within cooldown window
     }
 
     eventDeduplicationMap.set(eventKey, now);
@@ -440,7 +454,8 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
 }
 
 /**
- * Play decoded AudioBuffer cleanly with amplification directly to speakers
+ * Play decoded AudioBuffer cleanly with amplification directly to speakers.
+ * Returns true only if Web Audio context is active and playback was successfully scheduled.
  */
 function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
     try {
@@ -449,8 +464,11 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
 
         const ctx = getSharedAudioContext();
         if (!ctx) return false;
+
         if (ctx.state === 'suspended') {
             ctx.resume().catch(() => {});
+            // Return false so HTML5 Audio fallback fires synchronously without delay
+            return false;
         }
 
         const source = ctx.createBufferSource();
@@ -625,14 +643,15 @@ export function playUrgentTone() {
 
 /**
  * Primary High-Impact Order Alert
- * Plays /noti1.mp3 through the High-Gain Web Audio Mastering Chain with multi-level fallbacks.
+ * Plays /noti1.mp3 through the High-Gain Web Audio Mastering Chain with multi-level fail-safes.
+ * If multiple orders arrive at the exact same moment (within throttleMs), it plays ONE clean chime.
  * 
- * @param {string|null} eventKey - Deduplication identifier (e.g. "order_123_pending")
- * @param {number} throttleMs - Minimum interval between alerts (default: 800ms)
+ * @param {string|null} eventKey - Deduplication identifier (optional)
+ * @param {number} throttleMs - Minimum interval between audio bursts (default: 1200ms)
  * @param {number} boostLevel - Output gain multiplier (default: 3.4x / +14dB)
  * @returns {boolean} - Whether audio playback was triggered
  */
-export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.4) {
+export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 3.4) {
     const effectiveGain = getEffectiveGainFactor();
     if (effectiveGain <= 0) {
         return false; // Sound muted or volume 0
@@ -640,18 +659,18 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
 
     const now = Date.now();
 
-    // 1. Check Event Deduplication Key
-    if (eventKey && !checkEventDeduplication(eventKey, 4500)) {
-        return false;
-    }
-
-    // 2. Global Throttle Check (Prevents audio overlap/stutter)
+    // 1. Global Burst Throttle: If multiple orders arrive simultaneously, ring ONCE cleanly without stutter
     if (now - lastAlertPlayedTime < throttleMs) {
         return false;
     }
     lastAlertPlayedTime = now;
 
-    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
+    // Record deduplication timestamp for event key if supplied
+    if (eventKey) {
+        eventDeduplicationMap.set(eventKey, now);
+    }
+
+    // 2. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
     if (noti1AudioBuffer) {
         const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
         if (played) return true;
@@ -662,21 +681,24 @@ export function playOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3
         preloadNotificationAudio();
     }
 
-    // 4. Secondary Playback: HTML5 Audio with bundled noti1.mp3
+    // 3. Secondary Playback: HTML5 Audio with bundled noti1.mp3
     try {
+        const primed = getPrimedHtml5Audio();
         const soundSrc = noti1SoundUrl || '/noti1.mp3';
-        const audio = new Audio(soundSrc);
+        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
         const promise = audio.play();
         if (promise !== undefined) {
             promise.catch((e) => {
-                console.warn('[AudioEngine] HTML5 Audio play prevented:', e);
+                console.warn('[AudioEngine] HTML5 Audio play prevented, falling back to synth chime:', e);
+                playSynthChime();
             });
         }
         return true;
     } catch (e) {
-        console.warn('[AudioEngine] HTML5 Audio error:', e);
-        return false;
+        console.warn('[AudioEngine] HTML5 Audio error, falling back to synth chime:', e);
+        playSynthChime();
+        return true;
     }
 }
 

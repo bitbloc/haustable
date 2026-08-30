@@ -41,7 +41,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const alertIntervalRef = useRef(null);
 
     const playAlert = (eventKey = null) => {
-        playOrderAlert(eventKey, 600, 3.4);
+        playOrderAlert(eventKey, 1200, 3.4);
         if (alertIntervalRef.current) {
             clearInterval(alertIntervalRef.current);
             alertIntervalRef.current = null;

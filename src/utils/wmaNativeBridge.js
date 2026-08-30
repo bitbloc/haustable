@@ -58,7 +58,7 @@ export async function saveWmaOrderToSupabase(order, rawBytes = null) {
     
     // Play loud notification sound immediately with noti1.mp3 high gain
     try {
-        playOrderAlert(`wma_order_${order.short_id || Date.now()}`, 600, 3.4);
+        playOrderAlert(`wma_order_${order.short_id || Date.now()}`, 1200, 3.4);
     } catch (e) {}
 
     toast.info(`🛵 ได้รับออเดอร์ LINE MAN #${order.short_id} (฿${order.total_amount})`, {
