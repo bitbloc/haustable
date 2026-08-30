@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, Utensils, Award } from 'lucide-react'
+import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, Utensils, Award, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
@@ -127,7 +127,7 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                 </div>
 
                 {/* Sub-tab Switcher (Dieter Rams Tabular division) */}
-                <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-xs overflow-x-auto no-scrollbar gap-1">
+                <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-xs overflow-x-auto no-scrollbar gap-1 items-center">
                     {tabs.map(tab => {
                         const Icon = tab.icon
                         const isActive = activeTab === tab.id
@@ -154,6 +154,15 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                             </button>
                         )
                     })}
+
+                    <a
+                        href="/admin/hausmade?tab=catalog"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap text-[oklch(52%_0.16_28)] hover:text-white hover:bg-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40 ml-auto bg-white/60 cursor-pointer"
+                        title="ไปที่ระบบจัดการสินค้าและ Pre-Order ของ HAUSMADE"
+                    >
+                        <ShoppingBag size={14} />
+                        <span>🛍️ HAUSMADE CATALOG ↗</span>
+                    </a>
                 </div>
             </div>
 

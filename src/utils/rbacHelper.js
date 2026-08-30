@@ -1,10 +1,11 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 
-// Core 8 Backoffice Hub Module Keys
+// Core Backoffice Hub Module Keys
 export const ADMIN_MODULES = [
     { key: 'overview', label: 'Overview', path: '/admin', match: (p) => p === '/admin' },
     { key: 'tables', label: 'Floor & Tables', path: '/admin/tables', match: (p) => p.startsWith('/admin/tables') || p.startsWith('/admin/editor') },
     { key: 'bookings', label: 'Bookings & Orders', path: '/admin/bookings', match: (p) => p.startsWith('/admin/bookings') },
+    { key: 'hausmade', label: 'HAUSMADE Retail', path: '/admin/hausmade', match: (p) => p.startsWith('/admin/hausmade') },
     { key: 'menu', label: 'Menu & Lab', path: '/admin/menu', match: (p) => p.startsWith('/admin/menu') || p.startsWith('/admin/costing') || p.startsWith('/admin/lab') || p.startsWith('/admin/sop') },
     { key: 'financial', label: 'Financial & Insights', path: '/admin/financial', match: (p) => p === '/admin/financial' },
     { key: 'tax', label: 'Tax & Invoices', path: '/admin/tax', match: (p) => p.startsWith('/admin/tax') },
@@ -14,11 +15,11 @@ export const ADMIN_MODULES = [
 
 // Default Role Permissions Preset
 export const ROLE_PERMISSIONS = {
-    owner: ['overview', 'tables', 'bookings', 'menu', 'financial', 'tax', 'marketing', 'settings'],
-    admin: ['overview', 'tables', 'bookings', 'menu', 'financial', 'tax', 'marketing', 'settings'],
-    manager: ['overview', 'tables', 'bookings', 'menu', 'marketing'],
-    staff: ['tables', 'bookings'],
-    cashier: ['tables', 'bookings', 'overview'],
+    owner: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'settings'],
+    admin: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'settings'],
+    manager: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'marketing'],
+    staff: ['tables', 'bookings', 'hausmade'],
+    cashier: ['tables', 'bookings', 'overview', 'hausmade'],
     kitchen: ['menu', 'bookings'],
     customer: []
 }

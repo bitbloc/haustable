@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, Shield } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, Shield, ShoppingBag } from 'lucide-react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -116,6 +116,13 @@ export default function AdminLayout() {
             icon: Calendar, 
             label: 'Bookings & Orders',
             isActive: (pathname) => pathname.startsWith('/admin/bookings')
+        },
+        { 
+            key: 'hausmade',
+            path: '/admin/hausmade', 
+            icon: ShoppingBag, 
+            label: 'HAUSMADE Retail',
+            isActive: (pathname) => pathname.startsWith('/admin/hausmade')
         },
         { 
             key: 'menu',

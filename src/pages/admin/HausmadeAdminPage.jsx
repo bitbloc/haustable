@@ -1,11 +1,15 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useHausmadeAdmin } from '../../hooks/useHausmadeAdmin'
 import HausmadeDocumentPrinter from '../../components/hausmade/HausmadeDocumentPrinter'
 import HausmadeOnlineBillModal from '../../components/hausmade/HausmadeOnlineBillModal'
+import HausmadeCatalogManager from '../../components/hausmade/HausmadeCatalogManager'
 import { supabase } from '../../lib/supabaseClient'
 
 export default function HausmadeAdminPage() {
+    const [searchParams, setSearchParams] = useSearchParams()
+    const urlTab = searchParams.get('tab')
     const {
         loading,
         orders,
@@ -15,7 +19,13 @@ export default function HausmadeAdminPage() {
         updateOrderStatus
     } = useHausmadeAdmin()
 
-    const [activeTab, setActiveTab] = useState('orders') // 'orders' | 'settings'
+    const [activeTab, setActiveTab] = useState(urlTab || 'orders') // 'orders' | 'catalog' | 'settings'
+
+    useEffect(() => {
+        if (urlTab && urlTab !== activeTab) {
+            setActiveTab(urlTab)
+        }
+    }, [urlTab])
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedOrderForPrint, setSelectedOrderForPrint] = useState(null)
@@ -138,28 +148,50 @@ export default function HausmadeAdminPage() {
                     </h1>
                 </div>
 
-                {/* Tab Switcher */}
-                <div className="flex items-center gap-2 bg-[oklch(97%_0.008_28)] p-1 border border-[oklch(85%_0.012_28)]">
-                    <button
-                        onClick={() => setActiveTab('orders')}
-                        className={`px-4 py-2 text-xs font-bold uppercase transition-all ${
-                            activeTab === 'orders'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                        }`}
+                {/* Header Actions & Tab Switcher */}
+                <div className="flex items-center gap-3 flex-wrap">
+                    <a
+                        href="/hausmade"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3.5 py-2 text-xs font-bold uppercase border border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors cursor-pointer"
+                        title="เปิดหน้าร้าน HAUSMADE สำหรับลูกค้าในแท็บใหม่"
                     >
-                        [ FULFILLMENT QUEUE ]
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('settings')}
-                        className={`px-4 py-2 text-xs font-bold uppercase transition-all ${
-                            activeTab === 'settings'
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                        }`}
-                    >
-                        [ SHIPPING & SENDER SETTINGS ]
-                    </button>
+                        [ 🏪 ดูหน้าร้าน SHOP ↗ ]
+                    </a>
+
+                    <div className="flex items-center gap-2 bg-[oklch(97%_0.008_28)] p-1 border border-[oklch(85%_0.012_28)]">
+                        <button
+                            onClick={() => setActiveTab('orders')}
+                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                                activeTab === 'orders'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            [ FULFILLMENT QUEUE ]
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('catalog')}
+                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                                activeTab === 'catalog'
+                                    ? 'bg-[oklch(52%_0.16_28)] text-white'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            [ 📦 CATALOG & PRODUCTS ]
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('settings')}
+                            className={`px-4 py-2 text-xs font-bold uppercase transition-all cursor-pointer ${
+                                activeTab === 'settings'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                        >
+                            [ SHIPPING & SENDER SETTINGS ]
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -403,8 +435,11 @@ export default function HausmadeAdminPage() {
                         </div>
                     )}
                 </div>
+            ) : activeTab === 'catalog' ? (
+                /* TAB 2: CATALOG & PRODUCT MANAGER */
+                <HausmadeCatalogManager />
             ) : (
-                /* TAB 2: SHIPPING & SENDER SETTINGS */
+                /* TAB 3: SHIPPING & SENDER SETTINGS */
                 <form onSubmit={handleSaveSettingsSubmit} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-6 flex flex-col gap-6">
                     <div className="border-b border-[oklch(85%_0.012_28)] pb-3">
                         <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest block">

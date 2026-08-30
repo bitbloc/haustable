@@ -5,11 +5,35 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { isPreOrderItem, getPreOrderEta } from '../../hooks/useHausmadeShop'
 
+export const TSHIRT_SIZE_CHART = [
+    { size: 'S', chest: '37.0"', length: '25"', sleeve: '3.0"' },
+    { size: 'M', chest: '39.4"', length: '25"', sleeve: '3.5"' },
+    { size: 'L', chest: '41.7"', length: '26"', sleeve: '4.0"' },
+    { size: 'XL', chest: '44.0"', length: '27"', sleeve: '4.5"' },
+    { size: '2XL', chest: '46.4"', length: '28"', sleeve: '5.0"' },
+    { size: '3XL', chest: '48.8"', length: '29"', sleeve: '5.5"' },
+    { size: '4XL', chest: '51.8"', length: '30"', sleeve: '6.0"' }
+]
+
+export function getSizingInfo(name) {
+    if (!name) return null
+    const clean = name.trim().toUpperCase()
+    return TSHIRT_SIZE_CHART.find(s => {
+        if (clean === s.size) return true
+        if (clean === `SIZE ${s.size}` || clean === `ไซส์ ${s.size}` || clean === `ขนาด ${s.size}`) return true
+        if (clean.startsWith(`${s.size} `) || clean.endsWith(` ${s.size}`)) return true
+        if (s.size === '2XL' && (clean === 'XXL' || clean === 'SIZE XXL')) return true
+        if (s.size === '3XL' && (clean === 'XXXL' || clean === 'SIZE XXXL')) return true
+        return false
+    }) || null
+}
+
 export default function HausmadeProductModal({ product, isOpen, onClose, onAddToCart }) {
     const [quantity, setQuantity] = useState(1)
     const [selectedOptions, setSelectedOptions] = useState({})
     const [giftNote, setGiftNote] = useState('')
     const [validationMsg, setValidationMsg] = useState('')
+    const [showSizeChart, setShowSizeChart] = useState(false)
 
     // Option groups calculation
     const optionGroups = useMemo(() => {
@@ -22,6 +46,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
             setQuantity(1)
             setValidationMsg('')
             setGiftNote('')
+            setShowSizeChart(false)
             
             // Auto-select first in-stock choice for required option groups
             const initial = {}
@@ -131,6 +156,9 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
     // Check if product has coffee/craft roast metadata
     const craftSpecs = product.craft_specs || product.metadata || {}
     const hasCraftSpecs = craftSpecs.roast_level || craftSpecs.origin || craftSpecs.process || craftSpecs.tasting_notes || product.origin || product.tasting_notes
+
+    // Check if product is apparel / clothing
+    const isApparelProduct = (product.name || '').toLowerCase().includes('shirt') || (product.name || '').includes('เสื้อ') || (product.category || '').toLowerCase().includes('shirt') || (product.description || '').includes('เสื้อ')
 
     return (
         <AnimatePresence>
@@ -255,77 +283,166 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                             </div>
                         )}
 
-                        {/* Option Groups (Size, Grind, Packaging) with Variant Stock Indicator */}
+                        {/* Option Groups (Size, Grind, Packaging) with Variant Stock Indicator & Size Chart */}
                         {optionGroups.length > 0 && (
                             <div className="flex flex-col gap-5 border-t border-[oklch(85%_0.012_28)] pt-5">
-                                {optionGroups.map((group) => (
-                                    <div key={group.id} className="flex flex-col gap-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase">
-                                                [ {group.name} ]
-                                            </span>
-                                            {group.is_required && (
-                                                <span className="font-mono text-[9px] text-[oklch(52%_0.16_28)] uppercase font-bold">
-                                                    [ REQUIRED / ต้องเลือก ]
-                                                </span>
-                                            )}
-                                        </div>
+                                {optionGroups.map((group) => {
+                                    const gName = (group.name || '').toLowerCase()
+                                    const isSizeGroup = gName.includes('size') || gName.includes('ไซส์') || gName.includes('ขนาด') || isApparelProduct
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                            {group.option_choices?.map((choice) => {
-                                                const isSelected = selectedOptions[group.id]?.choiceId === choice.id
-                                                
-                                                // Compute stock per option choice
-                                                const choiceStock = choice.stock_quantity ?? choice.remaining_stock ?? null
-                                                const isSoldOut = choice.is_available === false || (choiceStock !== null && choiceStock <= 0)
-                                                const isLowStock = choiceStock !== null && choiceStock > 0 && choiceStock <= 5
-                                                const choicePrice = Number(choice.price_modifier || choice.price || 0)
+                                    return (
+                                        <div key={group.id} className="flex flex-col gap-2.5">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                                        [ {group.name} ]
+                                                    </span>
+                                                    {group.is_required && (
+                                                        <span className="font-mono text-[9px] text-[oklch(52%_0.16_28)] uppercase font-bold">
+                                                            *จำเป็น
+                                                        </span>
+                                                    )}
+                                                </div>
 
-                                                return (
+                                                {/* Size Chart Toggle Button */}
+                                                {isSizeGroup && (
                                                     <button
-                                                        key={choice.id}
                                                         type="button"
-                                                        disabled={isSoldOut}
-                                                        onClick={() => handleOptionChange(group, choice)}
-                                                        className={`px-3.5 py-2.5 text-left border font-mono text-[11px] transition-all flex flex-col justify-between gap-1 cursor-pointer ${
-                                                            isSoldOut
-                                                                ? 'border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]/50 text-[oklch(55%_0.010_28)] opacity-50 cursor-not-allowed'
-                                                                : isSelected
-                                                                    ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(18%_0.012_28)] font-bold shadow-xs'
-                                                                    : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
-                                                        }`}
+                                                        onClick={() => setShowSizeChart(prev => !prev)}
+                                                        className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] uppercase underline cursor-pointer flex items-center gap-1"
                                                     >
-                                                        <div className="flex items-center justify-between w-full">
-                                                            <span className="font-bold">{choice.name}</span>
-                                                            {choicePrice > 0 && (
-                                                                <span className="text-[10px] text-[oklch(52%_0.16_28)]">
-                                                                    +฿{choicePrice}
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {/* Stock Status Badge per Variant */}
-                                                        <div className="flex items-center justify-between w-full text-[9px]">
-                                                            {isSoldOut ? (
-                                                                <span className="text-red-600 font-bold">[ SOLD OUT // หมด ]</span>
-                                                            ) : isLowStock ? (
-                                                                <span className="text-[oklch(52%_0.16_28)] font-bold">● เหลือ {choiceStock} ชิ้น</span>
-                                                            ) : choiceStock !== null ? (
-                                                                <span className="text-[oklch(45%_0.08_140)]">มีสินค้า ({choiceStock})</span>
-                                                            ) : (
-                                                                <span className="text-[oklch(55%_0.010_28)]">พร้อมส่ง</span>
-                                                            )}
-
-                                                            {isSelected && (
-                                                                <span className="font-bold text-[oklch(52%_0.16_28)]">[ SELECTED ]</span>
-                                                            )}
-                                                        </div>
+                                                        <span>📏 {showSizeChart ? '[ ซ่อนตารางไซส์ ]' : '[ ดูตารางไซส์ (SIZE CHART) ]'}</span>
                                                     </button>
-                                                )
-                                            })}
+                                                )}
+                                            </div>
+
+                                            {/* Expandable Dieter Rams Minimalist Size Chart Table */}
+                                            {isSizeGroup && showSizeChart && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="border-2 border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 font-mono text-xs flex flex-col gap-2.5 overflow-hidden"
+                                                >
+                                                    <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
+                                                        <div>
+                                                            <span className="font-black text-sm uppercase tracking-tight text-[oklch(18%_0.012_28)] block">
+                                                                SIZE CHART // ตารางไซส์เสื้อ
+                                                            </span>
+                                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">
+                                                                T-SHIRT SIZING GUIDE (INCHES / นิ้ว)
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setShowSizeChart(false)}
+                                                            className="text-[10px] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] uppercase"
+                                                        >
+                                                            [ CLOSE / ปิด ]
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="overflow-x-auto">
+                                                        <table className="w-full text-center border-collapse">
+                                                            <thead>
+                                                                <tr className="border-b-2 border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold text-[11px]">
+                                                                    <th className="py-2 text-left font-black">ขนาด</th>
+                                                                    <th className="py-2">อก (Chest)</th>
+                                                                    <th className="py-2">ยาว (Length)</th>
+                                                                    <th className="py-2">แขน (Sleeve)</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {TSHIRT_SIZE_CHART.map((row) => {
+                                                                    const currentSelectedChoiceName = selectedOptions[group.id]?.name
+                                                                    const isRowSelected = currentSelectedChoiceName && getSizingInfo(currentSelectedChoiceName)?.size === row.size
+
+                                                                    return (
+                                                                        <tr
+                                                                            key={row.size}
+                                                                            className={`border-b border-[oklch(85%_0.012_28)]/60 text-[11px] transition-colors ${
+                                                                                isRowSelected
+                                                                                    ? 'bg-[oklch(52%_0.16_28)]/15 font-bold text-[oklch(52%_0.16_28)]'
+                                                                                    : 'text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                                                            }`}
+                                                                        >
+                                                                            <td className="py-2 text-left font-black">{row.size}</td>
+                                                                            <td className="py-2 font-bold">{row.chest}</td>
+                                                                            <td className="py-2">{row.length}</td>
+                                                                            <td className="py-2">{row.sleeve}</td>
+                                                                        </tr>
+                                                                    )
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {group.option_choices?.map((choice) => {
+                                                    const isSelected = selectedOptions[group.id]?.choiceId === choice.id
+                                                    
+                                                    // Compute stock per option choice
+                                                    const choiceStock = choice.stock_quantity ?? choice.remaining_stock ?? null
+                                                    const isSoldOut = choice.is_available === false || (choiceStock !== null && choiceStock <= 0)
+                                                    const isLowStock = choiceStock !== null && choiceStock > 0 && choiceStock <= 5
+                                                    const choicePrice = Number(choice.price_modifier || choice.price || 0)
+                                                    const sizeDim = isSizeGroup ? getSizingInfo(choice.name) : null
+
+                                                    return (
+                                                        <button
+                                                            key={choice.id}
+                                                            type="button"
+                                                            disabled={isSoldOut}
+                                                            onClick={() => handleOptionChange(group, choice)}
+                                                            className={`px-3.5 py-2.5 text-left border font-mono text-[11px] transition-all flex flex-col justify-between gap-1.5 cursor-pointer ${
+                                                                isSoldOut
+                                                                    ? 'border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]/50 text-[oklch(55%_0.010_28)] opacity-50 cursor-not-allowed'
+                                                                    : isSelected
+                                                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(52%_0.16_28)]/10 text-[oklch(18%_0.012_28)] font-bold shadow-xs'
+                                                                        : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-center justify-between w-full">
+                                                                <span className="font-bold text-xs">{choice.name}</span>
+                                                                {choicePrice > 0 && (
+                                                                    <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                                        +฿{choicePrice}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Quick Size Measurements Subtitle */}
+                                                            {sizeDim && (
+                                                                <div className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                                                    อก {sizeDim.chest} · ยาว {sizeDim.length} {sizeDim.sleeve ? `· แขน ${sizeDim.sleeve}` : ''}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Stock Status Badge per Variant */}
+                                                            <div className="flex items-center justify-between w-full text-[9px] border-t border-[oklch(85%_0.012_28)]/40 pt-1">
+                                                                {isSoldOut ? (
+                                                                    <span className="text-red-600 font-bold">[ SOLD OUT // หมด ]</span>
+                                                                ) : isLowStock ? (
+                                                                    <span className="text-[oklch(52%_0.16_28)] font-bold">● เหลือ {choiceStock} ชิ้น</span>
+                                                                ) : choiceStock !== null ? (
+                                                                    <span className="text-[oklch(45%_0.08_140)]">มีสินค้า ({choiceStock})</span>
+                                                                ) : (
+                                                                    <span className="text-[oklch(55%_0.010_28)]">พร้อมส่ง</span>
+                                                                )}
+
+                                                                {isSelected && (
+                                                                    <span className="font-bold text-[oklch(52%_0.16_28)]">[ SELECTED ]</span>
+                                                                )}
+                                                            </div>
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                             </div>
                         )}
 
