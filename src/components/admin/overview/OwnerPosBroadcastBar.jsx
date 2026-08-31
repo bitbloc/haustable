@@ -38,7 +38,7 @@ export default function OwnerPosBroadcastBar() {
                 .from('app_settings')
                 .select('value, updated_at')
                 .eq('key', 'pos_owner_broadcast')
-                .single()
+                .maybeSingle()
 
             if (!error && data && data.value) {
                 try {

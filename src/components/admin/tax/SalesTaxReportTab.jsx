@@ -40,6 +40,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import SalesTaxLedgerPrintView from './SalesTaxLedgerPrintView';
 import POSBillDetailsModal from '../../../pos/POSBillDetailsModal';
 import TaxInvoiceModal from './TaxInvoiceModal';
+import TaxInvoicePrintView from './TaxInvoicePrintView';
 import { toast } from 'sonner';
 
 const VAT_THRESHOLD_ANNUAL = 1800000; // 1.8 Million THB per Revenue Code
@@ -53,6 +54,7 @@ export default function SalesTaxReportTab({
     onDeleteInvoice
 }) {
     const isVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
+    const [activePrintInvoice, setActivePrintInvoice] = useState(null);
 
     // Time helper utilities
     const getTodayDate = () => {
@@ -983,10 +985,22 @@ export default function SalesTaxReportTab({
                     onClose={() => setSelectedBookingForTaxModal(null)}
                     booking={selectedBookingForTaxModal}
                     companySettings={companySettings}
-                    onInvoiceSaved={() => {
+                    onSaveSuccess={(savedInvoice, printImmediately) => {
                         setSelectedBookingForTaxModal(null);
                         toast.success('ออกเอกสารใบกำกับภาษีเรียบร้อยแล้ว');
+                        if (printImmediately) {
+                            setActivePrintInvoice(savedInvoice);
+                        }
                     }}
+                />
+            )}
+
+            {/* A4 Official Printable Tax Invoice / Receipt View */}
+            {activePrintInvoice && (
+                <TaxInvoicePrintView
+                    invoice={activePrintInvoice}
+                    companySettings={companySettings}
+                    onClose={() => setActivePrintInvoice(null)}
                 />
             )}
 

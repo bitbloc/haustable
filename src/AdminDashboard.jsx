@@ -20,6 +20,7 @@ import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import TaxInvoiceModal from './components/admin/tax/TaxInvoiceModal'
+import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
 
 export default function AdminDashboard() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
@@ -30,8 +31,34 @@ export default function AdminDashboard() {
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [taxInvoiceBooking, setTaxInvoiceBooking] = useState(null)
+    const [activePrintInvoice, setActivePrintInvoice] = useState(null)
+    const [companySettings, setCompanySettings] = useState(() => {
+        try {
+            const stored = localStorage.getItem('onhaus_tax_settings');
+            return stored ? JSON.parse(stored) : {};
+        } catch {
+            return {};
+        }
+    })
     const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
     const [showDailySummaryModal, setShowDailySummaryModal] = useState(false)
+
+    useEffect(() => {
+        // Load company tax settings
+        supabase
+            .from('app_settings')
+            .select('key, value')
+            .or('key.like.tax_%,key.eq.receipt_shop_logo_url,key.eq.shop_logo_url')
+            .not('key', 'eq', 'tax_signature_image')
+            .then(({ data }) => {
+                if (data && data.length > 0) {
+                    const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    setCompanySettings(map);
+                    localStorage.setItem('onhaus_tax_settings', JSON.stringify(map));
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         fetchData()
@@ -514,11 +541,24 @@ export default function AdminDashboard() {
             {taxInvoiceBooking && (
                 <TaxInvoiceModal
                     booking={taxInvoiceBooking}
+                    companySettings={companySettings}
                     onClose={() => setTaxInvoiceBooking(null)}
-                    onSuccess={() => {
-                        setTaxInvoiceBooking(null)
-                        fetchData()
+                    onSaveSuccess={(savedInvoice, printImmediately) => {
+                        setTaxInvoiceBooking(null);
+                        fetchData();
+                        if (printImmediately) {
+                            setActivePrintInvoice(savedInvoice);
+                        }
                     }}
+                />
+            )}
+
+            {/* A4 Official Printable Tax Invoice / Receipt View */}
+            {activePrintInvoice && (
+                <TaxInvoicePrintView
+                    invoice={activePrintInvoice}
+                    companySettings={companySettings}
+                    onClose={() => setActivePrintInvoice(null)}
                 />
             )}
         </PageTransition>

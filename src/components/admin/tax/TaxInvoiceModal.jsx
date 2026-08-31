@@ -34,9 +34,41 @@ export default function TaxInvoiceModal({
     existingInvoice = null, 
     companySettings = {}, 
     onClose, 
-    onSaveSuccess 
+    onSaveSuccess,
+    onSuccess,
+    onInvoiceSaved
 }) {
-    const isCompanyVatRegistered = companySettings?.tax_is_vat_registered === 'true' || companySettings?.tax_is_vat_registered === true;
+    // Internal company settings fallback if empty prop passed
+    const [localCompanySettings, setLocalCompanySettings] = useState(companySettings || {});
+
+    useEffect(() => {
+        if (companySettings && Object.keys(companySettings).length > 0) {
+            setLocalCompanySettings(companySettings);
+        } else {
+            try {
+                const stored = localStorage.getItem('onhaus_tax_settings');
+                if (stored) {
+                    setLocalCompanySettings(JSON.parse(stored));
+                }
+            } catch (e) {}
+
+            supabase
+                .from('app_settings')
+                .select('key, value')
+                .or('key.like.tax_%,key.eq.receipt_shop_logo_url,key.eq.shop_logo_url')
+                .not('key', 'eq', 'tax_signature_image')
+                .then(({ data }) => {
+                    if (data && data.length > 0) {
+                        const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                        setLocalCompanySettings(prev => ({ ...prev, ...map }));
+                    }
+                })
+                .catch(() => {});
+        }
+    }, [companySettings]);
+
+    const activeCompanySettings = Object.keys(localCompanySettings).length > 0 ? localCompanySettings : companySettings;
+    const isCompanyVatRegistered = activeCompanySettings?.tax_is_vat_registered === 'true' || activeCompanySettings?.tax_is_vat_registered === true;
     
     // Receipt Linking State
     const [linkedBooking, setLinkedBooking] = useState(booking);
@@ -223,8 +255,10 @@ export default function TaxInvoiceModal({
         if (customerTaxId && customerTaxId.replace(/\D/g, '').length !== 13) {
             toast.warning('เลขประจำตัวผู้เสียภาษีควรมี 13 หลัก');
         }
-        if (!customerAddress.trim()) {
-            toast.error('กรุณากรอกที่อยู่จดทะเบียนผู้ซื้อ');
+        // Only require registered address if it's a Full Tax Invoice for a Company/Juristic Person
+        const isFullTaxInvoiceForCompany = docType === 'tax_invoice' && customerType === 'company';
+        if (isFullTaxInvoiceForCompany && !customerAddress.trim()) {
+            toast.error('กรุณากรอกที่อยู่จดทะเบียนผู้ซื้อ สำหรับใบกำกับภาษีเต็มรูป');
             return;
         }
 
@@ -234,8 +268,8 @@ export default function TaxInvoiceModal({
             let invoiceNumber = existingInvoice?.invoice_number;
             if (!invoiceNumber) {
                 const prefix = isDocVat 
-                    ? (companySettings?.tax_invoice_prefix || 'INV')
-                    : (companySettings?.tax_receipt_prefix || 'REC');
+                    ? (activeCompanySettings?.tax_invoice_prefix || 'INV')
+                    : (activeCompanySettings?.tax_receipt_prefix || 'REC');
                 const ym = new Date().toISOString().slice(0, 7).replace('-', '');
                 const randomSeq = Math.floor(Math.random() * 9000) + 1000;
                 invoiceNumber = `${prefix}-${ym}-${randomSeq}`;
@@ -264,11 +298,11 @@ export default function TaxInvoiceModal({
                 net_payable: totals.netPayable,
                 payment_method: paymentMethod,
                 items,
-                issuer_name: companySettings?.tax_company_name || 'ร้านในบ้าน นครพนม',
-                issuer_tax_id: companySettings?.tax_id || '1120100144907',
-                issuer_branch: companySettings?.tax_branch_code || '00000',
-                issuer_address: companySettings?.tax_address || '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
-                issuer_phone: companySettings?.tax_phone || '',
+                issuer_name: activeCompanySettings?.tax_company_name || 'ร้านในบ้าน นครพนม',
+                issuer_tax_id: activeCompanySettings?.tax_id || '1120100144907',
+                issuer_branch: activeCompanySettings?.tax_branch_code || '00000',
+                issuer_address: activeCompanySettings?.tax_address || '788/1, สุนทรวิจิตร ซ.พนมพนารักษ์ ในเมือง เมืองนครพนม นครพนม 48000',
+                issuer_phone: activeCompanySettings?.tax_phone || '',
                 status: existingInvoice?.status || 'issued',
                 notes: notes.trim(),
                 issued_at: existingInvoice?.issued_at || new Date().toISOString()
@@ -338,6 +372,8 @@ export default function TaxInvoiceModal({
 
             toast.success(`ออกเอกสาร ${invoiceNumber} เรียบร้อยแล้ว!`);
             if (onSaveSuccess) onSaveSuccess(savedRecord, printImmediately);
+            if (onSuccess) onSuccess(savedRecord, printImmediately);
+            if (onInvoiceSaved) onInvoiceSaved(savedRecord, printImmediately);
         } catch (err) {
             console.error('Error saving tax invoice:', err);
             toast.error('เกิดข้อผิดพลาดในการบันทึกเอกสาร: ' + err.message);
@@ -643,7 +679,7 @@ export default function TaxInvoiceModal({
                             {/* Registered Address */}
                             <div className="sm:col-span-2">
                                 <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
-                                    ที่อยู่จดทะเบียนตาม ภ.พ.20 / ทะเบียนพาณิชย์ *
+                                    ที่อยู่จดทะเบียน / ที่อยู่ผู้ซื้อ {docType === 'tax_invoice' && customerType === 'company' ? '*' : '(ระบุหรือไม่ก็ได้)'}
                                 </label>
                                 <textarea
                                     value={customerAddress}

@@ -66,7 +66,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                     .from('app_settings')
                     .select('value')
                     .eq('key', 'pos_owner_broadcast')
-                    .single();
+                    .maybeSingle();
 
                 if (!error && data?.value) {
                     try {

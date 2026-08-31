@@ -293,7 +293,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     .from('app_settings')
                     .select('value')
                     .eq('key', 'default_vat_enabled')
-                    .single();
+                    .maybeSingle();
                 if (data && data.value) {
                     setIncludeTax(data.value === 'true');
                 }
