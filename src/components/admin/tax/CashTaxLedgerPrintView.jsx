@@ -69,32 +69,22 @@ export default function CashTaxLedgerPrintView({
     const bahtWords = thaiBahtText(netProfit);
 
     // Dynamic A4 Smart Pagination (Calibrated for Standard A4 Height):
-    // Single page mode: Fits up to 28 rows + financial summary + signatures seamlessly on 1 single sheet!
-    // Multi-page mode: Normal pages fit up to 38 rows; Last page fits up to 24 rows + summary + signatures.
+    // Single page mode: Fits up to 30 rows + financial summary + signatures seamlessly on 1 single sheet!
+    // Multi-page mode: Normal pages fit up to 36 rows; Last page fits up to 22 rows + summary + signatures.
     const pages = React.useMemo(() => {
         if (!recordsWithBalance || recordsWithBalance.length === 0) return [[]];
 
         const totalCount = recordsWithBalance.length;
-        const ROWS_SINGLE_PAGE = 28;
-        const ROWS_NORMAL = 38;
-        const ROWS_LAST = 24;
+        const ROWS_SINGLE_PAGE = 30; // Fits up to 30 rows on 1 single sheet
+        const ROWS_NORMAL = 36;      // Normal full page without summary
+        const ROWS_LAST = 22;        // Last page with summary + signatures
 
         // 1. Single Page: Everything fits on 1 sheet
         if (totalCount <= ROWS_SINGLE_PAGE) {
             return [recordsWithBalance];
         }
 
-        // 2. Exactly 2 Pages: Balanced distribution so both pages look filled & proportional
-        if (totalCount <= (ROWS_NORMAL + ROWS_LAST)) {
-            const page2Count = Math.min(ROWS_LAST, Math.max(Math.ceil(totalCount / 2), totalCount - ROWS_NORMAL));
-            const page1Count = totalCount - page2Count;
-            return [
-                recordsWithBalance.slice(0, page1Count),
-                recordsWithBalance.slice(page1Count)
-            ];
-        }
-
-        // 3. 3+ Pages: Fill normal pages with 38 rows, and balance the last 2 pages to avoid orphan rows
+        // 2. Multi-Page: Greedily fill normal pages to prevent huge blank gaps on Page 1
         const pagesList = [];
         let remaining = [...recordsWithBalance];
 
@@ -105,16 +95,25 @@ export default function CashTaxLedgerPrintView({
                 break;
             }
 
-            // If remaining fits in 2 pages, balance them
+            // If remaining fits in 2 pages (current page + final page)
             if (remaining.length <= (ROWS_NORMAL + ROWS_LAST)) {
-                const lastCount = Math.min(ROWS_LAST, Math.max(Math.ceil(remaining.length / 2), remaining.length - ROWS_NORMAL));
-                const firstCount = remaining.length - lastCount;
+                // Fill first page up to ROWS_NORMAL, while ensuring final page <= ROWS_LAST
+                let firstCount = remaining.length - ROWS_LAST;
+                if (firstCount < 1) firstCount = 1;
+                if (firstCount > ROWS_NORMAL) firstCount = ROWS_NORMAL;
+
+                // Ensure final page has at least 3 rows so it looks balanced
+                const lastCount = remaining.length - firstCount;
+                if (lastCount < 3 && firstCount > 10) {
+                    firstCount -= (3 - lastCount);
+                }
+
                 pagesList.push(remaining.slice(0, firstCount));
                 pagesList.push(remaining.slice(firstCount));
                 break;
             }
 
-            // Normal full page (38 rows)
+            // Normal full page (36 rows)
             pagesList.push(remaining.slice(0, ROWS_NORMAL));
             remaining = remaining.slice(ROWS_NORMAL);
         }
