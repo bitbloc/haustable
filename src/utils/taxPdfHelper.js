@@ -1,6 +1,6 @@
 /**
  * Tax Invoice & Official Receipt PDF Generator Utility
- * Generates crisp A4 PDF documents from printable HTML sheets using html-to-image & jsPDF.
+ * Generates crisp, proportional A4 PDF documents from printable HTML sheets using html-to-image & jsPDF.
  * Fully compatible with modern CSS (OKLCH, CSS Variables, Flex/Grid layouts).
  */
 import { toPng } from 'html-to-image';
@@ -11,6 +11,7 @@ import { jsPDF } from 'jspdf';
  * @param {HTMLElement} element - DOM element to render (e.g. document.getElementById('tax-invoice-printable-sheet'))
  * @param {Object} options - Configuration options
  * @param {string} options.fileName - Output PDF filename (e.g. 'REC-202608-6778.pdf')
+ * @param {string} options.orientation - 'portrait' | 'landscape' (auto-detected if omitted)
  * @returns {Promise<{ pdf: jsPDF, blob: Blob, file: File, dataUrl: string, fileName: string }>}
  */
 export async function generateTaxDocumentPdf(element, options = {}) {
@@ -33,26 +34,37 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     const pageSheets = element.querySelectorAll ? Array.from(element.querySelectorAll('.print-page-sheet')) : [];
     const targets = pageSheets.length > 0 ? pageSheets : [element];
 
-    // 3. Initialize jsPDF in A4 Portrait mode
+    // Detect orientation from options or first target dimensions
+    const firstTarget = targets[0];
+    const initialWidth = firstTarget.offsetWidth || firstTarget.scrollWidth || 800;
+    const initialHeight = firstTarget.offsetHeight || firstTarget.scrollHeight || 1130;
+    const isLandscape = options.orientation === 'landscape' || (options.orientation !== 'portrait' && initialWidth > initialHeight * 1.15);
+
+    const orientation = isLandscape ? 'landscape' : 'portrait';
+    const pdfWidth = isLandscape ? 297 : 210; // mm
+    const pdfHeight = isLandscape ? 210 : 297; // mm
+
+    // 3. Initialize jsPDF in correct mode
     const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation,
         unit: 'mm',
         format: 'a4',
         compress: true
     });
 
-    const pdfWidth = 210; // Exact A4 mm
-    const pdfHeight = 297; // Exact A4 mm
-
     // 4. Capture and append each page
     for (let i = 0; i < targets.length; i++) {
         if (i > 0) {
-            pdf.addPage('a4', 'portrait');
+            pdf.addPage('a4', orientation);
         }
 
         const target = targets[i];
+        const targetWidth = target.offsetWidth || target.scrollWidth || initialWidth;
+        const targetHeight = target.offsetHeight || target.scrollHeight || initialHeight;
+        const aspectRatio = targetHeight / targetWidth;
+
         const imgData = await toPng(target, {
-            pixelRatio: 2.8,
+            pixelRatio: 3.0, // High-DPI 300+ resolution
             backgroundColor: '#ffffff',
             cacheBust: true,
             quality: 1.0,
@@ -64,16 +76,37 @@ export async function generateTaxDocumentPdf(element, options = {}) {
             }
         });
 
-        pdf.addImage(
-            imgData,
-            'PNG',
-            0,
-            0,
-            pdfWidth,
-            pdfHeight,
-            undefined,
-            'FAST'
-        );
+        // Calculate rendered height in mm based on full page width (no stretching/squishing)
+        const renderedHeightMm = pdfWidth * aspectRatio;
+
+        if (renderedHeightMm <= pdfHeight) {
+            // Fits cleanly within A4 height: preserve 100% natural proportions
+            pdf.addImage(
+                imgData,
+                'PNG',
+                0,
+                0,
+                pdfWidth,
+                renderedHeightMm,
+                undefined,
+                'FAST'
+            );
+        } else {
+            // If taller than A4, scale down proportionally to fit the page without distortion
+            const scale = pdfHeight / renderedHeightMm;
+            const scaledWidthMm = pdfWidth * scale;
+            const offsetX = (pdfWidth - scaledWidthMm) / 2;
+            pdf.addImage(
+                imgData,
+                'PNG',
+                offsetX,
+                0,
+                scaledWidthMm,
+                pdfHeight,
+                undefined,
+                'FAST'
+            );
+        }
     }
 
     // 5. Generate Blob and File instances

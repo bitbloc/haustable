@@ -352,11 +352,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         <span>{showSignature && signatureImage ? '✓ ลายเซ็น: เปิด' : 'ลายเซ็น: ปิด'}</span>
                     </button>
 
-                    {/* Download PDF Button */}
+                    {/* Direct PDF Download */}
                     <button
                         onClick={handleDownloadPdfOnly}
                         disabled={isGeneratingPdf}
-                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px]"
+                        className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer disabled:opacity-50 text-[11px]"
                         title="สร้างและดาวน์โหลดไฟล์ PDF ขนาด A4 ความละเอียดสูง"
                     >
                         {isGeneratingPdf ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
@@ -372,10 +372,11 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         <span>ส่งอีเมล (Email / PDF)</span>
                     </button>
 
-                    {/* Print Button */}
+                    {/* Print & Native Browser PDF Save Button */}
                     <button
                         onClick={handlePrint}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px]"
+                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold uppercase transition-colors flex items-center gap-1.5 rounded cursor-pointer text-[11px] shadow-sm"
+                        title="เปิดหน้าต่างสั่งพิมพ์ของเบราว์เซอร์ (สามารถเลือกเครื่องพิมพ์จริง หรือเลือก 'Save as PDF' เพื่อเซฟไฟล์ PDF คมชัดสูงได้)"
                     >
                         <Printer size={13} />
                         <span>พิมพ์ (Print)</span>
@@ -407,7 +408,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                 id="tax-invoice-printable-sheet"
                 ref={printableSheetRef}
                 style={{ fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif" }}
-                className="print-page-sheet w-full max-w-4xl bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-2xl text-[12pt] leading-normal print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
+                className="print-page-sheet w-full max-w-4xl bg-white text-zinc-950 p-6 sm:p-8 border border-zinc-300 shadow-2xl text-[12pt] leading-normal print:m-0 print:p-6 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between min-h-[280mm]"
             >
                 <div>
                     {/* Header Section */}
