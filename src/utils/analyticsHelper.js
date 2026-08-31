@@ -10,7 +10,7 @@ export const GOOGLE_ADS_ID = 'AW-11227095880';
 // Google Ads Outbound Click Conversion Action Labels
 export const GOOGLE_ADS_CALL_CONVERSION = 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp';        // TechSol - Call 3788
 export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/uWqACPuDvOEcEMjGv-kp';  // TechSol - Direction 26311
-export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/QU1qCJHHvcocEMjGv-kp';        // TechSol - Line 95594
+export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp';        // TechSol - Line (XCMIClO2BwOEcEMjGv-kp)
 
 // Timestamp cache for anti-spam click debouncing (2000ms cooldown)
 const lastEventTimestamps = new Map();
