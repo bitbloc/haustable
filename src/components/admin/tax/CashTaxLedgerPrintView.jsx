@@ -1,9 +1,10 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Printer, X, Download, ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Printer, X, Download, ArrowLeft, CheckCircle2, FileSpreadsheet, Loader2, FileText } from 'lucide-react';
 import { formatTaxId, formatBranch, thaiBahtText, downloadCsvFile } from '../../../utils/thaiTaxHelper';
 import { generateTaxDocumentPdf, downloadTaxPdf } from '../../../utils/taxPdfHelper';
+import { exportCashTaxTemplateExcel, classifyExpenseType } from '../../../utils/thaiTaxExcelHelper';
 import { toast } from 'sonner';
 
 export default function CashTaxLedgerPrintView({
@@ -18,6 +19,7 @@ export default function CashTaxLedgerPrintView({
     onClose
 }) {
     const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const [exportingExcel, setExportingExcel] = useState(false);
 
     // Format Date / Month Thai string
     const formatThaiDatePeriod = () => {
@@ -41,14 +43,19 @@ export default function CashTaxLedgerPrintView({
         return 'รายการทั้งหมดตลอดกาล';
     };
 
-    // Cumulative balance calculation
+    // Cumulative balance calculation and expense classification
     let currentBalance = 0;
     const recordsWithBalance = records.map((rec) => {
         const inAmt = Number(rec.inAmount || 0);
         const outAmt = Number(rec.outAmount || 0);
         currentBalance = currentBalance + inAmt - outAmt;
+        const expType = rec.type === 'EXPENSE' ? (rec.expenseClassification || classifyExpenseType(rec)) : null;
+
         return {
             ...rec,
+            expenseClassification: expType,
+            goodsAmount: expType === 'goods' ? outAmt : 0,
+            otherAmount: expType === 'other' ? outAmt : 0,
             runningBalance: currentBalance
         };
     });
@@ -56,6 +63,8 @@ export default function CashTaxLedgerPrintView({
     // Calculations
     const grandRevenue = totals.totalRevenue || records.reduce((s, r) => s + Number(r.inAmount || 0), 0);
     const grandExpense = totals.totalExpense || records.reduce((s, r) => s + Number(r.outAmount || 0), 0);
+    const grandGoodsExpense = totals.totalGoodsExpense || recordsWithBalance.filter(r => r.expenseClassification === 'goods').reduce((s, r) => s + Number(r.outAmount || 0), 0);
+    const grandOtherExpense = totals.totalOtherExpense || recordsWithBalance.filter(r => r.expenseClassification === 'other').reduce((s, r) => s + Number(r.outAmount || 0), 0);
     const netProfit = grandRevenue - grandExpense;
     const bahtWords = thaiBahtText(netProfit);
 
@@ -139,20 +148,37 @@ export default function CashTaxLedgerPrintView({
         }
     };
 
+    const handleExportExcel = async () => {
+        setExportingExcel(true);
+        const toastId = toast.loading('กำลังสร้างไฟล์ Excel รายงานเงินสดรับ-จ่าย ตามแบบฟอร์มสรรพากร...');
+        try {
+            await exportCashTaxTemplateExcel({
+                records: recordsWithBalance,
+                companySettings,
+                periodLabel: formatThaiDatePeriod(),
+                periodMonth: periodMonth || periodDate || 'export',
+                mode: 'daily'
+            });
+            toast.success('ดาวน์โหลดไฟล์ Excel รายงานเงินสดรับ-จ่าย เรียบร้อยแล้ว', { id: toastId });
+        } catch (err) {
+            console.error('Export Excel failed:', err);
+            toast.error('ไม่สามารถสร้าง Excel ได้: ' + err.message, { id: toastId });
+        } finally {
+            setExportingExcel(false);
+        }
+    };
+
     const handleExportCsv = () => {
-        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'เลขที่เอกสาร', 'ประเภท', 'รายการ', 'หมวดหมู่', 'รายรับ (บาท)', 'รายจ่าย (บาท)', 'ยอดคงเหลือสะสม (บาท)', 'VAT 7%', 'สถานะหลักฐาน'];
+        const headers = ['ลำดับ', 'วัน/เดือน/ปี', 'รายการ', 'รายรับ (บาท)', 'รายจ่าย-ซื้อสินค้า (บาท)', 'รายจ่าย-ค่าใช้จ่ายอื่นๆ (บาท)', 'ยอดคงเหลือสะสม (บาท)', 'หมายเหตุ/หลักฐาน'];
         const rows = recordsWithBalance.map((item, idx) => [
             idx + 1,
             item.date,
-            `"${item.docNo}"`,
-            item.type === 'INCOME' ? 'รายรับ' : 'รายจ่าย',
             `"${(item.title || '').replace(/"/g, '""')}"`,
-            `"${item.category || ''}"`,
             item.inAmount ? Number(item.inAmount).toFixed(2) : '0.00',
-            item.outAmount ? Number(item.outAmount).toFixed(2) : '0.00',
+            item.type === 'EXPENSE' && item.expenseClassification === 'goods' ? Number(item.outAmount).toFixed(2) : '0.00',
+            item.type === 'EXPENSE' && item.expenseClassification === 'other' ? Number(item.outAmount).toFixed(2) : '0.00',
             item.runningBalance ? Number(item.runningBalance).toFixed(2) : '0.00',
-            item.vatAmount ? Number(item.vatAmount).toFixed(2) : '0.00',
-            item.hasProof ? 'เอกสารสมบูรณ์' : 'ไม่มีหลักฐานแนบ'
+            `"${item.docNo || item.proofType || 'ใบเสร็จ'}"`
         ]);
 
         const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -235,10 +261,19 @@ export default function CashTaxLedgerPrintView({
 
                 <div className="flex items-center gap-2 font-mono text-xs">
                     <button
+                        onClick={handleExportExcel}
+                        disabled={exportingExcel}
+                        className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-700 text-white border border-emerald-700 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        title="ดาวน์โหลดไฟล์ Excel ตามแบบสรรพากรบุคคลธรรมดา"
+                    >
+                        <FileSpreadsheet size={13} className="text-emerald-300" />
+                        <span>EXCEL (.xlsx)</span>
+                    </button>
+                    <button
                         onClick={handleExportCsv}
                         className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                        <FileSpreadsheet size={13} />
+                        <FileText size={13} />
                         <span>CSV</span>
                     </button>
                     <button
@@ -283,8 +318,8 @@ export default function CashTaxLedgerPrintView({
                             <div className="flex-1 flex flex-col">
                                 
                                 {/* 1. Formal Tax Header (ม.161) */}
-                                <div className="text-center border-b-2 border-zinc-900 pb-3 mb-3">
-                                    <div className="text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-0.5">
+                                <div className="text-center border-b-2 border-zinc-900 pb-2.5 mb-2.5">
+                                    <div className="text-[9px] font-mono font-bold text-zinc-500 uppercase tracking-widest mb-0.5">
                                         แบบฟอร์มตามประกาศอธิบดีกรมสรรพากร เกี่ยวกับภาษีเงินได้ (ฉบับที่ ๑๖๑)
                                     </div>
                                     <h1 className="text-base font-bold tracking-tight text-zinc-900 uppercase">
@@ -296,13 +331,23 @@ export default function CashTaxLedgerPrintView({
                                 </div>
 
                                 {/* 2. Business & Tax Registration Information (Sole Proprietorship / Trade Name) */}
-                                <div className="grid grid-cols-2 gap-y-1 text-xs border border-zinc-300 p-2.5 mb-3 bg-zinc-50/50">
+                                <div className="grid grid-cols-2 gap-y-1 text-xs border border-zinc-300 p-2 mb-2.5 bg-zinc-50/50 text-[11px]">
                                     <div>
-                                        <span className="text-zinc-500 font-medium">ชื่อผู้มีเงินได้ / ชื่อร้านค้า: </span>
-                                        <span className="font-bold text-zinc-900">{companySettings.tax_company_name || companySettings.company_name || 'ร้านในบ้าน นครพนม (IN THE HAUS)'}</span>
+                                        <span className="text-zinc-500 font-medium">ชื่อผู้ประกอบกิจการ: </span>
+                                        <span className="font-bold text-zinc-900">{companySettings.tax_proprietor_name || companySettings.tax_company_name || 'นายธนภัทร บุญเจริญ'}</span>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-zinc-500 font-medium">เลขประจำตัวผู้เสียภาษี: </span>
+                                        <span className="text-zinc-500 font-medium">เลขประจำตัวประชาชน: </span>
+                                        <span className="font-mono font-bold text-zinc-900 tracking-wider">
+                                            {formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '1120100144907')}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-zinc-500 font-medium">ชื่อสถานประกอบการ: </span>
+                                        <span className="font-bold text-zinc-900">{companySettings.tax_establishment_name || companySettings.tax_company_name || 'ร้านในบ้าน นครพนม (IN THE HAUS)'}</span>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-zinc-500 font-medium">เลขประจำตัวผู้เสียภาษีอากร: </span>
                                         <span className="font-mono font-bold text-zinc-900 tracking-wider">
                                             {formatTaxId(companySettings.tax_id || '1120100144907')}
                                         </span>
@@ -314,10 +359,10 @@ export default function CashTaxLedgerPrintView({
                                     <div>
                                         <span className="text-zinc-500 font-medium">สถานะ: </span>
                                         <span className="font-mono font-bold text-zinc-900">
-                                            {isVatRegistered ? '[จดทะเบียน VAT 7%]' : '[บุคคลธรรมดา / ไม่จดทะเบียนภาษีมูลค่าเพิ่ม]'}
+                                            {isVatRegistered ? '[จดทะเบียน VAT 7%]' : '[บุคคลธรรมดา (NON-VAT)]'}
                                         </span>
                                     </div>
-                                    <div className="text-right font-mono text-[11px] text-zinc-500">
+                                    <div className="text-right font-mono text-[10px] text-zinc-500">
                                         หน้า {pageIndex + 1} จากทั้งหมด {pages.length} หน้า
                                     </div>
                                 </div>
@@ -327,16 +372,17 @@ export default function CashTaxLedgerPrintView({
                                     <table className="w-full text-left border-collapse text-[10px]">
                                         <thead>
                                             <tr className="bg-zinc-100 border-b border-zinc-900 font-bold text-zinc-900 text-center">
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-8">ลำดับ</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-18">วัน/เดือน/ปี</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-24">เลขที่เอกสาร</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 text-left pl-2">รายการ</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-22 text-left pl-2">หมวดหมู่</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินรับ</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-20 text-right pr-2">จำนวนเงินจ่าย</th>
-                                                <th className="py-1.5 px-1 border-r border-zinc-300 w-22 text-right pr-2">ยอดคงเหลือ</th>
-                                                {isVatRegistered && <th className="py-1.5 px-1 border-r border-zinc-300 w-16 text-right pr-1.5">VAT</th>}
-                                                <th className="py-1.5 px-1 w-14">หลักฐาน</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-8" rowSpan={2}>ลำดับ</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-18" rowSpan={2}>ว/ด/ป</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 text-left pl-2" rowSpan={2}>รายการ</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-20 text-right pr-2" rowSpan={2}>รายรับ (บาท)</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 text-center bg-zinc-200/60" colSpan={2}>รายจ่าย (บาท)</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-20 text-right pr-2" rowSpan={2}>ยอดคงเหลือ</th>
+                                                <th className="py-1 px-1 w-24 text-left pl-2" rowSpan={2}>หมายเหตุ</th>
+                                            </tr>
+                                            <tr className="bg-zinc-100 border-b border-zinc-900 font-bold text-zinc-900 text-center text-[9px]">
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-18 text-right pr-1.5">ซื้อสินค้า</th>
+                                                <th className="py-1 px-1 border-r border-zinc-300 w-18 text-right pr-1.5">ค่าใช้จ่ายอื่นๆ</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -344,37 +390,33 @@ export default function CashTaxLedgerPrintView({
                                                 const globalIndex = pageStartIdx + rIdx + 1;
                                                 return (
                                                     <tr key={row.id} className="border-b border-zinc-200 hover:bg-zinc-50 leading-tight">
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-center font-mono text-zinc-600">
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-center font-mono text-zinc-600">
                                                             {globalIndex}
                                                         </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-center font-mono text-zinc-800">
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-center font-mono text-zinc-800">
                                                             {row.date}
                                                         </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 font-mono text-zinc-900 truncate max-w-[90px]">
-                                                            {row.docNo}
-                                                        </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-zinc-900 truncate max-w-[150px] pl-1.5 font-medium">
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-zinc-900 truncate max-w-[170px] pl-1.5 font-medium">
                                                             {row.title}
                                                         </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-zinc-600 text-[9px] truncate max-w-[85px] pl-1.5">
-                                                            {row.category}
-                                                        </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
                                                             {row.inAmount > 0 ? Number(row.inAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                                         </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-bold text-zinc-900 pr-1.5">
-                                                            {row.outAmount > 0 ? Number(row.outAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-right font-mono text-zinc-900 pr-1.5">
+                                                            {row.type === 'EXPENSE' && row.expenseClassification === 'goods' 
+                                                                ? <span className="font-bold">{Number(row.outAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> 
+                                                                : '-'}
                                                         </td>
-                                                        <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono font-semibold text-zinc-700 pr-1.5">
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-right font-mono text-zinc-900 pr-1.5">
+                                                            {row.type === 'EXPENSE' && row.expenseClassification === 'other' 
+                                                                ? <span className="font-bold">{Number(row.outAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> 
+                                                                : '-'}
+                                                        </td>
+                                                        <td className="py-1 px-1 border-r border-zinc-200 text-right font-mono font-semibold text-zinc-700 pr-1.5">
                                                             {Number(row.runningBalance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                         </td>
-                                                        {isVatRegistered && (
-                                                            <td className="py-1.5 px-1 border-r border-zinc-200 text-right font-mono text-zinc-500 pr-1 text-[9px]">
-                                                                {row.vatAmount > 0 ? Number(row.vatAmount).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
-                                                            </td>
-                                                        )}
-                                                        <td className="py-1.5 px-1 text-center font-mono text-[9px] text-zinc-800 font-medium">
-                                                            {row.proofType || 'ใบเสร็จรับเงิน'}
+                                                        <td className="py-1 px-1 text-left pl-1.5 font-mono text-[9px] text-zinc-800 truncate max-w-[110px]">
+                                                            {row.docNo ? `${row.docNo}` : (row.proofType || 'ใบเสร็จ')}
                                                         </td>
                                                     </tr>
                                                 );
@@ -385,53 +427,59 @@ export default function CashTaxLedgerPrintView({
 
                                 {/* 4. Final Page Summary Matrix & Official Certification */}
                                 {isLastPage && (
-                                    <div className="space-y-3 mt-1">
+                                    <div className="space-y-2.5 mt-1">
                                         {/* Financial Totals Strip */}
-                                        <div className="border border-zinc-900 p-2.5 bg-zinc-50">
-                                            <div className="grid grid-cols-3 gap-2 text-xs font-mono mb-1.5">
+                                        <div className="border border-zinc-900 p-2 bg-zinc-50">
+                                            <div className="grid grid-cols-4 gap-2 text-xs font-mono mb-1">
                                                 <div>
-                                                    <div className="text-zinc-500 text-[10px]">รวมรายรับทั้งหมด (TOTAL CASH IN)</div>
-                                                    <div className="text-sm font-bold text-zinc-900">
+                                                    <div className="text-zinc-500 text-[9px]">รวมรายรับ (TOTAL IN)</div>
+                                                    <div className="text-xs font-bold text-emerald-800">
                                                         ฿{grandRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-zinc-500 text-[10px]">รวมรายจ่ายทั้งหมด (TOTAL CASH OUT)</div>
-                                                    <div className="text-sm font-bold text-zinc-900">
-                                                        ฿{grandExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    <div className="text-zinc-500 text-[9px]">รวมซื้อสินค้า (GOODS)</div>
+                                                    <div className="text-xs font-bold text-rose-800">
+                                                        ฿{grandGoodsExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-zinc-500 text-[10px]">กำไรสุทธิก่อนภาษี (NET PROFIT)</div>
-                                                    <div className="text-sm font-bold text-zinc-900">
+                                                    <div className="text-zinc-500 text-[9px]">รวมค่าใช้จ่ายอื่น (OTHER)</div>
+                                                    <div className="text-xs font-bold text-rose-800">
+                                                        ฿{grandOtherExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-zinc-500 text-[9px]">กำไรสุทธิ (NET PROFIT)</div>
+                                                    <div className="text-xs font-bold text-zinc-900">
                                                         ฿{netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <div className="border-t border-zinc-300 pt-1.5 flex items-center justify-between text-xs">
+                                            <div className="border-t border-zinc-300 pt-1 flex items-center justify-between text-[11px]">
                                                 <span className="text-zinc-600 font-medium">จำนวนเงินตัวอักษร:</span>
                                                 <span className="font-bold text-zinc-900">({bahtWords})</span>
                                             </div>
                                         </div>
 
                                         {/* Signatures Strip */}
-                                        <div className="grid grid-cols-2 gap-6 pt-5 border-t border-zinc-200 text-center text-xs">
-                                            <div className="space-y-6">
-                                                <div className="border-b border-zinc-400 w-44 mx-auto"></div>
+                                        <div className="grid grid-cols-2 gap-6 pt-4 border-t border-zinc-200 text-center text-xs">
+                                            <div className="space-y-5">
+                                                <div className="border-b border-zinc-400 w-40 mx-auto"></div>
                                                 <div>
                                                     <div className="font-bold text-zinc-900">(........................................................)</div>
-                                                    <div className="text-zinc-500 text-[11px] mt-0.5">ผู้จัดทำรายงาน / พนักงานบัญชี</div>
-                                                    <div className="text-zinc-400 text-[10px] font-mono">วันที่ .......... / .......... / ..........</div>
+                                                    <div className="text-zinc-500 text-[10px] mt-0.5">ผู้จัดทำรายงาน / พนักงานบัญชี</div>
+                                                    <div className="text-zinc-400 text-[9px] font-mono">วันที่ .......... / .......... / ..........</div>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-6">
-                                                <div className="border-b border-zinc-400 w-44 mx-auto"></div>
+                                            <div className="space-y-5">
+                                                <div className="border-b border-zinc-400 w-40 mx-auto"></div>
                                                 <div>
                                                     <div className="font-bold text-zinc-900">({companySettings.tax_signature_name || '........................................................'})</div>
-                                                    <div className="text-zinc-500 text-[11px] mt-0.5">ผู้มีเงินได้ / เจ้าของสถานประกอบการ</div>
-                                                    <div className="text-zinc-400 text-[10px] font-mono">วันที่ .......... / .......... / ..........</div>
+                                                    <div className="text-zinc-500 text-[10px] mt-0.5">ผู้มีเงินได้ / เจ้าของสถานประกอบการ</div>
+                                                    <div className="text-zinc-400 text-[9px] font-mono">วันที่ .......... / .......... / ..........</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -440,7 +488,7 @@ export default function CashTaxLedgerPrintView({
                             </div>
 
                             {/* Page Footer */}
-                            <div className="border-t border-zinc-300 pt-2 flex items-center justify-between text-[9px] text-zinc-400 font-mono mt-2">
+                            <div className="border-t border-zinc-300 pt-1.5 flex items-center justify-between text-[9px] text-zinc-400 font-mono mt-1">
                                 <div>ระบบบริหารจัดการภาษี HAUSTABLE TAX ENGINE • อ้างอิง ม.161</div>
                                 <div>หน้า {pageIndex + 1} / {pages.length}</div>
                             </div>

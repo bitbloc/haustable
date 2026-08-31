@@ -34,6 +34,7 @@
     "axios": "^1.13.6",
     "canvas-confetti": "^1.9.4",
     "date-fns": "^4.1.0",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "firebase": "^12.7.0",
     "framer-motion": "^12.23.26",

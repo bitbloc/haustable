@@ -20,12 +20,15 @@ import {
     Eye,
     Plus,
     X,
-    FileText
+    FileText,
+    FileCode,
+    Check
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabaseClient';
 import { downloadCsvFile, thaiBahtText, formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
 import { EXPENSE_CATEGORIES, getCleanCategoryLabel } from '../../../utils/expenseConstants';
 import { parseReceiptUrls } from '../../../utils/receiptImageHelper';
+import { exportCashTaxTemplateExcel, classifyExpenseType } from '../../../utils/thaiTaxExcelHelper';
 import CashTaxLedgerPrintView from './CashTaxLedgerPrintView';
 import POSBillDetailsModal from '../../../pos/POSBillDetailsModal';
 import { toast } from 'sonner';
@@ -70,6 +73,9 @@ export default function CashTaxLedgerTab({
 
     // Modals
     const [showPrintModal, setShowPrintModal] = useState(false);
+    const [showExcelModal, setShowExcelModal] = useState(false);
+    const [excelExportMode, setExcelExportMode] = useState('daily'); // 'daily' | 'detailed'
+    const [isExportingExcel, setIsExportingExcel] = useState(false);
     const [selectedBillForDetail, setSelectedBillForDetail] = useState(null);
     const [previewImage, setPreviewImage] = useState(null);
 
@@ -311,6 +317,7 @@ export default function CashTaxLedgerTab({
                 const catLabel = getCleanCategoryLabel(e.category) || 'ต้นทุนสินค้าและค่าใช้จ่ายดำเนินงาน';
                 const proofType = getExpenseProofType(e);
                 const proofUrl = e.receipt_url || e.image_url || null;
+                const expType = classifyExpenseType(e);
 
                 return {
                     id: `exp_${e.id}`,
@@ -318,6 +325,9 @@ export default function CashTaxLedgerTab({
                     date: dateStr,
                     docNo: docNo,
                     type: 'EXPENSE',
+                    expenseClassification: expType,
+                    goodsAmount: expType === 'goods' ? total : 0,
+                    otherAmount: expType === 'other' ? total : 0,
                     title: e.title || e.description || e.vendor_name || 'ค่าใช้จ่ายดำเนินงาน',
                     category: catLabel,
                     inAmount: 0,
@@ -409,9 +419,14 @@ export default function CashTaxLedgerTab({
             return acc + Math.max(disc, xhaus > 0 ? (disc >= xhaus ? disc : disc + xhaus) : disc);
         }, 0);
 
+        const totalGoodsExpense = expenseItems.filter(e => e.expenseClassification === 'goods').reduce((s, e) => s + e.outAmount, 0);
+        const totalOtherExpense = expenseItems.filter(e => e.expenseClassification === 'other').reduce((s, e) => s + e.outAmount, 0);
+
         return {
             totalRevenue,
             totalExpense,
+            totalGoodsExpense,
+            totalOtherExpense,
             deductibleExpense,
             netProfit,
             flat60Expense,
@@ -427,6 +442,28 @@ export default function CashTaxLedgerTab({
             totalCrmDiscounts
         };
     }, [incomeItems, expenseItems]);
+
+    // Export Excel Template Handler (Revenue Dept Form 161)
+    const handleExportExcel = async (mode = excelExportMode) => {
+        setIsExportingExcel(true);
+        const toastId = toast.loading('กำลังสร้างไฟล์ Excel รายงานเงินสดรับ-จ่าย ตามแบบฟอร์มสรรพากร...');
+        try {
+            await exportCashTaxTemplateExcel({
+                records: filteredLedger,
+                companySettings,
+                periodLabel: activePeriodLabel,
+                periodMonth: periodMode === 'month' ? selectedMonth : (periodMode === 'day' ? selectedDate : selectedYear),
+                mode
+            });
+            toast.success('ดาวน์โหลดไฟล์ Excel รายงานเงินสดรับ-จ่าย เรียบร้อยแล้ว', { id: toastId });
+            setShowExcelModal(false);
+        } catch (err) {
+            console.error('Export Excel failed:', err);
+            toast.error('ไม่สามารถส่งออก Excel ได้: ' + err.message, { id: toastId });
+        } finally {
+            setIsExportingExcel(false);
+        }
+    };
 
     // Export CSV Handler
     const handleExportCsv = () => {
@@ -488,11 +525,20 @@ export default function CashTaxLedgerTab({
                     </button>
 
                     <button
+                        onClick={() => setShowExcelModal(true)}
+                        className="px-3.5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        title="ส่งออกรายงานเงินสดรับ-จ่าย เป็นไฟล์ Excel (.xlsx) ตามแบบฟอร์มสรรพากรบุคคลธรรมดา"
+                    >
+                        <FileSpreadsheet size={14} className="text-emerald-300" />
+                        <span>📗 EXPORT EXCEL (แบบสรรพากร)</span>
+                    </button>
+
+                    <button
                         onClick={handleExportCsv}
                         className="px-3 py-2 bg-[var(--color-paper)] hover:bg-white text-[var(--color-ink)] border border-[var(--color-rule)] font-bold text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
-                        <FileSpreadsheet size={14} className="text-emerald-700" />
-                        <span>EXPORT CSV (ส่งบัญชี)</span>
+                        <FileText size={14} className="text-zinc-600" />
+                        <span>EXPORT CSV</span>
                     </button>
 
                     <button
@@ -736,23 +782,27 @@ export default function CashTaxLedgerTab({
                     <table className="w-full text-left font-mono text-xs divide-y divide-[var(--color-rule)]">
                         <thead className="bg-[var(--color-paper-2)] text-[var(--color-neutral)] font-bold uppercase tracking-wider text-[10px]">
                             <tr>
-                                <th className="p-3 w-12 text-center">#</th>
-                                <th className="p-3 w-24">วัน/เดือน/ปี</th>
-                                <th className="p-3 w-32">เลขที่เอกสาร</th>
-                                <th className="p-3">รายการรับ-จ่าย</th>
-                                <th className="p-3 w-36">หมวดหมู่สรรพากร</th>
-                                <th className="p-3 w-28 text-right text-emerald-800 font-bold">รายรับ (บาท)</th>
-                                <th className="p-3 w-28 text-right text-rose-800 font-bold">รายจ่าย (บาท)</th>
-                                <th className="p-3 w-28 text-right text-[var(--color-ink)] font-bold">ยอดคงเหลือ</th>
-                                {isVatRegistered && <th className="p-3 w-24 text-right">VAT (7%)</th>}
-                                <th className="p-3 w-24 text-center">หลักฐานแนบ</th>
-                                <th className="p-3 w-14 text-center">ดูบิล</th>
+                                <th className="p-3 w-10 text-center" rowSpan={2}>#</th>
+                                <th className="p-3 w-22" rowSpan={2}>วัน/เดือน/ปี</th>
+                                <th className="p-3 w-28" rowSpan={2}>เลขที่เอกสาร</th>
+                                <th className="p-3" rowSpan={2}>รายการรับ-จ่าย</th>
+                                <th className="p-3 w-32" rowSpan={2}>หมวดหมู่</th>
+                                <th className="p-2.5 w-26 text-right text-emerald-800 font-bold border-l border-[var(--color-rule)]" rowSpan={2}>รายรับ (บาท)</th>
+                                <th className="p-1.5 text-center text-rose-800 font-bold border-l border-[var(--color-rule)] bg-rose-50/50" colSpan={2}>รายจ่าย (บาท)</th>
+                                <th className="p-2.5 w-26 text-right text-[var(--color-ink)] font-bold border-l border-[var(--color-rule)]" rowSpan={2}>ยอดคงเหลือ</th>
+                                {isVatRegistered && <th className="p-2.5 w-20 text-right border-l border-[var(--color-rule)]" rowSpan={2}>VAT 7%</th>}
+                                <th className="p-3 w-24 text-center border-l border-[var(--color-rule)]" rowSpan={2}>หลักฐาน</th>
+                                <th className="p-3 w-12 text-center" rowSpan={2}>ดูบิล</th>
+                            </tr>
+                            <tr className="bg-rose-50/70 text-rose-900 border-t border-[var(--color-rule)] text-[9px]">
+                                <th className="p-1.5 w-24 text-right border-l border-[var(--color-rule)]">ซื้อสินค้า</th>
+                                <th className="p-1.5 w-24 text-right border-l border-[var(--color-rule)]">ค่าใช้จ่ายอื่นๆ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--color-rule)]">
                             {ledgerWithRunningBalance.length === 0 ? (
                                 <tr>
-                                    <td colSpan={isVatRegistered ? 11 : 10} className="p-10 text-center text-[var(--color-neutral)]">
+                                    <td colSpan={isVatRegistered ? 12 : 11} className="p-10 text-center text-[var(--color-neutral)]">
                                         <div className="space-y-1">
                                             <div className="text-sm font-bold font-mono text-[var(--color-ink)]">ไม่พบรายการเงินสดรับ-จ่ายในรอบระยะเวลานี้</div>
                                             <div className="text-xs text-[var(--color-muted)]">ลองปรับเลือกช่วงวันที่หรือเงื่อนไขการค้นหาใหม่</div>
@@ -777,24 +827,31 @@ export default function CashTaxLedgerTab({
                                                 <span className="truncate max-w-sm">{item.title}</span>
                                             </div>
                                         </td>
-                                        <td className="p-3 text-[var(--color-neutral)] text-[11px] truncate max-w-[140px]">
+                                        <td className="p-3 text-[var(--color-neutral)] text-[11px] truncate max-w-[130px]">
                                             {item.category}
                                         </td>
-                                        <td className="p-3 text-right font-bold font-mono text-emerald-800">
+                                        <td className="p-3 text-right font-bold font-mono text-emerald-800 border-l border-[var(--color-rule)]">
                                             {item.inAmount > 0 ? item.inAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-bold font-mono text-rose-800">
-                                            {item.outAmount > 0 ? item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
+                                        <td className="p-3 text-right font-mono text-rose-800 border-l border-[var(--color-rule)]">
+                                            {item.type === 'EXPENSE' && item.expenseClassification === 'goods' 
+                                                ? <span className="font-bold">{item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                                : '-'}
                                         </td>
-                                        <td className="p-3 text-right font-bold font-mono text-[var(--color-ink)]">
+                                        <td className="p-3 text-right font-mono text-rose-800 border-l border-[var(--color-rule)]">
+                                            {item.type === 'EXPENSE' && item.expenseClassification === 'other' 
+                                                ? <span className="font-bold">{item.outAmount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                                : '-'}
+                                        </td>
+                                        <td className="p-3 text-right font-bold font-mono text-[var(--color-ink)] border-l border-[var(--color-rule)]">
                                             {item.runningBalance !== undefined ? Number(item.runningBalance).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                         </td>
                                         {isVatRegistered && (
-                                            <td className="p-3 text-right font-mono text-[var(--color-muted)] text-[11px]">
+                                            <td className="p-3 text-right font-mono text-[var(--color-muted)] text-[11px] border-l border-[var(--color-rule)]">
                                                 {item.vatAmount > 0 ? item.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}
                                             </td>
                                         )}
-                                        <td className="p-3 text-center">
+                                        <td className="p-3 text-center border-l border-[var(--color-rule)]">
                                             {item.proofUrl ? (
                                                 <button
                                                     onClick={() => setPreviewImage(item.proofUrl)}
@@ -841,17 +898,20 @@ export default function CashTaxLedgerTab({
                                 <td colSpan={5} className="p-3 text-right text-[var(--color-ink)] font-mono">
                                     รวมยอดทั้งสิ้น ({thaiBahtText(totals.netProfit)}):
                                 </td>
-                                <td className="p-3 text-right font-mono text-emerald-800 text-sm">
+                                <td className="p-3 text-right font-mono text-emerald-800 text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3 text-right font-mono text-rose-800 text-sm">
-                                    ฿{totals.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                <td className="p-3 text-right font-mono text-rose-800 text-sm border-l border-[var(--color-rule)]">
+                                    ฿{totals.totalGoodsExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
-                                <td className="p-3 text-right font-mono text-[var(--color-ink)] text-sm">
+                                <td className="p-3 text-right font-mono text-rose-800 text-sm border-l border-[var(--color-rule)]">
+                                    ฿{totals.totalOtherExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                </td>
+                                <td className="p-3 text-right font-mono text-[var(--color-ink)] text-sm border-l border-[var(--color-rule)]">
                                     ฿{totals.netProfit.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                 </td>
                                 {isVatRegistered && (
-                                    <td className="p-3 text-right font-mono text-[var(--color-ink)] text-xs">
+                                    <td className="p-3 text-right font-mono text-[var(--color-ink)] text-xs border-l border-[var(--color-rule)]">
                                         ฿{totals.netVat.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                                     </td>
                                 )}
@@ -861,6 +921,142 @@ export default function CashTaxLedgerTab({
                     </table>
                 </div>
             </div>
+
+            {/* Excel Export Selection Modal */}
+            {showExcelModal && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs cursor-pointer"
+                    onClick={() => !isExportingExcel && setShowExcelModal(false)}
+                >
+                    <div 
+                        className="relative max-w-lg w-full bg-[var(--color-paper)] border-2 border-[var(--color-rule)] shadow-2xl p-5 sm:p-6 space-y-5 cursor-default font-sans"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between pb-3 border-b border-[var(--color-rule)]">
+                            <div className="flex items-center gap-2">
+                                <FileSpreadsheet className="text-emerald-700" size={20} />
+                                <div>
+                                    <h3 className="font-mono font-bold text-sm text-[var(--color-ink)] uppercase">
+                                        ส่งออก EXCEL รายงานเงินสด รับ - จ่าย (ม.161)
+                                    </h3>
+                                    <p className="text-[11px] text-[var(--color-neutral)] font-mono">
+                                        แบบฟอร์มบุคคลธรรมดา กรมสรรพากร
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => !isExportingExcel && setShowExcelModal(false)}
+                                className="p-1 hover:bg-black/5 text-[var(--color-neutral)] hover:text-black cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Metadata Preview Box */}
+                        <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs space-y-1 font-mono">
+                            <div className="flex justify-between">
+                                <span className="text-[var(--color-neutral)]">รอบระยะเวลา:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{activePeriodLabel}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--color-neutral)]">ชื่อผู้ประกอบกิจการ:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{companySettings.tax_proprietor_name || companySettings.tax_company_name || 'นายธนภัทร บุญเจริญ'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--color-neutral)]">เลขประจำตัวประชาชน:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{formatTaxId(companySettings.tax_citizen_id || companySettings.tax_id || '1120100144907')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--color-neutral)]">สถานประกอบการ:</span>
+                                <span className="font-bold text-[var(--color-ink)]">{companySettings.tax_establishment_name || companySettings.tax_company_name || 'ร้านในบ้าน นครพนม'}</span>
+                            </div>
+                        </div>
+
+                        {/* Export Mode Selection */}
+                        <div className="space-y-2">
+                            <label className="font-mono font-bold text-[11px] text-[var(--color-ink)] uppercase block">
+                                เลือกรูปแบบการสรุปข้อมูลในไฟล์ Excel:
+                            </label>
+                            
+                            <div className="grid grid-cols-1 gap-2.5">
+                                {/* Mode 1: Daily Summary */}
+                                <div 
+                                    onClick={() => setExcelExportMode('daily')}
+                                    className={`p-3.5 border transition-all cursor-pointer flex items-start gap-3 ${excelExportMode === 'daily' ? 'border-emerald-700 bg-emerald-50/50' : 'border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'}`}
+                                >
+                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'daily' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-400'}`}>
+                                        {excelExportMode === 'daily' && <Check size={11} strokeWidth={3} />}
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <div className="font-bold text-xs text-[var(--color-ink)] flex items-center gap-2">
+                                            <span>1. สรุปยอดรายวัน (Daily Summary)</span>
+                                            <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[10px] font-mono font-bold">แนะนำสำหรับยื่นภาษี</span>
+                                        </div>
+                                        <p className="text-[11px] text-[var(--color-neutral)] leading-relaxed">
+                                            รวมยอดขาย POS แต่ละวันเป็น 1 บรรทัดต่อวัน พร้อมแจกแจงรายการซื้อสินค้า/ค่าใช้จ่ายแต่ละบิล เรียงตามวัน ชัดเจน กระชับ ไม่ยาวเกินไป
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Mode 2: Detailed Line by Line */}
+                                <div 
+                                    onClick={() => setExcelExportMode('detailed')}
+                                    className={`p-3.5 border transition-all cursor-pointer flex items-start gap-3 ${excelExportMode === 'detailed' ? 'border-emerald-700 bg-emerald-50/50' : 'border-[var(--color-rule)] bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)]'}`}
+                                >
+                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center ${excelExportMode === 'detailed' ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-zinc-400'}`}>
+                                        {excelExportMode === 'detailed' && <Check size={11} strokeWidth={3} />}
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <div className="font-bold text-xs text-[var(--color-ink)]">
+                                            2. แยกรายบิลละเอียด (Detailed Transactions)
+                                        </div>
+                                        <p className="text-[11px] text-[var(--color-neutral)] leading-relaxed">
+                                            แสดงทุกบิล POS ทุกโต๊ะ ทุกออเดอร์ และทุกบิลรายจ่าย เหมาะสำหรับการตรวจสอบบัญชีภายในอย่างละเอียด
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Financial Snapshot */}
+                        <div className="grid grid-cols-3 gap-2 p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-center font-mono text-[11px]">
+                            <div>
+                                <div className="text-[var(--color-neutral)] text-[10px]">รายรับรวม</div>
+                                <div className="font-bold text-emerald-800">฿{totals.totalRevenue.toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div className="text-[var(--color-neutral)] text-[10px]">ซื้อสินค้า</div>
+                                <div className="font-bold text-rose-800">฿{totals.totalGoodsExpense.toLocaleString()}</div>
+                            </div>
+                            <div>
+                                <div className="text-[var(--color-neutral)] text-[10px]">ค่าใช้จ่ายอื่นๆ</div>
+                                <div className="font-bold text-rose-800">฿{totals.totalOtherExpense.toLocaleString()}</div>
+                            </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--color-rule)]">
+                            <button
+                                type="button"
+                                onClick={() => setShowExcelModal(false)}
+                                disabled={isExportingExcel}
+                                className="px-4 py-2 border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] font-mono text-xs font-bold cursor-pointer"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleExportExcel()}
+                                disabled={isExportingExcel}
+                                className="px-5 py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-mono text-xs font-bold flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+                            >
+                                <Download size={15} />
+                                <span>{isExportingExcel ? 'กำลังสร้างไฟล์...' : 'ดาวน์โหลดไฟล์ EXCEL (.xlsx)'}</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Print View Portal Modal */}
             {showPrintModal && (

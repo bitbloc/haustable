@@ -36,6 +36,9 @@ export default function TaxSettingsTab({
         tax_is_vat_registered: 'false',
         tax_company_name: 'ร้านในบ้าน นครพนม',
         tax_company_name_en: 'IN THE HAUS NAKHON PHANOM',
+        tax_proprietor_name: 'นายธนภัทร บุญเจริญ',
+        tax_citizen_id: '1120100144907',
+        tax_establishment_name: 'ร้านในบ้าน นครพนม (IN THE HAUS)',
         tax_id: '1120100144907',
         tax_branch_type: 'head_office',
         tax_branch_code: '00000',
@@ -480,6 +483,63 @@ export default function TaxSettingsTab({
                             onChange={(e) => handleSettingChange('tax_email', e.target.value)}
                             placeholder="accounting@inthehaus.com"
                             className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            {/* Individual Taxpayer & Revenue Dept Form 161 Metadata Card */}
+            <div className="bg-white border border-[#D1D1CD] rounded-2xl p-5 sm:p-6 shadow-sm space-y-5">
+                <div className="flex items-center gap-2.5 border-b border-zinc-200 pb-3">
+                    <ShieldCheck size={18} className="text-emerald-700" />
+                    <div>
+                        <h3 className="font-mono font-bold text-sm text-zinc-950 uppercase tracking-wider">
+                            ข้อมูลรายงานเงินสด รับ-จ่าย บุคคลธรรมดา (ม.161 &amp; Excel Template)
+                        </h3>
+                        <p className="text-[11px] text-zinc-500 font-mono">
+                            ข้อมูลสำหรับพิมพ์ลงหัวรายงานเงินสด รับ - จ่าย และส่งออก Excel ตามแบบฟอร์มกรมสรรพากร
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                            ชื่อผู้ประกอบกิจการ (บุคคลธรรมดา) *
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.tax_proprietor_name}
+                            onChange={(e) => handleSettingChange('tax_proprietor_name', e.target.value)}
+                            placeholder="เช่น นายธนภัทร บุญเจริญ"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                            เลขประจำตัวประชาชน (13 หลัก) *
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.tax_citizen_id}
+                            onChange={(e) => handleSettingChange('tax_citizen_id', e.target.value)}
+                            placeholder="1120100144907"
+                            maxLength={17}
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg font-mono text-xs focus:border-zinc-900 focus:outline-none"
+                        />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                        <label className="font-mono font-bold text-[10px] text-zinc-500 uppercase block mb-1">
+                            ชื่อสถานประกอบการ (Trade Name)
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.tax_establishment_name}
+                            onChange={(e) => handleSettingChange('tax_establishment_name', e.target.value)}
+                            placeholder="เช่น ร้านในบ้าน นครพนม (IN THE HAUS)"
+                            className="w-full px-3 py-2 border border-zinc-300 rounded-lg text-xs font-semibold focus:border-zinc-900 focus:outline-none"
                         />
                     </div>
                 </div>
