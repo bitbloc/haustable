@@ -479,11 +479,16 @@ export async function exportCashTaxTemplateExcel({
         currentRowIdx++;
     }
 
-    // 6. Summary Totals Row with Excel Formulas
+    // 6. Summary Totals Row with Excel Formulas & Pre-Calculated Results
     const lastDataRow = currentRowIdx - 1;
     const summaryRow = worksheet.getRow(currentRowIdx);
 
-    // Merge A & B for "รวม"
+    const totalIncomeCalc = processedRows.reduce((s, r) => s + (Number(r.income) || 0), 0);
+    const totalGoodsCalc = processedRows.reduce((s, r) => s + (Number(r.expenseGoods) || 0), 0);
+    const totalOtherCalc = processedRows.reduce((s, r) => s + (Number(r.expenseOther) || 0), 0);
+    const netProfitCalc = totalIncomeCalc - (totalGoodsCalc + totalOtherCalc);
+
+    // Merge A & B for "รวมทั้งสิ้น"
     worksheet.mergeCells(`A${currentRowIdx}:B${currentRowIdx}`);
     const summaryLabelCell = summaryRow.getCell(1);
     summaryLabelCell.value = 'รวมทั้งสิ้น (TOTAL)';
@@ -494,42 +499,83 @@ export async function exportCashTaxTemplateExcel({
 
     summaryRow.getCell(2).border = doubleBottomBorder;
 
-    // Col C: Total Income Formula
+    // Col C: Total Income Formula (with pre-calculated number for instant display)
     const cellIncomeSum = summaryRow.getCell(3);
-    cellIncomeSum.value = { formula: `SUM(C10:C${lastDataRow})` };
+    cellIncomeSum.value = { 
+        formula: `SUM(C10:C${lastDataRow})`,
+        result: totalIncomeCalc
+    };
     cellIncomeSum.numFmt = '#,##0.00;(#,##0.00);"-"';
     cellIncomeSum.font = { ...fontBold, color: { argb: 'FF15803D' } }; // Forest Green
     cellIncomeSum.alignment = { horizontal: 'right', vertical: 'middle' };
     cellIncomeSum.fill = headerFill;
     cellIncomeSum.border = doubleBottomBorder;
 
-    // Col D: Total Goods Purchases Formula
+    // Col D: Total Goods Purchases Formula (with pre-calculated number for instant display)
     const cellGoodsSum = summaryRow.getCell(4);
-    cellGoodsSum.value = { formula: `SUM(D10:D${lastDataRow})` };
+    cellGoodsSum.value = { 
+        formula: `SUM(D10:D${lastDataRow})`,
+        result: totalGoodsCalc
+    };
     cellGoodsSum.numFmt = '#,##0.00;(#,##0.00);"-"';
     cellGoodsSum.font = { ...fontBold, color: { argb: 'FFB91C1C' } }; // Rose Red
     cellGoodsSum.alignment = { horizontal: 'right', vertical: 'middle' };
     cellGoodsSum.fill = headerFill;
     cellGoodsSum.border = doubleBottomBorder;
 
-    // Col E: Total Other Expenses Formula
+    // Col E: Total Other Expenses Formula (with pre-calculated number for instant display)
     const cellOtherSum = summaryRow.getCell(5);
-    cellOtherSum.value = { formula: `SUM(E10:E${lastDataRow})` };
+    cellOtherSum.value = { 
+        formula: `SUM(E10:E${lastDataRow})`,
+        result: totalOtherCalc
+    };
     cellOtherSum.numFmt = '#,##0.00;(#,##0.00);"-"';
     cellOtherSum.font = { ...fontBold, color: { argb: 'FFB91C1C' } };
     cellOtherSum.alignment = { horizontal: 'right', vertical: 'middle' };
     cellOtherSum.fill = headerFill;
     cellOtherSum.border = doubleBottomBorder;
 
-    // Col F: Net Profit Formula or Balance Note
+    // Col F: Remarks Column (clean blank matching official Revenue Dept template)
     const cellRemarkSum = summaryRow.getCell(6);
-    cellRemarkSum.value = `กำไรก่อนภาษี = C${currentRowIdx} - (D${currentRowIdx} + E${currentRowIdx})`;
-    cellRemarkSum.font = { ...fontBold, size: 9, color: { argb: 'FF4B5563' } };
-    cellRemarkSum.alignment = { horizontal: 'center', vertical: 'middle' };
+    cellRemarkSum.value = '';
     cellRemarkSum.fill = headerFill;
     cellRemarkSum.border = doubleBottomBorder;
 
     summaryRow.height = 24;
+
+    // 6.1 Optional Net Profit Summary strip 2 rows below table
+    const profitRowIdx = currentRowIdx + 2;
+    worksheet.mergeCells(`A${profitRowIdx}:D${profitRowIdx}`);
+    const profitLabelCell = worksheet.getCell(`A${profitRowIdx}`);
+    profitLabelCell.value = 'กำไรสุทธิก่อนภาษี (รายรับ - รายจ่ายทั้งหมด):';
+    profitLabelCell.font = fontBold;
+    profitLabelCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+    const profitValueCell = worksheet.getCell(`E${profitRowIdx}`);
+    profitValueCell.value = {
+        formula: `C${currentRowIdx}-(D${currentRowIdx}+E${currentRowIdx})`,
+        result: netProfitCalc
+    };
+    profitValueCell.numFmt = '#,##0.00;(#,##0.00);"-"';
+    profitValueCell.font = { ...fontBold, color: { argb: netProfitCalc >= 0 ? 'FF15803D' : 'FFB91C1C' } };
+    profitValueCell.alignment = { horizontal: 'right', vertical: 'middle' };
+    profitValueCell.border = {
+        top: { style: 'thin', color: { argb: 'FF555555' } },
+        bottom: { style: 'double', color: { argb: 'FF000000' } },
+        left: { style: 'thin', color: { argb: 'FF555555' } },
+        right: { style: 'thin', color: { argb: 'FF555555' } }
+    };
+    profitValueCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: netProfitCalc >= 0 ? 'FFF0FDF4' : 'FFFDF2F2' }
+    };
+
+    const profitUnitCell = worksheet.getCell(`F${profitRowIdx}`);
+    profitUnitCell.value = 'บาท';
+    profitUnitCell.font = fontMain;
+    profitUnitCell.alignment = { horizontal: 'left', vertical: 'middle' };
+    worksheet.getRow(profitRowIdx).height = 22;
 
     // 7. Write to Buffer and Trigger Download
     const buffer = await workbook.xlsx.writeBuffer();
