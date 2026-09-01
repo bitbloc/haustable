@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RefreshCw, Compass, Instagram, Facebook, Star } from 'lucide-react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
@@ -8,8 +9,11 @@ import {
     trackDirectionsClick,
     trackPhoneClick,
     trackLineClick,
-    trackBookletClick
+    trackBookletClick,
+    trackBookingClick,
+    trackPickupClick
 } from './utils/analyticsHelper';
+
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
@@ -283,6 +287,27 @@ export default function AdsLandingPage() {
     const fbUrl = (settings.link_url_3 && settings.link_url_3 !== 'https://facebook.com' && settings.link_url_3 !== 'https://www.facebook.com') ? settings.link_url_3 : defaultFbUrl;
     const mapUrl = (settings.link_url_4 && settings.link_url_4 !== 'https://maps.google.com') ? settings.link_url_4 : defaultMapUrl;
 
+    const navigate = useNavigate();
+
+    const getPreservedQueryUrl = (path) => {
+        if (typeof window !== 'undefined' && window.location.search) {
+            return `${path}${window.location.search}`;
+        }
+        return path;
+    };
+
+    const handleBookingClick = (e) => {
+        if (e) e.preventDefault();
+        trackBookingClick('/link');
+        navigate(getPreservedQueryUrl('/booking'));
+    };
+
+    const handlePickupClick = (e) => {
+        if (e) e.preventDefault();
+        trackPickupClick('/link');
+        navigate(getPreservedQueryUrl('/pickup'));
+    };
+
     const handleDirectionsClick = () => {
         trackDirectionsClick('/link');
     };
@@ -298,6 +323,7 @@ export default function AdsLandingPage() {
     const handleBookletClick = () => {
         trackBookletClick('/link');
     };
+
 
     // ─── DYNAMIC SEO (Title & Meta) ───
     useEffect(() => {
@@ -420,6 +446,53 @@ export default function AdsLandingPage() {
                             <span>ดูรูปภาพลูกค้า</span> <span className="font-mono font-bold">➔</span>
                         </span>
                     </a>
+
+                    {/* ─── QUICK ACTIONS: DIRECT ONLINE SERVICES (TABULAR GRID) ─── */}
+                    <div className="grid grid-cols-2 divide-x divide-[var(--color-hallmark-rule)] border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] select-none">
+                        <a
+                            href={getPreservedQueryUrl('/booking')}
+                            onClick={handleBookingClick}
+                            className="p-3.5 sm:p-4 flex flex-col justify-between gap-1 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors group cursor-pointer"
+                            id="cta-quick-booking"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-mono font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] uppercase">
+                                    // RESERVATION
+                                </span>
+                                <span className="font-mono text-xs font-bold text-[var(--color-hallmark-ink)] group-hover:translate-x-0.5 transition-transform">➔</span>
+                            </div>
+                            <div>
+                                <span className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] block leading-tight">
+                                    จองโต๊ะล่วงหน้า
+                                </span>
+                                <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] tracking-wider block mt-0.5">
+                                    BOOK A TABLE
+                                </span>
+                            </div>
+                        </a>
+
+                        <a
+                            href={getPreservedQueryUrl('/pickup')}
+                            onClick={handlePickupClick}
+                            className="p-3.5 sm:p-4 flex flex-col justify-between gap-1 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors group cursor-pointer"
+                            id="cta-quick-pickup"
+                        >
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-mono font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] uppercase">
+                                    // SELF-PICKUP
+                                </span>
+                                <span className="font-mono text-xs font-bold text-[var(--color-hallmark-ink)] group-hover:translate-x-0.5 transition-transform">➔</span>
+                            </div>
+                            <div>
+                                <span className="font-[var(--font-body)] font-bold text-xs sm:text-[13px] text-[var(--color-hallmark-ink)] block leading-tight">
+                                    สั่งอาหารรับหน้าร้าน
+                                </span>
+                                <span className="font-mono text-[9px] font-bold text-[var(--color-hallmark-ink-muted)] tracking-wider block mt-0.5">
+                                    PICK UP ONLINE
+                                </span>
+                            </div>
+                        </a>
+                    </div>
                 </header>
 
                 {/* ─── SECTION CONTROLS (Tabular Structure) ─── */}
@@ -576,6 +649,44 @@ export default function AdsLandingPage() {
                                 </button>
                             </section>
                         )}
+
+                        {/* Ready to Dine / Online Service Prompt */}
+                        <section className="border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] select-none">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex items-center justify-between">
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    READY TO ORDER OR DINE?
+                                </h3>
+                                <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] uppercase">
+                                    // DIRECT SERVICES
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 divide-x divide-[var(--color-hallmark-rule)]">
+                                <a
+                                    href={getPreservedQueryUrl('/booking')}
+                                    onClick={handleBookingClick}
+                                    className="p-3.5 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-center transition-colors cursor-pointer group"
+                                >
+                                    <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] block">
+                                        จองโต๊ะล่วงหน้า
+                                    </span>
+                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] font-bold uppercase tracking-wider block mt-0.5">
+                                        BOOK TABLE ➔
+                                    </span>
+                                </a>
+                                <a
+                                    href={getPreservedQueryUrl('/pickup')}
+                                    onClick={handlePickupClick}
+                                    className="p-3.5 bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] text-center transition-colors cursor-pointer group"
+                                >
+                                    <span className="font-[var(--font-body)] font-bold text-xs text-[var(--color-hallmark-ink)] block">
+                                        สั่งอาหารรับหน้าร้าน
+                                    </span>
+                                    <span className="font-mono text-[9px] text-[var(--color-hallmark-ink-muted)] group-hover:text-[var(--color-hallmark-ink)] font-bold uppercase tracking-wider block mt-0.5">
+                                        PICK UP ➔
+                                    </span>
+                                </a>
+                            </div>
+                        </section>
                         
                     </div>
                 )}
@@ -658,17 +769,49 @@ export default function AdsLandingPage() {
                 {/* ─── SECTION 3: CONNECT / LINKS ─── */}
                 {activeSection === 'connect' && (
                     <div className="space-y-4 flex-grow animate-fade-in">
-                        {/* Reservation & Contact */}
+                        {/* Direct Online Services */}
+                        <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] flex items-center justify-between">
+                                <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                    ONLINE SERVICES & BOOKING
+                                </h3>
+                                <span className="text-[9px] font-mono text-[var(--color-brand)] bg-[var(--color-hallmark-ink)] px-2 py-0.5 font-bold uppercase">
+                                    DIRECT WEB APP
+                                </span>
+                            </div>
+                            
+                            <LinkCard 
+                                href={getPreservedQueryUrl('/booking')}
+                                onClick={handleBookingClick}
+                                title="TABLE BOOKING // จองโต๊ะออนไลน์ ➔" 
+                                bg="bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800" 
+                                wide 
+                                internal
+                                id="cta-connect-booking"
+                            />
+
+                            <LinkCard 
+                                href={getPreservedQueryUrl('/pickup')}
+                                onClick={handlePickupClick}
+                                title="PICK UP ONLINE // สั่งอาหารรับหน้าร้าน ➔" 
+                                bg="bg-[#E9F344] text-[var(--color-hallmark-ink)] hover:bg-[#d8e235] font-black" 
+                                wide 
+                                internal
+                                id="cta-connect-pickup"
+                            />
+                        </div>
+
+                        {/* LINE & Phone Contact */}
                         <div className="divide-y divide-[var(--color-hallmark-rule)] border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                             <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                                 <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                    RESERVATION & CONTACT
+                                    LINE & PHONE CONTACT
                                 </h3>
                             </div>
                             
                             <LinkCard 
                                 href={lineUrl} 
-                                title={settings?.link_title_1 || "LINE OA // จองโต๊ะ หรือ สั่งอาหาร"} 
+                                title={settings?.link_title_1 || "LINE OA // แชทสอบถามหรือสั่งอาหาร"} 
                                 bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
                                 wide 
                             />

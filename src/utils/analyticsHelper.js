@@ -165,3 +165,30 @@ export const trackBookletClick = (pageLocation = '/link') => {
         page_location: pageLocation
     });
 };
+
+/**
+ * Track Table Booking Navigation Click
+ * @param {string} pageLocation 
+ */
+export const trackBookingClick = (pageLocation = '/link') => {
+    if (isDebounced('booking_click')) return;
+
+    trackEvent('click_booking_link', {
+        page_location: pageLocation,
+        target_destination: '/booking'
+    });
+};
+
+/**
+ * Track Pick Up Online Navigation Click
+ * @param {string} pageLocation 
+ */
+export const trackPickupClick = (pageLocation = '/link') => {
+    if (isDebounced('pickup_click')) return;
+
+    trackEvent('click_pickup_link', {
+        page_location: pageLocation,
+        target_destination: '/pickup'
+    });
+};
+
