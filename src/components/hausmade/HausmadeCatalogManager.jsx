@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import HausmadeProductEditorModal from './HausmadeProductEditorModal'
-import { isPreOrderItem, getPreOrderEta } from '../../hooks/useHausmadeShop'
+import { isPreOrderItem, getPreOrderEta, getProductImages } from '../../hooks/useHausmadeShop'
 
 export default function HausmadeCatalogManager() {
     const [products, setProducts] = useState([])
@@ -450,6 +450,8 @@ export default function HausmadeCatalogManager() {
                         const isPinnedHero = product.is_recommended === true || product.is_hero_featured === true
                         const optionGroups = product.menu_item_options?.map(o => o.option_groups).filter(Boolean) || []
                         const totalVariants = optionGroups.reduce((sum, g) => sum + (g.option_choices?.length || 0), 0)
+                        const productImages = getProductImages(product)
+                        const hasMultipleImages = productImages.length > 1
 
                         return (
                             <div
@@ -463,9 +465,9 @@ export default function HausmadeCatalogManager() {
                                 {/* Top Image & Badges */}
                                 <div>
                                     <div className="h-48 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] relative overflow-hidden flex items-center justify-center">
-                                        {product.image_url ? (
+                                        {productImages.length > 0 ? (
                                             <img
-                                                src={product.image_url}
+                                                src={productImages[0]}
                                                 alt={product.name}
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
@@ -494,7 +496,7 @@ export default function HausmadeCatalogManager() {
                                             )}
                                         </div>
 
-                                        <div className="absolute top-2 right-2 z-10">
+                                        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
                                             <button
                                                 onClick={() => handleToggleAvailable(product)}
                                                 className={`px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-sm cursor-pointer ${
@@ -506,7 +508,16 @@ export default function HausmadeCatalogManager() {
                                                 {product.is_available !== false ? 'เปิดขาย' : 'ซ่อนอยู่'}
                                             </button>
                                         </div>
+
+                                        {/* Multi-Photo Count Badge */}
+                                        {hasMultipleImages && (
+                                            <div className="absolute bottom-2 right-2 bg-[oklch(18%_0.012_28)]/90 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-sm backdrop-blur-xs flex items-center gap-1">
+                                                <span>📷</span>
+                                                <span>{productImages.length} รูป</span>
+                                            </div>
+                                        )}
                                     </div>
+
 
                                     {/* Product Details */}
                                     <div className="p-4 flex flex-col gap-2">

@@ -44,6 +44,18 @@ export function getPreOrderEta(item) {
     return 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
 }
 
+export function getProductImages(item) {
+    if (!item) return []
+    const specs = item.craft_specs || item.metadata || {}
+    const list = specs.images || specs.gallery || item.images || item.gallery
+    if (Array.isArray(list) && list.length > 0) {
+        const validList = list.filter(img => typeof img === 'string' && img.trim().length > 0)
+        if (validList.length > 0) return validList
+    }
+    return item.image_url ? [item.image_url] : []
+}
+
+
 export function useHausmadeShop() {
     const [menuItems, setMenuItems] = useState([])
     const [categories, setCategories] = useState([])
@@ -67,6 +79,7 @@ export function useHausmadeShop() {
     const [crmTiers, setCrmTiers] = useState(DEFAULT_CRM_TIERS)
     const [memberProfile, setMemberProfile] = useState(null)
     const [redeemedCoinsInput, setRedeemedCoinsInput] = useState(0)
+    const [activeOrders, setActiveOrders] = useState([])
 
     // Cart State with LocalStorage initialization
     const [cart, setCart] = useState(() => {
@@ -140,86 +153,186 @@ export function useHausmadeShop() {
                     setCrmTiers(parseTiersConfig(settingsMap.crm_tiers_config))
                 }
 
-                // Fetch Profile for CRM if logged in
-                const user = authUserRes.data?.user
-                if (user) {
-                    const { data: prof } = await supabase
+        // Fetch Profile & Active Pending Orders for CRM if logged in
+        async function fetchUserContext(user) {
+            if (!user) {
+                if (isMounted) {
+                    setMemberProfile(null)
+                    setActiveOrders([])
+                }
+                return
+            }
+
+            try {
+                const [profRes, ordersRes] = await Promise.all([
+                    supabase
                         .from('profiles')
                         .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, total_spent_12m, total_spent_13m')
                         .eq('id', user.id)
-                        .single()
+                        .single(),
+                    supabase
+                        .from('bookings')
+                        .select(`
+                            id,
+                            tracking_token,
+                            status,
+                            total_amount,
+                            booking_time,
+                            is_preorder,
+                            order_type,
+                            created_at,
+                            pickup_contact_name,
+                            pickup_contact_phone,
+                            shipping_address,
+                            order_items (
+                                id,
+                                quantity,
+                                price_at_time,
+                                custom_name,
+                                menu_items (name)
+                            )
+                        `)
+                        .eq('user_id', user.id)
+                        .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
+                        .order('created_at', { ascending: false })
+                ])
 
-                    if (prof && isMounted) {
-                        setMemberProfile(prof)
-                    }
+                if (isMounted) {
+                    if (profRes.data) setMemberProfile(profRes.data)
+                    if (ordersRes.data) setActiveOrders(ordersRes.data)
                 }
-
-                // Identify category IDs for "hausmade", "retail", "craft", etc.
-                const hausmadeCatIds = new Set(
-                    allCats
-                        .filter(c => {
-                            const name = (c.name || '').toLowerCase()
-                            return name.includes('hausmade') || name.includes('retail') || name.includes('ของฝาก') || name.includes('สินค้า')
-                        })
-                        .map(c => c.id)
-                )
-
-                // Filter items that belong to hausmade category OR have is_hausmade tag OR match retail keywords
-                const filteredItems = allItems.filter(item => {
-                    if (item.is_hausmade === true) return true
-                    if (item.category_id && hausmadeCatIds.has(item.category_id)) return true
-                    const catName = ((item.menu_categories?.name || item.category || '')).toLowerCase()
-                    if (catName.includes('hausmade') || catName.includes('retail') || catName.includes('ของฝาก')) return true
-                    return false
-                })
-
-                setCategories(allCats)
-                setMenuItems(filteredItems.length > 0 ? filteredItems : allItems)
             } catch (err) {
-                console.error('[useHausmadeShop] Error loading shop data:', err)
-            } finally {
-                if (isMounted) setLoading(false)
+                console.warn('[useHausmadeShop] fetchUserContext error:', err)
             }
         }
 
+        // Identify category IDs for "hausmade", "retail", "craft", etc.
+        const hausmadeCatIds = new Set(
+            allCats
+                .filter(c => {
+                    const name = (c.name || '').toLowerCase()
+                    return name.includes('hausmade') || name.includes('retail') || name.includes('ของฝาก') || name.includes('สินค้า')
+                })
+                .map(c => c.id)
+        )
+
+        // Filter items that belong to hausmade category OR have is_hausmade tag OR match retail keywords
+        const filteredItems = allItems.filter(item => {
+            if (item.is_hausmade === true) return true
+            if (item.category_id && hausmadeCatIds.has(item.category_id)) return true
+            const catName = ((item.menu_categories?.name || item.category || '')).toLowerCase()
+            if (catName.includes('hausmade') || catName.includes('retail') || catName.includes('ของฝาก')) return true
+            return false
+        })
+
+        setCategories(allCats)
+        setMenuItems(filteredItems.length > 0 ? filteredItems : allItems)
+
+        // Initial fetch user context
+        if (authUserRes.data?.user) {
+            fetchUserContext(authUserRes.data.user)
+        }
+    } catch (err) {
+        console.error('[useHausmadeShop] Error loading shop data:', err)
+    } finally {
+        if (isMounted) setLoading(false)
+    }
+}
+
+fetchShopData()
+
+// Auth State Change Listener
+const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (!isMounted) return
+    const user = session?.user || null
+    if (user) {
+        try {
+            const [profRes, ordersRes] = await Promise.all([
+                supabase
+                    .from('profiles')
+                    .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, total_spent_12m, total_spent_13m')
+                    .eq('id', user.id)
+                    .single(),
+                supabase
+                    .from('bookings')
+                    .select(`
+                        id,
+                        tracking_token,
+                        status,
+                        total_amount,
+                        booking_time,
+                        is_preorder,
+                        order_type,
+                        created_at,
+                        pickup_contact_name,
+                        pickup_contact_phone,
+                        shipping_address,
+                        order_items (
+                            id,
+                            quantity,
+                            price_at_time,
+                            custom_name,
+                            menu_items (name)
+                        )
+                    `)
+                    .eq('user_id', user.id)
+                    .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
+                    .order('created_at', { ascending: false })
+            ])
+            if (isMounted) {
+                if (profRes.data) setMemberProfile(profRes.data)
+                if (ordersRes.data) setActiveOrders(ordersRes.data)
+            }
+        } catch (err) {
+            console.warn('[useHausmadeShop] auth change error:', err)
+        }
+    } else {
+        if (isMounted) {
+            setMemberProfile(null)
+            setActiveOrders([])
+        }
+    }
+})
+
+let debounceTimer = null
+const handleRealtimeSync = () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+        if (isMounted) fetchShopData()
+    }, 300)
+}
+
+const channelId = `hausmade-shop-live-${Math.random().toString(36).slice(2, 8)}`
+const channel = supabase.channel(channelId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRealtimeSync)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, handleRealtimeSync)
+    .subscribe()
+
+const handleVisibilityOrFocus = () => {
+    if (document.visibilityState === 'visible' && isMounted) {
         fetchShopData()
+    }
+}
 
-        let debounceTimer = null
-        const handleRealtimeSync = () => {
-            if (debounceTimer) clearTimeout(debounceTimer)
-            debounceTimer = setTimeout(() => {
-                if (isMounted) fetchShopData()
-            }, 300)
-        }
+window.addEventListener('focus', handleVisibilityOrFocus)
+document.addEventListener('visibilitychange', handleVisibilityOrFocus)
 
-        const channelId = `hausmade-shop-live-${Math.random().toString(36).slice(2, 8)}`
-        const channel = supabase.channel(channelId)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_item_options' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleRealtimeSync)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRealtimeSync)
-            .subscribe()
+return () => {
+    isMounted = false
+    if (debounceTimer) clearTimeout(debounceTimer)
+    if (authSub) authSub.unsubscribe()
+    supabase.removeChannel(channel)
+    window.removeEventListener('focus', handleVisibilityOrFocus)
+    document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+}
+}, [])
 
-        const handleVisibilityOrFocus = () => {
-            if (document.visibilityState === 'visible' && isMounted) {
-                fetchShopData()
-            }
-        }
-
-        window.addEventListener('focus', handleVisibilityOrFocus)
-        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
-
-        return () => {
-            isMounted = false
-            if (debounceTimer) clearTimeout(debounceTimer)
-            supabase.removeChannel(channel)
-            window.removeEventListener('focus', handleVisibilityOrFocus)
-            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
-        }
-    }, [])
 
     // Derive Sub-Categories with item counts
     const subCategories = useMemo(() => {
@@ -486,6 +599,9 @@ export function useHausmadeShop() {
 
         // CRM Loyalty & xhaus state
         memberProfile,
+        isMember: Boolean(memberProfile),
+        activeOrders,
+        hasActiveOrders: activeOrders.length > 0,
         memberTierInfo,
         availableXhausBalance,
         projectedCoinsEarned,
@@ -497,6 +613,9 @@ export function useHausmadeShop() {
 
         // Helper functions
         isPreOrderItem,
-        getPreOrderEta
+        getPreOrderEta,
+        getProductImages
     }
 }
+
+

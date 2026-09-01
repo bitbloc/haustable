@@ -190,9 +190,11 @@ function App() {
                   <Route path="/pickup" element={<PickupPage />} />
                   <Route path="/hausmade" element={<HausmadeShopPage />} />
                   <Route path="/shop" element={<HausmadeShopPage />} />
+                  <Route path="/member" element={<Navigate to="/member-card" replace />} />
                   <Route path="/tracking/:token" element={<TrackingPage />} />
                   <Route path="/t/:token" element={<TrackingPage />} />
                 </Route>
+
 
                 {/* Admin Routes - Streamlined 7 Core Hubs */}
                 <Route path="/admin" element={<AdminLayout />}>

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { TSHIRT_SIZE_CHART, getSizingInfo } from './HausmadeProductModal'
+import { getProductImages } from '../../hooks/useHausmadeShop'
 
 const CATEGORY_PRESETS = [
     { key: 'APPAREL', label: 'APPAREL & MERCH // เสื้อผ้า & สินค้าที่ระลึก' },
@@ -25,14 +26,17 @@ export default function HausmadeProductEditorModal({
     const fileInputRef = useRef(null)
     const [isSaving, setIsSaving] = useState(false)
     const [uploadProgress, setUploadProgress] = useState(false)
+    const [uploadingCount, setUploadingCount] = useState(0)
 
-    // Basic Product Form
+    // Basic Product Form & Multi-Images
     const [name, setName] = useState('')
     const [price, setPrice] = useState('')
     const [categoryName, setCategoryName] = useState('HAUSMADE RETAIL')
     const [subCategory, setSubCategory] = useState('APPAREL')
     const [description, setDescription] = useState('')
+    const [images, setImages] = useState([])
     const [imageUrl, setImageUrl] = useState('')
+    const [newUrlInput, setNewUrlInput] = useState('')
     const [isAvailable, setIsAvailable] = useState(true)
     const [isHeroFeatured, setIsHeroFeatured] = useState(false)
     const [stockQuantity, setStockQuantity] = useState('')
@@ -63,7 +67,13 @@ export default function HausmadeProductEditorModal({
             setCategoryName(product.menu_categories?.name || product.category || 'HAUSMADE RETAIL')
             setSubCategory(product.sub_category || 'APPAREL')
             setDescription(product.description || '')
-            setImageUrl(product.image_url || '')
+            
+            // Extract multiple images gallery
+            const initialImages = getProductImages(product)
+            setImages(initialImages)
+            setImageUrl(initialImages[0] || product.image_url || '')
+            setNewUrlInput('')
+
             setIsAvailable(product.is_available !== false)
             setIsHeroFeatured(product.is_recommended === true || product.is_hero_featured === true)
             setStockQuantity(product.stock_quantity ?? product.remaining_stock ?? '')
@@ -109,7 +119,9 @@ export default function HausmadeProductEditorModal({
             setCategoryName('HAUSMADE RETAIL')
             setSubCategory('APPAREL')
             setDescription('')
+            setImages([])
             setImageUrl('')
+            setNewUrlInput('')
             setIsAvailable(true)
             setIsHeroFeatured(false)
             setStockQuantity('20')
@@ -171,73 +183,149 @@ export default function HausmadeProductEditorModal({
         setVariants(prev => prev.filter((_, i) => i !== index))
     }
 
-    // Image Resize & Upload Helper
+    // --- MULTI-IMAGE GALLERY ACTIONS ---
+    const handleSetCover = (index) => {
+        if (index === 0 || !images[index]) return
+        const target = images[index]
+        const remaining = images.filter((_, i) => i !== index)
+        const reordered = [target, ...remaining]
+        setImages(reordered)
+        setImageUrl(target)
+        toast.success('ตั้งเป็นรูปภาพปกหลัก (Cover) เรียบร้อย')
+    }
+
+    const handleMoveImage = (index, direction) => {
+        const targetIndex = index + direction
+        if (targetIndex < 0 || targetIndex >= images.length) return
+        const next = [...images]
+        const temp = next[index]
+        next[index] = next[targetIndex]
+        next[targetIndex] = temp
+        setImages(next)
+        setImageUrl(next[0] || '')
+    }
+
+    const handleRemoveImage = (index) => {
+        const next = images.filter((_, i) => i !== index)
+        setImages(next)
+        setImageUrl(next[0] || '')
+        toast.info('ลบรูปภาพออกจากแกลเลอรีแล้ว')
+    }
+
+    const handleAddUrlImage = () => {
+        const url = newUrlInput.trim()
+        if (!url) return
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            toast.error('กรุณาระบุ URL รูปภาพที่ถูกต้อง (ขึ้นต้นด้วย https://)')
+            return
+        }
+        setImages(prev => {
+            const next = [...prev, url]
+            if (!imageUrl) setImageUrl(url)
+            return next
+        })
+        setNewUrlInput('')
+        toast.success('เพิ่มรูปภาพจาก URL สำเร็จ')
+    }
+
+    // Batch Multi-Image Resize & Upload Helper
     const handleFileSelect = async (e) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+        const files = Array.from(e.target.files || [])
+        if (files.length === 0) return
 
         setUploadProgress(true)
+        setUploadingCount(files.length)
+        let successCount = 0
+        const uploadedUrls = []
+
         try {
-            // Compress & resize image to max 1200x1200px
-            const reader = new FileReader()
-            reader.readAsDataURL(file)
-            reader.onload = async (event) => {
-                const img = new Image()
-                img.src = event.target.result
-                img.onload = async () => {
-                    const canvas = document.createElement('canvas')
-                    let width = img.width
-                    let height = img.height
-                    const MAX_SIZE = 1200
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i]
+                
+                const uploadedUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader()
+                    reader.readAsDataURL(file)
+                    reader.onload = async (event) => {
+                        const img = new Image()
+                        img.src = event.target.result
+                        img.onload = async () => {
+                            const canvas = document.createElement('canvas')
+                            let width = img.width
+                            let height = img.height
+                            const MAX_SIZE = 1200
 
-                    if (width > height) {
-                        if (width > MAX_SIZE) {
-                            height = Math.round((height * MAX_SIZE) / width)
-                            width = MAX_SIZE
+                            if (width > height) {
+                                if (width > MAX_SIZE) {
+                                    height = Math.round((height * MAX_SIZE) / width)
+                                    width = MAX_SIZE
+                                }
+                            } else {
+                                if (height > MAX_SIZE) {
+                                    width = Math.round((width * MAX_SIZE) / height)
+                                    height = MAX_SIZE
+                                }
+                            }
+
+                            canvas.width = width
+                            canvas.height = height
+                            const ctx = canvas.getContext('2d')
+                            ctx.drawImage(img, 0, 0, width, height)
+
+                            canvas.toBlob(async (blob) => {
+                                if (!blob) return reject(new Error('ไม่สามารถแปลงไฟล์รูปภาพได้'))
+                                
+                                const fileExt = file.name.split('.').pop() || 'jpg'
+                                const fileName = `hausmade_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${fileExt}`
+                                
+                                const { error: uploadError } = await supabase.storage
+                                    .from('public-assets')
+                                    .upload(fileName, blob, {
+                                        contentType: file.type || 'image/jpeg',
+                                        cacheControl: '15552000'
+                                    })
+
+                                if (uploadError) return reject(uploadError)
+
+                                const { data: { publicUrl } } = supabase.storage
+                                    .from('public-assets')
+                                    .getPublicUrl(fileName)
+
+                                resolve(publicUrl)
+                            }, 'image/jpeg', 0.88)
                         }
-                    } else {
-                        if (height > MAX_SIZE) {
-                            width = Math.round((width * MAX_SIZE) / height)
-                            height = MAX_SIZE
-                        }
+                        img.onerror = () => reject(new Error('ไฟล์รูปภาพไม่ถูกต้อง'))
                     }
+                    reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'))
+                })
 
-                    canvas.width = width
-                    canvas.height = height
-                    const ctx = canvas.getContext('2d')
-                    ctx.drawImage(img, 0, 0, width, height)
-
-                    canvas.toBlob(async (blob) => {
-                        if (!blob) throw new Error('ไม่สามารถแปลงไฟล์รูปภาพได้')
-                        
-                        const fileExt = file.name.split('.').pop() || 'jpg'
-                        const fileName = `hausmade_${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${fileExt}`
-                        
-                        const { error: uploadError } = await supabase.storage
-                            .from('public-assets')
-                            .upload(fileName, blob, {
-                                contentType: file.type || 'image/jpeg',
-                                cacheControl: '15552000'
-                            })
-
-                        if (uploadError) throw uploadError
-
-                        const { data: { publicUrl } } = supabase.storage
-                            .from('public-assets')
-                            .getPublicUrl(fileName)
-
-                        setImageUrl(publicUrl)
-                        setUploadProgress(false)
-                        toast.success('อัปโหลดรูปภาพสินค้าสำเร็จ')
-                    }, 'image/jpeg', 0.88)
+                if (uploadedUrl) {
+                    uploadedUrls.push(uploadedUrl)
+                    successCount++
                 }
+            }
+
+            if (uploadedUrls.length > 0) {
+                setImages(prev => {
+                    const combined = [...prev, ...uploadedUrls]
+                    if (!imageUrl && combined.length > 0) {
+                        setImageUrl(combined[0])
+                    }
+                    return combined
+                })
+                toast.success(`อัปโหลดรูปภาพสำเร็จ ${successCount} รูป`)
             }
         } catch (err) {
             console.error('Image upload failed:', err)
             toast.error('อัปโหลดรูปภาพไม่สำเร็จ: ' + err.message)
+        } finally {
             setUploadProgress(false)
+            setUploadingCount(0)
+            if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+            }
         }
     }
+
 
     // Save Product to Supabase
     const handleSave = async (e) => {
@@ -270,8 +358,13 @@ export default function HausmadeProductEditorModal({
                 parsedTags.push('PRE-ORDER')
             }
 
-            // Craft Specs object
+            // Primary Image & Gallery Array
+            const validImages = images.filter(Boolean)
+            const primaryCover = validImages[0] || imageUrl.trim() || ''
+
+            // Craft Specs object with multi-images
             const craftSpecsObj = {}
+            if (validImages.length > 0) craftSpecsObj.images = validImages
             if (roastLevel) craftSpecsObj.roast_level = roastLevel
             if (origin) craftSpecsObj.origin = origin
             if (process) craftSpecsObj.process = process
@@ -284,7 +377,7 @@ export default function HausmadeProductEditorModal({
                 category: categoryName,
                 sub_category: isPreOrder ? 'PRE-ORDER' : subCategory,
                 description: description.trim(),
-                image_url: imageUrl.trim(),
+                image_url: primaryCover,
                 is_available: isAvailable,
                 is_recommended: isHeroFeatured,
                 is_hausmade: true,
@@ -321,7 +414,7 @@ export default function HausmadeProductEditorModal({
                         category_id: categoryId,
                         category: categoryName || 'HAUSMADE',
                         description: enrichedDesc,
-                        image_url: imageUrl.trim(),
+                        image_url: primaryCover,
                         is_available: isAvailable,
                         is_recommended: isHeroFeatured,
                         is_pickup_available: true
@@ -356,7 +449,7 @@ export default function HausmadeProductEditorModal({
                         category_id: categoryId,
                         category: categoryName || 'HAUSMADE',
                         description: enrichedDesc,
-                        image_url: imageUrl.trim(),
+                        image_url: primaryCover,
                         is_available: isAvailable,
                         is_recommended: isHeroFeatured,
                         is_pickup_available: true
@@ -500,30 +593,20 @@ export default function HausmadeProductEditorModal({
                     {/* Form Body (Scrollable) */}
                     <form onSubmit={handleSave} className="p-6 overflow-y-auto flex-grow flex flex-col gap-6 font-mono text-xs">
 
-                        {/* SECTION 1: PHOTO UPLOAD & PREVIEW */}
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 flex flex-col sm:flex-row gap-4 items-start">
-                            <div className="w-full sm:w-36 h-36 bg-white border border-[oklch(85%_0.012_28)] flex-shrink-0 relative overflow-hidden flex items-center justify-center">
-                                {imageUrl ? (
-                                    <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" />
-                                ) : (
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] text-center px-2">
-                                        [ ยังไม่มีรูปภาพ ]
-                                    </span>
-                                )}
-                                {uploadProgress && (
-                                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white text-[10px] font-bold">
-                                        กำลังอัปโหลด...
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex-1 flex flex-col justify-between gap-3 w-full">
+                        {/* SECTION 1: MULTI-PHOTO GALLERY & UPLOAD MANAGER */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[oklch(85%_0.012_28)] pb-3">
                                 <div>
-                                    <span className="text-[11px] font-bold uppercase text-[oklch(18%_0.012_28)] block">
-                                        [ รูปภาพสินค้า (PRODUCT PHOTO) ]
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-bold uppercase text-[oklch(18%_0.012_28)] block">
+                                            [ คลังรูปภาพสินค้า (PRODUCT PHOTO GALLERY) ]
+                                        </span>
+                                        <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold">
+                                            {images.length} รูป
+                                        </span>
+                                    </div>
                                     <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans mt-0.5 leading-relaxed">
-                                        รองรับ JPG, PNG, WEBP ระบบจะย่อขนาดและแปลงความละเอียดให้พอดีสำหรับการแสดงผล Retina โดยอัตโนมัติ
+                                        อัปโหลดได้หลายภาพ (มุมมองด้านหน้า, ด้านหลัง, ป้ายสินค้า, รายละเอียดเนื้อผ้า) ระบบจะบีบอัดและปรับสัดส่วน Retina อัตโนมัติ
                                     </p>
                                 </div>
 
@@ -533,37 +616,152 @@ export default function HausmadeProductEditorModal({
                                         ref={fileInputRef}
                                         onChange={handleFileSelect}
                                         accept="image/*"
+                                        multiple
                                         className="hidden"
                                     />
                                     <button
                                         type="button"
+                                        disabled={uploadProgress}
                                         onClick={() => fileInputRef.current?.click()}
-                                        className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold text-[11px] uppercase hover:bg-black transition-colors cursor-pointer"
+                                        className="px-3.5 py-1.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-[11px] uppercase hover:bg-[oklch(45%_0.16_28)] transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
                                     >
-                                        [ 📸 เลือกไฟล์รูปภาพ ]
+                                        <span>{uploadProgress ? `⏳ กำลังอัปโหลด (${uploadingCount})...` : '📸 + เลือกรูปภาพ (หลายรูป)'}</span>
                                     </button>
-                                    {imageUrl && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setImageUrl('')}
-                                            className="px-3 py-1.5 border border-red-300 text-red-600 bg-white text-[10px] uppercase hover:bg-red-50 transition-colors"
-                                        >
-                                            [ ลบรูปภาพ ]
-                                        </button>
-                                    )}
                                 </div>
+                            </div>
 
+                            {/* Add Photo via URL */}
+                            <div className="flex items-center gap-2">
                                 <input
                                     type="text"
-                                    value={imageUrl}
-                                    onChange={(e) => setImageUrl(e.target.value)}
-                                    placeholder="หรือวาง URL รูปภาพตรงนี้: https://..."
-                                    className="w-full px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-[10px] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                    value={newUrlInput}
+                                    onChange={(e) => setNewUrlInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            handleAddUrlImage()
+                                        }
+                                    }}
+                                    placeholder="หรือวาง URL รูปภาพเพิ่มเติม: https://..."
+                                    className="flex-1 px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-[11px] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                 />
+                                <button
+                                    type="button"
+                                    onClick={handleAddUrlImage}
+                                    className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold text-[10px] uppercase hover:bg-black transition-colors whitespace-nowrap cursor-pointer"
+                                >
+                                    + เพิ่มรูป
+                                </button>
+                            </div>
+
+                            {/* Uploaded Photos Gallery Grid */}
+                            {images.length === 0 ? (
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="py-8 text-center border-2 border-dashed border-[oklch(85%_0.012_28)] bg-white/70 hover:bg-white hover:border-[oklch(52%_0.16_28)] transition-all cursor-pointer flex flex-col items-center justify-center gap-2"
+                                >
+                                    <span className="text-2xl">📸</span>
+                                    <span className="text-[11px] text-[oklch(18%_0.012_28)] font-bold uppercase">
+                                        [ ยังไม่มีรูปภาพสินค้า — คลิกที่นี่เพื่อเลือกอัปโหลดรูปภาพ ]
+                                    </span>
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
+                                        รองรับการเลือกไฟล์ทีละหลายรูปพร้อมกัน (JPG, PNG, WEBP)
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {images.map((imgUrl, idx) => {
+                                        const isCover = idx === 0
+
+                                        return (
+                                            <div
+                                                key={`${imgUrl}-${idx}`}
+                                                className={`relative bg-white border flex flex-col justify-between overflow-hidden group shadow-2xs transition-all ${
+                                                    isCover
+                                                        ? 'border-2 border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]'
+                                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                }`}
+                                            >
+                                                {/* Image Thumbnail */}
+                                                <div className="w-full h-32 bg-[oklch(94%_0.010_28)] relative overflow-hidden flex items-center justify-center">
+                                                    <img
+                                                        src={imgUrl}
+                                                        alt={`Product visual ${idx + 1}`}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                    />
+
+                                                    {/* Cover Badge vs Order Badge */}
+                                                    <div className="absolute top-1.5 left-1.5 z-10">
+                                                        {isCover ? (
+                                                            <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1">
+                                                                <span>★</span>
+                                                                <span>COVER</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)]/80 text-white font-mono text-[9px] font-bold">
+                                                                #{idx + 1}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Quick Delete Overlay Button */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveImage(idx)}
+                                                        title="ลบรูปนี้"
+                                                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-red-600/90 text-white hover:bg-red-700 transition-colors flex items-center justify-center text-xs font-bold rounded-xs shadow-sm cursor-pointer z-10"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+
+                                                {/* Card Action Strip */}
+                                                <div className="p-2 bg-[oklch(97%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex flex-col gap-1.5">
+                                                    {!isCover && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleSetCover(idx)}
+                                                            className="w-full py-1 text-[9px] font-bold uppercase bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] hover:text-[oklch(52%_0.16_28)] transition-colors cursor-pointer text-center"
+                                                        >
+                                                            [ ★ ตั้งเป็นรูปปก ]
+                                                        </button>
+                                                    )}
+
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <button
+                                                            type="button"
+                                                            disabled={idx === 0}
+                                                            onClick={() => handleMoveImage(idx, -1)}
+                                                            title="เลื่อนไปซ้าย"
+                                                            className="flex-1 py-1 bg-white border border-[oklch(85%_0.012_28)] text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-30 cursor-pointer text-center"
+                                                        >
+                                                            ◀
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={idx === images.length - 1}
+                                                            onClick={() => handleMoveImage(idx, 1)}
+                                                            title="เลื่อนไปขวา"
+                                                            className="flex-1 py-1 bg-white border border-[oklch(85%_0.012_28)] text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] disabled:opacity-30 cursor-pointer text-center"
+                                                        >
+                                                            ▶
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+
+                            <div className="text-[10px] text-[oklch(55%_0.010_28)] font-sans border-t border-[oklch(85%_0.012_28)]/60 pt-2 flex items-center gap-1.5">
+                                <span className="font-mono text-[oklch(52%_0.16_28)] font-bold">[ TIP ]</span>
+                                <span>รูปภาพลำดับแรก (COVER) จะถูกนำไปแสดงเป็นภาพหลักบนหน้าร้านและใบเสร็จ รูปอื่นๆ จะแสดงในแกลเลอรีให้ลูกค้าคลิกเลือกดูได้อย่างสวยงาม</span>
                             </div>
                         </div>
 
                         {/* SECTION 2: BASIC PRODUCT INFORMATION */}
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="sm:col-span-2 flex flex-col gap-1">
                                 <label className="font-bold text-[11px] uppercase text-[oklch(18%_0.012_28)]">

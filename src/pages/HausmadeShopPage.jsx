@@ -4,10 +4,11 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
-import { useHausmadeShop, isPreOrderItem, getPreOrderEta } from '../hooks/useHausmadeShop'
+import { useHausmadeShop, isPreOrderItem, getPreOrderEta, getProductImages } from '../hooks/useHausmadeShop'
 import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
 import HausmadeCartDrawer from '../components/hausmade/HausmadeCartDrawer'
+import AuthModal from '../components/AuthModal'
 
 export default function HausmadeShopPage() {
     const isChecking = useServiceGuard('shop_mode_hausmade')
@@ -31,12 +32,16 @@ export default function HausmadeShopPage() {
         settings,
         isFreeShipping,
         memberProfile,
+        isMember,
+        activeOrders,
+        hasActiveOrders,
         memberTierInfo,
         availableXhausBalance
     } = shopState
 
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isCartOpen, setIsCartOpen] = useState(false)
+    const [showAuthModal, setShowAuthModal] = useState(false)
     const [heroSlideIdx, setHeroSlideIdx] = useState(0)
 
     // Featured Hero Items (items marked is_featured or first 4 items with images)
@@ -131,12 +136,13 @@ export default function HausmadeShopPage() {
                             <span className="text-[oklch(55%_0.010_28)]">({availableXhausBalance.toLocaleString()} xhaus)</span>
                         </div>
                     ) : (
-                        <Link
-                            to="/member"
-                            className="hidden md:block font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold"
+                        <button
+                            type="button"
+                            onClick={() => setShowAuthModal(true)}
+                            className="hidden md:block font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold cursor-pointer"
                         >
-                            [ เข้าสู่ระบบสมาชิกรับ xhaus ]
-                        </Link>
+                            [ 🔑 เข้าสู่ระบบสมาชิกรับ xhaus ]
+                        </button>
                     )}
 
                     <button
@@ -153,6 +159,25 @@ export default function HausmadeShopPage() {
                 </div>
             </nav>
 
+            {/* Active Orders In Progress Bar */}
+            {hasActiveOrders && (
+                <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 sm:px-6 py-2.5 font-mono text-xs text-amber-950 flex items-center justify-between">
+                    <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                            <span>📦</span>
+                            <span className="font-bold">[ คุณมีคำสั่งซื้อที่กำลังดำเนินการ {activeOrders.length} รายการ ]</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsCartOpen(true)}
+                            className="underline font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] cursor-pointer text-[11px]"
+                        >
+                            [ ดูรายการที่ค้างอยู่ / ตรวจสอบสถานะ ➔ ]
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* 3. Hero Product Showcase Banner */}
             {currentHeroItem && (
                 <section className="w-full bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] overflow-hidden">
@@ -163,7 +188,7 @@ export default function HausmadeShopPage() {
                             <div className="flex flex-col gap-2">
                                 <div className="flex items-center gap-2">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest px-2 py-0.5 border border-[oklch(52%_0.16_28)] bg-white">
-                                        // NEW ARRIVAL & FEATURED
+                                        {isPreOrderItem(currentHeroItem) ? '⏳ PRE-ORDER SPECIAL' : '// NEW ARRIVAL & FEATURED'}
                                     </span>
                                     <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase">
                                         [ {heroSlideIdx + 1} / {heroItems.length} ]
@@ -186,9 +211,16 @@ export default function HausmadeShopPage() {
 
                                 <button
                                     onClick={() => handleProductAction(currentHeroItem)}
-                                    className="px-5 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                                    className={`px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs ${
+                                        isPreOrderItem(currentHeroItem)
+                                            ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
+                                            : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
+                                    }`}
                                 >
-                                    [ สั่งซื้อทันที // ORDER NOW ➔ ]
+                                    {isPreOrderItem(currentHeroItem)
+                                        ? '[ ⏳ สั่งจองล่วงหน้า // PRE-ORDER NOW ➔ ]'
+                                        : '[ สั่งซื้อทันที // ORDER NOW ➔ ]'
+                                    }
                                 </button>
 
                                 {/* Slide Selectors */}
@@ -210,17 +242,36 @@ export default function HausmadeShopPage() {
                             </div>
                         </div>
 
-                        {/* Hero Right: High-Res Image Display */}
-                        <div className="md:col-span-5 relative bg-[oklch(97%_0.008_28)] border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] overflow-hidden flex items-center justify-center p-6">
+
+                        {/* Hero Right: High-Res Image & Multi-Angle Thumbnails Display */}
+                        <div className="md:col-span-5 relative bg-[oklch(97%_0.008_28)] border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] overflow-hidden flex flex-col items-center justify-center p-6 gap-3">
                             <motion.img
-                                key={currentHeroItem.id}
-                                initial={{ opacity: 0, scale: 0.95 }}
+                                key={`${currentHeroItem.id}-${heroSlideIdx}`}
+                                initial={{ opacity: 0, scale: 0.96 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.4 }}
-                                src={currentHeroItem.image_url}
+                                transition={{ duration: 0.35 }}
+                                src={getProductImages(currentHeroItem)[0] || currentHeroItem.image_url}
                                 alt={currentHeroItem.name}
-                                className="w-full h-64 md:h-full object-cover shadow-xs"
+                                onClick={() => setSelectedProduct(currentHeroItem)}
+                                className="w-full h-60 md:h-68 object-cover shadow-xs cursor-pointer hover:scale-102 transition-transform duration-300"
                             />
+                            {getProductImages(currentHeroItem).length > 1 && (
+                                <div className="flex items-center gap-1.5 self-start">
+                                    <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                        [ {getProductImages(currentHeroItem).length} ANGLES ]:
+                                    </span>
+                                    {getProductImages(currentHeroItem).slice(0, 4).map((img, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setSelectedProduct(currentHeroItem)}
+                                            className="w-7 h-7 border border-[oklch(85%_0.012_28)] overflow-hidden hover:border-[oklch(52%_0.16_28)] cursor-pointer"
+                                        >
+                                            <img src={img} alt="" className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -320,125 +371,14 @@ export default function HausmadeShopPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayedItems.map((product) => {
-                            const optionGroups = product.menu_item_options?.map(o => o.option_groups).filter(Boolean) || []
-                            const hasOptions = optionGroups.length > 0
-                            
-                            // Stock evaluation
-                            const stockNum = product.stock_quantity ?? product.remaining_stock ?? null
-                            const isSoldOut = product.is_available === false || (stockNum !== null && stockNum <= 0)
-                            const isLowStock = stockNum !== null && stockNum > 0 && stockNum <= 5
-
-                            return (
-                                <motion.div
-                                    key={product.id}
-                                    whileHover={isSoldOut ? {} : { y: -3 }}
-                                    transition={{ duration: 0.2 }}
-                                    className={`bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between overflow-hidden group shadow-2xs transition-colors ${
-                                        isSoldOut
-                                            ? 'opacity-65 border-dashed'
-                                            : 'hover:border-[oklch(52%_0.16_28)]'
-                                    }`}
-                                >
-                                    {/* Product Image */}
-                                    <div className="relative w-full h-56 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] overflow-hidden">
-                                        {product.image_url ? (
-                                            <img
-                                                src={product.image_url}
-                                                alt={product.name}
-                                                className={`w-full h-full object-cover transition-transform duration-500 ${
-                                                    isSoldOut ? 'grayscale contrast-75' : 'group-hover:scale-105'
-                                                }`}
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase gap-1 p-4 text-center">
-                                                <span className="font-bold text-[oklch(18%_0.012_28)]">// HAUSMADE</span>
-                                                <span>[ NAKHON PHANOM CRAFT ]</span>
-                                            </div>
-                                        )}
-
-                                        {/* Status & Pre-Order Badges */}
-                                        <div className="absolute top-3 left-3 flex flex-col gap-1">
-                                            {isSoldOut ? (
-                                                <div className="bg-red-700 text-white px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                                                    [ SOLD OUT // สินค้าหมด ]
-                                                </div>
-                                            ) : isPreOrderItem(product) ? (
-                                                <div className="bg-[oklch(45%_0.08_140)] text-white px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm border border-white/20 flex items-center gap-1">
-                                                    <span>⏳ PRE-ORDER</span>
-                                                </div>
-                                            ) : isLowStock ? (
-                                                <div className="bg-[oklch(52%_0.16_28)] text-white px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                                                    [ เหลือ {stockNum} ชิ้น ]
-                                                </div>
-                                            ) : (
-                                                <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2.5 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider">
-                                                    [ IN STOCK ]
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Product Info Body */}
-                                    <div className="p-5 flex flex-col gap-3 flex-grow justify-between">
-                                        <div>
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block mb-1">
-                                                    // {product.menu_categories?.name || product.category || 'HAUSMADE'}
-                                                </span>
-                                                {isPreOrderItem(product) && (
-                                                    <span className="font-mono text-[9px] text-[oklch(45%_0.08_140)] font-bold uppercase">
-                                                        [ สินค้าเปิดจอง ]
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <h3 className="text-lg font-bold text-[oklch(18%_0.012_28)] tracking-tight leading-snug">
-                                                {product.name}
-                                            </h3>
-
-                                            {product.description && (
-                                                <p className="text-xs text-[oklch(42%_0.010_28)] mt-1.5 line-clamp-2 leading-relaxed font-sans">
-                                                    {product.description}
-                                                </p>
-                                            )}
-
-                                            {/* Pre-Order ETA Info Box */}
-                                            {isPreOrderItem(product) && (
-                                                <div className="mt-2.5 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold flex items-center gap-1.5">
-                                                    <span>📦</span>
-                                                    <span>รอบส่ง: {getPreOrderEta(product)}</span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center justify-between border-t border-[oklch(85%_0.012_28)] pt-4 mt-2">
-                                            <div className="font-mono text-base font-bold text-[oklch(18%_0.012_28)]">
-                                                ฿{Number(product.price || 0).toLocaleString()}.-
-                                            </div>
-                                            <button
-                                                disabled={isSoldOut}
-                                                onClick={() => handleProductAction(product)}
-                                                className={`px-3.5 py-2 border font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
-                                                    isSoldOut
-                                                        ? 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
-                                                        : isPreOrderItem(product)
-                                                            ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
-                                                            : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)]'
-                                                }`}
-                                            >
-                                                {isSoldOut 
-                                                    ? '[ SOLD OUT ]' 
-                                                    : hasOptions 
-                                                        ? (isPreOrderItem(product) ? '[ ⏳ สั่งจอง / OPTIONS ]' : '[ SELECT OPTIONS ]')
-                                                        : (isPreOrderItem(product) ? '[ ⏳ สั่งจองล่วงหน้า ]' : '[ + ADD TO CART ]')
-                                                }
-                                            </button>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )
-                        })}
+                        {displayedItems.map((product) => (
+                            <HausmadeProductCard
+                                key={product.id}
+                                product={product}
+                                onSelectProduct={setSelectedProduct}
+                                onQuickAction={handleProductAction}
+                            />
+                        ))}
                     </div>
                 )}
             </main>
@@ -487,7 +427,14 @@ export default function HausmadeShopPage() {
                 shopState={shopState}
             />
 
-            {/* 7. Footer Section */}
+            {/* 7. Member Authentication Modal */}
+            <AuthModal
+                isOpen={showAuthModal}
+                onClose={() => setShowAuthModal(false)}
+            />
+
+            {/* 8. Footer Section */}
+
             <footer className="w-full bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] px-6 py-8 mt-12 font-mono text-xs text-[oklch(42%_0.010_28)]">
                 <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
                     <div>
@@ -502,3 +449,169 @@ export default function HausmadeShopPage() {
         </div>
     )
 }
+
+/**
+ * Interactive Hausmade Product Card with Multi-Image Quick Preview
+ */
+function HausmadeProductCard({ product, onSelectProduct, onQuickAction }) {
+    const [activeIdx, setActiveIdx] = useState(0)
+    const images = useMemo(() => getProductImages(product), [product])
+    const hasMultiple = images.length > 1
+
+    const optionGroups = product.menu_item_options?.map(o => o.option_groups).filter(Boolean) || []
+    const hasOptions = optionGroups.length > 0
+    
+    // Stock evaluation
+    const stockNum = product.stock_quantity ?? product.remaining_stock ?? null
+    const isSoldOut = product.is_available === false || (stockNum !== null && stockNum <= 0)
+    const isLowStock = stockNum !== null && stockNum > 0 && stockNum <= 5
+
+    const currentImg = images[activeIdx] || product.image_url
+
+    return (
+        <motion.div
+            whileHover={isSoldOut ? {} : { y: -3 }}
+            transition={{ duration: 0.2 }}
+            className={`bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between overflow-hidden group shadow-2xs transition-colors ${
+                isSoldOut
+                    ? 'opacity-65 border-dashed'
+                    : 'hover:border-[oklch(52%_0.16_28)]'
+            }`}
+        >
+            {/* Product Image & Multi-Angle Controller */}
+            <div className="relative w-full h-60 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] overflow-hidden select-none">
+                {currentImg ? (
+                    <img
+                        src={currentImg}
+                        alt={product.name}
+                        onClick={() => onSelectProduct(product)}
+                        className={`w-full h-full object-cover cursor-pointer transition-transform duration-500 ${
+                            isSoldOut ? 'grayscale contrast-75' : 'group-hover:scale-103'
+                        }`}
+                    />
+                ) : (
+                    <div
+                        onClick={() => onSelectProduct(product)}
+                        className="w-full h-full flex flex-col items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase gap-1 p-4 text-center cursor-pointer"
+                    >
+                        <span className="font-bold text-[oklch(18%_0.012_28)]">// HAUSMADE</span>
+                        <span>[ NAKHON PHANOM CRAFT ]</span>
+                    </div>
+                )}
+
+                {/* Status & Pre-Order Badges (Top Left) */}
+                <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
+                    {isSoldOut ? (
+                        <div className="bg-red-700 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                            [ SOLD OUT // หมด ]
+                        </div>
+                    ) : isPreOrderItem(product) ? (
+                        <div className="bg-[oklch(45%_0.08_140)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm border border-white/20 flex items-center gap-1">
+                            <span>⏳ PRE-ORDER</span>
+                        </div>
+                    ) : isLowStock ? (
+                        <div className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                            [ เหลือ {stockNum} ชิ้น ]
+                        </div>
+                    ) : (
+                        <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider">
+                            [ IN STOCK ]
+                        </div>
+                    )}
+                </div>
+
+                {/* Multi-Photo Count Badge (Top Right) */}
+                {hasMultiple && (
+                    <div className="absolute top-2.5 right-2.5 bg-[oklch(18%_0.012_28)]/85 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 z-10">
+                        <span>📷</span>
+                        <span>{activeIdx + 1}/{images.length}</span>
+                    </div>
+                )}
+
+                {/* Multi-Image Dots / Angle Switchers (Bottom Bar) */}
+                {hasMultiple && (
+                    <div
+                        className="absolute bottom-2 inset-x-2 flex items-center justify-center gap-1.5 p-1 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {images.map((_, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setActiveIdx(idx)}
+                                className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                                    idx === activeIdx
+                                        ? 'w-5 bg-[oklch(52%_0.16_28)]'
+                                        : 'w-2 bg-white/70 hover:bg-white'
+                                }`}
+                                title={`มุมมองที่ ${idx + 1}`}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {/* Product Info Body */}
+            <div className="p-5 flex flex-col gap-3 flex-grow justify-between">
+                <div>
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block mb-1">
+                            // {product.menu_categories?.name || product.category || 'HAUSMADE'}
+                        </span>
+                        {isPreOrderItem(product) && (
+                            <span className="font-mono text-[9px] text-[oklch(45%_0.08_140)] font-bold uppercase">
+                                [ สินค้าเปิดจอง ]
+                            </span>
+                        )}
+                    </div>
+
+                    <h3
+                        onClick={() => onSelectProduct(product)}
+                        className="text-lg font-bold text-[oklch(18%_0.012_28)] tracking-tight leading-snug cursor-pointer hover:text-[oklch(52%_0.16_28)] transition-colors line-clamp-1"
+                    >
+                        {product.name}
+                    </h3>
+
+                    {product.description && (
+                        <p className="text-xs text-[oklch(42%_0.010_28)] mt-1.5 line-clamp-2 leading-relaxed font-sans">
+                            {product.description}
+                        </p>
+                    )}
+
+                    {/* Pre-Order ETA Info Box */}
+                    {isPreOrderItem(product) && (
+                        <div className="mt-2.5 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold flex items-center gap-1.5">
+                            <span>📦</span>
+                            <span>รอบส่ง: {getPreOrderEta(product)}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between border-t border-[oklch(85%_0.012_28)] pt-4 mt-2">
+                    <div className="font-mono text-base font-bold text-[oklch(18%_0.012_28)]">
+                        ฿{Number(product.price || 0).toLocaleString()}.-
+                    </div>
+                    <button
+                        disabled={isSoldOut}
+                        onClick={() => onQuickAction(product)}
+                        className={`px-3.5 py-2 border font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                            isSoldOut
+                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
+                                : isPreOrderItem(product)
+                                    ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
+                                    : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)]'
+                        }`}
+                    >
+                        {isSoldOut 
+                            ? '[ SOLD OUT ]' 
+                            : hasOptions 
+                                ? (isPreOrderItem(product) ? '[ ⏳ สั่งจอง / OPTIONS ]' : '[ SELECT OPTIONS ]')
+                                : (isPreOrderItem(product) ? '[ ⏳ สั่งจองล่วงหน้า ]' : '[ + ADD TO CART ]')
+                        }
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    )
+}
+

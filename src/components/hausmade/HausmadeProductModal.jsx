@@ -1,9 +1,9 @@
 /* Hallmark · component: HausmadeProductModal · theme: Atelier (Thai Modern OKLCH)
- * features: Variant Stock Indicators, Sold-Out Protection, Craft Metadata (Roast/Batch), Quantity Safeguard
+ * features: Multi-Image Interactive Gallery, Lightbox Zoom, Variant Stock Indicators, Sold-Out Protection, Craft Metadata (Roast/Batch), Quantity Safeguard
  */
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { isPreOrderItem, getPreOrderEta } from '../../hooks/useHausmadeShop'
+import { isPreOrderItem, getPreOrderEta, getProductImages } from '../../hooks/useHausmadeShop'
 
 export const TSHIRT_SIZE_CHART = [
     { size: 'S', chest: '37.0"', length: '25"', sleeve: '3.0"' },
@@ -34,6 +34,13 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
     const [giftNote, setGiftNote] = useState('')
     const [validationMsg, setValidationMsg] = useState('')
     const [showSizeChart, setShowSizeChart] = useState(false)
+    const [activeImgIdx, setActiveImgIdx] = useState(0)
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false)
+
+    // Extract product images
+    const productImages = useMemo(() => {
+        return getProductImages(product)
+    }, [product])
 
     // Option groups calculation
     const optionGroups = useMemo(() => {
@@ -47,6 +54,8 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
             setValidationMsg('')
             setGiftNote('')
             setShowSizeChart(false)
+            setActiveImgIdx(0)
+            setIsLightboxOpen(false)
             
             // Auto-select first in-stock choice for required option groups
             const initial = {}
@@ -72,14 +81,25 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
         }
     }, [product, isOpen, optionGroups])
 
-    // Keyboard ESC listener
+    // Keyboard navigation listener (ESC & Arrow keys for gallery)
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (e.key === 'Escape' && isOpen) onClose()
+            if (!isOpen) return
+            if (e.key === 'Escape') {
+                if (isLightboxOpen) {
+                    setIsLightboxOpen(false)
+                } else {
+                    onClose()
+                }
+            } else if (e.key === 'ArrowLeft' && productImages.length > 1) {
+                setActiveImgIdx(prev => (prev > 0 ? prev - 1 : productImages.length - 1))
+            } else if (e.key === 'ArrowRight' && productImages.length > 1) {
+                setActiveImgIdx(prev => (prev < productImages.length - 1 ? prev + 1 : 0))
+            }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [isOpen, onClose])
+    }, [isOpen, onClose, isLightboxOpen, productImages.length])
 
     // Determine Maximum Available Stock for current combination
     const maxAvailableStock = useMemo(() => {
@@ -160,6 +180,8 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
     // Check if product is apparel / clothing
     const isApparelProduct = (product.name || '').toLowerCase().includes('shirt') || (product.name || '').includes('เสื้อ') || (product.category || '').toLowerCase().includes('shirt') || (product.description || '').includes('เสื้อ')
 
+    const currentImage = productImages[activeImgIdx] || product.image_url
+
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
@@ -184,7 +206,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                     <div className="flex items-center justify-between px-6 py-4 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex-shrink-0">
                         <div>
                             <span className="font-mono text-[10px] font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase block">
-                                // HAUSMADE SPECIFICATION & STOCK
+                                // HAUSMADE SPECIFICATION & GALLERY
                             </span>
                             <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
                                 [ PRODUCT // CUSTOMIZATION ]
@@ -201,22 +223,111 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                     {/* Content Body (Scrollable) */}
                     <div className="p-6 overflow-y-auto flex-grow flex flex-col gap-6">
                         
-                        {/* Image & Title Header */}
-                        {product.image_url ? (
-                            <div className="w-full h-52 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] overflow-hidden relative">
-                                <img
-                                    src={product.image_url}
-                                    alt={product.name}
-                                    className="w-full h-full object-cover"
-                                />
-                                {maxAvailableStock > 0 && maxAvailableStock <= 5 && (
-                                    <div className="absolute bottom-2 left-2 bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                                        [ เหลือเพียง {maxAvailableStock} ชิ้นสุดท้าย ]
+                        {/* 1. INTERACTIVE MULTI-IMAGE GALLERY VIEWPORT */}
+                        {currentImage ? (
+                            <div className="flex flex-col gap-2.5">
+                                <div className="w-full h-64 sm:h-72 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] overflow-hidden relative group select-none">
+                                    <AnimatePresence mode="wait">
+                                        <motion.img
+                                            key={currentImage}
+                                            src={currentImage}
+                                            alt={`${product.name} visual ${activeImgIdx + 1}`}
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.98 }}
+                                            transition={{ duration: 0.25 }}
+                                            onClick={() => setIsLightboxOpen(true)}
+                                            className="w-full h-full object-cover cursor-zoom-in"
+                                        />
+                                    </AnimatePresence>
+
+                                    {/* Gallery Navigation Arrows */}
+                                    {productImages.length > 1 && (
+                                        <>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setActiveImgIdx(prev => (prev > 0 ? prev - 1 : productImages.length - 1))
+                                                }}
+                                                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
+                                                title="รูปก่อนหน้า"
+                                            >
+                                                ◀
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setActiveImgIdx(prev => (prev < productImages.length - 1 ? prev + 1 : 0))
+                                                }}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-xs font-bold flex items-center justify-center transition-all shadow-md cursor-pointer z-10"
+                                                title="รูปถัดไป"
+                                            >
+                                                ▶
+                                            </button>
+                                        </>
+                                    )}
+
+                                    {/* Top Right Counter & Zoom Hint */}
+                                    <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsLightboxOpen(true)}
+                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)]/80 hover:bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 cursor-pointer"
+                                            title="คลิกเพื่อดูภาพขยายเต็มจอ"
+                                        >
+                                            <span>🔍 ZOOM</span>
+                                        </button>
+                                        {productImages.length > 1 && (
+                                            <div className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold tracking-wider">
+                                                [ {String(activeImgIdx + 1).padStart(2, '0')} / {String(productImages.length).padStart(2, '0')} ]
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Stock warning pill */}
+                                    {maxAvailableStock > 0 && maxAvailableStock <= 5 && (
+                                        <div className="absolute bottom-2 left-2 bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm z-10">
+                                            [ เหลือเพียง {maxAvailableStock} ชิ้นสุดท้าย ]
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Thumbnail Selector Strip */}
+                                {productImages.length > 1 && (
+                                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                                        {productImages.map((thumbUrl, idx) => {
+                                            const isActive = idx === activeImgIdx
+                                            return (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setActiveImgIdx(idx)}
+                                                    className={`w-14 h-14 flex-shrink-0 bg-[oklch(94%_0.010_28)] overflow-hidden transition-all cursor-pointer relative ${
+                                                        isActive
+                                                            ? 'border-2 border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
+                                                            : 'border border-[oklch(85%_0.012_28)] opacity-60 hover:opacity-100'
+                                                    }`}
+                                                >
+                                                    <img
+                                                        src={thumbUrl}
+                                                        alt={`Thumbnail ${idx + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                    {idx === 0 && (
+                                                        <span className="absolute bottom-0 inset-x-0 bg-[oklch(18%_0.012_28)] text-white text-[7px] font-mono font-bold uppercase text-center">
+                                                            COVER
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
                         ) : (
-                            <div className="w-full h-24 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase">
+                            <div className="w-full h-28 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center font-mono text-[11px] text-[oklch(55%_0.010_28)] uppercase">
                                 [ HAUSMADE NAKHON PHANOM // ORIGINAL CRAFT ]
                             </div>
                         )}
@@ -237,7 +348,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                             </div>
 
                             {product.description && (
-                                <p className="text-xs text-[oklch(42%_0.010_28)] mt-2 leading-relaxed font-sans">
+                                <p className="text-xs text-[oklch(42%_0.010_28)] mt-2 leading-relaxed font-sans whitespace-pre-line">
                                     {product.description}
                                 </p>
                             )}
@@ -248,6 +359,7 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                             <div className="p-3.5 bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)] font-mono text-xs flex flex-col gap-1">
                                 <div className="flex items-center gap-1.5 text-[oklch(45%_0.08_140)] font-bold">
                                     <span>⏳</span>
+
                                     <span className="uppercase">[ PRE-ORDER // สินค้าเปิดสั่งจองล่วงหน้า ]</span>
                                 </div>
                                 <p className="text-[11px] text-[oklch(18%_0.012_28)] font-sans mt-0.5 leading-relaxed">
@@ -515,13 +627,121 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                             }`}
                         >
                             <span>
-                                {isPreOrderItem(product) ? '⏳ PRE-ORDER NOW // ยืนยันการสั่งจอง' : 'ADD TO CART // เพิ่มลงตะกร้า'}
+                                {isPreOrderItem(product) ? '⏳ PRE-ORDER NOW // ยืนยันการสั่งจองล่วงหน้า' : 'ADD TO CART // เพิ่มลงตะกร้า'}
                             </span>
                             <span>฿{totalPrice.toLocaleString()}.-</span>
                         </button>
+
                     </div>
                 </motion.div>
+
+                {/* FULLSCREEN LIGHTBOX ZOOM MODAL */}
+                <AnimatePresence>
+                    {isLightboxOpen && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-60 bg-[oklch(18%_0.012_28)]/95 backdrop-blur-md flex flex-col items-center justify-between p-4 select-none"
+                            onClick={() => setIsLightboxOpen(false)}
+                        >
+                            {/* Lightbox Top Bar */}
+                            <div className="w-full max-w-4xl flex items-center justify-between text-[oklch(97%_0.008_28)] font-mono text-xs z-10">
+                                <div className="flex items-center gap-3">
+                                    <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                        // {product.name}
+                                    </span>
+                                    {productImages.length > 1 && (
+                                        <span className="text-[oklch(85%_0.012_28)]">
+                                            [ {activeImgIdx + 1} / {productImages.length} ]
+                                        </span>
+                                    )}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsLightboxOpen(false)}
+                                    className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold uppercase transition-colors cursor-pointer border border-white/20"
+                                >
+                                    [ ESC / ปิด ]
+                                </button>
+                            </div>
+
+                            {/* Lightbox Main Image */}
+                            <div
+                                className="relative flex-grow flex items-center justify-center max-w-4xl w-full my-4"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <motion.img
+                                    key={currentImage}
+                                    src={currentImage}
+                                    alt={product.name}
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="max-h-[75vh] max-w-full object-contain border border-[oklch(85%_0.012_28)]/30 shadow-2xl"
+                                />
+
+                                {/* Lightbox Navigation Buttons */}
+                                {productImages.length > 1 && (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setActiveImgIdx(prev => (prev > 0 ? prev - 1 : productImages.length - 1))
+                                            }}
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 hover:bg-black/90 text-white font-mono text-sm font-bold flex items-center justify-center transition-colors cursor-pointer border border-white/20"
+                                            title="ก่อนหน้า"
+                                        >
+                                            ◀
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setActiveImgIdx(prev => (prev < productImages.length - 1 ? prev + 1 : 0))
+                                            }}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/60 hover:bg-black/90 text-white font-mono text-sm font-bold flex items-center justify-center transition-colors cursor-pointer border border-white/20"
+                                            title="ถัดไป"
+                                        >
+                                            ▶
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Lightbox Bottom Thumbnail Row */}
+                            {productImages.length > 1 && (
+                                <div
+                                    className="w-full max-w-2xl flex items-center justify-center gap-2 overflow-x-auto p-2"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {productImages.map((thumbUrl, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setActiveImgIdx(idx)}
+                                            className={`w-12 h-12 flex-shrink-0 bg-black/40 overflow-hidden transition-all cursor-pointer ${
+                                                idx === activeImgIdx
+                                                    ? 'border-2 border-[oklch(52%_0.16_28)] scale-105'
+                                                    : 'border border-white/20 opacity-50 hover:opacity-100'
+                                            }`}
+                                        >
+                                            <img
+                                                src={thumbUrl}
+                                                alt={`Thumb ${idx + 1}`}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </AnimatePresence>
     )
 }
+

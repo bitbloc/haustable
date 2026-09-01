@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useOrderSubmission } from '../../hooks/useOrderSubmission'
 import { usePromotion } from '../../hooks/usePromotion'
 import { getThaiDate, toThaiISO } from '../../utils/timeUtils'
 import { supabase } from '../../lib/supabaseClient'
 import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
-import { QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
+import { QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon, Package, LogIn, UserPlus } from 'lucide-react'
+import AuthModal from '../AuthModal'
 
 const LAST_ADDRESS_STORAGE_KEY = 'hausmade_last_shipping_address'
 
@@ -31,8 +33,11 @@ export default function HausmadeCartDrawer({
         clearCart,
         settings,
 
-        // CRM xhaus Loyalty
+        // CRM xhaus Loyalty & Auth
         memberProfile,
+        isMember,
+        activeOrders,
+        hasActiveOrders,
         memberTierInfo,
         availableXhausBalance,
         projectedCoinsEarned,
@@ -43,7 +48,9 @@ export default function HausmadeCartDrawer({
         xhausDiscountCalculation
     } = shopState
 
+    const [showAuthModal, setShowAuthModal] = useState(false)
     const { submitOrder, isSubmitting, error: submitError } = useOrderSubmission()
+
 
     // Fulfilment Mode: 'shipping' | 'pickup'
     const [fulfilmentMode, setFulfilmentMode] = useState('shipping')
@@ -436,6 +443,84 @@ export default function HausmadeCartDrawer({
                             </div>
                         ) : (
                             <>
+                                {/* ACTIVE PENDING ORDERS (ORDER ค้างในระบบ) */}
+                                {hasActiveOrders && (
+                                    <div className="p-3.5 bg-amber-500/10 border-2 border-amber-500/30 flex flex-col gap-2 font-mono">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5 text-amber-950 font-bold text-xs">
+                                                <Package size={14} className="text-amber-700 shrink-0" />
+                                                <span>[ คุณมีคำสั่งซื้อค้างอยู่ในระบบ {activeOrders.length} รายการ ]</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+                                            {activeOrders.map(order => {
+                                                const statusMap = {
+                                                    pending: 'รอตรวจสอบสลิป',
+                                                    confirmed: 'ยืนยันออเดอร์แล้ว',
+                                                    preparing: 'กำลังจัดเตรียมสินค้า',
+                                                    ready: 'พร้อมจัดส่ง/รับของ',
+                                                    paid: 'ชำระเงินแล้ว',
+                                                    shipping: 'อยู่ระหว่างจัดส่ง'
+                                                }
+                                                return (
+                                                    <div key={order.id} className="p-2.5 bg-white border border-amber-500/30 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-2xs">
+                                                        <div>
+                                                            <div className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5 flex-wrap">
+                                                                <span>{order.tracking_token || `#${order.id.slice(0, 8)}`}</span>
+                                                                {order.is_preorder && (
+                                                                    <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white text-[9px] font-bold">
+                                                                        ⏳ PRE-ORDER
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                                                ยอดสุทธิ ฿{Number(order.total_amount || 0).toLocaleString()} · สถานะ: <strong className="text-[oklch(18%_0.012_28)]">{statusMap[order.status] || order.status}</strong>
+                                                            </div>
+                                                        </div>
+                                                        <Link
+                                                            to={`/tracking/${order.tracking_token || order.id}`}
+                                                            onClick={onClose}
+                                                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-white text-[10px] font-bold uppercase transition-colors text-center whitespace-nowrap"
+                                                        >
+                                                            [ ติดตามสถานะ ➔ ]
+                                                        </Link>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* MEMBERSHIP REQUIREMENT GATE BANNER */}
+                                {!isMember && (
+                                    <div className="p-4 bg-[oklch(94%_0.010_28)] border-2 border-[oklch(52%_0.16_28)] font-mono flex flex-col gap-2.5 shadow-xs">
+                                        <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)] font-bold text-xs">
+                                            <LogIn size={15} className="shrink-0" />
+                                            <span>[ สมาชิก HAUSMADE เท่านั้น // MEMBERSHIP REQUIRED ]</span>
+                                        </div>
+                                        <p className="text-xs text-[oklch(18%_0.012_28)] font-sans leading-relaxed">
+                                            กรุณาเข้าสู่ระบบ หรือสมัครสมาชิกก่อนทำการสั่งซื้อ / สั่งจอง เพื่อรับสิทธิ์สะสมแต้ม xhaus และติดตามสถานะพัสดุ
+                                        </p>
+                                        <div className="flex items-center gap-2 pt-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowAuthModal(true)}
+                                                className="flex-1 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white text-xs font-bold uppercase transition-colors text-center cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+                                            >
+                                                <UserPlus size={13} />
+                                                <span>[ 🔑 เข้าสู่ระบบ / สมัครสมาชิก ]</span>
+                                            </button>
+                                            <Link
+                                                to="/member-card"
+                                                onClick={onClose}
+                                                className="px-3 py-2 border border-[oklch(85%_0.012_28)] bg-white hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase transition-colors text-center"
+                                            >
+                                                [ 💳 บัตรสมาชิก ]
+                                            </Link>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Fulfilment Switcher (Tabular Dial) */}
                                 <div className="flex flex-col gap-2">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
@@ -504,8 +589,9 @@ export default function HausmadeCartDrawer({
                                 {/* Cart Items List */}
                                 <div className="flex flex-col gap-3">
                                     <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
-                                        [ ITEMS SUMMARY // รายการสินค้า ]
+                                        [ ITEMS SUMMARY // รายการสินค้าในตะกร้า ({cartItemCount} ชิ้น) ]
                                     </span>
+
 
                                     {/* Pre-Order Notice in Cart */}
                                     {hasPreOrderInCart && (
@@ -1152,21 +1238,51 @@ export default function HausmadeCartDrawer({
                                     )}
 
                                     {/* Submit Action Button */}
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting || cart.length === 0}
-                                        className="w-full py-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(52%_0.16_28)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6"
-                                    >
-                                        <span>{isSubmitting ? 'TRANSMITTING ORDER...' : 'TRANSMIT ORDER // ชำระเงิน'}</span>
-                                        <span>฿{finalTotalAmount.toLocaleString()}.-</span>
-                                    </button>
+                                    {!isMember ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowAuthModal(true)}
+                                            className="w-full py-4 bg-[oklch(52%_0.16_28)] text-white font-mono text-[12px] font-bold uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] transition-colors flex items-center justify-between px-6 cursor-pointer shadow-md"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <LogIn size={15} />
+                                                <span>[ 🔑 กรุณาเข้าสู่ระบบ / สมัครสมาชิกก่อนสั่งซื้อ ]</span>
+                                            </span>
+                                            <span>฿{finalTotalAmount.toLocaleString()}.-</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting || cart.length === 0}
+                                            className={`w-full py-4 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6 shadow-md cursor-pointer ${
+                                                hasPreOrderInCart
+                                                    ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
+                                                    : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)]'
+                                            }`}
+                                        >
+                                            <span>
+                                                {isSubmitting
+                                                    ? (hasPreOrderInCart ? '⏳ กำลังส่งข้อมูลคำสั่งจอง (PRE-ORDER)...' : 'TRANSMITTING ORDER...')
+                                                    : (hasPreOrderInCart ? '⏳ ยืนยันการสั่งจองล่วงหน้า // PRE-ORDER NOW' : 'TRANSMIT ORDER // ชำระเงิน')
+                                                }
+                                            </span>
+                                            <span>฿{finalTotalAmount.toLocaleString()}.-</span>
+                                        </button>
+                                    )}
                                 </form>
                             </>
                         )}
                     </div>
                 </motion.div>
+
+                {/* Member Authentication Modal */}
+                <AuthModal
+                    isOpen={showAuthModal}
+                    onClose={() => setShowAuthModal(false)}
+                />
             </div>
         </AnimatePresence>
     )
 }
+
 
