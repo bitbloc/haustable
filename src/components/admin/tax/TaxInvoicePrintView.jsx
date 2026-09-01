@@ -479,68 +479,72 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                 </div>
             </div>
 
-            {/* Printable Document Container (Supports 1-Page & Multi-Page A4 Precision) */}
-            <div 
-                id="tax-invoice-printable-container"
-                ref={printableSheetRef}
-                className="w-full max-w-[794px] space-y-4 print:space-y-0 mx-auto"
-            >
-                {pages.map((page, pIdx) => {
-                    // Calculate starting index for item numbering
-                    const itemStartIndex = pages.slice(0, pIdx).reduce((acc, p) => acc + p.items.length, 0);
+            {/* Printable Document Container (Guaranteed Fixed 794px A4 Width on Mobile & Desktop) */}
+            <div className="w-full overflow-x-auto pb-8 flex justify-center print:overflow-visible print:p-0 print:m-0 print:w-full">
+                <div 
+                    id="tax-invoice-printable-container"
+                    ref={printableSheetRef}
+                    style={{ width: '794px', minWidth: '794px' }}
+                    className="space-y-4 print:space-y-0 mx-auto print:w-full print:min-w-0"
+                >
+                    {pages.map((page, pIdx) => {
+                        // Calculate starting index for item numbering
+                        const itemStartIndex = pages.slice(0, pIdx).reduce((acc, p) => acc + p.items.length, 0);
 
-                    return (
-                        <div 
-                            key={`sheet-${pIdx}`}
-                            style={{ 
-                                fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif",
-                                minHeight: '280mm',
-                                boxSizing: 'border-box'
-                            }}
-                            className="print-page-sheet w-full bg-white text-zinc-950 px-6 py-5 sm:px-8 sm:py-6 border border-zinc-300 shadow-2xl text-[10.5pt] leading-normal print:m-0 print:border-none print:shadow-none print:w-full print:max-w-none flex flex-col justify-between"
-                        >
-                            <div>
-                                {/* Header Section */}
-                                <div className="flex justify-between items-start border-b-2 border-zinc-950 pb-2.5 gap-3">
-                                    {/* Company / Issuer Info */}
-                                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                                        {/* In The Haus Logo */}
-                                        <div className="shrink-0 pt-0.5">
-                                            <img 
-                                                src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
-                                                alt="IN THE HAUS" 
-                                                className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
-                                                crossOrigin="anonymous"
-                                                onError={(e) => {
-                                                    if (e.target.src !== `${window.location.origin}/logo.png`) {
-                                                        e.target.src = '/logo.png';
-                                                    }
-                                                }}
-                                            />
-                                        </div>
+                        return (
+                            <div 
+                                key={`sheet-${pIdx}`}
+                                style={{ 
+                                    fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif",
+                                    width: '794px',
+                                    minWidth: '794px',
+                                    minHeight: '280mm',
+                                    boxSizing: 'border-box'
+                                }}
+                                className="print-page-sheet bg-white text-zinc-950 px-8 py-6 border border-zinc-300 shadow-2xl text-[10.5pt] leading-normal print:m-0 print:border-none print:shadow-none print:w-full print:min-w-0 flex flex-col justify-between"
+                            >
+                                <div>
+                                    {/* Header Section */}
+                                    <div className="flex justify-between items-start border-b-2 border-zinc-950 pb-2.5 gap-3">
+                                        {/* Company / Issuer Info */}
+                                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                                            {/* In The Haus Logo */}
+                                            <div className="shrink-0 pt-0.5">
+                                                <img 
+                                                    src={companySettings?.tax_logo_url || companySettings?.receipt_shop_logo_url || companySettings?.shop_logo_url || '/logo.png'} 
+                                                    alt="IN THE HAUS" 
+                                                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain object-left-top shrink-0"
+                                                    crossOrigin="anonymous"
+                                                    onError={(e) => {
+                                                        if (e.target.src !== `${window.location.origin}/logo.png`) {
+                                                            e.target.src = '/logo.png';
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <h1 className="font-bold text-[14pt] uppercase tracking-tight text-zinc-950 leading-tight">
-                                                {companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม'}
-                                            </h1>
-                                            {companySettings?.tax_company_name_en && (
-                                                <p className="font-mono text-[9.5pt] text-zinc-700 uppercase font-semibold mt-0.5">
-                                                    {companySettings.tax_company_name_en}
-                                                </p>
-                                            )}
-                                            <div className="mt-0.5 text-[10pt] text-zinc-800 leading-snug max-w-lg">
-                                                <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
-                                                <div className="flex flex-wrap gap-x-2.5 mt-0.5 font-mono text-[9.5pt]">
-                                                    <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
-                                                    <span>สถานประกอบการ: <strong className="text-zinc-950 font-bold">{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
-                                                </div>
-                                                <div className="flex flex-wrap gap-x-2.5 font-mono text-[9pt] text-zinc-600 mt-0.5">
-                                                    {companySettings?.tax_phone && <span>โทร: {companySettings.tax_phone}</span>}
-                                                    {companySettings?.tax_email && <span>อีเมล: {companySettings.tax_email}</span>}
+                                            <div className="flex-1 min-w-0">
+                                                <h1 className="font-bold text-[14pt] uppercase tracking-tight text-zinc-950 leading-tight">
+                                                    {companySettings?.tax_company_name || invoice.issuer_name || 'ร้านในบ้าน นครพนม'}
+                                                </h1>
+                                                {companySettings?.tax_company_name_en && (
+                                                    <p className="font-mono text-[9.5pt] text-zinc-700 uppercase font-semibold mt-0.5">
+                                                        {companySettings.tax_company_name_en}
+                                                    </p>
+                                                )}
+                                                <div className="mt-0.5 text-[10pt] text-zinc-800 leading-snug max-w-lg">
+                                                    <p>{companySettings?.tax_address || invoice.issuer_address || '788/1 สุนทรวิจิตร ในเมือง เมืองนครพนม 48000'}</p>
+                                                    <div className="flex flex-wrap gap-x-2.5 mt-0.5 font-mono text-[9.5pt]">
+                                                        <span>เลขประจำตัวผู้เสียภาษี: <strong className="text-zinc-950 font-bold">{formatTaxId(companySettings?.tax_id || invoice.issuer_tax_id || '1120100144907')}</strong></span>
+                                                        <span>สถานประกอบการ: <strong className="text-zinc-950 font-bold">{formatBranch(companySettings?.tax_branch_type, companySettings?.tax_branch_code)}</strong></span>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-x-2.5 font-mono text-[9pt] text-zinc-600 mt-0.5">
+                                                        {companySettings?.tax_phone && <span>โทร: {companySettings.tax_phone}</span>}
+                                                        {companySettings?.tax_email && <span>อีเมล: {companySettings.tax_email}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
                                     {/* Document Title & Number Badge */}
                                     <div className="text-right flex flex-col items-end shrink-0">
