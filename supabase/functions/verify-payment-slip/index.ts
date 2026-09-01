@@ -23,26 +23,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const body: VerifyRequest = await req.json()
-    const { base64, url, matchAmount, preferredProvider = 'auto', checkDuplicate = true, remark } = body
+    const body: any = await req.json()
+    const { action = 'verify', apiKey: customApiKey, base64, url, matchAmount, preferredProvider = 'auto', checkDuplicate = true, remark } = body
 
-    if (!base64 && !url) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: 'Missing slip image (base64 or url required)' 
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
-      })
-    }
-
-    // 1. Resolve EasySlip API Key from DB or Env
+    // 1. Resolve EasySlip API Key from DB, Env, or Request
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    let apiKey = Deno.env.get('EASYSLIP_API_KEY') || DEFAULT_EASYSLIP_KEY
+    let apiKey = customApiKey?.trim() || Deno.env.get('EASYSLIP_API_KEY') || DEFAULT_EASYSLIP_KEY
     try {
       const { data: settingData } = await supabaseAdmin
         .from('app_settings')
@@ -54,6 +44,44 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       console.warn('[verify-payment-slip] Error reading easyslip_api_key setting:', e)
+    }
+
+    // Handle Action: INFO (Connection & Quota check)
+    if (action === 'info') {
+      const resp = await fetch(`${EASYSLIP_BASE_URL}/info`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      })
+      const result = await resp.json()
+      if (!resp.ok || !result.success) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: result.message || result.error?.message || 'การเชื่อมต่อ EasySlip ล้มเหลว'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: resp.status || 400
+        })
+      }
+      return new Response(JSON.stringify({
+        success: true,
+        data: result.data,
+        message: 'เชื่อมต่อ EasySlip API สำเร็จเรียบร้อย'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      })
+    }
+
+    if (!base64 && !url) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Missing slip image (base64 or url required)' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400
+      })
     }
 
     // Format clean Base64 string if data URI provided

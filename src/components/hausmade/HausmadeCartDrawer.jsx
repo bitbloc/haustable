@@ -4,6 +4,8 @@ import { useOrderSubmission } from '../../hooks/useOrderSubmission'
 import { usePromotion } from '../../hooks/usePromotion'
 import { getThaiDate, toThaiISO } from '../../utils/timeUtils'
 import { supabase } from '../../lib/supabaseClient'
+import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
+import { QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
 
 const LAST_ADDRESS_STORAGE_KEY = 'hausmade_last_shipping_address'
 
@@ -68,6 +70,13 @@ export default function HausmadeCartDrawer({
     const [validationError, setValidationError] = useState('')
     const [copyFeedback, setCopyFeedback] = useState('')
 
+    // Payment & Auto-Verification State
+    const [paymentMethod, setPaymentMethod] = useState('promptpay') // 'promptpay' | 'truewallet'
+    const [isVerifyingSlip, setIsVerifyingSlip] = useState(false)
+    const [slipVerifyResult, setSlipVerifyResult] = useState(null)
+    const [slipVerifyError, setSlipVerifyError] = useState(null)
+    const [allowManualFallback, setAllowManualFallback] = useState(false)
+
     // Promotion Code Hook
     const { 
         promoCode, setPromoCode, 
@@ -129,11 +138,46 @@ export default function HausmadeCartDrawer({
 
     if (!isOpen) return null
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0]
             setSlipFile(file)
             setSlipPreviewUrl(URL.createObjectURL(file))
+            setSlipVerifyResult(null)
+            setSlipVerifyError(null)
+            setAllowManualFallback(false)
+
+            if (settings.easySlipEnabled === false) {
+                return
+            }
+
+            setIsVerifyingSlip(true)
+            try {
+                const res = await verifyPaymentSlip({
+                    file,
+                    matchAmount: finalTotalAmount,
+                    provider: paymentMethod,
+                    remark: `Hausmade Order ฿${finalTotalAmount}`
+                })
+
+                if (res.verified) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError(null)
+                } else if (res.success && !res.isAmountMatched) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError(`ยอดเงินในสลิป (฿${res.amountInSlip}) ไม่ตรงกับยอดที่ต้องชำระ (฿${finalTotalAmount.toLocaleString()})`)
+                } else if (res.isDuplicate) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError('สลิปนี้ถูกบันทึกในระบบไปแล้ว ไม่สามารถใช้ซ้ำได้')
+                } else {
+                    setSlipVerifyResult(null)
+                    setSlipVerifyError(res.error || 'ไม่สามารถตรวจสอบข้อมูลสลิปได้')
+                }
+            } catch (err) {
+                setSlipVerifyError('เกิดข้อผิดพลาดในการตรวจสอบสลิป: ' + err.message)
+            } finally {
+                setIsVerifyingSlip(false)
+            }
         }
     }
 
@@ -141,6 +185,9 @@ export default function HausmadeCartDrawer({
         setSlipFile(null)
         if (slipPreviewUrl) URL.revokeObjectURL(slipPreviewUrl)
         setSlipPreviewUrl(null)
+        setSlipVerifyResult(null)
+        setSlipVerifyError(null)
+        setAllowManualFallback(false)
     }
 
     const handleCopy = (text, label) => {
@@ -180,6 +227,11 @@ export default function HausmadeCartDrawer({
             return
         }
 
+        if (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
+            setValidationError('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
+            return
+        }
+
         // Construct Full Address String
         const fullShippingAddress = fulfilmentMode === 'shipping'
             ? `${addressLine} ${subDistrict ? 'ต.' + subDistrict : ''} ${district ? 'อ.' + district : ''} จ.${province} ${postalCode}`.trim()
@@ -214,16 +266,20 @@ export default function HausmadeCartDrawer({
             ? toThaiISO(targetDateStr, pickupTime)
             : toThaiISO(getThaiDate(), '12:00')
 
+        const isAutoVerified = Boolean(slipVerifyResult?.verified)
         const bookingPayload = {
             pickup_contact_name: contactName,
             pickup_contact_phone: contactPhone,
             booking_time: bookingDateTime,
-            status: 'pending',
+            status: isAutoVerified ? 'confirmed' : 'pending',
             deposit_amount: finalTotalAmount,
             total_amount: finalTotalAmount,
             discount_amount: totalDiscountAmount,
             promotion_code_id: appliedPromo?.id || null,
             customer_note: specialRequest ? `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}]`,
+            staff_remark: isAutoVerified
+                ? `[HAUSMADE] สั่งสินค้า (ตรวจสลิป Auto EasySlip ✓ ${slipVerifyResult?.bankName || ''})`
+                : '[HAUSMADE] สั่งสินค้า',
             order_type: fulfilmentMode === 'shipping' ? 'hausmade_shipping' : 'hausmade_pickup',
             booking_type: 'hausmade',
             is_preorder: hasPreOrderInCart,
@@ -232,7 +288,12 @@ export default function HausmadeCartDrawer({
             shipping_fee: activeShippingFee,
             xhaus_earned: projectedCoinsEarned || 0,
             xhaus_redeemed: effectiveXhausRedeemed || 0,
-            xhaus_discount: xhausDiscountAmount || 0
+            xhaus_discount: xhausDiscountAmount || 0,
+            slip_verified: isAutoVerified,
+            slip_provider: slipVerifyResult?.provider || paymentMethod,
+            slip_trans_ref: slipVerifyResult?.transRef || null,
+            slip_verification_status: isAutoVerified ? 'auto_verified' : (slipVerifyResult ? 'manual_pending' : 'pending'),
+            slip_verified_data: slipVerifyResult?.rawSlip || null
         }
 
         const orderItemsPayload = cart.map(item => ({
@@ -839,46 +900,126 @@ export default function HausmadeCartDrawer({
 
                                     {/* Payment Section */}
                                     <div className="border-t border-[oklch(85%_0.012_28)] pt-5 flex flex-col gap-3">
-                                        <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
-                                            [ PAYMENT // สแกนชำระเงิน ]
-                                        </span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                [ PAYMENT // เลือกช่องทางชำระเงิน ]
+                                            </span>
+                                            <span className="font-mono text-[10px] font-bold bg-[oklch(18%_0.012_28)] text-white px-2 py-0.5">
+                                                ฿{finalTotalAmount.toLocaleString()}.-
+                                            </span>
+                                        </div>
+
+                                        {/* Dual Payment Selector (Dieter Rams Tabular Layout) */}
+                                        <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPaymentMethod('promptpay');
+                                                    if (slipFile) handleFileChange({ target: { files: [slipFile] } });
+                                                }}
+                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all ${paymentMethod === 'promptpay' ? 'bg-[oklch(18%_0.012_28)] text-white' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                            >
+                                                <QrCode size={13} />
+                                                <span>พร้อมเพย์ QR</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPaymentMethod('truewallet');
+                                                    if (slipFile) handleFileChange({ target: { files: [slipFile] } });
+                                                }}
+                                                className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[10px] font-bold uppercase transition-all border-l border-[oklch(85%_0.012_28)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'}`}
+                                            >
+                                                <Wallet size={13} />
+                                                <span>TrueMoney</span>
+                                            </button>
+                                        </div>
 
                                         <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col items-center gap-3">
-                                            {settings.paymentQrUrl ? (
-                                                <img
-                                                    src={settings.paymentQrUrl}
-                                                    alt="PromptPay QR Code"
-                                                    className="w-44 h-44 object-contain border border-[oklch(85%_0.012_28)] bg-white p-2"
-                                                />
+                                            {paymentMethod === 'promptpay' ? (
+                                                <>
+                                                    {settings.paymentQrUrl ? (
+                                                        <img
+                                                            src={settings.paymentQrUrl}
+                                                            alt="PromptPay QR Code"
+                                                            className="w-44 h-44 object-contain border border-[oklch(85%_0.012_28)] bg-white p-2"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-44 h-44 border border-dashed border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] text-center p-4">
+                                                            [ PROMPTPAY QR CODE ]
+                                                        </div>
+                                                    )}
+
+                                                    <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
+                                                        <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.promptpayName || settings.bankAccountName}</div>
+                                                        <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.promptpayId || settings.bankAccountNo}</div>
+                                                        <div className="text-[oklch(55%_0.010_28)] text-[10px]">{settings.bankName}</div>
+                                                    </div>
+
+                                                    {/* 1-Click Copy Buttons */}
+                                                    <div className="flex gap-2 w-full mt-1">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCopy((settings.promptpayId || settings.bankAccountNo).replace(/-/g, ''), 'คัดลอกเลขบัญชีแล้ว!')}
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                        >
+                                                            [ COPY ACCT NO. ]
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                        >
+                                                            [ COPY ฿{finalTotalAmount.toLocaleString()} ]
+                                                        </button>
+                                                    </div>
+                                                </>
                                             ) : (
-                                                <div className="w-44 h-44 border border-dashed border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] text-center p-4">
-                                                    [ PROMPTPAY QR CODE ]
-                                                </div>
+                                                <>
+                                                    {(settings.trueWalletQrUrl || settings.paymentQrUrl) ? (
+                                                        <img
+                                                            src={settings.trueWalletQrUrl || settings.paymentQrUrl}
+                                                            alt="TrueMoney QR Code"
+                                                            className="w-44 h-44 object-contain border border-[oklch(85%_0.012_28)] bg-white p-2"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-44 h-44 border border-dashed border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] text-center p-4">
+                                                            [ TRUEMONEY QR CODE ]
+                                                        </div>
+                                                    )}
+
+                                                    <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
+                                                        {settings.trueWalletName && (
+                                                            <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.trueWalletName}</div>
+                                                        )}
+                                                        {settings.trueWalletPhone ? (
+                                                            <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.trueWalletPhone}</div>
+                                                        ) : (
+                                                            <div className="text-[oklch(55%_0.010_28)] text-[10px]">สแกนผ่านแอป TrueMoney Wallet</div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* 1-Click Copy Buttons */}
+                                                    <div className="flex gap-2 w-full mt-1">
+                                                        {settings.trueWalletPhone && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleCopy(settings.trueWalletPhone.replace(/-/g, ''), 'คัดลอกเบอร์ TrueMoney แล้ว!')}
+                                                                className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                            >
+                                                                [ COPY PHONE ]
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
+                                                            className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
+                                                        >
+                                                            [ COPY ฿{finalTotalAmount.toLocaleString()} ]
+                                                        </button>
+                                                    </div>
+                                                </>
                                             )}
-
-                                            <div className="text-center font-mono text-xs flex flex-col items-center gap-1">
-                                                <div className="font-bold text-[oklch(18%_0.012_28)]">{settings.bankAccountName}</div>
-                                                <div className="text-[oklch(52%_0.16_28)] font-bold">{settings.bankAccountNo}</div>
-                                                <div className="text-[oklch(55%_0.010_28)] text-[10px]">{settings.bankName}</div>
-                                            </div>
-
-                                            {/* 1-Click Copy Buttons */}
-                                            <div className="flex gap-2 w-full mt-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopy(settings.bankAccountNo.replace(/-/g, ''), 'คัดลอกเลขบัญชีแล้ว!')}
-                                                    className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
-                                                >
-                                                    [ COPY ACCT NO. ]
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopy(finalTotalAmount.toFixed(2), 'คัดลอกยอดเงินแล้ว!')}
-                                                    className="flex-1 py-1.5 px-2 bg-white border border-[oklch(85%_0.012_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-white transition-colors font-mono text-[10px] font-bold uppercase"
-                                                >
-                                                    [ COPY ฿{finalTotalAmount.toLocaleString()} ]
-                                                </button>
-                                            </div>
 
                                             {copyFeedback && (
                                                 <span className="font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold">
@@ -887,7 +1028,7 @@ export default function HausmadeCartDrawer({
                                             )}
                                         </div>
 
-                                        {/* Slip Uploader with Preview */}
+                                        {/* Slip Uploader with Preview & Live Verification Feedback */}
                                         <div className="flex flex-col gap-2">
                                             <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block">
                                                 แนบสลิปการชำระเงิน *
@@ -904,7 +1045,7 @@ export default function HausmadeCartDrawer({
                                                     <button
                                                         type="button"
                                                         onClick={handleRemoveSlip}
-                                                        className="px-2.5 py-1 border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-mono text-[10px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors"
+                                                        className="px-2.5 py-1 border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-mono text-[10px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors cursor-pointer"
                                                     >
                                                         [ เปลี่ยนรูป ]
                                                     </button>
@@ -916,6 +1057,55 @@ export default function HausmadeCartDrawer({
                                                     onChange={handleFileChange}
                                                     className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] cursor-pointer"
                                                 />
+                                            )}
+
+                                            {/* Verification Progress Card */}
+                                            {isVerifyingSlip && (
+                                                <div className="bg-white border border-[oklch(85%_0.012_28)] p-2.5 flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)] animate-pulse">
+                                                    <RefreshCw size={14} className="animate-spin text-[oklch(18%_0.012_28)] shrink-0" />
+                                                    <span>กำลังตรวจสอบสลิปอัตโนมัติผ่าน EasySlip...</span>
+                                                </div>
+                                            )}
+
+                                            {/* Auto-verified success card */}
+                                            {slipVerifyResult?.verified && (
+                                                <div className="bg-emerald-500/10 border border-emerald-500/30 p-2.5 font-mono text-xs space-y-1">
+                                                    <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                                                        <CheckCircle2 size={15} className="text-emerald-700 shrink-0" />
+                                                        <span>สลิปผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-emerald-900/90 pl-5 space-y-0.5">
+                                                        <p>ผู้โอน: <strong>{slipVerifyResult.senderName}</strong></p>
+                                                        <p>ยอดโอน: <strong>฿{slipVerifyResult.amountInSlip}.-</strong> ({slipVerifyResult.bankName})</p>
+                                                        {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Error / Amount mismatch card */}
+                                            {slipVerifyError && (
+                                                <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 font-mono text-xs space-y-1.5">
+                                                    <div className="flex items-start gap-1.5 text-amber-900 font-bold">
+                                                        <AlertTriangle size={14} className="text-amber-700 shrink-0 mt-0.5" />
+                                                        <span>{slipVerifyError}</span>
+                                                    </div>
+                                                    {!allowManualFallback && (
+                                                        <div className="pl-5 pt-0.5">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setAllowManualFallback(true)}
+                                                                className="text-[10px] font-bold text-[oklch(18%_0.012_28)] underline hover:opacity-75 cursor-pointer"
+                                                            >
+                                                                ส่งสลิปนี้ให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง (Manual Review)
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    {allowManualFallback && (
+                                                        <p className="text-[9px] text-amber-800 pl-5">
+                                                            ✓ เปิดโหมดส่งให้เจ้าหน้าที่ตรวจสอบแล้ว คุณสามารถกดยืนยันการสั่งซื้อได้
+                                                        </p>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>

@@ -54,97 +54,24 @@ export async function fileToBase64(file) {
 }
 
 /**
- * Direct client-side verification fallback in case Edge Function is not reachable
+ * Resolves the verification API endpoint (Vercel Serverless Function or Cloud URL for mobile app)
  */
-async function directEasySlipVerify({ base64, matchAmount, provider, apiKey }) {
-    const cleanBase64 = base64.includes(',') ? base64.split(',')[1] : base64
-    const endpoint = provider === 'truewallet' ? '/verify/truewallet' : '/verify/bank'
-
-    const payload = {
-        base64: cleanBase64,
-        checkDuplicate: true
-    }
-    if (matchAmount && matchAmount > 0) {
-        payload.matchAmount = Number(matchAmount)
-    }
-
-    const resp = await fetch(`${EASYSLIP_BASE_URL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey || DEFAULT_EASYSLIP_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    })
-
-    const result = await resp.json()
-    if (!resp.ok || !result.success) {
-        // If bank failed and provider wasn't explicitly locked to bank, try truewallet
-        if (provider !== 'bank' && endpoint === '/verify/bank') {
-            try {
-                const walletResp = await fetch(`${EASYSLIP_BASE_URL}/verify/truewallet`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey || DEFAULT_EASYSLIP_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                })
-                const walletResult = await walletResp.json()
-                if (walletResp.ok && walletResult.success) {
-                    return formatEasySlipData(walletResult.data, 'truewallet', matchAmount)
-                }
-            } catch (e) {
-                console.warn('[directEasySlipVerify] Truewallet retry error:', e)
-            }
+function getApiEndpoint() {
+    if (typeof window !== 'undefined') {
+        const proto = window.location.protocol
+        const host = window.location.hostname
+        if (proto === 'capacitor:' || proto === 'ionic:' || host === 'localhost' && window.location.port !== '5173') {
+            return 'https://haustable.vercel.app/api/verify-slip'
         }
-
-        const msg = result.error?.message || result.message || 'ไม่สามารถตรวจสอบสลิปได้'
-        return {
-            success: false,
-            verified: false,
-            error: msg,
-            errorCode: result.error?.code || 'ERROR'
-        }
+        return '/api/verify-slip'
     }
-
-    return formatEasySlipData(result.data, provider === 'truewallet' ? 'truewallet' : 'bank', matchAmount)
-}
-
-function formatEasySlipData(data, provider, matchAmount) {
-    const rawSlip = data.rawSlip || {}
-    const transRef = rawSlip.transRef || rawSlip.transactionId || null
-    const slipAmount = Number(data.amountInSlip || rawSlip.amount || 0)
-    const senderName = rawSlip.sender?.account?.name || rawSlip.sender?.name || rawSlip.sender?.accountName || 'ไม่ระบุ'
-    const receiverName = rawSlip.receiver?.account?.name || rawSlip.receiver?.name || rawSlip.receiver?.accountName || 'IN THE HAUS'
-    const bankName = provider === 'truewallet' 
-        ? 'TrueMoney Wallet' 
-        : (rawSlip.sender?.bank?.nameTh || rawSlip.sender?.bank?.shortCode || 'ธนาคาร')
-
-    let isAmountMatched = data.isAmountMatched ?? true
-    if (matchAmount && matchAmount > 0) {
-        isAmountMatched = slipAmount >= Number(matchAmount)
-    }
-
-    return {
-        success: true,
-        verified: isAmountMatched && !data.isDuplicate,
-        provider,
-        isAmountMatched,
-        isDuplicate: Boolean(data.isDuplicate),
-        amountInSlip: slipAmount,
-        amountExpected: matchAmount ? Number(matchAmount) : slipAmount,
-        transRef,
-        transferDate: rawSlip.date || rawSlip.dateTime || new Date().toISOString(),
-        senderName,
-        receiverName,
-        bankName,
-        rawSlip: data
-    }
+    return 'https://haustable.vercel.app/api/verify-slip'
 }
 
 /**
  * Main verification entrypoint for Frontend
+ * Calls server-side proxy to guarantee zero CORS blocking.
+ * 
  * @param {Object} params
  * @param {File} [params.file] - The uploaded slip File object
  * @param {string} [params.base64] - The Base64 string of the slip (optional if file provided)
@@ -163,30 +90,7 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
             return { success: false, verified: false, error: 'กรุณาอัปโหลดรูปภาพสลิป' }
         }
 
-        // 1. First try calling Supabase Edge Function
-        try {
-            const { data, error } = await supabase.functions.invoke('verify-payment-slip', {
-                body: {
-                    base64,
-                    matchAmount: Number(matchAmount),
-                    preferredProvider: provider,
-                    checkDuplicate: true,
-                    remark
-                }
-            })
-
-            if (!error && data && data.success !== undefined) {
-                return data
-            }
-            if (error) {
-                console.warn('[verifyPaymentSlip] Edge function returned error, falling back to direct verify:', error)
-            }
-        } catch (edgeErr) {
-            console.warn('[verifyPaymentSlip] Edge function invoke exception, fallback to direct verify:', edgeErr)
-        }
-
-        // 2. Direct API Fallback
-        // Fetch API key from app_settings
+        // Fetch custom API key from app_settings if available
         let apiKey = DEFAULT_EASYSLIP_KEY
         try {
             const { data: settingData } = await supabase
@@ -198,10 +102,63 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
                 apiKey = settingData.value.trim()
             }
         } catch (sErr) {
-            console.warn('[verifyPaymentSlip] Settings read error:', sErr)
+            console.warn('[verifyPaymentSlip] Settings read warning:', sErr)
         }
 
-        return await directEasySlipVerify({ base64, matchAmount, provider, apiKey })
+        // 1. Call Vercel Serverless Proxy (/api/verify-slip)
+        try {
+            const endpoint = getApiEndpoint()
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'verify',
+                    base64,
+                    matchAmount: Number(matchAmount),
+                    preferredProvider: provider,
+                    checkDuplicate: true,
+                    remark,
+                    apiKey
+                })
+            })
+
+            if (resp.ok) {
+                const result = await resp.json()
+                if (result && result.success !== undefined) {
+                    return result
+                }
+            }
+        } catch (proxyErr) {
+            console.warn('[verifyPaymentSlip] Serverless proxy error, trying Supabase Edge Function:', proxyErr)
+        }
+
+        // 2. Fallback: Call Supabase Edge Function
+        try {
+            const { data, error } = await supabase.functions.invoke('verify-payment-slip', {
+                body: {
+                    action: 'verify',
+                    base64,
+                    matchAmount: Number(matchAmount),
+                    preferredProvider: provider,
+                    checkDuplicate: true,
+                    remark
+                }
+            })
+
+            if (!error && data && data.success !== undefined) {
+                return data
+            }
+        } catch (edgeErr) {
+            console.warn('[verifyPaymentSlip] Supabase Edge Function error:', edgeErr)
+        }
+
+        return {
+            success: false,
+            verified: false,
+            error: 'ไม่สามารถเชื่อมต่อระบบตรวจสลิปได้ชั่วคราว คุณสามารถเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"'
+        }
 
     } catch (err) {
         console.error('[verifyPaymentSlip] Critical Verification Error:', err)
@@ -214,7 +171,7 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
 }
 
 /**
- * Test EasySlip API Connection and retrieve Quota Information
+ * Test EasySlip API Connection and retrieve Quota Information via Serverless Proxy (No CORS)
  */
 export async function testEasySlipConnection(customApiKey = null) {
     try {
@@ -224,30 +181,65 @@ export async function testEasySlipConnection(customApiKey = null) {
             keyToTest = data?.value || DEFAULT_EASYSLIP_KEY
         }
 
-        const resp = await fetch(`${EASYSLIP_BASE_URL}/info`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${keyToTest.trim()}`
-            }
-        })
+        // 1. Try Vercel Serverless Proxy (/api/verify-slip with action='info')
+        try {
+            const endpoint = getApiEndpoint()
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    action: 'info',
+                    apiKey: keyToTest.trim()
+                })
+            })
 
-        const result = await resp.json()
-        if (!resp.ok || !result.success) {
-            return {
-                success: false,
-                error: result.message || result.error?.message || 'การเชื่อมต่อ EasySlip ล้มเหลว กรุณาตรวจสอบ API Key'
+            const result = await resp.json()
+            if (resp.ok && result.success) {
+                return {
+                    success: true,
+                    data: result.data,
+                    message: 'เชื่อมต่อ EasySlip API สำเร็จเรียบร้อย'
+                }
+            } else if (result.error) {
+                return {
+                    success: false,
+                    error: result.error
+                }
             }
+        } catch (proxyErr) {
+            console.warn('[testEasySlipConnection] Serverless proxy error, trying Supabase Edge Function:', proxyErr)
+        }
+
+        // 2. Try Supabase Edge Function
+        try {
+            const { data, error } = await supabase.functions.invoke('verify-payment-slip', {
+                body: {
+                    action: 'info',
+                    apiKey: keyToTest.trim()
+                }
+            })
+
+            if (!error && data?.success) {
+                return {
+                    success: true,
+                    data: data.data,
+                    message: 'เชื่อมต่อ EasySlip API สำเร็จเรียบร้อย'
+                }
+            }
+        } catch (edgeErr) {
+            console.warn('[testEasySlipConnection] Edge Function error:', edgeErr)
         }
 
         return {
-            success: true,
-            data: result.data,
-            message: 'เชื่อมต่อ EasySlip API สำเร็จเรียบร้อย'
+            success: false,
+            error: 'ไม่สามารถเชื่อมต่อ EasySlip API ได้ กรุณาตรวจสอบ API Key หรืออินเทอร์เน็ต'
         }
     } catch (err) {
         return {
             success: false,
-            error: 'ไม่สามารถเชื่อมต่อไปยัง EasySlip ได้: ' + err.message
+            error: 'การเชื่อมต่อ EasySlip ล้มเหลว: ' + err.message
         }
     }
 }
