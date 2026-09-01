@@ -74,8 +74,8 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
         setVolumeState(val);
         setAudioVolume(val);
         if (val > 0) {
-            // Auto test feedback on preset click
-            testPlayAlertSound(val);
+            // Auto test feedback on preset click (throttled 1200ms)
+            testPlayAlertSound(val, 1200);
         }
     }, []);
 
@@ -85,11 +85,12 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
     }, []);
 
     const handleTestSound = useCallback(() => {
+        if (isTesting) return;
         unlockAudioEngine();
         setIsTesting(true);
-        testPlayAlertSound();
-        setTimeout(() => setIsTesting(false), 500);
-    }, []);
+        testPlayAlertSound(null, 1200);
+        setTimeout(() => setIsTesting(false), 1200);
+    }, [isTesting]);
 
     const effectiveVol = isMuted ? 0 : volume;
 
@@ -158,6 +159,7 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
                                 )}
                             </span>
                         </div>
+
                         <button
                             type="button"
                             onClick={handleToggleMute}
@@ -224,13 +226,14 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
                     <button
                         type="button"
                         onClick={handleTestSound}
-                        className={`w-full min-h-[40px] flex items-center justify-center gap-2 rounded-md font-mono text-xs font-bold uppercase transition-all cursor-pointer touch-manipulation shadow-xs ${
+                        disabled={isTesting}
+                        className={`w-full min-h-[40px] flex items-center justify-center gap-2 rounded-md font-mono text-xs font-bold uppercase transition-all shadow-xs ${
                             isTesting
-                                ? 'bg-[var(--color-accent)] text-white'
-                                : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)]'
+                                ? 'bg-[var(--color-accent)] text-white opacity-90 cursor-not-allowed'
+                                : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
                         }`}
                     >
-                        <Play size={13} className={isTesting ? 'animate-ping' : 'text-[var(--color-accent)]'} />
+                        <Play size={13} className={isTesting ? 'animate-spin' : 'text-[var(--color-accent)]'} />
                         <span>{isTesting ? 'กำลังทดสอบเสียง...' : 'ทดสอบเสียงแจ้งเตือน (TEST)'}</span>
                     </button>
                 </div>

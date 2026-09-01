@@ -64,22 +64,22 @@ describe('Audio Engine & Notification Resilience', () => {
             setAudioVolume(80);
 
             // First click: should succeed
-            const firstResult = testPlayAlertSound(80, 600);
+            const firstResult = testPlayAlertSound(80, 1200);
             expect(firstResult).toBe(true);
 
             // Rapid 2nd click (50ms later): should be throttled (returns false)
             vi.advanceTimersByTime(50);
-            const rapidSecondClick = testPlayAlertSound(80, 600);
+            const rapidSecondClick = testPlayAlertSound(80, 1200);
             expect(rapidSecondClick).toBe(false);
 
-            // Rapid 3rd click (200ms later): should still be throttled
-            vi.advanceTimersByTime(200);
-            const rapidThirdClick = testPlayAlertSound(80, 600);
+            // Rapid 3rd click (500ms later): should still be throttled
+            vi.advanceTimersByTime(500);
+            const rapidThirdClick = testPlayAlertSound(80, 1200);
             expect(rapidThirdClick).toBe(false);
 
-            // After cooldown expires (650ms later): should succeed
-            vi.advanceTimersByTime(650);
-            const afterCooldownClick = testPlayAlertSound(80, 600);
+            // After cooldown expires (1300ms later): should succeed
+            vi.advanceTimersByTime(1300);
+            const afterCooldownClick = testPlayAlertSound(80, 1200);
             expect(afterCooldownClick).toBe(true);
         });
 

@@ -652,19 +652,21 @@ export default function HardwarePrintersTab({
 
                         <button
                             type="button"
+                            disabled={isTestingAudio}
                             onClick={() => {
+                                if (isTestingAudio) return;
                                 unlockAudioEngine();
                                 setIsTestingAudio(true);
-                                testPlayAlertSound();
-                                setTimeout(() => setIsTestingAudio(false), 500);
+                                testPlayAlertSound(null, 1200);
+                                setTimeout(() => setIsTestingAudio(false), 1200);
                             }}
-                            className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer touch-manipulation shadow-xs ${
+                            className={`w-full py-2.5 rounded-xl font-mono text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 shadow-xs ${
                                 isTestingAudio
-                                    ? 'bg-[var(--color-accent)] text-white'
-                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)]'
+                                    ? 'bg-[var(--color-accent)] text-white opacity-90 cursor-not-allowed'
+                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
                             }`}
                         >
-                            <Play size={13} className={isTestingAudio ? 'animate-ping' : 'text-[var(--color-accent)]'} />
+                            <Play size={13} className={isTestingAudio ? 'animate-spin' : 'text-[var(--color-accent)]'} />
                             <span>{isTestingAudio ? 'กำลังทดสอบเสียง...' : 'ทดสอบเล่นเสียงแจ้งเตือน (Test Sound)'}</span>
                         </button>
                     </div>

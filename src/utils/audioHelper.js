@@ -453,6 +453,9 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
     return true;
 }
 
+let activeAudioBufferSource = null;
+let activeHtml5Audio = null;
+
 /**
  * Play decoded AudioBuffer cleanly with amplification directly to speakers.
  * Returns true only if Web Audio context is active and playback was successfully scheduled.
@@ -471,12 +474,29 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
             return false;
         }
 
+        // Stop any previously playing audio buffer source so sounds NEVER layer/overlap
+        if (activeAudioBufferSource) {
+            try {
+                activeAudioBufferSource.stop();
+                activeAudioBufferSource.disconnect();
+            } catch (e) {}
+            activeAudioBufferSource = null;
+        }
+
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         const gainNode = ctx.createGain();
         gainNode.gain.setValueAtTime(boostFactor * effectiveGain, ctx.currentTime);
         source.connect(gainNode);
         gainNode.connect(ctx.destination);
+
+        activeAudioBufferSource = source;
+        source.onended = () => {
+            if (activeAudioBufferSource === source) {
+                activeAudioBufferSource = null;
+            }
+        };
+
         source.start(0);
         return true;
     } catch (err) {
@@ -709,7 +729,7 @@ let lastTestAlertPlayedTime = 0;
  * Unlocks engine and plays noti1.mp3 at preview volume (or current effective volume).
  * Throttled to prevent overlapping audio glitches on rapid double clicks.
  */
-export function testPlayAlertSound(previewVol = null, throttleMs = 600) {
+export function testPlayAlertSound(previewVol = null, throttleMs = 1200) {
     const now = Date.now();
     if (now - lastTestAlertPlayedTime < throttleMs) {
         return false; // Prevent rapid repeated clicks / double tap
@@ -730,24 +750,10 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 600) {
         return true;
     }
 
-    // Play buffer directly with custom gain
+    // Play buffer directly with custom gain and active node tracking
     if (noti1AudioBuffer) {
-        try {
-            const ctx = getSharedAudioContext();
-            if (ctx) {
-                if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-                const source = ctx.createBufferSource();
-                source.buffer = noti1AudioBuffer;
-                const gainNode = ctx.createGain();
-                gainNode.gain.setValueAtTime(3.2 * factor, ctx.currentTime);
-                source.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                source.start(0);
-                return true;
-            }
-        } catch (e) {
-            console.warn('[AudioEngine] testPlayAlertSound buffer error:', e);
-        }
+        const played = playAudioBufferDirectly(noti1AudioBuffer, 3.2);
+        if (played) return true;
     }
 
     // Fallback chime
@@ -767,9 +773,17 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 600) {
 
     // HTML5 fallback
     try {
+        if (activeHtml5Audio) {
+            try {
+                activeHtml5Audio.pause();
+                activeHtml5Audio.currentTime = 0;
+            } catch (e) {}
+            activeHtml5Audio = null;
+        }
         const soundSrc = noti1SoundUrl || '/noti1.mp3';
         const audio = new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, factor));
+        activeHtml5Audio = audio;
         const promise = typeof audio.play === 'function' ? audio.play() : null;
         if (promise && typeof promise.catch === 'function') {
             promise.catch(() => {});
