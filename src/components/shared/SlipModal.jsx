@@ -579,16 +579,20 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         const noteLower = (booking.customer_note || '').toLowerCase();
         const sourceLower = (booking.source || '').toLowerCase();
 
-        const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url;
-        const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr');
+        const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || (booking.customer_name || '').toLowerCase().includes('line man');
+        const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url || isLineman;
+        const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr') || isLineman;
         
-        const isOnlinePickup = isOnlineSource && isPickupOrder;
-        const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr';
+        const isOnlinePickup = isOnlineSource && isPickupOrder && !isLineman;
+        const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr' && !isLineman;
 
         let orderBannerTitle = '';
         let orderBannerSub = '';
 
-        if (isOnlinePickup) {
+        if (isLineman) {
+            orderBannerTitle = 'LINE MAN DELIVERY';
+            orderBannerSub = '(ออเดอร์เดลิเวอรี LINE MAN)';
+        } else if (isOnlinePickup) {
             orderBannerTitle = 'ONLINE PICKUP ORDER';
             orderBannerSub = '(รับกลับออนไลน์ - PICKUP)';
         } else if (isOnlineBooking) {
@@ -792,6 +796,30 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             object-fit: contain;
                         }
 
+                        .kitchen-footer-block {
+                            border-top: 2px solid black;
+                            border-bottom: 2px solid black;
+                            padding: 8px 4px;
+                            margin-top: 14px;
+                            margin-bottom: 8px;
+                            text-align: center;
+                            background: #fdfdfd;
+                        }
+                        .kitchen-footer-table {
+                            font-size: 20px;
+                            font-weight: 900;
+                            line-height: 1.1;
+                            text-transform: uppercase;
+                            letter-spacing: -0.5px;
+                            margin-bottom: 4px;
+                        }
+                        .kitchen-footer-sub {
+                            font-size: 9px;
+                            font-weight: bold;
+                            color: #222;
+                            text-transform: uppercase;
+                            letter-spacing: 0.5px;
+                        }
                         .footer { text-align: center; margin-top: 15px; font-size: 8px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; color: #555; }
                         @media print { 
                             body { width: 100%; padding: 0; } 
@@ -873,15 +901,42 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     ${noteHtml}
 
                     ${(() => {
-                        if (isKitchenTab) return '';
-                        let art = printerConfig?.footer_ascii_art || getStoredShopSetting('footer_ascii_art', '');
-                        if (!art) return '';
-                        return `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>`;
-                    })()}
+                        if (!isKitchenTab) {
+                            let art = printerConfig?.footer_ascii_art || getStoredShopSetting('footer_ascii_art', '');
+                            return `
+                                ${art ? `<pre style="font-family: monospace; font-size: 9px; font-weight: bold; margin: 8px 0; text-align: center; white-space: pre;">${art}</pre>` : ''}
+                                <div class="footer">
+                                    ${receiptShopFooter || printerConfig?.shop_footer_text || getStoredShopSetting('receipt_shop_footer', '')}
+                                </div>
+                            `;
+                        }
 
-                    <div class="footer">
-                        ${receiptShopFooter || printerConfig?.shop_footer_text || getStoredShopSetting('receipt_shop_footer', '')}
-                    </div>
+                        const itemsForThisTab = selectItemsForTab(booking.order_items || [], activeTab, printerConfig);
+                        const totalItemsCount = itemsForThisTab.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+                        const slipLabel = (activeTab === 'bar') ? 'บาร์' : (activeTab === 'other' ? 'อื่นๆ' : 'ครัว');
+                        let footerTableTitle = isPickupOrder ? `PICKUP #${queueNo}` : `โต๊ะ ${booking.tables_layout?.table_name || 'WALK-IN'}`;
+                        if (isLineman) {
+                            footerTableTitle = `LINE MAN #${queueNo}`;
+                        } else if (!isPickupOrder) {
+                            if (transfer.isMergedSource) {
+                                footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (➔ ${transfer.mergedToTable})`;
+                            } else if (transfer.isMergedTarget) {
+                                footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (+${transfer.mergedFromTables.join(',')})`;
+                            } else if (transfer.isMoved) {
+                                footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (ย้ายจาก ${transfer.movedFromTable})`;
+                            }
+                        }
+                        const orderPlacedDateObj = new Date(orderPlacedAtRaw);
+                        const timeOnlyStr = orderPlacedDateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                        const paxCount = booking.pax || booking.guest_count || 1;
+
+                        return `
+                            <div class="kitchen-footer-block">
+                                <div class="kitchen-footer-table">${footerTableTitle}</div>
+                                <div class="kitchen-footer-sub">[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น | ${paxCount} ท่าน</div>
+                            </div>
+                        `;
+                    })()}
 
                     <script>
                         window.onload = function() { window.print(); }
@@ -1145,8 +1200,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const remarkLower = (booking.staff_remark || '').toLowerCase()
     const noteLower = (booking.customer_note || '').toLowerCase()
     const sourceLower = (booking.source || '').toLowerCase()
-    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url
-    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr')
+    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || remarkLower.includes('line man') || noteLower.includes('lineman') || (booking.customer_name || '').toLowerCase().includes('line man')
+    const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url || isLineman
+    const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr') || isLineman
     
     const transfer = parseTableTransferInfo(booking);
     const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
@@ -1567,8 +1623,40 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             );
                         })()}
 
-                        {/* SHOP FOOTER */}
-                        {!isKitchenTab && (
+                        {/* FOOTER: KITCHEN / BAR TICKET RAIL FOOTER STUB vs SHOP RECEIPT FOOTER */}
+                        {isKitchenTab ? (
+                            (() => {
+                                const itemsForThisTab = selectItemsForTab(booking.order_items || [], activeTab, printerConfig);
+                                const totalItemsCount = itemsForThisTab.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+                                const slipLabel = (activeTab === 'bar') ? 'บาร์' : (activeTab === 'other' ? 'อื่นๆ' : 'ครัว');
+                                let footerTableTitle = isPickupOrder ? `PICKUP #${queueNo}` : `โต๊ะ ${booking.tables_layout?.table_name || 'WALK-IN'}`;
+                                if (isLineman) {
+                                    footerTableTitle = `LINE MAN #${queueNo}`;
+                                } else if (!isPickupOrder) {
+                                    if (transfer.isMergedSource) {
+                                        footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (➔ ${transfer.mergedToTable})`;
+                                    } else if (transfer.isMergedTarget) {
+                                        footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (+${transfer.mergedFromTables.join(',')})`;
+                                    } else if (transfer.isMoved) {
+                                        footerTableTitle = `โต๊ะ ${booking.tables_layout?.table_name || ''} (ย้ายจาก ${transfer.movedFromTable})`;
+                                    }
+                                }
+                                const orderPlacedDateObj = new Date(orderPlacedAtRaw);
+                                const timeOnlyStr = orderPlacedDateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                                const paxCount = booking.pax || booking.guest_count || 1;
+
+                                return (
+                                    <div className="border-t-2 border-b-2 border-[oklch(18%_0.012_28)] bg-[oklch(96%_0.008_28)] p-3 text-center rounded-sm space-y-1 mt-2">
+                                        <div className="text-xl font-black text-[oklch(18%_0.012_28)] tracking-tight leading-tight uppercase font-mono">
+                                            {footerTableTitle}
+                                        </div>
+                                        <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                            [ {slipLabel} ] {timeOnlyStr} | {totalItemsCount} ชิ้น | {paxCount} ท่าน
+                                        </div>
+                                    </div>
+                                );
+                            })()
+                        ) : (
                             <div className="text-center pt-2 border-t border-[oklch(88%_0.010_28)] space-y-1">
                                 <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
                                     {receiptShopFooter || 'THANK YOU FOR YOUR VISIT // ขอบคุณที่ใช้บริการ'}

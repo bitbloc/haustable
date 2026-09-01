@@ -1385,6 +1385,37 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         encoder.feed(2)
                .cut();
     } else {
+        // Kitchen / Bar Order Slip: Prominent Table & Summary Beacon for Order Ticket Rails
+        const totalItemsCount = itemsToRender.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
+        const slipLabel = (activeTab === 'bar') ? 'บาร์' : (activeTab === 'other' ? 'อื่นๆ' : 'ครัว');
+        
+        let footerTableTitle = isPickupOrder ? `PICKUP #${queueNo}` : `โต๊ะ ${tableName}`;
+        if (isLineman) {
+            footerTableTitle = `LINE MAN #${queueNo}`;
+        } else if (!isPickupOrder) {
+            if (transfer.isMergedSource) {
+                footerTableTitle = `โต๊ะ ${tableName} (➔ ${transfer.mergedToTable})`;
+            } else if (transfer.isMergedTarget) {
+                footerTableTitle = `โต๊ะ ${tableName} (+${transfer.mergedFromTables.join(',')})`;
+            } else if (transfer.isMoved) {
+                footerTableTitle = `โต๊ะ ${tableName} (ย้ายจาก ${transfer.movedFromTable})`;
+            }
+        }
+
+        const timeOnlyStr = orderPlacedDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        const paxCount = booking.pax || booking.guest_count || 1;
+
+        encoder.align('center')
+               .line(doubleDivider)
+               .bold(true)
+               .size(1, 1)
+               .line(footerTableTitle)
+               .size(0, 0)
+               .bold(true)
+               .line(`[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น | ${paxCount} ท่าน`)
+               .bold(false)
+               .line(doubleDivider);
+
         encoder.feed(2)
                .cut();
     }

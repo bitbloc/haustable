@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData, getBookingPaymentMethod } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData } from '../printerHelper';
+import { decodeTis620 } from '../wmaParser';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
 import { calculateShiftMetrics, getBookingPaymentBreakdown } from '../shiftHelper';
@@ -85,6 +86,35 @@ describe('System Audit - Phase 2: ESC/POS Thermal Printer & Thai Graphemes Engin
         lines.forEach(line => {
             expect(getPrinterCellWidth(line)).toBeLessThanOrEqual(15);
         });
+    });
+
+    it('should include prominent table footer beacon in kitchen order slips (encodeReceiptData)', () => {
+        const dummyBooking = {
+            id: 'bk-1234',
+            short_id: '1234',
+            booking_type: 'dine_in',
+            pax: 2,
+            order_time: '2026-09-01T12:30:00.000Z',
+            tables_layout: { table_name: 'A1' },
+            order_items: [
+                {
+                    name: 'ข้าวกะเพราหมูกรอบ',
+                    quantity: 2,
+                    price_at_time: 120,
+                    destination: 'kitchen'
+                }
+            ]
+        };
+
+        const encoded = encodeReceiptData(dummyBooking, 'kitchen', 'cash');
+        expect(encoded).toBeInstanceOf(Uint8Array);
+        expect(encoded.length).toBeGreaterThan(0);
+
+        const decodedText = decodeTis620(encoded);
+        expect(decodedText).toContain('โต๊ะ A1');
+        expect(decodedText).toContain('ครัว');
+        expect(decodedText).toContain('2 ชิ้น');
+        expect(decodedText).toContain('2 ท่าน');
     });
 });
 
