@@ -45,8 +45,18 @@ export default function AdminTaxHub() {
     // Filter & Search State
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'issued' | 'cancelled'
-    const [invoiceTimeMode, setInvoiceTimeMode] = useState('month'); // 'month' | 'day' | 'all'
+    const [invoiceTimeMode, setInvoiceTimeMode] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_tax_invoice_time_mode') || 'day';
+        } catch {
+            return 'day';
+        }
+    }); // 'day' | 'month' | 'all'
     const [invoiceDateFilter, setInvoiceDateFilter] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_tax_invoice_date_filter');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -54,6 +64,10 @@ export default function AdminTaxHub() {
         return `${y}-${m}-${day}`;
     });
     const [monthFilter, setMonthFilter] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_tax_invoice_month_filter');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -75,7 +89,7 @@ export default function AdminTaxHub() {
     // Expense Modals
     const [showExpenseModal, setShowExpenseModal] = useState(false);
     const [editingExpense, setEditingExpense] = useState(null);
-    const [expensesKey, setExpensesKey] = useState(0);
+    const [lastSavedExpense, setLastSavedExpense] = useState(null);
 
     // Fetch Invoices
     const fetchInvoices = async () => {
@@ -510,22 +524,31 @@ export default function AdminTaxHub() {
                                 <div className="flex border border-[var(--color-rule)]">
                                     <button
                                         type="button"
-                                        onClick={() => setInvoiceTimeMode('day')}
-                                        className={`px-3 py-1.5 transition-colors ${invoiceTimeMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                        onClick={() => {
+                                            setInvoiceTimeMode('day');
+                                            try { localStorage.setItem('onhaus_tax_invoice_time_mode', 'day'); } catch {}
+                                        }}
+                                        className={`px-3 py-1.5 transition-colors cursor-pointer ${invoiceTimeMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
                                         รายวัน
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setInvoiceTimeMode('month')}
-                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${invoiceTimeMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                        onClick={() => {
+                                            setInvoiceTimeMode('month');
+                                            try { localStorage.setItem('onhaus_tax_invoice_time_mode', 'month'); } catch {}
+                                        }}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] cursor-pointer ${invoiceTimeMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
                                         รายเดือน
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setInvoiceTimeMode('all')}
-                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${invoiceTimeMode === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                                        onClick={() => {
+                                            setInvoiceTimeMode('all');
+                                            try { localStorage.setItem('onhaus_tax_invoice_time_mode', 'all'); } catch {}
+                                        }}
+                                        className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] cursor-pointer ${invoiceTimeMode === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                                     >
                                         ทั้งหมด
                                     </button>
@@ -536,7 +559,10 @@ export default function AdminTaxHub() {
                                         <input
                                             type="date"
                                             value={invoiceDateFilter}
-                                            onChange={(e) => setInvoiceDateFilter(e.target.value)}
+                                            onChange={(e) => {
+                                                setInvoiceDateFilter(e.target.value);
+                                                try { localStorage.setItem('onhaus_tax_invoice_date_filter', e.target.value); } catch {}
+                                            }}
                                             className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                         />
                                         <button
@@ -546,9 +572,11 @@ export default function AdminTaxHub() {
                                                 const y = d.getFullYear();
                                                 const m = String(d.getMonth() + 1).padStart(2, '0');
                                                 const day = String(d.getDate()).padStart(2, '0');
-                                                setInvoiceDateFilter(`${y}-${m}-${day}`);
+                                                const todayStr = `${y}-${m}-${day}`;
+                                                setInvoiceDateFilter(todayStr);
+                                                try { localStorage.setItem('onhaus_tax_invoice_date_filter', todayStr); } catch {}
                                             }}
-                                            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px]"
+                                            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px] cursor-pointer"
                                         >
                                             วันนี้
                                         </button>
@@ -559,7 +587,10 @@ export default function AdminTaxHub() {
                                     <input
                                         type="month"
                                         value={monthFilter}
-                                        onChange={(e) => setMonthFilter(e.target.value)}
+                                        onChange={(e) => {
+                                            setMonthFilter(e.target.value);
+                                            try { localStorage.setItem('onhaus_tax_invoice_month_filter', e.target.value); } catch {}
+                                        }}
                                         className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                                     />
                                 )}
@@ -727,11 +758,11 @@ export default function AdminTaxHub() {
                 {/* TAB 2: STORE EXPENSES & MAKRO PURCHASES */}
                 {activeTab === 'expenses' && (
                     <ExpensesTab
-                        key={expensesKey}
                         allYearBookings={allYearBookings}
                         monthlyPosRevenue={currentMonthPosRevenue}
                         companySettings={companySettings}
                         isVatRegistered={isVatRegistered}
+                        lastSavedExpense={lastSavedExpense}
                         onOpenCreateModal={() => {
                             setEditingExpense(null);
                             setShowExpenseModal(true);
@@ -819,11 +850,11 @@ export default function AdminTaxHub() {
                         setShowExpenseModal(false);
                         setEditingExpense(null);
                     }}
-                    onSaveSuccess={() => {
+                    onSaveSuccess={(savedExpense) => {
                         setShowExpenseModal(false);
                         setEditingExpense(null);
                         setActiveTab('expenses');
-                        setExpensesKey(k => k + 1);
+                        setLastSavedExpense(savedExpense);
                     }}
                 />
             )}

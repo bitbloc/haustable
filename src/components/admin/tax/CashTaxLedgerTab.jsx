@@ -53,14 +53,28 @@ export default function CashTaxLedgerTab({
     const [loadingExpenses, setLoadingExpenses] = useState(false);
 
     // Filter & Period States
-    const [periodMode, setPeriodMode] = useState('month'); // 'month' | 'day' | 'year' | 'all'
+    const [periodMode, setPeriodMode] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_cash_ledger_period_mode') || 'day';
+        } catch {
+            return 'day';
+        }
+    }); // 'day' | 'month' | 'year' | 'all'
     const [selectedMonth, setSelectedMonth] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_cash_ledger_selected_month');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         return `${y}-${m}`;
     });
     const [selectedDate, setSelectedDate] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_cash_ledger_selected_date');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -679,25 +693,37 @@ export default function CashTaxLedgerTab({
                     {/* Period Mode Selector */}
                     <div className="flex items-center border border-[var(--color-rule)] divide-x divide-[var(--color-rule)] bg-[var(--color-paper)]">
                         <button
-                            onClick={() => setPeriodMode('day')}
+                            onClick={() => {
+                                setPeriodMode('day');
+                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'day'); } catch {}
+                            }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             รายวัน
                         </button>
                         <button
-                            onClick={() => setPeriodMode('month')}
+                            onClick={() => {
+                                setPeriodMode('month');
+                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'month'); } catch {}
+                            }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             รายเดือน (ภ.พ.30)
                         </button>
                         <button
-                            onClick={() => setPeriodMode('year')}
+                            onClick={() => {
+                                setPeriodMode('year');
+                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'year'); } catch {}
+                            }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'year' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             รายปี (ภ.ง.ด.90)
                         </button>
                         <button
-                            onClick={() => setPeriodMode('all')}
+                            onClick={() => {
+                                setPeriodMode('all');
+                                try { localStorage.setItem('onhaus_cash_ledger_period_mode', 'all'); } catch {}
+                            }}
                             className={`px-3 py-1.5 font-bold cursor-pointer transition-colors ${periodMode === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-paper)]' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             ทั้งหมด
@@ -709,7 +735,10 @@ export default function CashTaxLedgerTab({
                         <input 
                             type="date"
                             value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedDate(e.target.value);
+                                try { localStorage.setItem('onhaus_cash_ledger_selected_date', e.target.value); } catch {}
+                            }}
                             className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold focus:outline-hidden text-xs"
                         />
                     )}
@@ -717,7 +746,10 @@ export default function CashTaxLedgerTab({
                         <input 
                             type="month"
                             value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedMonth(e.target.value);
+                                try { localStorage.setItem('onhaus_cash_ledger_selected_month', e.target.value); } catch {}
+                            }}
                             className="px-2.5 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold focus:outline-hidden text-xs"
                         />
                     )}

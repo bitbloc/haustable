@@ -29,7 +29,8 @@ export default function ExpensesTab({
     allYearBookings = [],
     monthlyPosRevenue = 0,
     companySettings = {},
-    isVatRegistered = false
+    isVatRegistered = false,
+    lastSavedExpense = null
 }) {
     const [expenses, setExpenses] = useState(() => {
         try {
@@ -43,6 +44,10 @@ export default function ExpensesTab({
     const [loading, setLoading] = useState(false);
 
     const [selectedMonth, setSelectedMonth] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_tax_expense_selected_month');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -50,15 +55,33 @@ export default function ExpensesTab({
     });
 
     const [selectedDate, setSelectedDate] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_tax_expense_selected_date');
+            if (saved) return saved;
+        } catch {}
         const d = new Date();
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
     });
-    const [periodMode, setPeriodMode] = useState('month'); // 'month' | 'day' | 'all'
 
-    const [isAllPeriods, setIsAllPeriods] = useState(false);
+    const [periodMode, setPeriodMode] = useState(() => {
+        try {
+            const saved = localStorage.getItem('onhaus_tax_expense_period_mode');
+            return saved || 'day';
+        } catch {
+            return 'day';
+        }
+    }); // 'day' | 'month' | 'all'
+
+    const [isAllPeriods, setIsAllPeriods] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_tax_expense_period_mode') === 'all';
+        } catch {
+            return false;
+        }
+    });
     const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
     const [showMonthlyExporter, setShowMonthlyExporter] = useState(false);
     const [showLedgerPrintView, setShowLedgerPrintView] = useState(false);
@@ -105,6 +128,23 @@ export default function ExpensesTab({
             if (!silent) setLoading(false);
         }
     }, []);
+
+    // Instant update if lastSavedExpense arrives from ExpenseModal without needing a component remount
+    useEffect(() => {
+        if (lastSavedExpense) {
+            setExpenses(prev => {
+                const idx = prev.findIndex(e => e.id === lastSavedExpense.id);
+                if (idx >= 0) {
+                    const next = [...prev];
+                    next[idx] = lastSavedExpense;
+                    return next;
+                } else {
+                    return [lastSavedExpense, ...prev];
+                }
+            });
+            loadExpenses(true);
+        }
+    }, [lastSavedExpense, loadExpenses]);
 
     useEffect(() => {
         loadExpenses(false);
@@ -400,7 +440,7 @@ export default function ExpensesTab({
                 {/* Major Categories Spread (8 Cols) */}
                 <div className="md:col-span-8 p-4 sm:p-5 space-y-3 bg-[var(--color-paper-2)]">
                     <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--color-neutral)] block border-b border-[var(--color-rule)] pb-2">
-                        EXPENDITURE BY CATEGORY // {isAllPeriods ? 'ALL TIME' : selectedMonth}
+                        EXPENDITURE BY CATEGORY // {isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth)}
                     </span>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
                         {EXPENSE_CATEGORIES.map(cat => {
@@ -457,9 +497,10 @@ export default function ExpensesTab({
                             onClick={() => {
                                 setIsAllPeriods(false);
                                 setPeriodMode('day');
+                                try { localStorage.setItem('onhaus_tax_expense_period_mode', 'day'); } catch {}
                                 setShowOnlyDuplicates(false);
                             }}
-                            className={`px-3 py-1.5 transition-colors ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`px-3 py-1.5 transition-colors cursor-pointer ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'day' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             รายวัน (DAY)
                         </button>
@@ -468,9 +509,10 @@ export default function ExpensesTab({
                             onClick={() => {
                                 setIsAllPeriods(false);
                                 setPeriodMode('month');
+                                try { localStorage.setItem('onhaus_tax_expense_period_mode', 'month'); } catch {}
                                 setShowOnlyDuplicates(false);
                             }}
-                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] cursor-pointer ${!isAllPeriods && !showOnlyDuplicates && periodMode === 'month' ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             รายเดือน (MONTH)
                         </button>
@@ -478,9 +520,11 @@ export default function ExpensesTab({
                             type="button"
                             onClick={() => {
                                 setIsAllPeriods(true);
+                                setPeriodMode('all');
+                                try { localStorage.setItem('onhaus_tax_expense_period_mode', 'all'); } catch {}
                                 setShowOnlyDuplicates(false);
                             }}
-                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] ${isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] cursor-pointer ${isAllPeriods && !showOnlyDuplicates ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-bold' : 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             ทั้งหมด ({expenses.length})
                         </button>
@@ -488,7 +532,7 @@ export default function ExpensesTab({
                             <button
                                 type="button"
                                 onClick={() => setShowOnlyDuplicates(true)}
-                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 ${showOnlyDuplicates ? 'bg-amber-600 text-white font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
+                                className={`px-3 py-1.5 transition-colors border-l border-[var(--color-rule)] flex items-center gap-1 cursor-pointer ${showOnlyDuplicates ? 'bg-amber-600 text-white font-bold' : 'bg-amber-100/70 text-amber-900 hover:bg-amber-200'}`}
                             >
                                 <AlertTriangle size={11} />
                                 <span>DUPLICATES ({duplicateIds.size})</span>
@@ -501,7 +545,10 @@ export default function ExpensesTab({
                             <input
                                 type="date"
                                 value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
+                                onChange={(e) => {
+                                    setSelectedDate(e.target.value);
+                                    try { localStorage.setItem('onhaus_tax_expense_selected_date', e.target.value); } catch {}
+                                }}
                                 className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                             />
                             <button
@@ -511,9 +558,11 @@ export default function ExpensesTab({
                                     const y = d.getFullYear();
                                     const m = String(d.getMonth() + 1).padStart(2, '0');
                                     const day = String(d.getDate()).padStart(2, '0');
-                                    setSelectedDate(`${y}-${m}-${day}`);
+                                    const todayStr = `${y}-${m}-${day}`;
+                                    setSelectedDate(todayStr);
+                                    try { localStorage.setItem('onhaus_tax_expense_selected_date', todayStr); } catch {}
                                 }}
-                                className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px]"
+                                className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] font-bold text-[11px] cursor-pointer"
                             >
                                 วันนี้
                             </button>
@@ -524,7 +573,10 @@ export default function ExpensesTab({
                         <input
                             type="month"
                             value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            onChange={(e) => {
+                                setSelectedMonth(e.target.value);
+                                try { localStorage.setItem('onhaus_tax_expense_selected_month', e.target.value); } catch {}
+                            }}
                             className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-bold text-xs focus:border-[var(--color-ink)] focus:outline-none"
                         />
                     )}
@@ -603,11 +655,15 @@ export default function ExpensesTab({
             {filteredExpenses.length === 0 && expenses.length > 0 && !isAllPeriods && !showOnlyDuplicates && (
                 <div className="p-3 bg-amber-50 border border-amber-200 text-amber-900 font-mono text-xs flex items-center justify-between">
                     <span>
-                        ⚠️ ไม่พบรายการในงวด [{selectedMonth}] แต่พบ <strong>{expenses.length} รายการในงวดอื่น</strong>
+                        ⚠️ ไม่พบรายการในงวด [{periodMode === 'day' ? selectedDate : selectedMonth}] แต่พบ <strong>{expenses.length} รายการในงวดอื่น</strong>
                     </span>
                     <button
                         type="button"
-                        onClick={() => setIsAllPeriods(true)}
+                        onClick={() => {
+                            setIsAllPeriods(true);
+                            setPeriodMode('all');
+                            try { localStorage.setItem('onhaus_tax_expense_period_mode', 'all'); } catch {}
+                        }}
                         className="px-3 py-1 bg-amber-900 text-white font-bold rounded text-[11px] cursor-pointer hover:bg-black"
                     >
                         ดูรายการทั้งหมด (VIEW ALL) &rarr;
@@ -634,7 +690,7 @@ export default function ExpensesTab({
                             {filteredExpenses.length === 0 ? (
                                 <tr>
                                     <td colSpan={7} className="p-12 text-center text-[var(--color-muted)] font-mono text-xs">
-                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${showOnlyDuplicates ? 'DUPLICATES' : (isAllPeriods ? 'ALL TIME' : selectedMonth)}]`}
+                                        {loading ? 'LOADING EXPENSE LEDGER...' : `NO EXPENSE RECORDS FOUND FOR PERIOD [${showOnlyDuplicates ? 'DUPLICATES' : (isAllPeriods ? 'ALL TIME' : (periodMode === 'day' ? selectedDate : selectedMonth))}]`}
                                     </td>
                                 </tr>
                             ) : (
