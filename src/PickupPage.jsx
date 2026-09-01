@@ -312,7 +312,7 @@ export default function PickupPage() {
                 pickup_contact_phone: contactPhone,
                 customer_note: customerNoteContent,
                 staff_remark: isAutoVerified 
-                    ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${slipVerifyResult?.bankName || ''})`
+                    ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
                     : '[ONLINE_PICKUP] สั่งรับกลับ',
                 promotion_code_id: appliedPromo?.id || null, 
                 discount_amount: appliedPromo?.discountAmount || 0,
@@ -752,8 +752,8 @@ export default function PickupPage() {
                                                     <span>สลิปผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
                                                 </div>
                                                 <div className="text-[11px] text-emerald-900/90 pl-5 space-y-0.5">
-                                                    <p>ผู้โอน: <strong>{slipVerifyResult.senderName}</strong></p>
-                                                    <p>ยอดโอน: <strong>฿{slipVerifyResult.amountInSlip}.-</strong> ({slipVerifyResult.bankName})</p>
+                                                    <p>ผู้โอน: <strong>{typeof slipVerifyResult.senderName === 'object' ? (slipVerifyResult.senderName?.th || slipVerifyResult.senderName?.en || 'ไม่ระบุ') : (slipVerifyResult.senderName || 'ไม่ระบุ')}</strong></p>
+                                                    <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')})</p>
                                                     {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
                                                 </div>
                                             </div>

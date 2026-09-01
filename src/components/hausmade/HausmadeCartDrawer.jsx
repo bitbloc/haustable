@@ -278,7 +278,7 @@ export default function HausmadeCartDrawer({
             promotion_code_id: appliedPromo?.id || null,
             customer_note: specialRequest ? `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}] ${specialRequest}` : `[HAUSMADE ${hasPreOrderInCart ? 'PRE-ORDER ' : ''}${fulfilmentMode.toUpperCase()}]`,
             staff_remark: isAutoVerified
-                ? `[HAUSMADE] สั่งสินค้า (ตรวจสลิป Auto EasySlip ✓ ${slipVerifyResult?.bankName || ''})`
+                ? `[HAUSMADE] สั่งสินค้า (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
                 : '[HAUSMADE] สั่งสินค้า',
             order_type: fulfilmentMode === 'shipping' ? 'hausmade_shipping' : 'hausmade_pickup',
             booking_type: 'hausmade',
@@ -1075,8 +1075,8 @@ export default function HausmadeCartDrawer({
                                                         <span>สลิปผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
                                                     </div>
                                                     <div className="text-[10px] text-emerald-900/90 pl-5 space-y-0.5">
-                                                        <p>ผู้โอน: <strong>{slipVerifyResult.senderName}</strong></p>
-                                                        <p>ยอดโอน: <strong>฿{slipVerifyResult.amountInSlip}.-</strong> ({slipVerifyResult.bankName})</p>
+                                                        <p>ผู้โอน: <strong>{typeof slipVerifyResult.senderName === 'object' ? (slipVerifyResult.senderName?.th || slipVerifyResult.senderName?.en || 'ไม่ระบุ') : (slipVerifyResult.senderName || 'ไม่ระบุ')}</strong></p>
+                                                        <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')})</p>
                                                         {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
                                                     </div>
                                                 </div>

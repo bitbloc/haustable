@@ -69,6 +69,29 @@ function getApiEndpoint() {
 }
 
 /**
+ * Ensures all fields returned in slip result are primitive strings/numbers (never {th, en} objects)
+ */
+function sanitizeSlipResult(data) {
+    if (!data) return data
+    const extractText = (val, fallback = '') => {
+        if (!val) return fallback
+        if (typeof val === 'string') return val
+        if (typeof val === 'object') {
+            return val.th || val.en || Object.values(val).find(v => typeof v === 'string') || fallback
+        }
+        return String(val)
+    }
+
+    return {
+        ...data,
+        senderName: extractText(data.senderName, 'ไม่ระบุ'),
+        receiverName: extractText(data.receiverName, 'IN THE HAUS'),
+        bankName: extractText(data.bankName, 'ธนาคาร'),
+        error: data.error ? extractText(data.error) : null
+    }
+}
+
+/**
  * Main verification entrypoint for Frontend
  * Calls server-side proxy to guarantee zero CORS blocking.
  * 
@@ -127,7 +150,7 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
             if (resp.ok) {
                 const result = await resp.json()
                 if (result && result.success !== undefined) {
-                    return result
+                    return sanitizeSlipResult(result)
                 }
             }
         } catch (proxyErr) {
@@ -148,7 +171,7 @@ export async function verifyPaymentSlip({ file, base64: rawBase64, matchAmount =
             })
 
             if (!error && data && data.success !== undefined) {
-                return data
+                return sanitizeSlipResult(data)
             }
         } catch (edgeErr) {
             console.warn('[verifyPaymentSlip] Supabase Edge Function error:', edgeErr)

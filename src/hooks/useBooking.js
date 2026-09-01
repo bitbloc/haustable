@@ -171,7 +171,7 @@ export function useBooking() {
                 pickup_contact_phone: finalContactPhone,
                 customer_note: customerNoteContent,
                 staff_remark: isAutoVerified
-                    ? `[ONLINE] จองโต๊ะล่วงหน้า (ตรวจมัดจำ Auto EasySlip ✓ ${overrides.slipVerifyResult?.bankName || ''})`
+                    ? `[ONLINE] จองโต๊ะล่วงหน้า (ตรวจมัดจำ Auto EasySlip ✓ ${typeof overrides.slipVerifyResult?.bankName === 'object' ? (overrides.slipVerifyResult?.bankName?.th || overrides.slipVerifyResult?.bankName?.en || '') : (overrides.slipVerifyResult?.bankName || '')})`
                     : '[ONLINE] จองโต๊ะล่วงหน้า',
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 

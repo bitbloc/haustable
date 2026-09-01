@@ -183,17 +183,42 @@ Deno.serve(async (req) => {
     }
 
     const data = verificationResult.data
-    const rawSlip = data.rawSlip || {}
+    const rawSlip = data.rawSlip || data
 
     // Extract standardized information
     let transRef = rawSlip.transRef || rawSlip.transactionId || null
     let transferDate = rawSlip.date || rawSlip.dateTime || new Date().toISOString()
-    let slipAmount = Number(data.amountInSlip || rawSlip.amount || 0)
-    let senderName = rawSlip.sender?.account?.name || rawSlip.sender?.name || rawSlip.sender?.accountName || 'ไม่ระบุ'
-    let receiverName = rawSlip.receiver?.account?.name || rawSlip.receiver?.name || rawSlip.receiver?.accountName || 'IN THE HAUS'
+    
+    let slipAmount = 0
+    if (typeof data.amountInSlip === 'number') slipAmount = data.amountInSlip
+    else if (typeof rawSlip.amount === 'number') slipAmount = rawSlip.amount
+    else if (typeof rawSlip.amount?.amount === 'number') slipAmount = rawSlip.amount.amount
+    else if (typeof rawSlip.amount?.local?.amount === 'number') slipAmount = rawSlip.amount.local.amount
+    else slipAmount = Number(data.amountInSlip || rawSlip.amount || 0)
+
+    const extractText = (val: any, fallback = ''): string => {
+      if (!val) return fallback
+      if (typeof val === 'string') return val
+      if (typeof val === 'object') {
+        return val.th || val.en || Object.values(val).find(v => typeof v === 'string') || fallback
+      }
+      return String(val)
+    }
+
+    let senderName = extractText(
+      rawSlip.sender?.account?.name || rawSlip.sender?.name || rawSlip.sender?.accountName || data.senderName,
+      'ไม่ระบุ'
+    )
+    let receiverName = extractText(
+      rawSlip.receiver?.account?.name || rawSlip.receiver?.name || rawSlip.receiver?.accountName || data.receiverName,
+      'IN THE HAUS'
+    )
     let bankName = activeProvider === 'truewallet' 
       ? 'TrueMoney Wallet' 
-      : (rawSlip.sender?.bank?.nameTh || rawSlip.sender?.bank?.shortCode || 'ธนาคาร')
+      : extractText(
+          rawSlip.sender?.bank?.name || rawSlip.sender?.bank?.nameTh || rawSlip.sender?.bank?.short || rawSlip.sender?.bank?.shortCode,
+          'ธนาคาร'
+        )
 
     // Amount match validation:
     // EasySlip returns isAmountMatched. We also double check if matchAmount is specified

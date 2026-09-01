@@ -123,14 +123,43 @@ export default async function handler(req, res) {
         }
 
         const data = result.data.data || {}
-        const rawSlip = data.rawSlip || {}
+        const rawSlip = data.rawSlip || data
         const transRef = rawSlip.transRef || rawSlip.transactionId || data.transRef || null
-        const slipAmount = Number(data.amountInSlip || rawSlip.amount || 0)
-        const senderName = rawSlip.sender?.account?.name || rawSlip.sender?.name || rawSlip.sender?.accountName || 'ไม่ระบุ'
-        const receiverName = rawSlip.receiver?.account?.name || rawSlip.receiver?.name || rawSlip.receiver?.accountName || 'IN THE HAUS'
-        const bankName = activeProvider === 'truewallet' 
-            ? 'TrueMoney Wallet' 
-            : (rawSlip.sender?.bank?.nameTh || rawSlip.sender?.bank?.shortCode || 'ธนาคาร')
+
+        // Safe extraction of amount
+        let slipAmount = 0
+        if (typeof data.amountInSlip === 'number') slipAmount = data.amountInSlip
+        else if (typeof rawSlip.amount === 'number') slipAmount = rawSlip.amount
+        else if (typeof rawSlip.amount?.amount === 'number') slipAmount = rawSlip.amount.amount
+        else if (typeof rawSlip.amount?.local?.amount === 'number') slipAmount = rawSlip.amount.local.amount
+        else slipAmount = Number(data.amountInSlip || rawSlip.amount || 0)
+
+        // Helper to extract bilingual strings safely from { th, en } objects
+        const extractText = (val, fallback = '') => {
+            if (!val) return fallback
+            if (typeof val === 'string') return val
+            if (typeof val === 'object') {
+                return val.th || val.en || Object.values(val).find(v => typeof v === 'string') || fallback
+            }
+            return String(val)
+        }
+
+        const senderName = extractText(
+            rawSlip.sender?.account?.name || rawSlip.sender?.name || rawSlip.sender?.accountName || data.senderName,
+            'ไม่ระบุ'
+        )
+
+        const receiverName = extractText(
+            rawSlip.receiver?.account?.name || rawSlip.receiver?.name || rawSlip.receiver?.accountName || data.receiverName,
+            'IN THE HAUS'
+        )
+
+        const bankName = activeProvider === 'truewallet'
+            ? 'TrueMoney Wallet'
+            : extractText(
+                rawSlip.sender?.bank?.name || rawSlip.sender?.bank?.nameTh || rawSlip.sender?.bank?.short || rawSlip.sender?.bank?.shortCode,
+                'ธนาคาร'
+            )
 
         let isAmountMatched = data.isAmountMatched ?? true
         if (matchAmount && Number(matchAmount) > 0) {
@@ -158,7 +187,7 @@ export default async function handler(req, res) {
         return res.status(500).json({
             success: false,
             verified: false,
-            error: 'เกิดข้อผิดพลาดในการตรวจสอบสลิปผ่านเซิร์ฟเวอร์: ' + err.message
+            error: 'เกิดข้อผิดพลาดในการตรวจสอบสลิปผ่านเซิร์ฟเวอร์: ' + (err.message || String(err))
         })
     }
 }
