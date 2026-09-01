@@ -25,6 +25,17 @@ export default function StepTableSelection() {
     const [availabilityTooltip, setAvailabilityTooltip] = useState(null)
     const [lockedTableIds, setLockedTableIds] = useState([]) // From Presence
     const channelRef = useRef(null)
+    const lastTrackedRef = useRef(null) // Prevents duplicate .track() calls
+    const selectedTableRef = useRef(selectedTable)
+    const dateRef = useRef(date)
+    const timeRef = useRef(time)
+    
+    // Keep refs up to date
+    useEffect(() => {
+        selectedTableRef.current = selectedTable
+        dateRef.current = date
+        timeRef.current = time
+    }, [selectedTable, date, time])
     
     // Unique ID for this browser session's presence
     const sessionId = useMemo(() => crypto.randomUUID(), [])
@@ -50,16 +61,19 @@ export default function StepTableSelection() {
             .on('presence', { event: 'sync' }, () => {
                 const state = presenceChannel.presenceState()
                 const lockedIds = []
+                const currentDate = dateRef.current
+                const currentTime = timeRef.current
+
                 for (const key in state) {
                     if (key !== sessionId) { // Don't lock our own selected table
                         state[key].forEach(presence => {
-                            if (presence.table_id && presence.date === date) {
+                            if (presence.table_id && presence.date === currentDate) {
                                 // If same date, check if time slot overlaps (within 2-hour window)
-                                if (!presence.time || !time) {
+                                if (!presence.time || !currentTime) {
                                     lockedIds.push(presence.table_id)
                                 } else {
                                     const [h1, m1] = String(presence.time).split(':').map(Number)
-                                    const [h2, m2] = String(time).split(':').map(Number)
+                                    const [h2, m2] = String(currentTime).split(':').map(Number)
                                     const t1 = (h1 || 0) * 60 + (m1 || 0)
                                     const t2 = (h2 || 0) * 60 + (m2 || 0)
                                     if (Math.abs(t1 - t2) < 120) {
@@ -70,34 +84,81 @@ export default function StepTableSelection() {
                         })
                     }
                 }
-                setLockedTableIds([...new Set(lockedIds)])
+
+                const sortedNew = [...new Set(lockedIds)].sort()
+                setLockedTableIds(prev => {
+                    if (prev.length === sortedNew.length && prev.every((val, idx) => val === sortedNew[idx])) {
+                        return prev; // Prevent unnecessary re-render if identical
+                    }
+                    return sortedNew;
+                })
             })
-            .subscribe()
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED' && selectedTableRef.current) {
+                    try {
+                        await presenceChannel.track({
+                            table_id: selectedTableRef.current.id,
+                            date: dateRef.current,
+                            time: timeRef.current
+                        })
+                        lastTrackedRef.current = selectedTableRef.current.id
+                    } catch (e) {
+                        console.warn('Presence initial track warning:', e)
+                    }
+                }
+            })
 
         channelRef.current = presenceChannel
 
         return () => {
+            if (lastTrackedRef.current && channelRef.current) {
+                try {
+                    channelRef.current.untrack()
+                } catch (e) {}
+                lastTrackedRef.current = null
+            }
             supabase.removeChannel(dbChannel)
             supabase.removeChannel(presenceChannel)
+            channelRef.current = null
         }
     }, [date, time, sessionId]) 
 
-    // Update Presence & 5-minute Auto-Release Timer when selectedTable changes
+    // Update Presence with 400ms Debounce & 5-minute Auto-Release Timer
     useEffect(() => {
-        let idleTimer = null;
-        if (channelRef.current && channelRef.current.state === 'joined') {
-            if (selectedTable) {
-                channelRef.current.track({ table_id: selectedTable.id, date, time })
-                
-                // 5-minute (300,000ms) Auto-Release Timeout
-                idleTimer = setTimeout(() => {
-                    selectTable(null)
-                }, 5 * 60 * 1000)
-            } else {
-                channelRef.current.untrack()
-            }
+        let idleTimer = null
+        let debounceTimer = null
+
+        const currentSelectedId = selectedTable?.id || null
+
+        // Only send presence packet if the selection actually changed
+        if (currentSelectedId !== lastTrackedRef.current) {
+            debounceTimer = setTimeout(async () => {
+                const channel = channelRef.current
+                if (!channel || channel.state !== 'joined') return
+
+                try {
+                    if (selectedTable) {
+                        await channel.track({ table_id: selectedTable.id, date, time })
+                        lastTrackedRef.current = selectedTable.id
+                    } else if (lastTrackedRef.current) {
+                        await channel.untrack()
+                        lastTrackedRef.current = null
+                    }
+                } catch (err) {
+                    console.warn('Presence track/untrack rate guard:', err)
+                }
+            }, 400) // 400ms Debounce prevents rate limit spikes
         }
+
+        if (selectedTable) {
+            // 5-minute (300,000ms) Auto-Release Timeout
+            idleTimer = setTimeout(() => {
+                selectTable(null)
+            }, 5 * 60 * 1000)
+        }
+
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             if (idleTimer) clearTimeout(idleTimer)
         }
     }, [selectedTable, date, time])
