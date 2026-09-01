@@ -52,6 +52,29 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
 
     const isMobile = isMobileBrowser();
 
+    // Responsive scaling for mobile preview so 794px A4 sheet fits iPhone screen perfectly
+    const [previewScale, setPreviewScale] = useState(1);
+    const [isSmallScreen, setIsSmallScreen] = useState(false);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (typeof window !== 'undefined') {
+                const screenW = window.innerWidth;
+                if (screenW < 820) {
+                    setIsSmallScreen(true);
+                    const availWidth = Math.max(300, screenW - 20);
+                    setPreviewScale(availWidth / 794);
+                } else {
+                    setIsSmallScreen(false);
+                    setPreviewScale(1);
+                }
+            }
+        };
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     if (!invoice) return null;
 
     const isVat = Boolean(invoice.doc_type === 'tax_invoice' || (invoice.vat_amount && Number(invoice.vat_amount) > 0));
@@ -480,29 +503,44 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             </div>
 
             {/* Printable Document Container (Guaranteed Fixed 794px A4 Width on Mobile & Desktop) */}
-            <div className="w-full overflow-x-auto pb-8 flex justify-center print:overflow-visible print:p-0 print:m-0 print:w-full">
+            <div className="w-full flex flex-col items-center justify-start pb-8 print:p-0 print:m-0 print:w-full">
                 <div 
-                    id="tax-invoice-printable-container"
-                    ref={printableSheetRef}
-                    style={{ width: '794px', minWidth: '794px' }}
-                    className="space-y-4 print:space-y-0 mx-auto print:w-full print:min-w-0"
+                    style={{
+                        width: isSmallScreen ? `${Math.round(794 * previewScale)}px` : '794px',
+                        height: isSmallScreen ? `${Math.round((1058 * pages.length + (pages.length - 1) * 16) * previewScale)}px` : 'auto',
+                        overflow: 'visible',
+                        position: 'relative'
+                    }}
+                    className="print:w-full print:h-auto print:static mx-auto"
                 >
-                    {pages.map((page, pIdx) => {
-                        // Calculate starting index for item numbering
-                        const itemStartIndex = pages.slice(0, pIdx).reduce((acc, p) => acc + p.items.length, 0);
+                    <div 
+                        id="tax-invoice-printable-container"
+                        ref={printableSheetRef}
+                        style={{ 
+                            width: '794px', 
+                            minWidth: '794px',
+                            maxWidth: '794px',
+                            transform: isSmallScreen ? `scale(${previewScale})` : 'none',
+                            transformOrigin: 'top left'
+                        }}
+                        className="space-y-4 print:space-y-0 mx-auto print:w-full print:min-w-0 print:transform-none"
+                    >
+                        {pages.map((page, pIdx) => {
+                            // Calculate starting index for item numbering
+                            const itemStartIndex = pages.slice(0, pIdx).reduce((acc, p) => acc + p.items.length, 0);
 
-                        return (
-                            <div 
-                                key={`sheet-${pIdx}`}
-                                style={{ 
-                                    fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif",
-                                    width: '794px',
-                                    minWidth: '794px',
-                                    minHeight: '280mm',
-                                    boxSizing: 'border-box'
-                                }}
-                                className="print-page-sheet bg-white text-zinc-950 px-8 py-6 border border-zinc-300 shadow-2xl text-[10.5pt] leading-normal print:m-0 print:border-none print:shadow-none print:w-full print:min-w-0 flex flex-col justify-between"
-                            >
+                            return (
+                                <div 
+                                    key={`sheet-${pIdx}`}
+                                    style={{ 
+                                        fontFamily: "'Sarabun', 'Leelawadee', 'TH Sarabun New', system-ui, -apple-system, sans-serif",
+                                        width: '794px',
+                                        minWidth: '794px',
+                                        minHeight: '280mm',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    className="print-page-sheet bg-white text-zinc-950 px-8 py-6 border border-zinc-300 shadow-2xl text-[10.5pt] leading-normal print:m-0 print:border-none print:shadow-none print:w-full print:min-w-0 flex flex-col justify-between"
+                                >
                                 <div>
                                     {/* Header Section */}
                                     <div className="flex justify-between items-start border-b-2 border-zinc-950 pb-2.5 gap-3">

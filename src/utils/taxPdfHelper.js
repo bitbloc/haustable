@@ -65,16 +65,17 @@ export async function generateTaxDocumentPdf(element, options = {}) {
         compress: true
     });
 
-    // 5. Capture and append each page
+    // 5. Standard A4 pixel dimensions (at 96 DPI: 210mm = 794px, 297mm = 1123px)
+    const standardWidth = orientation === 'landscape' ? 1123 : 794;
+    const standardHeight = orientation === 'landscape' ? 794 : 1123;
+
+    // 6. Capture and append each page
     for (let i = 0; i < targets.length; i++) {
         if (i > 0) {
             pdf.addPage('a4', orientation);
         }
 
         const target = targets[i];
-        const targetWidth = target.offsetWidth || target.scrollWidth || initialWidth;
-        const targetHeight = target.offsetHeight || target.scrollHeight || initialHeight;
-        const aspectRatio = targetHeight / targetWidth;
 
         let imgData = null;
         try {
@@ -83,7 +84,21 @@ export async function generateTaxDocumentPdf(element, options = {}) {
                 backgroundColor: '#ffffff',
                 cacheBust: false,
                 quality: 0.98,
-                skipAutoScale: true,
+                width: standardWidth,
+                height: standardHeight,
+                canvasWidth: Math.round(standardWidth * adaptivePixelRatio),
+                canvasHeight: Math.round(standardHeight * adaptivePixelRatio),
+                style: {
+                    width: `${standardWidth}px`,
+                    minWidth: `${standardWidth}px`,
+                    maxWidth: `${standardWidth}px`,
+                    height: `${standardHeight}px`,
+                    minHeight: `${standardHeight}px`,
+                    maxHeight: `${standardHeight}px`,
+                    margin: '0',
+                    transform: 'none',
+                    boxSizing: 'border-box'
+                },
                 filter: (node) => {
                     if (node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print'))) {
                         return false;
@@ -93,46 +108,37 @@ export async function generateTaxDocumentPdf(element, options = {}) {
             });
         } catch (captureErr) {
             console.warn('First pass capture warning, retrying with fallback settings:', captureErr);
-            // Fallback retry with safe pixelRatio 1.5
+            // Fallback retry with safe pixelRatio 1.5 and standard dimensions
             imgData = await toPng(target, {
                 pixelRatio: 1.5,
                 backgroundColor: '#ffffff',
                 cacheBust: true,
+                width: standardWidth,
+                height: standardHeight,
+                style: {
+                    width: `${standardWidth}px`,
+                    minWidth: `${standardWidth}px`,
+                    maxWidth: `${standardWidth}px`,
+                    height: `${standardHeight}px`,
+                    margin: '0',
+                    transform: 'none',
+                    boxSizing: 'border-box'
+                },
                 filter: (node) => !(node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print')))
             });
         }
 
-        // Calculate rendered height in mm based on full page width (no stretching/squishing)
-        const renderedHeightMm = pdfWidth * aspectRatio;
-
-        if (renderedHeightMm <= pdfHeight) {
-            // Fits cleanly within A4 height: preserve 100% natural proportions
-            pdf.addImage(
-                imgData,
-                'PNG',
-                0,
-                0,
-                pdfWidth,
-                renderedHeightMm,
-                undefined,
-                'FAST'
-            );
-        } else {
-            // If taller than A4, scale down proportionally to fit the page without distortion
-            const scale = pdfHeight / renderedHeightMm;
-            const scaledWidthMm = pdfWidth * scale;
-            const offsetX = (pdfWidth - scaledWidthMm) / 2;
-            pdf.addImage(
-                imgData,
-                'PNG',
-                offsetX,
-                0,
-                scaledWidthMm,
-                pdfHeight,
-                undefined,
-                'FAST'
-            );
-        }
+        // Add to PDF: fills 100% of the A4 page with exact 1:1 natural proportions (no stretching, no squishing)
+        pdf.addImage(
+            imgData,
+            'PNG',
+            0,
+            0,
+            pdfWidth,
+            pdfHeight,
+            undefined,
+            'FAST'
+        );
     }
 
     // 6. Generate Blob and File instances
