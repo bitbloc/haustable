@@ -166,18 +166,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         fetchTimeoutRef.current = setTimeout(async () => {
             try {
                 const today = new Date();
+                const startOfYesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0, 0).toISOString();
                 const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
                 const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+                const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 23, 59, 59, 999).toISOString();
 
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Fetch active pending, seated, confirmed, ready bookings for today only
+                // Fetch active pending, seated, confirmed, ready bookings from yesterday to upcoming slots
                 const { data: activeBookings } = await supabase
                     .from('bookings')
                     .select('id, table_id, status, booking_time, booking_type, staff_remark, pickup_contact_name, total_amount, profiles(display_name, nickname, phone_number)')
                     .in('status', ['pending', 'seated', 'confirmed', 'ready'])
-                    .gte('booking_time', startOfToday)
-                    .lte('booking_time', endOfToday);
+                    .gte('booking_time', startOfYesterday)
+                    .lte('booking_time', endOfTomorrow);
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
