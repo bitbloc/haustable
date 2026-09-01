@@ -1,5 +1,5 @@
 // Enhanced Service Worker for PWA (Network First for HTML & Runtime Cache for Assets)
-const CACHE_NAME = 'haus-table-v6';
+const CACHE_NAME = 'haus-table-v7';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -52,9 +52,13 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // HTML Navigation: Network First
-  // Prevents serving stale index.html which links to old JS hashes
-  if (event.request.mode === 'navigate') {
+  // HTML Navigation & Document Requests: Network First with index.html SPA Fallback
+  const isHtmlRequest = 
+    event.request.mode === 'navigate' || 
+    event.request.destination === 'document' ||
+    (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
+
+  if (isHtmlRequest) {
     event.respondWith(
       fetch(event.request)
         .then(networkResponse => {
@@ -108,10 +112,12 @@ self.addEventListener('fetch', event => {
             statusText: 'Not Found',
             headers: { 'Content-Type': 'text/plain' }
           });
-        }).catch(() => {
+        }).catch(async () => {
+          const cached = await caches.match(event.request);
+          if (cached) return cached;
           return new Response('Network error loading asset', {
-            status: 408,
-            statusText: 'Request Timeout',
+            status: 504,
+            statusText: 'Gateway Timeout',
             headers: { 'Content-Type': 'text/plain' }
           });
         });
@@ -130,7 +136,11 @@ self.addEventListener('fetch', event => {
         }
         return networkResponse;
       }).catch(() => {
-        return cachedResponse || new Response('', { status: 408, statusText: 'Request Timeout' });
+        return cachedResponse || new Response('Offline resource unavailable', {
+          status: 504,
+          statusText: 'Gateway Timeout',
+          headers: { 'Content-Type': 'text/plain' }
+        });
       });
 
       return cachedResponse || fetchPromise;

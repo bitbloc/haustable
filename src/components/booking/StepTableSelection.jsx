@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
-import { Maximize, Minimize, ZoomIn, ZoomOut, RotateCw, X, Image } from 'lucide-react'
+import { Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, X, Image as ImageIcon, Check } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
-import { supabase } from '../../lib/supabaseClient' // For direct Tooltip availability check if needed
+import { supabase } from '../../lib/supabaseClient'
 import { safeCssUrl } from '../../utils/urlHelper'
 
 export default function StepTableSelection() {
@@ -101,6 +102,26 @@ export default function StepTableSelection() {
         }
     }, [selectedTable, date, time])
 
+    // Body scroll lock & Escape key listener for fullscreen mode
+    useEffect(() => {
+        if (!isExpanded) return;
+        
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                dispatch({ type: 'TOGGLE_EXPAND' });
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isExpanded, dispatch]);
+
     // Toggle Expanded
     const toggleExpanded = () => dispatch({ type: 'TOGGLE_EXPAND' })
 
@@ -126,13 +147,15 @@ export default function StepTableSelection() {
         }
 
         let bgColor = isBooked 
-            ? (statusType === 'walk_in' ? '#F97316' : '#ef4444') 
+            ? (statusType === 'walk_in' ? 'oklch(52% 0.16 28)' : 'oklch(45% 0.18 28)') 
             : isLockedByOthers 
-                ? '#9CA3AF' // Grey for temporarily locked
-                : (isSelected ? '#000000' : (table.table_color || '#ffffff'))
+                ? 'oklch(55% 0.010 28)' // Grey for temporarily locked
+                : (isSelected ? 'oklch(18% 0.012 28)' : (table.table_color || 'oklch(97% 0.008 28)'))
             
-        let textColor = (isBooked || isSelected || isLockedByOthers || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) ? 'white' : 'black'
-        let borderColor = isSelected ? 'white' : 'transparent'
+        let textColor = (isBooked || isSelected || isLockedByOthers || ['#333333', '#7F1D1D', '#14532D', '#1E3A8A', '#581C87'].includes(bgColor)) 
+            ? 'oklch(97% 0.008 28)' 
+            : 'oklch(18% 0.012 28)'
+        let borderColor = isSelected ? 'oklch(52% 0.16 28)' : 'oklch(85% 0.012 28)'
 
         return (
             <button
@@ -144,40 +167,43 @@ export default function StepTableSelection() {
                         setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `${t('bookedTooltip')} (${statusLabel})`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else if (isLockedByOthers) {
-                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `กำลังจอง... (Someone is looking)`, loading: false })
+                        setAvailabilityTooltip({ x: e.clientX, y: e.clientY, text: `กำลังจอง... (Someone is selecting)`, loading: false })
                         setTimeout(() => setAvailabilityTooltip(null), 2000)
                     } else {
                         selectTable(table)
                     }
                 }}
                 style={baseStyle}
-                className={`transition-all duration-300 flex flex-col items-center justify-center shadow-md
-                ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'}
-                ${isBooked || isLockedByOthers ? 'opacity-90 cursor-not-allowed contrast-100' : 'hover:scale-105 active:scale-95 cursor-pointer'}
-                ${isSelected ? 'z-20 ring-4 ring-black/20 scale-105' : ''}
+                className={`transition-all duration-200 flex flex-col items-center justify-center shadow-sm select-none
+                ${table.shape === 'circle' ? 'rounded-full' : 'rounded-md'}
+                ${isBooked || isLockedByOthers ? 'opacity-85 cursor-not-allowed contrast-100' : 'hover:scale-[1.03] active:scale-95 cursor-pointer'}
+                ${isSelected ? 'z-20 ring-2 ring-[oklch(52%_0.16_28)] scale-[1.03]' : ''}
                 ${isLockedByOthers ? 'animate-pulse' : ''}
                 `}
             >
-                <div className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-lg'} `} style={{ backgroundColor: bgColor, border: `2px solid ${borderColor} ` }} />
+                <div 
+                    className={`absolute inset-0 w-full h-full ${table.shape === 'circle' ? 'rounded-full' : 'rounded-md'}`} 
+                    style={{ backgroundColor: bgColor, border: `1.5px solid ${borderColor}` }} 
+                />
                 <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
                     {isBooked ? (
                         <>
-                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                            <span className="font-mono font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
                                 {statusType === 'walk_in' ? 'WALK-IN' : t('full')}
                             </span>
-                            <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
+                            <span className="font-mono text-[8px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : isLockedByOthers ? (
                         <>
-                            <span className="font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                            <span className="font-mono font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
                                 LOCK
                             </span>
-                            <span className="text-[8px] opacity-75" style={{ color: textColor }}>{table.table_name}</span>
+                            <span className="font-mono text-[8px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : (
                         <>
                             <span className="font-bold text-xs sm:text-sm truncate" style={{ color: textColor }}>{table.table_name}</span>
-                            <span className="text-[8px] sm:text-[10px] opacity-75" style={{ color: textColor }}>{table.capacity}p</span>
+                            <span className="font-mono text-[8px] sm:text-[9px] opacity-75" style={{ color: textColor }}>{table.capacity}p</span>
                         </>
                     )}
                 </div>
@@ -185,47 +211,230 @@ export default function StepTableSelection() {
         )
     }
 
+    // Shared Floorplan Canvas Component
+    const renderFloorplanCanvas = (inFullscreen = false) => (
+        <div className="relative w-full h-full flex flex-col overflow-hidden bg-[oklch(94%_0.010_28)]">
+            <TransformWrapper initialScale={0.88} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
+                {({ zoomIn, zoomOut, resetTransform }) => (
+                    <>
+                        {/* Zoom Controls Panel */}
+                        <div className={`absolute ${inFullscreen ? 'bottom-8 right-6' : 'bottom-20 right-4'} z-30 flex flex-col gap-1.5 pointer-events-auto bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-lg p-1 rounded-lg`}>
+                            <button 
+                                onClick={() => zoomIn()} 
+                                title="Zoom In"
+                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded"
+                            >
+                                <ZoomIn size={18} />
+                            </button>
+                            <button 
+                                onClick={() => zoomOut()} 
+                                title="Zoom Out"
+                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded"
+                            >
+                                <ZoomOut size={18} />
+                            </button>
+                            <button 
+                                onClick={() => resetTransform()} 
+                                title="Reset View"
+                                className="p-2 hover:bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] active:scale-95 transition-all rounded border-t border-[oklch(85%_0.012_28)]"
+                            >
+                                <RotateCcw size={16} />
+                            </button>
+                        </div>
+
+                        {/* Interactive Zoom/Pan Component */}
+                        <TransformComponent 
+                            wrapperClass="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing" 
+                            contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <div
+                                className="relative w-[1000px] aspect-video bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-sm origin-center"
+                                style={{
+                                    backgroundImage: safeCssUrl(settings.floorplanUrl),
+                                    backgroundSize: '100% 100%',
+                                    backgroundRepeat: 'no-repeat',
+                                }}
+                                onClick={() => selectTable(null)}
+                            >
+                                {tables.map(table => renderTable(table))}
+                            </div>
+                        </TransformComponent>
+                    </>
+                )}
+            </TransformWrapper>
+
+            {/* Selected Table Floating Card */}
+            <AnimatePresence>
+                {selectedTable && (
+                    <motion.div
+                        initial={{ y: 60, opacity: 0 }} 
+                        animate={{ y: 0, opacity: 1 }} 
+                        exit={{ y: 60, opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                        className={`absolute ${inFullscreen ? 'bottom-6 left-6 right-6 sm:left-auto sm:right-6 sm:w-96' : 'bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:w-80'} bg-[oklch(97%_0.008_28)] p-4 border border-[oklch(85%_0.012_28)] shadow-2xl z-40 rounded-xl`}
+                    >
+                        <div className="flex gap-3.5">
+                            <div
+                                className="w-18 h-18 rounded-lg bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] overflow-hidden cursor-zoom-in shrink-0 relative group"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (selectedTable.image_url) setPreviewImage(selectedTable.image_url);
+                                }}
+                            >
+                                {selectedTable.image_url ? (
+                                    <>
+                                        <img src={selectedTable.image_url} className="w-full h-full object-cover" alt={selectedTable.table_name} />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <Maximize2 size={16} className="text-white opacity-0 group-hover:opacity-100" />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[oklch(55%_0.010_28)]">
+                                        <ImageIcon size={20} />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <h3 className="font-bold text-[15px] text-[oklch(18%_0.012_28)] truncate pr-2">
+                                            {selectedTable.table_name}
+                                        </h3>
+                                        <p className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                                            {selectedTable.capacity} {t('seats')} ({selectedTable.zone || 'Indoor'})
+                                        </p>
+                                    </div>
+                                    <button 
+                                        onClick={() => selectTable(null)} 
+                                        className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
+                                <button 
+                                    onClick={nextStep} 
+                                    className="w-full mt-2 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] py-2 px-3 rounded-lg font-mono text-[11px] font-bold shadow-md transition-all flex items-center justify-center gap-1.5"
+                                >
+                                    <span>[ {t('select')} // CONFIRM TABLE ➔ ]</span>
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+
     return (
         <div className="h-full flex flex-col relative">
             {/* Top Controls Overlay */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
-                <div className="bg-paper p-4 rounded-rams border border-ink pointer-events-auto">
-                    <h2 className="text-lg font-bold text-ink leading-none">{t('selectTable')}</h2>
-                    <div className="flex items-center gap-2 mt-2 text-xs sm:text-sm text-subInk font-medium whitespace-nowrap">
-                        <span className="bg-paper border border-[var(--color-rule)] px-2 py-1 rounded-rams">{date}</span>
-                        <span className="bg-paper border border-[var(--color-rule)] px-2 py-1 rounded-rams">{time}</span>
-                        <span className="bg-ink text-paper px-2 py-1 rounded-rams">{pax} {t('guests')}</span>
+            <div className="mb-3 flex justify-between items-start gap-3 select-none">
+                <div className="bg-[oklch(97%_0.008_28)] p-3 sm:p-4 border border-[oklch(85%_0.012_28)] shadow-sm rounded-xl flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] leading-tight">
+                            {t('selectTable')}
+                        </h2>
+                        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] uppercase rounded">
+                            FLOORPLAN
+                        </span>
                     </div>
-                    {/* Legend */}
-                    <div className="flex justify-center gap-6 mt-4 mb-2">
-                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-[#4CAF50] rounded-none"></div>{t('available')}</div>
-                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-brand rounded-none border border-ink"></div>{t('selected')}</div>
-                        <div className="flex items-center gap-2 text-xs font-mono text-subInk font-bold"><div className="w-3 h-3 bg-[var(--color-rule)] rounded-none"></div>{t('unavailable')}</div>
+
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-2 text-xs text-[oklch(42%_0.010_28)] font-mono font-bold whitespace-nowrap overflow-x-auto pb-0.5">
+                        <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{date}</span>
+                        <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{time}</span>
+                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                    </div>
+
+                    {/* Status Legend */}
+                    <div className="flex items-center gap-4 sm:gap-6 mt-3 pt-2.5 border-t border-[oklch(85%_0.012_28)]">
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                            <span className="w-2.5 h-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm" />
+                            <span>{t('available')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                            <span className="w-2.5 h-2.5 bg-[oklch(18%_0.012_28)] rounded-sm" />
+                            <span>{t('selected')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                            <span className="w-2.5 h-2.5 bg-[oklch(45%_0.18_28)] rounded-sm" />
+                            <span>{t('unavailable')}</span>
+                        </div>
                     </div>
                 </div>
-                <button onClick={toggleExpanded} className="bg-paper p-3 rounded-rams border border-ink text-ink pointer-events-auto hover:bg-paper transition-colors">
-                    {isExpanded ? <Minimize size={20} /> : <Maximize size={20} />}
+
+                {/* Fullscreen Expand Button */}
+                <button 
+                    onClick={toggleExpanded} 
+                    title="Fullscreen Floorplan"
+                    className="p-3 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-sm rounded-xl transition-all cursor-pointer flex-shrink-0 flex flex-col items-center gap-1 font-mono text-[9px] font-bold"
+                >
+                    <Maximize2 size={18} />
+                    <span>FULL</span>
                 </button>
             </div>
 
-            {/* Tooltip */}
+            {/* Standard In-card Floorplan View */}
+            <div className="flex-1 min-h-[420px] overflow-hidden relative rounded-xl border border-[oklch(85%_0.012_28)] shadow-inner">
+                {renderFloorplanCanvas(false)}
+            </div>
+
+            {/* FULLSCREEN PORTAL MODAL (Escapes CSS transform containers cleanly) */}
+            {isExpanded && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[9999] bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm flex flex-col overflow-hidden animate-fadeIn">
+                    {/* Fullscreen Top Header Bar */}
+                    <div className="w-full bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-3 flex items-center justify-between shadow-md select-none z-50">
+                        <div className="flex items-center gap-3">
+                            <h2 className="font-bold text-base text-[oklch(18%_0.012_28)]">
+                                {t('selectTable')}
+                            </h2>
+                            <div className="hidden sm:flex items-center gap-2 font-mono text-xs text-[oklch(42%_0.010_28)]">
+                                <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{date}</span>
+                                <span className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded">{time}</span>
+                                <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded">{pax} {t('guests')}</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                            <span className="hidden md:inline font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                [ กด ESC หรือปุ่ม CLOSE เพื่อย่อกลับ ]
+                            </span>
+                            <button
+                                onClick={toggleExpanded}
+                                className="px-3.5 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:opacity-90 font-mono text-xs font-bold rounded-lg flex items-center gap-1.5 transition-all shadow cursor-pointer"
+                            >
+                                <Minimize2 size={14} />
+                                <span>CLOSE [ ✕ ]</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Fullscreen Canvas Viewport */}
+                    <div className="flex-1 w-full h-full relative overflow-hidden">
+                        {renderFloorplanCanvas(true)}
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Tooltip Popup */}
             {availabilityTooltip && (
                 <div
-                    className="fixed z-50 bg-ink text-paper text-xs px-3 py-1 rounded-rams pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
+                    className="fixed z-[10000] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs px-3 py-1.5 rounded-lg shadow-xl pointer-events-none transform -translate-x-1/2 -translate-y-full mt-[-8px]"
                     style={{ left: availabilityTooltip.x, top: availabilityTooltip.y }}
                 >
                     {availabilityTooltip.text}
-                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-ink rotate-45"></div>
+                    <div className="absolute bottom-[-4px] left-1/2 -translate-x-1/2 w-2 h-2 bg-[oklch(18%_0.012_28)] rotate-45"></div>
                 </div>
             )}
 
-            {/* Lightbox */}
+            {/* Lightbox Zoom for Table Image */}
             <AnimatePresence>
                 {previewImage && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="fixed inset-0 z-[100] bg-ink/95 flex items-center justify-center p-4 cursor-pointer"
+                        className="fixed inset-0 z-[10001] bg-black/90 flex items-center justify-center p-4 cursor-pointer"
                         onClick={() => setPreviewImage(null)}
                     >
                         <motion.div
@@ -233,84 +442,14 @@ export default function StepTableSelection() {
                             className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center"
                             onClick={e => e.stopPropagation()}
                         >
-                            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-paper/20 hover:bg-paper/40 text-paper p-2 rounded-rams backdrop-blur-md z-10">
+                            <button onClick={() => setPreviewImage(null)} className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white p-2 rounded-full backdrop-blur-md z-10">
                                 <X size={24} />
                             </button>
-                            <img src={previewImage} className="w-full h-full object-contain rounded-rams" alt="Table Preview" />
+                            <img src={previewImage} className="w-full h-full object-contain rounded-lg" alt="Table Preview" />
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <div className={`flex-1 overflow-hidden relative rounded-rams border border-ink bg-[#f0f0f0] transition-all duration-500 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : ''} `}>
-                <TransformWrapper initialScale={0.9} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
-                    {({ zoomIn, zoomOut, resetTransform }) => (
-                        <>
-                            <div className="absolute bottom-24 right-4 z-20 flex flex-col gap-2 pointer-events-auto">
-                                <button onClick={() => zoomIn()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><ZoomIn size={20} /></button>
-                                <button onClick={() => zoomOut()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><ZoomOut size={20} /></button>
-                                <button onClick={() => resetTransform()} className="bg-paper p-2 rounded-rams border border-ink hover:bg-gray-50 active:scale-90 transition-transform"><RotateCw size={20} /></button>
-                            </div>
-                            <TransformComponent wrapperClass="w-full h-full flex items-center justify-center bg-[#f0f0f0]" contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <div
-                                    className="relative w-[1000px] aspect-video bg-paper border border-[var(--color-rule)] origin-center"
-                                    style={{
-                                        backgroundImage: safeCssUrl(settings.floorplanUrl),
-                                        backgroundSize: '100% 100%',
-                                        backgroundRepeat: 'no-repeat',
-                                    }}
-                                    onClick={() => selectTable(null)}
-                                >
-                                    {tables.map(table => renderTable(table))}
-                                </div>
-                            </TransformComponent>
-                        </>
-                    )}
-                </TransformWrapper>
-
-                {/* Selected Table Card */}
-                <AnimatePresence>
-                    {selectedTable && (
-                        <motion.div
-                            initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }}
-                            transition={{ type: "tween", duration: 0.2 }}
-                            className="absolute bottom-6 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 bg-paper p-4 rounded-rams border border-ink z-30 shadow-lg"
-                        >
-                            <div className="flex gap-4">
-                                <div
-                                    className="w-20 h-20 rounded-rams bg-paper border border-[var(--color-rule)] overflow-hidden cursor-zoom-in shrink-0 relative group"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (selectedTable.image_url) setPreviewImage(selectedTable.image_url);
-                                    }}
-                                >
-                                    {selectedTable.image_url ? (
-                                        <>
-                                            <img src={selectedTable.image_url} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                                <Maximize size={16} className="text-white opacity-0 group-hover:opacity-100" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-300"><Image size={24} /></div>
-                                    )}
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="font-bold text-lg truncate pr-2">{selectedTable.table_name}</h3>
-                                        <button onClick={() => selectTable(null)} className="text-gray-400 hover:text-black"><X size={18} /></button>
-                                    </div>
-                                    <p className="text-gray-500 text-xs mb-3">{selectedTable.capacity} {t('seats')}</p>
-                                    <button onClick={nextStep} className="w-full bg-black text-white py-2 rounded-lg font-bold text-xs shadow-md">
-                                        {t('select')}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
         </div>
     )
 }
