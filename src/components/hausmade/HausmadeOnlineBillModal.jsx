@@ -78,7 +78,7 @@ export default function HausmadeOnlineBillModal({
     const handleSaveShippingFeeToDb = async () => {
         setIsSavingDb(true)
         try {
-            const { error } = await supabase
+            let { error } = await supabase
                 .from('bookings')
                 .update({
                     shipping_fee: customShippingFee,
@@ -86,7 +86,19 @@ export default function HausmadeOnlineBillModal({
                 })
                 .eq('id', order.id)
 
-            if (error) throw error
+            if (error && error.message && error.message.includes('column')) {
+                console.warn('[HausmadeOnlineBillModal] shipping_fee column not found, updating total_amount:', error.message)
+                const fallbackRes = await supabase
+                    .from('bookings')
+                    .update({
+                        total_amount: finalTotal
+                    })
+                    .eq('id', order.id)
+
+                if (fallbackRes.error) throw fallbackRes.error
+            } else if (error) {
+                throw error
+            }
 
             toast.success(`บันทึกค่าจัดส่ง ฿${customShippingFee}.- และยอดรวม ฿${finalTotal.toLocaleString()}.- สำเร็จ`)
             if (onOrderUpdated) {

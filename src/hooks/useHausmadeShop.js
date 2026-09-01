@@ -25,12 +25,23 @@ export function isPreOrderItem(item) {
     if (sub.includes('preorder') || sub.includes('pre-order') || sub.includes('พรีออเดอร์') || sub.includes('เปิดจอง')) return true
     const name = (item.name || '').toLowerCase()
     if (name.includes('[pre-order]') || name.includes('pre-order') || name.includes('พรีออเดอร์') || name.includes('เปิดจอง')) return true
+    const desc = (item.description || '').toLowerCase()
+    if (desc.includes('[pre-order') || desc.includes('พรีออเดอร์') || desc.includes('เปิดจอง')) return true
     return false
 }
 
 export function getPreOrderEta(item) {
     if (!item) return ''
-    return item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date || item.metadata?.preorder_eta || 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
+    if (item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date || item.metadata?.preorder_eta) {
+        return item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date || item.metadata?.preorder_eta
+    }
+    if (item.description) {
+        const match = item.description.match(/\[PRE-ORDER\s+รอบส่ง:\s*([^\]]+)\]/i) || 
+                      item.description.match(/\[รอบส่ง:\s*([^\]]+)\]/i) || 
+                      item.description.match(/\[ETA:\s*([^\]]+)\]/i)
+        if (match) return match[1].trim()
+    }
+    return 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
 }
 
 export function useHausmadeShop() {

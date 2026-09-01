@@ -303,22 +303,77 @@ export default function HausmadeProductEditorModal({
 
             if (savedItemId) {
                 // Update Existing
-                const { error: updateError } = await supabase
+                let { error: updateError } = await supabase
                     .from('menu_items')
                     .update(payload)
                     .eq('id', savedItemId)
 
-                if (updateError) throw updateError
+                if (updateError && updateError.message && updateError.message.includes('column')) {
+                    console.warn('[HausmadeProductEditorModal] DB column missing, using resilient fallback:', updateError.message)
+                    let enrichedDesc = description.trim()
+                    if (isPreOrder && !enrichedDesc.includes('[PRE-ORDER')) {
+                        const eta = preOrderEta.trim() || 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
+                        enrichedDesc = `[PRE-ORDER รอบส่ง: ${eta}]\n${enrichedDesc}`.trim()
+                    }
+                    const fallbackPayload = {
+                        name: isPreOrder && !name.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${name.trim()}` : name.trim(),
+                        price: numericPrice,
+                        category_id: categoryId,
+                        category: categoryName || 'HAUSMADE',
+                        description: enrichedDesc,
+                        image_url: imageUrl.trim(),
+                        is_available: isAvailable,
+                        is_recommended: isHeroFeatured,
+                        is_pickup_available: true
+                    }
+                    const fallbackRes = await supabase
+                        .from('menu_items')
+                        .update(fallbackPayload)
+                        .eq('id', savedItemId)
+
+                    if (fallbackRes.error) throw fallbackRes.error
+                } else if (updateError) {
+                    throw updateError
+                }
             } else {
                 // Insert New
-                const { data: inserted, error: insertError } = await supabase
+                let { data: inserted, error: insertError } = await supabase
                     .from('menu_items')
                     .insert(payload)
                     .select()
                     .single()
 
-                if (insertError) throw insertError
-                savedItemId = inserted.id
+                if (insertError && insertError.message && insertError.message.includes('column')) {
+                    console.warn('[HausmadeProductEditorModal] DB column missing, using resilient fallback insert:', insertError.message)
+                    let enrichedDesc = description.trim()
+                    if (isPreOrder && !enrichedDesc.includes('[PRE-ORDER')) {
+                        const eta = preOrderEta.trim() || 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
+                        enrichedDesc = `[PRE-ORDER รอบส่ง: ${eta}]\n${enrichedDesc}`.trim()
+                    }
+                    const fallbackPayload = {
+                        name: isPreOrder && !name.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${name.trim()}` : name.trim(),
+                        price: numericPrice,
+                        category_id: categoryId,
+                        category: categoryName || 'HAUSMADE',
+                        description: enrichedDesc,
+                        image_url: imageUrl.trim(),
+                        is_available: isAvailable,
+                        is_recommended: isHeroFeatured,
+                        is_pickup_available: true
+                    }
+                    const fallbackRes = await supabase
+                        .from('menu_items')
+                        .insert(fallbackPayload)
+                        .select()
+                        .single()
+
+                    if (fallbackRes.error) throw fallbackRes.error
+                    savedItemId = fallbackRes.data.id
+                } else if (insertError) {
+                    throw insertError
+                } else {
+                    savedItemId = inserted.id
+                }
             }
 
             // Save / Sync Variants (Option Group & Option Choices)
@@ -357,23 +412,20 @@ export default function HausmadeProductEditorModal({
                         .update({ name: variantGroupName || 'ขนาดไซส์ (Size)' })
                         .eq('id', groupId)
 
-                    // Clear old choices to replace
+                    // Clear old choices using group_id
                     await supabase
                         .from('option_choices')
                         .delete()
-                        .eq('option_group_id', groupId)
+                        .eq('group_id', groupId)
                 }
 
-                // 2. Insert new choices
+                // 2. Insert new choices with correct column names (group_id, name, price_modifier, is_available, display_order)
                 const choicePayloads = variants
                     .filter(v => v.name.trim())
                     .map((v, index) => ({
-                        option_group_id: groupId,
+                        group_id: groupId,
                         name: v.name.trim(),
                         price_modifier: parseFloat(v.price_modifier) || 0,
-                        price: parseFloat(v.price_modifier) || 0,
-                        stock_quantity: v.stock !== '' ? parseInt(v.stock, 10) : null,
-                        remaining_stock: v.stock !== '' ? parseInt(v.stock, 10) : null,
                         is_available: v.is_available !== false,
                         display_order: index
                     }))

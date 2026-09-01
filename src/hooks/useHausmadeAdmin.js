@@ -108,12 +108,26 @@ export function useHausmadeAdmin() {
             if (courierName !== undefined) payload.courier_name = courierName
             if (trackingNumber !== undefined) payload.tracking_number = trackingNumber
 
-            const { error } = await supabase
+            let { error } = await supabase
                 .from('bookings')
                 .update(payload)
                 .eq('id', orderId)
 
-            if (error) throw error
+            if (error && error.message && error.message.includes('column')) {
+                console.warn('[useHausmadeAdmin] Bookings column missing, updating status with staff_remark fallback:', error.message)
+                const trackingRemark = `[COURIER: ${courierName || 'Flash Express'}] [TRACKING: ${trackingNumber || '-'}]`
+                const fallbackRes = await supabase
+                    .from('bookings')
+                    .update({
+                        status,
+                        staff_remark: trackingRemark
+                    })
+                    .eq('id', orderId)
+
+                if (fallbackRes.error) throw fallbackRes.error
+            } else if (error) {
+                throw error
+            }
 
             // Refresh orders list
             await fetchAdminData()

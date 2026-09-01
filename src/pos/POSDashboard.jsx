@@ -3067,7 +3067,6 @@ export default function POSDashboard() {
                             booking={activeBooking}
                             isSubmitting={isSubmittingOrder}
                             attachedMemberCrm={attachedMemberCrm}
-                            onDetachCustomer={handleDetachCrmCustomer}
                             onSelectCrmCustomer={handleSelectCrmCustomer}
                             onUpdateQuantity={handleUpdateQuantity}
                             onUpdateItemNote={handleUpdateItemNote}

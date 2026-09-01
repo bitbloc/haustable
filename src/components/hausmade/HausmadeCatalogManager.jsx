@@ -99,20 +99,57 @@ export default function HausmadeCatalogManager() {
     const handleTogglePreOrder = async (item) => {
         const nextState = !isPreOrderItem(item)
         try {
-            const payload = {
+            let payload = {
                 is_preorder: nextState,
-                sub_category: nextState ? 'PRE-ORDER' : (item.sub_category === 'PRE-ORDER' ? 'APPAREL' : item.sub_category),
+                sub_category: nextState ? 'PRE-ORDER' : (item.sub_category === 'PRE-ORDER' ? 'APPAREL' : (item.sub_category || 'HAUSMADE')),
                 preorder_eta: nextState ? (item.preorder_eta || 'จัดส่งตามรอบการผลิต (ภายใน 7 วันทำการ)') : null
             }
-            const { error } = await supabase
+            
+            let { error } = await supabase
                 .from('menu_items')
                 .update(payload)
                 .eq('id', item.id)
 
-            if (error) throw error
-            setProducts(prev => prev.map(p => p.id === item.id ? { ...p, ...payload } : p))
+            // If column is_preorder does not exist in DB schema, fallback gracefully to encoding in name/description
+            if (error && error.message && error.message.includes('column')) {
+                console.warn('[HausmadeCatalogManager] Column not found, applying fallback update:', error.message)
+                let cleanName = item.name.replace(/^\[PRE-ORDER\]\s*/i, '').trim()
+                const updatedName = nextState ? `[PRE-ORDER] ${cleanName}` : cleanName
+                
+                let desc = item.description || ''
+                if (nextState) {
+                    if (!desc.includes('[PRE-ORDER')) {
+                        desc = `[PRE-ORDER รอบส่ง: จัดส่งตามรอบการผลิต (ภายใน 7 วันทำการ)]\n${desc}`.trim()
+                    }
+                } else {
+                    desc = desc.replace(/\[PRE-ORDER[^\]]*\]\s*/gi, '').trim()
+                }
+
+                const fallbackPayload = {
+                    name: updatedName,
+                    description: desc
+                }
+
+                const fallbackRes = await supabase
+                    .from('menu_items')
+                    .update(fallbackPayload)
+                    .eq('id', item.id)
+
+                if (fallbackRes.error) throw fallbackRes.error
+
+                payload = {
+                    ...payload,
+                    name: updatedName,
+                    description: desc
+                }
+            } else if (error) {
+                throw error
+            }
+
+            setProducts(prev => prev.map(p => p.id === item.id ? { ...p, ...payload, is_preorder: nextState } : p))
             toast.success(nextState ? `ตั้งค่า "${item.name}" เป็นสินค้า Pre-Order ⏳` : `เปลี่ยน "${item.name}" เป็นสินค้าพร้อมส่งปกติ 📦`)
         } catch (err) {
+            console.error('[HausmadeCatalogManager] Toggle pre-order error:', err)
             toast.error('ไม่สามารถเปลี่ยนโหมด Pre-Order ได้: ' + err.message)
         }
     }
@@ -121,12 +158,22 @@ export default function HausmadeCatalogManager() {
     const handleToggleHero = async (item) => {
         const nextState = !(item.is_recommended === true || item.is_hero_featured === true)
         try {
-            const { error } = await supabase
+            let { error } = await supabase
                 .from('menu_items')
                 .update({ is_recommended: nextState, is_hero_featured: nextState })
                 .eq('id', item.id)
 
-            if (error) throw error
+            if (error && error.message && error.message.includes('column')) {
+                // Fallback to updating is_recommended only
+                const fallbackRes = await supabase
+                    .from('menu_items')
+                    .update({ is_recommended: nextState })
+                    .eq('id', item.id)
+                if (fallbackRes.error) throw fallbackRes.error
+            } else if (error) {
+                throw error
+            }
+
             setProducts(prev => prev.map(p => p.id === item.id ? { ...p, is_recommended: nextState, is_hero_featured: nextState } : p))
             toast.success(nextState ? `ปักหมุด "${item.name}" บน Hero Banner แล้ว ⭐` : `ยกเลิกการปักหมุด "${item.name}"`)
         } catch (err) {
@@ -157,16 +204,39 @@ export default function HausmadeCatalogManager() {
                 tags: item.tags
             }
 
-            const { data: newInserted, error: insertError } = await supabase
+            let { data: newInserted, error: insertError } = await supabase
                 .from('menu_items')
                 .insert(payload)
                 .select()
                 .single()
 
-            if (insertError) throw insertError
+            if (insertError && insertError.message && insertError.message.includes('column')) {
+                // Fallback with standard columns only
+                const fallbackPayload = {
+                    name: newName,
+                    price: item.price,
+                    category_id: item.category_id,
+                    category: item.category || 'HAUSMADE',
+                    description: item.description,
+                    image_url: item.image_url,
+                    is_available: true,
+                    is_recommended: false,
+                    is_pickup_available: true
+                }
+                const fallbackRes = await supabase
+                    .from('menu_items')
+                    .insert(fallbackPayload)
+                    .select()
+                    .single()
+
+                if (fallbackRes.error) throw fallbackRes.error
+                newInserted = fallbackRes.data
+            } else if (insertError) {
+                throw insertError
+            }
 
             // Duplicate Option Groups
-            if (item.menu_item_options?.length > 0) {
+            if (item.menu_item_options?.length > 0 && newInserted?.id) {
                 const links = item.menu_item_options.map(opt => ({
                     menu_item_id: newInserted.id,
                     option_group_id: opt.option_group_id,

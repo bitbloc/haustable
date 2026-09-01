@@ -24,6 +24,45 @@ export function useOrderSubmission() {
         }
     }
 
+    const insertBookingWithFallback = async (payload) => {
+        let { data, error } = await supabase.from('bookings').insert(payload).select().single()
+        if (error && error.message && error.message.includes('column')) {
+            console.warn('[useOrderSubmission] bookings column missing, using resilient fallback insert:', error.message)
+            
+            let extraNote = ''
+            if (payload.shipping_address) extraNote += ` [ที่อยู่: ${payload.shipping_address}]`
+            if (payload.shipping_fee) extraNote += ` [ค่าส่ง: ฿${payload.shipping_fee}]`
+            if (payload.order_type) extraNote += ` [ประเภท: ${payload.order_type}]`
+
+            const fallbackPayload = {
+                user_id: payload.user_id || null,
+                booking_type: payload.booking_type || 'hausmade',
+                status: payload.status || 'pending',
+                table_id: payload.table_id || null,
+                booking_time: payload.booking_time,
+                total_amount: payload.total_amount,
+                deposit_amount: payload.deposit_amount !== undefined ? payload.deposit_amount : payload.total_amount,
+                discount_amount: payload.discount_amount || 0,
+                promotion_code_id: payload.promotion_code_id || null,
+                pickup_contact_name: payload.pickup_contact_name,
+                pickup_contact_phone: payload.pickup_contact_phone,
+                customer_note: ((payload.customer_note || '') + extraNote).trim(),
+                staff_remark: payload.staff_remark || null,
+                payment_slip_url: payload.payment_slip_url,
+                tracking_token: payload.tracking_token,
+                xhaus_earned: payload.xhaus_earned || 0,
+                xhaus_redeemed: payload.xhaus_redeemed || 0,
+                xhaus_discount: payload.xhaus_discount || 0
+            }
+
+            const fallbackRes = await supabase.from('bookings').insert(fallbackPayload).select().single()
+            if (fallbackRes.error) throw fallbackRes.error
+            return fallbackRes.data
+        }
+        if (error) throw error
+        return data
+    }
+
     const submitOrder = async ({
         bookingPayload,
         orderItemsPayload,
@@ -66,12 +105,11 @@ export function useOrderSubmission() {
                 // --- AUTHENTICATED USER (Direct Insert) ---
                 console.log("Submitting as Authenticated User:", user.id)
 
-                const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
+                const bookingData = await insertBookingWithFallback({
                     ...finalBookingPayload,
                     user_id: user.id
-                }).select().single()
+                })
 
-                if (bookingError) throw bookingError
                 resultData = bookingData
                 trackingToken = bookingData.tracking_token
 
@@ -111,12 +149,11 @@ export function useOrderSubmission() {
             } else {
                 // --- GUEST / DIRECT INSERT (Auto-linked by DB Trigger if phone matches member) ---
                 console.log("Submitting as Guest Order...")
-                const { data: bookingData, error: bookingError } = await supabase.from('bookings').insert({
+                const bookingData = await insertBookingWithFallback({
                     ...finalBookingPayload,
                     user_id: null
-                }).select().single()
+                })
 
-                if (bookingError) throw bookingError
                 resultData = bookingData
                 trackingToken = bookingData.tracking_token
 
