@@ -131,7 +131,10 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
         if (!sheetEl) {
             throw new Error('ไม่พบส่วนแสดงเอกสารสำหรับสร้าง PDF');
         }
-        const result = await generateTaxDocumentPdf(sheetEl, { fileName: pdfFileName });
+        const result = await generateTaxDocumentPdf(sheetEl, { 
+            fileName: pdfFileName,
+            orientation: 'portrait'
+        });
         setLastPdfResult(result);
         return result;
     };
@@ -364,7 +367,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             `}</style>
 
             {/* Top Toolbar (Non-printable) */}
-            <div className="w-full max-w-4xl bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 sm:px-6 py-2.5 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-3 print:hidden gap-2.5 shadow-2xl shrink-0">
+            <div className="w-full max-w-[794px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-3.5 sm:px-6 py-2.5 border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between font-mono text-xs mb-3 print:hidden gap-2.5 shadow-2xl shrink-0">
                 <div className="flex items-center gap-2 sm:gap-3">
                     <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider text-[10.5px] sm:text-[11px]">
                         [ {isVat ? 'FULL TAX INVOICE' : 'OFFICIAL RECEIPT'} ]
@@ -480,7 +483,7 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
             <div 
                 id="tax-invoice-printable-container"
                 ref={printableSheetRef}
-                className="w-full max-w-4xl space-y-4 print:space-y-0"
+                className="w-full max-w-[794px] space-y-4 print:space-y-0 mx-auto"
             >
                 {pages.map((page, pIdx) => {
                     // Calculate starting index for item numbering

@@ -48,15 +48,10 @@ export async function generateTaxDocumentPdf(element, options = {}) {
     const pageSheets = element.querySelectorAll ? Array.from(element.querySelectorAll('.print-page-sheet')) : [];
     const targets = pageSheets.length > 0 ? pageSheets : [element];
 
-    // Detect orientation from options or first target dimensions
-    const firstTarget = targets[0];
-    const initialWidth = firstTarget.offsetWidth || firstTarget.scrollWidth || 800;
-    const initialHeight = firstTarget.offsetHeight || firstTarget.scrollHeight || 1130;
-    const isLandscape = options.orientation === 'landscape' || (options.orientation !== 'portrait' && initialWidth > initialHeight * 1.15);
-
-    const orientation = isLandscape ? 'landscape' : 'portrait';
-    const pdfWidth = isLandscape ? 297 : 210; // mm
-    const pdfHeight = isLandscape ? 210 : 297; // mm
+    // Detect orientation: strictly default to 'portrait' unless options.orientation === 'landscape'
+    const orientation = options.orientation === 'landscape' ? 'landscape' : 'portrait';
+    const pdfWidth = orientation === 'landscape' ? 297 : 210; // mm
+    const pdfHeight = orientation === 'landscape' ? 210 : 297; // mm
 
     // 3. Adaptive pixel ratio to guarantee stability on iOS Safari without canvas memory exhaustion
     const isMobile = isMobileBrowser();
