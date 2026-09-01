@@ -129,12 +129,15 @@ export default function HausmadeShopPage() {
 
                 {/* Member CRM Status & Cart Action */}
                 <div className="flex items-center gap-3">
-                    {memberProfile ? (
-                        <div className="hidden md:flex items-center gap-2 font-mono text-[11px] px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                    {isMember ? (
+                        <Link
+                            to="/member-card"
+                            className="hidden md:flex items-center gap-2 font-mono text-[11px] px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(97%_0.008_28)] transition-colors text-[oklch(18%_0.012_28)]"
+                        >
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: memberTierInfo?.color_accent || '#C84B31' }} />
-                            <span className="font-bold">{memberTierInfo?.name || 'MEMBER'}</span>
-                            <span className="text-[oklch(55%_0.010_28)]">({availableXhausBalance.toLocaleString()} xhaus)</span>
-                        </div>
+                            <span className="font-bold">{memberProfile?.display_name || memberProfile?.nickname || memberTierInfo?.name || 'MEMBER'}</span>
+                            <span className="text-[oklch(55%_0.010_28)]">({(memberProfile?.xhaus_balance ?? availableXhausBalance).toLocaleString()} xhaus)</span>
+                        </Link>
                     ) : (
                         <button
                             type="button"
@@ -144,6 +147,7 @@ export default function HausmadeShopPage() {
                             [ 🔑 เข้าสู่ระบบสมาชิกรับ xhaus ]
                         </button>
                     )}
+
 
                     <button
                         onClick={() => setIsCartOpen(true)}

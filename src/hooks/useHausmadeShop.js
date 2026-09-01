@@ -75,17 +75,30 @@ export function useHausmadeShop() {
     })
 
     // CRM Settings & Member Profile State
+    const [currentUser, setCurrentUser] = useState(null)
     const [crmSettings, setCrmSettings] = useState(DEFAULT_CRM_SETTINGS)
     const [crmTiers, setCrmTiers] = useState(DEFAULT_CRM_TIERS)
     const [memberProfile, setMemberProfile] = useState(null)
     const [redeemedCoinsInput, setRedeemedCoinsInput] = useState(0)
     const [activeOrders, setActiveOrders] = useState([])
 
-    // Cart State with LocalStorage initialization
+    // Cart State with LocalStorage initialization & sanitization
     const [cart, setCart] = useState(() => {
         try {
             const saved = localStorage.getItem(CART_STORAGE_KEY)
-            return saved ? JSON.parse(saved) : []
+            if (!saved) return []
+            const parsed = JSON.parse(saved)
+            if (!Array.isArray(parsed)) return []
+            // Sanitize items and ensure valid cartKey & numbers
+            return parsed
+                .filter(item => item && item.id && (item.name || item.custom_name))
+                .map((item, idx) => ({
+                    ...item,
+                    cartKey: item.cartKey || `${item.id}-${JSON.stringify(item.selectedOptions || {})}`,
+                    quantity: Math.max(1, Number(item.quantity) || 1),
+                    price: Number(item.price || 0),
+                    optionsPrice: Number(item.optionsPrice || 0)
+                }))
         } catch {
             return []
         }
@@ -94,7 +107,11 @@ export function useHausmadeShop() {
     // Sync Cart to LocalStorage
     useEffect(() => {
         try {
-            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+            if (cart.length === 0) {
+                localStorage.removeItem(CART_STORAGE_KEY)
+            } else {
+                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+            }
         } catch (e) {
             console.error('Failed to sync cart to localStorage:', e)
         }
@@ -104,14 +121,97 @@ export function useHausmadeShop() {
     useEffect(() => {
         let isMounted = true
 
+        // Fetch Profile & Active Pending Orders for CRM if logged in
+        async function fetchUserContext(user) {
+            if (!user) {
+                if (isMounted) {
+                    setCurrentUser(null)
+                    setMemberProfile(null)
+                    setActiveOrders([])
+                }
+                return
+            }
+
+            if (isMounted) {
+                setCurrentUser(user)
+            }
+
+            try {
+                const [profRes, ordersRes] = await Promise.all([
+                    supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', user.id)
+                        .maybeSingle(),
+                    supabase
+                        .from('bookings')
+                        .select(`
+                            id,
+                            tracking_token,
+                            status,
+                            total_amount,
+                            booking_time,
+                            is_preorder,
+                            order_type,
+                            created_at,
+                            pickup_contact_name,
+                            pickup_contact_phone,
+                            shipping_address,
+                            order_items (
+                                id,
+                                quantity,
+                                price_at_time,
+                                custom_name,
+                                menu_items (name)
+                            )
+                        `)
+                        .eq('user_id', user.id)
+                        .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
+                        .order('created_at', { ascending: false })
+                ])
+
+                if (isMounted) {
+                    if (profRes.data) {
+                        setMemberProfile(profRes.data)
+                    } else {
+                        // Fallback profile if record in profiles is not yet created
+                        const fallbackProf = {
+                            id: user.id,
+                            display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'MEMBER',
+                            nickname: user.user_metadata?.nickname || '',
+                            phone_number: user.phone || user.user_metadata?.phone || '',
+                            current_tier: 'Haus Common',
+                            xhaus_balance: 0
+                        }
+                        setMemberProfile(fallbackProf)
+                    }
+
+                    if (ordersRes.data) {
+                        setActiveOrders(ordersRes.data)
+                    }
+                }
+            } catch (err) {
+                console.warn('[useHausmadeShop] fetchUserContext error:', err)
+                if (isMounted) {
+                    const fallbackProf = {
+                        id: user.id,
+                        display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'MEMBER',
+                        current_tier: 'MEMBER',
+                        xhaus_balance: 0
+                    }
+                    setMemberProfile(fallbackProf)
+                }
+            }
+        }
+
         async function fetchShopData() {
             try {
                 // 1. Fetch Categories, Menu Items with Options, Settings, and Current User Profile
-                const [catsRes, itemsRes, settingsRes, authUserRes] = await Promise.all([
+                const [catsRes, itemsRes, settingsRes, sessionRes] = await Promise.all([
                     supabase.from('menu_categories').select('*').order('display_order', { ascending: true }),
                     supabase.from('menu_items').select('*, menu_categories(*), menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true),
                     supabase.from('app_settings').select('key, value').not('key', 'in', '("tax_signature_image")'),
-                    supabase.auth.getUser()
+                    supabase.auth.getSession()
                 ])
 
                 if (!isMounted) return
@@ -153,146 +253,55 @@ export function useHausmadeShop() {
                     setCrmTiers(parseTiersConfig(settingsMap.crm_tiers_config))
                 }
 
-        // Fetch Profile & Active Pending Orders for CRM if logged in
-        async function fetchUserContext(user) {
-            if (!user) {
-                if (isMounted) {
-                    setMemberProfile(null)
-                    setActiveOrders([])
-                }
-                return
-            }
+                // Identify category IDs for "hausmade", "retail", "craft", etc.
+                const hausmadeCatIds = new Set(
+                    allCats
+                        .filter(c => {
+                            const name = (c.name || '').toLowerCase()
+                            return name.includes('hausmade') || name.includes('retail') || name.includes('ของฝาก') || name.includes('สินค้า')
+                        })
+                        .map(c => c.id)
+                )
 
-            try {
-                const [profRes, ordersRes] = await Promise.all([
-                    supabase
-                        .from('profiles')
-                        .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, total_spent_12m, total_spent_13m')
-                        .eq('id', user.id)
-                        .single(),
-                    supabase
-                        .from('bookings')
-                        .select(`
-                            id,
-                            tracking_token,
-                            status,
-                            total_amount,
-                            booking_time,
-                            is_preorder,
-                            order_type,
-                            created_at,
-                            pickup_contact_name,
-                            pickup_contact_phone,
-                            shipping_address,
-                            order_items (
-                                id,
-                                quantity,
-                                price_at_time,
-                                custom_name,
-                                menu_items (name)
-                            )
-                        `)
-                        .eq('user_id', user.id)
-                        .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
-                        .order('created_at', { ascending: false })
-                ])
+                // Filter items that belong to hausmade category OR have is_hausmade tag OR match retail keywords
+                const filteredItems = allItems.filter(item => {
+                    if (item.is_hausmade === true) return true
+                    if (item.category_id && hausmadeCatIds.has(item.category_id)) return true
+                    const catName = ((item.menu_categories?.name || item.category || '')).toLowerCase()
+                    if (catName.includes('hausmade') || catName.includes('retail') || catName.includes('ของฝาก')) return true
+                    return false
+                })
 
-                if (isMounted) {
-                    if (profRes.data) setMemberProfile(profRes.data)
-                    if (ordersRes.data) setActiveOrders(ordersRes.data)
+                setCategories(allCats)
+                setMenuItems(filteredItems.length > 0 ? filteredItems : allItems)
+
+                // Initial fetch user context from session
+                const activeUser = sessionRes.data?.session?.user || null
+                if (activeUser) {
+                    fetchUserContext(activeUser)
+                } else {
+                    // Fallback check getUser()
+                    const { data: userData } = await supabase.auth.getUser()
+                    if (userData?.user) {
+                        fetchUserContext(userData.user)
+                    }
                 }
             } catch (err) {
-                console.warn('[useHausmadeShop] fetchUserContext error:', err)
+                console.error('[useHausmadeShop] Error loading shop data:', err)
+            } finally {
+                if (isMounted) setLoading(false)
             }
         }
 
-        // Identify category IDs for "hausmade", "retail", "craft", etc.
-        const hausmadeCatIds = new Set(
-            allCats
-                .filter(c => {
-                    const name = (c.name || '').toLowerCase()
-                    return name.includes('hausmade') || name.includes('retail') || name.includes('ของฝาก') || name.includes('สินค้า')
-                })
-                .map(c => c.id)
-        )
+        fetchShopData()
 
-        // Filter items that belong to hausmade category OR have is_hausmade tag OR match retail keywords
-        const filteredItems = allItems.filter(item => {
-            if (item.is_hausmade === true) return true
-            if (item.category_id && hausmadeCatIds.has(item.category_id)) return true
-            const catName = ((item.menu_categories?.name || item.category || '')).toLowerCase()
-            if (catName.includes('hausmade') || catName.includes('retail') || catName.includes('ของฝาก')) return true
-            return false
+        // Auth State Change Listener
+        const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (!isMounted) return
+            const user = session?.user || null
+            fetchUserContext(user)
         })
 
-        setCategories(allCats)
-        setMenuItems(filteredItems.length > 0 ? filteredItems : allItems)
-
-        // Initial fetch user context
-        if (authUserRes.data?.user) {
-            fetchUserContext(authUserRes.data.user)
-        }
-    } catch (err) {
-        console.error('[useHausmadeShop] Error loading shop data:', err)
-    } finally {
-        if (isMounted) setLoading(false)
-    }
-}
-
-fetchShopData()
-
-// Auth State Change Listener
-const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
-    if (!isMounted) return
-    const user = session?.user || null
-    if (user) {
-        try {
-            const [profRes, ordersRes] = await Promise.all([
-                supabase
-                    .from('profiles')
-                    .select('id, display_name, nickname, phone_number, current_tier, xhaus_balance, total_spent_12m, total_spent_13m')
-                    .eq('id', user.id)
-                    .single(),
-                supabase
-                    .from('bookings')
-                    .select(`
-                        id,
-                        tracking_token,
-                        status,
-                        total_amount,
-                        booking_time,
-                        is_preorder,
-                        order_type,
-                        created_at,
-                        pickup_contact_name,
-                        pickup_contact_phone,
-                        shipping_address,
-                        order_items (
-                            id,
-                            quantity,
-                            price_at_time,
-                            custom_name,
-                            menu_items (name)
-                        )
-                    `)
-                    .eq('user_id', user.id)
-                    .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
-                    .order('created_at', { ascending: false })
-            ])
-            if (isMounted) {
-                if (profRes.data) setMemberProfile(profRes.data)
-                if (ordersRes.data) setActiveOrders(ordersRes.data)
-            }
-        } catch (err) {
-            console.warn('[useHausmadeShop] auth change error:', err)
-        }
-    } else {
-        if (isMounted) {
-            setMemberProfile(null)
-            setActiveOrders([])
-        }
-    }
-})
 
 let debounceTimer = null
 const handleRealtimeSync = () => {
@@ -598,8 +607,9 @@ return () => {
         clearCart,
 
         // CRM Loyalty & xhaus state
+        currentUser,
         memberProfile,
-        isMember: Boolean(memberProfile),
+        isMember: Boolean(currentUser || memberProfile),
         activeOrders,
         hasActiveOrders: activeOrders.length > 0,
         memberTierInfo,

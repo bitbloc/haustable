@@ -113,12 +113,13 @@ export default function HausmadeCartDrawer({
                 const { data: { user } } = await supabase.auth.getUser()
                 if (user && isMounted) {
                     if (user.user_metadata?.full_name) setContactName(user.user_metadata.full_name)
-                    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+                    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle()
                     if (profile && isMounted) {
                         if (profile.display_name) setContactName(profile.display_name)
                         if (profile.phone_number) setContactPhone(profile.phone_number)
                     }
                 }
+
 
                 // 2. Load cached shipping address
                 const cachedAddr = localStorage.getItem(LAST_ADDRESS_STORAGE_KEY)
@@ -588,9 +589,21 @@ export default function HausmadeCartDrawer({
 
                                 {/* Cart Items List */}
                                 <div className="flex flex-col gap-3">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
-                                        [ ITEMS SUMMARY // รายการสินค้าในตะกร้า ({cartItemCount} ชิ้น) ]
-                                    </span>
+                                    <div className="flex items-center justify-between">
+                                        <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                            [ ITEMS SUMMARY // รายการสินค้าในตะกร้า ({cartItemCount} ชิ้น) ]
+                                        </span>
+                                        {cart.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={clearCart}
+                                                className="font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold cursor-pointer transition-colors"
+                                            >
+                                                [ ✕ ล้างตะกร้า ]
+                                            </button>
+                                        )}
+                                    </div>
+
 
 
                                     {/* Pre-Order Notice in Cart */}
