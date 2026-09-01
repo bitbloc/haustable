@@ -218,8 +218,12 @@ export default function HausmadeCartDrawer({
             return
         }
 
-        if (!contactName.trim() || !contactPhone.trim()) {
-            setValidationError('กรุณากรอกชื่อและเบอร์โทรศัพท์ติดต่อ')
+        const trimmedName = (contactName || '').trim()
+        const trimmedPhone = (contactPhone || '').trim()
+        const cleanPhone = trimmedPhone.replace(/\D/g, '')
+
+        if (!trimmedName || !trimmedPhone || cleanPhone.length < 9) {
+            setValidationError('กรุณากรอกชื่อและเบอร์โทรศัพท์ติดต่อที่ถูกต้อง (อย่างน้อย 9-10 หลัก)')
             return
         }
 
@@ -869,7 +873,7 @@ export default function HausmadeCartDrawer({
                                         </div>
                                         <div>
                                             <label className="font-mono text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
-                                                เบอร์โทรศัพท์ *
+                                                เบอร์โทรศัพท์ * (9-10 หลัก)
                                             </label>
                                             <input
                                                 type="tel"
@@ -879,6 +883,11 @@ export default function HausmadeCartDrawer({
                                                 placeholder="08X-XXX-XXXX"
                                                 className="w-full px-3 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                             />
+                                            {contactPhone && contactPhone.replace(/\D/g, '').length > 0 && contactPhone.replace(/\D/g, '').length < 9 && (
+                                                <p className="text-[9px] text-amber-700 font-mono mt-1">
+                                                    * เบอร์โทรศัพท์ต้องมีอย่างน้อย 9-10 หลัก
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1266,7 +1275,7 @@ export default function HausmadeCartDrawer({
                                     ) : (
                                         <button
                                             type="submit"
-                                            disabled={isSubmitting || cart.length === 0}
+                                            disabled={isSubmitting || cart.length === 0 || !contactName?.trim() || !contactPhone?.trim() || contactPhone.replace(/\D/g, '').length < 9 || !slipFile}
                                             className={`w-full py-4 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6 shadow-md cursor-pointer ${
                                                 hasPreOrderInCart
                                                     ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'

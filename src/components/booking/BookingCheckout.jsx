@@ -176,8 +176,22 @@ export default function BookingCheckout() {
         }
     }
 
+    const isContactValid = Boolean(localName?.trim() && localPhone?.trim()?.replace(/\D/g, '').length >= 9)
+
     const handleSubmit = async () => {
         if (submitting) return
+
+        const trimmedName = (localName || '').trim()
+        const trimmedPhone = (localPhone || '').trim()
+        const cleanPhone = trimmedPhone.replace(/\D/g, '')
+
+        if (!trimmedName) {
+            return alert(t('fillContact') || 'กรุณากรอกชื่อผู้จองโต๊ะ (Customer Name is required)')
+        }
+        if (!trimmedPhone || cleanPhone.length < 9) {
+            return alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Phone Number is required)')
+        }
+
         if (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
             return alert('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
         }
@@ -186,12 +200,12 @@ export default function BookingCheckout() {
         
         try {
             // Sync final values before submit
-            updateForm('contactName', localName)
-            updateForm('contactPhone', localPhone)
+            updateForm('contactName', trimmedName)
+            updateForm('contactPhone', trimmedPhone)
 
             const result = await submitBooking(appliedPromo, depositAmount, {
-                contactName: localName,
-                contactPhone: localPhone,
+                contactName: trimmedName,
+                contactPhone: trimmedPhone,
                 slipFile: slipFile,
                 slipVerifyResult: slipVerifyResult,
                 paymentMethod: paymentMethod
@@ -289,23 +303,55 @@ export default function BookingCheckout() {
             </div>
 
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
-                <h3 className="text-xs font-mono font-bold text-subInk uppercase">{t('contactInfo')}</h3>
-                <input 
-                    type="text" 
-                    placeholder={t('yourName')} 
-                    value={localName} 
-                    onChange={e => setLocalName(e.target.value)} 
-                    onBlur={() => updateForm('contactName', localName)}
-                    className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" 
-                />
-                <input 
-                    type="tel" 
-                    placeholder={t('phoneNumber')} 
-                    value={localPhone} 
-                    onChange={e => setLocalPhone(e.target.value)} 
-                    onBlur={() => updateForm('contactPhone', localPhone)}
-                    className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" 
-                />
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">
+                        1. {t('contactInfo')} <span className="text-[var(--color-accent)]">*</span>
+                    </h3>
+                    <span className={`text-[10px] font-mono font-bold ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
+                        {isContactValid ? '✓ ข้อมูลครบถ้วน' : '* บังคับกรอกชื่อและเบอร์โทร'}
+                    </span>
+                </div>
+                <div className="space-y-3">
+                    <div>
+                        <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                            {t('yourName')} <span className="text-[var(--color-accent)]">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            placeholder={t('yourName') + ' (เช่น คุณสมชาย)'} 
+                            value={localName} 
+                            onChange={e => {
+                                setLocalName(e.target.value)
+                                updateForm('contactName', e.target.value)
+                            }} 
+                            onBlur={() => updateForm('contactName', localName.trim())}
+                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-sans focus:border-ink outline-none transition-colors" 
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                            {t('phoneNumber')} <span className="text-[var(--color-accent)]">* (9-10 หลัก)</span>
+                        </label>
+                        <input 
+                            type="tel" 
+                            placeholder={t('phoneNumber') + ' (เช่น 0812345678)'} 
+                            value={localPhone} 
+                            onChange={e => {
+                                setLocalPhone(e.target.value)
+                                updateForm('contactPhone', e.target.value)
+                            }} 
+                            onBlur={() => updateForm('contactPhone', localPhone.trim())}
+                            className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-mono focus:border-ink outline-none transition-colors" 
+                            required
+                        />
+                        {localPhone && localPhone.replace(/\D/g, '').length > 0 && localPhone.replace(/\D/g, '').length < 9 && (
+                            <p className="text-[10px] text-amber-700 font-mono mt-1">
+                                * เบอร์โทรศัพท์ต้องมีอย่างน้อย 9-10 หลัก (ปัจจุบัน {localPhone.replace(/\D/g, '').length} หลัก)
+                            </p>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
@@ -601,7 +647,7 @@ export default function BookingCheckout() {
 
             <button
                 onClick={handleSubmit}
-                disabled={submitting || !isAgreed || !slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)}
+                disabled={submitting || !isContactValid || !isAgreed || !slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)}
                 className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
             >
                 {submitting ? t('processing') : t('confirmBooking')}

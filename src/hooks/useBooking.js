@@ -101,11 +101,13 @@ export function useBooking() {
     // Submit Booking
     const submitBooking = async (promotionData = null, depositAmount = 0, overrides = {}) => { // Modified to accept promotion, deposit, and overrides
         try {
-            const finalContactName = overrides.contactName || state.contactName
-            const finalContactPhone = overrides.contactPhone || state.contactPhone
+            const finalContactName = (overrides.contactName || state.contactName || '').trim()
+            const finalContactPhone = (overrides.contactPhone || state.contactPhone || '').trim()
+            const cleanPhone = finalContactPhone.replace(/\D/g, '')
             const finalSlipFile = overrides.slipFile || state.slipFile
 
-            if (!finalContactName || !finalContactPhone) throw new Error('กรุณากรอกข้อมูลให้ครบ')
+            if (!finalContactName) throw new Error('กรุณาระบุชื่อผู้จองโต๊ะ (Customer Name is required)')
+            if (!finalContactPhone || cleanPhone.length < 9) throw new Error('กรุณาระบุเบอร์โทรศัพท์ติดต่อที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
             if (!state.isAgreed) throw new Error('Please agree to terms')
             if (!finalSlipFile) throw new Error('Please upload payment slip')
             if (!state.selectedTable?.id) throw new Error('กรุณาเลือกโต๊ะที่ต้องการจอง')

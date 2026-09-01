@@ -298,9 +298,17 @@ export default function PickupPage() {
         setTimeout(() => setCopiedField(null), 2000)
     }
 
+    const isContactValid = Boolean(contactName?.trim() && contactPhone?.trim()?.replace(/\D/g, '').length >= 9)
+
     const handleSubmit = async () => {
         if (submitting || isSubmitting) return
-        if (!contactName || !contactPhone) return alert(t('fillContact'))
+
+        const trimmedName = (contactName || '').trim()
+        const trimmedPhone = (contactPhone || '').trim()
+        const cleanPhone = trimmedPhone.replace(/\D/g, '')
+
+        if (!trimmedName) return alert(t('fillContact') || 'กรุณากรอกชื่อผู้รับสินค้า (Name is required)')
+        if (!trimmedPhone || cleanPhone.length < 9) return alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
         if (!isAgreed) return alert(t('agreeTerms'))
         if (!slipFile) return alert(t('uploadSlipDesc'))
         if (!pickupTime) return alert(t('selectPickupTime'))
@@ -326,8 +334,8 @@ export default function PickupPage() {
                 booking_type: 'pickup',
                 status: isAutoVerified ? 'confirmed' : 'pending',
                 booking_time: bookingDateTime,
-                pickup_contact_name: contactName,
-                pickup_contact_phone: contactPhone,
+                pickup_contact_name: trimmedName,
+                pickup_contact_phone: trimmedPhone,
                 customer_note: customerNoteContent,
                 staff_remark: isAutoVerified 
                     ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
@@ -477,9 +485,47 @@ export default function PickupPage() {
 
                             <div className="space-y-4 pb-20">
                                 <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
-                                    <h3 className="text-xs font-mono text-subInk uppercase">{t('contactInfo')}</h3>
-                                    <input type="text" placeholder={t('yourName')} value={contactName} onChange={e => setContactName(e.target.value)} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" />
-                                    <input type="tel" placeholder={t('phoneNumber')} value={contactPhone} onChange={e => setContactPhone(e.target.value)} className="w-full bg-transparent border-b border-[var(--color-rule)] py-2 focus:border-ink outline-none transition-colors" />
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-mono font-bold text-subInk uppercase">
+                                            {t('contactInfo')} <span className="text-[var(--color-accent)]">*</span>
+                                        </h3>
+                                        <span className={`text-[10px] font-mono font-bold ${isContactValid ? 'text-[var(--color-accent-2)]' : 'text-[var(--color-accent)]'}`}>
+                                            {isContactValid ? '✓ ข้อมูลครบถ้วน' : '* บังคับกรอกชื่อและเบอร์โทร'}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                                                {t('yourName')} <span className="text-[var(--color-accent)]">*</span>
+                                            </label>
+                                            <input 
+                                                type="text" 
+                                                placeholder={t('yourName') + ' (เช่น คุณสมชาย)'} 
+                                                value={contactName} 
+                                                onChange={e => setContactName(e.target.value)} 
+                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-sans focus:border-ink outline-none transition-colors" 
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-[11px] font-mono text-subInk font-bold block mb-1">
+                                                {t('phoneNumber')} <span className="text-[var(--color-accent)]">* (9-10 หลัก)</span>
+                                            </label>
+                                            <input 
+                                                type="tel" 
+                                                placeholder={t('phoneNumber') + ' (เช่น 0812345678)'} 
+                                                value={contactPhone} 
+                                                onChange={e => setContactPhone(e.target.value)} 
+                                                className="w-full bg-canvas border border-[var(--color-rule)] px-3 py-2.5 rounded-rams text-sm font-mono focus:border-ink outline-none transition-colors" 
+                                                required
+                                            />
+                                            {contactPhone && contactPhone.replace(/\D/g, '').length > 0 && contactPhone.replace(/\D/g, '').length < 9 && (
+                                                <p className="text-[10px] text-amber-700 font-mono mt-1">
+                                                    * เบอร์โทรศัพท์ต้องมีอย่างน้อย 9-10 หลัก (ปัจจุบัน {contactPhone.replace(/\D/g, '').length} หลัก)
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams">
@@ -813,7 +859,7 @@ export default function PickupPage() {
 
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={submitting || !isAgreed || !pickupTime || !slipFile || isVerifyingSlip || (easySlipEnabled && !slipVerifyResult?.verified && !allowManualFallback)}
+                                    disabled={submitting || !isContactValid || !isAgreed || !pickupTime || !slipFile || isVerifyingSlip || (easySlipEnabled && !slipVerifyResult?.verified && !allowManualFallback)}
                                     className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2"
                                 >
                                     {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}
