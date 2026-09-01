@@ -851,9 +851,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const processedLines = lines.map(line => {
             let processedLine = line;
             const width = getPrinterCellWidth(processedLine, true);
-            if (currentSizeW === 1) {
-                const targetCols = Math.floor(maxCols / 2);
-                const halfOffset = Math.floor(offset / 2);
+            if (currentSizeW >= 1) {
+                const scale = currentSizeW + 1;
+                const targetCols = Math.floor(maxCols / scale);
+                const halfOffset = Math.floor(offset / scale);
                 const margin = ' '.repeat(halfOffset);
                 if (currentAlign === 'center' && width < targetCols) {
                     const padding = Math.floor((targetCols - width) / 2);
@@ -1405,10 +1406,16 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const timeOnlyStr = orderPlacedDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
         const paxCount = booking.pax || booking.guest_count || 1;
 
+        // Choose size magnification: 2x larger height and width
+        const tableTitleWidth = getPrinterCellWidth(footerTableTitle, true);
+        const targetTripleWidthCols = Math.floor(maxCols / 3);
+        const sizeW = (tableTitleWidth <= targetTripleWidthCols) ? 2 : 1;
+        const sizeH = (tableTitleWidth <= targetTripleWidthCols) ? 2 : 2;
+
         encoder.align('center')
                .line(doubleDivider)
                .bold(true)
-               .size(1, 1)
+               .size(sizeW, sizeH)
                .line(footerTableTitle)
                .size(0, 0)
                .bold(true)

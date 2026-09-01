@@ -797,24 +797,24 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         }
 
                         .kitchen-footer-block {
-                            border-top: 2px solid black;
-                            border-bottom: 2px solid black;
-                            padding: 8px 4px;
+                            border-top: 3px solid black;
+                            border-bottom: 3px solid black;
+                            padding: 12px 6px;
                             margin-top: 14px;
                             margin-bottom: 8px;
                             text-align: center;
                             background: #fdfdfd;
                         }
                         .kitchen-footer-table {
-                            font-size: 20px;
+                            font-size: 36px;
                             font-weight: 900;
                             line-height: 1.1;
                             text-transform: uppercase;
-                            letter-spacing: -0.5px;
-                            margin-bottom: 4px;
+                            letter-spacing: -1px;
+                            margin: 4px 0 6px 0;
                         }
                         .kitchen-footer-sub {
-                            font-size: 9px;
+                            font-size: 11px;
                             font-weight: bold;
                             color: #222;
                             text-transform: uppercase;
@@ -1646,11 +1646,11 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                 const paxCount = booking.pax || booking.guest_count || 1;
 
                                 return (
-                                    <div className="border-t-2 border-b-2 border-[oklch(18%_0.012_28)] bg-[oklch(96%_0.008_28)] p-3 text-center rounded-sm space-y-1 mt-2">
-                                        <div className="text-xl font-black text-[oklch(18%_0.012_28)] tracking-tight leading-tight uppercase font-mono">
+                                    <div className="border-t-2 border-b-2 border-[oklch(18%_0.012_28)] bg-[oklch(96%_0.008_28)] p-4 sm:p-5 text-center rounded-sm space-y-1.5 mt-2">
+                                        <div className="text-3xl sm:text-4xl font-black text-[oklch(18%_0.012_28)] tracking-tight leading-tight uppercase font-mono py-1">
                                             {footerTableTitle}
                                         </div>
-                                        <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                        <div className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
                                             [ {slipLabel} ] {timeOnlyStr} | {totalItemsCount} ชิ้น | {paxCount} ท่าน
                                         </div>
                                     </div>
