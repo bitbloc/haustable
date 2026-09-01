@@ -6,6 +6,8 @@ import { getShortBookingId } from '../utils/printerHelper';
 import POSBillDetailsModal from './POSBillDetailsModal';
 import { posCache } from '../utils/offlineHelper';
 
+const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
 export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -298,7 +300,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                         <th className="py-3 px-4">Contact</th>
                                         <th className="py-3 px-4">Access Tier</th>
                                         <th className="py-3 px-4 text-center">Visits</th>
-                                        <th className="py-3 px-4 text-center">Completed</th>
+                                        <th className="py-3 px-4 text-center">แก้วสะสม (10+1)</th>
                                         <th className="py-3 px-4 text-right">xhaus Coins</th>
                                     </tr>
                                 </thead>
@@ -359,7 +361,18 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 })()}
                                             </td>
                                             <td className="py-3 px-4 text-center font-mono font-bold text-xs">{m.total_bookings}</td>
-                                            <td className="py-3 px-4 text-center font-mono font-bold text-xs text-emerald-600">{m.completed_bookings}</td>
+                                            <td className="py-3 px-4 text-center">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className="font-mono font-bold text-xs text-[#1A1A1A]">
+                                                        {m.drink_stamp_count || 0}/10
+                                                    </span>
+                                                    {(m.free_drink_quota || 0) > 0 && (
+                                                        <span className="px-1.5 py-0.2 rounded font-mono text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 uppercase">
+                                                            🎁 ฟรี {m.free_drink_quota} แก้ว
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="py-3 px-4 text-right font-mono font-bold text-xs text-[oklch(52%_0.16_28)]">
                                                 {Number(m.xhaus_balance || 0).toFixed(0)}
                                             </td>
@@ -458,7 +471,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
                                                 <span className="font-mono text-[9px] font-bold text-[#1A1A1A]">{stamps} / {maxStamps}</span>
                                             </div>
                                             <div className="flex gap-1">
-                                                {Array.from({ length: maxStamps }).map((_, i) => (
+                                                {STAMP_PUNCHCARD_SLOTS.map((i) => (
                                                     <div
                                                         key={i}
                                                         className={`flex-1 h-2 rounded-full transition-all ${

@@ -980,6 +980,14 @@ export default function POSDashboard() {
 
     const [attachedMemberCrm, setAttachedMemberCrm] = useState(null);
 
+    const handleDetachCrmCustomer = useCallback(() => {
+        setAttachedMemberCrm(null);
+        if (activeBooking && activeBooking.id) {
+            setActiveBooking(prev => prev ? { ...prev, user_id: null, profiles: null } : prev);
+        }
+        toast.info("ยกเลิกการผูกสมาชิกแล้ว");
+    }, [activeBooking]);
+
     useEffect(() => {
         const fetchAttachedMemberCrm = async () => {
             if (!activeBooking) {
@@ -3059,6 +3067,8 @@ export default function POSDashboard() {
                             booking={activeBooking}
                             isSubmitting={isSubmittingOrder}
                             attachedMemberCrm={attachedMemberCrm}
+                            onDetachCustomer={handleDetachCrmCustomer}
+                            onSelectCrmCustomer={handleSelectCrmCustomer}
                             onUpdateQuantity={handleUpdateQuantity}
                             onUpdateItemNote={handleUpdateItemNote}
                             onClear={handleClearOrderOrTable}

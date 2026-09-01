@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight, Coffee, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -9,6 +9,8 @@ import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
 import { formatOrderItemOptions } from '../utils/menuHelper';
+
+const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 const POSOrderPanel = React.memo(function POSOrderPanel({ 
     order, 
@@ -578,6 +580,78 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         return attachedMemberCrm || null;
     })();
 
+    const memberMetrics = React.useMemo(() => {
+        if (!currentMemberProfile) return null;
+        const memberCoins = Math.max(0, parseFloat(currentMemberProfile.xhaus_balance ?? currentMemberProfile.xhaus_coins ?? currentMemberProfile.points ?? 0) || 0);
+        const memberStamps = parseInt(currentMemberProfile.drink_stamp_count || 0, 10);
+        const memberFreeDrinks = parseInt(currentMemberProfile.free_drink_quota || 0, 10);
+        const minRedeem = parseFloat(crmSettings.crm_min_redeem_xhaus) || 10.0;
+        const redeemRate = parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0;
+        const maxAllowedBaht = (subtotal * (parseFloat(crmSettings.crm_max_redeem_percent) || 100)) / 100;
+        const maxCoins = Math.min(memberCoins, Math.floor(maxAllowedBaht / redeemRate));
+        const canRedeemCoins = memberCoins >= minRedeem && subtotal > 0 && maxCoins > 0;
+        const eligibleDrinkItems = order.items.filter(isItemDrinkStampEligible);
+        const hasEligibleDrinks = eligibleDrinkItems.length > 0;
+        const canUseFreeDrink = memberFreeDrinks > 0 && hasEligibleDrinks;
+        return {
+            memberCoins,
+            memberStamps,
+            memberFreeDrinks,
+            minRedeem,
+            redeemRate,
+            maxAllowedBaht,
+            maxCoins,
+            canRedeemCoins,
+            hasEligibleDrinks,
+            canUseFreeDrink
+        };
+    }, [currentMemberProfile, crmSettings, subtotal, order.items, isItemDrinkStampEligible]);
+
+    const enrichedMemberProfile = React.useMemo(() => {
+        if (!currentMemberProfile) return null;
+        const balance = memberMetrics?.memberCoins || 0;
+        const stamps = memberMetrics?.memberStamps || 0;
+        const freeDrinks = memberMetrics?.memberFreeDrinks || 0;
+        return {
+            ...currentMemberProfile,
+            xhaus_balance: balance,
+            xhaus_coins: balance,
+            points: balance,
+            drink_stamp_count: stamps,
+            free_drink_quota: freeDrinks,
+            current_tier: currentMemberProfile.current_tier || 'Haus Common',
+            multiplier: tierMultiplier
+        };
+    }, [currentMemberProfile, memberMetrics, tierMultiplier]);
+
+    const handleQuickRedeemMaxCoins = React.useCallback(() => {
+        if (!memberMetrics) return;
+        if (memberMetrics.memberCoins < memberMetrics.minRedeem) {
+            toast.error(`ลูกค้ามีคะแนนสะสม ${memberMetrics.memberCoins} xhaus ซึ่งน้อยกว่าขั้นต่ำ ${memberMetrics.minRedeem} xhaus ครับ`);
+            return;
+        }
+        if (memberMetrics.maxCoins <= 0) {
+            toast.error("ไม่มียอดที่สามารถใช้แต้มแลกส่วนลดในบิลนี้ได้ครับ");
+            return;
+        }
+        setXhausToRedeem(memberMetrics.maxCoins);
+        toast.success(`แลกส่วนลดสูงสุด ฿${Math.ceil(memberMetrics.maxCoins * memberMetrics.redeemRate).toLocaleString()} (หัก ${memberMetrics.maxCoins} xhaus)`);
+    }, [memberMetrics]);
+
+    const handleQuickToggleFreeDrink = React.useCallback(() => {
+        if (useFreeDrinkQuota) {
+            setUseFreeDrinkQuota(false);
+            toast.info("ยกเลิกการใช้สิทธิ์เครื่องดื่มฟรีแล้ว");
+            return;
+        }
+        if (!memberMetrics?.hasEligibleDrinks) {
+            toast.error("กรุณาเพิ่มเมนูเครื่องดื่มที่ร่วมรายการลงในบิลก่อนใช้สิทธิ์ฟรีครับ");
+            return;
+        }
+        setUseFreeDrinkQuota(true);
+        toast.success("ใช้สิทธิ์เครื่องดื่มฟรี 1 แก้วเรียบร้อยแล้ว");
+    }, [useFreeDrinkQuota, memberMetrics?.hasEligibleDrinks]);
+
     const computeCurrentCFDPayload = React.useCallback(() => {
         const totalDiscountValue = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
         if (activeModal === 'checkout') {
@@ -591,10 +665,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                        memberProfile: currentMemberProfile,
+                        memberProfile: enrichedMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'qr',
-                        promptpayId: storePromptpayId
+                        promptpayId: storePromptpayId,
+                        xhausDiscount,
+                        freeDrinkDiscount,
+                        useFreeDrinkQuota,
+                        xhausToRedeem
                     }
                 };
             } else {
@@ -608,12 +686,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         tax,
                         total,
                         customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                        memberProfile: currentMemberProfile,
+                        memberProfile: enrichedMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'cash',
                         cashReceived: received,
                         changeDue: Math.max(0, received - total),
-                        promptpayId: storePromptpayId
+                        promptpayId: storePromptpayId,
+                        xhausDiscount,
+                        freeDrinkDiscount,
+                        useFreeDrinkQuota,
+                        xhausToRedeem
                     }
                 };
             }
@@ -627,14 +709,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     tax,
                     total,
                     customer: order.customer || booking?.customer_name || 'Walk-in Guest',
-                    memberProfile: currentMemberProfile,
-                    tableName: order.table?.table_name || booking?.tables_layout?.table_name || null
+                    memberProfile: enrichedMemberProfile,
+                    tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
+                    xhausDiscount,
+                    freeDrinkDiscount,
+                    useFreeDrinkQuota,
+                    xhausToRedeem
                 }
             };
         } else {
             return { type: 'IDLE' };
         }
-    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, currentMemberProfile, booking, cashReceivedInput, storePromptpayId]);
+    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, enrichedMemberProfile, booking, cashReceivedInput, storePromptpayId, useFreeDrinkQuota, xhausToRedeem]);
 
     const lastBroadcastMsgRef = React.useRef('');
     const cfdDebounceTimerRef = React.useRef(null);
@@ -929,47 +1015,133 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 </div>
             )}
 
-            {/* Customer CRM Summary Header */}
-            <div className="px-3.5 py-2 shrink-0 border-b border-[#D1D1CD]/50 bg-white/40 touch-manipulation select-none">
-                {(attachedMemberCrm || booking?.profiles) ? (
-                    <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <span className="w-3 h-3 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
-                            <div className="text-left min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider block">Attached Member</span>
-                                    <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[8px] font-mono font-bold rounded">
-                                        แต้ม x{tierMultiplier}
+            {/* Customer CRM Summary Header - Ultra-Compact Rams Cellular Layout */}
+            <div className="px-3 py-2 shrink-0 border-b border-[#D1D1CD]/60 bg-[#F7F7F5] touch-manipulation select-none">
+                {memberMetrics ? (
+                    <div className="space-y-1.5">
+                        {/* Row 1: Identity & Quick Open */}
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
+                                <span className="text-xs font-bold text-[oklch(18%_0.012_28)] truncate uppercase leading-tight">
+                                    {currentMemberProfile?.display_name || 'Anonymous User'}
+                                </span>
+                                {currentMemberProfile?.current_tier && (
+                                    <span className="px-1.5 py-0.2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[8px] font-mono font-bold rounded uppercase shrink-0">
+                                        {currentMemberProfile.current_tier}
                                     </span>
+                                )}
+                                {currentMemberProfile?.phone_number && (
+                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] shrink-0 hidden sm:inline">
+                                        · 📞 {currentMemberProfile.phone_number}
+                                    </span>
+                                )}
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setActiveModal('crm')}
+                                className="text-[9.5px] font-mono font-bold text-[oklch(52%_0.16_28)] hover:text-black px-2 py-0.5 bg-white hover:bg-[#EAEAE7] border border-[#D1D1CD] rounded transition-all cursor-pointer touch-manipulation shrink-0"
+                            >
+                                จัดการ CRM
+                            </button>
+                        </div>
+
+                        {/* Row 2: Consolidated Cellular Scannable Strip (Points, Stamps & 1-Click Action) */}
+                        <div className="flex items-center gap-1.5 bg-white border border-[#DCDCD8] rounded-lg p-1.5 text-xs font-mono">
+                            {/* Coins block */}
+                            <div className="flex items-center gap-1 shrink-0">
+                                <Coins size={11} className="text-amber-500 shrink-0" />
+                                <span className="font-bold text-[oklch(52%_0.16_28)]">
+                                    {Math.floor(memberMetrics.memberCoins).toLocaleString()}
+                                </span>
+                                <span className="text-[8.5px] text-neutral-400">pts</span>
+                            </div>
+
+                            <span className="text-neutral-300">|</span>
+
+                            {/* Stamps block */}
+                            <div className="flex items-center gap-1 min-w-[70px] shrink-0">
+                                <Coffee size={11} className="text-[oklch(52%_0.16_28)] shrink-0" />
+                                <span className="text-[10px] font-bold text-[oklch(18%_0.012_28)]">{memberMetrics.memberStamps}/10</span>
+                                <div className="flex items-center gap-0.5 ml-0.5">
+                                    {STAMP_PUNCHCARD_SLOTS.map((idx) => (
+                                        <span 
+                                            key={idx} 
+                                            className={`w-1 h-1.5 rounded-xs transition-all ${
+                                                idx < memberMetrics.memberStamps 
+                                                    ? 'bg-[oklch(52%_0.16_28)]' 
+                                                    : 'bg-[#E5E5E2]'
+                                            }`}
+                                        />
+                                    ))}
                                 </div>
-                                <p className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate uppercase flex items-center gap-1">
-                                    {attachedMemberCrm?.display_name || booking?.profiles?.display_name || 'Anonymous User'} 
-                                    {(attachedMemberCrm?.current_tier || booking?.profiles?.current_tier) && (
-                                        <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase">
-                                            {attachedMemberCrm?.current_tier || booking?.profiles?.current_tier}
-                                        </span>
-                                    )}
-                                </p>
+                            </div>
+
+                            {/* Row 2 Right: Contextual Quick-Action Buttons (Zero-Clutter) */}
+                            <div className="flex items-center gap-1 ml-auto shrink-0">
+                                {/* Free Drink Action */}
+                                {memberMetrics.memberFreeDrinks > 0 && (
+                                    useFreeDrinkQuota ? (
+                                        <button
+                                            type="button"
+                                            onClick={handleQuickToggleFreeDrink}
+                                            className="px-1.5 py-0.5 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-800 text-[8.5px] font-bold rounded cursor-pointer transition-all flex items-center gap-1"
+                                            title="คลิกเพื่อยกเลิกแก้วฟรี"
+                                        >
+                                            <Gift size={9} className="text-emerald-700" />
+                                            <span>ฟรี 1 แก้ว (-฿{Math.ceil(freeDrinkDiscount)})</span>
+                                            <span className="text-emerald-600 font-normal">✕</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleQuickToggleFreeDrink}
+                                            className="px-1.5 py-0.5 bg-emerald-700 hover:bg-emerald-800 text-white text-[8.5px] font-bold rounded uppercase cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center gap-0.5"
+                                        >
+                                            <Gift size={9} />
+                                            <span>+ ใช้แก้วฟรี</span>
+                                        </button>
+                                    )
+                                )}
+
+                                {/* Coins Redeem Action */}
+                                {memberMetrics.canRedeemCoins && (
+                                    xhausToRedeem > 0 ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setXhausToRedeem(0)}
+                                            className="px-1.5 py-0.5 bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[8.5px] font-bold rounded cursor-pointer transition-all flex items-center gap-1"
+                                            title="คลิกเพื่อยกเลิกแลกแต้ม"
+                                        >
+                                            <Sparkles size={9} className="text-amber-600" />
+                                            <span>-฿{Math.ceil(xhausDiscount)}</span>
+                                            <span className="text-amber-700 font-normal">✕</span>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={handleQuickRedeemMaxCoins}
+                                            className="px-1.5 py-0.5 bg-[#1A1A1A] hover:bg-black text-white text-[8.5px] font-bold uppercase rounded cursor-pointer transition-all shadow-2xs active:scale-95 flex items-center gap-0.5"
+                                        >
+                                            <Sparkles size={9} className="text-amber-400" />
+                                            <span>+ แลก Max</span>
+                                        </button>
+                                    )
+                                )}
                             </div>
                         </div>
-                        <button
-                            onClick={() => setActiveModal('crm')}
-                            className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] hover:underline px-2.5 py-1.5 bg-[#F5F5F2] hover:bg-[#E0E0DC] border border-[#D1D1CD] rounded-lg transition-all cursor-pointer touch-manipulation"
-                        >
-                            CRM & Rewards
-                        </button>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-between py-1">
+                    <div className="flex items-center justify-between py-0.5">
                         <div className="flex items-center gap-2">
-                            <UserPlus size={16} className="text-[#767673]" />
+                            <UserPlus size={14} className="text-[#767673]" />
                             <span className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">No Customer Attached</span>
                         </div>
                         <button
                             onClick={() => setActiveModal('crm')}
-                            className="text-xs font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-3 py-1.5 rounded-lg transition-all cursor-pointer shadow-sm active:scale-95 touch-manipulation"
+                            className="text-xs font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 touch-manipulation"
                         >
-                            + Attach CRM
+                            + ผูก CRM
                         </button>
                     </div>
                 )}
@@ -1373,40 +1545,71 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="flex gap-2.5">
-                                                    <input 
-                                                        type="number"
-                                                        value={redeemInputVal}
-                                                        onChange={(e) => setRedeemInputVal(e.target.value)}
-                                                        placeholder={`e.g. ${crmSettings.crm_min_redeem_xhaus}`}
-                                                        className="flex-1 bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-2.5 text-sm font-bold font-mono text-[#1A1A1A] outline-none focus:border-amber-500 h-11"
-                                                    />
-                                                    <button 
-                                                        onClick={() => {
-                                                            const points = parseFloat(redeemInputVal) || 0;
-                                                            const cartRewardCost = (order.items || []).reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
-                                                            const maxBalance = (parseFloat(currentMemberProfile.xhaus_balance) || 0) - (appliedReward?.xhaus_cost || 0) - cartRewardCost;
-                                                            const minRedeem = crmSettings.crm_min_redeem_xhaus || 10.0;
-                                                            
-                                                            if (points < minRedeem) {
-                                                                toast.error(`จำนวนเหรียญที่แลกต้องไม่ต่ำกว่า ${minRedeem} xhaus ครับ`);
-                                                                return;
-                                                            }
-                                                            if (points > maxBalance) {
-                                                                toast.error(`คะแนนคงเหลือมีเพียง ${Math.ceil(maxBalance).toLocaleString()} xhaus ครับ`);
-                                                                return;
-                                                            }
-                                                            if (points > total) {
-                                                                toast.error('แต้มส่วนลดห้ามเกินมูลค่ารวมของบิลอาหารครับ');
-                                                                return;
-                                                            }
-                                                            setXhausToRedeem(points);
-                                                            toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${Math.ceil(points * (crmSettings.crm_redeem_rate_xhaus || 1.0)).toLocaleString()}`);
-                                                        }}
-                                                        className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-xs font-bold uppercase rounded-xl px-5 h-11 cursor-pointer transition-all active:scale-95 shadow-sm"
-                                                    >
-                                                        Apply
-                                                    </button>
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex gap-2.5">
+                                                        <input 
+                                                            type="number"
+                                                            value={redeemInputVal}
+                                                            onChange={(e) => setRedeemInputVal(e.target.value)}
+                                                            placeholder={`e.g. ${crmSettings.crm_min_redeem_xhaus}`}
+                                                            className="flex-1 bg-white border border-[#D1D1CD] rounded-xl px-3.5 py-2.5 text-sm font-bold font-mono text-[#1A1A1A] outline-none focus:border-amber-500 h-11"
+                                                        />
+                                                        <button 
+                                                            onClick={() => {
+                                                                const points = parseFloat(redeemInputVal) || 0;
+                                                                const cartRewardCost = (order.items || []).reduce((sum, item) => sum + (parseFloat(item.xhaus_cost) || 0), 0);
+                                                                const maxBalance = (parseFloat(currentMemberProfile.xhaus_balance) || 0) - (appliedReward?.xhaus_cost || 0) - cartRewardCost;
+                                                                const minRedeem = parseFloat(crmSettings.crm_min_redeem_xhaus) || 10.0;
+                                                                
+                                                                if (points < minRedeem) {
+                                                                    toast.error(`จำนวนเหรียญที่แลกต้องไม่ต่ำกว่า ${minRedeem} xhaus ครับ`);
+                                                                    return;
+                                                                }
+                                                                if (points > maxBalance) {
+                                                                    toast.error(`คะแนนคงเหลือมีเพียง ${Math.ceil(maxBalance).toLocaleString()} xhaus ครับ`);
+                                                                    return;
+                                                                }
+                                                                if (points > total) {
+                                                                    toast.error('แต้มส่วนลดห้ามเกินมูลค่ารวมของบิลอาหารครับ');
+                                                                    return;
+                                                                }
+                                                                setXhausToRedeem(points);
+                                                                toast.success(`กรอกแลกส่วนลดสำเร็จ: ส่วนลด ฿${Math.ceil(points * (parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0)).toLocaleString()}`);
+                                                            }}
+                                                            className="bg-[#1A1A1A] hover:bg-[#333330] text-white text-xs font-bold uppercase rounded-xl px-5 h-11 cursor-pointer transition-all active:scale-95 shadow-sm"
+                                                        >
+                                                            Apply
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Quick Max Button & Manual Input Help */}
+                                                    {(() => {
+                                                        const bal = Math.max(0, parseFloat(currentMemberProfile?.xhaus_balance || 0));
+                                                        const maxAllowedBaht = (subtotal * (parseFloat(crmSettings.crm_max_redeem_percent) || 100)) / 100;
+                                                        const maxCoins = Math.min(bal, Math.floor(maxAllowedBaht / (parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0)));
+
+                                                        if (maxCoins <= 0) return null;
+
+                                                        return (
+                                                            <div className="flex items-center justify-between pt-1">
+                                                                <span className="text-[10px] font-mono text-neutral-500">
+                                                                    หรือแลกเต็มจำนวนตามยอดบิล:
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setRedeemInputVal(String(maxCoins));
+                                                                        setXhausToRedeem(maxCoins);
+                                                                        toast.success(`แลกสูงสุด ${maxCoins} xhaus (-฿${maxCoins})`);
+                                                                    }}
+                                                                    className="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white rounded-lg text-xs font-mono font-bold uppercase cursor-pointer transition-all active:scale-95 shadow-2xs flex items-center gap-1"
+                                                                >
+                                                                    <Sparkles size={11} className="text-amber-300" />
+                                                                    <span>แลกเต็มจำนวน Max ({maxCoins} xhaus)</span>
+                                                                </button>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
                                         </div>

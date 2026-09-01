@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Utensils, CheckCircle2, Smartphone, QrCode, Sparkles, Receipt, ShieldCheck } from 'lucide-react';
+import { Utensils, CheckCircle2, Smartphone, QrCode, Sparkles, Receipt, ShieldCheck, Coffee, Gift, Coins, Tag } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { normalizePromptPayId, getStorePromptpayId, formatPromptpayDisplay } from '../utils/printerHelper';
 
 const LINE_LIFF_MEMBER_URL = "https://liff.line.me/2008674756-hTEWodVj";
+const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
 export default function POSCustomerDisplay() {
     const [mode, setMode] = useState('IDLE'); // 'IDLE' | 'CART' | 'CHECKOUT' | 'SPLIT_CHECKOUT' | 'SPLIT_SUCCESS' | 'SUCCESS'
@@ -583,30 +584,99 @@ export default function POSCustomerDisplay() {
                     </div>
 
                     {/* Member Profile Banner if attached */}
-                    {orderData.memberProfile ? (
-                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/30 rounded-xl p-3 space-y-1.5 shadow-2xs">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-[oklch(52%_0.16_28)] flex items-center gap-1">
-                                    <ShieldCheck size={11} />
-                                    VIP MEMBER ATTACHED
-                                </span>
-                                <span className="text-[9px] font-mono font-bold bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded uppercase">
-                                    {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
-                                </span>
+                    {orderData.memberProfile ? (() => {
+                        const mp = orderData.memberProfile;
+                        const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
+                        const stamps = parseInt(mp.drink_stamp_count || 0, 10);
+                        const freeDrinks = parseInt(mp.free_drink_quota || 0, 10);
+                        const tier = mp.current_tier || mp.tier || 'Haus Common';
+
+                        return (
+                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2 shadow-2xs">
+                                {/* Header: Member Name & Tier */}
+                                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)]/60 pb-1.5">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <span className="w-2.5 h-2.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
+                                        <div className="min-w-0">
+                                            <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                                                IN THE HAUS MEMBER
+                                            </span>
+                                            <h2 className="text-sm font-bold text-[oklch(18%_0.012_28)] truncate leading-tight uppercase">
+                                                {mp.display_name || mp.name || orderData.customer}
+                                            </h2>
+                                        </div>
+                                    </div>
+                                    <span className="text-[8px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded uppercase shrink-0">
+                                        {tier}
+                                    </span>
+                                </div>
+
+                                {/* Points & Stamp Card Metrics */}
+                                <div className="grid grid-cols-2 gap-1.5 font-mono">
+                                    {/* Points Box */}
+                                    <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
+                                        <span className="text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase flex items-center gap-1">
+                                            <Coins size={10} className="text-amber-600" /> แต้ม xhaus
+                                        </span>
+                                        <div className="mt-0.5">
+                                            <span className="text-xs font-black text-[oklch(52%_0.16_28)]">
+                                                {Math.floor(coins).toLocaleString()} pts
+                                            </span>
+                                            <span className="text-[8px] text-[oklch(55%_0.010_28)] block">
+                                                ≈ ส่วนลด ฿{Math.floor(coins).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Cup Stamps Box */}
+                                    <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
+                                        <div className="flex items-center justify-between text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                            <span className="flex items-center gap-1"><Coffee size={10} className="text-[oklch(52%_0.16_28)]" /> แก้วสะสม</span>
+                                            <span>{stamps}/10</span>
+                                        </div>
+                                        <div className="flex items-center gap-0.5 mt-1">
+                                            {STAMP_PUNCHCARD_SLOTS.map((i) => (
+                                                <span
+                                                    key={i}
+                                                    className={`flex-1 h-1.5 rounded-full transition-all ${
+                                                        i < stamps 
+                                                            ? 'bg-[oklch(52%_0.16_28)]' 
+                                                            : 'bg-[oklch(85%_0.012_28)]'
+                                                    }`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <span className="text-[7.5px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                            {stamps >= 10 ? 'ครบ 10 แก้วแล้ว!' : `อีก ${10 - stamps} แก้ว รับฟรี 1 แก้ว`}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Free Drink Alert Badge */}
+                                {freeDrinks > 0 && (
+                                    <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-emerald-950">
+                                        <span className="flex items-center gap-1">
+                                            <Gift size={11} className="text-emerald-700 shrink-0" />
+                                            สิทธิ์เครื่องดื่มฟรี: {freeDrinks} แก้ว
+                                        </span>
+                                        <span className="text-[8px] bg-emerald-700 text-white px-1.5 py-0.2 rounded uppercase">
+                                            พร้อมใช้
+                                        </span>
+                                    </div>
+                                )}
+
+                                {/* Customer Prompt / Reminder Banner */}
+                                {(coins >= 10 || freeDrinks > 0) && (
+                                    <div className="bg-[#FFF9E6] border border-amber-300/90 rounded-lg p-1.5 text-center">
+                                        <p className="text-[9.5px] font-bold text-amber-950 flex items-center justify-center gap-1 font-sans">
+                                            <Sparkles size={11} className="text-amber-600 shrink-0" />
+                                            <span>คุณมีสิทธิ์ส่วนลด / เครื่องดื่มฟรี แจ้งพนักงานเพื่อใช้สิทธิ์ในบิลนี้ได้เลยครับ!</span>
+                                        </p>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <h2 className="text-base font-bold text-[oklch(18%_0.012_28)] line-clamp-1">
-                                    {orderData.memberProfile.display_name || orderData.memberProfile.name || orderData.memberProfile.customer_name || orderData.customer}
-                                </h2>
-                            </div>
-                            <div className="flex items-center justify-between border-t border-[oklch(52%_0.16_28)]/20 pt-1.5 text-[11px] font-mono">
-                                <span className="text-[oklch(55%_0.010_28)]">สะสมแต้มคงเหลือ:</span>
-                                <span className="font-bold text-[oklch(52%_0.16_28)]">
-                                    {(orderData.memberProfile.points_balance ?? orderData.memberProfile.xhaus_points ?? orderData.memberProfile.points ?? 0).toLocaleString()} PTS
-                                </span>
-                            </div>
-                        </div>
-                    ) : orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer) ? (
+                        );
+                    })() : orderData.customer && !['Walk-in Guest', 'Walk-in Pick-up', 'Walk-in Customer', 'Walk-in'].includes(orderData.customer) ? (
                         <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-0.5 shadow-2xs">
                             <span className="text-[8px] font-mono font-bold uppercase tracking-widest text-[oklch(55%_0.010_28)]">
                                 CUSTOMER
@@ -754,16 +824,30 @@ export default function POSCustomerDisplay() {
                         สรุปรายการชำระเงิน
                     </h2>
 
-                    {orderData.memberProfile && (
-                        <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/20 p-2 rounded-lg flex items-center justify-between text-[11px] font-mono mb-2 shrink-0">
-                            <span className="font-bold text-[oklch(18%_0.012_28)] truncate mr-2">
-                                สมาชิก: {orderData.memberProfile.display_name || orderData.memberProfile.name || orderData.customer}
-                            </span>
-                            <span className="text-[8px] font-bold bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
-                                {orderData.memberProfile.current_tier || orderData.memberProfile.tier || 'MEMBER'}
-                            </span>
-                        </div>
-                    )}
+                    {orderData.memberProfile && (() => {
+                        const mp = orderData.memberProfile;
+                        const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
+                        const stamps = parseInt(mp.drink_stamp_count || 0, 10);
+                        const tier = mp.current_tier || mp.tier || 'MEMBER';
+
+                        return (
+                            <div className="bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)]/20 p-2 rounded-lg flex items-center justify-between text-[10px] font-mono mb-2 shrink-0">
+                                <div className="min-w-0 mr-2">
+                                    <span className="font-bold text-[oklch(18%_0.012_28)] truncate block">
+                                        สมาชิก: {mp.display_name || mp.name || orderData.customer}
+                                    </span>
+                                    <span className="text-[8.5px] text-[oklch(55%_0.010_28)] flex items-center gap-1.5 mt-0.5">
+                                        <span className="flex items-center gap-0.5"><Coins size={9} className="text-amber-600" /> {Math.floor(coins).toLocaleString()} pts</span>
+                                        <span>·</span>
+                                        <span className="flex items-center gap-0.5"><Coffee size={9} className="text-[oklch(52%_0.16_28)]" /> {stamps}/10 แก้ว</span>
+                                    </span>
+                                </div>
+                                <span className="text-[8px] font-bold bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
+                                    {tier}
+                                </span>
+                            </div>
+                        );
+                    })()}
 
                     <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar space-y-1 pr-1">
                         {orderData.items?.map((item, idx) => (
