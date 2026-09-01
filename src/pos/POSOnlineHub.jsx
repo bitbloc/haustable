@@ -451,11 +451,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             </span>
                         )}
 
-                        {order.payment_slip_url && (
-                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 border border-blue-300 px-1.5 py-0.5 rounded">
-                                SLIP
+                        {order.slip_verified ? (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-900 border border-emerald-300 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <CheckCircle2 size={10} className="text-emerald-700" />
+                                <span>{order.slip_provider === 'truewallet' ? 'AUTO-WALLET' : 'AUTO-SLIP'}</span>
                             </span>
-                        )}
+                        ) : order.payment_slip_url ? (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded">
+                                SLIP (MANUAL)
+                            </span>
+                        ) : null}
 
                         <span className={`font-mono text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
                             isPaid 

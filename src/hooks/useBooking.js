@@ -158,10 +158,11 @@ export function useBooking() {
             const discountAmount = promotionData?.discountAmount || 0
             const finalTotal = Math.max(0, cartTotal - discountAmount)
 
+            const isAutoVerified = Boolean(overrides.slipVerifyResult?.verified)
             const bookingPayload = {
                 source: 'online',
                 booking_type: 'dine_in',
-                status: 'pending',
+                status: isAutoVerified ? 'confirmed' : 'pending',
                 booking_time: bookingDateTime,
                 table_id: state.selectedTable.id,
                 total_amount: finalTotal,
@@ -169,12 +170,19 @@ export function useBooking() {
                 pickup_contact_name: finalContactName,
                 pickup_contact_phone: finalContactPhone,
                 customer_note: customerNoteContent,
-                staff_remark: '[ONLINE] จองโต๊ะล่วงหน้า',
+                staff_remark: isAutoVerified
+                    ? `[ONLINE] จองโต๊ะล่วงหน้า (ตรวจมัดจำ Auto EasySlip ✓ ${overrides.slipVerifyResult?.bankName || ''})`
+                    : '[ONLINE] จองโต๊ะล่วงหน้า',
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
                 discount_amount: promotionData?.discountAmount || 0,
                 deposit_amount: depositAmount,
-                tracking_token: crypto.randomUUID()
+                tracking_token: crypto.randomUUID(),
+                slip_verified: isAutoVerified,
+                slip_provider: overrides.slipVerifyResult?.provider || overrides.paymentMethod || 'bank',
+                slip_trans_ref: overrides.slipVerifyResult?.transRef || null,
+                slip_verification_status: isAutoVerified ? 'auto_verified' : (overrides.slipVerifyResult ? 'manual_pending' : 'pending'),
+                slip_verified_data: overrides.slipVerifyResult?.rawSlip || null
             }
 
             const orderItemsPayload = state.cart.map(item => ({

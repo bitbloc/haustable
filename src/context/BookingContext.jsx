@@ -53,6 +53,12 @@ export function BookingProvider({ children }) {
                     const map = settingsData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
                     if (map.floorplan_url) settings.floorplanUrl = safeTimestampUrl(map.floorplan_url)
                     if (map.payment_qr_url) settings.qrCodeUrl = safeTimestampUrl(map.payment_qr_url)
+                    if (map.promptpay_id) settings.promptpayId = map.promptpay_id
+                    if (map.promptpay_name) settings.promptpayName = map.promptpay_name
+                    if (map.truewallet_phone) settings.trueWalletPhone = map.truewallet_phone
+                    if (map.truewallet_account_name) settings.trueWalletName = map.truewallet_account_name
+                    if (map.truewallet_qr_url) settings.trueWalletQrUrl = safeTimestampUrl(map.truewallet_qr_url)
+                    if (map.easyslip_enabled_booking !== undefined) settings.easySlipEnabled = map.easyslip_enabled_booking !== 'false'
                     if (map.policy_dine_in) settings.policyNote = map.policy_dine_in
                     if (map.booking_min_spend) settings.minSpend = parseInt(map.booking_min_spend)
                     if (map.booking_min_advance_hours) settings.minAdvanceHours = Number(map.booking_min_advance_hours)

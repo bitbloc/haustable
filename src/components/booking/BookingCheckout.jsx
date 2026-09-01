@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Upload, X, Tag, AlertCircle, Crown, Sparkles, Coins, Coffee } from 'lucide-react'
+import { Upload, X, Tag, AlertCircle, Crown, Sparkles, Coins, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
 import { usePromotion } from '../../hooks/usePromotion' // NEW
 import ImageModal from '../shared/ImageModal'
 import { supabase } from '../../lib/supabaseClient'
+import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -20,6 +21,14 @@ export default function BookingCheckout() {
 
     const [submitting, setSubmitting] = useState(false)
     const [isSlipModalOpen, setIsSlipModalOpen] = useState(false)
+
+    // Payment & Auto-Verification State
+    const [paymentMethod, setPaymentMethod] = useState('promptpay') // 'promptpay' | 'truewallet'
+    const [isVerifyingSlip, setIsVerifyingSlip] = useState(false)
+    const [slipVerifyResult, setSlipVerifyResult] = useState(null)
+    const [slipVerifyError, setSlipVerifyError] = useState(null)
+    const [allowManualFallback, setAllowManualFallback] = useState(false)
+    const [copiedField, setCopiedField] = useState(null)
 
     // Member CRM state
     const [memberProfile, setMemberProfile] = useState(null)
@@ -99,14 +108,61 @@ export default function BookingCheckout() {
         await applyCode(promoCode, cartTotal, 'booking')
     }
 
-    const handleFileChange = (e) => {
+    const copyToClipboard = (text, fieldName) => {
+        if (!text) return
+        navigator.clipboard.writeText(text)
+        setCopiedField(fieldName)
+        setTimeout(() => setCopiedField(null), 2000)
+    }
+
+    const handleFileChange = async (e) => {
         if (e.target.files && e.target.files[0]) {
-            updateForm('slipFile', e.target.files[0])
+            const file = e.target.files[0]
+            updateForm('slipFile', file)
+            setSlipVerifyResult(null)
+            setSlipVerifyError(null)
+            setAllowManualFallback(false)
+
+            if (settings.easySlipEnabled === false) {
+                return
+            }
+
+            setIsVerifyingSlip(true)
+            try {
+                const res = await verifyPaymentSlip({
+                    file,
+                    matchAmount: depositAmount,
+                    provider: paymentMethod,
+                    remark: `Table Booking Deposit ฿${depositAmount}`
+                })
+
+                if (res.verified) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError(null)
+                } else if (res.success && !res.isAmountMatched) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError(`ยอดเงินในสลิป (฿${res.amountInSlip}) ไม่ตรงกับยอดมัดจำ (฿${depositAmount})`)
+                } else if (res.isDuplicate) {
+                    setSlipVerifyResult(res)
+                    setSlipVerifyError('สลิปนี้ถูกบันทึกในระบบไปแล้ว ไม่สามารถใช้ซ้ำได้')
+                } else {
+                    setSlipVerifyResult(null)
+                    setSlipVerifyError(res.error || 'ไม่สามารถตรวจสอบข้อมูลสลิปได้')
+                }
+            } catch (err) {
+                setSlipVerifyError('เกิดข้อผิดพลาดในการตรวจสอบสลิป: ' + err.message)
+            } finally {
+                setIsVerifyingSlip(false)
+            }
         }
     }
 
     const handleSubmit = async () => {
         if (submitting) return
+        if (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
+            return alert('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
+        }
+
         setSubmitting(true)
         
         try {
@@ -117,14 +173,16 @@ export default function BookingCheckout() {
             const result = await submitBooking(appliedPromo, depositAmount, {
                 contactName: localName,
                 contactPhone: localPhone,
-                slipFile: slipFile
+                slipFile: slipFile,
+                slipVerifyResult: slipVerifyResult,
+                paymentMethod: paymentMethod
             }) 
 
             if (result.success) {
                 const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
                 const token = bookingData?.tracking_token
 
-                alert(t('confirmBooking') + ' Success!')
+                alert(t('confirmBooking') + ' Success!' + (slipVerifyResult?.verified ? ' (สลิปมัดจำผ่านการตรวจอัตโนมัติ ✓)' : ''))
                 
                 if (token) {
                     window.location.replace(`/tracking/${token}`)
@@ -293,23 +351,201 @@ export default function BookingCheckout() {
                     <p className="text-[10px] text-subInk font-mono text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
                 </div>
 
-                {settings.qrCodeUrl ? (
-                    <div className="flex flex-col items-center gap-2 pt-4">
-                        <img
-                            src={settings.qrCodeUrl}
-                            className="w-48 h-48 object-contain rounded-rams border border-[var(--color-rule)] cursor-zoom-in mix-blend-multiply"
-                            alt="QR Code"
-                            onClick={() => setIsSlipModalOpen(true)}
-                        />
-                        <p className="text-[10px] text-subInk font-mono">{t('clickToEnlarge')}</p>
+                {/* PAYMENT METHODS SELECTOR & QR (Dieter Rams Tabular Layout) */}
+                <div className="border-t border-[var(--color-rule)] pt-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-mono font-bold text-subInk uppercase">เลือกช่องทางชำระเงินมัดจำ 50%</h4>
+                        <span className="text-[10px] font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">ยอดมัดจำ ฿{depositAmount}.-</span>
                     </div>
-                ) : (
-                    <div className="w-full h-40 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">{t('noQrCode')}</div>
-                )}
 
-                <div className="border-t border-[var(--color-rule)] pt-4">
-                    <label className="block text-xs font-mono font-bold text-subInk uppercase mb-2">{t('uploadSlip')}</label>
-                    <input type="file" accept="image/*" onChange={handleFileChange} className="block w-full text-sm text-subInk file:mr-4 file:py-2 file:px-4 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono" />
+                    {/* Tab Navigation */}
+                    <div className="grid grid-cols-2 border border-[var(--color-rule)] rounded-rams overflow-hidden bg-canvas">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPaymentMethod('promptpay');
+                                if (slipFile) {
+                                    handleFileChange({ target: { files: [slipFile] } });
+                                }
+                            }}
+                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all ${paymentMethod === 'promptpay' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
+                        >
+                            <QrCode size={14} />
+                            <span>พร้อมเพย์ QR</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setPaymentMethod('truewallet');
+                                if (slipFile) {
+                                    handleFileChange({ target: { files: [slipFile] } });
+                                }
+                            }}
+                            className={`py-2.5 px-3 flex items-center justify-center gap-2 text-xs font-mono font-bold transition-all border-l border-[var(--color-rule)] ${paymentMethod === 'truewallet' ? 'bg-[#ff6000] text-white' : 'text-subInk hover:text-ink'}`}
+                        >
+                            <Wallet size={14} />
+                            <span>TrueMoney</span>
+                        </button>
+                    </div>
+
+                    {/* QR Code & Account Display */}
+                    <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] space-y-3">
+                        {paymentMethod === 'promptpay' ? (
+                            <div>
+                                {settings.qrCodeUrl ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="bg-white p-3 rounded-rams border border-[var(--color-rule)]">
+                                            <img
+                                                src={settings.qrCodeUrl}
+                                                className="w-44 h-44 object-contain cursor-zoom-in mix-blend-multiply"
+                                                alt="Payment QR"
+                                                onClick={() => setIsSlipModalOpen(true)}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-subInk font-mono">{t('clickToEnlarge')}</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-32 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">{t('noQrCode')}</div>
+                                )}
+
+                                <div className="space-y-1.5 font-mono text-xs pt-2">
+                                    {settings.promptpayName && (
+                                        <div className="flex justify-between items-center text-subInk">
+                                            <span>ชื่อบัญชี:</span>
+                                            <strong className="text-ink">{settings.promptpayName}</strong>
+                                        </div>
+                                    )}
+                                    {settings.promptpayId && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-subInk">พร้อมเพย์ ID:</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <strong className="text-ink">{settings.promptpayId}</strong>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => copyToClipboard(settings.promptpayId, 'promptpay')}
+                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                    title="คัดลอก"
+                                                >
+                                                    {copiedField === 'promptpay' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div>
+                                {(settings.trueWalletQrUrl || settings.qrCodeUrl) ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <div className="bg-white p-3 rounded-rams border border-[var(--color-rule)]">
+                                            <img
+                                                src={settings.trueWalletQrUrl || settings.qrCodeUrl}
+                                                className="w-44 h-44 object-contain cursor-zoom-in mix-blend-multiply"
+                                                alt="TrueMoney QR"
+                                                onClick={() => setIsSlipModalOpen(true)}
+                                            />
+                                        </div>
+                                        <p className="text-[10px] text-subInk font-mono">{t('clickToEnlarge')}</p>
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-32 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
+                                )}
+
+                                <div className="space-y-1.5 font-mono text-xs pt-2">
+                                    {settings.trueWalletName && (
+                                        <div className="flex justify-between items-center text-subInk">
+                                            <span>ชื่อบัญชี TrueMoney:</span>
+                                            <strong className="text-ink">{settings.trueWalletName}</strong>
+                                        </div>
+                                    )}
+                                    {settings.trueWalletPhone ? (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-subInk">เบอร์ TrueMoney Wallet:</span>
+                                            <div className="flex items-center gap-1.5">
+                                                <strong className="text-ink font-bold">{settings.trueWalletPhone}</strong>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => copyToClipboard(settings.trueWalletPhone, 'truewallet')}
+                                                    className="p-1 text-subInk hover:text-ink hover:bg-paper rounded transition-colors"
+                                                    title="คัดลอก"
+                                                >
+                                                    {copiedField === 'truewallet' ? <CheckIcon size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-[11px] text-subInk font-mono">สามารถสแกน QR ผ่านแอป TrueMoney Wallet ได้ทันที</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <p className="text-[10px] text-subInk font-mono border-t border-[var(--color-rule)] pt-2 leading-relaxed">
+                            • ชำระเงินมัดจำ <strong>฿{depositAmount}.-</strong> (หักคืนให้อัตโนมัติในบิลหน้าร้าน)<br />
+                            • ระบบจะตรวจสลิปมัดจำอัตโนมัติทันทีที่อัปโหลด
+                        </p>
+                    </div>
+
+                    {/* SLIP UPLOAD & AUTO-VERIFICATION STATUS */}
+                    <div className="space-y-2.5 pt-2 border-t border-[var(--color-rule)]">
+                        <label className="block text-xs font-mono font-bold text-subInk uppercase">
+                            {t('uploadSlip')} (หลักฐานโอนเงินมัดจำ ฿{depositAmount}.-)
+                        </label>
+
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFileChange}
+                            className="block w-full text-xs text-subInk file:mr-3 file:py-2 file:px-3 file:rounded-none file:border-0 file:bg-ink file:text-paper hover:file:bg-canvas hover:file:text-ink hover:file:border hover:file:border-ink transition-colors cursor-pointer font-mono"
+                        />
+
+                        {/* Verification Status Card */}
+                        {isVerifyingSlip && (
+                            <div className="bg-canvas border border-[var(--color-rule)] p-3 rounded-rams flex items-center gap-2.5 text-xs font-mono text-subInk animate-pulse">
+                                <RefreshCw size={15} className="animate-spin text-ink shrink-0" />
+                                <span>กำลังตรวจสอบสลิปอัตโนมัติผ่าน EasySlip...</span>
+                            </div>
+                        )}
+
+                        {slipVerifyResult?.verified && (
+                            <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-xs font-mono">
+                                <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
+                                    <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
+                                    <span>สลิปมัดจำผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
+                                </div>
+                                <div className="text-[11px] text-emerald-900/90 pl-5 space-y-0.5">
+                                    <p>ผู้โอน: <strong>{slipVerifyResult.senderName}</strong></p>
+                                    <p>ยอดโอน: <strong>฿{slipVerifyResult.amountInSlip}.-</strong> ({slipVerifyResult.bankName})</p>
+                                    {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
+                                </div>
+                            </div>
+                        )}
+
+                        {slipVerifyError && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-rams space-y-2 text-xs font-mono">
+                                <div className="flex items-start gap-1.5 text-amber-900 font-bold">
+                                    <AlertTriangle size={15} className="text-amber-700 shrink-0 mt-0.5" />
+                                    <span>{slipVerifyError}</span>
+                                </div>
+                                {!allowManualFallback && (
+                                    <div className="pl-5 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => setAllowManualFallback(true)}
+                                            className="text-[11px] font-bold text-ink underline hover:opacity-75 cursor-pointer"
+                                        >
+                                            ส่งสลิปนี้ให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง (Manual Review)
+                                        </button>
+                                    </div>
+                                )}
+                                {allowManualFallback && (
+                                    <p className="text-[10px] text-amber-800 pl-5">
+                                        ✓ เปิดโหมดส่งให้เจ้าหน้าที่ตรวจสอบแล้ว คุณสามารถกดยืนยันการจองได้
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -334,7 +570,7 @@ export default function BookingCheckout() {
 
             <button
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !isAgreed || !slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)}
                 className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
             >
                 {submitting ? t('processing') : t('confirmBooking')}
@@ -344,7 +580,7 @@ export default function BookingCheckout() {
             <ImageModal
                 isOpen={isSlipModalOpen}
                 onClose={() => setIsSlipModalOpen(false)}
-                imageUrl={settings.qrCodeUrl}
+                imageUrl={paymentMethod === 'truewallet' ? (settings.trueWalletQrUrl || settings.qrCodeUrl) : settings.qrCodeUrl}
                 title="Payment QR Code"
             />
         </div>

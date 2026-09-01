@@ -1,9 +1,9 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState } from 'react';
-import { Power, Save, TrendingUp, ShieldCheck, Trash2, Upload, RotateCcw } from 'lucide-react';
+import { Power, Save, TrendingUp, ShieldCheck, Trash2, Upload, RotateCcw, CheckCircle2, AlertCircle, RefreshCw, Smartphone, KeyRound, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '../../../lib/supabaseClient';
 import { safeTimestampUrl } from '../../../utils/urlHelper';
+import { testEasySlipConnection } from '../../../utils/slipVerificationHelper';
 import VisualCalendarBlocker from './VisualCalendarBlocker';
 import TimeSlotStudio from './TimeSlotStudio';
 
@@ -17,9 +17,30 @@ export default function GeneralBookingSettingsTab({
     fetchSettings
 }) {
     const [uploadingQr, setUploadingQr] = useState(false);
+    const [uploadingTrueWalletQr, setUploadingTrueWalletQr] = useState(false);
     const [uploadingFloor, setUploadingFloor] = useState(false);
     const [uploadingHomeBg, setUploadingHomeBg] = useState(false);
     const [cleaningSlips, setCleaningSlips] = useState(false);
+    const [testingEasySlip, setTestingEasySlip] = useState(false);
+    const [easySlipQuota, setEasySlipQuota] = useState(null);
+
+    const handleTestEasySlip = async () => {
+        setTestingEasySlip(true);
+        try {
+            const key = settings.easyslip_api_key || 'e0650eb6-a4c8-4e25-b109-54bf3a10256e';
+            const res = await testEasySlipConnection(key);
+            if (res.success) {
+                setEasySlipQuota(res.data);
+                toast.success('เชื่อมต่อ EasySlip API สำเร็จ!');
+            } else {
+                toast.error(res.error || 'การเชื่อมต่อ EasySlip ล้มเหลว');
+            }
+        } catch (err) {
+            toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + err.message);
+        } finally {
+            setTestingEasySlip(false);
+        }
+    };
 
     const handleSavePolicies = async () => {
         try {
@@ -441,14 +462,108 @@ export default function GeneralBookingSettingsTab({
                 </div>
             </div>
 
-            {/* QR Payment, Floor Plan, Home Background Image Grid (3 Columns) */}
-            <div className="grid lg:grid-cols-3 gap-6">
-                {/* QR Payment Card */}
+            {/* EasySlip API v2 Auto Slip Verification Card */}
+            <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[var(--color-rule)] pb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-bold">
+                            <KeyRound size={20} />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                    ระบบตรวจสลิปอัตโนมัติ (EasySlip API v2)
+                                </h2>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold uppercase bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    Bank + TrueMoney
+                                </span>
+                            </div>
+                            <p className="text-xs font-mono text-[var(--color-neutral)] mt-0.5">
+                                ตรวจสอบสลิปธนาคารและทรูมันนี่วอลเล็ททันที ตรวจสอบยอดเงิน และป้องกันสลิปซ้ำ 100%
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleTestEasySlip}
+                        disabled={testingEasySlip}
+                        className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-black rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                    >
+                        <RefreshCw size={13} className={testingEasySlip ? 'animate-spin' : ''} />
+                        <span>{testingEasySlip ? 'กำลังตรวจสอบ...' : 'ทดสอบการเชื่อมต่อ API'}</span>
+                    </button>
+                </div>
+
+                {easySlipQuota && (
+                    <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
+                        <div className="flex items-center gap-2 text-emerald-800 font-bold">
+                            <CheckCircle2 size={15} />
+                            <span>เชื่อมต่อ EasySlip สำเร็จ (App: {easySlipQuota.application?.name || 'haustable'})</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-emerald-900">
+                            <span>โควต้าคงเหลือ: <strong className="text-emerald-700">{easySlipQuota.quota?.remaining ?? 50} / {easySlipQuota.quota?.max ?? 50}</strong></span>
+                            <span>แพ็กเกจ: <strong className="text-emerald-700">{easySlipQuota.product?.name || 'Tester'}</strong></span>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid md:grid-cols-3 gap-4 pt-1">
+                    <div className="md:col-span-2 space-y-1.5">
+                        <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                            EasySlip Secret API Key (v2)
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.easyslip_api_key || 'e0650eb6-a4c8-4e25-b109-54bf3a10256e'}
+                            onChange={(e) => handleSave('easyslip_api_key', e.target.value)}
+                            className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                            placeholder="e0650eb6-a4c8-4e25-b109-..."
+                        />
+                        <p className="text-[10px] font-mono text-[var(--color-neutral)]">
+                            คีย์ API สำหรับเรียกตรวจสอบสลิปผ่าน EasySlip v2
+                        </p>
+                    </div>
+
+                    <div className="bg-[var(--color-paper)] p-3 rounded-xl border border-[var(--color-rule)] space-y-2.5">
+                        <span className="text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] block">
+                            เปิดใช้งานตรวจสลิปอัตโนมัติ
+                        </span>
+                        
+                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                            <span>Pickup Online:</span>
+                            <input
+                                type="checkbox"
+                                checked={settings.easyslip_enabled_pickup !== 'false'}
+                                onChange={(e) => handleSave('easyslip_enabled_pickup', e.target.checked ? 'true' : 'false')}
+                                className="accent-[var(--color-ink)] w-4 h-4 cursor-pointer"
+                            />
+                        </label>
+
+                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                            <span>จองโต๊ะ Online:</span>
+                            <input
+                                type="checkbox"
+                                checked={settings.easyslip_enabled_booking !== 'false'}
+                                onChange={(e) => handleSave('easyslip_enabled_booking', e.target.checked ? 'true' : 'false')}
+                                className="accent-[var(--color-ink)] w-4 h-4 cursor-pointer"
+                            />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {/* Payment & Media Assets Grid (4 Columns) */}
+            <div className="grid lg:grid-cols-4 gap-6">
+                {/* 1. PromptPay Payment Card */}
                 <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
                     <div>
-                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-3">
-                            QR Payment (พร้อมเพย์)
-                        </h2>
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                1. พร้อมเพย์ (PromptPay)
+                            </h2>
+                            <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-bold">QR / ธนาคาร</span>
+                        </div>
                         <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
                             {settings.payment_qr_url ? (
                                 <img
@@ -468,7 +583,7 @@ export default function GeneralBookingSettingsTab({
                         <label className="block w-full cursor-pointer group">
                             <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
                                 <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
-                                    {uploadingQr ? 'กำลังอัปโหลด...' : 'เลือกรูป QR เพื่อเปลี่ยน'}
+                                    {uploadingQr ? 'กำลังอัปโหลด...' : 'เลือกรูป QR พร้อมเพย์'}
                                 </span>
                             </div>
                             <input
@@ -478,14 +593,14 @@ export default function GeneralBookingSettingsTab({
                                 onChange={(e) => handleUpload(e.target.files[0], 'payment_qr_url', setUploadingQr)}
                             />
                         </label>
-                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-2 text-center">
+                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1.5 text-center">
                             สัดส่วน 1:1, ขนาดไม่เกิน 500KB
                         </p>
 
                         <div className="mt-3 pt-3 border-t border-[var(--color-rule)] space-y-2.5">
                             <div>
                                 <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
-                                    ชื่อบัญชีพร้อมเพย์ (Account Name)
+                                    ชื่อบัญชีพร้อมเพย์
                                 </label>
                                 <input
                                     type="text"
@@ -497,7 +612,7 @@ export default function GeneralBookingSettingsTab({
                             </div>
                             <div>
                                 <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
-                                    เบอร์พร้อมเพย์รับเงิน (PromptPay ID)
+                                    เบอร์ / รหัสพร้อมเพย์รับเงิน
                                 </label>
                                 <input
                                     type="text"
@@ -507,9 +622,77 @@ export default function GeneralBookingSettingsTab({
                                     placeholder="เช่น 0985284217 หรือ เลขประจำตัว 13 หลัก"
                                 />
                             </div>
-                            <p className="text-[10px] font-mono text-[var(--color-neutral)]">
-                                ใช้แสดงชื่อบัญชี เบอร์โทร และสร้าง Dynamic QR บนจอ CDS และสลิป
-                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 2. TrueMoney Wallet Card */}
+                <div className="bg-[var(--color-paper-2)] p-6 rounded-2xl border border-[var(--color-rule)] flex flex-col justify-between space-y-4">
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                                2. TrueMoney Wallet
+                            </h2>
+                            <span className="text-[10px] font-mono bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded font-bold">วอลเล็ท</span>
+                        </div>
+                        <div className="mb-4 flex justify-center bg-[var(--color-paper)] p-4 rounded-xl border border-[var(--color-rule)]">
+                            {settings.truewallet_qr_url ? (
+                                <img
+                                    src={safeTimestampUrl(settings.truewallet_qr_url, timestamp)}
+                                    alt="TrueMoney QR"
+                                    className="w-32 h-32 object-cover rounded-lg border border-[var(--color-rule)]"
+                                />
+                            ) : (
+                                <div className="w-32 h-32 bg-[var(--color-paper-2)] rounded-lg flex items-center justify-center text-[var(--color-neutral)] text-xs font-mono text-center px-2">
+                                    ใช้รูปพร้อมเพย์หรืออัปโหลด QR ทรูวอลเล็ท
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block w-full cursor-pointer group">
+                            <div className="bg-[var(--color-paper)] border border-dashed border-[var(--color-rule)] rounded-xl p-3 text-center group-hover:border-[var(--color-ink)] transition-colors">
+                                <span className="text-[var(--color-neutral)] text-xs font-mono group-hover:text-[var(--color-ink)]">
+                                    {uploadingTrueWalletQr ? 'กำลังอัปโหลด...' : 'เลือกรูป QR TrueMoney'}
+                                </span>
+                            </div>
+                            <input
+                                type="file"
+                                className="hidden"
+                                accept="image/*"
+                                onChange={(e) => handleUpload(e.target.files[0], 'truewallet_qr_url', setUploadingTrueWalletQr)}
+                            />
+                        </label>
+                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1.5 text-center">
+                            สัดส่วน 1:1, ขนาดไม่เกิน 500KB
+                        </p>
+
+                        <div className="mt-3 pt-3 border-t border-[var(--color-rule)] space-y-2.5">
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                    เบอร์ TrueMoney Wallet (ID)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={settings.truewallet_phone || ''}
+                                    onChange={(e) => handleSave('truewallet_phone', e.target.value)}
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    placeholder="เช่น 089xxxxxxx"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
+                                    ชื่อบัญชี TrueMoney Wallet
+                                </label>
+                                <input
+                                    type="text"
+                                    value={settings.truewallet_account_name || ''}
+                                    onChange={(e) => handleSave('truewallet_account_name', e.target.value)}
+                                    className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                                    placeholder="เช่น นาย รัชชานนท์..."
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -55,8 +55,21 @@ export function useOrderSubmission() {
                 xhaus_discount: payload.xhaus_discount || 0
             }
 
+            // Include slip verification columns if present and avoid failing if column not migrated
+            if (payload.slip_verified !== undefined) fallbackPayload.slip_verified = payload.slip_verified
+            if (payload.slip_trans_ref) fallbackPayload.slip_trans_ref = payload.slip_trans_ref
+            if (payload.slip_provider) fallbackPayload.slip_provider = payload.slip_provider
+            if (payload.slip_verification_status) fallbackPayload.slip_verification_status = payload.slip_verification_status
+            if (payload.slip_verified_data) fallbackPayload.slip_verified_data = payload.slip_verified_data
+
             const fallbackRes = await supabase.from('bookings').insert(fallbackPayload).select().single()
-            if (fallbackRes.error) throw fallbackRes.error
+            if (fallbackRes.error) {
+                // If slip columns caused error, retry without slip columns
+                const { slip_verified, slip_trans_ref, slip_provider, slip_verification_status, slip_verified_data, ...safePayload } = fallbackPayload
+                const safeRes = await supabase.from('bookings').insert(safePayload).select().single()
+                if (safeRes.error) throw safeRes.error
+                return safeRes.data
+            }
             return fallbackRes.data
         }
         if (error) throw error
@@ -184,6 +197,8 @@ export function useOrderSubmission() {
                         phone: custPhone,
                         total_amount: resultData.total_amount || 0,
                         has_slip: !!finalSlipUrl,
+                        slip_verified: Boolean(resultData.slip_verified),
+                        slip_provider: resultData.slip_provider || null,
                         booking_time: resultData.booking_time,
                         items_count: orderItemsPayload?.length || 0
                     })
@@ -193,6 +208,8 @@ export function useOrderSubmission() {
                             booking_id: resultData.id,
                             booking_type: resultData.booking_type,
                             slip_url: finalSlipUrl,
+                            slip_verified: Boolean(resultData.slip_verified),
+                            slip_provider: resultData.slip_provider || null,
                             total_amount: resultData.total_amount || 0
                         })
                     }
