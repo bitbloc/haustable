@@ -857,24 +857,36 @@ export default function POSDashboard() {
             const { data: pendingData, error } = await supabase
                 .from('bookings')
                 .select(`
-                    id, table_id, booking_type, booking_time, status, source, staff_remark,
+                    id, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
                     customer_note, pax, deposit_amount, total_amount, payment_slip_url,
-                    pickup_contact_name, pickup_contact_phone,
+                    slip_verified, slip_provider, slip_trans_ref, slip_verification_status,
+                    pickup_contact_name, pickup_contact_phone, customer_name,
                     profiles (display_name, phone_number),
                     tables_layout (table_name),
                     order_items (id, quantity, price_at_time, custom_name, menu_items (name))
                 `)
-                .eq('status', 'pending')
-                .gte('booking_time', startOfToday)
+                .in('status', ['pending', 'confirmed'])
+                .or(`booking_time.gte.${startOfToday},created_at.gte.${startOfToday}`)
                 .order('booking_time', { ascending: false });
             
             if (!error && pendingData) {
-                // Filter relevant orders: pending bookings + incoming online pickup waiting for staff approval
+                // Filter relevant orders: pending bookings + incoming online pickup waiting for staff approval or slip review
                 const pendingOnly = pendingData.filter(b => {
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                    return !isExplicitInHouse;
+                    if (isExplicitInHouse) return false;
+
+                    // All pending status orders require staff approval
+                    if (b.status === 'pending') return true;
+
+                    // If confirmed but has attached slip that is not yet verified or staff remark lacks acknowledgment
+                    const hasSlip = !!b.payment_slip_url;
+                    const isStaffVerified = remarkLower.includes('[slip_verified]') || remarkLower.includes('[staff_confirmed]') || remarkLower.includes('[staff_accepted]');
+                    const isEasySlipVerified = Boolean(b.slip_verified || remarkLower.includes('easyslip'));
+                    if (hasSlip && !isStaffVerified && !isEasySlipVerified) return true;
+
+                    return false;
                 });
 
                 setPendingBookingsList(pendingOnly);
@@ -974,6 +986,28 @@ export default function POSDashboard() {
         };
         window.addEventListener('pos-menu-updated', handlePosMenuUpdated);
 
+        // Global native WMA / LINE MAN bridge order listener
+        const handleWmaOrderGlobal = (event) => {
+            const b = event.detail?.booking;
+            if (b) {
+                const eventKey = `wma_dashboard_${b.id || Date.now()}`;
+                if (checkEventDeduplication(eventKey, 4000)) {
+                    playOrderAlert(eventKey, 1200, 3.4);
+                    toast.custom((t) => renderPosToast(t, {
+                        badge: 'LINE MAN / WMA · ออเดอร์เข้าใหม่',
+                        title: `LINE MAN #${getShortBookingId(b)} สั่งอาหารเข้ามาแล้ว`,
+                        subtitle: 'แตะเพื่อเปิดดูใน Online Hub',
+                        dot: 'emerald',
+                        onClick: () => setView('online_hub')
+                    }), { id: eventKey, duration: 10000 });
+                    setShowPendingModal(true);
+                    checkPendingOrders();
+                    triggerDebouncedRefresh();
+                }
+            }
+        };
+        window.addEventListener('wma_order_received', handleWmaOrderGlobal);
+
         return () => {
             clearInterval(pollInterval);
             document.removeEventListener('visibilitychange', handleForegroundWakeup);
@@ -981,6 +1015,7 @@ export default function POSDashboard() {
             window.removeEventListener('pageshow', handleForegroundWakeup);
             window.removeEventListener('online', handleOnlineStatus);
             window.removeEventListener('pos-menu-updated', handlePosMenuUpdated);
+            window.removeEventListener('wma_order_received', handleWmaOrderGlobal);
             if (cleanupPrinterSync) cleanupPrinterSync();
         };
     }, [requestWakeLock, triggerDebouncedRefresh]);
@@ -3506,6 +3541,10 @@ export default function POSDashboard() {
                         <div className="p-4 overflow-y-auto space-y-3 flex-1 bg-[oklch(94%_0.010_28)] scrollbar-none">
                             {pendingBookingsList.map((item, idx) => {
                                 const isPickup = item.booking_type === 'pickup';
+                                const isEasySlipVerified = Boolean(item.slip_verified || (item.staff_remark && item.staff_remark.includes('EasySlip')));
+                                const isStaffVerified = Boolean(item.staff_remark && item.staff_remark.includes('[SLIP_VERIFIED]'));
+                                const isVerified = isEasySlipVerified || isStaffVerified;
+                                const hasSlip = Boolean(item.payment_slip_url);
 
                                 return (
                                     <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
@@ -3520,9 +3559,9 @@ export default function POSDashboard() {
                                                     }`}>
                                                         {isPickup ? 'PICKUP (รับกลับบ้าน)' : 'DINE-IN (จองโต๊ะ)'}
                                                     </span>
-                                                    {item.deposit_amount >= item.total_amount && item.total_amount > 0 && (
+                                                    {isVerified && (
                                                         <span className="bg-emerald-100 text-emerald-900 border-emerald-200 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border inline-block">
-                                                            [ PAID ]
+                                                            {isEasySlipVerified ? '[ EASYSLIP ✓ ]' : '[ SLIP VERIFIED ]'}
                                                         </span>
                                                     )}
                                                     <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
@@ -3573,23 +3612,81 @@ export default function POSDashboard() {
                                             </div>
                                         )}
 
-                                        {/* Deposit & Slip Section (No Icons) */}
-                                        {(item.deposit_amount > 0 || item.total_amount > 0) && (
-                                            <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg text-emerald-950 font-mono text-xs">
-                                                <div className="flex items-center gap-2">
-                                                    {item.deposit_amount > 0 && <span className="font-bold">ยอดมัดจำ: ฿{item.deposit_amount}</span>}
-                                                    {item.total_amount > 0 && <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดรวม: ฿{item.total_amount}</span>}
+                                        {/* Deposit & Slip Section (Multi-Tier EasySlip & Fallback, Zero-Icon) */}
+                                        {(item.deposit_amount > 0 || item.total_amount > 0 || hasSlip) && (
+                                            <div className={`p-3 rounded-xl border font-mono text-xs flex flex-col gap-2 ${
+                                                isVerified 
+                                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950' 
+                                                    : (hasSlip ? 'bg-amber-500/10 border-amber-500/30 text-amber-950' : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]')
+                                            }`}>
+                                                <div className="flex justify-between items-center flex-wrap gap-1">
+                                                    <div className="flex items-center gap-2 font-bold">
+                                                        {item.deposit_amount > 0 && <span>มัดจำ: ฿{item.deposit_amount.toLocaleString()}</span>}
+                                                        {item.total_amount > 0 && <span className="text-[oklch(42%_0.010_28)]">ยอดรวม: ฿{item.total_amount.toLocaleString()}</span>}
+                                                    </div>
+
+                                                    {/* Verification Status Tag */}
+                                                    <div>
+                                                        {isEasySlipVerified ? (
+                                                            <span className="bg-emerald-700 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                                ✓ EASYSLIP VERIFIED
+                                                            </span>
+                                                        ) : isStaffVerified ? (
+                                                            <span className="bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                                ✓ SLIP APPROVED
+                                                            </span>
+                                                        ) : hasSlip ? (
+                                                            <span className="bg-amber-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded animate-pulse">
+                                                                ⚠️ รอตรวจสลิปโอนเงิน
+                                                            </span>
+                                                        ) : (
+                                                            <span className="bg-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                                ยังไม่มีสลิป
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {item.payment_slip_url && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setViewSlipImageUrl(item.payment_slip_url);
-                                                        }}
-                                                        className="bg-emerald-800 hover:bg-emerald-900 text-white text-[10px] font-bold px-3 py-1 rounded-md transition-all cursor-pointer shadow-sm active:scale-95 uppercase font-mono"
-                                                    >
-                                                        ตรวจสลิปโอนเงิน
-                                                    </button>
+
+                                                {/* Slip Actions & Details */}
+                                                {hasSlip && (
+                                                    <div className="flex justify-between items-center border-t border-black/10 pt-2 text-[10px]">
+                                                        <span className="text-[oklch(42%_0.010_28)] truncate pr-2">
+                                                            {item.slip_trans_ref ? `Ref: ${item.slip_trans_ref}` : (item.slip_provider ? `Provider: ${item.slip_provider}` : 'หลักฐานการโอนเงินแนบมาแล้ว')}
+                                                        </span>
+                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setViewSlipImageUrl(item.payment_slip_url);
+                                                                }}
+                                                                className="bg-[oklch(18%_0.012_28)] hover:bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded transition-all cursor-pointer shadow-2xs uppercase font-mono"
+                                                            >
+                                                                ตรวจสลิป (VIEW)
+                                                            </button>
+                                                            {!isVerified && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={async () => {
+                                                                        const updates = {
+                                                                            deposit_amount: item.deposit_amount > 0 ? item.deposit_amount : (item.total_amount || 0),
+                                                                            slip_verified: true,
+                                                                            slip_verification_status: 'manual_verified',
+                                                                            staff_remark: `${item.staff_remark || ''} [SLIP_VERIFIED]`.trim()
+                                                                        };
+                                                                        const { error } = await supabase.from('bookings').update(updates).eq('id', item.id);
+                                                                        if (!error) {
+                                                                            toast.success("อนุมัติสลิปโอนเงินเรียบร้อยแล้ว");
+                                                                            checkPendingOrders();
+                                                                            triggerDebouncedRefresh();
+                                                                        }
+                                                                    }}
+                                                                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-[10px] font-bold px-2.5 py-1 rounded transition-all cursor-pointer shadow-2xs uppercase font-mono"
+                                                                >
+                                                                    อนุมัติสลิป ✓
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
@@ -3613,9 +3710,10 @@ export default function POSDashboard() {
                                                         });
                                                         toast.success("ยกเลิกรายการเรียบร้อยแล้ว");
                                                         checkPendingOrders();
+                                                        triggerDebouncedRefresh();
                                                     }
                                                 }}
-                                                className="flex-1 py-2 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center"
+                                                className="flex-1 py-2.5 bg-white hover:bg-red-50 text-red-700 border border-red-200 rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer text-center font-mono uppercase"
                                             >
                                                 ปฏิเสธ{isPickup ? 'ออเดอร์' : 'คิว'}
                                             </button>
@@ -3623,7 +3721,11 @@ export default function POSDashboard() {
                                                 type="button"
                                                 onClick={async () => {
                                                     if (isPickup) {
-                                                        const { error } = await supabase.from('bookings').update({ status: 'ready' }).eq('id', item.id);
+                                                        const updates = {
+                                                            status: 'ready',
+                                                            staff_remark: `${item.staff_remark || ''} [STAFF_ACCEPTED]`.trim()
+                                                        };
+                                                        const { error } = await supabase.from('bookings').update(updates).eq('id', item.id);
                                                         if (!error) {
                                                             if (item.tracking_token) {
                                                                 sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
@@ -3637,22 +3739,32 @@ export default function POSDashboard() {
                                                             });
                                                             toast.success("อนุมัติออเดอร์ Pickup เรียบร้อยแล้ว!");
                                                             checkPendingOrders();
+                                                            triggerDebouncedRefresh();
                                                         }
                                                     } else {
-                                                        const success = await acceptOrder(item.id);
-                                                        if (success) {
+                                                        const updates = {
+                                                            status: 'confirmed',
+                                                            staff_remark: `${item.staff_remark || ''} [STAFF_CONFIRMED]`.trim()
+                                                        };
+                                                        const { error } = await supabase.from('bookings').update(updates).eq('id', item.id);
+                                                        if (!error) {
                                                             if (item.tracking_token) {
                                                                 sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
                                                                     status: 'confirmed',
                                                                     booking_id: item.id
                                                                 });
                                                             }
+                                                            sendPOSBroadcast('online_order_status_updated', {
+                                                                booking_id: item.id,
+                                                                status: 'confirmed'
+                                                            });
                                                             toast.success("อนุมัติคิวจองเรียบร้อยแล้ว!");
                                                             checkPendingOrders();
+                                                            triggerDebouncedRefresh();
                                                         }
                                                     }
                                                 }}
-                                                className="flex-2 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center"
+                                                className="flex-2 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center font-mono uppercase tracking-wider"
                                             >
                                                 {isPickup ? 'อนุมัติออเดอร์ (Pickup)' : 'อนุมัติ & ยืนยันคิว'}
                                             </button>

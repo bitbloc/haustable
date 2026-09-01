@@ -299,8 +299,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             setApprovingId(order.id);
             const total = order.total_amount || 0;
             const updates = {
-                status: order.booking_type === 'dine_in' ? 'confirmed' : 'seated',
+                status: order.booking_type === 'dine_in' ? 'confirmed' : 'ready',
                 deposit_amount: order.deposit_amount > 0 ? order.deposit_amount : total,
+                slip_verified: true,
+                slip_verification_status: 'manual_verified',
                 staff_remark: `${order.staff_remark || ''} [SLIP_VERIFIED]`.trim()
             };
 
@@ -319,6 +321,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     booking_id: order.id
                 });
             }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: order.id,
+                status: updates.status
+            });
 
             // Auto-trigger kitchen order print if items exist
             if (order.order_items && order.order_items.length > 0 && onOpenSlipModal) {
