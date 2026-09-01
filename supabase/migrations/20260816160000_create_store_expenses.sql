@@ -25,5 +25,6 @@ CREATE INDEX IF NOT EXISTS idx_store_expenses_doc_type ON public.store_expenses 
 
 ALTER TABLE public.store_expenses ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow full access to store_expenses" ON public.store_expenses;
 CREATE POLICY "Allow full access to store_expenses" 
 ON public.store_expenses FOR ALL USING (true) WITH CHECK (true);

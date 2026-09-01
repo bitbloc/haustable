@@ -250,6 +250,10 @@ export default function AdminMembers() {
 
         try {
             const cleanPin = editForm.pin ? String(editForm.pin).trim() : null
+            const finalPermissions = (editForm.role === 'owner' || editForm.role === 'admin')
+                ? ['*']
+                : (editForm.role === 'customer' ? [] : (editForm.admin_permissions || []))
+
             const payload = {
                 display_name: editForm.display_name ? String(editForm.display_name).trim() : '',
                 nickname: editForm.nickname ? String(editForm.nickname).trim() : '',
@@ -262,7 +266,8 @@ export default function AdminMembers() {
                 pin: cleanPin,
                 drink_stamp_count: Math.min(9, Math.max(0, parseInt(editForm.drink_stamp_count || 0, 10))),
                 free_drink_quota: Math.max(0, parseInt(editForm.free_drink_quota || 0, 10)),
-                role: editForm.role || 'customer'
+                role: editForm.role || 'customer',
+                admin_permissions: finalPermissions
             }
 
             const { error } = await supabase
@@ -531,9 +536,11 @@ export default function AdminMembers() {
             ) : (
                 <div className="grid gap-3">
                     {filteredAndSortedMembers.map((member) => {
+                        const isOwner = member.role === 'owner'
                         const isAdmin = member.role === 'admin'
-                        const isStaff = member.role === 'staff'
-                        const isPrivileged = isAdmin || isStaff
+                        const isMaster = isOwner || isAdmin
+                        const isCustom = member.role === 'custom'
+                        const isStaff = ['staff', 'cashier', 'kitchen', 'manager'].includes(member.role) || isCustom
                         const pinVisible = visiblePins[member.id]
 
                         return (
@@ -543,24 +550,28 @@ export default function AdminMembers() {
                                 animate={{ opacity: 1, y: 0 }}
                                 key={member.id}
                                 className={`bg-white border rounded-sm p-4 transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
-                                    isAdmin 
+                                    isMaster 
                                         ? 'border-[oklch(52%_0.16_28)] shadow-2xs bg-[oklch(99%_0.004_28)]' 
-                                        : isStaff
-                                            ? 'border-[oklch(45%_0.08_140)] shadow-2xs'
-                                            : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
+                                        : isCustom
+                                            ? 'border-amber-400 shadow-2xs bg-amber-50/20'
+                                            : isStaff
+                                                ? 'border-[oklch(45%_0.08_140)] shadow-2xs'
+                                                : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(55%_0.010_28)]'
                                 }`}
                             >
                                 {/* Left Section: Avatar & Info */}
                                 <div className="flex items-start gap-3.5 flex-1 min-w-0">
                                     {/* Role Avatar */}
                                     <div className={`w-11 h-11 rounded-sm flex items-center justify-center shrink-0 border font-mono font-bold text-xs ${
-                                        isAdmin
+                                        isMaster
                                             ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                            : isStaff
-                                                ? 'bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
-                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                            : isCustom
+                                                ? 'bg-amber-600 text-white border-amber-600'
+                                                : isStaff
+                                                    ? 'bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
+                                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
                                     }`}>
-                                        {isAdmin ? <Shield size={18} /> : <User size={18} />}
+                                        {isMaster ? <Shield size={18} /> : <User size={18} />}
                                     </div>
 
                                     {/* User Details */}
@@ -575,13 +586,15 @@ export default function AdminMembers() {
                                                 </span>
                                             )}
                                             <span className={`font-mono text-[10px] font-bold uppercase px-1.5 py-0.2 rounded-xs border ${
-                                                isAdmin
+                                                isMaster
                                                     ? 'bg-[oklch(94%_0.02_28)] text-[oklch(52%_0.16_28)] border-[oklch(52%_0.16_28)]'
-                                                    : isStaff
-                                                        ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
-                                                        : 'bg-[oklch(96%_0.005_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                                                    : isCustom
+                                                        ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                                                        : isStaff
+                                                            ? 'bg-[oklch(94%_0.02_140)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]'
+                                                            : 'bg-[oklch(96%_0.005_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
                                             }`}>
-                                                {member.role || 'customer'}
+                                                {isCustom ? `CUSTOM (${(member.admin_permissions || []).length}/${ADMIN_MODULES.length})` : (member.role || 'customer')}
                                             </span>
                                             {member.current_tier && (
                                                 <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 bg-[oklch(52%_0.16_28)]/10 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/30 rounded-xs uppercase">
@@ -875,12 +888,22 @@ export default function AdminMembers() {
                                             value={editForm.role}
                                             onChange={e => {
                                                 const newRole = e.target.value
-                                                const defPerms = ROLE_PERMISSIONS[newRole] || []
-                                                setEditForm({
-                                                    ...editForm,
-                                                    role: newRole,
-                                                    admin_permissions: (newRole === 'owner' || newRole === 'admin') ? ['*'] : defPerms
-                                                })
+                                                if (newRole === 'custom') {
+                                                    setEditForm({
+                                                        ...editForm,
+                                                        role: 'custom',
+                                                        admin_permissions: (editForm.admin_permissions && editForm.admin_permissions.length > 0)
+                                                            ? editForm.admin_permissions.filter(k => k !== '*')
+                                                            : ['tables', 'bookings']
+                                                    })
+                                                } else {
+                                                    const defPerms = ROLE_PERMISSIONS[newRole] || []
+                                                    setEditForm({
+                                                        ...editForm,
+                                                        role: newRole,
+                                                        admin_permissions: (newRole === 'owner' || newRole === 'admin') ? ['*'] : defPerms
+                                                    })
+                                                }
                                             }}
                                             className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-black mt-1"
                                         >
@@ -889,6 +912,7 @@ export default function AdminMembers() {
                                             <option value="cashier">CASHIER / แคชเชียร์ (เข้าได้ Overview, Floor, Bookings)</option>
                                             <option value="kitchen">KITCHEN / ครัวและบาร์ (เข้าได้เฉพาะ Menu, Bookings)</option>
                                             <option value="manager">MANAGER / ผู้จัดการร้าน (เข้าได้เกือบทุกหมวดหมู่ ยกเว้น Financial/Settings)</option>
+                                            <option value="custom">CUSTOM / กำหนดสิทธิ์เอง (เลือกหมวดหมู่ที่ต้องการด้านล่าง)</option>
                                             <option value="owner">OWNER / เจ้าของร้าน (เข้าได้ทุกหมวดหมู่ 100%)</option>
                                             <option value="admin">ADMIN / ผู้ดูแลระบบ (เข้าได้ทุกหมวดหมู่ 100%)</option>
                                         </select>
@@ -899,11 +923,16 @@ export default function AdminMembers() {
                                         <div className="pt-2 border-t border-[oklch(88%_0.015_28)] space-y-2">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase">
-                                                    สิทธิ์การเข้าถึง 8 หมวดหมู่หลังบ้าน (Custom Permissions):
+                                                    สิทธิ์การเข้าถึง {ADMIN_MODULES.length} หมวดหมู่หลังบ้าน (Custom Permissions):
                                                 </span>
                                                 {(editForm.role === 'owner' || editForm.role === 'admin') && (
                                                     <span className="text-[9px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-1.5 py-0.2 rounded-xs">
                                                         MASTER ACCESS (ทุกหมวดหมู่)
+                                                    </span>
+                                                )}
+                                                {editForm.role === 'custom' && (
+                                                    <span className="text-[9px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                                                        CUSTOMIZED ({(editForm.admin_permissions || []).length}/{ADMIN_MODULES.length} หมวด)
                                                     </span>
                                                 )}
                                             </div>
@@ -932,7 +961,12 @@ export default function AdminMembers() {
                                                                     } else {
                                                                         next = current.filter(k => k !== mod.key && k !== '*')
                                                                     }
-                                                                    setEditForm({ ...editForm, admin_permissions: next })
+                                                                    const isPreset = ['staff', 'cashier', 'kitchen', 'manager'].includes(editForm.role)
+                                                                    setEditForm({ 
+                                                                        ...editForm, 
+                                                                        role: isPreset ? 'custom' : editForm.role,
+                                                                        admin_permissions: next 
+                                                                    })
                                                                 }}
                                                                 className="accent-[oklch(52%_0.16_28)]"
                                                             />

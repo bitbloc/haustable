@@ -50,12 +50,13 @@ export default function StaffAuthLayout() {
 
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('role')
+                .select('role, admin_permissions')
                 .eq('id', session.user.id)
                 .single();
 
             const role = (profile?.role || '').toLowerCase();
-            const isAuthorizedStaff = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen'].includes(role);
+            const hasCustomPerms = Array.isArray(profile?.admin_permissions) && profile.admin_permissions.length > 0;
+            const isAuthorizedStaff = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen', 'custom'].includes(role) || hasCustomPerms;
 
             if (profileError || !profile || !isAuthorizedStaff) {
                 localStorage.removeItem('staff_role');

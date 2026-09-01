@@ -27,13 +27,14 @@ export default function AdminLayout() {
 
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
-                    .select('id, role, display_name, nickname, phone_number')
+                    .select('id, role, display_name, nickname, phone_number, admin_permissions')
                     .eq('id', user.id)
                     .single()
 
                 const role = (profile?.role || '').toLowerCase()
-                // Owner & Admin have full master access; other staff roles also authorized
-                const isStaffOrAdmin = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen'].includes(role)
+                // Owner & Admin have full master access; other staff/custom roles also authorized
+                const hasCustomPerms = Array.isArray(profile?.admin_permissions) && profile.admin_permissions.length > 0
+                const isStaffOrAdmin = ['owner', 'admin', 'manager', 'staff', 'cashier', 'kitchen', 'custom'].includes(role) || hasCustomPerms
 
                 if (profileError || !profile || !isStaffOrAdmin) {
                     console.warn("Backoffice Auth Blocked:", { profileError, profile, role, isStaffOrAdmin })
@@ -179,7 +180,8 @@ export default function AdminLayout() {
 
     const userRoleDisplay = useMemo(() => {
         const role = (userProfile?.role || 'staff').toUpperCase()
-        if (role === 'ADMIN') return 'OWNER / ADMIN'
+        if (role === 'ADMIN' || role === 'OWNER') return 'OWNER / ADMIN'
+        if (role === 'CUSTOM') return 'CUSTOM STAFF'
         return role
     }, [userProfile])
 

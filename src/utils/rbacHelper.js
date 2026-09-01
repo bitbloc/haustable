@@ -21,6 +21,7 @@ export const ROLE_PERMISSIONS = {
     staff: ['tables', 'bookings', 'hausmade'],
     cashier: ['tables', 'bookings', 'overview', 'hausmade'],
     kitchen: ['menu', 'bookings'],
+    custom: [],
     customer: []
 }
 
