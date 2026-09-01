@@ -864,24 +864,17 @@ export default function POSDashboard() {
                     tables_layout (table_name),
                     order_items (id, quantity, price_at_time, custom_name, menu_items (name))
                 `)
-                .in('status', ['pending', 'confirmed'])
+                .eq('status', 'pending')
                 .gte('booking_time', startOfToday)
                 .order('booking_time', { ascending: false });
             
             if (!error && pendingData) {
-                // Filter relevant orders: pending bookings + incoming online pickup / booking waiting to be processed
+                // Filter relevant orders: pending bookings + incoming online pickup waiting for staff approval
                 const pendingOnly = pendingData.filter(b => {
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
-                    const nameLower = (b.customer_name || '').toLowerCase();
-                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
                     const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                    const isOnline = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('online') || remarkLower.includes('qr') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
-
-                    if (b.status === 'pending') return true;
-                    // Auto-confirmed EasySlip online orders that are pending kitchen/staff action
-                    if (b.status === 'confirmed' && isOnline && (b.booking_type === 'pickup' || sourceLower === 'online' || !b.table_id)) return true;
-                    return false;
+                    return !isExplicitInHouse;
                 });
 
                 setPendingBookingsList(pendingOnly);
@@ -1038,22 +1031,28 @@ export default function POSDashboard() {
         fetchAttachedMemberCrm();
     }, [activeBooking]);
 
-    // Repeating Sound Alert when pending orders exist (every 12s, instant stop when opened)
+    // Repeating Sound Alert when pending orders exist & modal is shown (instant stop when modal is closed or orders accepted)
     useEffect(() => {
-        if (!hasPendingOrders) return;
+        if (!hasPendingOrders || !showPendingModal) return;
 
         // Play high-impact order alert with noti1.mp3
         playOrderAlert('pending_orders_loop', 1000, 3.2);
 
-        // Repeat every 12 seconds if pending orders remain unacknowledged
+        // Repeat every 15 seconds if pending modal remains open & unhandled (capped to 2 repeats to prevent infinite ringing)
+        let repeatCount = 0;
         const soundInterval = setInterval(() => {
+            repeatCount++;
+            if (repeatCount >= 2) {
+                clearInterval(soundInterval);
+                return;
+            }
             playOrderAlert('pending_orders_loop', 1000, 3.2);
-        }, 12000);
+        }, 15000);
 
         return () => {
             clearInterval(soundInterval);
         };
-    }, [hasPendingOrders]);
+    }, [hasPendingOrders, showPendingModal]);
 
     const playSystemAlertSound = (eventKey = null) => {
         playOrderAlert(eventKey, 800, 3.2);

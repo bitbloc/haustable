@@ -170,5 +170,24 @@ describe('Audio Engine & Notification Resilience', () => {
             expect(result.isOnline).toBe(true);
             expect(result.isWalkIn).toBe(false);
         });
+
+        it('should ensure pending queue only holds unconfirmed pending orders', () => {
+            const rawBookings = [
+                { id: 'b1', status: 'pending', booking_type: 'pickup', source: 'online' },
+                { id: 'b2', status: 'confirmed', booking_type: 'pickup', source: 'online' }, // Already accepted
+                { id: 'b3', status: 'ready', booking_type: 'pickup', source: 'online' }, // Ready for pickup
+                { id: 'b4', status: 'pending', booking_type: 'dine_in', source: 'online' }
+            ];
+
+            const pendingOnly = rawBookings.filter(b => {
+                const sourceLower = (b.source || '').toLowerCase();
+                const remarkLower = (b.staff_remark || '').toLowerCase();
+                const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
+                return b.status === 'pending' && !isExplicitInHouse;
+            });
+
+            expect(pendingOnly).toHaveLength(2);
+            expect(pendingOnly.map(b => b.id)).toEqual(['b1', 'b4']);
+        });
     });
 });

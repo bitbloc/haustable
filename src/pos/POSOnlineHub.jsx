@@ -46,9 +46,15 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             clearInterval(alertIntervalRef.current);
             alertIntervalRef.current = null;
         }
+        let repeatCount = 0;
         alertIntervalRef.current = setInterval(() => {
+            repeatCount++;
+            if (repeatCount >= 2) {
+                stopAlert();
+                return;
+            }
             playOrderAlert('online_hub_repeat', 1000, 3.4);
-        }, 12000);
+        }, 15000);
     };
 
     const stopAlert = () => {
