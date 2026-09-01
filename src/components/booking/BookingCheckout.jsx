@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Upload, X, Tag, AlertCircle, Crown, Sparkles, Coins, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
@@ -6,6 +6,9 @@ import { usePromotion } from '../../hooks/usePromotion' // NEW
 import ImageModal from '../shared/ImageModal'
 import { supabase } from '../../lib/supabaseClient'
 import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
+import { normalizePromptPayId } from '../../utils/printerHelper'
+import generatePayload from 'promptpay-qr'
+import { QRCodeSVG } from 'qrcode.react'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -92,6 +95,22 @@ export default function BookingCheckout() {
     const discountAmount = appliedPromo?.discountAmount || 0
     const finalTotal = Math.max(0, cartTotal - discountAmount)
     const depositAmount = Math.ceil(finalTotal * 0.5)
+
+    const [selectedModalImage, setSelectedModalImage] = useState(null)
+
+    const cleanPromptPayId = useMemo(() => {
+        return normalizePromptPayId(settings.promptpayId || '0985284217')
+    }, [settings.promptpayId])
+
+    const promptPayPayload = useMemo(() => {
+        if (!cleanPromptPayId) return null
+        try {
+            return generatePayload(cleanPromptPayId, { amount: depositAmount > 0 ? depositAmount : undefined })
+        } catch (e) {
+            console.warn('Failed to generate dynamic PromptPay QR payload for booking:', e)
+            return null
+        }
+    }, [cleanPromptPayId, depositAmount])
 
     // Estimated points earned
     const estimatedPointsEarned = Math.floor((finalTotal / (crmBaseSpendAmount || 100)) * (tierDetails.multiplier || 1.0))
@@ -392,21 +411,31 @@ export default function BookingCheckout() {
                     <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] space-y-3">
                         {paymentMethod === 'promptpay' ? (
                             <div>
-                                {settings.qrCodeUrl ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="bg-white p-3 rounded-rams border border-[var(--color-rule)]">
+                                <div className="flex flex-col items-center gap-2 mb-3">
+                                    <div className="bg-white p-3.5 rounded-rams border border-[var(--color-rule)] shadow-2xs">
+                                        {promptPayPayload ? (
+                                            <QRCodeSVG
+                                                value={promptPayPayload}
+                                                size={176}
+                                                level="M"
+                                                className="cursor-zoom-in"
+                                                onClick={() => setSelectedModalImage({ type: 'vector', payload: promptPayPayload, title: 'PromptPay QR (ยอดมัดจำ 50%)' })}
+                                            />
+                                        ) : settings.qrCodeUrl ? (
                                             <img
                                                 src={settings.qrCodeUrl}
-                                                className="w-44 h-44 object-contain cursor-zoom-in mix-blend-multiply"
+                                                className="max-w-[176px] max-h-[176px] w-auto h-auto object-contain cursor-zoom-in"
                                                 alt="Payment QR"
-                                                onClick={() => setIsSlipModalOpen(true)}
+                                                onClick={() => setSelectedModalImage({ type: 'image', url: settings.qrCodeUrl, title: 'PromptPay QR (ยอดมัดจำ 50%)' })}
                                             />
-                                        </div>
-                                        <p className="text-[10px] text-subInk font-mono">{t('clickToEnlarge')}</p>
+                                        ) : (
+                                            <div className="w-44 h-44 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">{t('noQrCode')}</div>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="w-full h-32 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">{t('noQrCode')}</div>
-                                )}
+                                    {(promptPayPayload || settings.qrCodeUrl) && (
+                                        <p className="text-[10px] text-subInk font-mono">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
+                                    )}
+                                </div>
 
                                 <div className="space-y-1.5 font-mono text-xs pt-2">
                                     {settings.promptpayName && (
@@ -435,21 +464,23 @@ export default function BookingCheckout() {
                             </div>
                         ) : (
                             <div>
-                                {(settings.trueWalletQrUrl || settings.qrCodeUrl) ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <div className="bg-white p-3 rounded-rams border border-[var(--color-rule)]">
+                                <div className="flex flex-col items-center gap-2 mb-3">
+                                    <div className="bg-white p-3.5 rounded-rams border border-[var(--color-rule)] shadow-2xs">
+                                        {(settings.trueWalletQrUrl || settings.qrCodeUrl) ? (
                                             <img
                                                 src={settings.trueWalletQrUrl || settings.qrCodeUrl}
-                                                className="w-44 h-44 object-contain cursor-zoom-in mix-blend-multiply"
+                                                className="max-w-[176px] max-h-[176px] w-auto h-auto object-contain cursor-zoom-in"
                                                 alt="TrueMoney QR"
-                                                onClick={() => setIsSlipModalOpen(true)}
+                                                onClick={() => setSelectedModalImage({ type: 'image', url: settings.trueWalletQrUrl || settings.qrCodeUrl, title: 'TrueMoney QR' })}
                                             />
-                                        </div>
-                                        <p className="text-[10px] text-subInk font-mono">{t('clickToEnlarge')}</p>
+                                        ) : (
+                                            <div className="w-44 h-44 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="w-full h-32 bg-canvas flex items-center justify-center text-subInk rounded-rams font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
-                                )}
+                                    {(settings.trueWalletQrUrl || settings.qrCodeUrl) && (
+                                        <p className="text-[10px] text-subInk font-mono">แตะที่รูป QR เพื่อขยายเต็มจอ</p>
+                                    )}
+                                </div>
 
                                 <div className="space-y-1.5 font-mono text-xs pt-2">
                                     {settings.trueWalletName && (
@@ -583,6 +614,46 @@ export default function BookingCheckout() {
                 imageUrl={paymentMethod === 'truewallet' ? (settings.trueWalletQrUrl || settings.qrCodeUrl) : settings.qrCodeUrl}
                 title="Payment QR Code"
             />
+
+            {/* QR Vector / Image Zoom Modal */}
+            {selectedModalImage && (
+                <div 
+                    className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 select-none backdrop-blur-xs animate-in fade-in duration-150"
+                    onClick={() => setSelectedModalImage(null)}
+                >
+                    <div 
+                        className="bg-white p-5 rounded-2xl max-w-sm w-full flex flex-col items-center gap-3 shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="w-full flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
+                            <span className="font-bold text-xs font-mono uppercase text-ink">{selectedModalImage.title}</span>
+                            <button 
+                                onClick={() => setSelectedModalImage(null)}
+                                className="p-1 rounded-md hover:bg-paper text-subInk hover:text-ink transition-colors cursor-pointer"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                        <div className="p-3 bg-white border border-[var(--color-rule)] rounded-xl my-2 flex justify-center items-center shadow-inner">
+                            {selectedModalImage.type === 'vector' ? (
+                                <QRCodeSVG value={selectedModalImage.payload} size={240} level="M" />
+                            ) : (
+                                <img src={selectedModalImage.url} alt="QR Zoom" className="max-w-[240px] max-h-[300px] w-auto h-auto object-contain" />
+                            )}
+                        </div>
+                        <div className="text-center font-mono space-y-1">
+                            <span className="text-xs font-bold text-ink">ยอดเงินมัดจำ (50%): ฿{depositAmount}.-</span>
+                            <p className="text-[10px] text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
+                        </div>
+                        <button 
+                            onClick={() => setSelectedModalImage(null)}
+                            className="w-full py-2.5 bg-ink text-paper text-xs font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
+                        >
+                            ปิดหน้าต่าง
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

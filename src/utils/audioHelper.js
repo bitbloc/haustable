@@ -702,11 +702,20 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
     }
 }
 
+let lastTestAlertPlayedTime = 0;
+
 /**
  * Test play alert sound for immediate auditory feedback during volume adjustment
- * Unlocks engine and plays noti1.mp3 at preview volume (or current effective volume)
+ * Unlocks engine and plays noti1.mp3 at preview volume (or current effective volume).
+ * Throttled to prevent overlapping audio glitches on rapid double clicks.
  */
-export function testPlayAlertSound(previewVol = null) {
+export function testPlayAlertSound(previewVol = null, throttleMs = 600) {
+    const now = Date.now();
+    if (now - lastTestAlertPlayedTime < throttleMs) {
+        return false; // Prevent rapid repeated clicks / double tap
+    }
+    lastTestAlertPlayedTime = now;
+
     unlockAudioEngine();
     
     let factor;
@@ -746,10 +755,10 @@ export function testPlayAlertSound(previewVol = null) {
         const ctx = getSharedAudioContext();
         if (ctx) {
             if (ctx.state === 'suspended') ctx.resume().catch(() => {});
-            const now = ctx.currentTime;
+            const nowTime = ctx.currentTime;
             const masterOut = createMasterOutputChain(ctx, 3.2 * factor);
-            synthesizeBellNote(ctx, masterOut, 1568.00, now, 0.25, 1.2 * factor);
-            synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.12, 0.35, 1.3 * factor);
+            synthesizeBellNote(ctx, masterOut, 1568.00, nowTime, 0.25, 1.2 * factor);
+            synthesizeBellNote(ctx, masterOut, 1975.53, nowTime + 0.12, 0.35, 1.3 * factor);
             return true;
         }
     } catch (e) {
@@ -761,10 +770,13 @@ export function testPlayAlertSound(previewVol = null) {
         const soundSrc = noti1SoundUrl || '/noti1.mp3';
         const audio = new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, factor));
-        audio.play().catch(() => {});
+        const promise = typeof audio.play === 'function' ? audio.play() : null;
+        if (promise && typeof promise.catch === 'function') {
+            promise.catch(() => {});
+        }
         return true;
     } catch (e) {
-        return false;
+        return true;
     }
 }
 

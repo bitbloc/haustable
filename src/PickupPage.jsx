@@ -15,7 +15,10 @@ import { useOrderSubmission } from './hooks/useOrderSubmission' // NEW
 import { useServiceGuard } from './hooks/useServiceGuard'
 import { safeTimestampUrl } from './utils/urlHelper'
 import { verifyPaymentSlip } from './utils/slipVerificationHelper'
-import { Tag, AlertCircle, Crown, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
+import { normalizePromptPayId } from './utils/printerHelper'
+import generatePayload from 'promptpay-qr'
+import { QRCodeSVG } from 'qrcode.react'
+import { Tag, AlertCircle, Crown, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon, X as CloseIcon } from 'lucide-react'
 
 // --- Main Page ---
 export default function PickupPage() {
@@ -60,6 +63,7 @@ export default function PickupPage() {
     const [slipVerifyError, setSlipVerifyError] = useState(null)
     const [allowManualFallback, setAllowManualFallback] = useState(false)
     const [copiedField, setCopiedField] = useState(null)
+    const [selectedModalImage, setSelectedModalImage] = useState(null)
 
     // Settings State
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
@@ -74,6 +78,10 @@ export default function PickupPage() {
     // --- Hooks ---
     const { menuItems: allMenuItems, categories, loading: menuLoading } = useMenuData()
     const { submitOrder, isSubmitting } = useOrderSubmission()
+
+    const cleanPromptPayId = useMemo(() => {
+        return normalizePromptPayId(promptpayId || '0985284217')
+    }, [promptpayId])
 
     // Filter Menu for Pickup
     useEffect(() => {
@@ -204,6 +212,16 @@ export default function PickupPage() {
      // Calculate Final Total
      const discountAmount = appliedPromo?.discountAmount || 0
      const finalTotal = Math.max(0, cartTotal - discountAmount)
+
+     const promptPayPayload = useMemo(() => {
+         if (!cleanPromptPayId) return null
+         try {
+             return generatePayload(cleanPromptPayId, { amount: finalTotal > 0 ? finalTotal : undefined })
+         } catch (e) {
+             console.warn('Failed to generate dynamic PromptPay QR payload:', e)
+             return null
+         }
+     }, [cleanPromptPayId, finalTotal])
  
      // Revalidate when cartTotal changes
      useEffect(() => {
@@ -642,13 +660,15 @@ export default function PickupPage() {
                                     <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] space-y-3">
                                         {paymentMethod === 'promptpay' ? (
                                             <div>
-                                                {qrCodeUrl ? (
-                                                    <div className="flex justify-center bg-white p-3 rounded-rams border border-[var(--color-rule)] mb-3">
-                                                        <img src={qrCodeUrl} alt="PromptPay QR" className="w-44 h-44 object-contain mix-blend-multiply" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full h-32 flex items-center justify-center text-subInk font-mono text-xs">กำลังโหลด QR พร้อมเพย์...</div>
-                                                )}
+                                                <div className="flex justify-center bg-white p-3 rounded-rams border border-[var(--color-rule)] mb-3">
+                                                    {promptPayPayload ? (
+                                                        <QRCodeSVG value={promptPayPayload} size={176} level="M" className="cursor-zoom-in" onClick={() => setSelectedModalImage({ type: 'vector', payload: promptPayPayload, title: 'PromptPay QR (สแกนจ่าย)' })} />
+                                                    ) : qrCodeUrl ? (
+                                                        <img src={qrCodeUrl} alt="PromptPay QR" className="w-44 h-44 object-contain cursor-zoom-in" onClick={() => setSelectedModalImage({ type: 'image', url: qrCodeUrl, title: 'PromptPay QR (สแกนจ่าย)' })} />
+                                                    ) : (
+                                                        <div className="w-44 h-44 flex items-center justify-center text-subInk font-mono text-xs">กำลังโหลด QR พร้อมเพย์...</div>
+                                                    )}
+                                                </div>
 
                                                 <div className="space-y-1.5 font-mono text-xs">
                                                     {promptpayName && (
@@ -677,13 +697,13 @@ export default function PickupPage() {
                                             </div>
                                         ) : (
                                             <div>
-                                                {(truewalletQrUrl || qrCodeUrl) ? (
-                                                    <div className="flex justify-center bg-white p-3 rounded-rams border border-[var(--color-rule)] mb-3">
-                                                        <img src={truewalletQrUrl || qrCodeUrl} alt="TrueMoney QR" className="w-44 h-44 object-contain mix-blend-multiply" />
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full h-32 flex items-center justify-center text-subInk font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
-                                                )}
+                                                <div className="flex justify-center bg-white p-3 rounded-rams border border-[var(--color-rule)] mb-3">
+                                                    {(truewalletQrUrl || qrCodeUrl) ? (
+                                                        <img src={truewalletQrUrl || qrCodeUrl} alt="TrueMoney QR" className="w-44 h-44 object-contain cursor-zoom-in" onClick={() => setSelectedModalImage({ type: 'image', url: truewalletQrUrl || qrCodeUrl, title: 'TrueMoney QR' })} />
+                                                    ) : (
+                                                        <div className="w-44 h-44 flex items-center justify-center text-subInk font-mono text-xs">กำลังโหลด QR TrueMoney...</div>
+                                                    )}
+                                                </div>
 
                                                 <div className="space-y-1.5 font-mono text-xs">
                                                     {truewalletName && (
@@ -803,6 +823,46 @@ export default function PickupPage() {
                     )}
                 </AnimatePresence>
             </div>
+
+            {/* QR Zoom Modal */}
+            {selectedModalImage && (
+                <div 
+                    className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4 select-none backdrop-blur-xs animate-in fade-in duration-150"
+                    onClick={() => setSelectedModalImage(null)}
+                >
+                    <div 
+                        className="bg-white p-5 rounded-2xl max-w-sm w-full flex flex-col items-center gap-3 shadow-2xl"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="w-full flex justify-between items-center border-b border-[var(--color-rule)] pb-2">
+                            <span className="font-bold text-xs font-mono uppercase text-ink">{selectedModalImage.title}</span>
+                            <button 
+                                onClick={() => setSelectedModalImage(null)}
+                                className="p-1 rounded-md hover:bg-paper text-subInk hover:text-ink transition-colors cursor-pointer"
+                            >
+                                <CloseIcon size={16} />
+                            </button>
+                        </div>
+                        <div className="p-3 bg-white border border-[var(--color-rule)] rounded-xl my-2 flex justify-center items-center shadow-inner">
+                            {selectedModalImage.type === 'vector' ? (
+                                <QRCodeSVG value={selectedModalImage.payload} size={240} level="M" />
+                            ) : (
+                                <img src={selectedModalImage.url} alt="QR Zoom" className="max-w-[240px] max-h-[300px] w-auto h-auto object-contain" />
+                            )}
+                        </div>
+                        <div className="text-center font-mono space-y-1">
+                            <span className="text-xs font-bold text-ink">ยอดชำระ: ฿{finalTotal}.-</span>
+                            <p className="text-[10px] text-subInk">บันทึกรูปหรือสแกนผ่านแอปธนาคารได้ทันที</p>
+                        </div>
+                        <button 
+                            onClick={() => setSelectedModalImage(null)}
+                            className="w-full py-2.5 bg-ink text-paper text-xs font-mono font-bold rounded-rams hover:bg-subInk transition-colors cursor-pointer"
+                        >
+                            ปิดหน้าต่าง
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

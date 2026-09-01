@@ -112,7 +112,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             fetchOnlineData();
         }
 
-        const channel = supabase.channel('online_orders_hub')
+        const channel = supabase.channel('pos-realtime-notifications-hub')
             .on(
                 'broadcast',
                 { event: 'online_order_created' },

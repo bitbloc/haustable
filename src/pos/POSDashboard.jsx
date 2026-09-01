@@ -864,12 +864,26 @@ export default function POSDashboard() {
                     tables_layout (table_name),
                     order_items (id, quantity, price_at_time, custom_name, menu_items (name))
                 `)
-                .eq('status', 'pending')
+                .in('status', ['pending', 'confirmed'])
                 .gte('booking_time', startOfToday)
                 .order('booking_time', { ascending: false });
             
             if (!error && pendingData) {
-                const pendingOnly = pendingData;
+                // Filter relevant orders: pending bookings + incoming online pickup / booking waiting to be processed
+                const pendingOnly = pendingData.filter(b => {
+                    const sourceLower = (b.source || '').toLowerCase();
+                    const remarkLower = (b.staff_remark || '').toLowerCase();
+                    const nameLower = (b.customer_name || '').toLowerCase();
+                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
+                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
+                    const isOnline = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('online') || remarkLower.includes('qr') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
+
+                    if (b.status === 'pending') return true;
+                    // Auto-confirmed EasySlip online orders that are pending kitchen/staff action
+                    if (b.status === 'confirmed' && isOnline && (b.booking_type === 'pickup' || sourceLower === 'online' || !b.table_id)) return true;
+                    return false;
+                });
+
                 setPendingBookingsList(pendingOnly);
                 const count = pendingOnly.length;
                 const hasPending = count > 0;
@@ -881,7 +895,7 @@ export default function POSDashboard() {
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const nameLower = (b.customer_name || '').toLowerCase();
                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
-                    const isExplicitInHouse = sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in';
+                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
                     const isOnline = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
                     return isOnline;
                 }).length;
@@ -1240,7 +1254,8 @@ export default function POSDashboard() {
                                 setView('online_hub');
                             }
                         }), { id: eventKey, duration: 10000 });
-                        pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่`, null);
+                        pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
+                        setShowPendingModal(true);
                     } else {
                         playOrderAlert(eventKey, 1200, 3.4);
                     }
@@ -1264,6 +1279,7 @@ export default function POSDashboard() {
                             }
                         }), { id: slipEventKey, duration: 10000 });
                         pushNotifHistory('SLIP', 'Payment Uploaded', `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
+                        setShowPendingModal(true);
                     }
                     checkPendingOrders();
                     triggerDebouncedRefresh();
@@ -1280,7 +1296,12 @@ export default function POSDashboard() {
                     if (!bookingId) return;
 
                     const tableId = newRow?.table_id || oldRow?.table_id || null;
-                    const isPickup = newRow?.booking_type === 'pickup' || (!tableId && (newRow?.source === 'online' || (newRow?.staff_remark || '').toLowerCase().includes('pickup')));
+                    const sourceLower = (newRow?.source || oldRow?.source || '').toLowerCase();
+                    const remarkLower = (newRow?.staff_remark || oldRow?.staff_remark || '').toLowerCase();
+                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
+                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || newRow?.booking_type === 'walk_in') && newRow?.booking_type !== 'pickup';
+                    const isPickup = newRow?.booking_type === 'pickup' || (!tableId && (sourceLower === 'online' || remarkLower.includes('pickup')));
+                    const isOnlineBooking = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online')) && !isExplicitInHouse;
                     const tableName = tableId ? (tablesMap[tableId] || `Table #${tableId}`) : (isPickup ? 'รับกลับ (Pickup)' : 'Online Order');
 
                     const callBillKey = `${bookingId}_CALL_BILL`;
@@ -1289,20 +1310,26 @@ export default function POSDashboard() {
                     const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
 
                     if (eventType === 'INSERT') {
-                        const remarkCheck = (newRow?.staff_remark || '').toLowerCase();
-                        if (tableId && (remarkCheck.includes('qr walk-in') || remarkCheck.includes('qr') || newRow?.source === 'online' || newRow?.source === 'qr')) {
+                        if (tableId && (remarkLower.includes('qr walk-in') || remarkLower.includes('qr') || sourceLower === 'online' || sourceLower === 'qr')) {
                             handleAutoPrintQROrder(bookingId, tableName);
                         }
 
-                        if (newRow.status === 'pending' || newRow.source === 'qr' || remarkCheck.includes('qr') || isPickup) {
+                        if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isPickup || isOnlineBooking || isLineman) {
                             if (checkEventDeduplication(pendingOrderKey, 4500)) {
+                                const toastBadge = isPickup ? 'PICKUP ONLINE · รับกลับ' : (isOnlineBooking ? 'ONLINE BOOKING · จองโต๊ะ' : 'NEW ORDER · อาหารเข้าใหม่');
+                                const toastTitle = isPickup 
+                                    ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` 
+                                    : (isOnlineBooking ? `จองโต๊ะ ${tableName} (${newRow.pickup_contact_name || newRow.customer_name || 'ลูกค้าออนไลน์'}) ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`);
+
                                 toast.custom((t) => renderPosToast(t, {
-                                    badge: isPickup ? 'PICKUP ONLINE · รับกลับ' : 'NEW ORDER · อาหารเข้าใหม่',
-                                    title: isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`,
-                                    subtitle: isPickup ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    badge: toastBadge,
+                                    title: toastTitle,
+                                    subtitle: isPickup || isOnlineBooking ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
                                     dot: 'emerald',
                                     onClick: () => {
-                                        if (tableId) {
+                                        if (isPickup || isOnlineBooking) {
+                                            setView('online_hub');
+                                        } else if (tableId) {
                                             supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                                 if (data) handleSelectTable(data);
                                             });
@@ -1311,8 +1338,11 @@ export default function POSDashboard() {
                                         }
                                     }
                                 }), { id: pendingOrderKey, duration: 10000 });
-                                pushNotifHistory('ORDER', isPickup ? 'Online Pickup' : 'New Order', isPickup ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)}` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`, tableId);
+                                pushNotifHistory('ORDER', isPickup ? 'Online Pickup' : (isOnlineBooking ? 'Online Booking' : 'New Order'), toastTitle, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
+                                if (isPickup || isOnlineBooking) {
+                                    setShowPendingModal(true);
+                                }
                             }
                         }
                     } else if (eventType === 'UPDATE') {
@@ -1426,6 +1456,8 @@ export default function POSDashboard() {
                                             supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                                 if (data) handleSelectTable(data);
                                             });
+                                        } else {
+                                            setView('online_hub');
                                         }
                                     }
                                 }), { id: slipReceivedKey, duration: 10000 });
@@ -1449,24 +1481,35 @@ export default function POSDashboard() {
                                 console.log(`🔊 [POS Alert] QR / New items incoming for booking: ${bookingId}`);
                                 playOrderAlert(qrItemAlertKey, 1200, 3.4);
                                 
-                                // Lookup table name for toast & history
-                                supabase.from('bookings').select('table_id, staff_remark, source, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
-                                    const tName = bData?.tables_layout?.table_name || tablesMap[bData?.table_id] || `โต๊ะ #${bData?.table_id || ''}`;
+                                // Lookup table / order details for toast & history
+                                supabase.from('bookings').select('id, table_id, staff_remark, source, booking_type, pickup_contact_name, customer_name, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
+                                    const sourceLower = (bData?.source || '').toLowerCase();
+                                    const remarkLower = (bData?.staff_remark || '').toLowerCase();
+                                    const isItemPickup = bData?.booking_type === 'pickup' || (!bData?.table_id && (sourceLower === 'online' || remarkLower.includes('pickup')));
+                                    const tName = bData?.tables_layout?.table_name || (bData?.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : null);
                                     const tId = bData?.table_id;
+                                    
+                                    const itemBadge = isItemPickup ? 'PICKUP ITEMS · เพิ่มรายการ' : 'QR ORDER · ออเดอร์เข้าใหม่';
+                                    const itemTitle = isItemPickup 
+                                        ? `ออเดอร์รับกลับ #${getShortBookingId(bData)} มีรายการสั่งอาหารเข้ามา` 
+                                        : `โต๊ะ ${tName || 'หน้าร้าน'} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`;
+
                                     toast.custom((t) => renderPosToast(t, {
-                                        badge: 'QR ORDER · ออเดอร์เข้าใหม่',
-                                        title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
-                                        subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                        badge: itemBadge,
+                                        title: itemTitle,
+                                        subtitle: isItemPickup ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
                                         dot: 'emerald',
                                         onClick: () => {
-                                            if (tId) {
+                                            if (isItemPickup) {
+                                                setView('online_hub');
+                                            } else if (tId) {
                                                 supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                                     if (data) handleSelectTable(data);
                                                 });
                                             }
                                         }
                                     }), { id: qrItemAlertKey, duration: 10000 });
-                                    pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                                    pushNotifHistory('ORDER', isItemPickup ? 'Pickup Order' : 'QR Order', itemTitle, tId);
                                 });
                             } else {
                                 // Trigger single chime for burst
