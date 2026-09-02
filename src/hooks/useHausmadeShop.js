@@ -232,7 +232,7 @@ export function useHausmadeShop() {
                     trueWalletPhone: settingsMap.truewallet_phone || '',
                     trueWalletName: settingsMap.truewallet_account_name || '',
                     trueWalletQrUrl: safeTimestampUrl(settingsMap.truewallet_qr_url) || '',
-                    easySlipEnabled: settingsMap.easyslip_enabled_pickup !== 'false',
+                    easySlipEnabled: settingsMap.easyslip_enabled_hausmade !== 'false',
                     bankAccountName: settingsMap.bank_account_name || 'IN THE HAUS',
                     bankAccountNo: settingsMap.bank_account_no || '123-4-56789-0',
                     bankName: settingsMap.bank_name || 'กสิกรไทย (KBank)',

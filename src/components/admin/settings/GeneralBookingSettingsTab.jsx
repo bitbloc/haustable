@@ -531,6 +531,16 @@ export default function GeneralBookingSettingsTab({
                         </span>
                         
                         <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
+                            <span>HAUSMADE Shop:</span>
+                            <input
+                                type="checkbox"
+                                checked={settings.easyslip_enabled_hausmade !== 'false'}
+                                onChange={(e) => handleSave('easyslip_enabled_hausmade', e.target.checked ? 'true' : 'false')}
+                                className="accent-[var(--color-ink)] w-4 h-4 cursor-pointer"
+                            />
+                        </label>
+
+                        <label className="flex items-center justify-between text-xs font-mono text-[var(--color-ink)] cursor-pointer">
                             <span>Pickup Online:</span>
                             <input
                                 type="checkbox"

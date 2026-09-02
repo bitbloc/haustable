@@ -1275,7 +1275,16 @@ export default function HausmadeCartDrawer({
                                     ) : (
                                         <button
                                             type="submit"
-                                            disabled={isSubmitting || cart.length === 0 || !contactName?.trim() || !contactPhone?.trim() || contactPhone.replace(/\D/g, '').length < 9 || !slipFile}
+                                            disabled={
+                                                isSubmitting ||
+                                                isVerifyingSlip ||
+                                                cart.length === 0 ||
+                                                !contactName?.trim() ||
+                                                !contactPhone?.trim() ||
+                                                contactPhone.replace(/\D/g, '').length < 9 ||
+                                                !slipFile ||
+                                                (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)
+                                            }
                                             className={`w-full py-4 font-mono text-[12px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between px-6 shadow-md cursor-pointer ${
                                                 hasPreOrderInCart
                                                     ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
@@ -1285,7 +1294,9 @@ export default function HausmadeCartDrawer({
                                             <span>
                                                 {isSubmitting
                                                     ? (hasPreOrderInCart ? '⏳ กำลังส่งข้อมูลคำสั่งจอง (PRE-ORDER)...' : 'TRANSMITTING ORDER...')
-                                                    : (hasPreOrderInCart ? '⏳ ยืนยันการสั่งจองล่วงหน้า // PRE-ORDER NOW' : 'TRANSMIT ORDER // ชำระเงิน')
+                                                    : isVerifyingSlip
+                                                        ? '🔍 กำลังตรวจสอบสลิปผ่าน EasySlip...'
+                                                        : (hasPreOrderInCart ? '⏳ ยืนยันการสั่งจองล่วงหน้า // PRE-ORDER NOW' : 'TRANSMIT ORDER // ชำระเงิน')
                                                 }
                                             </span>
                                             <span>฿{finalTotalAmount.toLocaleString()}.-</span>
