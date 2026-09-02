@@ -210,9 +210,11 @@ export default function HausmadeShopPage() {
                 </div>
 
                 {/* Center Title on mobile */}
-                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)] sm:hidden">
-                    hausmade.
-                </span>
+                <img
+                    src="/hausmade-logo.png"
+                    alt="hausmade."
+                    className="h-4.5 w-auto object-contain sm:hidden"
+                />
 
                 {/* Member CRM Status & Cart Trigger */}
                 <div className="flex items-center gap-3">
@@ -269,13 +271,15 @@ export default function HausmadeShopPage() {
                 </div>
             )}
 
-            {/* 3. Massive Retro Editorial Masthead (Requested: hausmade.) */}
+            {/* 3. Massive Official Logo Masthead */}
             <header className="w-full bg-[var(--color-paper)] pt-8 pb-6 px-4 sm:px-8 text-center border-b border-[var(--color-rule)]">
                 <div className="max-w-6xl mx-auto flex flex-col items-center">
-                    <h1 className="font-['Instrument_Serif',Georgia,serif] text-6xl sm:text-8xl md:text-9xl font-normal tracking-tight text-[var(--color-ink)] leading-none select-none lowercase">
-                        hausmade.
-                    </h1>
-                    <div className="mt-2 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-[var(--color-neutral)]">
+                    <img
+                        src="/hausmade-logo.png"
+                        alt="hausmade."
+                        className="h-14 sm:h-20 md:h-26 w-auto max-w-full object-contain select-none transition-transform"
+                    />
+                    <div className="mt-3 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-[var(--color-neutral)]">
                         <span>// CRAFT & SPECIALTY ATELIER</span>
                         <span>·</span>
                         <span>CRAFTED IN NAKHON PHANOM, THAILAND</span>
