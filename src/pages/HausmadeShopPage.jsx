@@ -1,7 +1,7 @@
-/* Hallmark · page: HausmadeShopPage · genre: editorial · macrostructure: editorial-magazine · theme: atelier-thai-modern · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient'
 import { useHausmadeShop, isPreOrderItem, getPreOrderEta, getProductImages } from '../hooks/useHausmadeShop'
 import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
@@ -55,12 +55,50 @@ export default function HausmadeShopPage() {
         availableXhausBalance
     } = shopState
 
+    const navigate = useNavigate()
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [showAuthModal, setShowAuthModal] = useState(false)
     const [heroSlideIdx, setHeroSlideIdx] = useState(0)
-    const [newsletterEmail, setNewsletterEmail] = useState('')
-    const [newsletterSubmitted, setNewsletterSubmitted] = useState(false)
+
+    // Quick Order Tracking State
+    const [quickTrackQuery, setQuickTrackQuery] = useState('')
+    const [quickTrackLoading, setQuickTrackLoading] = useState(false)
+    const [quickTrackError, setQuickTrackError] = useState('')
+
+    const handleQuickTrack = async (e) => {
+        e.preventDefault()
+        const clean = quickTrackQuery.trim()
+        if (!clean) return
+
+        setQuickTrackLoading(true)
+        setQuickTrackError('')
+
+        try {
+            // Search for matching booking by tracking_token, pickup_contact_phone, or phone
+            const { data: match, error } = await supabase
+                .from('bookings')
+                .select('tracking_token, id')
+                .or(`tracking_token.ilike.%${clean}%,pickup_contact_phone.ilike.%${clean}%,phone.ilike.%${clean}%`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            if (match && (match.tracking_token || match.id)) {
+                navigate(`/track/${match.tracking_token || match.id}`)
+            } else if (clean.length >= 4) {
+                // If it looks like a direct token, attempt direct route
+                navigate(`/track/${clean}`)
+            } else {
+                setQuickTrackError('ไม่พบข้อมูลคำสั่งซื้อ กรุณาตรวจสอบรหัส Token หรือเบอร์โทรศัพท์อีกครั้ง')
+            }
+        } catch (err) {
+            console.warn('Quick track lookup error:', err)
+            setQuickTrackError('เกิดข้อผิดพลาดในการตรวจสอบ กรุณาลองใหม่อีกครั้ง')
+        } finally {
+            setQuickTrackLoading(false)
+        }
+    }
 
     // Featured Hero Items (items marked is_featured or first 4 items with images)
     const heroItems = useMemo(() => {
@@ -641,49 +679,149 @@ export default function HausmadeShopPage() {
                     </section>
                 )}
 
-                {/* SECTION E: Newsletter / Join Club Section */}
-                <section className="w-full bg-[var(--color-paper-warm)] border border-[var(--color-rule)] p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-4 relative overflow-hidden">
-                    <h3 className="font-['Instrument_Serif',Georgia,serif] text-2xl sm:text-3xl text-[var(--color-ink)] tracking-tight font-normal uppercase max-w-xl mx-auto">
-                        Sign up for our newsletter for special drops & stories
-                    </h3>
-                    <p className="font-mono text-[11px] text-[var(--color-neutral)] uppercase max-w-md">
-                        รับข่าวสารเมล็ดกาแฟล็อตใหม่ สินค้าลิมิเต็ด และสิทธิพิเศษสมาชิก xhaus ก่อนใคร
-                    </p>
+                {/* SECTION E: Dual Workbench — xhaus Membership Perks & Quick Order Tracking */}
+                <section className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] grid grid-cols-1 md:grid-cols-12 overflow-hidden shadow-2xs">
+                    
+                    {/* Left Column: xhaus Club Membership & Loyalty Perks */}
+                    <div className="md:col-span-6 p-6 sm:p-10 border-b md:border-b-0 md:border-r border-[var(--color-rule)] flex flex-col justify-between gap-6 bg-[var(--color-paper)]">
+                        <div className="flex flex-col gap-3">
+                            <span className="font-mono text-[10px] font-extrabold text-[var(--color-accent)] uppercase tracking-wider">
+                                // XHAUS MEMBERSHIP & REWARDS
+                            </span>
+                            <h3 className="font-['Instrument_Serif',Georgia,serif] text-3xl sm:text-4xl text-[var(--color-ink)] tracking-tight font-normal lowercase leading-none">
+                                join the haus club.
+                            </h3>
+                            <p className="font-sans text-xs sm:text-[13px] text-[var(--color-muted)] leading-relaxed mt-1">
+                                ระบบสะสมแต้มและสิทธิประโยชน์สำหรับสมาชิกคนพิเศษของ IN THE HAUS เพลิดเพลินกับส่วนลดเงินสดและสิทธิสั่งจองสินค้าลิมิเต็ดก่อนใคร
+                            </p>
 
-                    <form
-                        onSubmit={(e) => {
-                            e.preventDefault()
-                            if (newsletterEmail) setNewsletterSubmitted(true)
-                        }}
-                        className="w-full max-w-md flex flex-col items-center gap-3 mt-2"
-                    >
-                        {newsletterSubmitted ? (
-                            <div className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-4 py-2 border border-emerald-300">
-                                ✓ ขอบคุณสำหรับการติดตาม! เราจะส่งเรื่องราวพิเศษถึงคุณ
+                            <div className="grid grid-cols-1 gap-2.5 pt-2">
+                                <div className="flex items-start gap-3 p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
+                                    <span className="text-base">🪙</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase">
+                                            สะสมแต้ม xhaus ทุกออเดอร์
+                                        </span>
+                                        <span className="text-[11px] text-[var(--color-muted)] mt-0.5 leading-normal font-sans">
+                                            ทุก 1 บาท = 1 xhaus coin ใช้แลกส่วนลดเงินสดได้ทันทีในออเดอร์ถัดไป
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3 p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)]">
+                                    <span className="text-base">📦</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase">
+                                            Early Access Pre-Orders
+                                        </span>
+                                        <span className="text-[11px] text-[var(--color-muted)] mt-0.5 leading-normal font-sans">
+                                            รับสิทธิ์เปิดสั่งจองคอลเลกชันพิเศษและเมล็ดกาแฟล็อตหายากก่อนวางจำหน่ายทั่วไป
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                        ) : (
-                            <>
-                                <input
-                                    type="email"
-                                    required
-                                    placeholder="Enter your email address..."
-                                    value={newsletterEmail}
-                                    onChange={(e) => setNewsletterEmail(e.target.value)}
-                                    className="w-full border-b border-[var(--color-ink)]/40 bg-transparent text-center font-mono text-xs py-2 text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
-                                />
-                                <button
-                                    type="submit"
-                                    className="mt-2 px-8 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase rounded-full hover:bg-[oklch(12%_0.012_28)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
-                                >
-                                    SUBMIT
-                                </button>
-                            </>
-                        )}
-                    </form>
+                        </div>
 
-                    {/* Playful Cat / Mascot Line Art */}
-                    <div className="absolute right-4 bottom-2 font-mono text-xs text-[var(--color-ink)]/40 select-none">
-                        ( ฅ^•ﻌ•^ฅ )
+                        {/* Member Action Card */}
+                        <div className="pt-4 border-t border-[var(--color-rule)]">
+                            {isMember ? (
+                                <div className="flex items-center justify-between gap-3 p-3 bg-[var(--color-accent-yellow)] border border-[var(--color-ink)]/15">
+                                    <div className="flex flex-col">
+                                        <span className="font-mono text-[10px] uppercase font-bold text-[var(--color-ink)]/75">
+                                            STATUS: {memberTierInfo?.name || 'MEMBER'}
+                                        </span>
+                                        <span className="font-mono text-sm font-bold text-[var(--color-ink)]">
+                                            {(memberProfile?.xhaus_balance ?? availableXhausBalance).toLocaleString()} xhaus coins
+                                        </span>
+                                    </div>
+                                    <Link
+                                        to="/member-card"
+                                        className="px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[11px] font-bold uppercase hover:bg-[oklch(12%_0.012_28)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                    >
+                                        [ 💳 บัตรสมาชิกของฉัน ➔ ]
+                                    </Link>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAuthModal(true)}
+                                    className="w-full py-3 px-4 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-accent-yellow)] hover:text-[var(--color-ink)] font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer border border-[var(--color-ink)] flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1 shadow-xs"
+                                >
+                                    <span>[ 🔑 เข้าสู่ระบบ / สมัครสมาชิกรับ 10 xhaus ➔ ]</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right Column: Realtime Order & Parcel Tracking Search */}
+                    <div className="md:col-span-6 p-6 sm:p-10 flex flex-col justify-between gap-6 bg-[var(--color-paper-warm)] relative">
+                        <div className="flex flex-col gap-3">
+                            <span className="font-mono text-[10px] font-extrabold text-[var(--color-ink)]/80 uppercase tracking-wider">
+                                // REALTIME LOGISTICS & TRACKING
+                            </span>
+                            <h3 className="font-['Instrument_Serif',Georgia,serif] text-3xl sm:text-4xl text-[var(--color-ink)] tracking-tight font-normal lowercase leading-none">
+                                track your order.
+                            </h3>
+                            <p className="font-sans text-xs sm:text-[13px] text-[var(--color-ink)]/80 leading-relaxed mt-1">
+                                กรอกรหัสติดตามคำสั่งซื้อ (เช่น <strong className="font-mono">HM-XXXX</strong>) หรือเบอร์โทรศัพท์ที่ใช้สั่งซื้อ เพื่อตรวจสอบขั้นตอนการผลิตและเลขพัสดุขนส่งแบบเรียลไทม์
+                            </p>
+
+                            <form onSubmit={handleQuickTrack} className="flex flex-col gap-2 pt-2">
+                                <div className="flex flex-col sm:flex-row items-stretch gap-2">
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="รหัสออเดอร์ เช่น HM-XXXX หรือ เบอร์โทร..."
+                                        value={quickTrackQuery}
+                                        onChange={(e) => setQuickTrackQuery(e.target.value)}
+                                        className="flex-1 px-3.5 py-2.5 bg-[var(--color-paper)] border border-[var(--color-ink)]/30 font-mono text-xs text-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] uppercase"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={quickTrackLoading}
+                                        className="px-5 py-2.5 bg-[var(--color-ink)] hover:bg-[oklch(12%_0.012_28)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase transition-colors cursor-pointer whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] flex items-center justify-center gap-1.5 shadow-xs"
+                                    >
+                                        {quickTrackLoading ? (
+                                            <span>[ ⏳ ตรวจสอบ... ]</span>
+                                        ) : (
+                                            <span>[ 🔍 ค้นหา ➔ ]</span>
+                                        )}
+                                    </button>
+                                </div>
+                                {quickTrackError && (
+                                    <span className="font-mono text-[11px] text-red-700 font-bold bg-red-100/80 p-2 border border-red-300">
+                                        ✕ {quickTrackError}
+                                    </span>
+                                )}
+                            </form>
+                        </div>
+
+                        {/* Quick Links for Active Orders if any */}
+                        {hasActiveOrders && (
+                            <div className="pt-4 border-t border-[var(--color-ink)]/15 flex flex-col gap-2 font-mono text-xs">
+                                <span className="font-bold text-[10px] text-[var(--color-ink)] uppercase">
+                                    [ ออเดอร์ล่าสุดของคุณ // RECENT ORDERS ]:
+                                </span>
+                                <div className="flex flex-wrap gap-2">
+                                    {activeOrders.slice(0, 2).map((ord) => (
+                                        <Link
+                                            key={ord.id}
+                                            to={`/track/${ord.tracking_token || ord.id}`}
+                                            className="px-2.5 py-1 bg-[var(--color-paper)] border border-[var(--color-ink)]/30 hover:border-[var(--color-ink)] text-[var(--color-ink)] text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors"
+                                        >
+                                            <span>📦</span>
+                                            <span>#{(ord.tracking_token || String(ord.id)).slice(-6).toUpperCase()}</span>
+                                            <span>({ord.status}) ➔</span>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Playful Cat / Mascot Line Art */}
+                        <div className="absolute right-4 bottom-2 font-mono text-xs text-[var(--color-ink)]/40 select-none">
+                            ( ฅ^•ﻌ•^ฅ )
+                        </div>
                     </div>
                 </section>
 

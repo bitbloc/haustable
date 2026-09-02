@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { getAppOrigin } from '../utils/urlHelper'
 import { sendPOSBroadcast } from '../utils/realtimeNotifier'
+import { sendOrderNotificationEmail } from '../utils/orderNotificationHelper'
 
 export function useOrderSubmission() {
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -256,6 +257,19 @@ export function useOrderSubmission() {
                     }
                 } catch(e) {
                     console.error("Failed to trigger ticket:", e)
+                }
+
+                // Automatically trigger email notification to Rithawat@gmail.com for Hausmade orders
+                try {
+                    const isHausmadeOrder = resultData.booking_type === 'hausmade' || 
+                        resultData.order_type?.includes('hausmade') || 
+                        resultData.shipping_address !== undefined
+                    
+                    if (isHausmadeOrder) {
+                        sendOrderNotificationEmail(resultData, orderItemsPayload)
+                    }
+                } catch (emailErr) {
+                    console.warn('[useOrderSubmission] Failed to dispatch email notification:', emailErr)
                 }
             }
 

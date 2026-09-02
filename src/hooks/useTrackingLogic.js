@@ -1,7 +1,11 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { isValidUuid } from '../utils/urlHelper'
+
+function isValidToken(tok) {
+  if (!tok || typeof tok !== 'string') return false
+  const clean = tok.trim()
+  return /^[a-zA-Z0-9_-]{4,64}$/.test(clean)
+}
 
 export function useTrackingLogic(token) {
   const [data, setData] = useState(null)
@@ -12,8 +16,8 @@ export function useTrackingLogic(token) {
   const isFetchingRef = useRef(false)
 
   const fetchTrackingInfo = useCallback(async () => {
-    if (!token || !isValidUuid(token) || isFetchingRef.current) {
-      if (token && !isValidUuid(token)) {
+    if (!token || !isValidToken(token) || isFetchingRef.current) {
+      if (token && !isValidToken(token)) {
         setError('ไม่พบรหัสติดตามออเดอร์ที่ถูกต้อง (Invalid Tracking Link)')
         setLoading(false)
       }
@@ -22,26 +26,102 @@ export function useTrackingLogic(token) {
     isFetchingRef.current = true
 
     try {
-      const { data: resData, error: apiError } = await supabase.functions.invoke('get-tracking-info', {
-        body: { token: token.trim() },
-      })
+      let trackingResult = null
 
-      if (apiError) {
-        if (apiError.status === 404 || apiError.context?.status === 404) {
-            throw new Error('ไม่พบข้อมูลคำสั่งซื้อ (Order not found)')
+      try {
+        const { data: resData, error: apiError } = await supabase.functions.invoke('get-tracking-info', {
+          body: { token: token.trim() },
+        })
+
+        if (!apiError && resData && !resData.error) {
+          trackingResult = resData
         }
-        if (apiError.status === 410 || apiError.context?.status === 410) {
-            throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
-        }
-        throw apiError
-      }
-      if (resData?.error) {
-        if (resData.code === 'TOKEN_EXPIRED') throw new Error('ลิงก์นี้หมดอายุแล้ว (Link Expired)')
-        if (resData.code === 'NOT_FOUND') throw new Error('ไม่พบข้อมูลคำสั่งซื้อ (Order not found)')
-        throw new Error(resData.error)
+      } catch (fnErr) {
+        console.warn('[useTrackingLogic] Edge function fallback triggered:', fnErr)
       }
 
-      setData(resData)
+      // Direct DB Fallback if Edge function was unavailable or incomplete
+      if (!trackingResult) {
+        const { data: dbBooking, error: dbError } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            tables_layout ( table_name ),
+            promotion_codes ( code ),
+            profiles ( display_name, phone_number ),
+            order_items (
+              quantity,
+              price_at_time,
+              custom_name,
+              selected_options,
+              menu_items ( name, image_url )
+            )
+          `)
+          .eq('tracking_token', token.trim())
+          .maybeSingle()
+
+        if (dbBooking) {
+          const shortId = token.trim().slice(-4).toUpperCase()
+          const fullName = dbBooking.pickup_contact_name || dbBooking.profiles?.display_name || dbBooking.customer_name || 'Guest'
+          const safeName = fullName.split(' ')[0]
+          let maskedPhone = ''
+          const rawPhone = dbBooking.pickup_contact_phone || dbBooking.phone || dbBooking.profiles?.phone_number || ''
+          if (rawPhone && rawPhone.length >= 10) {
+            const p = rawPhone.replace(/[^0-9]/g, '')
+            maskedPhone = `${p.substring(0, 3)}-xxx-${p.substring(p.length - 4)}`
+          } else {
+            maskedPhone = rawPhone
+          }
+
+          const items = dbBooking.order_items?.map((item) => ({
+            name: item.custom_name || item.menu_items?.name || 'Unknown Item',
+            quantity: item.quantity,
+            price: item.price_at_time,
+            options: item.selected_options
+          })) || []
+
+          trackingResult = {
+            id: dbBooking.id,
+            short_id: shortId,
+            status: dbBooking.status,
+            booking_type: dbBooking.booking_type || 'dine_in',
+            order_type: dbBooking.order_type || (dbBooking.booking_type === 'hausmade' ? (dbBooking.shipping_address ? 'hausmade_shipping' : 'hausmade_pickup') : null),
+            customer_name: safeName,
+            full_name: fullName,
+            phone: maskedPhone,
+            pickup_contact_name: dbBooking.pickup_contact_name,
+            pickup_contact_phone: dbBooking.pickup_contact_phone,
+            shipping_address: dbBooking.shipping_address,
+            shipping_fee: dbBooking.shipping_fee,
+            courier_name: dbBooking.courier_name || 'Flash Express',
+            tracking_number: dbBooking.tracking_number,
+            customer_note: dbBooking.customer_note,
+            staff_remark: dbBooking.staff_remark,
+            is_preorder: dbBooking.is_preorder,
+            preorder_eta: dbBooking.preorder_eta,
+            created_at: dbBooking.created_at,
+            booking_time: dbBooking.booking_time,
+            pax: dbBooking.pax,
+            items: items,
+            table_name: dbBooking.tables_layout?.table_name,
+            total_amount: dbBooking.total_amount,
+            discount_amount: dbBooking.discount_amount,
+            promotion_codes: dbBooking.promotion_codes,
+            profiles: dbBooking.profiles,
+            payment_slip_url: dbBooking.payment_slip_url,
+            slip_verified: dbBooking.slip_verified,
+            token_expires_at: dbBooking.token_expires_at
+          }
+        } else if (dbError) {
+          throw dbError
+        }
+      }
+
+      if (!trackingResult) {
+        throw new Error('ไม่พบข้อมูลคำสั่งซื้อ หรือลิงก์นี้ไม่ถูกต้อง (Order not found)')
+      }
+
+      setData(trackingResult)
       setIsDataLoaded(true)
       setError(null) 
     } catch (err) {
@@ -57,7 +137,7 @@ export function useTrackingLogic(token) {
   useEffect(() => {
     fetchTrackingInfo()
 
-    if (!token || !isValidUuid(token)) return
+    if (!token || !isValidToken(token)) return
 
     // 1. Dedicated Instant Realtime Broadcast Room for this tracking token (< 50ms)
     const cleanToken = token.trim()

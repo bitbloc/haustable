@@ -32,9 +32,9 @@ serve(async (req) => {
       throw new Error("Invalid request body");
     }
 
-    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const TOKEN_REGEX = /^[a-zA-Z0-9_-]{4,64}$/;
 
-    if (!token || token === "null" || token === "undefined" || !UUID_REGEX.test(token)) {
+    if (!token || token === "null" || token === "undefined" || !TOKEN_REGEX.test(token)) {
       return new Response(JSON.stringify({ error: "ข้อมูลไม่ถูกต้อง (Invalid Token)", code: "INVALID_TOKEN" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -112,11 +112,24 @@ serve(async (req) => {
     })) || [];
 
     const responseData = {
+      id: booking.id,
       short_id: shortId,
       status: booking.status,
       booking_type: booking.booking_type || 'dine_in',
+      order_type: booking.order_type || (booking.booking_type === 'hausmade' ? (booking.shipping_address ? 'hausmade_shipping' : 'hausmade_pickup') : null),
       customer_name: safeName,
+      full_name: fullName,
       phone: maskedPhone,
+      pickup_contact_name: booking.pickup_contact_name,
+      pickup_contact_phone: booking.pickup_contact_phone,
+      shipping_address: booking.shipping_address,
+      shipping_fee: booking.shipping_fee,
+      courier_name: booking.courier_name || 'Flash Express',
+      tracking_number: booking.tracking_number,
+      customer_note: booking.customer_note,
+      staff_remark: booking.staff_remark,
+      is_preorder: booking.is_preorder,
+      preorder_eta: booking.preorder_eta,
       created_at: booking.created_at,
       booking_time: booking.booking_time,
       pax: booking.pax,
@@ -126,6 +139,8 @@ serve(async (req) => {
       discount_amount: booking.discount_amount,
       promotion_codes: booking.promotion_codes,
       profiles: booking.profiles,
+      payment_slip_url: booking.payment_slip_url,
+      slip_verified: booking.slip_verified,
       token_expires_at: booking.token_expires_at
     };
 
