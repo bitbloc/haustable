@@ -150,7 +150,7 @@ export default function ExpenseModal({
         setCategory(catId);
         const matched = EXPENSE_CATEGORIES.find(c => c.id === catId);
         if (matched && !existingExpense) {
-            setTitle(matched.label.replace(/^[^\s]+\s*/, ''));
+            setTitle(matched.shortLabel || matched.label);
             if (matched.defaultVendor) setVendorName(matched.defaultVendor);
             if (matched.defaultDoc) setDocType(matched.defaultDoc);
         }

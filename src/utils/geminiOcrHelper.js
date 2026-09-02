@@ -161,7 +161,7 @@ Extract and return ONLY a valid JSON object matching this schema:
 {
   "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแกัสหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่ายิงแอด Facebook Ads')",
   "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set (do NOT sum page subtotals if one page shows the grand total; extract the final net amount).
-  "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing, use today's date
+  "expense_date": "YYYY-MM-DD", // CRITICAL: Date in Gregorian/Common Era (ค.ศ. เช่น '2026-08-31'). If receipt/slip is in Thai Buddhist Era (พ.ศ. 25XX), MUST convert to ค.ศ. (ค.ศ. = พ.ศ. - 543, e.g. 2569 -> 2026, 2568 -> 2025, 2567 -> 2024). Inspect the year digits carefully!
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
   "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Facebook Ads')",
   "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
@@ -171,6 +171,14 @@ Extract and return ONLY a valid JSON object matching this schema:
   "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
+
+Thai Date & Buddhist Year Rules (พ.ศ. -> ค.ศ.):
+- Slips and receipts frequently use Thai Buddhist Era (พ.ศ. 25XX) and Thai months (ม.ค., ก.พ., มี.ค., เม.ย., พ.ค., มิ.ย., ก.ค., ส.ค., ก.ย., ต.ค., พ.ย., ธ.ค.).
+- You MUST convert to Common Era (ค.ศ.) in 'YYYY-MM-DD':
+  * '31 ส.ค. 2569' -> '2026-08-31' (2569 - 543 = 2026)
+  * '31 ส.ค. 2568' -> '2025-08-31' (2568 - 543 = 2025)
+  * '31 ส.ค. 2567' -> '2024-08-31' (2567 - 543 = 2024)
+- Pay close attention to distinguishing '2569' from '2567' or '2564'. Always extract the exact year shown.
 
 Category Rules:
 - Cooking Gas / LPG / Gas Tanks (แก๊สหุงต้ม, แก๊สครัว, ถังแก๊ส, เวิลด์แก๊ส, สยามแก๊ส, ปตท.แก๊ส, ร้านส่งแก๊ส, ค่าเติมแก๊ส) -> 'utilities'
@@ -280,6 +288,31 @@ Payment Method Rules:
             // Clean and parse JSON
             const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
             const parsed = JSON.parse(cleaned);
+
+            // Date Normalization (Ensure Gregorian Year and ISO YYYY-MM-DD format)
+            if (parsed.expense_date && typeof parsed.expense_date === 'string') {
+                const cleanDate = parsed.expense_date.trim();
+                // Check DD/MM/YYYY or DD-MM-YYYY
+                const ddmmyyyy = cleanDate.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+                if (ddmmyyyy) {
+                    let y = parseInt(ddmmyyyy[3], 10);
+                    if (y > 2400) y -= 543;
+                    const m = ddmmyyyy[2].padStart(2, '0');
+                    const d = ddmmyyyy[1].padStart(2, '0');
+                    parsed.expense_date = `${y}-${m}-${d}`;
+                } else {
+                    // Check YYYY-MM-DD or YYYY/MM/DD
+                    const yyyymmdd = cleanDate.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+                    if (yyyymmdd) {
+                        let y = parseInt(yyyymmdd[1], 10);
+                        if (y > 2400) y -= 543;
+                        const m = yyyymmdd[2].padStart(2, '0');
+                        const d = yyyymmdd[3].padStart(2, '0');
+                        parsed.expense_date = `${y}-${m}-${d}`;
+                    }
+                }
+            }
+
             return parsed;
         } catch (err) {
             lastError = err;
