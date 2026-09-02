@@ -1,6 +1,4 @@
-/* Hallmark · page: HausmadeShopPage · theme: Atelier (Thai Modern OKLCH)
- * features: Hero Showcase Banner, Variant & Stock Badges, Member CRM Status, Filter Rail, Cart Drawer Integration
- */
+/* Hallmark · page: HausmadeShopPage · genre: editorial · macrostructure: editorial-magazine · theme: atelier-thai-modern · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import React, { useState, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
@@ -9,6 +7,26 @@ import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
 import HausmadeCartDrawer from '../components/hausmade/HausmadeCartDrawer'
 import AuthModal from '../components/AuthModal'
+
+/**
+ * Format product craft release date or batch identifier
+ */
+function getCraftDateTag(product) {
+    if (!product) return '09.02.26'
+    if (product.created_at) {
+        try {
+            const d = new Date(product.created_at)
+            const day = String(d.getDate()).padStart(2, '0')
+            const month = String(d.getMonth() + 1).padStart(2, '0')
+            const year = String(d.getFullYear()).slice(-2)
+            return `${day}.${month}.${year}`
+        } catch {
+            // fallback
+        }
+    }
+    const idSnippet = String(product.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 4).toUpperCase()
+    return idSnippet ? `BATCH #${idSnippet}` : '09.02.26'
+}
 
 export default function HausmadeShopPage() {
     const isChecking = useServiceGuard('shop_mode_hausmade')
@@ -26,11 +44,9 @@ export default function HausmadeShopPage() {
         setSortBy,
         cartItemCount,
         hasPreOrderInCart,
-        preOrderItemsInCart,
         totalAmount,
         addToCart,
         settings,
-        isFreeShipping,
         memberProfile,
         isMember,
         activeOrders,
@@ -43,6 +59,8 @@ export default function HausmadeShopPage() {
     const [isCartOpen, setIsCartOpen] = useState(false)
     const [showAuthModal, setShowAuthModal] = useState(false)
     const [heroSlideIdx, setHeroSlideIdx] = useState(0)
+    const [newsletterEmail, setNewsletterEmail] = useState('')
+    const [newsletterSubmitted, setNewsletterSubmitted] = useState(false)
 
     // Featured Hero Items (items marked is_featured or first 4 items with images)
     const heroItems = useMemo(() => {
@@ -50,6 +68,18 @@ export default function HausmadeShopPage() {
         const featured = withImg.filter(i => i.is_featured === true || i.is_recommended === true)
         return (featured.length > 0 ? featured : withImg).slice(0, 4)
     }, [menuItems])
+
+    // Featured sidebar articles / drops (next 3 items after the active hero)
+    const featuredSidebarItems = useMemo(() => {
+        const list = menuItems.filter(i => i.image_url)
+        if (list.length <= 1) return list
+        return list.slice(1, 4)
+    }, [menuItems])
+
+    // Spotlight mid-page item
+    const spotlightItem = useMemo(() => {
+        return menuItems.find(i => isPreOrderItem(i) && i.image_url) || menuItems[menuItems.length - 1] || heroItems[0]
+    }, [menuItems, heroItems])
 
     // Auto-advance hero carousel every 6s
     useEffect(() => {
@@ -62,15 +92,24 @@ export default function HausmadeShopPage() {
 
     if (isChecking) {
         return (
-            <div className="min-h-screen bg-[oklch(97%_0.008_28)] flex flex-col items-center justify-center text-[oklch(18%_0.012_28)] font-mono text-xs uppercase tracking-widest gap-3 select-none">
-                <div className="w-6 h-6 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
+            <div className="min-h-screen bg-[var(--color-paper)] flex flex-col items-center justify-center text-[var(--color-ink)] font-mono text-xs uppercase tracking-widest gap-3 select-none">
+                <div className="w-6 h-6 rounded-full border-2 border-[var(--color-rule)] border-t-[var(--color-ink)] animate-spin" />
                 <span>CHECKING HAUSMADE SHOP STATUS...</span>
             </div>
         )
     }
 
+    /**
+     * Corrected Product Action Handler
+     * Fixed the null <= 0 coercion bug so options modal opens reliably!
+     */
     const handleProductAction = (product) => {
-        const isSoldOut = product.is_available === false || (product.stock_quantity !== undefined && product.stock_quantity <= 0) || (product.remaining_stock !== undefined && product.remaining_stock <= 0)
+        if (!product) return
+
+        const isSoldOut = product.is_available === false || 
+            (product.stock_quantity !== null && product.stock_quantity !== undefined && product.stock_quantity <= 0) || 
+            (product.remaining_stock !== null && product.remaining_stock !== undefined && product.remaining_stock <= 0)
+        
         if (isSoldOut) return
 
         const optionGroups = product.menu_item_options?.map(o => o.option_groups).filter(Boolean) || []
@@ -84,78 +123,86 @@ export default function HausmadeShopPage() {
 
     const currentHeroItem = heroItems[heroSlideIdx] || heroItems[0]
 
+    // Split displayed items into latest grid (first 4 items) and remaining catalog
+    const latestItems = displayedItems.slice(0, 4)
+    const remainingItems = displayedItems.slice(4)
+
     return (
-        <div className="min-h-screen bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] font-sans flex flex-col selection:bg-[oklch(52%_0.16_28)] selection:text-white">
+        <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] font-sans flex flex-col selection:bg-[var(--color-accent-yellow)] selection:text-[var(--color-ink)]">
             
-            {/* 1. Ticker Header (Top Announcement Marquee) */}
-            <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] h-9 flex items-center overflow-hidden z-20">
+            {/* 1. Top Ticker Marquee Announcement */}
+            <div className="bg-[var(--color-ink)] text-[var(--color-paper)] border-b border-[var(--color-rule)] h-8 flex items-center overflow-hidden z-20">
                 <motion.div
                     className="whitespace-nowrap flex gap-12 font-mono text-[9px] uppercase tracking-normal"
                     animate={{ x: ['0%', '-50%'] }}
-                    transition={{
-                        repeat: Infinity,
-                        duration: 25,
-                        ease: 'linear'
-                    }}
+                    transition={{ repeat: Infinity, duration: 24, ease: 'linear' }}
                 >
                     {Array.from({ length: 8 }).map((_, i) => (
                         <div key={i} className="flex items-center gap-6">
-                            <span className="text-[oklch(52%_0.16_28)] font-bold">
+                            <span className="text-[var(--color-accent-yellow)] font-bold">
                                 // HAUSMADE ONLINE STORE
                             </span>
                             <span>
-                                CRAFTED IN NAKHON PHANOM, THAILAND
+                                CRAFTED & ROASTED IN NAKHON PHANOM, THAILAND
                             </span>
                             <span>
-                                🚚 ค่าจัดส่ง {settings.shippingFee}.- {settings.freeShippingMinItems > 0 ? `(ซื้อครบ ${settings.freeShippingMinItems} ชิ้น ส่งฟรี!)` : ''}
+                                🚚 ค่าจัดส่ง ฿{settings.shippingFee}.- {settings.freeShippingMinItems > 0 ? `(ซื้อครบ ${settings.freeShippingMinItems} ชิ้น ส่งฟรี!)` : ''}
                             </span>
-                            <span className="w-1.5 h-1.5 bg-[oklch(52%_0.16_28)]" />
+                            <span className="w-1.5 h-1.5 bg-[var(--color-accent-yellow)]" />
                         </div>
                     ))}
                 </motion.div>
             </div>
 
-            {/* 2. Top Navigation Bar (Neo-Brutalist Grid Header) */}
-            <nav className="sticky top-0 z-30 bg-[oklch(97%_0.008_28)]/95 backdrop-blur-md border-b border-[oklch(85%_0.012_28)] px-4 sm:px-6 py-3.5 flex items-center justify-between">
+            {/* 2. Top Brutalist Navigation Bar */}
+            <nav className="sticky top-0 z-30 bg-[var(--color-paper)]/95 backdrop-blur-md border-b border-[var(--color-rule)] px-4 sm:px-8 py-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <Link to="/" className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors px-2 py-1 border border-transparent hover:border-[oklch(85%_0.012_28)] bg-transparent">
+                    <Link
+                        to="/"
+                        className="font-mono text-xs font-bold text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors px-2.5 py-1 border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
+                    >
                         [ ← HOME // หน้าหลัก ]
                     </Link>
-                    <span className="font-mono text-xs text-[oklch(85%_0.012_28)]">/</span>
-                    <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                        HAUSMADE SHOP
+                    <span className="font-mono text-xs text-[var(--color-rule)] hidden sm:inline">/</span>
+                    <span className="font-mono text-[11px] font-bold text-[var(--color-neutral)] uppercase tracking-wider hidden sm:inline">
+                        IN THE HAUS ATELIER
                     </span>
                 </div>
 
-                {/* Member CRM Status & Cart Action */}
+                {/* Center Title on mobile */}
+                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)] sm:hidden">
+                    HAUSMADE
+                </span>
+
+                {/* Member CRM Status & Cart Trigger */}
                 <div className="flex items-center gap-3">
                     {isMember ? (
                         <Link
                             to="/member-card"
-                            className="hidden md:flex items-center gap-2 font-mono text-[11px] px-3 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(97%_0.008_28)] transition-colors text-[oklch(18%_0.012_28)]"
+                            className="hidden md:flex items-center gap-2 font-mono text-[11px] px-3 py-1.5 border border-[var(--color-rule)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] transition-colors text-[var(--color-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
                         >
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: memberTierInfo?.color_accent || '#C84B31' }} />
                             <span className="font-bold">{memberProfile?.display_name || memberProfile?.nickname || memberTierInfo?.name || 'MEMBER'}</span>
-                            <span className="text-[oklch(55%_0.010_28)]">({(memberProfile?.xhaus_balance ?? availableXhausBalance).toLocaleString()} xhaus)</span>
+                            <span className="text-[var(--color-neutral)]">({(memberProfile?.xhaus_balance ?? availableXhausBalance).toLocaleString()} xhaus)</span>
                         </Link>
                     ) : (
                         <button
                             type="button"
                             onClick={() => setShowAuthModal(true)}
-                            className="hidden md:block font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold cursor-pointer"
+                            className="hidden md:block font-mono text-[11px] text-[var(--color-ink)] hover:underline uppercase font-bold cursor-pointer px-2 py-1 border border-transparent hover:border-[var(--color-rule)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
                         >
-                            [ 🔑 เข้าสู่ระบบสมาชิกรับ xhaus ]
+                            [ 🔑 LOG IN / สมาชิก ]
                         </button>
                     )}
 
-
                     <button
+                        type="button"
                         onClick={() => setIsCartOpen(true)}
-                        className="relative px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] transition-colors font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2.5 border border-[oklch(18%_0.012_28)] shadow-xs cursor-pointer"
+                        className="relative px-3.5 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-accent-yellow)] hover:text-[var(--color-ink)] transition-colors font-mono text-[11px] font-bold uppercase tracking-wider flex items-center gap-2.5 border border-[var(--color-ink)] shadow-xs cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
                     >
                         <span>[ CART ({cartItemCount}) ]</span>
                         {cartItemCount > 0 && (
-                            <span className="border-l border-[oklch(85%_0.012_28)]/30 pl-2.5 text-[oklch(52%_0.16_28)]">
+                            <span className="border-l border-[var(--color-paper)]/30 pl-2 text-[var(--color-accent-yellow)] group-hover:text-[var(--color-ink)]">
                                 ฿{totalAmount.toLocaleString()}.-
                             </span>
                         )}
@@ -163,9 +210,9 @@ export default function HausmadeShopPage() {
                 </div>
             </nav>
 
-            {/* Active Orders In Progress Bar */}
+            {/* Active Orders In Progress Notification Bar */}
             {hasActiveOrders && (
-                <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 sm:px-6 py-2.5 font-mono text-xs text-amber-950 flex items-center justify-between">
+                <div className="bg-amber-500/10 border-b border-amber-500/30 px-4 sm:px-8 py-2.5 font-mono text-xs text-amber-950 flex items-center justify-between">
                     <div className="max-w-6xl mx-auto w-full flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2">
                             <span>📦</span>
@@ -174,218 +221,472 @@ export default function HausmadeShopPage() {
                         <button
                             type="button"
                             onClick={() => setIsCartOpen(true)}
-                            className="underline font-bold text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] cursor-pointer text-[11px]"
+                            className="underline font-bold text-[var(--color-ink)] hover:text-[var(--color-accent)] cursor-pointer text-[11px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
                         >
-                            [ ดูรายการที่ค้างอยู่ / ตรวจสอบสถานะ ➔ ]
+                            [ ดูสถานะคำสั่งซื้อ ➔ ]
                         </button>
                     </div>
                 </div>
             )}
 
-            {/* 3. Hero Product Showcase Banner */}
-            {currentHeroItem && (
-                <section className="w-full bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] overflow-hidden">
-                    <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 min-h-[360px] border-x border-[oklch(85%_0.012_28)]">
-                        
-                        {/* Hero Left: Product Information */}
-                        <div className="md:col-span-7 p-6 sm:p-10 flex flex-col justify-between gap-6">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-widest px-2 py-0.5 border border-[oklch(52%_0.16_28)] bg-white">
-                                        {isPreOrderItem(currentHeroItem) ? '⏳ PRE-ORDER SPECIAL' : '// NEW ARRIVAL & FEATURED'}
-                                    </span>
-                                    <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase">
-                                        [ {heroSlideIdx + 1} / {heroItems.length} ]
-                                    </span>
-                                </div>
+            {/* 3. Massive Retro Editorial Masthead (Matching Smalls "Small Talk" Style) */}
+            <header className="w-full bg-[var(--color-paper)] pt-8 pb-6 px-4 sm:px-8 text-center border-b border-[var(--color-rule)]">
+                <div className="max-w-6xl mx-auto flex flex-col items-center">
+                    <h1 className="font-['Instrument_Serif',Georgia,serif] text-6xl sm:text-8xl md:text-9xl font-normal tracking-tight text-[var(--color-ink)] leading-none select-none">
+                        Small Talk
+                    </h1>
+                    <div className="mt-2 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-[var(--color-neutral)]">
+                        <span>// HAUSMADE SPECIALTY & RETAIL</span>
+                        <span>·</span>
+                        <span>CRAFTED IN NAKHON PHANOM</span>
+                    </div>
+                </div>
+            </header>
 
-                                <h2 className="text-2xl sm:text-4xl font-extrabold text-[oklch(18%_0.012_28)] tracking-tight leading-tight uppercase">
-                                    {currentHeroItem.name}
-                                </h2>
-
-                                <p className="text-xs sm:text-sm text-[oklch(42%_0.010_28)] leading-relaxed max-w-lg mt-1 line-clamp-3">
-                                    {currentHeroItem.description || 'สินค้าคัดสรรคุณภาพและงานคราฟต์ต้นตำรับจากริมแม่น้ำโขง นครพนม'}
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-4 flex-wrap pt-2 border-t border-[oklch(85%_0.012_28)]">
-                                <div className="font-mono text-2xl font-bold text-[oklch(18%_0.012_28)]">
-                                    ฿{Number(currentHeroItem.price || 0).toLocaleString()}.-
-                                </div>
-
+            {/* 4. High-Contrast Sunny Yellow Topics / Category Filter Pill Bar */}
+            <section className="w-full bg-[var(--color-accent-yellow)] border-b border-[var(--color-ink)]/20 px-4 sm:px-8 py-2.5 z-20">
+                <div className="max-w-6xl mx-auto flex items-center gap-3 overflow-x-auto scrollbar-none">
+                    <span className="font-mono text-xs font-extrabold text-[var(--color-ink)] tracking-wider uppercase whitespace-nowrap">
+                        TOPICS:
+                    </span>
+                    <div className="flex items-center gap-2 flex-nowrap">
+                        {subCategories.map((subCat) => {
+                            const isActive = activeSubCategory === subCat.name
+                            return (
                                 <button
-                                    onClick={() => handleProductAction(currentHeroItem)}
-                                    className={`px-5 py-2.5 font-mono text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs ${
-                                        isPreOrderItem(currentHeroItem)
-                                            ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white'
-                                            : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
+                                    key={subCat.name}
+                                    type="button"
+                                    onClick={() => setActiveSubCategory(subCat.name)}
+                                    className={`px-3.5 py-1 rounded-full font-mono text-[11px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1 ${
+                                        isActive
+                                            ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-xs'
+                                            : 'bg-transparent text-[var(--color-ink)] border border-[var(--color-ink)]/40 hover:border-[var(--color-ink)] hover:bg-black/5'
                                     }`}
                                 >
-                                    {isPreOrderItem(currentHeroItem)
-                                        ? '[ ⏳ สั่งจองล่วงหน้า // PRE-ORDER NOW ➔ ]'
-                                        : '[ สั่งซื้อทันที // ORDER NOW ➔ ]'
-                                    }
+                                    {subCat.name}
                                 </button>
-
-                                {/* Slide Selectors */}
-                                {heroItems.length > 1 && (
-                                    <div className="flex gap-1 ml-auto">
-                                        {heroItems.map((_, idx) => (
-                                            <button
-                                                key={idx}
-                                                onClick={() => setHeroSlideIdx(idx)}
-                                                className={`w-6 h-1.5 transition-all cursor-pointer ${
-                                                    idx === heroSlideIdx
-                                                        ? 'bg-[oklch(52%_0.16_28)] w-8'
-                                                        : 'bg-[oklch(85%_0.012_28)] hover:bg-[oklch(55%_0.010_28)]'
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-
-                        {/* Hero Right: High-Res Image & Multi-Angle Thumbnails Display */}
-                        <div className="md:col-span-5 relative bg-[oklch(97%_0.008_28)] border-t md:border-t-0 md:border-l border-[oklch(85%_0.012_28)] overflow-hidden flex flex-col items-center justify-center p-6 gap-3">
-                            <motion.img
-                                key={`${currentHeroItem.id}-${heroSlideIdx}`}
-                                initial={{ opacity: 0, scale: 0.96 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.35 }}
-                                src={getProductImages(currentHeroItem)[0] || currentHeroItem.image_url}
-                                alt={currentHeroItem.name}
-                                onClick={() => setSelectedProduct(currentHeroItem)}
-                                className="w-full h-60 md:h-68 object-cover shadow-xs cursor-pointer hover:scale-102 transition-transform duration-300"
-                            />
-                            {getProductImages(currentHeroItem).length > 1 && (
-                                <div className="flex items-center gap-1.5 self-start">
-                                    <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] uppercase">
-                                        [ {getProductImages(currentHeroItem).length} ANGLES ]:
-                                    </span>
-                                    {getProductImages(currentHeroItem).slice(0, 4).map((img, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => setSelectedProduct(currentHeroItem)}
-                                            className="w-7 h-7 border border-[oklch(85%_0.012_28)] overflow-hidden hover:border-[oklch(52%_0.16_28)] cursor-pointer"
-                                        >
-                                            <img src={img} alt="" className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </section>
-            )}
-
-            {/* 4. Search & Controls Toolbar */}
-            <section className="w-full bg-[oklch(97%_0.008_28)] border-b border-[oklch(85%_0.012_28)] px-6 py-4">
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-                    {/* Search Input Bar */}
-                    <div className="relative flex-1 max-w-md">
-                        <input
-                            type="text"
-                            placeholder="ค้นหาสินค้า HAUSMADE..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-3.5 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] uppercase cursor-pointer"
-                            >
-                                [ CLEAR ]
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Sorting Selector */}
-                    <div className="flex items-center gap-2 font-mono text-xs">
-                        <span className="text-[oklch(55%_0.010_28)] text-[10px] uppercase">[ SORT BY ]:</span>
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5">
-                            {[
-                                { id: 'featured', label: 'RECOMMENDED' },
-                                { id: 'price_asc', label: 'PRICE: LOW' },
-                                { id: 'price_desc', label: 'PRICE: HIGH' },
-                                { id: 'name_asc', label: 'A-Z' }
-                            ].map(s => (
-                                <button
-                                    key={s.id}
-                                    onClick={() => setSortBy(s.id)}
-                                    className={`px-2.5 py-1 text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                                        sortBy === s.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                            : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                    }`}
-                                >
-                                    {s.label}
-                                </button>
-                            ))}
-                        </div>
+                            )
+                        })}
                     </div>
                 </div>
             </section>
 
-            {/* 5. Main Catalog Section */}
-            <main className="max-w-6xl w-full mx-auto px-6 py-8 flex-grow flex flex-col gap-6">
-                {/* Sub-Category Tab Filter Rail */}
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[oklch(85%_0.012_28)] scrollbar-none">
-                    {subCategories.map((subCat) => {
-                        const isActive = activeSubCategory === subCat.name
-                        return (
-                            <button
-                                key={subCat.name}
-                                onClick={() => setActiveSubCategory(subCat.name)}
-                                className={`relative px-3.5 py-1.5 font-mono text-[11px] font-bold uppercase transition-all whitespace-nowrap border cursor-pointer ${
-                                    isActive
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
-                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
-                                }`}
-                            >
-                                [ {subCat.name} ({subCat.count}) ]
-                            </button>
-                        )
-                    })}
+            {/* 5. Main Content Area */}
+            <main className="max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-12 flex-grow">
+
+                {/* SECTION A: Split Featured Hero Showcase (Magazine Layout) */}
+                {currentHeroItem && (
+                    <section className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] overflow-hidden shadow-2xs">
+                        <div className="grid grid-cols-1 lg:grid-cols-12">
+                            
+                            {/* Left Hero Story Box (Yellow Block Split with Photo) */}
+                            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-12 border-b lg:border-b-0 lg:border-r border-[var(--color-rule)]">
+                                
+                                {/* Yellow Editorial Tag Block */}
+                                <div className="md:col-span-5 bg-[var(--color-accent-yellow)] p-6 sm:p-8 flex flex-col justify-between gap-6 border-b md:border-b-0 md:border-r border-[var(--color-ink)]/15">
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-mono text-[10px] font-extrabold text-[var(--color-ink)]/80 uppercase">
+                                                {getCraftDateTag(currentHeroItem)}
+                                            </span>
+                                            {isPreOrderItem(currentHeroItem) && (
+                                                <span className="font-mono text-[9px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded-sm uppercase">
+                                                    PRE-ORDER
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <h2
+                                            onClick={() => setSelectedProduct(currentHeroItem)}
+                                            className="font-sans text-xl sm:text-2xl font-black text-[var(--color-ink)] uppercase tracking-tight leading-snug cursor-pointer hover:underline"
+                                        >
+                                            {currentHeroItem.name}
+                                        </h2>
+
+                                        <span className="font-mono text-[10px] text-[var(--color-ink)]/70 uppercase tracking-wider font-bold">
+                                            // {currentHeroItem.menu_categories?.name || currentHeroItem.category || 'SPECIALTY CRAFT'}
+                                        </span>
+
+                                        <p className="font-sans text-xs text-[var(--color-ink)]/80 line-clamp-3 leading-relaxed">
+                                            {currentHeroItem.description || 'สินค้าคัดสรรคุณภาพและงานคราฟต์ต้นตำรับจากริมแม่น้ำโขง นครพนม'}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3 pt-4 border-t border-[var(--color-ink)]/20">
+                                        <div className="flex items-baseline justify-between">
+                                            <span className="font-mono text-xl font-black text-[var(--color-ink)]">
+                                                ฿{Number(currentHeroItem.price || 0).toLocaleString()}.-
+                                            </span>
+                                            <span className="font-mono text-[9px] text-[var(--color-ink)]/70 uppercase font-bold">
+                                                BY: HAUS TEAM
+                                            </span>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => handleProductAction(currentHeroItem)}
+                                            className="w-full py-2.5 px-4 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[oklch(12%_0.012_28)] font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
+                                        >
+                                            {isPreOrderItem(currentHeroItem)
+                                                ? '[ ⏳ สั่งจอง / PRE-ORDER ➔ ]'
+                                                : '[ SELECT / สั่งซื้อ ➔ ]'
+                                            }
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Hero Main Photo */}
+                                <div className="md:col-span-7 relative bg-[var(--color-paper-2)] flex items-center justify-center overflow-hidden min-h-[280px]">
+                                    <motion.img
+                                        key={`${currentHeroItem.id}-${heroSlideIdx}`}
+                                        initial={{ opacity: 0, scale: 0.97 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.35 }}
+                                        loading="lazy"
+                                        src={getProductImages(currentHeroItem)[0] || currentHeroItem.image_url}
+                                        alt={currentHeroItem.name}
+                                        onClick={() => setSelectedProduct(currentHeroItem)}
+                                        className="w-full h-full object-cover cursor-pointer hover:scale-102 transition-transform duration-500"
+                                    />
+                                    {heroItems.length > 1 && (
+                                        <div className="absolute bottom-3 right-3 bg-[var(--color-ink)]/80 backdrop-blur-xs text-[var(--color-paper)] px-2 py-1 font-mono text-[10px] flex gap-1 items-center">
+                                            {heroItems.map((_, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setHeroSlideIdx(idx)}
+                                                    className={`w-3.5 h-1.5 transition-all cursor-pointer focus-visible:outline-none ${
+                                                        idx === heroSlideIdx ? 'bg-[var(--color-accent-yellow)] w-6' : 'bg-white/50'
+                                                    }`}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Right Hero Sidebar: Featured Releases / Articles */}
+                            <div className="lg:col-span-4 p-5 sm:p-6 bg-[var(--color-paper)] flex flex-col justify-between gap-4">
+                                <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2.5">
+                                    <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
+                                        FEATURED RELEASES
+                                    </span>
+                                    <span className="font-mono text-[10px] text-[var(--color-neutral)]">
+                                        [ {featuredSidebarItems.length} DROPS ]
+                                    </span>
+                                </div>
+
+                                <div className="flex flex-col gap-4 flex-grow justify-around">
+                                    {featuredSidebarItems.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => handleProductAction(item)}
+                                            className="group flex items-center gap-3.5 cursor-pointer pb-3 border-b border-[var(--color-rule)]/60 last:border-b-0"
+                                        >
+                                            <div className="w-18 h-18 bg-[var(--color-paper-2)] border border-[var(--color-rule)] flex-shrink-0 overflow-hidden">
+                                                <img
+                                                    src={item.image_url}
+                                                    alt={item.name}
+                                                    loading="lazy"
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-1 min-w-0">
+                                                <span className="font-mono text-[9px] text-[var(--color-neutral)] uppercase">
+                                                    // {item.menu_categories?.name || item.category || 'HAUSMADE'}
+                                                </span>
+                                                <h4 className="font-sans text-xs font-bold text-[var(--color-ink)] uppercase tracking-tight line-clamp-1 group-hover:text-[var(--color-accent)]">
+                                                    {item.name}
+                                                </h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono text-xs font-bold text-[var(--color-ink)]">
+                                                        ฿{Number(item.price || 0).toLocaleString()}.-
+                                                    </span>
+                                                    <span className="font-mono text-[9px] text-[var(--color-accent)] font-bold group-hover:translate-x-0.5 transition-transform">
+                                                        VIEW ➔
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* SECTION B: "THE LATEST" Header & Controls */}
+                <section className="flex flex-col gap-6">
+                    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-[var(--color-rule)] pb-4">
+                        <div>
+                            <h3 className="font-mono text-sm sm:text-base font-extrabold text-[var(--color-ink)] uppercase tracking-wider">
+                                THE LATEST
+                            </h3>
+                            <span className="font-mono text-[10px] text-[var(--color-neutral)] uppercase">
+                                [ {displayedItems.length} ITEMS AVAILABLE ]
+                            </span>
+                        </div>
+
+                        {/* Search & Sort Inline Controls */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <div className="relative">
+                                <input
+                                    type="text"
+                                    placeholder="SEARCH / ค้นหา..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="px-3 py-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[11px] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] w-44 sm:w-56"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[9px] text-[var(--color-neutral)] hover:text-[var(--color-ink)] uppercase cursor-pointer"
+                                    >
+                                        [✕]
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-0.5">
+                                {[
+                                    { id: 'featured', label: 'RECOMMENDED' },
+                                    { id: 'price_asc', label: 'PRICE: LOW' },
+                                    { id: 'price_desc', label: 'PRICE: HIGH' },
+                                    { id: 'name_asc', label: 'A-Z' }
+                                ].map(s => (
+                                    <button
+                                        key={s.id}
+                                        type="button"
+                                        onClick={() => setSortBy(s.id)}
+                                        className={`px-2 py-1 font-mono text-[9px] font-bold uppercase transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ink)] ${
+                                            sortBy === s.id
+                                                ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
+                                        }`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 4-Column Product Grid for "THE LATEST" */}
+                    {loading ? (
+                        <div className="py-20 text-center font-mono text-xs text-[var(--color-neutral)] uppercase tracking-widest flex flex-col items-center gap-3">
+                            <div className="w-5 h-5 rounded-full border-2 border-[var(--color-rule)] border-t-[var(--color-ink)] animate-spin" />
+                            <span>[ LOADING HAUSMADE CATALOG... ]</span>
+                        </div>
+                    ) : latestItems.length === 0 ? (
+                        <div className="py-16 text-center border border-dashed border-[var(--color-rule)] font-mono text-xs text-[var(--color-neutral)] uppercase flex flex-col items-center gap-3">
+                            <span>[ NO ITEMS FOUND // ไม่พบสินค้าที่ค้นหา ]</span>
+                            {(searchQuery || activeSubCategory !== 'ALL') && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchQuery('')
+                                        setActiveSubCategory('ALL')
+                                    }}
+                                    className="px-3 py-1 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold uppercase cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                >
+                                    [ RESET FILTERS // แสดงทั้งหมด ]
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {latestItems.map((product) => (
+                                <EditorialProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onSelectProduct={setSelectedProduct}
+                                    onQuickAction={handleProductAction}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </section>
+
+                {/* SECTION C: Mid-Page Editorial Spotlight Banner (Matching Smalls Feature Banner) */}
+                {spotlightItem && (
+                    <section className="w-full relative border border-[var(--color-rule)] overflow-hidden shadow-2xs group bg-[var(--color-paper-2)]">
+                        <div className="relative h-80 sm:h-96 w-full overflow-hidden">
+                            <img
+                                src={spotlightItem.image_url || 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=1200&q=80'}
+                                alt={spotlightItem.name}
+                                loading="lazy"
+                                className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"
+                            />
+                            <div className="absolute inset-0 bg-[var(--color-ink)]/25" />
+
+                            {/* Floating Organic Yellow Card Badge Overlay */}
+                            <div className="absolute top-6 left-6 max-w-xs sm:max-w-sm bg-[var(--color-accent-yellow)] p-6 sm:p-7 rounded-3xl shadow-xl flex flex-col gap-3 text-[var(--color-ink)]">
+                                <div className="flex items-center justify-between font-mono text-[10px] font-bold">
+                                    <span>{getCraftDateTag(spotlightItem)}</span>
+                                    {isPreOrderItem(spotlightItem) && (
+                                        <span className="bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded-full text-[9px]">
+                                            PRE-ORDER
+                                        </span>
+                                    )}
+                                </div>
+
+                                <h3 className="font-sans text-lg sm:text-xl font-black uppercase tracking-tight leading-tight">
+                                    {spotlightItem.name}
+                                </h3>
+
+                                <p className="font-sans text-xs line-clamp-2 leading-relaxed text-[var(--color-ink)]/80">
+                                    {spotlightItem.description || 'งานคราฟต์ต้นตำรับและรสชาติเอกลักษณ์ เสิร์ฟตรงจากริมแม่น้ำโขง นครพนม'}
+                                </p>
+
+                                <div className="flex items-center justify-between pt-2 border-t border-[var(--color-ink)]/15">
+                                    <span className="font-mono text-xs font-bold text-[var(--color-ink)]/70">
+                                        BY: HAUS ATELIER
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleProductAction(spotlightItem)}
+                                        className="px-3 py-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold uppercase rounded-full hover:bg-[oklch(12%_0.012_28)] cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                    >
+                                        [ ฿{spotlightItem.price}.- ORDER ➔ ]
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                )}
+
+                {/* SECTION D: Additional Catalog Grid */}
+                {remainingItems.length > 0 && (
+                    <section className="flex flex-col gap-6">
+                        <div className="border-b border-[var(--color-rule)] pb-2 flex items-center justify-between">
+                            <h3 className="font-mono text-xs sm:text-sm font-extrabold text-[var(--color-ink)] uppercase tracking-wider">
+                                MORE FROM HAUSMADE
+                            </h3>
+                            <span className="font-mono text-[10px] text-[var(--color-neutral)]">
+                                [ {remainingItems.length} ITEMS ]
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {remainingItems.map((product) => (
+                                <EditorialProductCard
+                                    key={product.id}
+                                    product={product}
+                                    onSelectProduct={setSelectedProduct}
+                                    onQuickAction={handleProductAction}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* SECTION E: Newsletter / Join Club Section */}
+                <section className="w-full bg-[var(--color-paper-warm)] border border-[var(--color-rule)] p-8 sm:p-12 text-center flex flex-col items-center justify-center gap-4 relative overflow-hidden">
+                    <h3 className="font-['Instrument_Serif',Georgia,serif] text-2xl sm:text-3xl text-[var(--color-ink)] tracking-tight font-normal uppercase max-w-xl mx-auto">
+                        Sign up for our newsletter for special drops & stories
+                    </h3>
+                    <p className="font-mono text-[11px] text-[var(--color-neutral)] uppercase max-w-md">
+                        รับข่าวสารเมล็ดกาแฟล็อตใหม่ สินค้าลิมิเต็ด และสิทธิพิเศษสมาชิก xhaus ก่อนใคร
+                    </p>
+
+                    <form
+                        onSubmit={(e) => {
+                            e.preventDefault()
+                            if (newsletterEmail) setNewsletterSubmitted(true)
+                        }}
+                        className="w-full max-w-md flex flex-col items-center gap-3 mt-2"
+                    >
+                        {newsletterSubmitted ? (
+                            <div className="font-mono text-xs font-bold text-emerald-800 bg-emerald-100 px-4 py-2 border border-emerald-300">
+                                ✓ ขอบคุณสำหรับการติดตาม! เราจะส่งเรื่องราวพิเศษถึงคุณ
+                            </div>
+                        ) : (
+                            <>
+                                <input
+                                    type="email"
+                                    required
+                                    placeholder="Enter your email address..."
+                                    value={newsletterEmail}
+                                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                                    className="w-full border-b border-[var(--color-ink)]/40 bg-transparent text-center font-mono text-xs py-2 text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)] placeholder:text-[var(--color-neutral)] focus-visible:ring-2 focus-visible:ring-[var(--color-ink)]"
+                                />
+                                <button
+                                    type="submit"
+                                    className="mt-2 px-8 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase rounded-full hover:bg-[oklch(12%_0.012_28)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1"
+                                >
+                                    SUBMIT
+                                </button>
+                            </>
+                        )}
+                    </form>
+
+                    {/* Playful Cat / Mascot Line Art */}
+                    <div className="absolute right-4 bottom-2 font-mono text-xs text-[var(--color-ink)]/40 select-none">
+                        ( ฅ^•ﻌ•^ฅ )
+                    </div>
+                </section>
+
+            </main>
+
+            {/* 6. Free Shipping Promo Blue Strip */}
+            <div className="w-full bg-[var(--color-accent-sky)] border-t border-b border-[var(--color-ink)]/20 py-2 px-4 text-center font-mono text-[11px] font-bold text-[var(--color-ink)] uppercase tracking-wider flex items-center justify-center gap-2">
+                <span>🚚 FREE SHIPPING ON ORDERS OVER {settings.freeShippingMinItems || 3} ITEMS · SHIPPED DIRECTLY FROM NAKHON PHANOM</span>
+                <span>➔</span>
+            </div>
+
+            {/* 7. Vibrant Yellow Multi-Column Footer */}
+            <footer className="w-full bg-[var(--color-accent-yellow)] text-[var(--color-ink)] border-t border-[var(--color-ink)]/20 pt-10 pb-12 px-6 sm:px-12 font-mono text-xs">
+                <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 pb-10 border-b border-[var(--color-ink)]/20">
+                    
+                    {/* Left Col: Contact Info */}
+                    <div className="md:col-span-4 flex flex-col gap-2">
+                        <span className="font-black text-sm uppercase">IN THE HAUS · HAUSMADE</span>
+                        <span className="text-[10px] text-[var(--color-ink)]/80 uppercase">
+                            TEL: {settings.storePhone || '098-528-4217'}
+                        </span>
+                        <span className="text-[10px] text-[var(--color-ink)]/80 uppercase">
+                            EMAIL: CONTACT@INTHEHAUS.CO
+                        </span>
+                        <span className="text-[10px] text-[var(--color-ink)]/80 uppercase">
+                            LOCATION: RIVERSIDE, NAKHON PHANOM
+                        </span>
+                    </div>
+
+                    {/* Middle Col 1: About */}
+                    <div className="md:col-span-3 flex flex-col gap-2">
+                        <span className="font-bold text-[11px] uppercase">[ ABOUT ]</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">WHY HAUSMADE?</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">BEHIND OUR CRAFT</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">SPECIALTY ROASTERY</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">COMMUNITY STORIES</span>
+                    </div>
+
+                    {/* Middle Col 2: Services */}
+                    <div className="md:col-span-3 flex flex-col gap-2">
+                        <span className="font-bold text-[11px] uppercase">[ CUSTOMER CARE ]</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">ORDER TRACKING</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">SHIPPING & PRE-ORDERS</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">FAQS & RETURNS</span>
+                        <span className="text-[10px] hover:underline cursor-pointer">PRIVACY POLICY</span>
+                    </div>
+
+                    {/* Right Col: Socials */}
+                    <div className="md:col-span-2 flex flex-col gap-2">
+                        <span className="font-bold text-[11px] uppercase">[ CONNECT ]</span>
+                        <a href="https://instagram.com" target="_blank" rel="noreferrer" className="text-[10px] hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ink)]">INSTAGRAM</a>
+                        <span className="text-[10px] hover:underline cursor-pointer">LINE OA (@inthehaus)</span>
+                        <a href="https://tiktok.com" target="_blank" rel="noreferrer" className="text-[10px] hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ink)]">TIKTOK</a>
+                        <a href="https://facebook.com" target="_blank" rel="noreferrer" className="text-[10px] hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-ink)]">FACEBOOK</a>
+                    </div>
                 </div>
 
-                {/* Product Grid */}
-                {loading ? (
-                    <div className="py-20 text-center font-mono text-xs text-[oklch(55%_0.010_28)] uppercase tracking-widest flex flex-col items-center gap-3">
-                        <div className="w-5 h-5 rounded-full border-2 border-[oklch(85%_0.012_28)] border-t-[oklch(18%_0.012_28)] animate-spin" />
-                        <span>[ LOADING HAUSMADE CATALOG... ]</span>
-                    </div>
-                ) : displayedItems.length === 0 ? (
-                    <div className="py-16 text-center border border-dashed border-[oklch(85%_0.012_28)] font-mono text-xs text-[oklch(55%_0.010_28)] uppercase flex flex-col items-center gap-3">
-                        <span>[ NO ITEMS FOUND // ไม่พบสินค้าที่ค้นหา ]</span>
-                        {(searchQuery || activeSubCategory !== 'ALL') && (
-                            <button
-                                onClick={() => {
-                                    setSearchQuery('')
-                                    setActiveSubCategory('ALL')
-                                }}
-                                className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-bold uppercase cursor-pointer"
-                            >
-                                [ RESET FILTERS // แสดงทั้งหมด ]
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {displayedItems.map((product) => (
-                            <HausmadeProductCard
-                                key={product.id}
-                                product={product}
-                                onSelectProduct={setSelectedProduct}
-                                onQuickAction={handleProductAction}
-                            />
-                        ))}
-                    </div>
-                )}
-            </main>
+                {/* Bottom Copyright */}
+                <div className="max-w-6xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between text-[10px] text-[var(--color-ink)]/70">
+                    <span>© IN THE HAUS 2026. ALL RIGHTS RESERVED.</span>
+                    <span>ATELIER SYSTEM OPERATIONAL // NAKHON PHANOM</span>
+                </div>
+            </footer>
 
             {/* Floating Mobile Cart Bar */}
             <AnimatePresence>
@@ -397,24 +698,25 @@ export default function HausmadeShopPage() {
                         className="fixed bottom-4 left-4 right-4 z-40 max-w-lg mx-auto sm:hidden"
                     >
                         <button
+                            type="button"
                             onClick={() => setIsCartOpen(true)}
-                            className="w-full py-3.5 px-5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl flex items-center justify-between font-mono text-xs font-bold uppercase cursor-pointer"
+                            className="w-full py-3.5 px-5 bg-[var(--color-ink)] text-[var(--color-paper)] border border-[var(--color-rule)] shadow-2xl flex items-center justify-between font-mono text-xs font-bold uppercase cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-paper)]"
                         >
                             <div className="flex items-center gap-2">
                                 <span>[ VIEW CART // ตะกร้า ({cartItemCount}) ]</span>
                                 {hasPreOrderInCart && (
-                                    <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-white text-[9px] font-bold">
+                                    <span className="px-1.5 py-0.5 bg-[var(--color-accent-yellow)] text-[var(--color-ink)] text-[9px] font-bold">
                                         ⏳ PRE-ORDER
                                     </span>
                                 )}
                             </div>
-                            <span className="text-[oklch(52%_0.16_28)]">฿{totalAmount.toLocaleString()}.-</span>
+                            <span className="text-[var(--color-accent-yellow)]">฿{totalAmount.toLocaleString()}.-</span>
                         </button>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* 6. Product Selection Modal & Cart Drawer */}
+            {/* Product Selection Modal */}
             <HausmadeProductModal
                 product={selectedProduct}
                 isOpen={!!selectedProduct}
@@ -425,39 +727,26 @@ export default function HausmadeShopPage() {
                 }}
             />
 
+            {/* Cart Drawer */}
             <HausmadeCartDrawer
                 isOpen={isCartOpen}
                 onClose={() => setIsCartOpen(false)}
                 shopState={shopState}
             />
 
-            {/* 7. Member Authentication Modal */}
+            {/* Member Authentication Modal */}
             <AuthModal
                 isOpen={showAuthModal}
                 onClose={() => setShowAuthModal(false)}
             />
-
-            {/* 8. Footer Section */}
-
-            <footer className="w-full bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] px-6 py-8 mt-12 font-mono text-xs text-[oklch(42%_0.010_28)]">
-                <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div>
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">HAUSMADE BY IN THE HAUS</span>
-                        <span className="ml-2">// NAKHON PHANOM, THAILAND</span>
-                    </div>
-                    <div>
-                        [ SYSTEM STATUS: ONLINE // ALL SYSTEMS OPERATIONAL ]
-                    </div>
-                </div>
-            </footer>
         </div>
     )
 }
 
 /**
- * Interactive Hausmade Product Card with Multi-Image Quick Preview
+ * Editorial Magazine Product Card (Matching "THE LATEST" 4-Column Layout from Reference)
  */
-function HausmadeProductCard({ product, onSelectProduct, onQuickAction }) {
+function EditorialProductCard({ product, onSelectProduct, onQuickAction }) {
     const [activeIdx, setActiveIdx] = useState(0)
     const images = useMemo(() => getProductImages(product), [product])
     const hasMultiple = images.length > 1
@@ -465,7 +754,7 @@ function HausmadeProductCard({ product, onSelectProduct, onQuickAction }) {
     const optionGroups = product.menu_item_options?.map(o => o.option_groups).filter(Boolean) || []
     const hasOptions = optionGroups.length > 0
     
-    // Stock evaluation
+    // Proper Stock Evaluation without null coercion bug
     const stockNum = product.stock_quantity ?? product.remaining_stock ?? null
     const isSoldOut = product.is_available === false || (stockNum !== null && stockNum <= 0)
     const isLowStock = stockNum !== null && stockNum > 0 && stockNum <= 5
@@ -476,66 +765,63 @@ function HausmadeProductCard({ product, onSelectProduct, onQuickAction }) {
         <motion.div
             whileHover={isSoldOut ? {} : { y: -3 }}
             transition={{ duration: 0.2 }}
-            className={`bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between overflow-hidden group shadow-2xs transition-colors ${
+            className={`bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between overflow-hidden group shadow-2xs transition-colors ${
                 isSoldOut
                     ? 'opacity-65 border-dashed'
-                    : 'hover:border-[oklch(52%_0.16_28)]'
+                    : 'hover:border-[var(--color-ink)]'
             }`}
         >
-            {/* Product Image & Multi-Angle Controller */}
-            <div className="relative w-full h-60 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] overflow-hidden select-none">
+            {/* Top: Product Image */}
+            <div className="relative w-full aspect-[4/3] bg-[var(--color-paper-2)] overflow-hidden select-none">
                 {currentImg ? (
                     <img
                         src={currentImg}
                         alt={product.name}
+                        loading="lazy"
                         onClick={() => onSelectProduct(product)}
                         className={`w-full h-full object-cover cursor-pointer transition-transform duration-500 ${
-                            isSoldOut ? 'grayscale contrast-75' : 'group-hover:scale-103'
+                            isSoldOut ? 'grayscale contrast-75' : 'group-hover:scale-104'
                         }`}
                     />
                 ) : (
                     <div
                         onClick={() => onSelectProduct(product)}
-                        className="w-full h-full flex flex-col items-center justify-center font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase gap-1 p-4 text-center cursor-pointer"
+                        className="w-full h-full flex flex-col items-center justify-center font-mono text-[10px] text-[var(--color-neutral)] uppercase gap-1 p-4 text-center cursor-pointer"
                     >
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">// HAUSMADE</span>
+                        <span className="font-bold text-[var(--color-ink)]">// HAUSMADE</span>
                         <span>[ NAKHON PHANOM CRAFT ]</span>
                     </div>
                 )}
 
-                {/* Status & Pre-Order Badges (Top Left) */}
+                {/* Pre-Order / Sold Out Badge (Top Left) */}
                 <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 z-10">
                     {isSoldOut ? (
-                        <div className="bg-red-700 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
-                            [ SOLD OUT // หมด ]
+                        <div className="bg-red-700 text-[var(--color-paper)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider">
+                            [ SOLD OUT ]
                         </div>
                     ) : isPreOrderItem(product) ? (
-                        <div className="bg-[oklch(45%_0.08_140)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm border border-white/20 flex items-center gap-1">
+                        <div className="bg-[var(--color-ink)] text-[var(--color-accent-yellow)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 shadow-xs">
                             <span>⏳ PRE-ORDER</span>
                         </div>
                     ) : isLowStock ? (
-                        <div className="bg-[oklch(52%_0.16_28)] text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider shadow-sm">
+                        <div className="bg-[var(--color-accent)] text-[var(--color-paper)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider">
                             [ เหลือ {stockNum} ชิ้น ]
                         </div>
-                    ) : (
-                        <div className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider">
-                            [ IN STOCK ]
-                        </div>
-                    )}
+                    ) : null}
                 </div>
 
-                {/* Multi-Photo Count Badge (Top Right) */}
+                {/* Multi-Photo Count Badge */}
                 {hasMultiple && (
-                    <div className="absolute top-2.5 right-2.5 bg-[oklch(18%_0.012_28)]/85 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 z-10">
+                    <div className="absolute top-2.5 right-2.5 bg-[var(--color-ink)]/85 text-[var(--color-paper)] px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider backdrop-blur-xs flex items-center gap-1 z-10">
                         <span>📷</span>
                         <span>{activeIdx + 1}/{images.length}</span>
                     </div>
                 )}
 
-                {/* Multi-Image Dots / Angle Switchers (Bottom Bar) */}
+                {/* Angle Thumbnails / Dots on Hover */}
                 {hasMultiple && (
                     <div
-                        className="absolute bottom-2 inset-x-2 flex items-center justify-center gap-1.5 p-1 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                        className="absolute bottom-2 inset-x-2 flex items-center justify-center gap-1.5 p-1 bg-[var(--color-ink)]/60 backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {images.map((_, idx) => (
@@ -543,79 +829,74 @@ function HausmadeProductCard({ product, onSelectProduct, onQuickAction }) {
                                 key={idx}
                                 type="button"
                                 onClick={() => setActiveIdx(idx)}
-                                className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                                    idx === activeIdx
-                                        ? 'w-5 bg-[oklch(52%_0.16_28)]'
-                                        : 'w-2 bg-white/70 hover:bg-white'
+                                className={`h-1.5 rounded-full transition-all cursor-pointer focus-visible:outline-none ${
+                                    idx === activeIdx ? 'w-5 bg-[var(--color-accent-yellow)]' : 'w-2 bg-white/70 hover:bg-white'
                                 }`}
-                                title={`มุมมองที่ ${idx + 1}`}
                             />
                         ))}
                     </div>
                 )}
             </div>
 
-            {/* Product Info Body */}
-            <div className="p-5 flex flex-col gap-3 flex-grow justify-between">
-                <div>
-                    <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block mb-1">
-                            // {product.menu_categories?.name || product.category || 'HAUSMADE'}
-                        </span>
-                        {isPreOrderItem(product) && (
-                            <span className="font-mono text-[9px] text-[oklch(45%_0.08_140)] font-bold uppercase">
-                                [ สินค้าเปิดจอง ]
-                            </span>
-                        )}
-                    </div>
+            {/* Signature Yellow Strip Tag under Photo (Matching Reference Bar) */}
+            <div className="bg-[var(--color-accent-yellow)] px-3.5 py-1.5 border-t border-b border-[var(--color-ink)]/15 flex items-center justify-between font-mono text-[9px] font-extrabold text-[var(--color-ink)] uppercase">
+                <span>{getCraftDateTag(product)} · ฿{Number(product.price || 0).toLocaleString()}.-</span>
+                <span className="truncate max-w-[120px]">
+                    {product.menu_categories?.name || product.category || (isPreOrderItem(product) ? 'PRE-ORDER' : 'HAUSMADE')}
+                </span>
+            </div>
 
-                    <h3
+            {/* Product Body Information */}
+            <div className="p-4 flex flex-col gap-2.5 flex-grow justify-between">
+                <div>
+                    <h4
                         onClick={() => onSelectProduct(product)}
-                        className="text-lg font-bold text-[oklch(18%_0.012_28)] tracking-tight leading-snug cursor-pointer hover:text-[oklch(52%_0.16_28)] transition-colors line-clamp-1"
+                        className="font-sans text-sm font-bold text-[var(--color-ink)] uppercase tracking-tight leading-snug cursor-pointer hover:text-[var(--color-accent)] transition-colors line-clamp-2"
                     >
                         {product.name}
-                    </h3>
+                    </h4>
 
                     {product.description && (
-                        <p className="text-xs text-[oklch(42%_0.010_28)] mt-1.5 line-clamp-2 leading-relaxed font-sans">
+                        <p className="font-sans text-xs text-[var(--color-muted)] mt-1 line-clamp-2 leading-relaxed">
                             {product.description}
                         </p>
                     )}
 
                     {/* Pre-Order ETA Info Box */}
                     {isPreOrderItem(product) && (
-                        <div className="mt-2.5 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-[10px] text-[oklch(45%_0.08_140)] font-bold flex items-center gap-1.5">
+                        <div className="mt-2 p-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] font-mono text-[9px] text-[var(--color-ink)] font-bold flex items-center gap-1">
                             <span>📦</span>
                             <span>รอบส่ง: {getPreOrderEta(product)}</span>
                         </div>
                     )}
                 </div>
 
-                <div className="flex items-center justify-between border-t border-[oklch(85%_0.012_28)] pt-4 mt-2">
-                    <div className="font-mono text-base font-bold text-[oklch(18%_0.012_28)]">
-                        ฿{Number(product.price || 0).toLocaleString()}.-
-                    </div>
+                {/* Bottom CTA Button */}
+                <div className="pt-2 border-t border-[var(--color-rule)]">
                     <button
+                        type="button"
                         disabled={isSoldOut}
                         onClick={() => onQuickAction(product)}
-                        className={`px-3.5 py-2 border font-mono text-[11px] font-bold uppercase tracking-wider transition-colors cursor-pointer ${
+                        className={`w-full py-2 px-3 border font-mono text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ink)] focus-visible:ring-offset-1 ${
                             isSoldOut
-                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] cursor-not-allowed'
+                                ? 'bg-[var(--color-paper-2)] text-[var(--color-neutral)] border-[var(--color-rule)] cursor-not-allowed'
                                 : isPreOrderItem(product)
-                                    ? 'bg-[oklch(45%_0.08_140)] hover:bg-[oklch(38%_0.08_140)] text-white border-[oklch(45%_0.08_140)]'
-                                    : 'bg-[oklch(94%_0.010_28)] hover:bg-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border-[oklch(85%_0.012_28)]'
+                                    ? 'bg-[var(--color-ink)] hover:bg-[var(--color-accent-yellow)] text-[var(--color-accent-yellow)] hover:text-[var(--color-ink)] border-[var(--color-ink)]'
+                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] text-[var(--color-ink)] hover:text-[var(--color-paper)] border-[var(--color-rule)]'
                         }`}
                     >
-                        {isSoldOut 
-                            ? '[ SOLD OUT ]' 
-                            : hasOptions 
-                                ? (isPreOrderItem(product) ? '[ ⏳ สั่งจอง / OPTIONS ]' : '[ SELECT OPTIONS ]')
-                                : (isPreOrderItem(product) ? '[ ⏳ สั่งจองล่วงหน้า ]' : '[ + ADD TO CART ]')
-                        }
+                        <span>฿{Number(product.price || 0).toLocaleString()}.-</span>
+                        <span>
+                            {isSoldOut
+                                ? '[ SOLD OUT ]'
+                                : hasOptions
+                                    ? (isPreOrderItem(product) ? '[ ⏳ สั่งจอง / OPTIONS ➔ ]' : '[ SELECT OPTIONS ➔ ]')
+                                    : (isPreOrderItem(product) ? '[ ⏳ สั่งจองล่วงหน้า ➔ ]' : '[ + ADD TO CART ➔ ]')
+                            }
+                        </span>
                     </button>
                 </div>
             </div>
         </motion.div>
     )
 }
-

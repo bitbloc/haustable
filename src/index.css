@@ -25,6 +25,9 @@
   --color-accent: oklch(52% 0.16 28);
   --color-accent-2: oklch(45% 0.08 140);
   --color-focus: oklch(60% 0.15 28);
+  --color-accent-yellow: oklch(88% 0.18 95);
+  --color-paper-warm: oklch(91% 0.012 35);
+  --color-accent-sky: oklch(85% 0.06 220);
 
   /* Hallmark Typography Tokens */
   --font-display: 'Instrument Serif', Georgia, serif;

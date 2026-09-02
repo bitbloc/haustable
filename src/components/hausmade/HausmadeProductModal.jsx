@@ -63,7 +63,9 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
                 if (group.is_required && group.option_choices && group.option_choices.length > 0) {
                     // Find first choice that is NOT sold out
                     const availableChoice = group.option_choices.find(c => {
-                        const isSoldOut = c.is_available === false || (c.stock_quantity !== undefined && c.stock_quantity <= 0) || (c.remaining_stock !== undefined && c.remaining_stock <= 0)
+                        const isSoldOut = c.is_available === false || 
+                            (c.stock_quantity !== null && c.stock_quantity !== undefined && c.stock_quantity <= 0) || 
+                            (c.remaining_stock !== null && c.remaining_stock !== undefined && c.remaining_stock <= 0)
                         return !isSoldOut
                     }) || group.option_choices[0]
 
@@ -116,7 +118,9 @@ export default function HausmadeProductModal({ product, isOpen, onClose, onAddTo
     if (!isOpen || !product) return null
 
     const handleOptionChange = (group, choice) => {
-        const isSoldOut = choice.is_available === false || (choice.stock_quantity !== undefined && choice.stock_quantity <= 0) || (choice.remaining_stock !== undefined && choice.remaining_stock <= 0)
+        const isSoldOut = choice.is_available === false || 
+            (choice.stock_quantity !== null && choice.stock_quantity !== undefined && choice.stock_quantity <= 0) || 
+            (choice.remaining_stock !== null && choice.remaining_stock !== undefined && choice.remaining_stock <= 0)
         if (isSoldOut) return
 
         setValidationMsg('')
