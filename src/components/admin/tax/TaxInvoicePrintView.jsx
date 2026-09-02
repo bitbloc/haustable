@@ -838,6 +838,8 @@ export default function TaxInvoicePrintView({ invoice, companySettings, onClose,
                         </div>
                     );
                 })}
+                    </div>
+                </div>
             </div>
 
             {/* SEND EMAIL MODAL */}
