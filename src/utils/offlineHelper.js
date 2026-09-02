@@ -585,7 +585,7 @@ export async function syncOfflineQueue(isManual = false) {
                     const dom = action.payload.dominantMember;
                     const chosenId = dom.id || dom.user_id;
                     if (chosenId) targetUpdate.user_id = chosenId;
-                    if (dom.display_name) targetUpdate.customer_name = dom.display_name;
+                    if (dom.display_name) targetUpdate.pickup_contact_name = dom.display_name;
                     if (dom.phone_number) targetUpdate.pickup_contact_phone = dom.phone_number;
                 }
                 if (Object.keys(targetUpdate).length > 0) {

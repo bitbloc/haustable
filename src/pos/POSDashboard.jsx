@@ -860,7 +860,7 @@ export default function POSDashboard() {
                     id, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
                     customer_note, pax, deposit_amount, total_amount, payment_slip_url,
                     slip_verified, slip_provider, slip_trans_ref, slip_verification_status,
-                    pickup_contact_name, pickup_contact_phone, customer_name,
+                    pickup_contact_name, pickup_contact_phone,
                     profiles (display_name, phone_number),
                     tables_layout (table_name),
                     order_items (id, quantity, price_at_time, custom_name, menu_items (name))
@@ -898,7 +898,7 @@ export default function POSDashboard() {
                 const onlineCount = pendingOnly.filter(b => {
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
-                    const nameLower = (b.customer_name || '').toLowerCase();
+                    const nameLower = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
                     const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
                     const isOnline = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
@@ -1516,7 +1516,7 @@ export default function POSDashboard() {
                                 playOrderAlert(qrItemAlertKey, 1200, 3.4);
                                 
                                 // Lookup table / order details for toast & history
-                                supabase.from('bookings').select('id, table_id, staff_remark, source, booking_type, pickup_contact_name, customer_name, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
+                                supabase.from('bookings').select('id, table_id, staff_remark, source, booking_type, pickup_contact_name, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
                                     const sourceLower = (bData?.source || '').toLowerCase();
                                     const remarkLower = (bData?.staff_remark || '').toLowerCase();
                                     const isItemPickup = bData?.booking_type === 'pickup' || (!bData?.table_id && (sourceLower === 'online' || remarkLower.includes('pickup')));
@@ -1884,7 +1884,7 @@ export default function POSDashboard() {
             const existingItems = (booking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
             setCurrentOrder({
                 items: existingItems,
-                customer: booking.customer_name || 'Customer',
+                customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'Customer',
                 table: table
             });
             // Keep on 'tables' view so the floorplan remains visible
@@ -2535,7 +2535,7 @@ export default function POSDashboard() {
                     cashReceived: paymentMethod === 'cash' ? numCashRecv : 0,
                     changeDue: paymentMethod === 'cash' ? numChangeDue : 0,
                     tableName: selectedTable?.table_name || currentBooking?.tables_layout?.table_name || null,
-                    customer: currentBooking?.customer_name || 'Walk-in Guest'
+                    customer: currentBooking?.profiles?.display_name || currentBooking?.pickup_contact_name || currentBooking?.customer_name || 'Walk-in Guest'
                 },
                 timestamp: Date.now()
             };
@@ -2725,7 +2725,7 @@ export default function POSDashboard() {
                         updatedTarget.user_id = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
                         updatedTarget.profiles = dominantCrm.dominantMember;
                         if (dominantCrm.dominantMember.display_name) {
-                            updatedTarget.customer_name = dominantCrm.dominantMember.display_name;
+                            updatedTarget.pickup_contact_name = dominantCrm.dominantMember.display_name;
                         }
                         if (dominantCrm.dominantMember.phone_number) {
                             updatedTarget.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
@@ -2791,7 +2791,7 @@ export default function POSDashboard() {
                 const dominantId = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
                 if (dominantId) targetUpdatePayload.user_id = dominantId;
                 if (dominantCrm.dominantMember.display_name) {
-                    targetUpdatePayload.customer_name = dominantCrm.dominantMember.display_name;
+                    targetUpdatePayload.pickup_contact_name = dominantCrm.dominantMember.display_name;
                 }
                 if (dominantCrm.dominantMember.phone_number) {
                     targetUpdatePayload.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
@@ -3846,7 +3846,7 @@ export default function POSDashboard() {
                                 availableTables.map(t => {
                                     const shortId = getShortBookingId(t.booking);
                                     const targetAmt = parseFloat(t.booking?.total_amount || t.booking?.total_price || 0);
-                                    const memberName = t.booking?.profiles?.display_name || t.booking?.customer_name || '';
+                                    const memberName = t.booking?.profiles?.display_name || t.booking?.pickup_contact_name || t.booking?.customer_name || '';
                                     return (
                                         <button
                                             key={t.id}
