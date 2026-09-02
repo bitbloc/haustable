@@ -65,28 +65,30 @@ export default function HausmadeShopPage() {
     // Featured Hero Items (items marked is_featured or first 4 items with images)
     const heroItems = useMemo(() => {
         const withImg = menuItems.filter(i => i.image_url)
-        const featured = withImg.filter(i => i.is_featured === true || i.is_recommended === true)
+        const featured = withImg.filter(i => i.is_featured === true || i.is_recommended === true || i.is_hero_featured === true)
         return (featured.length > 0 ? featured : withImg).slice(0, 4)
     }, [menuItems])
 
-    // Featured sidebar articles / drops (next 3 items after the active hero)
+    // Other featured releases (all items excluding the current hero item)
     const featuredSidebarItems = useMemo(() => {
-        const list = menuItems.filter(i => i.image_url)
-        if (list.length <= 1) return list
-        return list.slice(1, 4)
-    }, [menuItems])
+        const currentHero = heroItems[heroSlideIdx] || heroItems[0]
+        const available = menuItems.filter(i => i.image_url && i.id !== currentHero?.id)
+        if (available.length > 0) return available.slice(0, 3)
+        // If only 1 item total in catalog, fallback to showing other menu items
+        return menuItems.filter(i => i.id !== currentHero?.id).slice(0, 3)
+    }, [menuItems, heroItems, heroSlideIdx])
 
     // Spotlight mid-page item
     const spotlightItem = useMemo(() => {
         return menuItems.find(i => isPreOrderItem(i) && i.image_url) || menuItems[menuItems.length - 1] || heroItems[0]
     }, [menuItems, heroItems])
 
-    // Auto-advance hero carousel every 6s
+    // Auto-advance hero carousel every 8s
     useEffect(() => {
         if (heroItems.length <= 1) return
         const timer = setInterval(() => {
             setHeroSlideIdx(prev => (prev + 1) % heroItems.length)
-        }, 6000)
+        }, 8000)
         return () => clearInterval(timer)
     }, [heroItems.length])
 
@@ -171,7 +173,7 @@ export default function HausmadeShopPage() {
 
                 {/* Center Title on mobile */}
                 <span className="font-mono text-xs font-bold uppercase tracking-wider text-[var(--color-ink)] sm:hidden">
-                    HAUSMADE
+                    hausmade.
                 </span>
 
                 {/* Member CRM Status & Cart Trigger */}
@@ -229,16 +231,16 @@ export default function HausmadeShopPage() {
                 </div>
             )}
 
-            {/* 3. Massive Retro Editorial Masthead (Matching Smalls "Small Talk" Style) */}
+            {/* 3. Massive Retro Editorial Masthead (Requested: hausmade.) */}
             <header className="w-full bg-[var(--color-paper)] pt-8 pb-6 px-4 sm:px-8 text-center border-b border-[var(--color-rule)]">
                 <div className="max-w-6xl mx-auto flex flex-col items-center">
-                    <h1 className="font-['Instrument_Serif',Georgia,serif] text-6xl sm:text-8xl md:text-9xl font-normal tracking-tight text-[var(--color-ink)] leading-none select-none">
-                        Small Talk
+                    <h1 className="font-['Instrument_Serif',Georgia,serif] text-6xl sm:text-8xl md:text-9xl font-normal tracking-tight text-[var(--color-ink)] leading-none select-none lowercase">
+                        hausmade.
                     </h1>
                     <div className="mt-2 flex items-center gap-3 font-mono text-[11px] uppercase tracking-widest text-[var(--color-neutral)]">
-                        <span>// HAUSMADE SPECIALTY & RETAIL</span>
+                        <span>// CRAFT & SPECIALTY ATELIER</span>
                         <span>·</span>
-                        <span>CRAFTED IN NAKHON PHANOM</span>
+                        <span>CRAFTED IN NAKHON PHANOM, THAILAND</span>
                     </div>
                 </div>
             </header>
@@ -274,24 +276,28 @@ export default function HausmadeShopPage() {
             {/* 5. Main Content Area */}
             <main className="max-w-6xl w-full mx-auto px-4 sm:px-8 py-8 flex flex-col gap-12 flex-grow">
 
-                {/* SECTION A: Split Featured Hero Showcase (Magazine Layout) */}
+                {/* SECTION A: Split Featured Hero Showcase & Curated Drops */}
                 {currentHeroItem && (
                     <section className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] overflow-hidden shadow-2xs">
                         <div className="grid grid-cols-1 lg:grid-cols-12">
                             
                             {/* Left Hero Story Box (Yellow Block Split with Photo) */}
-                            <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-12 border-b lg:border-b-0 lg:border-r border-[var(--color-rule)]">
+                            <div className={`${featuredSidebarItems.length > 0 ? 'lg:col-span-8' : 'lg:col-span-12'} grid grid-cols-1 md:grid-cols-12 border-b lg:border-b-0 ${featuredSidebarItems.length > 0 ? 'lg:border-r' : ''} border-[var(--color-rule)]`}>
                                 
-                                {/* Yellow Editorial Tag Block */}
-                                <div className="md:col-span-5 bg-[var(--color-accent-yellow)] p-6 sm:p-8 flex flex-col justify-between gap-6 border-b md:border-b-0 md:border-r border-[var(--color-ink)]/15">
-                                    <div className="flex flex-col gap-3">
+                                {/* Yellow Editorial Tag Block (Full Bilingual Description Display) */}
+                                <div className="md:col-span-5 bg-[var(--color-accent-yellow)] p-6 sm:p-8 flex flex-col justify-between gap-5 border-b md:border-b-0 md:border-r border-[var(--color-ink)]/15">
+                                    <div className="flex flex-col gap-2.5">
                                         <div className="flex items-center justify-between">
                                             <span className="font-mono text-[10px] font-extrabold text-[var(--color-ink)]/80 uppercase">
                                                 {getCraftDateTag(currentHeroItem)}
                                             </span>
-                                            {isPreOrderItem(currentHeroItem) && (
-                                                <span className="font-mono text-[9px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-1.5 py-0.5 rounded-sm uppercase">
-                                                    PRE-ORDER
+                                            {isPreOrderItem(currentHeroItem) ? (
+                                                <span className="font-mono text-[9px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                                                    ⏳ PRE-ORDER
+                                                </span>
+                                            ) : (
+                                                <span className="font-mono text-[9px] font-bold bg-[var(--color-ink)]/10 text-[var(--color-ink)] px-2 py-0.5 rounded-sm uppercase tracking-wider">
+                                                    ● IN STOCK
                                                 </span>
                                             )}
                                         </div>
@@ -304,15 +310,27 @@ export default function HausmadeShopPage() {
                                         </h2>
 
                                         <span className="font-mono text-[10px] text-[var(--color-ink)]/70 uppercase tracking-wider font-bold">
-                                            // {currentHeroItem.menu_categories?.name || currentHeroItem.category || 'SPECIALTY CRAFT'}
+                                            // {currentHeroItem.menu_categories?.name || currentHeroItem.category || 'HAUSMADE.'}
                                         </span>
 
-                                        <p className="font-sans text-xs text-[var(--color-ink)]/80 line-clamp-3 leading-relaxed">
-                                            {currentHeroItem.description || 'สินค้าคัดสรรคุณภาพและงานคราฟต์ต้นตำรับจากริมแม่น้ำโขง นครพนม'}
-                                        </p>
+                                        {/* Full Bilingual Description (Thai + English preserved with line breaks) */}
+                                        {currentHeroItem.description && (
+                                            <div className="font-sans text-xs sm:text-[13px] text-[var(--color-ink)]/90 leading-relaxed whitespace-pre-line max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                                                {currentHeroItem.description}
+                                            </div>
+                                        )}
+
+                                        {/* Pre-Order ETA Box if applicable */}
+                                        {isPreOrderItem(currentHeroItem) && (
+                                            <div className="p-2 bg-[var(--color-ink)]/10 border border-[var(--color-ink)]/20 font-mono text-[10px] text-[var(--color-ink)] font-bold flex items-center gap-1.5 mt-1">
+                                                <span>📦</span>
+                                                <span>รอบส่ง: {getPreOrderEta(currentHeroItem)}</span>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <div className="flex flex-col gap-3 pt-4 border-t border-[var(--color-ink)]/20">
+                                    {/* Bottom Action Bar */}
+                                    <div className="flex flex-col gap-3 pt-3 border-t border-[var(--color-ink)]/20">
                                         <div className="flex items-baseline justify-between">
                                             <span className="font-mono text-xl font-black text-[var(--color-ink)]">
                                                 ฿{Number(currentHeroItem.price || 0).toLocaleString()}.-
@@ -335,8 +353,8 @@ export default function HausmadeShopPage() {
                                     </div>
                                 </div>
 
-                                {/* Hero Main Photo */}
-                                <div className="md:col-span-7 relative bg-[var(--color-paper-2)] flex items-center justify-center overflow-hidden min-h-[280px]">
+                                {/* Hero Main Photo & Multi-Angle Thumbnails */}
+                                <div className="md:col-span-7 relative bg-[var(--color-paper-2)] flex flex-col items-center justify-center overflow-hidden min-h-[300px] p-4 gap-2">
                                     <motion.img
                                         key={`${currentHeroItem.id}-${heroSlideIdx}`}
                                         initial={{ opacity: 0, scale: 0.97 }}
@@ -346,10 +364,31 @@ export default function HausmadeShopPage() {
                                         src={getProductImages(currentHeroItem)[0] || currentHeroItem.image_url}
                                         alt={currentHeroItem.name}
                                         onClick={() => setSelectedProduct(currentHeroItem)}
-                                        className="w-full h-full object-cover cursor-pointer hover:scale-102 transition-transform duration-500"
+                                        className="w-full h-64 md:h-76 object-cover cursor-pointer hover:scale-102 transition-transform duration-500 shadow-xs"
                                     />
+
+                                    {/* Multi-angle preview thumbnails */}
+                                    {getProductImages(currentHeroItem).length > 1 && (
+                                        <div className="flex items-center gap-1.5 self-start pt-1">
+                                            <span className="font-mono text-[9px] text-[var(--color-neutral)] uppercase font-bold">
+                                                [ {getProductImages(currentHeroItem).length} ANGLES ]:
+                                            </span>
+                                            {getProductImages(currentHeroItem).map((img, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    type="button"
+                                                    onClick={() => setSelectedProduct(currentHeroItem)}
+                                                    className="w-8 h-8 border border-[var(--color-rule)] overflow-hidden hover:border-[var(--color-ink)] cursor-pointer"
+                                                >
+                                                    <img src={img} alt="" className="w-full h-full object-cover" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Slide switchers if multiple hero items */}
                                     {heroItems.length > 1 && (
-                                        <div className="absolute bottom-3 right-3 bg-[var(--color-ink)]/80 backdrop-blur-xs text-[var(--color-paper)] px-2 py-1 font-mono text-[10px] flex gap-1 items-center">
+                                        <div className="absolute top-3 right-3 bg-[var(--color-ink)]/80 backdrop-blur-xs text-[var(--color-paper)] px-2 py-1 font-mono text-[10px] flex gap-1 items-center">
                                             {heroItems.map((_, idx) => (
                                                 <button
                                                     key={idx}
@@ -365,52 +404,73 @@ export default function HausmadeShopPage() {
                                 </div>
                             </div>
 
-                            {/* Right Hero Sidebar: Featured Releases / Articles */}
-                            <div className="lg:col-span-4 p-5 sm:p-6 bg-[var(--color-paper)] flex flex-col justify-between gap-4">
-                                <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2.5">
-                                    <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
-                                        FEATURED RELEASES
-                                    </span>
-                                    <span className="font-mono text-[10px] text-[var(--color-neutral)]">
-                                        [ {featuredSidebarItems.length} DROPS ]
-                                    </span>
-                                </div>
+                            {/* Right Hero Sidebar: Featured Releases / Curated Drops */}
+                            {featuredSidebarItems.length > 0 && (
+                                <div className="lg:col-span-4 p-5 sm:p-6 bg-[var(--color-paper)] flex flex-col justify-start gap-4">
+                                    <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-2.5">
+                                        <span className="font-mono text-xs font-bold text-[var(--color-ink)] uppercase tracking-wider">
+                                            FEATURED RELEASES
+                                        </span>
+                                        <span className="font-mono text-[10px] text-[var(--color-neutral)]">
+                                            [ {featuredSidebarItems.length} DROPS ]
+                                        </span>
+                                    </div>
 
-                                <div className="flex flex-col gap-4 flex-grow justify-around">
-                                    {featuredSidebarItems.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            onClick={() => handleProductAction(item)}
-                                            className="group flex items-center gap-3.5 cursor-pointer pb-3 border-b border-[var(--color-rule)]/60 last:border-b-0"
-                                        >
-                                            <div className="w-18 h-18 bg-[var(--color-paper-2)] border border-[var(--color-rule)] flex-shrink-0 overflow-hidden">
-                                                <img
-                                                    src={item.image_url}
-                                                    alt={item.name}
-                                                    loading="lazy"
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-1 min-w-0">
-                                                <span className="font-mono text-[9px] text-[var(--color-neutral)] uppercase">
-                                                    // {item.menu_categories?.name || item.category || 'HAUSMADE'}
-                                                </span>
-                                                <h4 className="font-sans text-xs font-bold text-[var(--color-ink)] uppercase tracking-tight line-clamp-1 group-hover:text-[var(--color-accent)]">
-                                                    {item.name}
-                                                </h4>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-mono text-xs font-bold text-[var(--color-ink)]">
-                                                        ฿{Number(item.price || 0).toLocaleString()}.-
-                                                    </span>
-                                                    <span className="font-mono text-[9px] text-[var(--color-accent)] font-bold group-hover:translate-x-0.5 transition-transform">
-                                                        VIEW ➔
+                                    {/* Rich, Content-Packed Featured Cards */}
+                                    <div className="flex flex-col gap-4">
+                                        {featuredSidebarItems.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="group border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] p-3 flex flex-col gap-2.5 transition-all cursor-pointer"
+                                                onClick={() => setSelectedProduct(item)}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-20 h-20 bg-[var(--color-paper)] border border-[var(--color-rule)] flex-shrink-0 overflow-hidden">
+                                                        <img
+                                                            src={item.image_url}
+                                                            alt={item.name}
+                                                            loading="lazy"
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                        />
+                                                    </div>
+                                                    <div className="flex flex-col gap-1 min-w-0 flex-grow">
+                                                        <div className="flex items-center justify-between gap-1">
+                                                            <span className="font-mono text-[9px] text-[var(--color-neutral)] uppercase font-bold truncate">
+                                                                // {item.menu_categories?.name || item.category || 'HAUSMADE.'}
+                                                            </span>
+                                                            {isPreOrderItem(item) && (
+                                                                <span className="font-mono text-[8px] font-bold bg-[var(--color-ink)] text-[var(--color-paper)] px-1 py-0.2 rounded-xs uppercase">
+                                                                    PRE-ORDER
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <h4 className="font-sans text-xs font-bold text-[var(--color-ink)] uppercase tracking-tight line-clamp-1 group-hover:text-[var(--color-accent)]">
+                                                            {item.name}
+                                                        </h4>
+                                                        <div className="font-mono text-xs font-bold text-[var(--color-ink)]">
+                                                            ฿{Number(item.price || 0).toLocaleString()}.-
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Description Preview & Action */}
+                                                {item.description && (
+                                                    <p className="font-sans text-[11px] text-[var(--color-muted)] line-clamp-2 leading-relaxed">
+                                                        {item.description}
+                                                    </p>
+                                                )}
+
+                                                <div className="flex items-center justify-between pt-1 border-t border-[var(--color-rule)]/60 text-[10px] font-mono font-bold text-[var(--color-ink)]">
+                                                    <span>{getCraftDateTag(item)}</span>
+                                                    <span className="text-[var(--color-accent)] group-hover:translate-x-0.5 transition-transform">
+                                                        [ SELECT OPTIONS ➔ ]
                                                     </span>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     </section>
                 )}
@@ -535,7 +595,7 @@ export default function HausmadeShopPage() {
                                     {spotlightItem.name}
                                 </h3>
 
-                                <p className="font-sans text-xs line-clamp-2 leading-relaxed text-[var(--color-ink)]/80">
+                                <p className="font-sans text-xs line-clamp-3 leading-relaxed text-[var(--color-ink)]/80 whitespace-pre-line">
                                     {spotlightItem.description || 'งานคราฟต์ต้นตำรับและรสชาติเอกลักษณ์ เสิร์ฟตรงจากริมแม่น้ำโขง นครพนม'}
                                 </p>
 
@@ -788,7 +848,7 @@ function EditorialProductCard({ product, onSelectProduct, onQuickAction }) {
                         onClick={() => onSelectProduct(product)}
                         className="w-full h-full flex flex-col items-center justify-center font-mono text-[10px] text-[var(--color-neutral)] uppercase gap-1 p-4 text-center cursor-pointer"
                     >
-                        <span className="font-bold text-[var(--color-ink)]">// HAUSMADE</span>
+                        <span className="font-bold text-[var(--color-ink)]">// HAUSMADE.</span>
                         <span>[ NAKHON PHANOM CRAFT ]</span>
                     </div>
                 )}
@@ -842,7 +902,7 @@ function EditorialProductCard({ product, onSelectProduct, onQuickAction }) {
             <div className="bg-[var(--color-accent-yellow)] px-3.5 py-1.5 border-t border-b border-[var(--color-ink)]/15 flex items-center justify-between font-mono text-[9px] font-extrabold text-[var(--color-ink)] uppercase">
                 <span>{getCraftDateTag(product)} · ฿{Number(product.price || 0).toLocaleString()}.-</span>
                 <span className="truncate max-w-[120px]">
-                    {product.menu_categories?.name || product.category || (isPreOrderItem(product) ? 'PRE-ORDER' : 'HAUSMADE')}
+                    {product.menu_categories?.name || product.category || (isPreOrderItem(product) ? 'PRE-ORDER' : 'HAUSMADE.')}
                 </span>
             </div>
 
@@ -856,8 +916,9 @@ function EditorialProductCard({ product, onSelectProduct, onQuickAction }) {
                         {product.name}
                     </h4>
 
+                    {/* Preserved Bilingual Description */}
                     {product.description && (
-                        <p className="font-sans text-xs text-[var(--color-muted)] mt-1 line-clamp-2 leading-relaxed">
+                        <p className="font-sans text-xs text-[var(--color-muted)] mt-1 line-clamp-3 leading-relaxed whitespace-pre-line">
                             {product.description}
                         </p>
                     )}
