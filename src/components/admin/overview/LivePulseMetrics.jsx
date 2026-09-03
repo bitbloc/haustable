@@ -1,6 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React from 'react'
-import { TrendingUp, Users, Utensils, AlertCircle, CheckCircle2, DollarSign, Clock, ShieldAlert } from 'lucide-react'
 
 export default function LivePulseMetrics({
     revenueToday = 0,
@@ -28,14 +27,14 @@ export default function LivePulseMetrics({
                 </div>
                 
                 <div className="my-2">
-                    <div className="font-mono text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                    <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                         {loading ? '...' : `฿${Number(revenueToday || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
                     </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
-                    <span>{completedOrdersCount} PAID ORDERS</span>
-                    <span className="text-[oklch(45%_0.08_140)] font-bold">LIVE SYNC</span>
+                    <span className="tabular-nums">{completedOrdersCount} PAID ORDERS</span>
+                    <span className="text-[oklch(45%_0.08_140)] font-bold tracking-wider text-[10px]">LIVE SYNC</span>
                 </div>
             </div>
 
@@ -45,13 +44,13 @@ export default function LivePulseMetrics({
                     <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
                         TABLE OCCUPANCY
                     </span>
-                    <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm">
+                    <span className="font-mono tabular-nums text-[11px] font-bold text-[oklch(18%_0.012_28)] bg-[oklch(92%_0.012_28)] px-1.5 py-0.5 rounded-sm">
                         {occupancyRate}%
                     </span>
                 </div>
 
                 <div className="my-2 flex items-baseline gap-2">
-                    <div className="font-mono text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                    <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                         {occupiedTables} <span className="text-sm md:text-base font-normal text-[oklch(55%_0.010_28)]">/ {totalTables} TABLES</span>
                     </div>
                 </div>
@@ -65,8 +64,8 @@ export default function LivePulseMetrics({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2">
-                    <span>{totalGuests} GUESTS SEATED</span>
-                    <span>{totalTables - occupiedTables} FREE</span>
+                    <span className="tabular-nums">{totalGuests} GUESTS SEATED</span>
+                    <span className="tabular-nums">{totalTables - occupiedTables} FREE</span>
                 </div>
             </div>
 
@@ -76,23 +75,23 @@ export default function LivePulseMetrics({
                     <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
                         ACTIVE SERVICE MIX
                     </span>
-                    <Utensils size={14} className="text-[oklch(55%_0.010_28)]" />
+                    <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] font-bold">[CHANNELS]</span>
                 </div>
 
                 <div className="my-2 grid grid-cols-2 gap-1.5 text-center font-mono">
                     <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
-                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)]">{dineInCount}</div>
-                        <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase">DINE-IN</div>
+                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{dineInCount}</div>
+                        <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase tracking-wider">DINE-IN</div>
                     </div>
                     <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
-                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)]">{pickupCount}</div>
-                        <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase">PICKUP</div>
+                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{pickupCount}</div>
+                        <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase tracking-wider">PICKUP</div>
                     </div>
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
                     <span>TOTAL ACTIVE</span>
-                    <span className="font-bold text-[oklch(18%_0.012_28)]">{dineInCount + pickupCount} ORDERS</span>
+                    <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">{dineInCount + pickupCount} ORDERS</span>
                 </div>
             </div>
 
@@ -112,12 +111,12 @@ export default function LivePulseMetrics({
                             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[oklch(52%_0.16_28)]"></span>
                         </span>
                     ) : (
-                        <CheckCircle2 size={14} className="text-[oklch(45%_0.08_140)]" />
+                        <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
                     )}
                 </div>
 
                 <div className="my-2 flex items-baseline gap-2">
-                    <div className={`font-mono text-xl md:text-2xl lg:text-3xl font-bold tracking-tight ${
+                    <div className={`font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight ${
                         pendingInboxCount > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'
                     }`}>
                         {pendingInboxCount}
@@ -127,7 +126,7 @@ export default function LivePulseMetrics({
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
                     <span>{pendingInboxCount > 0 ? 'NEEDS APPROVAL' : 'ALL CAUGHT UP'}</span>
-                    <span className="font-bold">{pendingInboxCount > 0 ? 'URGENT' : 'READY'}</span>
+                    <span className="font-bold tracking-wider text-[10px]">{pendingInboxCount > 0 ? 'URGENT' : 'READY'}</span>
                 </div>
             </div>
 
@@ -138,13 +137,13 @@ export default function LivePulseMetrics({
                         PAYMENT METHOD BREAKDOWN:
                     </span>
                     <div className="flex items-center gap-3 flex-wrap text-[11px]">
-                        <span className="text-amber-900 font-bold bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                        <span className="text-[oklch(28%_0.10_65)] font-bold bg-[oklch(93%_0.04_65)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_65)] tabular-nums">
                             เงินสด: ฿{(paymentBreakdown.cash || 0).toLocaleString()}
                         </span>
-                        <span className="text-emerald-900 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                        <span className="text-[oklch(28%_0.08_140)] font-bold bg-[oklch(93%_0.04_140)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_140)] tabular-nums">
                             PromptPay QR: ฿{(paymentBreakdown.qr || 0).toLocaleString()}
                         </span>
-                        <span className="text-indigo-900 font-bold bg-indigo-100 px-2 py-0.5 rounded border border-indigo-300">
+                        <span className="text-[oklch(28%_0.08_250)] font-bold bg-[oklch(93%_0.04_250)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_250)] tabular-nums">
                             บัตรเครดิต: ฿{(paymentBreakdown.credit || 0).toLocaleString()}
                         </span>
                     </div>

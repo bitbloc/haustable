@@ -523,14 +523,29 @@ export default function MemberCard() {
             return toast.error("กรุณากรอกเบอร์โทรศัพท์ 10 หลัก")
         }
 
+        const cleanPhone = editForm.phone_number.replace(/[^0-9]/g, '')
         setIsSaving(true)
         try {
+            // Check if phone number is already registered to another member
+            const { data: duplicatePhone } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('phone_number', cleanPhone)
+                .neq('id', user.id)
+                .limit(1)
+                .maybeSingle()
+
+            if (duplicatePhone) {
+                setIsSaving(false)
+                return toast.error("เบอร์โทรศัพท์นี้ถูกใช้งานโดยสมาชิกท่านอื่นแล้ว กรุณาใช้เบอร์ของท่านเองครับ")
+            }
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
                     display_name: editForm.display_name,
                     nickname: editForm.nickname,
-                    phone_number: editForm.phone_number,
+                    phone_number: cleanPhone,
                     birth_day: editForm.birth_day ? parseInt(editForm.birth_day) : null,
                     birth_month: editForm.birth_month ? parseInt(editForm.birth_month) : null,
                     gender: editForm.gender || null

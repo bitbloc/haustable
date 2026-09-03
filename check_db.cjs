@@ -18,10 +18,9 @@ async function check() {
             id: b.id,
             booking_type: b.booking_type,
             status: b.status,
-            total_amount: b.total_amount,
-            staff_remark: b.staff_remark,
-            payment_slip_url: b.payment_slip_url,
-            payment_method: b.payment_method
+            booking_time: b.booking_time,
+            created_at: b.created_at,
+            total_amount: b.total_amount
         })));
     }
 }

@@ -175,12 +175,46 @@ export function useHausmadeAdmin() {
         }
     }
 
+    // Batch Update Multiple Order Statuses at once
+    const updateBatchOrderStatus = async (orderIds, { status, courierName }) => {
+        try {
+            const idList = Array.from(orderIds)
+            if (idList.length === 0) return { success: true }
+
+            const payload = { status }
+            if (courierName !== undefined) payload.courier_name = courierName
+
+            const { error } = await supabase
+                .from('bookings')
+                .update(payload)
+                .in('id', idList)
+
+            if (error) throw error
+
+            // If cancelled, restore stock for each order
+            if (status === 'cancelled' || status === 'void') {
+                for (const id of idList) {
+                    try {
+                        await supabase.rpc('restore_order_stock', { p_booking_id: id })
+                    } catch (e) {}
+                }
+            }
+
+            await fetchAdminData()
+            return { success: true, count: idList.length }
+        } catch (err) {
+            console.error('[useHausmadeAdmin] Error batch updating orders:', err)
+            return { success: false, error: err.message }
+        }
+    }
+
     return {
         loading,
         orders,
         settings,
         fetchAdminData,
         updateSettings,
-        updateOrderStatus
+        updateOrderStatus,
+        updateBatchOrderStatus
     }
 }

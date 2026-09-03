@@ -52,6 +52,19 @@ export async function sendPOSBroadcast(event, payload = {}) {
             payload: fullPayload
         });
 
+        // Local cross-tab & in-app instant sync (0ms)
+        try {
+            if (typeof BroadcastChannel !== 'undefined') {
+                const bc = new BroadcastChannel('onhaus_pos_sync');
+                bc.postMessage({ event, payload: fullPayload });
+                bc.close();
+            }
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('pos_sync_event', { detail: { event, payload: fullPayload } }));
+                localStorage.setItem('pos_last_order_sync', String(Date.now()));
+            }
+        } catch (e) {}
+
         console.log(`⚡ [RealtimeNotifier] Broadcast "${event}" sent:`, res);
         return res;
     } catch (err) {

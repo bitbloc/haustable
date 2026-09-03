@@ -24,7 +24,10 @@ import {
     ShoppingBag,
     X,
     ExternalLink,
-    Timer
+    Timer,
+    LayoutGrid,
+    Columns,
+    List
 } from 'lucide-react'
 import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
@@ -128,6 +131,20 @@ export default function AllDailyBillsHub({
     const [paymentFilter, setPaymentFilter] = useState('all') // all, cash, qr, credit, split
     const [channelFilter, setChannelFilter] = useState('all') // all, dine_in, pickup
     const [expandedBillIds, setExpandedBillIds] = useState(new Set())
+    const [viewMode, setViewMode] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_bills_view_mode') || 'grid'
+        } catch (e) {
+            return 'grid'
+        }
+    })
+
+    const handleViewModeChange = (mode) => {
+        setViewMode(mode)
+        try {
+            localStorage.setItem('onhaus_bills_view_mode', mode)
+        } catch (e) {}
+    }
 
     // Toggle expand/collapse for a specific bill
     const toggleExpand = (id) => {
@@ -147,7 +164,7 @@ export default function AllDailyBillsHub({
         setExpandedBillIds(new Set())
     }
 
-    // Filter & Search Logic
+    // Filter & Priority Search Logic
     const filteredBookings = useMemo(() => {
         return (bookings || []).filter(b => {
             const transfer = parseTableTransferInfo(b)
@@ -198,8 +215,60 @@ export default function AllDailyBillsHub({
             }
 
             return true
-        }).sort((a, b) => new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at))
+        }).sort((a, b) => {
+            // Priority Order:
+            // 1. Seated (กำลังทาน - highest operational attention)
+            // 2. Pending (รอตรวจ - new unverified orders / slips)
+            // 3. Confirmed / Ready (ยืนยัน/พร้อมส่ง)
+            // 4. Completed / Paid (ชำระแล้ว)
+            // 5. Cancelled / Merged (ยกเลิก/รวมโต๊ะ)
+            const getPriorityRank = (item) => {
+                const tr = parseTableTransferInfo(item)
+                if (tr.isMergedSource) return 6
+                const st = (item.status || '').toLowerCase()
+                if (st === 'seated') return 1
+                if (st === 'pending') return 2
+                if (st === 'confirmed' || st === 'ready') return 3
+                if (st === 'completed' || st === 'paid' || st === 'success') return 4
+                return 5
+            }
+            const rankA = getPriorityRank(a)
+            const rankB = getPriorityRank(b)
+            if (rankA !== rankB) return rankA - rankB
+            return new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at)
+        })
     }, [bookings, statusFilter, channelFilter, paymentFilter, searchQuery])
+
+    // Kanban Lanes partitioned by operational priority
+    const kanbanLanes = useMemo(() => {
+        const seated = []
+        const pending = []
+        const paid = []
+        const pickup = []
+        const other = []
+
+        filteredBookings.forEach(b => {
+            const tr = parseTableTransferInfo(b, bookings)
+            const st = (b.status || '').toLowerCase()
+            const isPick = b.booking_type === 'pickup' || (b.order_type || '').includes('hausmade')
+
+            if (tr.isMergedSource || st === 'cancelled' || st === 'void') {
+                other.push(b)
+            } else if (st === 'seated') {
+                seated.push(b)
+            } else if (st === 'pending') {
+                pending.push(b)
+            } else if (isPick && st !== 'completed' && st !== 'paid' && st !== 'success') {
+                pickup.push(b)
+            } else if (st === 'completed' || st === 'paid' || st === 'success') {
+                paid.push(b)
+            } else {
+                seated.push(b)
+            }
+        })
+
+        return { seated, pending, paid, pickup, other }
+    }, [filteredBookings, bookings])
 
     // Derived counts & sums for quick badges
     const metrics = useMemo(() => {
@@ -288,7 +357,7 @@ export default function AllDailyBillsHub({
         }
         if (s === 'pending') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300 animate-pulse">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)] animate-pulse">
                     <AlertCircle size={11} />
                     <span>PENDING (รอตรวจ)</span>
                 </span>
@@ -321,7 +390,7 @@ export default function AllDailyBillsHub({
         const breakdown = getBookingPaymentBreakdown(booking)
         if (breakdown.isSplit) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-purple-100 text-purple-900 border border-purple-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(93%_0.04_300)] text-[oklch(28%_0.08_300)] border border-[oklch(80%_0.06_300)]">
                     <Layers size={11} />
                     <span>SPLIT (ผสม)</span>
                 </span>
@@ -329,7 +398,7 @@ export default function AllDailyBillsHub({
         }
         if (breakdown.methodLabel === 'Credit Card') {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-indigo-100 text-indigo-900 border border-indigo-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(93%_0.04_250)] text-[oklch(28%_0.08_250)] border border-[oklch(80%_0.06_250)]">
                     <CreditCard size={11} />
                     <span>CREDIT CARD</span>
                 </span>
@@ -337,17 +406,208 @@ export default function AllDailyBillsHub({
         }
         if (breakdown.methodLabel === 'QR Transfer' || booking.payment_slip_url) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-emerald-100 text-emerald-900 border border-emerald-300">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(93%_0.04_140)] text-[oklch(28%_0.08_140)] border border-[oklch(80%_0.06_140)]">
                     <QrCode size={11} />
                     <span>PROMPTPAY QR</span>
                 </span>
             )
         }
         return (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-amber-100 text-amber-900 border border-amber-300">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)]">
                 <Banknote size={11} />
                 <span>CASH (เงินสด)</span>
             </span>
+        )
+    }
+
+    // Visual Database Card Component (Dieter Rams + Thai Modern OKLCH)
+    const renderVisualCard = (b) => {
+        const isExpanded = expandedBillIds.has(b.id)
+        const shortId = getShortBookingId(b)
+        const isDineIn = b.booking_type === 'dine_in' || b.booking_type === 'walk_in'
+        const guestName = b.profiles?.display_name || b.pickup_contact_name || b.customer_name || 'Walk-in Guest'
+        const phone = b.profiles?.phone_number || b.pickup_contact_phone || b.phone_number || ''
+        const tier = b.profiles?.current_tier || ''
+        const totalAmt = parseFloat(b.total_amount || b.total_price || 0)
+        const items = b.order_items || []
+        const itemsCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0)
+        const hasCallBill = b.staff_remark && b.staff_remark.includes('[CALL_BILL]')
+        const transfer = parseTableTransferInfo(b, bookings)
+        const status = (b.status || '').toLowerCase()
+        const isSeated = status === 'seated'
+        const isPending = status === 'pending'
+        const isPaid = status === 'completed' || status === 'paid' || status === 'success'
+
+        // Distinct border styling based on operational priority (Dieter Rams + Thai Modern OKLCH)
+        let cardStyle = 'border-2 border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] hover:border-[oklch(52%_0.16_28)]'
+        if (transfer.isMergedSource) {
+            cardStyle = 'border-2 border-dashed border-[oklch(52%_0.16_28)]/50 bg-[oklch(97%_0.008_28)] opacity-75'
+        } else if (hasCallBill) {
+            cardStyle = 'border-2 border-[oklch(75%_0.18_65)] bg-[oklch(98%_0.02_65)] shadow-xs'
+        } else if (isSeated) {
+            cardStyle = 'border-2 border-[oklch(52%_0.16_28)]/80 bg-[oklch(98%_0.010_28)] shadow-xs'
+        } else if (isPending) {
+            cardStyle = 'border-2 border-[oklch(75%_0.14_65)] bg-[oklch(98%_0.015_65)]'
+        } else if (isPaid) {
+            cardStyle = 'border-2 border-[oklch(75%_0.08_140)] bg-[oklch(99%_0.005_28)] hover:border-[oklch(45%_0.08_140)]'
+        }
+
+        return (
+            <div 
+                key={b.id} 
+                className={`rounded-sm p-3.5 flex flex-col justify-between transition-all duration-150 shadow-2xs hover:shadow-md ${cardStyle}`}
+            >
+                {/* Top Alert if Call Bill or Table Merged */}
+                <div>
+                    {hasCallBill && (
+                        <div className="mb-2 px-2.5 py-1 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-black rounded-xs flex items-center justify-between animate-pulse">
+                            <span className="tracking-wider">[CALL BILL] ลูกค้าเรียกเช็คบิล</span>
+                            <span className="text-[9px] uppercase tracking-widest font-bold">URGENT</span>
+                        </div>
+                    )}
+                    {transfer.isMergedSource && (
+                        <div className="mb-2 px-2 py-0.5 bg-[oklch(96%_0.018_28)] text-[oklch(35%_0.12_28)] font-mono text-[9px] font-black rounded-xs border border-[oklch(85%_0.018_28)] truncate">
+                            MERGED ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                        </div>
+                    )}
+
+                    {/* Top Row: Table Tag, Time & Short ID */}
+                    <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-[oklch(90%_0.008_28)]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            {isDineIn ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-black rounded-xs truncate">
+                                    <Utensils size={11} className="text-[oklch(52%_0.16_28)] shrink-0" />
+                                    <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(92%_0.02_220)] text-[oklch(35%_0.10_220)] border border-[oklch(82%_0.02_220)] font-mono text-xs font-black rounded-xs">
+                                    <ShoppingBag size={11} className="shrink-0" />
+                                    <span>PICKUP</span>
+                                </span>
+                            )}
+                            {transfer.isMergedTarget && (
+                                <span className="px-1 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[8px] font-mono font-black shrink-0">
+                                    +รวม
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs">
+                            <span className="text-[oklch(42%_0.010_28)] font-semibold text-[11px] tabular-nums">
+                                {formatThaiTimeOnly(b.booking_time || b.created_at)}
+                            </span>
+                            <span className="px-1.5 py-0.2 bg-[oklch(18%_0.012_28)] text-white font-mono text-[10px] font-black rounded-xs tabular-nums">
+                                #{shortId}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Status & Live Duration Row */}
+                    <div className="flex items-center gap-1.5 flex-wrap my-2">
+                        {getStatusBadge(b)}
+                        {getPaymentBadge(b)}
+                        <LiveServiceDurationBadge booking={b} />
+                    </div>
+
+                    {/* Customer Info */}
+                    <div className="flex items-center justify-between text-xs font-mono py-1">
+                        <div className="truncate pr-1">
+                            <span className="font-bold text-[oklch(18%_0.012_28)] truncate block">
+                                {guestName}
+                            </span>
+                            {phone && (
+                                <span className="text-[10px] text-[oklch(42%_0.010_28)] font-mono tracking-tight tabular-nums">
+                                    TEL: {phone}
+                                </span>
+                            )}
+                        </div>
+                        {tier && (
+                            <span className="px-1.5 py-0.2 rounded-xs text-[8.5px] font-mono font-bold bg-[oklch(93%_0.04_65)] text-[oklch(28%_0.10_65)] border border-[oklch(80%_0.06_65)] shrink-0">
+                                {tier}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Items List Preview (Clean Hairline Division - Anti Card-in-Card) */}
+                    <div className="my-2 pt-2 border-t border-[oklch(90%_0.008_28)] font-mono text-xs space-y-1">
+                        {items.slice(0, isExpanded ? items.length : 3).map((item, idx) => {
+                            const mName = item.custom_name || item.menu_items?.name || item.name || 'Custom Item'
+                            const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
+                            const qty = item.quantity || 1
+                            return (
+                                <div key={idx} className="flex items-center justify-between text-[11px] gap-2">
+                                    <span className="truncate text-[oklch(22%_0.012_28)]">
+                                        <strong className="text-[oklch(52%_0.16_28)] font-bold mr-1 tabular-nums">{qty}x</strong>
+                                        {mName}
+                                    </span>
+                                    <span className="text-[oklch(42%_0.010_28)] shrink-0 text-[10px] tabular-nums">
+                                        ฿{(price * qty).toLocaleString()}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                        {items.length === 0 && (
+                            <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono uppercase tracking-wider text-center py-1">
+                                ไม่มีรายการอาหารย่อย
+                            </div>
+                        )}
+                        {items.length > 3 && (
+                            <button
+                                type="button"
+                                onClick={() => toggleExpand(b.id)}
+                                className="w-full text-center text-[10px] font-bold text-[oklch(52%_0.16_28)] hover:underline pt-1 cursor-pointer"
+                            >
+                                {isExpanded ? '▲ ย่อรายการ' : `+ อีก ${items.length - 3} รายการ (คลิกดูครบ)`}
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bottom Total & Actions */}
+                <div className="pt-2 border-t border-[oklch(90%_0.008_28)] mt-1">
+                    <div className="flex items-baseline justify-between font-mono mb-2">
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] font-bold tabular-nums">
+                            {itemsCount} รายการ
+                        </span>
+                        <span className="text-base font-black text-[oklch(18%_0.012_28)] tabular-nums">
+                            ฿{totalAmt.toLocaleString()}
+                        </span>
+                    </div>
+
+                    {/* Action Buttons (Non-wrapping Clickable Affordances) */}
+                    <div className="flex items-center gap-1 font-mono text-xs">
+                        {b.payment_slip_url && (
+                            <button
+                                type="button"
+                                onClick={() => onViewSlip && onViewSlip(b.payment_slip_url)}
+                                className="flex-1 py-1.5 bg-[oklch(93%_0.04_140)] hover:bg-[oklch(88%_0.06_140)] text-[oklch(28%_0.08_140)] border border-[oklch(80%_0.06_140)] rounded-xs font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                                title="ดูสลิปโอนเงิน"
+                            >
+                                <ImageIcon size={11} />
+                                <span>ดูสลิป</span>
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            onClick={() => onPrintSlip && onPrintSlip(b, b.status === 'completed' ? 'receipt' : 'billing')}
+                            className="flex-1 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer whitespace-nowrap"
+                            title="ดูภาพสลิป/PNG"
+                        >
+                            <Receipt size={11} />
+                            <span>สลิป</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => onOpenTaxInvoice && onOpenTaxInvoice(b)}
+                            className="flex-1 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xs font-bold text-[10px] flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-2xs whitespace-nowrap"
+                            title="ออกใบกำกับภาษี"
+                        >
+                            <FileText size={11} />
+                            <span>ใบกำกับ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         )
     }
 
@@ -480,28 +740,187 @@ export default function AllDailyBillsHub({
                 </div>
             </div>
 
-            {/* Results Counter Strip */}
-            <div className="flex items-center justify-between font-mono text-xs px-1 text-[oklch(42%_0.010_28)] font-bold">
-                <span>แสดง {filteredBookings.length} จาก {bookings.length} บิล</span>
-                {filteredBookings.length > 0 && (
-                    <span>ยอดรวมรายการที่เลือก: <strong className="text-[oklch(18%_0.012_28)]">฿{metrics.filteredSum.toLocaleString()}</strong></span>
-                )}
+            {/* Results Counter Strip & View Mode Switcher (Neo-Brutalist Tabular Layout) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs px-1 text-[oklch(42%_0.010_28)] font-bold">
+                <div className="flex items-center gap-3 flex-wrap">
+                    <span>แสดง <strong className="text-[oklch(18%_0.012_28)] tabular-nums">{filteredBookings.length}</strong> จาก {bookings.length} บิล</span>
+                    {filteredBookings.length > 0 && (
+                        <span>ยอดรวม: <strong className="text-[oklch(18%_0.012_28)] tabular-nums">฿{metrics.filteredSum.toLocaleString()}</strong></span>
+                    )}
+                </div>
+
+                {/* Visual View Mode Switcher (Solid Rectangular Cells) */}
+                <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden shrink-0 divide-x divide-[oklch(85%_0.012_28)]">
+                    <button
+                        type="button"
+                        onClick={() => handleViewModeChange('grid')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                            viewMode === 'grid'
+                                ? 'bg-[oklch(18%_0.012_28)] text-white'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                        }`}
+                        title="มุมมองการ์ด Visual Database — กวาดสายตาดูได้พร้อมกันหลายบิล"
+                    >
+                        <LayoutGrid size={12} />
+                        <span className="whitespace-nowrap">การ์ดฐานข้อมูล</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleViewModeChange('kanban')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                            viewMode === 'kanban'
+                                ? 'bg-[oklch(18%_0.012_28)] text-white'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                        }`}
+                        title="มุมมองแยกตามลำดับความสำคัญ — กำลังทาน / รอตรวจ / ชำระแล้ว / รับกลับ"
+                    >
+                        <Columns size={12} />
+                        <span className="whitespace-nowrap">ลำดับความสำคัญ</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleViewModeChange('list')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                            viewMode === 'list'
+                                ? 'bg-[oklch(18%_0.012_28)] text-white'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                        }`}
+                        title="มุมมองรายการละเอียด"
+                    >
+                        <List size={12} />
+                        <span className="whitespace-nowrap">รายการ</span>
+                    </button>
+                </div>
             </div>
 
-            {/* Bills List / Table */}
+            {/* Bills Display Area */}
             {loading ? (
-                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] animate-pulse rounded-xl">
+                <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] animate-pulse rounded-sm">
                     กำลังโหลดข้อมูลบิลทั้งหมดประจำวัน...
                 </div>
             ) : filteredBookings.length === 0 ? (
-                <div className="bg-[oklch(98%_0.006_28)] border-2 border-dashed border-[oklch(85%_0.012_28)] p-12 rounded-xl text-center space-y-2">
+                <div className="bg-[oklch(98%_0.006_28)] border-2 border-dashed border-[oklch(85%_0.012_28)] p-12 rounded-sm text-center space-y-2">
                     <AlertCircle size={32} className="mx-auto text-[oklch(52%_0.16_28)] opacity-60" />
-                    <h3 className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)]">ไม่พบบิลตามเงื่อนไขที่เลือก</h3>
+                    <h3 className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-wider">ไม่พบบิลตามเงื่อนไขที่เลือก</h3>
                     <p className="font-mono text-xs text-[oklch(55%_0.010_28)]">
                         ลองปรับตัวกรองสถานะหรือค้นหาด้วยคำค้นอื่น
                     </p>
                 </div>
+            ) : viewMode === 'grid' ? (
+                /* 1. Visual Database Multi-Column Card Grid (Default) */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+                    {filteredBookings.map(b => renderVisualCard(b))}
+                </div>
+            ) : viewMode === 'kanban' ? (
+                /* 2. Priority Lanes (Kanban Columns with OKLCH Color Enclosures) */
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3.5 items-start">
+                    {/* Lane 1: Seated (กำลังทาน) */}
+                    <div className="flex flex-col bg-[oklch(96%_0.008_28)] border-2 border-[oklch(52%_0.16_28)]/40 rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                        <div className="flex items-center justify-between pb-2 border-b border-[oklch(88%_0.010_28)] font-mono">
+                            <span className="font-black text-xs text-[oklch(52%_0.16_28)] flex items-center gap-1.5 uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                กำลังทาน (SEATED)
+                            </span>
+                            <span className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[10px] font-black rounded-xs tabular-nums">
+                                {kanbanLanes.seated.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2.5 overflow-y-auto max-h-[70vh] pr-0.5 scrollbar-none">
+                            {kanbanLanes.seated.map(b => renderVisualCard(b))}
+                            {kanbanLanes.seated.length === 0 && (
+                                <div className="text-center py-10 font-mono text-[10px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                    ไม่มีโต๊ะกำลังทาน
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lane 2: Pending (รอตรวจ) */}
+                    <div className="flex flex-col bg-[oklch(96%_0.008_28)] border-2 border-[oklch(75%_0.14_65)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                        <div className="flex items-center justify-between pb-2 border-b border-[oklch(88%_0.010_28)] font-mono">
+                            <span className="font-black text-xs text-[oklch(28%_0.10_65)] flex items-center gap-1.5 uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(75%_0.18_65)] animate-pulse" />
+                                รอตรวจ (PENDING)
+                            </span>
+                            <span className="px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] text-[10px] font-black rounded-xs tabular-nums">
+                                {kanbanLanes.pending.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2.5 overflow-y-auto max-h-[70vh] pr-0.5 scrollbar-none">
+                            {kanbanLanes.pending.map(b => renderVisualCard(b))}
+                            {kanbanLanes.pending.length === 0 && (
+                                <div className="text-center py-10 font-mono text-[10px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                    ไม่มีออเดอร์รอตรวจ
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lane 3: Completed (ชำระแล้ว) */}
+                    <div className="flex flex-col bg-[oklch(96%_0.008_28)] border-2 border-[oklch(75%_0.08_140)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                        <div className="flex items-center justify-between pb-2 border-b border-[oklch(88%_0.010_28)] font-mono">
+                            <span className="font-black text-xs text-[oklch(28%_0.08_140)] flex items-center gap-1.5 uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                ชำระแล้ว (PAID)
+                            </span>
+                            <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white text-[10px] font-black rounded-xs tabular-nums">
+                                {kanbanLanes.paid.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2.5 overflow-y-auto max-h-[70vh] pr-0.5 scrollbar-none">
+                            {kanbanLanes.paid.map(b => renderVisualCard(b))}
+                            {kanbanLanes.paid.length === 0 && (
+                                <div className="text-center py-10 font-mono text-[10px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                    ยังไม่มีบิลชำระ
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lane 4: Pickup (รับกลับ/พัสดุ) */}
+                    <div className="flex flex-col bg-[oklch(96%_0.008_28)] border-2 border-[oklch(75%_0.08_220)] rounded-sm p-3 space-y-2.5 min-h-[400px]">
+                        <div className="flex items-center justify-between pb-2 border-b border-[oklch(88%_0.010_28)] font-mono">
+                            <span className="font-black text-xs text-[oklch(28%_0.08_220)] flex items-center gap-1.5 uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_220)]" />
+                                รับกลับ/พัสดุ (PICKUP)
+                            </span>
+                            <span className="px-2 py-0.5 bg-[oklch(45%_0.08_220)] text-white text-[10px] font-black rounded-xs tabular-nums">
+                                {kanbanLanes.pickup.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2.5 overflow-y-auto max-h-[70vh] pr-0.5 scrollbar-none">
+                            {kanbanLanes.pickup.map(b => renderVisualCard(b))}
+                            {kanbanLanes.pickup.length === 0 && (
+                                <div className="text-center py-10 font-mono text-[10px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                    ไม่มีรายการรับกลับ
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Lane 5: Merged & Cancelled */}
+                    <div className="flex flex-col bg-[oklch(96%_0.008_28)] border-2 border-[oklch(85%_0.012_28)] rounded-sm p-3 space-y-2.5 min-h-[400px] opacity-85">
+                        <div className="flex items-center justify-between pb-2 border-b border-[oklch(88%_0.010_28)] font-mono">
+                            <span className="font-black text-xs text-[oklch(42%_0.010_28)] flex items-center gap-1.5 uppercase tracking-wider">
+                                <span className="w-2 h-2 rounded-full bg-[oklch(55%_0.010_28)]" />
+                                รวมโต๊ะ/ยกเลิก
+                            </span>
+                            <span className="px-2 py-0.5 bg-[oklch(42%_0.010_28)] text-white text-[10px] font-black rounded-xs tabular-nums">
+                                {kanbanLanes.other.length}
+                            </span>
+                        </div>
+                        <div className="space-y-2.5 overflow-y-auto max-h-[70vh] pr-0.5 scrollbar-none">
+                            {kanbanLanes.other.map(b => renderVisualCard(b))}
+                            {kanbanLanes.other.length === 0 && (
+                                <div className="text-center py-10 font-mono text-[10px] uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                    ไม่มีบิลยกเลิก
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
             ) : (
+                /* 3. Compact List View (Classic Accordion) */
                 <div className="space-y-3">
                     {filteredBookings.map((b) => {
                         const isExpanded = expandedBillIds.has(b.id)

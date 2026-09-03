@@ -32,7 +32,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
                 fetchFloorData()
-            }, 400)
+            }, 300)
         }
 
         const channel = supabase
@@ -40,11 +40,22 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
+            .on('broadcast', { event: '*' }, debouncedFetch)
             .subscribe()
+
+        // Local 0ms BroadcastChannel synchronization with POS
+        const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
+        if (posSyncChannel) {
+            posSyncChannel.onmessage = () => debouncedFetch()
+        }
+        const handleCustomSync = () => debouncedFetch()
+        window.addEventListener('pos_sync_event', handleCustomSync)
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
+            if (posSyncChannel) posSyncChannel.close()
+            window.removeEventListener('pos_sync_event', handleCustomSync)
         }
     }, [])
 
@@ -62,21 +73,33 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 (a.table_name || '').localeCompare(b.table_name || '', undefined, { numeric: true, sensitivity: 'base' })
             )
 
-            // 2. Fetch today's active bookings + any active seated bookings
+            // 2. Fetch today's active bookings + any currently seated tables across floor
             const today = getThaiDate()
             const start = `${today}T00:00:00+07:00`
             const end = `${today}T23:59:59+07:00`
 
-            const { data: bookingsData, error: bErr } = await supabase
+            const todayReq = supabase
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', start)
                 .lte('booking_time', end)
 
-            if (bErr) throw bErr
+            const seatedReq = supabase
+                .from('bookings')
+                .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
+                .eq('status', 'seated')
 
-            const activeBookings = bookingsData || []
+            const [todayRes, seatedRes] = await Promise.all([todayReq, seatedReq])
+
+            if (todayRes.error) throw todayRes.error
+
+            // Merge & deduplicate
+            const bMap = new Map()
+            ;(todayRes.data || []).forEach(b => bMap.set(b.id, b))
+            ;(seatedRes.data || []).forEach(b => bMap.set(b.id, b))
+
+            const activeBookings = Array.from(bMap.values())
 
             setTables(sortedTables)
             setBookings(activeBookings)
@@ -318,7 +341,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                             bgStyle = isLongStay 
                                 ? 'bg-[oklch(96%_0.03_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]' 
                                 : isWarning 
-                                    ? 'bg-amber-50/70 text-[oklch(18%_0.012_28)] border-amber-300'
+                                    ? 'bg-[oklch(96%_0.03_65)] text-[oklch(18%_0.012_28)] border-[oklch(80%_0.06_65)]' 
                                     : 'bg-[oklch(95%_0.02_28)] text-[oklch(18%_0.012_28)] border-[oklch(52%_0.16_28)]'
                             statusTag = billTotal > 0 ? `฿${billTotal.toLocaleString()} • ${formattedDur}` : `${formattedDur}`
                             tagStyle = isLongStay ? 'bg-[oklch(52%_0.16_28)] text-white' : 'bg-[oklch(52%_0.16_28)] text-white'
@@ -339,7 +362,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                 onClick={() => handleTableClick(table, state)}
                                 disabled={actionLoading}
                                 className={`relative p-3 rounded-sm border transition-all text-left flex flex-col justify-between min-h-[84px] active:scale-95 select-none ${bgStyle} ${
-                                    hasCallStaff || hasCallBill ? 'ring-2 ring-amber-500 animate-pulse' : ''
+                                    hasCallStaff || hasCallBill ? 'ring-2 ring-[oklch(75%_0.18_65)] animate-pulse' : ''
                                 }`}
                             >
                                 <div className="flex items-center justify-between">
@@ -353,11 +376,11 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                                             </span>
                                         )}
                                         {transfer.isMoved && (
-                                            <span className="bg-blue-600 text-white text-[8px] font-mono font-bold px-1 rounded-xs">
+                                            <span className="bg-[oklch(45%_0.08_220)] text-white text-[8px] font-mono font-bold px-1 rounded-xs">
                                                 ย้าย
                                             </span>
                                         )}
-                                        <span className="font-mono text-[9px] opacity-70">
+                                        <span className="font-mono tabular-nums text-[9px] opacity-70">
                                             {table.capacity}P
                                         </span>
                                     </div>
@@ -365,13 +388,13 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
                                 {hasCallStaff || hasCallBill ? (
                                     <div className="mt-2">
-                                        <span className="font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate bg-amber-500 text-black">
+                                        <span className="font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-xs uppercase tracking-wider block text-center truncate bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)]">
                                             {hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
                                         </span>
                                     </div>
                                 ) : (
                                     <div className="mt-2">
-                                        <span className={`font-mono text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider block text-center truncate ${tagStyle}`}>
+                                        <span className={`font-mono tabular-nums text-[8px] md:text-[9px] font-bold px-1.5 py-0.5 rounded-xs uppercase tracking-wider block text-center truncate ${tagStyle}`}>
                                             {statusTag}
                                         </span>
                                     </div>

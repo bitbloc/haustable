@@ -36,6 +36,13 @@ export default function HausmadeDocumentPrinter({
                             A4 สติกเกอร์ (4 ใบ/หน้า)
                         </button>
                         <button
+                            onClick={() => setSelectedDocType('thermal_100x150')}
+                            className={`px-2.5 py-1 text-[11px] rounded font-bold uppercase transition-all ${selectedDocType === 'thermal_100x150' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-zinc-400 hover:text-white'}`}
+                            title="สติกเกอร์ความร้อนขนาด 100x150 มม. (4x6 นิ้ว) สำหรับเครื่องพิมพ์ Flash/Kerry/Xprinter"
+                        >
+                            ฉลากความร้อน 100x150 mm
+                        </button>
+                        <button
                             onClick={() => setSelectedDocType('label')}
                             className={`px-2.5 py-1 text-[11px] rounded font-bold uppercase transition-all ${selectedDocType === 'label' ? 'bg-[oklch(52%_0.16_28)] text-white' : 'text-zinc-400 hover:text-white'}`}
                         >
@@ -71,8 +78,8 @@ export default function HausmadeDocumentPrinter({
             <style dangerouslySetInnerHTML={{ __html: `
                 @media print {
                     @page {
-                        size: A4 portrait;
-                        margin: 6mm;
+                        size: ${selectedDocType === 'thermal_100x150' ? '100mm 150mm' : 'A4 portrait'};
+                        margin: ${selectedDocType === 'thermal_100x150' ? '2mm' : '6mm'};
                     }
                     body {
                         background: white !important;
@@ -348,6 +355,114 @@ export default function HausmadeDocumentPrinter({
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* 4. THERMAL DIRECT LABEL 100x150 mm (4x6 inch) FOR LABEL PRINTERS */}
+            {selectedDocType === 'thermal_100x150' && (
+                <div className="w-full max-w-[105mm] flex flex-col gap-4 font-mono print:max-w-none print:w-full print:gap-0 print:p-0">
+                    {orderList.map((ord, idx) => {
+                        const trackingUrl = `${origin}/tracking/${ord.tracking_token || ord.id}`
+                        const courier = ord.courier_name || 'FLASH EXPRESS'
+                        return (
+                            <div
+                                key={ord.id || idx}
+                                className="w-[100mm] min-h-[148mm] bg-white text-black p-3 border-2 border-black flex flex-col justify-between mx-auto print:border-none print:w-full print:h-[148mm] print:min-h-[148mm] print:m-0 print:p-2 print-page-break-after shadow-2xl print:shadow-none"
+                            >
+                                {/* Header: Courier & Tracking */}
+                                <div>
+                                    <div className="flex justify-between items-center border-b-2 border-black pb-1.5 mb-2">
+                                        <div>
+                                            <span className="font-bold text-sm uppercase tracking-tight block">
+                                                {courier}
+                                            </span>
+                                            <span className="text-[8px] text-zinc-600 uppercase block">
+                                                HAUSMADE DROP-OFF / PARCEL
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-bold text-xs uppercase block text-[oklch(52%_0.16_28)]">
+                                                {ord.tracking_token || String(ord.id).slice(-8).toUpperCase()}
+                                            </span>
+                                            <span className="text-[8px] text-zinc-500">
+                                                {new Date(ord.created_at || Date.now()).toLocaleDateString('th-TH')}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Sender Info (Compact) */}
+                                    <div className="border border-zinc-400 p-1.5 mb-2 bg-zinc-50 text-[9px] leading-tight">
+                                        <span className="font-bold text-zinc-500 block">ผู้ส่ง (SENDER):</span>
+                                        <span className="font-bold block">{senderInfo?.senderName || 'IN THE HAUS BOUTIQUE'} ({senderInfo?.senderPhone || '098-528-4217'})</span>
+                                        <span className="text-zinc-600 block line-clamp-1">{senderInfo?.senderAddress || '199/1 ถ.สุนทรวิจิตร อ.เมือง จ.นครพนม 48000'}</span>
+                                    </div>
+
+                                    {/* Recipient Info (Prominent) */}
+                                    <div className="border-2 border-black p-2 mb-2 bg-white text-[11px] leading-snug">
+                                        <span className="font-bold text-[9px] text-zinc-600 uppercase block">
+                                            ผู้รับ (TO / RECIPIENT):
+                                        </span>
+                                        <div className="flex justify-between items-baseline">
+                                            <span className="font-bold text-sm block">
+                                                {ord.pickup_contact_name || ord.guest_name || 'คุณลูกค้า'}
+                                            </span>
+                                            <span className="font-bold text-xs">
+                                                {ord.pickup_contact_phone || ord.phone_number || '-'}
+                                            </span>
+                                        </div>
+                                        <div className="mt-1 text-xs text-zinc-800 leading-normal">
+                                            {ord.shipping_address || 'ที่อยู่จัดส่งไม่ระบุ'}
+                                        </div>
+                                    </div>
+
+                                    {/* Items Packing Checklist */}
+                                    <div className="border border-black p-1.5 mb-2 text-[9px]">
+                                        <span className="font-bold text-[8px] text-zinc-600 uppercase block border-b border-zinc-300 pb-0.5 mb-1">
+                                            รายการสินค้าในกล่อง (PACKING CHECKLIST):
+                                        </span>
+                                        <div className="space-y-0.5">
+                                            {ord.order_items?.map((item, itemIdx) => (
+                                                <div key={itemIdx} className="flex justify-between items-center">
+                                                    <span className="flex items-center gap-1">
+                                                        <span>[ ]</span>
+                                                        <span className="font-bold">
+                                                            {item.menu_items?.name || item.custom_name || 'ITEM'}
+                                                        </span>
+                                                    </span>
+                                                    <span className="font-bold text-xs">
+                                                        x{item.quantity}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Footer with QR Code & Barcode space */}
+                                <div className="border-t-2 border-black pt-2 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <QRCodeSVG
+                                            value={trackingUrl}
+                                            size={48}
+                                            level="M"
+                                            includeMargin={false}
+                                        />
+                                        <div className="text-[8px] leading-tight">
+                                            <span className="font-bold block">SCAN TRACKING</span>
+                                            <span className="text-zinc-600 block">สแกนตรวจสอบสถานะ</span>
+                                            <span className="text-[7px] text-zinc-400 block font-mono">
+                                                #{ord.tracking_token || String(ord.id).slice(-6)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right text-[8px]">
+                                        <span className="block font-bold">THANK YOU FOR YOUR ORDER</span>
+                                        <span className="text-zinc-500 block">inthehaus.cafe/shop</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             )}
         </div>

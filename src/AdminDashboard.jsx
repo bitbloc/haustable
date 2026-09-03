@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Sparkles, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
+import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
@@ -78,11 +78,25 @@ export default function AdminDashboard() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchData)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetchData)
+            .on('broadcast', { event: '*' }, debouncedFetchData)
             .subscribe()
+
+        // Instant local BroadcastChannel synchronization with POS terminals (< 10ms)
+        const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
+        if (posSyncChannel) {
+            posSyncChannel.onmessage = () => debouncedFetchData()
+        }
+        const handleCustomSync = () => debouncedFetchData()
+        window.addEventListener('pos_sync_event', handleCustomSync)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'pos_last_order_sync') debouncedFetchData()
+        })
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(subscription)
+            if (posSyncChannel) posSyncChannel.close()
+            window.removeEventListener('pos_sync_event', handleCustomSync)
         }
     }, [selectedDate])
 
@@ -124,7 +138,24 @@ export default function AdminDashboard() {
                 .lte('booking_time', `${selectedDate}T23:59:59+07:00`)
                 .order('booking_time', { ascending: false })
 
-            const [pendingRes, dateRes] = await Promise.all([pendingReq, dateReq])
+            // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
+            const seatedReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_items ( name, price, category_id )
+                    ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
+                    tables_layout ( table_name )
+                `)
+                .in('status', ['seated', 'confirmed'])
+                .order('booking_time', { ascending: false })
+
+            const [pendingRes, dateRes, seatedRes] = await Promise.all([pendingReq, dateReq, seatedReq])
 
             if (pendingRes.error) throw pendingRes.error
             if (dateRes.error) throw dateRes.error
@@ -133,6 +164,7 @@ export default function AdminDashboard() {
             const map = new Map()
             ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
             ;(dateRes.data || []).forEach(b => map.set(b.id, b))
+            ;(seatedRes.data || []).forEach(b => map.set(b.id, b))
 
             setBookings(Array.from(map.values()))
 
@@ -170,12 +202,25 @@ export default function AdminDashboard() {
     }
 
     // --- DERIVED STATE ---
-    // 1. All Daily Bookings (for the selected date, all statuses)
+    // 1. All Daily Bookings (for the selected date, all statuses + active tables on floor)
     const dailyBookings = useMemo(() => {
         return bookings.filter(b => {
+            if (b.status === 'seated' || b.status === 'confirmed') return true
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             return bDate === selectedDate
-        }).sort((a, b) => new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at))
+        }).sort((a, b) => {
+            const getPriority = (st) => {
+                if (st === 'seated') return 1
+                if (st === 'pending') return 2
+                if (st === 'confirmed') return 3
+                if (st === 'completed' || st === 'paid' || st === 'success') return 4
+                return 5
+            }
+            const pA = getPriority(a.status)
+            const pB = getPriority(b.status)
+            if (pA !== pB) return pA - pB
+            return new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at)
+        })
     }, [bookings, selectedDate])
 
     // 2. Inbox: Pending (ALL dates)
@@ -476,14 +521,14 @@ export default function AdminDashboard() {
                     onOccupancyChange={setFloorOccupancy}
                 />
 
-                {/* 4. Segmented Filter Tabs */}
-                <div className="flex gap-1.5 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
+                {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
+                <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
                     {[
-                        { key: 'bills', label: `ALL BILLS (บิลทั้งหมด ${dailyBookings.length})`, icon: Receipt },
-                        { key: 'inbox', label: `INBOX (${pendingBookings.length})`, icon: Sparkles },
-                        { key: 'schedule', label: `SCHEDULE (${scheduleBookings.length})`, icon: Clock },
-                        { key: 'dine_in', label: `DINE-IN (${dineInCount})`, icon: Utensils },
-                        { key: 'pickup', label: `PICKUP (${pickupCount})`, icon: ShoppingBag }
+                        { key: 'bills', label: 'ALL BILLS', count: dailyBookings.length, icon: Receipt },
+                        { key: 'inbox', label: 'INBOX', count: pendingBookings.length, icon: Inbox },
+                        { key: 'schedule', label: 'SCHEDULE', count: scheduleBookings.length, icon: Clock },
+                        { key: 'dine_in', label: 'DINE-IN', count: dineInCount, icon: Utensils },
+                        { key: 'pickup', label: 'PICKUP', count: pickupCount, icon: ShoppingBag }
                     ].map((tab) => {
                         const isActive = activeTab === tab.key
                         const Icon = tab.icon
@@ -491,14 +536,19 @@ export default function AdminDashboard() {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`pb-2.5 px-3 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[2px] flex items-center gap-1.5 whitespace-nowrap ${
+                                className={`pb-2.5 px-3.5 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[1px] flex items-center gap-2 whitespace-nowrap cursor-pointer ${
                                     isActive 
                                         ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
-                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-black'
+                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                             >
-                                <Icon size={14} />
+                                <Icon size={14} className={isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'} />
                                 <span>{tab.label}</span>
+                                <span className={`px-1.5 py-0.2 rounded-xs text-[10px] tabular-nums font-mono ${
+                                    isActive ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'
+                                }`}>
+                                    {tab.count}
+                                </span>
                             </button>
                         )
                     })}

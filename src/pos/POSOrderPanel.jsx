@@ -277,7 +277,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             return (m.display_name || '').toLowerCase().includes(term) ||
                    (m.phone_number || '').toLowerCase().includes(term) ||
                    (m.phone || '').toLowerCase().includes(term) ||
-                   (m.nickname || '').toLowerCase().includes(term);
+                   (m.nickname || '').toLowerCase().includes(term) ||
+                   (m.id || '').toLowerCase().includes(term);
         }).slice(0, 50);
     }, [crmMembers, crmSearchTerm]);
 

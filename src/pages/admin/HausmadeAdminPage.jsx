@@ -17,7 +17,8 @@ export default function HausmadeAdminPage() {
         settings,
         fetchAdminData,
         updateSettings,
-        updateOrderStatus
+        updateOrderStatus,
+        updateBatchOrderStatus
     } = useHausmadeAdmin()
 
     const [activeTab, setActiveTab] = useState(urlTab || 'orders') // 'orders' | 'catalog' | 'settings'
@@ -37,6 +38,7 @@ export default function HausmadeAdminPage() {
 
     // Batch Selection State for Orders
     const [selectedOrderIds, setSelectedOrderIds] = useState(new Set())
+    const [isBatchUpdating, setIsBatchUpdating] = useState(false)
 
     // Form state for Settings
     const [formSettings, setFormSettings] = useState({
@@ -155,6 +157,36 @@ export default function HausmadeAdminPage() {
         }
     }
 
+    const handleBatchStatusUpdate = async (newStatus) => {
+        if (selectedOrderIds.size === 0) return
+        const count = selectedOrderIds.size
+        const statusLabels = {
+            confirmed: 'รับออเดอร์ (CONFIRMED)',
+            packing: 'กำลังแพ็คพัสดุ (PACKING)',
+            ready: 'พร้อมส่ง/รอรับ (READY)',
+            shipped: 'จัดส่งแล้ว (SHIPPED)',
+            completed: 'สำเร็จเรียบร้อย (COMPLETED)',
+            cancelled: 'ยกเลิกและคืนสต็อก (CANCEL & RESTOCK)'
+        }
+        const label = statusLabels[newStatus] || newStatus
+        if (!window.confirm(`ต้องการเปลี่ยนสถานะของ ${count} ออเดอร์ที่เลือกเป็น "${label}" หรือไม่?`)) return
+
+        setIsBatchUpdating(true)
+        try {
+            const res = await updateBatchOrderStatus(selectedOrderIds, { status: newStatus })
+            if (res.success) {
+                alert(`อัปเดตสถานะสำเร็จ ${res.count || count} ออเดอร์เรียบร้อยแล้ว`)
+                clearSelectedOrders()
+            } else {
+                alert('เกิดข้อผิดพลาดในการอัปเดต: ' + res.error)
+            }
+        } catch (err) {
+            alert('เกิดข้อผิดพลาด: ' + err.message)
+        } finally {
+            setIsBatchUpdating(false)
+        }
+    }
+
     const handleSaveSettingsSubmit = async (e) => {
         e.preventDefault()
         setSettingsSaveMsg('')
@@ -257,7 +289,7 @@ export default function HausmadeAdminPage() {
                     <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-[oklch(85%_0.012_28)] pb-4">
                         {/* Status Tabs */}
                         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                            {['ALL', 'pending', 'confirmed', 'packing', 'shipped', 'preorder', 'cancelled'].map((st) => (
+                            {['ALL', 'pending', 'confirmed', 'packing', 'ready', 'shipped', 'preorder', 'cancelled'].map((st) => (
                                 <button
                                     key={st}
                                     onClick={() => setStatusFilter(st)}
@@ -291,6 +323,28 @@ export default function HausmadeAdminPage() {
                             )}
                         </div>
                     </div>
+
+                    {/* Pre-order Batch Mode Banner */}
+                    {statusFilter === 'preorder' && (
+                        <div className="p-4 bg-[oklch(52%_0.16_28)]/10 border border-[oklch(52%_0.16_28)] flex flex-wrap items-center justify-between gap-3 text-xs">
+                            <div>
+                                <span className="font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider block">
+                                    ⏳ BATCH PRE-ORDER MANAGEMENT (จัดการรอบพรีออเดอร์)
+                                </span>
+                                <span className="text-[oklch(42%_0.010_28)]">
+                                    พบ {filteredOrders.length} รายการพรีออเดอร์ · สามารถเลือกหลายรายการเพื่อเปลี่ยนสถานะทั้งรอบ หรือพิมพ์สติกเกอร์ส่งของเป็นชุดได้ทันที
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => selectAllOrders(filteredOrders)}
+                                    className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white text-[11px] font-bold uppercase hover:bg-black transition-colors cursor-pointer"
+                                >
+                                    เลือกพรีออเดอร์ทั้งหมดในรอบนี้
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {loading ? (
                         <div className="py-16 text-center text-xs text-[oklch(55%_0.010_28)] uppercase tracking-widest">
@@ -326,6 +380,31 @@ export default function HausmadeAdminPage() {
                                 </div>
 
                                 <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Batch Status Changer Dropdown */}
+                                    <div className="flex items-center gap-1.5 bg-white border border-[oklch(85%_0.012_28)] px-2 py-1 rounded shadow-2xs">
+                                        <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                            {isBatchUpdating ? 'กำลังอัปเดต...' : 'เปลี่ยนสถานะชุด:'}
+                                        </span>
+                                        <select
+                                            disabled={selectedOrderIds.size === 0 || isBatchUpdating}
+                                            onChange={(e) => {
+                                                if (e.target.value) {
+                                                    handleBatchStatusUpdate(e.target.value)
+                                                    e.target.value = ''
+                                                }
+                                            }}
+                                            className="bg-transparent text-xs font-bold outline-none cursor-pointer text-[oklch(18%_0.012_28)] disabled:text-zinc-400"
+                                        >
+                                            <option value="">-- เลือกสถานะ ({selectedOrderIds.size}) --</option>
+                                            <option value="confirmed">รับออเดอร์ (CONFIRMED)</option>
+                                            <option value="packing">กำลังแพ็คพัสดุ (PACKING)</option>
+                                            <option value="ready">พร้อมส่ง/รอรับ (READY)</option>
+                                            <option value="shipped">จัดส่งแล้ว (SHIPPED)</option>
+                                            <option value="completed">สำเร็จเรียบร้อย (COMPLETED)</option>
+                                            <option value="cancelled">ยกเลิกและคืนสต็อก (CANCEL & RESTOCK)</option>
+                                        </select>
+                                    </div>
+
                                     {/* A4 Sticker Sheet Batch Print */}
                                     <button
                                         disabled={selectedOrderIds.size === 0}
@@ -343,7 +422,27 @@ export default function HausmadeAdminPage() {
                                         title="พิมพ์ใบปะหน้าพัสดุขนาด A4 แบบ 4 ใบต่อหน้า (2x2)"
                                     >
                                         <span>🖨️</span>
-                                        <span>พิมพ์ A4 สติกเกอร์ ({selectedOrderIds.size})</span>
+                                        <span>A4 สติกเกอร์ ({selectedOrderIds.size})</span>
+                                    </button>
+
+                                    {/* 100x150mm Direct Thermal Label Batch Print */}
+                                    <button
+                                        disabled={selectedOrderIds.size === 0}
+                                        onClick={() => {
+                                            const toPrint = filteredOrders.filter(o => selectedOrderIds.has(o.id))
+                                            setPrintOrders(toPrint)
+                                            setPrintDocType('thermal_100x150')
+                                            setSelectedOrderForPrint(toPrint[0])
+                                        }}
+                                        className={`px-3 py-1.5 font-bold uppercase transition-all flex items-center gap-1.5 ${
+                                            selectedOrderIds.size > 0
+                                                ? 'bg-zinc-800 text-white hover:bg-black cursor-pointer shadow-2xs'
+                                                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed'
+                                        }`}
+                                        title="พิมพ์สติกเกอร์ความร้อนขนาด 100x150 มม. (4x6 นิ้ว) สำหรับเครื่องพิมพ์ฉลาก Flash/Kerry/Xprinter"
+                                    >
+                                        <span>🏷️</span>
+                                        <span>ฉลาก 100x150 ({selectedOrderIds.size})</span>
                                     </button>
 
                                     {/* Flash Express CSV Export */}

@@ -218,7 +218,7 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
         };
     }, [isActive, fetchMembers, handleSelectMember]);
 
-    // Live Local Filtering
+    // Live Local Filtering (supports phone number, name, nickname, or Member QR ID)
     const filteredMembers = useMemo(() => {
         if (!searchTerm.trim()) return members;
         const term = searchTerm.toLowerCase().trim();
@@ -226,7 +226,8 @@ export default function POSCRMPanel({ onAttachToOrder, isActive = true }) {
             const nameMatch = (m.display_name || '').toLowerCase().includes(term);
             const phoneMatch = (m.phone_number || '').includes(term);
             const nicknameMatch = (m.nickname || '').toLowerCase().includes(term);
-            return nameMatch || phoneMatch || nicknameMatch;
+            const idMatch = (m.id || '').toLowerCase().includes(term);
+            return nameMatch || phoneMatch || nicknameMatch || idMatch;
         });
     }, [members, searchTerm]);
 
