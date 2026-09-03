@@ -118,13 +118,14 @@ describe('Audio Engine & Notification Resilience', () => {
             const remarkLower = (b.staff_remark || '').toLowerCase();
             const nameLower = (b.customer_name || '').toLowerCase();
             const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
-            const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-            const isOnline = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('online') || remarkLower.includes('qr') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
+            const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || (b.order_type || '').startsWith('hausmade');
+            const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
+            const isOnline = !isExplicitInHouse && (isLineman || hasOnlineMarker || sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('online') || remarkLower.includes('qr') || !!b.payment_slip_url);
             
             const isPickup = b.booking_type === 'pickup' || (!b.table_id && (sourceLower === 'online' || remarkLower.includes('pickup')));
             const isWalkIn = isExplicitInHouse || (b.booking_type === 'walk_in' && !isOnline);
 
-            return { isOnline, isPickup, isWalkIn, isLineman };
+            return { isOnline, isPickup, isWalkIn, isLineman, isExplicitInHouse };
         };
 
         it('should correctly distinguish Online Pickup from POS Walk-in order', () => {
@@ -155,6 +156,21 @@ describe('Audio Engine & Notification Resilience', () => {
             expect(resultWalkIn.isWalkIn).toBe(true);
         });
 
+        it('should correctly classify in-store POS walk-in pickup as in-house and NOT online', () => {
+            const posWalkInPickup = {
+                source: 'pos',
+                booking_type: 'pickup',
+                table_id: null,
+                staff_remark: 'Walk-in Pick-up',
+                customer_name: 'Walk-in Customer'
+            };
+
+            const result = categorizeOrder(posWalkInPickup);
+            expect(result.isOnline).toBe(false);
+            expect(result.isExplicitInHouse).toBe(true);
+            expect(result.isWalkIn).toBe(true);
+        });
+
         it('should correctly handle Auto-verified EasySlip Table Booking', () => {
             const autoVerifiedBooking = {
                 source: 'online',
@@ -176,13 +192,15 @@ describe('Audio Engine & Notification Resilience', () => {
                 { id: 'b1', status: 'pending', booking_type: 'pickup', source: 'online' },
                 { id: 'b2', status: 'confirmed', booking_type: 'pickup', source: 'online' }, // Already accepted
                 { id: 'b3', status: 'ready', booking_type: 'pickup', source: 'online' }, // Ready for pickup
-                { id: 'b4', status: 'pending', booking_type: 'dine_in', source: 'online' }
+                { id: 'b4', status: 'pending', booking_type: 'dine_in', source: 'online' },
+                { id: 'b5', status: 'seated', booking_type: 'pickup', source: 'pos', staff_remark: 'Walk-in Pick-up' } // In-store walkin pickup
             ];
 
             const pendingOnly = rawBookings.filter(b => {
                 const sourceLower = (b.source || '').toLowerCase();
                 const remarkLower = (b.staff_remark || '').toLowerCase();
-                const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
+                const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url;
+                const isExplicitInHouse = !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in');
                 return b.status === 'pending' && !isExplicitInHouse;
             });
 

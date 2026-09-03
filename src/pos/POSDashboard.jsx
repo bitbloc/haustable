@@ -875,7 +875,9 @@ export default function POSDashboard() {
                 const pendingOnly = pendingData.filter(b => {
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
-                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
+                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
+                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || (b.order_type || '').startsWith('hausmade');
+                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
                     if (isExplicitInHouse) return false;
 
                     // All pending status orders require staff approval
@@ -901,8 +903,10 @@ export default function POSDashboard() {
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const nameLower = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
-                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                    const isOnline = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || (b.booking_type === 'pickup' && !isExplicitInHouse) || !!b.payment_slip_url) && !isExplicitInHouse;
+                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || (b.order_type || '').startsWith('hausmade');
+                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
+                    if (isExplicitInHouse) return false;
+                    const isOnline = isLineman || hasOnlineMarker || ((b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse);
                     return isOnline;
                 }).length;
                 setOnlinePendingCount(onlineCount);
@@ -1334,10 +1338,13 @@ export default function POSDashboard() {
                     const sourceLower = (newRow?.source || oldRow?.source || '').toLowerCase();
                     const remarkLower = (newRow?.staff_remark || oldRow?.staff_remark || '').toLowerCase();
                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
-                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || newRow?.booking_type === 'walk_in') && newRow?.booking_type !== 'pickup';
-                    const isPickup = newRow?.booking_type === 'pickup' || (!tableId && (sourceLower === 'online' || remarkLower.includes('pickup')));
+                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!newRow?.payment_slip_url || (newRow?.order_type || '').startsWith('hausmade');
+                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || newRow?.booking_type === 'walk_in');
+                    
+                    const isWalkInPickup = newRow?.booking_type === 'pickup' && isExplicitInHouse;
+                    const isOnlinePickup = (newRow?.booking_type === 'pickup' || (!tableId && (sourceLower === 'online' || remarkLower.includes('[online_pickup]')))) && !isExplicitInHouse;
                     const isOnlineBooking = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online')) && !isExplicitInHouse;
-                    const tableName = tableId ? (tablesMap[tableId] || `Table #${tableId}`) : (isPickup ? 'รับกลับ (Pickup)' : 'Online Order');
+                    const tableName = tableId ? (tablesMap[tableId] || `Table #${tableId}`) : (isOnlinePickup || isWalkInPickup ? 'รับกลับ (Pickup)' : 'Online Order');
 
                     const callBillKey = `${bookingId}_CALL_BILL`;
                     const callStaffKey = `${bookingId}_CALL_STAFF`;
@@ -1345,24 +1352,29 @@ export default function POSDashboard() {
                     const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
 
                     if (eventType === 'INSERT') {
+                        // In-store walk-in pickup created right here at POS: do not fire online toast or modal
+                        if (isWalkInPickup) {
+                            return;
+                        }
+
                         if (tableId && (remarkLower.includes('qr walk-in') || remarkLower.includes('qr') || sourceLower === 'online' || sourceLower === 'qr')) {
                             handleAutoPrintQROrder(bookingId, tableName);
                         }
 
-                        if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isPickup || isOnlineBooking || isLineman) {
+                        if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isOnlinePickup || isOnlineBooking || isLineman) {
                             if (checkEventDeduplication(pendingOrderKey, 4500)) {
-                                const toastBadge = isPickup ? 'PICKUP ONLINE · รับกลับ' : (isOnlineBooking ? 'ONLINE BOOKING · จองโต๊ะ' : 'NEW ORDER · อาหารเข้าใหม่');
-                                const toastTitle = isPickup 
+                                const toastBadge = isOnlinePickup ? 'PICKUP ONLINE · รับกลับ' : (isOnlineBooking ? 'ONLINE BOOKING · จองโต๊ะ' : 'NEW ORDER · อาหารเข้าใหม่');
+                                const toastTitle = isOnlinePickup 
                                     ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` 
                                     : (isOnlineBooking ? `จองโต๊ะ ${tableName} (${newRow.pickup_contact_name || newRow.customer_name || 'ลูกค้าออนไลน์'}) ส่งเข้ามาแล้ว` : `โต๊ะ ${tableName} สั่งอาหารเข้าห้องครัวแล้ว`);
 
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: toastBadge,
                                     title: toastTitle,
-                                    subtitle: isPickup || isOnlineBooking ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                    subtitle: isOnlinePickup || isOnlineBooking ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
                                     dot: 'emerald',
                                     onClick: () => {
-                                        if (isPickup || isOnlineBooking) {
+                                        if (isOnlinePickup || isOnlineBooking) {
                                             setView('online_hub');
                                         } else if (tableId) {
                                             supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
@@ -1373,9 +1385,9 @@ export default function POSDashboard() {
                                         }
                                     }
                                 }), { id: pendingOrderKey, duration: 10000 });
-                                pushNotifHistory('ORDER', isPickup ? 'Online Pickup' : (isOnlineBooking ? 'Online Booking' : 'New Order'), toastTitle, tableId);
+                                pushNotifHistory('ORDER', isOnlinePickup ? 'Online Pickup' : (isOnlineBooking ? 'Online Booking' : 'New Order'), toastTitle, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
-                                if (isPickup || isOnlineBooking) {
+                                if (isOnlinePickup || isOnlineBooking) {
                                     setShowPendingModal(true);
                                 }
                             }

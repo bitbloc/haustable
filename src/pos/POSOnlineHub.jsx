@@ -109,10 +109,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const remarkLower = (b.staff_remark || '').toLowerCase();
                 const isLineman = isOrderLineman(b);
                 const isHausmade = isOrderHausmade(b);
-                const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman || isHausmade) && !isExplicitInHouse;
+                const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || isHausmade;
+                const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
+                if (isExplicitInHouse) return false;
+
+                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman || isHausmade);
                 const hasSlip = !!b.payment_slip_url;
-                const isOnlinePickup = b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup';
+                const isOnlinePickup = (b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse;
                 return isOnlineSource || hasSlip || isOnlinePickup || isLineman || isHausmade;
             });
 
@@ -165,12 +168,18 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const sourceLower = (b.source || '').toLowerCase();
                     const remarkLower = (b.staff_remark || '').toLowerCase();
                     const isLineman = isOrderLineman(b);
-                    const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
-                    const hasSlip = !!b.payment_slip_url;
-                    const isOnlinePickup = b.booking_type === 'pickup';
+                    const isHausmade = isOrderHausmade(b);
+                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || isHausmade;
+                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
                     
-                    if (isOnlineSource || hasSlip || isOnlinePickup || isLineman) {
+                    // In-store walk-in orders must NEVER trigger persistent alerts or sound in Online Hub!
+                    if (isExplicitInHouse) return;
+
+                    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman);
+                    const hasSlip = !!b.payment_slip_url;
+                    const isOnlinePickup = (b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse;
+                    
+                    if (isOnlineSource || hasSlip || isOnlinePickup || isLineman || isHausmade) {
                         const eventKey = `online_hub_insert_${b.id}`;
                         if (checkEventDeduplication(eventKey, 4500)) {
                             setPersistentAlert(b);

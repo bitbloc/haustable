@@ -210,6 +210,7 @@ export function usePOSOrder() {
             const mockBooking = {
                 id: tempId,
                 table_id: null,
+                source: 'pos',
                 status: 'seated',
                 booking_type: 'pickup',
                 booking_time: new Date().toISOString(),
@@ -241,6 +242,7 @@ export function usePOSOrder() {
                 .from('bookings')
                 .insert({
                     table_id: null,
+                    source: 'pos',
                     status: 'seated',
                     booking_type: 'pickup',
                     booking_time: new Date().toISOString(),
@@ -266,6 +268,7 @@ export function usePOSOrder() {
             const mockBooking = {
                 id: tempId,
                 table_id: null,
+                source: 'pos',
                 status: 'seated',
                 booking_type: 'pickup',
                 booking_time: new Date().toISOString(),
