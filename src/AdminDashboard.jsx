@@ -61,47 +61,94 @@ export default function AdminDashboard() {
     }, []);
 
     useEffect(() => {
-        fetchData()
+        fetchData(false)
 
         let debounceTimer = null
         const debouncedFetchData = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
-                fetchData()
-            }, 300)
+                fetchData(true)
+            }, 250)
         }
 
-        // Real-time: Refresh on any booking, order items, tables layout, or app settings change
-        const subscription = supabase
-            .channel('public:admin-dashboard')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetchData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetchData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchData)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, debouncedFetchData)
-            .on('broadcast', { event: '*' }, debouncedFetchData)
+        // 1. Dynamic Unique Channel for Postgres Table Changes
+        const channelId = `admin-dashboard-realtime-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+        const tableChannel = supabase
+            .channel(channelId)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+                console.log('⚡ [Admin Realtime] Bookings change detected:', payload?.eventType)
+                debouncedFetchData()
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, (payload) => {
+                console.log('⚡ [Admin Realtime] Order items change detected:', payload?.eventType)
+                debouncedFetchData()
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, (payload) => {
+                console.log('⚡ [Admin Realtime] Table layout change detected:', payload?.eventType)
+                debouncedFetchData()
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                console.log('⚡ [Admin Realtime] App settings change detected:', payload?.eventType)
+                debouncedFetchData()
+            })
+            .subscribe((status, err) => {
+                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    console.warn(`[Admin Realtime] Channel status: ${status}, retrying quiet fetch...`, err)
+                    debouncedFetchData()
+                }
+            })
+
+        // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms)
+        const notifyChannel = supabase
+            .channel('pos-realtime-notifications')
+            .on('broadcast', { event: '*' }, (payload) => {
+                console.log('⚡ [Admin Realtime] POS broadcast received:', payload?.event)
+                debouncedFetchData()
+            })
             .subscribe()
 
-        // Instant local BroadcastChannel synchronization with POS terminals (< 10ms)
+        // 3. Local BroadcastChannel for same-origin tabs (< 5ms)
         const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
         if (posSyncChannel) {
             posSyncChannel.onmessage = () => debouncedFetchData()
         }
         const handleCustomSync = () => debouncedFetchData()
         window.addEventListener('pos_sync_event', handleCustomSync)
-        window.addEventListener('storage', (e) => {
+        const handleStorageSync = (e) => {
             if (e.key === 'pos_last_order_sync') debouncedFetchData()
-        })
+        }
+        window.addEventListener('storage', handleStorageSync)
+
+        // 4. Auto Polling Fallback (every 5 seconds) - Guarantees ZERO need for manual refresh even if WebSocket sleeps!
+        const autoPollTimer = setInterval(() => {
+            fetchData(true)
+        }, 5000)
+
+        // 5. Refetch immediately when tab/window regains focus or becomes visible
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData(true)
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        const handleWindowFocus = () => fetchData(true)
+        window.addEventListener('focus', handleWindowFocus)
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
-            supabase.removeChannel(subscription)
+            clearInterval(autoPollTimer)
+            supabase.removeChannel(tableChannel)
+            supabase.removeChannel(notifyChannel)
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
+            window.removeEventListener('storage', handleStorageSync)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleWindowFocus)
         }
     }, [selectedDate])
 
-    const fetchData = async () => {
-        setLoading(true)
+    const fetchData = async (isSilent = false) => {
+        if (!isSilent) setLoading(true)
         try {
             // 1. Fetch ALL Pending (Inbox) across all dates
             const pendingReq = supabase
@@ -121,6 +168,7 @@ export default function AdminDashboard() {
                 .order('booking_time', { ascending: true })
 
             // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
+            // Robust matching across booking_time, created_at, or updated_at to ensure orders are NEVER lost!
             const dateReq = supabase
                 .from('bookings')
                 .select(`
@@ -134,9 +182,8 @@ export default function AdminDashboard() {
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
-                .gte('booking_time', `${selectedDate}T00:00:00+07:00`)
-                .lte('booking_time', `${selectedDate}T23:59:59+07:00`)
-                .order('booking_time', { ascending: false })
+                .or(`and(booking_time.gte.${selectedDate}T00:00:00+07:00,booking_time.lte.${selectedDate}T23:59:59+07:00),and(created_at.gte.${selectedDate}T00:00:00+07:00,created_at.lte.${selectedDate}T23:59:59+07:00),and(updated_at.gte.${selectedDate}T00:00:00+07:00,updated_at.lte.${selectedDate}T23:59:59+07:00)`)
+                .order('created_at', { ascending: false })
 
             // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
             const seatedReq = supabase
@@ -170,9 +217,9 @@ export default function AdminDashboard() {
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error.message)
-            toast.error('Failed to load dashboard data')
+            if (!isSilent) toast.error('Failed to load dashboard data')
         } finally {
-            setLoading(false)
+            if (!isSilent) setLoading(false)
         }
     }
 
@@ -192,10 +239,10 @@ export default function AdminDashboard() {
 
                 if (error) {
                     toast.error('Error updating status: ' + error.message)
-                    fetchData()
+                    fetchData(true)
                 } else {
                     toast.success('Status updated to ' + status)
-                    fetchData()
+                    fetchData(true)
                 }
             }
         })
@@ -206,8 +253,9 @@ export default function AdminDashboard() {
     const dailyBookings = useMemo(() => {
         return bookings.filter(b => {
             if (b.status === 'seated' || b.status === 'confirmed') return true
-            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            return bDate === selectedDate
+            const bDate = new Date(b.booking_time || b.created_at || b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isDateMatch = bDate === selectedDate || (b.updated_at && new Date(b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) === selectedDate)
+            return isDateMatch
         }).sort((a, b) => {
             const getPriority = (st) => {
                 if (st === 'seated') return 1
@@ -231,11 +279,11 @@ export default function AdminDashboard() {
     // 3. Schedule: Confirmed / Seated / Ready for selected date
     const scheduleBookings = useMemo(() => {
         return bookings.filter(b => {
-            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            const isDateMatch = bDate === selectedDate
+            const bDate = new Date(b.booking_time || b.created_at || b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isDateMatch = bDate === selectedDate || (b.updated_at && new Date(b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) === selectedDate)
             const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'
             return isDateMatch && isConfirmed
-        }).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+        }).sort((a, b) => new Date(a.booking_time || a.created_at) - new Date(b.booking_time || b.created_at))
     }, [bookings, selectedDate])
 
     // 4. Live Financial Metrics & Payment Breakdown for the selected date

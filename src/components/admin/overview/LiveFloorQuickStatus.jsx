@@ -25,21 +25,27 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     }, [])
 
     useEffect(() => {
-        fetchFloorData()
+        fetchFloorData(false)
 
         let debounceTimer = null
         const debouncedFetch = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
-                fetchFloorData()
-            }, 300)
+                fetchFloorData(true)
+            }, 250)
         }
 
+        const channelId = `overview-tables-live-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         const channel = supabase
-            .channel('overview-tables-live')
+            .channel(channelId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
+            .subscribe()
+
+        // Direct POS broadcast channel (cross-device < 50ms)
+        const notifyChannel = supabase
+            .channel('pos-realtime-notifications')
             .on('broadcast', { event: '*' }, debouncedFetch)
             .subscribe()
 
@@ -50,16 +56,39 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         }
         const handleCustomSync = () => debouncedFetch()
         window.addEventListener('pos_sync_event', handleCustomSync)
+        const handleStorageSync = (e) => {
+            if (e.key === 'pos_last_order_sync') debouncedFetch()
+        }
+        window.addEventListener('storage', handleStorageSync)
+
+        // Auto Poll Fallback (every 5 seconds) - Guarantees ZERO need for manual refresh!
+        const autoPollTimer = setInterval(() => {
+            fetchFloorData(true)
+        }, 5000)
+
+        // Refetch immediately when tab/window regains focus
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') fetchFloorData(true)
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        const handleWindowFocus = () => fetchFloorData(true)
+        window.addEventListener('focus', handleWindowFocus)
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
+            clearInterval(autoPollTimer)
             supabase.removeChannel(channel)
+            supabase.removeChannel(notifyChannel)
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
+            window.removeEventListener('storage', handleStorageSync)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('focus', handleWindowFocus)
         }
     }, [])
 
-    const fetchFloorData = async () => {
+    const fetchFloorData = async (isSilent = false) => {
+        if (!isSilent) setLoading(true)
         try {
             // 1. Fetch tables with natural table name sorting
             const { data: tablesData, error: tErr } = await supabase
@@ -82,8 +111,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
-                .gte('booking_time', start)
-                .lte('booking_time', end)
+                .or(`and(booking_time.gte.${start},booking_time.lte.${end}),and(created_at.gte.${start},created_at.lte.${end}),and(updated_at.gte.${start},updated_at.lte.${end})`)
 
             const seatedReq = supabase
                 .from('bookings')
