@@ -129,6 +129,43 @@ export function useHausmadeAdmin() {
                 throw error
             }
 
+            // Restore stock if order is cancelled or voided
+            if (status === 'cancelled' || status === 'void') {
+                try {
+                    const { error: rpcErr } = await supabase.rpc('restore_order_stock', { p_booking_id: orderId })
+                    if (rpcErr) {
+                        // Fallback client-side restore
+                        const { data: items } = await supabase
+                            .from('order_items')
+                            .select('menu_item_id, quantity')
+                            .eq('booking_id', orderId)
+                        if (items && items.length > 0) {
+                            for (const it of items) {
+                                if (!it.menu_item_id) continue
+                                const { data: mItem } = await supabase
+                                    .from('menu_items')
+                                    .select('remaining_stock, stock_quantity')
+                                    .eq('id', it.menu_item_id)
+                                    .maybeSingle()
+                                if (mItem) {
+                                    const curStock = mItem.remaining_stock ?? mItem.stock_quantity ?? 0
+                                    await supabase
+                                        .from('menu_items')
+                                        .update({
+                                            remaining_stock: curStock + (it.quantity || 1),
+                                            stock_quantity: curStock + (it.quantity || 1),
+                                            updated_at: new Date().toISOString()
+                                        })
+                                        .eq('id', it.menu_item_id)
+                                }
+                            }
+                        }
+                    }
+                } catch (restErr) {
+                    console.warn('[useHausmadeAdmin] Restock exception:', restErr)
+                }
+            }
+
             // Refresh orders list
             await fetchAdminData()
             return { success: true }

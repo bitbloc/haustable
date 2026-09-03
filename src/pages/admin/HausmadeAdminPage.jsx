@@ -6,6 +6,7 @@ import HausmadeDocumentPrinter from '../../components/hausmade/HausmadeDocumentP
 import HausmadeOnlineBillModal from '../../components/hausmade/HausmadeOnlineBillModal'
 import HausmadeCatalogManager from '../../components/hausmade/HausmadeCatalogManager'
 import { supabase } from '../../lib/supabaseClient'
+import { exportFlashExpressCSV, exportKexCSV, exportThailandPostCSV } from '../../utils/courierExportHelper'
 
 export default function HausmadeAdminPage() {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -29,9 +30,13 @@ export default function HausmadeAdminPage() {
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedOrderForPrint, setSelectedOrderForPrint] = useState(null)
+    const [printOrders, setPrintOrders] = useState([])
     const [selectedOrderForPngBill, setSelectedOrderForPngBill] = useState(null)
-    const [printDocType, setPrintDocType] = useState('label') // 'label' | 'receipt'
+    const [printDocType, setPrintDocType] = useState('label') // 'label' | 'a4_stickers' | 'receipt'
     const [slipModalUrl, setSlipModalUrl] = useState(null)
+
+    // Batch Selection State for Orders
+    const [selectedOrderIds, setSelectedOrderIds] = useState(new Set())
 
     // Form state for Settings
     const [formSettings, setFormSettings] = useState({
@@ -74,6 +79,28 @@ export default function HausmadeAdminPage() {
         }))
     }
 
+    // Selection Helpers for Batch Actions
+    const toggleSelectOrder = (id) => {
+        setSelectedOrderIds(prev => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+
+    const selectAllOrders = (orderList) => {
+        if (selectedOrderIds.size === orderList.length) {
+            setSelectedOrderIds(new Set())
+        } else {
+            setSelectedOrderIds(new Set(orderList.map(o => o.id)))
+        }
+    }
+
+    const clearSelectedOrders = () => {
+        setSelectedOrderIds(new Set())
+    }
+
     const handleSaveTracking = async (orderId, currentStatus) => {
         const input = trackingInputs[orderId] || {}
         const courier = input.courierName !== undefined ? input.courierName : 'Flash Express'
@@ -88,6 +115,33 @@ export default function HausmadeAdminPage() {
         })
 
         if (res.success) {
+            // Attempt to send LINE Push notification if user has linked LINE
+            if (trackingNum) {
+                try {
+                    const orderData = orders.find(o => o.id === orderId)
+                    const profileId = orderData?.user_id
+                    let lineUserId = null
+                    if (profileId) {
+                        const { data: prof } = await supabase.from('profiles').select('line_user_id').eq('id', profileId).maybeSingle()
+                        if (prof?.line_user_id) lineUserId = prof.line_user_id
+                    }
+
+                    if (lineUserId) {
+                        await supabase.functions.invoke('send-line-push', {
+                            body: {
+                                lineUserId,
+                                messageType: 'tracking_update',
+                                courierName: courier,
+                                trackingNumber: trackingNum,
+                                trackingUrl: `https://inthehaus.cafe/tracking/${orderData?.tracking_token || orderId}`,
+                                orderToken: orderData?.tracking_token || orderId
+                            }
+                        })
+                    }
+                } catch (lineErr) {
+                    console.warn('[handleSaveTracking] LINE push error:', lineErr)
+                }
+            }
             alert('บันทึกข้อมูลการจัดส่งเรียบร้อยแล้ว')
         } else {
             alert('เกิดข้อผิดพลาด: ' + res.error)
@@ -248,6 +302,103 @@ export default function HausmadeAdminPage() {
                         </div>
                     ) : (
                         <div className="flex flex-col gap-4">
+                            {/* Batch Actions & Courier Export Bar */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs">
+                                <div className="flex items-center gap-3">
+                                    <label className="flex items-center gap-2 cursor-pointer font-bold select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={filteredOrders.length > 0 && selectedOrderIds.size === filteredOrders.length}
+                                            onChange={() => selectAllOrders(filteredOrders)}
+                                            className="w-4 h-4 accent-[oklch(52%_0.16_28)] cursor-pointer"
+                                        />
+                                        <span>เลือกทั้งหมด ({selectedOrderIds.size}/{filteredOrders.length})</span>
+                                    </label>
+
+                                    {selectedOrderIds.size > 0 && (
+                                        <button
+                                            onClick={clearSelectedOrders}
+                                            className="text-[10px] text-[oklch(52%_0.16_28)] hover:underline cursor-pointer"
+                                        >
+                                            [ ล้างที่เลือก ]
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {/* A4 Sticker Sheet Batch Print */}
+                                    <button
+                                        disabled={selectedOrderIds.size === 0}
+                                        onClick={() => {
+                                            const toPrint = filteredOrders.filter(o => selectedOrderIds.has(o.id))
+                                            setPrintOrders(toPrint)
+                                            setPrintDocType('a4_stickers')
+                                            setSelectedOrderForPrint(toPrint[0])
+                                        }}
+                                        className={`px-3 py-1.5 font-bold uppercase transition-all flex items-center gap-1.5 ${
+                                            selectedOrderIds.size > 0
+                                                ? 'bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 cursor-pointer shadow-2xs'
+                                                : 'bg-zinc-300 text-zinc-500 cursor-not-allowed'
+                                        }`}
+                                        title="พิมพ์ใบปะหน้าพัสดุขนาด A4 แบบ 4 ใบต่อหน้า (2x2)"
+                                    >
+                                        <span>🖨️</span>
+                                        <span>พิมพ์ A4 สติกเกอร์ ({selectedOrderIds.size})</span>
+                                    </button>
+
+                                    {/* Flash Express CSV Export */}
+                                    <button
+                                        disabled={selectedOrderIds.size === 0}
+                                        onClick={() => {
+                                            const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
+                                            exportFlashExpressCSV(toExport)
+                                        }}
+                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all ${
+                                            selectedOrderIds.size > 0
+                                                ? 'bg-amber-400 text-black border-amber-500 hover:bg-amber-500 cursor-pointer shadow-2xs'
+                                                : 'bg-zinc-200 text-zinc-400 border-zinc-300 cursor-not-allowed'
+                                        }`}
+                                        title="ส่งออกไฟล์ CSV สำหรับอัปโหลดเข้า Flash Express FlashDrop"
+                                    >
+                                        ⚡ Flash CSV
+                                    </button>
+
+                                    {/* KEX (Kerry) CSV Export */}
+                                    <button
+                                        disabled={selectedOrderIds.size === 0}
+                                        onClick={() => {
+                                            const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
+                                            exportKexCSV(toExport)
+                                        }}
+                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all ${
+                                            selectedOrderIds.size > 0
+                                                ? 'bg-orange-500 text-white border-orange-600 hover:bg-orange-600 cursor-pointer shadow-2xs'
+                                                : 'bg-zinc-200 text-zinc-400 border-zinc-300 cursor-not-allowed'
+                                        }`}
+                                        title="ส่งออกไฟล์ CSV สำหรับอัปโหลดเข้า KEX (Kerry Express)"
+                                    >
+                                        📦 KEX CSV
+                                    </button>
+
+                                    {/* Thailand Post CSV Export */}
+                                    <button
+                                        disabled={selectedOrderIds.size === 0}
+                                        onClick={() => {
+                                            const toExport = filteredOrders.filter(o => selectedOrderIds.has(o.id))
+                                            exportThailandPostCSV(toExport)
+                                        }}
+                                        className={`px-2.5 py-1.5 font-bold uppercase border transition-all ${
+                                            selectedOrderIds.size > 0
+                                                ? 'bg-red-600 text-white border-red-700 hover:bg-red-700 cursor-pointer shadow-2xs'
+                                                : 'bg-zinc-200 text-zinc-400 border-zinc-300 cursor-not-allowed'
+                                        }`}
+                                        title="ส่งออกไฟล์ CSV สำหรับอัปโหลดเข้า ไปรษณีย์ไทย EMS Drop-off"
+                                    >
+                                        📮 ไปรษณีย์ไทย CSV
+                                    </button>
+                                </div>
+                            </div>
+
                             {filteredOrders.map((order) => {
                                 const inputState = trackingInputs[order.id] || {}
                                 const currentCourier = inputState.courierName !== undefined ? inputState.courierName : (order.courier_name || 'Flash Express')
@@ -261,6 +412,12 @@ export default function HausmadeAdminPage() {
                                         {/* Order Top Bar */}
                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2 border-b border-[oklch(85%_0.012_28)] pb-3">
                                             <div className="flex items-center gap-3 flex-wrap">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedOrderIds.has(order.id)}
+                                                    onChange={() => toggleSelectOrder(order.id)}
+                                                    className="w-4 h-4 accent-[oklch(52%_0.16_28)] cursor-pointer shrink-0"
+                                                />
                                                 <span className="font-bold text-sm text-[oklch(52%_0.16_28)]">
                                                     TOKEN: {order.tracking_token || order.id}
                                                 </span>
@@ -377,9 +534,10 @@ export default function HausmadeAdminPage() {
                                                     className="px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none"
                                                 >
                                                     <option value="Flash Express">Flash Express</option>
-                                                    <option value="Kerry Express">Kerry Express</option>
-                                                    <option value="J&T Express">J&T Express</option>
+                                                    <option value="KEX (Kerry Express)">KEX (Kerry Express)</option>
                                                     <option value="ไปรษณีย์ไทย (EMS)">ไปรษณีย์ไทย (EMS)</option>
+                                                    <option value="J&T Express">J&T Express</option>
+                                                    <option value="SPX Express">SPX Express</option>
                                                     <option value="Lineman / Grab">Lineman / Grab</option>
                                                     <option value="Seller Own Fleet">Seller Own Fleet</option>
                                                 </select>
@@ -619,9 +777,13 @@ export default function HausmadeAdminPage() {
             {selectedOrderForPrint && (
                 <HausmadeDocumentPrinter
                     order={selectedOrderForPrint}
+                    orders={printOrders.length > 0 ? printOrders : [selectedOrderForPrint]}
                     senderInfo={settings}
                     docType={printDocType}
-                    onClose={() => setSelectedOrderForPrint(null)}
+                    onClose={() => {
+                        setSelectedOrderForPrint(null)
+                        setPrintOrders([])
+                    }}
                 />
             )}
 

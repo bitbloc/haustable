@@ -1,19 +1,25 @@
 package com.inthehaus.pos;
 
+import android.app.Presentation;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.hardware.display.DisplayManager;
+import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
+import android.view.Display;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import com.getcapacitor.BridgeActivity;
-import android.app.Presentation;
-import android.content.Context;
-import android.view.Display;
-import android.hardware.display.DisplayManager;
-
-import android.media.AudioManager;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -38,7 +44,44 @@ public class MainActivity extends BridgeActivity {
         public void sendCfdEvent(String jsonPayload) {
             dispatchCfdEventToSecondary(jsonPayload);
         }
+
+        @JavascriptInterface
+        public boolean isNotificationServiceEnabled() {
+            try {
+                String pkgName = getPackageName();
+                final String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+                if (flat != null && !flat.isEmpty()) {
+                    final String[] names = flat.split(":");
+                    for (String name : names) {
+                        final ComponentName cn = ComponentName.unflattenFromString(name);
+                        if (cn != null && cn.getPackageName().equals(pkgName)) {
+                            return true;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+            return false;
+        }
+
+        @JavascriptInterface
+        public void openNotificationListenerSettings() {
+            try {
+                Intent intent = new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS);
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            } catch (Exception e) {
+                Log.e("MainActivity", "Cannot open notification settings", e);
+            }
+        }
+
+        @JavascriptInterface
+        public boolean isSecondaryDisplayConnected() {
+            return presentation != null && presentation.isShowing();
+        }
     }
+
+    // Alias for compatibility
+    public class AndroidPosBridge extends AndroidCfdBridge {}
 
     public static void dispatchCfdEventToSecondary(final String jsonPayload) {
         if (instance != null && instance.presentation != null) {
@@ -91,6 +134,7 @@ public class MainActivity extends BridgeActivity {
         try {
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            hideSystemBars();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -110,27 +154,64 @@ public class MainActivity extends BridgeActivity {
                 settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setEnableSmoothTransition(true);
                 
-                // Expose Direct Native CFD bridge to primary WebView JavaScript
-                webView.addJavascriptInterface(new AndroidCfdBridge(), "AndroidCfdBridge");
+                // Expose Native CFD and POS bridge to WebView JavaScript
+                AndroidCfdBridge bridge = new AndroidCfdBridge();
+                webView.addJavascriptInterface(bridge, "AndroidCfdBridge");
+                webView.addJavascriptInterface(bridge, "AndroidPosBridge");
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        // Auto display Customer Facing Display (CFD) on the secondary screen
+        // Auto display Customer Facing Display (CFD) on the secondary screen (Sunmi D2s Plus Dual-Screen Hardware)
         try {
             DisplayManager displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
-            Display[] displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
-            if (displays != null && displays.length > 0) {
-                presentation = new SecondaryDisplayPresentation(MainActivity.this, displays[0]);
-                presentation.show();
+            if (displayManager != null) {
+                Display[] displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+                if (displays != null && displays.length > 0) {
+                    presentation = new SecondaryDisplayPresentation(MainActivity.this, displays[0]);
+                    presentation.show();
+                    Log.i("MainActivity", "📺 Sunmi Dual-Screen CFD initialized successfully.");
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("MainActivity", "Secondary display initialization error", e);
         }
 
         // Start native WMA ESC/POS Virtual Printer Bridge Server on Port 9100
         startWmaBridgeServer();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) {
+            hideSystemBars();
+        }
+    }
+
+    private void hideSystemBars() {
+        try {
+            View decorView = getWindow().getDecorView();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                WindowInsetsController controller = getWindow().getInsetsController();
+                if (controller != null) {
+                    controller.hide(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
+                    controller.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            } else {
+                decorView.setSystemUiVisibility(
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_FULLSCREEN
+                );
+            }
+        } catch (Exception e) {
+            Log.w("MainActivity", "hideSystemBars error: " + e.getMessage());
+        }
     }
 
     private void startWmaBridgeServer() {
@@ -218,11 +299,34 @@ public class MainActivity extends BridgeActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        try {
+            WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+            if (webView != null) {
+                String currentUrl = webView.getUrl();
+                if (currentUrl != null && currentUrl.contains("/pos")) {
+                    webView.evaluateJavascript("window.dispatchEvent(new CustomEvent('pos_hardware_back_pressed'));", null);
+                    return;
+                }
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                    return;
+                }
+            }
+        } catch (Exception ignored) {}
+        super.onBackPressed();
+    }
+
+    @Override
     public void onDestroy() {
         if (instance == this) {
             instance = null;
         }
         try {
+            if (presentation != null) {
+                presentation.dismiss();
+                presentation = null;
+            }
             if (wmaServerSocket != null) {
                 wmaServerSocket.close();
                 wmaServerSocket = null;
@@ -231,7 +335,7 @@ public class MainActivity extends BridgeActivity {
                 wmaServerThread.interrupt();
                 wmaServerThread = null;
             }
-        } catch (Exception e) {}
+        } catch (Exception ignored) {}
         super.onDestroy();
     }
 

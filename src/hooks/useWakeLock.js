@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
   const [isLocked, setIsLocked] = useState(false);
   const wakeLockRef = useRef(null);
+  const wantsLockRef = useRef(false);
 
   const isSupported = typeof navigator !== 'undefined' && 'wakeLock' in navigator;
 
@@ -10,6 +11,8 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
     if (!isSupported) {
       return;
     }
+    wantsLockRef.current = true;
+
     // Guard against redundant duplicate lock requests
     if (wakeLockRef.current && !wakeLockRef.current.released) {
       return;
@@ -27,22 +30,27 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
       });
     } catch (err) {
       if (onError) onError(err);
-      console.error(err);
+      console.error('WakeLock request error:', err);
     }
   }, [isSupported, onRequest, onRelease, onError]);
 
   const release = useCallback(async () => {
+    wantsLockRef.current = false;
     if (wakeLockRef.current) {
-      await wakeLockRef.current.release();
+      try {
+        await wakeLockRef.current.release();
+      } catch (err) {
+        console.warn('WakeLock release error:', err);
+      }
       wakeLockRef.current = null;
       setIsLocked(false);
     }
   }, []);
 
-  // Re-request lock if visibility changes (e.g. user switches tabs and comes back)
+  // Re-request lock if visibility changes and app wants lock active
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && isLocked) {
+      if (document.visibilityState === 'visible' && wantsLockRef.current) {
         await request();
       }
     };
@@ -51,7 +59,7 @@ export const useWakeLock = ({ onRequest, onRelease, onError } = {}) => {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [isLocked, request]);
+  }, [request]);
 
   return { isSupported, isLocked, request, release };
 };

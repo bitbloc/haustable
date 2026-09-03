@@ -9,6 +9,7 @@ import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
 import { formatOrderItemOptions } from '../utils/menuHelper';
+import { calculateTierDiscount } from '../utils/crmHelper';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -478,15 +479,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     
-    // 1. Member Tier Privilege (Point Earning Multiplier Model, 0% bill percentage discount)
+    // 1. Member Tier Privilege (Point Earning Multiplier Model, 0% bill percentage discount by default policy)
     const currentMemberForDisc = attachedMemberCrm || booking?.profiles;
     const tierName = currentMemberForDisc?.current_tier || '';
     const tierMultiplier = currentMemberForDisc?.multiplier !== undefined 
         ? parseFloat(currentMemberForDisc.multiplier)
         : (tierName === 'Inner Haus' ? 1.50 : (tierName === 'Haus People' ? 1.25 : 1.00));
-    const tierDiscountRate = 0.00; // 0% member bill discount
-    const memberDiscount = 0;
-    const discountLabel = '';
+    
+    // Dynamic Tier Perks: calculateTierDiscount respects shop policy (disabled by default)
+    const tierPrivilege = calculateTierDiscount(tierName, subtotal, crmSettings);
+    const tierDiscountRate = tierPrivilege.discountPercent / 100;
+    const memberDiscount = tierPrivilege.discountAmount;
+    const discountLabel = tierPrivilege.reason;
     const baseSpendUnit = parseFloat(crmSettings.crm_base_spend_amount) || 100;
     const estimatedPointsEarned = currentMemberForDisc ? (Math.floor((subtotal / baseSpendUnit) * tierMultiplier * 100) / 100) : 0;
         

@@ -33,13 +33,16 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
             const { data: pickupBookings, error } = await supabase
                 .from('bookings')
                 .select('*')
-                .eq('booking_type', 'pickup')
-                .gte('booking_time', `${today}T00:00:00+07:00`)
+                .or('booking_type.eq.pickup,order_type.eq.hausmade_pickup,booking_type.eq.hausmade')
+                .or(`booking_time.gte.${today}T00:00:00+07:00,status.in.(pending,seated,confirmed,ready)`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;
             
-            const activeOrRecent = (pickupBookings || []).filter(b => b.status !== 'completed' || b.status === 'completed');
+            const activeOrRecent = (pickupBookings || []).filter(b => {
+                const isPickup = b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup';
+                return isPickup && (b.status !== 'cancelled' && b.status !== 'void');
+            });
             setOrders(activeOrRecent);
         } catch (err) {
             console.error('Failed to fetch pickup orders:', err);
@@ -155,8 +158,12 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                     className={`min-h-[140px] rounded-xl p-4 flex flex-col justify-between border cursor-pointer relative overflow-hidden transition-all duration-200 ${cardBg} text-left`}
                                 >
                                     <div className="flex justify-between items-start w-full">
-                                        <div className="flex gap-2 items-center">
-                                            {isOnline ? (
+                                        <div className="flex gap-2 items-center flex-wrap">
+                                            {order.order_type === 'hausmade_pickup' || order.booking_type === 'hausmade' ? (
+                                                <span className="bg-[oklch(52%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-widest uppercase">
+                                                    [ HAUSMADE ]
+                                                </span>
+                                            ) : isOnline ? (
                                                 <span className="bg-blue-100 text-blue-700 border border-blue-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded tracking-widest uppercase">
                                                     [ ONLINE ]
                                                 </span>

@@ -25,6 +25,48 @@ export function useOrderSubmission() {
         }
     }
 
+    const deductStockSafely = async (bookingId, orderItems) => {
+        if (!orderItems || orderItems.length === 0) return
+        try {
+            // 1. Try atomic RPC if available in database
+            if (bookingId) {
+                const { error: rpcErr } = await supabase.rpc('deduct_order_stock', { p_booking_id: bookingId })
+                if (!rpcErr) return
+                console.warn('[useOrderSubmission] deduct_order_stock RPC fallback to client-side decrement:', rpcErr.message)
+            }
+
+            // 2. Resilient Client-Side stock deduction
+            for (const item of orderItems) {
+                const menuItemId = item.menu_item_id || item.id
+                const qty = Number(item.quantity) || 1
+                if (!menuItemId) continue
+
+                const { data: currentItem } = await supabase
+                    .from('menu_items')
+                    .select('id, stock_quantity, remaining_stock, is_preorder')
+                    .eq('id', menuItemId)
+                    .maybeSingle()
+
+                if (currentItem) {
+                    const currentStock = currentItem.remaining_stock ?? currentItem.stock_quantity
+                    if (currentStock !== null && currentStock !== undefined) {
+                        const newStock = Math.max(0, currentStock - qty)
+                        await supabase
+                            .from('menu_items')
+                            .update({
+                                remaining_stock: newStock,
+                                stock_quantity: newStock,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', menuItemId)
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[useOrderSubmission] Stock deduction exception:', err)
+        }
+    }
+
     const insertBookingWithFallback = async (payload) => {
         let { data, error } = await supabase.from('bookings').insert(payload).select().single()
         if (error && error.message && error.message.includes('column')) {
@@ -138,6 +180,9 @@ export function useOrderSubmission() {
                     }))
                     const { error: itemsError } = await supabase.from('order_items').insert(items)
                     if (itemsError) throw itemsError
+
+                    // Immediate Stock Deduction (ตัดสต๊อกทันที)
+                    await deductStockSafely(bookingData.id, orderItemsPayload)
                 }
 
             } else if (lineIdToken) {
@@ -158,6 +203,10 @@ export function useOrderSubmission() {
 
                 if (finalSlipUrl && resultData?.id) {
                     await registerSlipSafely(resultData.id, finalSlipUrl, resultData.total_amount)
+                }
+
+                if (resultData?.id && orderItemsPayload && orderItemsPayload.length > 0) {
+                    await deductStockSafely(resultData.id, orderItemsPayload)
                 }
 
             } else {
@@ -182,6 +231,9 @@ export function useOrderSubmission() {
                     }))
                     const { error: itemsError } = await supabase.from('order_items').insert(items)
                     if (itemsError) throw itemsError
+
+                    // Immediate Stock Deduction (ตัดสต๊อกทันที)
+                    await deductStockSafely(bookingData.id, orderItemsPayload)
                 }
             }
 

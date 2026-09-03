@@ -166,7 +166,7 @@ export function useHausmadeShop() {
                             )
                         `)
                         .eq('user_id', user.id)
-                        .in('status', ['pending', 'confirmed', 'preparing', 'ready', 'paid', 'shipping'])
+                        .in('status', ['pending', 'confirmed', 'packing', 'shipped', 'preparing', 'ready', 'paid', 'shipping'])
                         .order('created_at', { ascending: false })
                 ])
 

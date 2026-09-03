@@ -78,6 +78,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         return sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
     };
 
+    const isOrderHausmade = (b) => {
+        if (!b) return false;
+        const sourceLower = (b.source || '').toLowerCase();
+        const bookingType = (b.booking_type || '').toLowerCase();
+        const orderType = (b.order_type || '').toLowerCase();
+        const note = (b.customer_note || '').toLowerCase();
+        const remark = (b.staff_remark || '').toLowerCase();
+        return bookingType === 'hausmade' || orderType.startsWith('hausmade') || sourceLower.includes('hausmade') || note.includes('hausmade') || remark.includes('hausmade');
+    };
+
     const fetchOnlineData = async () => {
         if (!isActive) return;
         try {
@@ -89,7 +99,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(display_name, phone_number), order_items(*, menu_items(name, category_id))')
-                .gte('booking_time', todayIso)
+                .or(`booking_time.gte.${todayIso},order_type.in.(hausmade_shipping,hausmade_pickup),booking_type.eq.hausmade`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;
@@ -98,11 +108,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const sourceLower = (b.source || '').toLowerCase();
                 const remarkLower = (b.staff_remark || '').toLowerCase();
                 const isLineman = isOrderLineman(b);
+                const isHausmade = isOrderHausmade(b);
                 const isExplicitInHouse = (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || b.booking_type === 'walk_in') && b.booking_type !== 'pickup';
-                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman) && !isExplicitInHouse;
+                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman || isHausmade) && !isExplicitInHouse;
                 const hasSlip = !!b.payment_slip_url;
-                const isOnlinePickup = b.booking_type === 'pickup';
-                return isOnlineSource || hasSlip || isOnlinePickup || isLineman;
+                const isOnlinePickup = b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup';
+                return isOnlineSource || hasSlip || isOnlinePickup || isLineman || isHausmade;
             });
 
             setOrders(onlineRelevant);
@@ -359,8 +370,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
         if (channelFilter === 'slips' && !order.payment_slip_url) return false;
         if (channelFilter === 'lineman' && !isOrderLineman(order)) return false;
-        if (channelFilter === 'bookings' && (order.booking_type !== 'dine_in' || isOrderLineman(order))) return false;
-        if (channelFilter === 'pickups' && (order.booking_type !== 'pickup' || isOrderLineman(order))) return false;
+        if (channelFilter === 'bookings' && (order.booking_type !== 'dine_in' || isOrderLineman(order) || isOrderHausmade(order))) return false;
+        if (channelFilter === 'pickups' && ((order.booking_type !== 'pickup' && order.order_type !== 'hausmade_pickup') || isOrderLineman(order))) return false;
+        if (channelFilter === 'hausmade' && !isOrderHausmade(order)) return false;
 
         return true;
     };
@@ -390,13 +402,17 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     // Active column groups (without confusing card duplicates)
     const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status === 'pending');
     const linemanOrders = activeOrders.filter(o => isOrderLineman(o));
-    const newBookings = activeOrders.filter(o => !isOrderLineman(o) && o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending'));
-    const onlinePickups = activeOrders.filter(o => !isOrderLineman(o) && o.booking_type === 'pickup' && (!o.payment_slip_url || o.status !== 'pending'));
+    const newBookings = activeOrders.filter(o => !isOrderLineman(o) && !isOrderHausmade(o) && o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending'));
+    const onlinePickups = activeOrders.filter(o => !isOrderLineman(o) && (o.booking_type === 'pickup' || o.order_type === 'hausmade_pickup') && (!o.payment_slip_url || o.status !== 'pending'));
+    const hausmadeOrders = activeOrders.filter(o => isOrderHausmade(o) && (!o.payment_slip_url || o.status !== 'pending'));
 
     const renderCard = (order, typeBadge) => {
         const shortId = getShortBookingId(order);
         const isLineman = isOrderLineman(order);
-        const isPickup = order.booking_type === 'pickup';
+        const isHausmade = isOrderHausmade(order);
+        const isHausmadePickup = order.order_type === 'hausmade_pickup';
+        const isHausmadeShipping = order.order_type === 'hausmade_shipping' || (isHausmade && !isHausmadePickup);
+        const isPickup = order.booking_type === 'pickup' || isHausmadePickup;
         
         // Order submission timestamp (when created)
         const orderDate = order.created_at ? new Date(order.created_at) : new Date(order.booking_time);
@@ -424,7 +440,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         const name = order.profiles?.display_name 
             || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
             || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
-            || (isLineman ? `LINE MAN #${shortId}` : 'Guest');
+            || (isLineman ? `LINE MAN #${shortId}` : isHausmade ? `HAUSMADE #${shortId}` : 'Guest');
         const phone = order.profiles?.phone_number || order.pickup_contact_phone || order.customer_phone || '';
         const items = order.order_items || [];
         const tableName = order.tables_layout?.table_name;
@@ -441,7 +457,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 className={`bg-[oklch(97%_0.008_28)] border rounded-xl p-4 flex flex-col gap-3 shadow-2xs transition-colors ${
                     isLineman 
                         ? 'border-[oklch(45%_0.08_140)]/40 hover:border-[oklch(45%_0.08_140)]' 
-                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                        : isHausmade
+                            ? 'border-[oklch(52%_0.16_28)]/40 hover:border-[oklch(52%_0.16_28)]'
+                            : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
                 }`}
             >
                 {/* Header: Short ID, Channel, Status */}
@@ -454,6 +472,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         {isLineman ? (
                             <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(45%_0.08_140)]/15 text-[oklch(45%_0.08_140)] border border-[oklch(45%_0.08_140)]/40">
                                 LINE MAN
+                            </span>
+                        ) : isHausmade ? (
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[oklch(52%_0.16_28)]/15 text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40">
+                                {isHausmadeShipping ? '📦 HAUSMADE SHIP' : '🏪 HAUSMADE PICKUP'}
                             </span>
                         ) : (
                             <span className={`font-mono text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
@@ -727,7 +749,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     )}
 
                     {/* Standard Pickup ready */}
-                    {!isLineman && order.booking_type === 'pickup' && order.status === 'ready' && (
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && order.status === 'ready' && (
                         isPaid ? (
                             <button
                                 type="button"
@@ -747,6 +769,41 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 <span>CHECKOUT POS</span>
                             </button>
                         )
+                    )}
+
+                    {/* HAUSMADE Pickup Actions */}
+                    {isHausmade && isHausmadePickup && (order.status === 'confirmed' || order.status === 'packing') && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'ready')}
+                            className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Check size={12} />
+                            <span>พร้อมรับหน้าร้าน (READY)</span>
+                        </button>
+                    )}
+
+                    {isHausmade && isHausmadePickup && order.status === 'ready' && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'completed')}
+                            className="flex-1 py-2 rounded-lg bg-[oklch(45%_0.08_140)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <CheckCircle2 size={12} />
+                            <span>จ่ายของแล้ว (HANDED OVER)</span>
+                        </button>
+                    )}
+
+                    {/* HAUSMADE Shipping Actions */}
+                    {isHausmade && isHausmadeShipping && order.status === 'confirmed' && (
+                        <button
+                            type="button"
+                            onClick={() => updateBookingStatus(order.id, 'packing')}
+                            className="flex-1 py-2 rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Check size={12} />
+                            <span>กำลังแพ็ค (PACKING)</span>
+                        </button>
                     )}
 
                     {/* Cancel button */}
@@ -895,19 +952,42 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         >
                             PICK-UP
                         </button>
+                        <button
+                            type="button"
+                            onClick={() => setChannelFilter('hausmade')}
+                            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${channelFilter === 'hausmade' ? 'bg-[oklch(52%_0.16_28)] text-white shadow-2xs font-bold' : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(52%_0.16_28)]'}`}
+                        >
+                            <span>HAUSMADE</span>
+                            {hausmadeOrders.length > 0 && (
+                                <span className={`px-1 py-0.2 text-[9px] rounded font-mono ${channelFilter === 'hausmade' ? 'bg-white text-[oklch(52%_0.16_28)]' : 'bg-[oklch(52%_0.16_28)] text-white'}`}>
+                                    {hausmadeOrders.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 </div>
 
                 {/* WMA Virtual Bridge & Interceptor Status Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-[oklch(94%_0.010_28)] rounded-xl border border-[oklch(85%_0.012_28)] mt-0.5">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         <span className="font-mono text-[10px] font-bold tracking-wider text-[oklch(18%_0.012_28)]">
-                            WMA BRIDGE: PORT 9100 ACTIVE
+                            WMA / LINE MAN INTERCEPTOR: ACTIVE
                         </span>
-                        <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] hidden lg:inline">
-                            · IP: 127.0.0.1:9100 / Android Notification Listener
+                        <span className="font-mono text-[9px] text-[oklch(55%_0.010_28)] hidden sm:inline">
+                            · ระบบดักจับออเดอร์อัตโนมัติบนเครื่อง Sunmi
                         </span>
+                        {typeof window !== 'undefined' && window.AndroidCfdBridge?.isNotificationServiceEnabled && !window.AndroidCfdBridge.isNotificationServiceEnabled() && (
+                            <button
+                                type="button"
+                                onClick={() => window.AndroidCfdBridge.openNotificationListenerSettings()}
+                                className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white text-[9px] font-mono font-bold rounded animate-pulse cursor-pointer flex items-center gap-1 ml-1"
+                                title="คลิกเพื่อเปิดหน้าตั้งค่า Notification Listener ของ Android"
+                            >
+                                <span>⚠️</span>
+                                <span>เปิดสิทธิ์ดักจับ LINE MAN</span>
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold uppercase tracking-wider">
@@ -1043,6 +1123,32 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             ) : (
                                 <AnimatePresence>
                                     {newBookings.map(o => renderCard(o, 'DINE-IN BOOKING'))}
+                                </AnimatePresence>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Column 5: HAUSMADE Orders */}
+                    <div className="w-[340px] shrink-0 flex flex-col snap-start bg-[oklch(97%_0.008_28)] rounded-xl border border-[oklch(52%_0.16_28)]/40 p-3.5 shadow-2xs">
+                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[oklch(85%_0.012_28)]">
+                            <div className="flex items-center gap-1.5">
+                                <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                                    HAUSMADE / สินค้า & พัสดุ
+                                </span>
+                            </div>
+                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded">
+                                {hausmadeOrders.length}
+                            </span>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col gap-3 pb-6">
+                            {hausmadeOrders.length === 0 ? (
+                                <div className="text-center text-[oklch(55%_0.010_28)] text-xs font-mono py-12">
+                                    ไม่มีออเดอร์ HAUSMADE ค้างอยู่
+                                </div>
+                            ) : (
+                                <AnimatePresence>
+                                    {hausmadeOrders.map(o => renderCard(o, o.order_type === 'hausmade_shipping' ? 'HAUSMADE SHIPPING' : 'HAUSMADE PICKUP'))}
                                 </AnimatePresence>
                             )}
                         </div>

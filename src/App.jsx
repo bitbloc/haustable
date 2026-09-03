@@ -192,6 +192,7 @@ function App() {
                   <Route path="/shop" element={<HausmadeShopPage />} />
                   <Route path="/member" element={<Navigate to="/member-card" replace />} />
                   <Route path="/tracking/:token" element={<TrackingPage />} />
+                  <Route path="/track/:token" element={<TrackingPage />} />
                   <Route path="/t/:token" element={<TrackingPage />} />
                 </Route>
 

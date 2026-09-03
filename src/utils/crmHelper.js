@@ -11,7 +11,8 @@ export const DEFAULT_CRM_SETTINGS = {
     crm_base_spend_amount: '100.00',   // Every 100 Baht spent = X coins
     crm_max_redeem_percent: '100',     // Max % of bill total payable by coins (100 = 100%)
     crm_tier_eval_months: '12',        // Rolling evaluation window (12 months)
-    crm_grace_period_days: '30'        // Grace period retention buffer (30 days)
+    crm_grace_period_days: '30',       // Grace period retention buffer (30 days)
+    crm_enable_tier_discount: false    // ⚠️ นโยบายร้าน: ปิดส่วนลด % ตาม Tier ไว้ (ให้สะสมแต้มตามตัวคูณ x1.0, x1.25, x1.5 แทน)
 };
 
 export const DEFAULT_CRM_TIERS = [
@@ -215,6 +216,46 @@ export function calculateCoinsDiscount(coinsToRedeem, redeemRate = 1.0, maxRedee
         effectiveCoinsRedeemed: cappedCoins,
         maxRedeemableCoins,
         error: null
+    };
+}
+
+/**
+ * Calculate member tier discount (Disabled/Off by default per shop business policy)
+ * Current policy: No % bill discount by tier. Members earn coins by multiplier (1.0x, 1.25x, 1.5x) and redeem coins.
+ * @param {Object|string} tier - Member tier object or tier name
+ * @param {number} billSubtotal - Current bill subtotal
+ * @param {Object} crmSettings - Current CRM settings
+ * @returns {Object} { discountPercent, discountAmount, isEnabled, reason }
+ */
+export function calculateTierDiscount(tier, billSubtotal = 0, crmSettings = DEFAULT_CRM_SETTINGS) {
+    const isEnabled = crmSettings?.crm_enable_tier_discount === true || crmSettings?.crm_enable_tier_discount === 'true';
+    
+    // Default policy: Tier % discount is strictly OFF
+    if (!isEnabled) {
+        return {
+            discountPercent: 0,
+            discountAmount: 0,
+            isEnabled: false,
+            reason: 'ไม่มีนโยบายส่วนลดเป็น % ตาม Tier (สะสมแต้มตามตัวคูณแทน)'
+        };
+    }
+
+    const subtotal = Math.max(0, parseFloat(billSubtotal) || 0);
+    const tierName = typeof tier === 'object' ? (tier?.name || tier?.current_tier || '') : String(tier || '');
+    
+    let discountPercent = 0;
+    if (tierName === 'Inner Haus') {
+        discountPercent = parseFloat(crmSettings?.crm_tier_inner_discount_pct) || 0;
+    } else if (tierName === 'Haus People') {
+        discountPercent = parseFloat(crmSettings?.crm_tier_people_discount_pct) || 0;
+    }
+
+    const discountAmount = Math.floor(subtotal * (discountPercent / 100) * 100) / 100;
+    return {
+        discountPercent,
+        discountAmount,
+        isEnabled: true,
+        reason: discountPercent > 0 ? `ส่วนลดระดับสมาชิก ${tierName} (${discountPercent}%)` : ''
     };
 }
 

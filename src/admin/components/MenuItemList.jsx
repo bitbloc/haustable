@@ -126,6 +126,17 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                         <span className="text-[9px] font-mono text-[oklch(42%_0.010_28)] bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded-xs">
                             {item.menu_categories?.name || item.category || 'ทั่วไป'}
                         </span>
+                        {item.remaining_stock !== null && item.remaining_stock !== undefined && (
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs border ${
+                                item.remaining_stock <= 0
+                                    ? 'bg-red-50 text-red-700 border-red-300'
+                                    : item.remaining_stock <= 5
+                                        ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
+                            }`}>
+                                สต็อก: {item.remaining_stock}
+                            </span>
+                        )}
                         {item.is_drink_stamp_eligible && (
                             <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-xs">
                                 10 FREE 1
@@ -248,6 +259,7 @@ export default function MenuItemList() {
         is_recommended: false,
         is_pickup_available: true,
         is_drink_stamp_eligible: false,
+        remaining_stock: '',
         material_cost: 0 
     })
 
@@ -370,6 +382,7 @@ export default function MenuItemList() {
             is_recommended: false,
             is_pickup_available: true,
             is_drink_stamp_eligible: defaultCat?.is_drink_stamp_eligible === true,
+            remaining_stock: '',
             material_cost: 0
         })
         setIsModalOpen(true)
@@ -391,6 +404,7 @@ export default function MenuItemList() {
             is_recommended: item.is_recommended === true,
             is_pickup_available: item.is_pickup_available !== false,
             is_drink_stamp_eligible: item.is_drink_stamp_eligible === true,
+            remaining_stock: item.remaining_stock !== null && item.remaining_stock !== undefined ? String(item.remaining_stock) : '',
             material_cost: 0
         })
 
@@ -691,6 +705,10 @@ export default function MenuItemList() {
             const selectedCat = categories.find(c => c.id === formData.category_id)
             const selectedCatName = selectedCat ? selectedCat.name : 'Uncategorized'
 
+            const stockVal = formData.remaining_stock !== '' && formData.remaining_stock !== null && formData.remaining_stock !== undefined
+                ? parseInt(formData.remaining_stock, 10)
+                : null
+
             const payload = {
                 name: trimmedName,
                 price: priceNum,
@@ -701,6 +719,8 @@ export default function MenuItemList() {
                 is_recommended: formData.is_recommended,
                 is_pickup_available: formData.is_pickup_available,
                 is_drink_stamp_eligible: formData.is_drink_stamp_eligible,
+                remaining_stock: stockVal,
+                stock_quantity: stockVal,
                 image_url: imageUrl || ''
             }
 
@@ -1058,8 +1078,8 @@ export default function MenuItemList() {
                                 </div>
                             </div>
 
-                            {/* Price & Costing Breakdown */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 border border-[oklch(85%_0.012_28)] rounded-sm">
+                            {/* Price, Stock & Costing Breakdown */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 border border-[oklch(85%_0.012_28)] rounded-sm">
                                 <div>
                                     <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
                                         ราคาขาย (บาท) *
@@ -1076,8 +1096,23 @@ export default function MenuItemList() {
                                 </div>
 
                                 <div>
+                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1" title="เว้นว่างไว้หากไม่จำกัดสต็อก (เครื่องดื่ม) หรือระบุจำนวน (ขนม/สินค้า)">
+                                        สต็อกคงเหลือ (ชิ้น)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="1"
+                                        min="0"
+                                        value={formData.remaining_stock}
+                                        onChange={e => setFormData({ ...formData, remaining_stock: e.target.value })}
+                                        placeholder="ไม่จำกัด"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(52%_0.16_28)] text-right focus:bg-white focus:border-[oklch(52%_0.16_28)] outline-none"
+                                    />
+                                </div>
+
+                                <div>
                                     <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
-                                        ต้นทุนวัตถุดิบ (Recipe Cost)
+                                        ต้นทุน (Recipe Cost)
                                     </label>
                                     <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold text-right text-[oklch(42%_0.010_28)]">
                                         ฿{modalCost.toFixed(2)}
@@ -1086,12 +1121,12 @@ export default function MenuItemList() {
 
                                 <div>
                                     <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
-                                        Gross Margin (GP%)
+                                        GP Margin (%)
                                     </label>
                                     <div className={`p-2 border rounded-sm text-xs font-mono font-bold text-right ${
                                         modalMargin >= 65 ? 'bg-green-50 text-green-800 border-green-200' : 'bg-amber-50 text-amber-800 border-amber-200'
                                     }`}>
-                                        {modalMargin}% (กำไร ฿{modalProfit.toFixed(2)})
+                                        {modalMargin}% (฿{modalProfit.toFixed(1)})
                                     </div>
                                 </div>
                             </div>

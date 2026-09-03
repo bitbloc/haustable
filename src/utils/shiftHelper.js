@@ -5,10 +5,15 @@ const SHIFT_HISTORY_KEY = 'pos_shift_history';
 
 // Helper to breakdown booking payment methods accurately (handling split payments, cash, credit, qr & slips)
 export const getBookingPaymentBreakdown = (b) => {
-    if (!b) return { cash: 0, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+    if (!b) return { cash: 0, qr: 0, credit: 0, isSplit: false, isOnline: false, methodLabel: 'Cash' };
     const total = parseFloat(b.total_amount || b.total_price || 0);
     const remark = (b.staff_remark || '').toLowerCase();
     const explicitMethod = (b.payment_method || '').toLowerCase();
+    const orderType = (b.order_type || '').toLowerCase();
+    const bookingType = (b.booking_type || '').toLowerCase();
+
+    // Determine if this is an online e-commerce / shipping order
+    const isOnline = orderType === 'hausmade_shipping' || (bookingType === 'hausmade' && !b.table_id && orderType !== 'hausmade_pickup');
     
     // 1. Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
     const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
@@ -30,32 +35,33 @@ export const getBookingPaymentBreakdown = (b) => {
             qr,
             credit,
             isSplit: true,
+            isOnline,
             methodLabel: 'Split (ผสม)'
         };
     }
 
     // 2. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
     if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
-        return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+        return { cash: total, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Cash' };
     }
 
     // 3. Explicit Credit Card Check
     if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
-        return { cash: 0, qr: 0, credit: total, isSplit: false, methodLabel: 'Credit Card' };
+        return { cash: 0, qr: 0, credit: total, isSplit: false, isOnline, methodLabel: 'Credit Card' };
     }
 
     // 4. QR / PromptPay / Bank Transfer Check
     if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
-        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
+        return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };
     }
 
     // 5. Online Deposit / Booking Slip (Only if not settled by in-store cash/credit)
     if (b.payment_slip_url) {
-        return { cash: 0, qr: total, credit: 0, isSplit: false, methodLabel: 'QR Transfer' };
+        return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };
     }
 
     // 6. Default In-store Fallback
-    return { cash: total, qr: 0, credit: 0, isSplit: false, methodLabel: 'Cash' };
+    return { cash: total, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Cash' };
 };
 
 // Calculate unified, high-precision metrics for active or historical shift
@@ -66,6 +72,12 @@ export function calculateShiftMetrics(shift, bookingsData = []) {
             qrSales: 0,
             creditSales: 0,
             totalSales: 0,
+            inStoreCash: 0,
+            inStoreQr: 0,
+            inStoreCredit: 0,
+            inStoreSales: 0,
+            onlineSales: 0,
+            onlineOrdersCount: 0,
             openingFloat: 0,
             totalIn: 0,
             totalOut: 0,
@@ -79,27 +91,48 @@ export function calculateShiftMetrics(shift, bookingsData = []) {
     let qrSales = 0;
     let creditSales = 0;
 
+    let inStoreCash = 0;
+    let inStoreQr = 0;
+    let inStoreCredit = 0;
+    let onlineSales = 0;
+    let onlineOrdersCount = 0;
+
     completed.forEach(b => {
         const breakdown = getBookingPaymentBreakdown(b);
         cashSales += breakdown.cash;
         qrSales += breakdown.qr;
         creditSales += breakdown.credit;
+
+        if (breakdown.isOnline) {
+            onlineSales += (breakdown.cash + breakdown.qr + breakdown.credit);
+            onlineOrdersCount += 1;
+        } else {
+            inStoreCash += breakdown.cash;
+            inStoreQr += breakdown.qr;
+            inStoreCredit += breakdown.credit;
+        }
     });
 
     const adjustments = Array.isArray(shift.adjustments) ? shift.adjustments : [];
     const totalIn = adjustments.filter(a => a.type === 'in').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
     const totalOut = adjustments.filter(a => a.type === 'out').reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-    const openingFloat = Number(shift.openingFloat || 0);
+    const openingFloat = Number(shift.openingFloat ?? shift.opening_cash ?? 0);
 
     return {
         cashSales,
         qrSales,
         creditSales,
         totalSales: cashSales + qrSales + creditSales,
+        inStoreCash,
+        inStoreQr,
+        inStoreCredit,
+        inStoreSales: inStoreCash + inStoreQr + inStoreCredit,
+        onlineSales,
+        onlineOrdersCount,
         openingFloat,
         totalIn,
         totalOut,
-        expectedCash: openingFloat + cashSales + totalIn - totalOut,
+        expectedCash: openingFloat + inStoreCash + totalIn - totalOut,
         completedBookingsCount: completed.length
     };
 }

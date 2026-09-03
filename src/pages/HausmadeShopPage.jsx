@@ -85,10 +85,10 @@ export default function HausmadeShopPage() {
                 .maybeSingle()
 
             if (match && (match.tracking_token || match.id)) {
-                navigate(`/track/${match.tracking_token || match.id}`)
+                navigate(`/tracking/${match.tracking_token || match.id}`)
             } else if (clean.length >= 4) {
                 // If it looks like a direct token, attempt direct route
-                navigate(`/track/${clean}`)
+                navigate(`/tracking/${clean}`)
             } else {
                 setQuickTrackError('ไม่พบข้อมูลคำสั่งซื้อ กรุณาตรวจสอบรหัส Token หรือเบอร์โทรศัพท์อีกครั้ง')
             }
