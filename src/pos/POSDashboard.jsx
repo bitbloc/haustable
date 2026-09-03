@@ -858,7 +858,7 @@ export default function POSDashboard() {
             const { data: pendingData, error } = await supabase
                 .from('bookings')
                 .select(`
-                    id, short_id, tracking_token, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
+                    id, tracking_token, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
                     customer_note, pax, deposit_amount, total_amount, payment_slip_url,
                     slip_verified, slip_provider, slip_trans_ref, slip_verification_status,
                     pickup_contact_name, pickup_contact_phone,
@@ -1532,9 +1532,9 @@ export default function POSDashboard() {
                             // If staff is currently editing or viewing this booking right on this POS terminal, do not alert
                             const isCurrentPosBooking = activeBookingRef.current?.id === bookingId;
 
-                            // Lookup booking details with short_id, tracking_token, status, and sources
+                            // Lookup booking details with tracking_token, status, and sources
                             supabase.from('bookings')
-                                .select('id, short_id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, customer_name, payment_slip_url, tables_layout(table_name)')
+                                .select('id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, customer_name, payment_slip_url, tables_layout(table_name)')
                                 .eq('id', bookingId)
                                 .maybeSingle()
                                 .then(({ data: bData }) => {
