@@ -171,8 +171,13 @@ export function useTrackingLogic(token) {
       }, () => {
         fetchTrackingInfo()
       })
+      let isRealtimeSubscribed = false
+      channel
       .subscribe((status, err) => {
-        if (status === 'CHANNEL_ERROR' || err) {
+        if (status === 'SUBSCRIBED') {
+          isRealtimeSubscribed = true
+        } else if (status === 'CHANNEL_ERROR' || err) {
+          isRealtimeSubscribed = false
           console.warn('[Realtime Tracking] Channel error:', status, err)
         }
       })
@@ -186,8 +191,23 @@ export function useTrackingLogic(token) {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleVisibilityChange)
 
-    // 3. Backup Polling (every 10s for active orders)
-    const interval = setInterval(fetchTrackingInfo, 10000)
+    // 3. Adaptive Backup Polling (Only if visible & active, relaxed if realtime is live)
+    let heartbeatTick = 0
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      
+      // Stop polling completely if order reached terminal state
+      if (data?.status && ['completed', 'cancelled', 'void'].includes(data.status.toLowerCase())) {
+        clearInterval(interval)
+        return
+      }
+
+      heartbeatTick++
+      // If realtime WebSocket is subscribed, relaxed heartbeat every 60s (every 4 ticks of 15s)
+      if (isRealtimeSubscribed && heartbeatTick % 4 !== 0) return
+
+      fetchTrackingInfo()
+    }, 15000)
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
@@ -195,7 +215,7 @@ export function useTrackingLogic(token) {
       supabase.removeChannel(channel)
       clearInterval(interval)
     }
-  }, [token, fetchTrackingInfo])
+  }, [token, fetchTrackingInfo, data?.status])
 
   // Countdown Logic for Arrival / Ready time
   useEffect(() => {

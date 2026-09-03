@@ -71,6 +71,7 @@ export default function AdminDashboard() {
             }, 250)
         }
 
+        let isRealtimeSubscribed = false
         // 1. Dynamic Unique Channel for Postgres Table Changes
         const channelId = `admin-dashboard-realtime-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         const tableChannel = supabase
@@ -92,7 +93,10 @@ export default function AdminDashboard() {
                 debouncedFetchData()
             })
             .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                if (status === 'SUBSCRIBED') {
+                    isRealtimeSubscribed = true
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    isRealtimeSubscribed = false
                     console.warn(`[Admin Realtime] Channel status: ${status}, retrying quiet fetch...`, err)
                     debouncedFetchData()
                 }
@@ -119,10 +123,15 @@ export default function AdminDashboard() {
         }
         window.addEventListener('storage', handleStorageSync)
 
-        // 4. Auto Polling Fallback (every 5 seconds) - Guarantees ZERO need for manual refresh even if WebSocket sleeps!
+        // 4. Adaptive Polling Fallback (Only active if WebSocket disconnects or tab is visible)
+        let heartbeatCounter = 0
         const autoPollTimer = setInterval(() => {
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+            heartbeatCounter++
+            // If realtime is healthy, only heartbeat once every 60 seconds (every 4 ticks of 15s)
+            if (isRealtimeSubscribed && heartbeatCounter % 4 !== 0) return
             fetchData(true)
-        }, 5000)
+        }, 15000)
 
         // 5. Refetch immediately when tab/window regains focus or becomes visible
         const handleVisibilityChange = () => {

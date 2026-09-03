@@ -11,8 +11,16 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     const [categories, setCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
     const [menuItems, setMenuItems] = useState([]);
-    const [search, setSearch] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchInput);
+        }, 120);
+        return () => clearTimeout(handler);
+    }, [searchInput]);
     const [selectedItemForModal, setSelectedItemForModal] = useState(null);
     const [showEmergencyModal, setShowEmergencyModal] = useState(false);
     const [localImageMap, setLocalImageMap] = useState({});
@@ -181,10 +189,10 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
     // O(1) Filtered items lookup
     const filteredItems = useMemo(() => {
         const catItems = itemsByCategoryMap.get(activeCategory) || itemsByCategoryMap.get('all') || [];
-        const query = search.trim().toLowerCase();
+        const query = debouncedSearch.trim().toLowerCase();
         if (!query) return catItems;
         return catItems.filter(item => item.name.toLowerCase().includes(query));
-    }, [itemsByCategoryMap, activeCategory, search]);
+    }, [itemsByCategoryMap, activeCategory, debouncedSearch]);
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[var(--color-paper)]">
@@ -203,8 +211,8 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                             type="search" 
                             placeholder="ค้นหารายการอาหาร / เครื่องดื่ม..." 
                             className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md py-2.5 pl-10 pr-4 text-sm text-[var(--color-ink)] placeholder-[var(--color-muted)] focus:outline-none focus:border-[var(--color-accent)] font-medium transition-colors touch-manipulation shadow-xs min-h-[44px]"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                         />
                     </div>
 

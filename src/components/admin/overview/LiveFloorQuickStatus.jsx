@@ -35,13 +35,21 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             }, 250)
         }
 
+        let isRealtimeSubscribed = false
         const channelId = `overview-tables-live-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
         const channel = supabase
             .channel(channelId)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetch)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, debouncedFetch)
-            .subscribe()
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    isRealtimeSubscribed = true
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+                    isRealtimeSubscribed = false
+                    debouncedFetch()
+                }
+            })
 
         // Direct POS broadcast channel (cross-device < 50ms)
         const notifyChannel = supabase
@@ -61,10 +69,15 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         }
         window.addEventListener('storage', handleStorageSync)
 
-        // Auto Poll Fallback (every 5 seconds) - Guarantees ZERO need for manual refresh!
+        // Adaptive Polling Fallback (Only active if WebSocket disconnects or tab is visible)
+        let heartbeatCounter = 0
         const autoPollTimer = setInterval(() => {
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+            heartbeatCounter++
+            // If realtime is healthy, only heartbeat once every 60 seconds (every 4 ticks of 15s)
+            if (isRealtimeSubscribed && heartbeatCounter % 4 !== 0) return
             fetchFloorData(true)
-        }, 5000)
+        }, 15000)
 
         // Refetch immediately when tab/window regains focus
         const handleVisibilityChange = () => {

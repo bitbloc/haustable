@@ -69,10 +69,20 @@ const memoryCache = new Map();
 export function cacheData(key, data) {
     if (data !== undefined) {
         memoryCache.set(key, data);
-        try {
-            localStorage.setItem(key, JSON.stringify(data));
-        } catch (err) {
-            console.warn(`[Offline Cache] Quota or storage write error for key ${key}:`, err);
+        
+        // Persist to disk asynchronously to prevent blocking the UI thread on tablet POS
+        const persist = () => {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+            } catch (err) {
+                console.warn(`[Offline Cache] Quota or storage write error for key ${key}:`, err);
+            }
+        };
+
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+            window.requestIdleCallback(persist, { timeout: 1000 });
+        } else {
+            setTimeout(persist, 0);
         }
     }
 }

@@ -84,15 +84,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         fetchTables();
         fetchFloorplan();
 
-        const tablesSub = supabase.channel('pos-tables-layout')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, fetchTables)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTables)
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.warn(`[Realtime POS Layout] Channel status: ${status}`, err || '');
-                }
-            });
-
         const settingsSub = supabase.channel('pos-app-settings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
                 fetchFloorplan();
@@ -103,7 +94,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // 60-second background heartbeat fallback (Realtime handles instant updates)
+        // 60-second background heartbeat fallback (Realtime master channel handles instant updates)
         const pollInterval = setInterval(() => {
             fetchTables();
         }, 60000);
@@ -117,7 +108,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         window.addEventListener('online', fetchTables);
 
         return () => {
-            supabase.removeChannel(tablesSub);
             supabase.removeChannel(settingsSub);
             clearInterval(pollInterval);
             document.removeEventListener('visibilitychange', handleVisibilityChange);

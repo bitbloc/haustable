@@ -80,11 +80,6 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         if (!isActive) return;
         fetchOpenBills();
 
-        const openBillsSub = supabase.channel('pos-open-bills-realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, triggerDebouncedFetch)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, triggerDebouncedFetch)
-            .subscribe();
-
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && isActive) {
                 fetchOpenBills();
@@ -97,9 +92,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
             if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('online', fetchOpenBills);
-            supabase.removeChannel(openBillsSub);
         };
-    }, [isActive, triggerDebouncedFetch]);
+    }, [isActive]);
 
     useEffect(() => {
         if (isActive && refreshKey > 0) {

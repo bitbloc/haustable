@@ -1326,6 +1326,13 @@ export default function POSDashboard() {
                 .on('postgres_changes', { 
                     event: '*', 
                     schema: 'public', 
+                    table: 'tables_layout' 
+                }, () => {
+                    triggerDebouncedRefresh();
+                })
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
                     table: 'bookings' 
                 }, async (payload) => {
                     checkPendingOrders();
