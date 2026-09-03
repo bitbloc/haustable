@@ -782,8 +782,21 @@ export function buildReceiptTotalRows(booking, receiptConfig = {}, itemsToRender
 
 // Convert receipt/ticket details to ESC/POS binary format
 export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap = {}, paperSize = '80mm', receiptConfig = {}, printerType = 'universal') {
-    let itemsToRender = selectItemsForTab(booking.order_items || [], activeTab, receiptConfig);
     const isKitchenTab = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
+    let rawItems = booking.order_items || [];
+    if (rawItems.length === 0 && Number(booking.total_amount) > 0 && !isKitchenTab) {
+        const isSplit = (booking.staff_remark || '').toLowerCase().includes('split');
+        const fallbackName = isSplit 
+            ? `แบ่งชำระค่าอาหาร (${booking.staff_remark})` 
+            : (booking.customer_note || 'ค่าบริการ / อาหารและเครื่องดื่ม');
+        rawItems = [{
+            quantity: 1,
+            price_at_time: Number(booking.total_amount),
+            custom_name: fallbackName,
+            name: fallbackName
+        }];
+    }
+    let itemsToRender = selectItemsForTab(rawItems, activeTab, receiptConfig);
 
     try {
         const config = getPrinterConfig();

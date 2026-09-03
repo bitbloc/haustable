@@ -22,12 +22,22 @@ function base64ToUint8Array(base64) {
     return bytes;
 }
 
+// User requested to disable automated LINE MAN / notification scraping for now
+const IS_WMA_INGESTION_ENABLED = false;
+
 export async function processIncomingWmaRawData(rawBytes) {
+    if (!IS_WMA_INGESTION_ENABLED) {
+        console.log('[WMA Bridge] Raw print stream ingestion disabled by user request.');
+        // Forward raw print bytes to Sunmi printer without creating DB bookings
+        try {
+            if (rawBytes) await printToSunmiBuiltIn(rawBytes);
+        } catch (e) {}
+        return;
+    }
     try {
         const order = decodeAndParseWmaBuffer(rawBytes);
         if (!order || ((!order.items || order.items.length === 0) && !order.order_id)) {
             console.log('[WMA Bridge] Received non-order raw print stream.');
-            // Still forward to Sunmi printer
             try {
                 await printToSunmiBuiltIn(rawBytes);
             } catch (e) {}
@@ -41,6 +51,10 @@ export async function processIncomingWmaRawData(rawBytes) {
 }
 
 export async function processIncomingWmaNotification(notificationObj) {
+    if (!IS_WMA_INGESTION_ENABLED) {
+        console.log('[WMA Bridge] Notification order ingestion disabled by user request.');
+        return null;
+    }
     try {
         if (!notificationObj || (!notificationObj.title && !notificationObj.text)) return;
         const parsed = parseWmaNotification(notificationObj.title, notificationObj.text);

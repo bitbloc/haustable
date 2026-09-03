@@ -129,26 +129,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     public static void dispatchWmaNotification(final String title, final String text, final String pkg) {
-        if (instance != null) {
-            instance.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        WebView webView = instance.getBridge() != null ? instance.getBridge().getWebView() : null;
-                        if (webView != null) {
-                            String encodedTitle = Base64.encodeToString(title != null ? title.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
-                            String encodedText = Base64.encodeToString(text != null ? text.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
-                            String encodedPkg = Base64.encodeToString(pkg != null ? pkg.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
-
-                            String js = String.format("try { var _data = { title: decodeURIComponent(escape(atob('%s'))), text: decodeURIComponent(escape(atob('%s'))), pkg: decodeURIComponent(escape(atob('%s'))) }; if (window.onWmaNotificationOrder) { window.onWmaNotificationOrder(_data); } window.dispatchEvent(new CustomEvent('wma_notification_order', { detail: _data })); window.dispatchEvent(new CustomEvent('wmaNotification', { detail: _data })); } catch (e) { console.error(e); }", encodedTitle, encodedText, encodedPkg);
-                            webView.evaluateJavascript(js, null);
-                        }
-                    } catch (Exception e) {
-                        Log.e("MainActivity", "Failed to dispatch WMA notification to WebView", e);
-                    }
-                }
-            });
-        }
+        // Notification listener ingestion temporarily disabled per user request
     }
 
     @Override

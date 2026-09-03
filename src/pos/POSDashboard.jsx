@@ -2896,10 +2896,18 @@ export default function POSDashboard() {
                     selected_options: item.selected_options || [],
                     menu_items: { name: item.name }
                 }))
-                : (activeBooking.order_items || []).map(item => ({
-                    ...item,
-                    price_at_time: item.price_at_time || item.price || 0
-                }))
+                : [{
+                    id: `split_item_${Date.now()}`,
+                    booking_id: activeBooking.id,
+                    menu_item_id: null,
+                    custom_name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
+                    name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
+                    is_custom: true,
+                    quantity: 1,
+                    price_at_time: splitTotal,
+                    selected_options: [{ name: `ยอดชำระ ฿${splitTotal.toLocaleString()}` }],
+                    status: 'completed'
+                }]
         };
 
         const updatedParentRemark = appendSplitRoundToRemark(activeBooking.staff_remark || '', {
@@ -3038,6 +3046,20 @@ export default function POSDashboard() {
                         if (error) throw error;
                     }
                 }
+            } else {
+                // Non-items split (PERCENT / EQUAL / CUSTOM): Insert a custom order item so the child booking is never empty
+                const splitOrderItem = {
+                    booking_id: newSplitBookingId,
+                    menu_item_id: null,
+                    custom_name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
+                    is_custom: true,
+                    quantity: 1,
+                    price_at_time: splitTotal,
+                    destination: 'pos',
+                    selected_options: [{ name: `ยอดชำระ ฿${splitTotal.toLocaleString()}` }],
+                    status: 'completed'
+                };
+                await supabase.from('order_items').insert([splitOrderItem]);
             }
 
             // 4. Check if fully settled or remaining

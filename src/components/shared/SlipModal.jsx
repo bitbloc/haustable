@@ -418,9 +418,23 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         const kitchenCatIds = printerConfig.kitchen_categories || [];
         const barCatIds = printerConfig.bar_categories || [];
         
-        let isSeparateBarPrinterEnabled = !!(printerConfig.separate_bar_printer || printerConfig.bar_printer_ip);
+        const hasOrderItems = Array.isArray(booking.order_items) && booking.order_items.length > 0;
+        const currentOrderItems = hasOrderItems 
+            ? booking.order_items 
+            : (Number(booking.total_amount) > 0 ? [{
+                id: `fallback_split_${booking.id || Date.now()}`,
+                quantity: 1,
+                price_at_time: Number(booking.total_amount),
+                custom_name: (booking.staff_remark || '').toLowerCase().includes('split') 
+                    ? `แบ่งชำระค่าอาหาร (${booking.staff_remark})` 
+                    : (booking.customer_note || 'ค่าบริการ / อาหารและเครื่องดื่ม'),
+                name: (booking.staff_remark || '').toLowerCase().includes('split') 
+                    ? `แบ่งชำระค่าอาหาร (${booking.staff_remark})` 
+                    : (booking.customer_note || 'ค่าบริการ / อาหารและเครื่องดื่ม'),
+                selected_options: []
+            }] : []);
 
-        let filteredItems = selectItemsForTab(booking.order_items || [], activeTab, printerConfig);
+        let filteredItems = selectItemsForTab(currentOrderItems, activeTab, printerConfig);
 
         const isKitchen = activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all';
 
@@ -1205,7 +1219,19 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr') || isLineman
     
     const transfer = parseTableTransferInfo(booking);
-    const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
+    const isSplitChild = remarkLower.includes('split');
+    const hasItems = Array.isArray(booking.order_items) && booking.order_items.length > 0;
+    const effectiveOrderItems = hasItems
+        ? booking.order_items
+        : (Number(booking.total_amount) > 0 ? [{
+            id: `fallback_split_${booking.id || Date.now()}`,
+            quantity: 1,
+            price_at_time: Number(booking.total_amount),
+            custom_name: isSplitChild ? `แบ่งชำระค่าอาหาร (${booking.staff_remark})` : (booking.customer_note || 'ค่าบริการ / อาหารและเครื่องดื่ม'),
+            name: isSplitChild ? `แบ่งชำระค่าอาหาร (${booking.staff_remark})` : (booking.customer_note || 'ค่าบริการ / อาหารและเครื่องดื่ม'),
+            selected_options: []
+        }] : []);
+    const subtotal = effectiveOrderItems.reduce((sum, item) => sum + ((Number(item.price_at_time) || 0) * (Number(item.quantity) || 1)), 0);
     const discountAmount = Number(booking.discount_amount) || 0;
     const depositAmount = Number(booking.deposit_amount) || 0;
     const displayTotalAmount = (discountAmount > 0 && Math.abs(Number(booking.total_amount) - subtotal) < 1)
@@ -1457,7 +1483,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             </div>
 
                             <div className="space-y-2">
-                                {selectItemsForTab(booking.order_items || [], activeTab, printerConfig).map((item, idx) => {
+                                {selectItemsForTab(effectiveOrderItems, activeTab, printerConfig).map((item, idx) => {
                                     const optList = formatOrderItemOptions(item.selected_options, item.item_note || item.notes || item.special_instructions || item.remark)
                                     const unitPrice = Number(item.price_at_time || 0)
                                     const lineTotal = unitPrice * (item.quantity || 1)

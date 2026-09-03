@@ -429,8 +429,17 @@ export default function AllDailyBillsHub({
         const phone = b.profiles?.phone_number || b.pickup_contact_phone || b.phone_number || ''
         const tier = b.profiles?.current_tier || ''
         const totalAmt = parseFloat(b.total_amount || b.total_price || 0)
-        const items = b.order_items || []
-        const itemsCount = items.reduce((sum, item) => sum + (item.quantity || 1), 0)
+        const isSplitBill = (b.staff_remark || '').toLowerCase().includes('split')
+        const rawItems = b.order_items || []
+        const items = rawItems.length > 0
+            ? rawItems
+            : (isSplitBill && totalAmt > 0 ? [{
+                id: `split_item_${b.id}`,
+                custom_name: `แบ่งชำระ (${b.staff_remark})`,
+                quantity: 1,
+                price_at_time: totalAmt
+            }] : [])
+        const itemsCount = items.length > 0 ? items.reduce((sum, item) => sum + (item.quantity || 1), 0) : (isSplitBill && totalAmt > 0 ? 1 : 0)
         const hasCallBill = b.staff_remark && b.staff_remark.includes('[CALL_BILL]')
         const transfer = parseTableTransferInfo(b, bookings)
         const status = (b.status || '').toLowerCase()
@@ -1131,9 +1140,18 @@ export default function AllDailyBillsHub({
                                             </span>
                                         </div>
 
-                                        {b.order_items && b.order_items.length > 0 ? (
+                                        {(() => {
+                                            const isSplit = (b.staff_remark || '').toLowerCase().includes('split');
+                                            const tableItems = (b.order_items && b.order_items.length > 0)
+                                                ? b.order_items
+                                                : (isSplit && totalAmt > 0 ? [{
+                                                    custom_name: `แบ่งชำระ (${b.staff_remark})`,
+                                                    price_at_time: totalAmt,
+                                                    quantity: 1
+                                                }] : []);
+                                            return tableItems.length > 0 ? (
                                             <div className="divide-y divide-[oklch(90%_0.008_28)] font-mono text-xs">
-                                                {b.order_items.map((item, idx) => {
+                                                {tableItems.map((item, idx) => {
                                                     const mName = item.custom_name || item.menu_items?.name || item.name || 'Custom Item'
                                                     const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
                                                     const qty = item.quantity || 1
@@ -1181,7 +1199,8 @@ export default function AllDailyBillsHub({
                                             <div className="py-3 text-center text-[oklch(42%_0.010_28)] font-mono text-xs">
                                                 บิลนี้เป็นการจองโต๊ะหรือยังไม่มีรายการอาหารย่อยระบุ
                                             </div>
-                                        )}
+                                        );
+                                        })()}
 
                                         {/* Bill Totals Summary */}
                                         <div className="pt-2 border-t-2 border-[oklch(85%_0.012_28)] flex justify-between items-baseline font-mono">
