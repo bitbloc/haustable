@@ -73,6 +73,25 @@ export default function POSSplitPaymentModal({
             } catch (e) {}
         };
         loadSettings();
+
+        const splitChannel = supabase
+            .channel(`pos_split_settings_${Math.random().toString(36).slice(2, 7)}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                if (payload.new) {
+                    const { key, value } = payload.new;
+                    if (['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number'].includes(key) && value) {
+                        setStorePromptpayId(normalizePromptPayId(value));
+                    }
+                    if (['promptpay_name', 'receipt_promptpay_name'].includes(key) && value) {
+                        setStorePromptpayName(value);
+                    }
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(splitChannel);
+        };
     }, [propPromptpayId]);
     const [searchingMember, setSearchingMember] = useState(false);
     const [attachedSplitMember, setAttachedSplitMember] = useState(null);
@@ -233,7 +252,9 @@ export default function POSSplitPaymentModal({
         numPeople, 
         currentEqualAmount, 
         splitQrPayload, 
-        attachedSplitMember
+        attachedSplitMember,
+        storePromptpayId,
+        storePromptpayName
     ]);
 
     // Handle Item Qty Steppers

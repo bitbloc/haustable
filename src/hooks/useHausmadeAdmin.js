@@ -43,7 +43,13 @@ export function useHausmadeAdmin() {
                     senderName: map.sender_name || 'HAUSMADE by IN THE HAUS',
                     senderPhone: map.sender_phone || '098-528-4217',
                     senderAddress: map.sender_address || '430 ถนนสุนทรวิจิตร ตำบลในเมือง อำเภอเมือง จังหวัดนครพนม 48000',
-                    senderTaxId: map.sender_tax_id || '0485566001234'
+                    senderTaxId: map.sender_tax_id || '0485566001234',
+                    promptpayId: map.promptpay_id || '0614232455',
+                    promptpayName: map.promptpay_name || 'ธัญญธร ศรีวิเศษ',
+                    paymentQrUrl: map.payment_qr_url || '',
+                    bankAccountName: map.bank_account_name || map.promptpay_name || 'ธัญญธร ศรีวิเศษ',
+                    bankAccountNo: map.bank_account_no || '123-4-56789-0',
+                    bankName: map.bank_name || 'กสิกรไทย (KBank)'
                 })
             }
         } catch (err) {

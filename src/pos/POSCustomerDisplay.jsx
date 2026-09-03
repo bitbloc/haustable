@@ -125,6 +125,13 @@ export default function POSCustomerDisplay() {
                     if (['promptpay_name', 'receipt_promptpay_name'].includes(key) && value) {
                         setStorePromptpayName(value);
                     }
+                    if (key === 'printer_config' && value) {
+                        try {
+                            const cfg = JSON.parse(value);
+                            if (cfg.promptpay_id) setStorePromptpayId(normalizePromptPayId(cfg.promptpay_id));
+                            if (cfg.promptpay_name) setStorePromptpayName(cfg.promptpay_name);
+                        } catch (e) {}
+                    }
                 }
             })
             .subscribe();
@@ -133,6 +140,21 @@ export default function POSCustomerDisplay() {
             supabase.removeChannel(logoSub);
         };
     }, []);
+
+    // Dynamically regenerate QR when storePromptpayId or order total changes while on checkout
+    useEffect(() => {
+        if (mode === 'CHECKOUT') {
+            const totalAmt = parseFloat(orderData?.total || 0);
+            if (totalAmt > 0 && storePromptpayId) {
+                try {
+                    const qr = generatePayload(normalizePromptPayId(storePromptpayId), { amount: totalAmt });
+                    setQrPayload(qr);
+                } catch (e) {
+                    console.error("QR Regeneration error:", e);
+                }
+            }
+        }
+    }, [storePromptpayId, orderData?.total, mode]);
 
     // Reusable Venue Logo Component
     const VenueLogo = ({ className = "h-10 object-contain", alt = "IN THE HAUS" }) => {

@@ -53,8 +53,8 @@ export default function PickupPage() {
 
     // Payment & Slip Verification State
     const [paymentMethod, setPaymentMethod] = useState('promptpay') // 'promptpay' | 'truewallet'
-    const [promptpayId, setPromptpayId] = useState('')
-    const [promptpayName, setPromptpayName] = useState('')
+    const [promptpayId, setPromptpayId] = useState('0614232455')
+    const [promptpayName, setPromptpayName] = useState('ธัญญธร ศรีวิเศษ')
     const [truewalletPhone, setTruewalletPhone] = useState('')
     const [truewalletName, setTruewalletName] = useState('')
     const [truewalletQrUrl, setTruewalletQrUrl] = useState(null)
@@ -129,6 +129,25 @@ export default function PickupPage() {
             }
         }
         fetchSettings()
+
+        const pickupSettingsChannel = supabase
+            .channel(`pickup_settings_live_${Math.random().toString(36).slice(2, 7)}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                if (payload.new) {
+                    const { key, value } = payload.new;
+                    if (key === 'payment_qr_url') setQrCodeUrl(safeTimestampUrl(value));
+                    if (key === 'promptpay_id') setPromptpayId(value);
+                    if (key === 'promptpay_name') setPromptpayName(value);
+                    if (key === 'truewallet_phone') setTruewalletPhone(value);
+                    if (key === 'truewallet_account_name') setTruewalletName(value);
+                    if (key === 'truewallet_qr_url') setTruewalletQrUrl(safeTimestampUrl(value));
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(pickupSettingsChannel);
+        };
     }, [])
 
     // --- Helpers for Time Slots ---

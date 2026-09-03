@@ -7,6 +7,7 @@ import { QRCodeSVG } from 'qrcode.react'
 import generatePayload from 'promptpay-qr'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
+import { formatPromptpayDisplay } from '../../utils/printerHelper'
 
 export default function HausmadeOnlineBillModal({
     order,
@@ -58,7 +59,8 @@ export default function HausmadeOnlineBillModal({
     const finalTotal = Math.max(0, (subtotal - discountAmount) + Number(customShippingFee))
 
     // PromptPay QR Payload Generation
-    const promptpayAccount = senderInfo.storePhone || senderInfo.senderPhone || '0985284217'
+    const promptpayAccount = senderInfo.promptpayId || senderInfo.storePhone || senderInfo.senderPhone || '0614232455'
+    const promptpayOwner = senderInfo.promptpayName || senderInfo.bankAccountName || 'ธัญญธร ศรีวิเศษ'
     const sanitizedPromptpay = promptpayAccount.replace(/[^0-9]/g, '')
     
     const qrPayload = useMemo(() => {
@@ -219,8 +221,8 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
 🏦 ช่องทางชำระเงิน:
 ธนาคาร: ${senderInfo.bankName || 'กสิกรไทย (KBank)'}
 เลขบัญชี: ${senderInfo.bankAccountNo || '123-4-56789-0'}
-ชื่อบัญชี: ${senderInfo.bankAccountName || 'บจก. อิน เดอะ เฮาส์'}
-พร้อมเพย์: ${sanitizedPromptpay || '098-528-4217'}
+ชื่อบัญชี: ${promptpayOwner}
+พร้อมเพย์: ${formatPromptpayDisplay(sanitizedPromptpay || '0614232455')}
 
 * ชำระเงินแล้ว รบกวนส่งสลิปยืนยันกลับทางแชทนี้ได้เลยครับ ขอบคุณครับ 🙏`
 
@@ -536,7 +538,10 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                     {senderInfo.bankAccountNo || '123-4-56789-0'}
                                 </div>
                                 <div className="text-[10px] text-[oklch(42%_0.010_28)]">
-                                    ชื่อบัญชี: {senderInfo.bankAccountName || 'บจก. อิน เดอะ เฮาส์ (IN THE HAUS)'}
+                                    ชื่อบัญชี: {promptpayOwner}
+                                </div>
+                                <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                    พร้อมเพย์: {formatPromptpayDisplay(sanitizedPromptpay || '0614232455')}
                                 </div>
                                 <div className="text-[9px] text-[oklch(55%_0.010_28)] mt-1">
                                     * โอนชำระแล้ว รบกวนส่งสลิปยืนยันกลับทางแชทนี้ครับ

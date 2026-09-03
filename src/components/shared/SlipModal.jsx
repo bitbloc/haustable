@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
@@ -24,6 +24,8 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const [isPrinting, setIsPrinting] = useState(false)
     const [optionMap, setOptionMap] = useState({})
     const [qrCodeUrl, setQrCodeUrl] = useState(null)
+    const [storePromptpayId, setStorePromptpayId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('promptpay_id') : null) || '0614232455')
+    const [storePromptpayName, setStorePromptpayName] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('promptpay_name') : null) || 'ธัญญธร ศรีวิเศษ')
     // Determine initial tab:
     // If isAdmin: only 'billing' or 'receipt'
     // If type === 'kitchen', default to kitchen (non-admin).
@@ -174,6 +176,16 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             setReceiptShopFooter(payload.new.value || 'THANK YOU FOR YOUR VISIT');
                         } else if (payload.new.key === 'payment_qr_url') {
                             setQrCodeUrl(payload.new.value || '');
+                        } else if (['promptpay_id', 'receipt_shop_phone'].includes(payload.new.key) && payload.new.value) {
+                            const norm = normalizePromptPayId(payload.new.value);
+                            setStorePromptpayId(norm);
+                            try { localStorage.setItem('promptpay_id', norm); } catch (e) {}
+                            if (activeTab === 'billing' && booking) {
+                                resolveBillingQrCode(booking, { promptpay_id: norm }).then(qr => { if (qr) setQrCodeUrl(qr); });
+                            }
+                        } else if (['promptpay_name', 'receipt_promptpay_name'].includes(payload.new.key) && payload.new.value) {
+                            setStorePromptpayName(payload.new.value);
+                            try { localStorage.setItem('promptpay_name', payload.new.value); } catch (e) {}
                         }
                     }
                 }
@@ -221,6 +233,11 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 if (settingsRes.data) {
                     const settingsMap = settingsRes.data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                     
+                    const resolvedPpId = getStorePromptpayId(settingsMap);
+                    setStorePromptpayId(resolvedPpId);
+                    const resolvedPpName = getStorePromptpayName(settingsMap);
+                    setStorePromptpayName(resolvedPpName);
+
                     if (activeTab === 'billing') {
                         qrUrlForBilling = await resolveBillingQrCode(booking, settingsMap);
                         if (qrUrlForBilling) setQrCodeUrl(qrUrlForBilling);
@@ -615,9 +632,11 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         let qrSectionHtml = ''
         if (activeTab === 'billing' && qrCodeUrl) {
             qrSectionHtml = `
-                <div class="qr-section">
-                    <div class="qr-title">PROMPTPAY / สแกนชำระเงิน (พร้อมเพย์)</div>
-                    <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" />
+                <div class="qr-section" style="text-align: center; margin: 8px 0;">
+                    <div class="qr-title" style="font-weight: bold; font-size: 11px;">PROMPTPAY / สแกนชำระเงิน</div>
+                    <img src="${qrCodeUrl}" class="qr-img" alt="QR Code" style="width: 140px; height: 140px; margin: 4px auto; display: block;" />
+                    <div style="font-size: 10px; font-weight: bold; margin-top: 2px;">ชื่อบัญชี: ${storePromptpayName || 'ธัญญธร ศรีวิเศษ'}</div>
+                    <div style="font-size: 9px; font-family: monospace;">พร้อมเพย์: ${formatPromptpayDisplay(storePromptpayId || '0614232455')}</div>
                 </div>
             `
         }
@@ -1563,9 +1582,14 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                         className="w-36 h-36 object-contain" 
                                     />
                                 </div>
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)] font-mono">
-                                    IN THE HAUS PROMPTPAY
-                                </span>
+                                <div className="text-center space-y-0.5">
+                                    <p className="text-[10px] font-bold text-[oklch(52%_0.16_28)]">
+                                        ชื่อบัญชี: {storePromptpayName || 'ธัญญธร ศรีวิเศษ'}
+                                    </p>
+                                    <p className="text-[9px] text-[oklch(55%_0.010_28)] font-mono">
+                                        พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId || '0614232455')}
+                                    </p>
+                                </div>
                             </div>
                         )}
 

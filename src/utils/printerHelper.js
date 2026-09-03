@@ -1327,6 +1327,19 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(doubleDivider);
     }
 
+    if (activeTab === 'billing') {
+        const storePpName = getStorePromptpayName({}, receiptConfig);
+        const storePpId = getStorePromptpayId({}, receiptConfig);
+        encoder.align('center')
+               .line('')
+               .bold(true)
+               .line('PROMPTPAY / สแกนชำระเงิน')
+               .bold(false)
+               .line(`ชื่อบัญชี: ${storePpName}`)
+               .line(`พร้อมเพย์: ${formatPromptpayDisplay(storePpId)}`)
+               .line(doubleDivider);
+    }
+
     // Notes
     const cleanCustomerNote = getCleanCustomerNote(booking.customer_note);
     const cleanStaffNote = getCleanStaffRemark(booking.staff_remark);
@@ -2762,7 +2775,7 @@ export async function resolveBillingQrCode(booking, config = {}) {
     const amountToPay = balanceDue > 0 ? balanceDue : totalAmt;
 
     try {
-        let promptpayId = '0985284217';
+        let promptpayId = '0614232455';
         
         // 1. If config already has promptpay_id or promptpayId
         if (config.promptpay_id || config.promptpayId) {
@@ -2773,7 +2786,7 @@ export async function resolveBillingQrCode(booking, config = {}) {
             const { data } = await supabase
                 .from('app_settings')
                 .select('key, value')
-                .in('key', ['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'payment_qr_url']);
+                .in('key', ['promptpay_id', 'promptpay_name', 'receipt_promptpay_name', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'payment_qr_url']);
             
             const settingsMap = (data || []).reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
             promptpayId = getStorePromptpayId(settingsMap, config);
