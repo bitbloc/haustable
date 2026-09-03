@@ -372,43 +372,6 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         loadDefaultVat();
         loadCrmSettings();
         fetchActivePromotions();
-
-        // Subscribe to app_settings realtime updates for instant promptpay & shop settings sync
-        const settingsChannel = supabase
-            .channel(`pos_order_panel_settings_${Math.random().toString(36).slice(2, 7)}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                if (payload.new) {
-                    const { key, value } = payload.new;
-                    if (['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number'].includes(key) && value) {
-                        const normalized = normalizePromptPayId(value);
-                        setStorePromptpayId(normalized);
-                        try { localStorage.setItem('promptpay_id', normalized); } catch (e) {}
-                    }
-                    if (['promptpay_name', 'receipt_promptpay_name'].includes(key) && value) {
-                        setStorePromptpayName(value);
-                        try { localStorage.setItem('promptpay_name', value); } catch (e) {}
-                    }
-                    if (key === 'printer_config' && value) {
-                        try {
-                            const cfg = JSON.parse(value);
-                            if (cfg.promptpay_id) {
-                                const normalized = normalizePromptPayId(cfg.promptpay_id);
-                                setStorePromptpayId(normalized);
-                                try { localStorage.setItem('promptpay_id', normalized); } catch (e) {}
-                            }
-                            if (cfg.promptpay_name) {
-                                setStorePromptpayName(cfg.promptpay_name);
-                                try { localStorage.setItem('promptpay_name', cfg.promptpay_name); } catch (e) {}
-                            }
-                        } catch (e) {}
-                    }
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(settingsChannel);
-        };
     }, []);
 
     // Reset points & discount settings when switching tables/bookings or when cart is cleared
@@ -770,20 +733,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         } else {
             return { type: 'IDLE' };
         }
-    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, enrichedMemberProfile, booking, cashReceivedInput, storePromptpayId, storePromptpayName, useFreeDrinkQuota, xhausToRedeem]);
+    }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, enrichedMemberProfile, booking, cashReceivedInput, storePromptpayId, useFreeDrinkQuota, xhausToRedeem]);
 
-    const lastBroadcastContentRef = React.useRef('');
+    const lastBroadcastMsgRef = React.useRef('');
     const cfdDebounceTimerRef = React.useRef(null);
     const lastPaymentSuccessTimeRef = React.useRef(0);
 
     const broadcastCFD = React.useCallback((msg) => {
         if (!msg) return;
-        const contentStr = JSON.stringify({ type: msg.type, payload: msg.payload });
-        if (contentStr === lastBroadcastContentRef.current) return;
-        lastBroadcastContentRef.current = contentStr;
-
         const enrichedMsg = { ...msg, timestamp: msg.timestamp || Date.now() };
         const msgStr = JSON.stringify(enrichedMsg);
+        if (msgStr === lastBroadcastMsgRef.current) return;
+        lastBroadcastMsgRef.current = msgStr;
 
         if (msg.type === 'PAYMENT_SUCCESS') {
             lastPaymentSuccessTimeRef.current = Date.now();

@@ -25,15 +25,14 @@ export default function POSSplitPaymentModal({
     onClose,
     onConfirmSplit
 }) {
-    // Default to EQUAL (Auto-calculate first for ultra-fast split payment)
-    const [splitMode, setSplitMode] = useState('EQUAL');
+    // 3 Split Modes: 'ITEMS' | 'EQUAL' | 'CUSTOM'
+    const [splitMode, setSplitMode] = useState('ITEMS');
     
     // --- Mode 1: By Items States ---
     const [splitQuantities, setSplitQuantities] = useState({});
     
-    // --- Mode 2: Equal Split States (Auto-detect table pax, default 2) ---
-    const initialPax = Math.max(2, Math.min(8, parseInt(activeBooking?.pax) || 2));
-    const [numPeople, setNumPeople] = useState(initialPax);
+    // --- Mode 2: Equal Split States ---
+    const [numPeople, setNumPeople] = useState(2);
     const [currentPersonIndex, setCurrentPersonIndex] = useState(0); // 0-indexed: Person 1
     const [completedEqualShares, setCompletedEqualShares] = useState([]); // [{ person: 1, amount: 250, method: 'qr' }]
 
@@ -74,25 +73,6 @@ export default function POSSplitPaymentModal({
             } catch (e) {}
         };
         loadSettings();
-
-        const splitChannel = supabase
-            .channel(`pos_split_settings_${Math.random().toString(36).slice(2, 7)}`)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                if (payload.new) {
-                    const { key, value } = payload.new;
-                    if (['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number'].includes(key) && value) {
-                        setStorePromptpayId(normalizePromptPayId(value));
-                    }
-                    if (['promptpay_name', 'receipt_promptpay_name'].includes(key) && value) {
-                        setStorePromptpayName(value);
-                    }
-                }
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(splitChannel);
-        };
     }, [propPromptpayId]);
     const [searchingMember, setSearchingMember] = useState(false);
     const [attachedSplitMember, setAttachedSplitMember] = useState(null);
@@ -193,13 +173,7 @@ export default function POSSplitPaymentModal({
         };
     }, []);
 
-    const lastSplitBroadcastRef = useRef('');
     const broadcastToCFD = (payload) => {
-        if (!payload) return;
-        const contentStr = JSON.stringify({ type: payload.type, payload: payload.payload });
-        if (contentStr === lastSplitBroadcastRef.current) return;
-        lastSplitBroadcastRef.current = contentStr;
-
         const enriched = { ...payload, timestamp: payload.timestamp || Date.now() };
         if (cfdChannel.current) {
             try { cfdChannel.current.postMessage(enriched); } catch (e) {}
@@ -259,9 +233,7 @@ export default function POSSplitPaymentModal({
         numPeople, 
         currentEqualAmount, 
         splitQrPayload, 
-        attachedSplitMember,
-        storePromptpayId,
-        storePromptpayName
+        attachedSplitMember
     ]);
 
     // Handle Item Qty Steppers
@@ -408,8 +380,21 @@ export default function POSSplitPaymentModal({
                 </div>
             )}
 
-            {/* 2. Three Tab Modes Navigation (EQUAL first for fast 1-click checkout) */}
+            {/* 2. Three Tab Modes Navigation */}
             <div className="grid grid-cols-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] p-1.5 gap-1.5 font-mono text-xs font-bold uppercase tracking-wider">
+                <button
+                    type="button"
+                    onClick={() => setSplitMode('ITEMS')}
+                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        splitMode === 'ITEMS' 
+                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
+                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                    }`}
+                >
+                    <Receipt size={14} />
+                    <span>1. ตามรายการ (ITEMS)</span>
+                </button>
+
                 <button
                     type="button"
                     onClick={() => setSplitMode('EQUAL')}
@@ -420,36 +405,12 @@ export default function POSSplitPaymentModal({
                     }`}
                 >
                     <Users size={14} />
-                    <span>1. หารเท่า (EQUAL)</span>
+                    <span>2. หารเท่า (EQUAL)</span>
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => {
-                        setSplitMode('ITEMS');
-                        // If no items selected yet, pre-select all items so cashier doesn't have to start from zero
-                        if (selectedItems.length === 0) {
-                            handleSelectAllItems();
-                        }
-                    }}
-                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        splitMode === 'ITEMS' 
-                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
-                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                    }`}
-                >
-                    <Receipt size={14} />
-                    <span>2. ตามรายการ (ITEMS)</span>
-                </button>
-
-                <button
-                    type="button"
-                    onClick={() => {
-                        setSplitMode('CUSTOM');
-                        if (!customAmountInput) {
-                            setCustomAmountInput(String(Math.ceil(orderTotal / 2)));
-                        }
-                    }}
+                    onClick={() => setSplitMode('CUSTOM')}
                     className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer ${
                         splitMode === 'CUSTOM' 
                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
@@ -464,70 +425,7 @@ export default function POSSplitPaymentModal({
             {/* 3. Tab Body Container */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[380px] scrollbar-none">
                 
-                {/* --- MODE 1: EQUAL SPLIT (Default Auto-calculated) --- */}
-                {splitMode === 'EQUAL' && (
-                    <div className="space-y-4">
-                        <div>
-                            <span className="text-xs font-mono text-[oklch(55%_0.010_28)] uppercase font-bold block mb-2">
-                                เลือกจำนวนคนที่ต้องการหารเท่า
-                            </span>
-                            <div className="grid grid-cols-5 gap-2 font-mono">
-                                {[2, 3, 4, 5, 6].map(num => (
-                                    <button
-                                        key={num}
-                                        type="button"
-                                        onClick={() => {
-                                            setNumPeople(num);
-                                            setCurrentPersonIndex(0);
-                                        }}
-                                        className={`py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
-                                            numPeople === num 
-                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm' 
-                                                : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
-                                        }`}
-                                    >
-                                        <span>{num} ท่าน</span>
-                                        <span className="text-[10px] opacity-75 font-normal">
-                                            ฿{Math.ceil(orderTotal / num).toLocaleString()}/คน
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Person Selection Stepper */}
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
-                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                                <span className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
-                                    ลำดับการชำระ (PERSON STEPPER)
-                                </span>
-                                <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)]">
-                                    ท่านที่ {currentPersonIndex + 1} จากทั้งหมด {numPeople} ท่าน
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                                {equalSharesArray.map((shareAmt, idx) => (
-                                    <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => setCurrentPersonIndex(idx)}
-                                        className={`p-2.5 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer ${
-                                            currentPersonIndex === idx
-                                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
-                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-white'
-                                        }`}
-                                    >
-                                        <div className="text-[10px] opacity-80 uppercase">คนที่ {idx + 1}</div>
-                                        <div className="text-sm font-black mt-0.5">฿{shareAmt.toLocaleString()}</div>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- MODE 2: BY ITEMS --- */}
+                {/* --- MODE 1: BY ITEMS --- */}
                 {splitMode === 'ITEMS' && (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between pb-1">
@@ -624,6 +522,69 @@ export default function POSSplitPaymentModal({
                                     </div>
                                 );
                             })}
+                        </div>
+                    </div>
+                )}
+
+                {/* --- MODE 2: EQUAL SPLIT --- */}
+                {splitMode === 'EQUAL' && (
+                    <div className="space-y-4">
+                        <div>
+                            <span className="text-xs font-mono text-[oklch(55%_0.010_28)] uppercase font-bold block mb-2">
+                                เลือกจำนวนคนที่ต้องการหารเท่า
+                            </span>
+                            <div className="grid grid-cols-5 gap-2 font-mono">
+                                {[2, 3, 4, 5, 6].map(num => (
+                                    <button
+                                        key={num}
+                                        type="button"
+                                        onClick={() => {
+                                            setNumPeople(num);
+                                            setCurrentPersonIndex(0);
+                                        }}
+                                        className={`py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                                            numPeople === num 
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm' 
+                                                : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        }`}
+                                    >
+                                        <span>{num} ท่าน</span>
+                                        <span className="text-[10px] opacity-75 font-normal">
+                                            ฿{Math.ceil(orderTotal / num).toLocaleString()}/คน
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Person Selection Stepper */}
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
+                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
+                                <span className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                                    ลำดับการชำระ (PERSON STEPPER)
+                                </span>
+                                <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)]">
+                                    ท่านที่ {currentPersonIndex + 1} จากทั้งหมด {numPeople} ท่าน
+                                </span>
+                            </div>
+
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                                {equalSharesArray.map((shareAmt, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setCurrentPersonIndex(idx)}
+                                        className={`p-2.5 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer ${
+                                            currentPersonIndex === idx
+                                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
+                                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-white'
+                                        }`}
+                                    >
+                                        <div className="text-[10px] opacity-80 uppercase">คนที่ {idx + 1}</div>
+                                        <div className="text-sm font-black mt-0.5">฿{shareAmt.toLocaleString()}</div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 )}

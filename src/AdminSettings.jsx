@@ -273,9 +273,6 @@ export default function AdminSettings() {
     const handleSave = async (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }));
         try {
-            if (typeof window !== 'undefined') {
-                try { localStorage.setItem(key, String(value)); } catch(e) {}
-            }
             const { error } = await supabase.from('app_settings').upsert({ key, value: String(value) });
             if (error) throw error;
         } catch (err) {

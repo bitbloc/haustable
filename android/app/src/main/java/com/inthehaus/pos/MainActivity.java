@@ -15,10 +15,7 @@ import android.view.Display;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
-import android.net.Uri;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -51,12 +48,6 @@ public class MainActivity extends BridgeActivity {
                 if (displays != null && displays.length > 0) {
                     if (presentation != null && presentation.isShowing()) {
                         return;
-                    }
-                    if (presentation != null) {
-                        try {
-                            presentation.dismiss();
-                        } catch (Exception ignored) {}
-                        presentation = null;
                     }
                     presentation = new SecondaryDisplayPresentation(MainActivity.this, displays[0]);
                     presentation.show();
@@ -114,13 +105,17 @@ public class MainActivity extends BridgeActivity {
 
     public static void dispatchCfdEventToSecondary(final String jsonPayload) {
         if (instance != null && instance.presentation != null) {
-            final SecondaryDisplayPresentation pres = instance.presentation;
-            pres.setLastEventJson(jsonPayload);
+            instance.presentation.setLastEventJson(jsonPayload);
             instance.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        pres.evaluateCfdEvent(jsonPayload);
+                        WebView secWebView = instance.presentation.getWebView();
+                        if (secWebView != null) {
+                            String base64Data = Base64.encodeToString(jsonPayload != null ? jsonPayload.getBytes("UTF-8") : new byte[0], Base64.NO_WRAP);
+                            String js = String.format("try { var _data = JSON.parse(decodeURIComponent(escape(atob('%s')))); if (window.onCfdNativeEvent) { window.onCfdNativeEvent(_data); } window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: _data })); } catch (e) { console.error('CFD Dispatch error', e); }", base64Data);
+                            secWebView.evaluateJavascript(js, null);
+                        }
                     } catch (Exception e) {
                         Log.e("MainActivity", "Failed to dispatch CFD event to secondary display", e);
                     }
@@ -168,6 +163,7 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
+                webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
                 webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
                 WebSettings settings = webView.getSettings();
                 settings.setMediaPlaybackRequiresUserGesture(false);
@@ -176,6 +172,7 @@ public class MainActivity extends BridgeActivity {
                 settings.setDatabaseEnabled(true);
                 settings.setAllowFileAccess(true);
                 settings.setAllowContentAccess(true);
+                settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
                 settings.setEnableSmoothTransition(true);
                 
                 // Expose Native CFD and POS bridge to WebView JavaScript
@@ -212,9 +209,7 @@ public class MainActivity extends BridgeActivity {
 
                     @Override
                     public void onDisplayChanged(int displayId) {
-                        if (presentation == null || !presentation.isShowing()) {
-                            initSecondaryDisplay();
-                        }
+                        initSecondaryDisplay();
                     }
                 };
                 displayManager.registerDisplayListener(displayListener, null);
@@ -413,34 +408,9 @@ public class MainActivity extends BridgeActivity {
 
         public void setLastEventJson(String json) {
             this.lastEventJson = json;
-        }
-
-        public void evaluateCfdEvent(final String jsonPayload) {
-            if (webView == null || !isPageLoaded || jsonPayload == null) {
-                return;
+            if (isPageLoaded && webView != null) {
+                MainActivity.dispatchCfdEventToSecondary(json);
             }
-            try {
-                String base64Data = Base64.encodeToString(jsonPayload.getBytes("UTF-8"), Base64.NO_WRAP);
-                String js = String.format("try { var _raw = atob('%s'); var _data = JSON.parse(decodeURIComponent(escape(_raw))); if (window.onCfdNativeEvent) { window.onCfdNativeEvent(_data); } else { window.dispatchEvent(new CustomEvent('pos_cfd_native_event', { detail: _data })); } } catch (e) { console.error('CFD Dispatch error', e); }", base64Data);
-                webView.evaluateJavascript(js, null);
-            } catch (Exception e) {
-                Log.e("SecondaryDisplay", "evaluateCfdEvent error", e);
-            }
-        }
-
-        @Override
-        public void dismiss() {
-            try {
-                if (webView != null) {
-                    webView.stopLoading();
-                    webView.loadUrl("about:blank");
-                    webView.clearHistory();
-                    webView.removeAllViews();
-                    webView.destroy();
-                    webView = null;
-                }
-            } catch (Exception ignored) {}
-            super.dismiss();
         }
 
         @Override
@@ -465,6 +435,7 @@ public class MainActivity extends BridgeActivity {
             }
             
             webView = new WebView(getContext());
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
             webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
@@ -472,6 +443,7 @@ public class MainActivity extends BridgeActivity {
             settings.setDatabaseEnabled(true);
             settings.setAllowFileAccess(true);
             settings.setAllowContentAccess(true);
+            settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
             settings.setEnableSmoothTransition(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -491,32 +463,16 @@ public class MainActivity extends BridgeActivity {
             
             webView.setWebViewClient(new WebViewClient() {
                 @Override
-                public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                    try {
-                        if (instance != null && instance.getBridge() != null && instance.getBridge().getLocalServer() != null) {
-                            WebResourceResponse res = instance.getBridge().getLocalServer().shouldInterceptRequest(request);
-                            if (res != null) {
-                                return res;
-                            }
-                        }
-                    } catch (Exception e) {
-                        Log.w("SecondaryDisplay", "LocalServer intercept exception: " + e.getMessage());
-                    }
-                    return super.shouldInterceptRequest(view, request);
-                }
-
-                @Override
                 public void onPageFinished(WebView view, String url) {
                     super.onPageFinished(view, url);
                     isPageLoaded = true;
                     if (lastEventJson != null) {
-                        evaluateCfdEvent(lastEventJson);
+                        MainActivity.dispatchCfdEventToSecondary(lastEventJson);
                     }
                 }
 
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
-                    Log.w("MainActivity", "Secondary WebView error: " + description + " for " + failingUrl);
                     if (failingUrl != null && failingUrl.startsWith("http://localhost")) {
                         Log.w("MainActivity", "Local CFD load failed, falling back to online CFD URL: " + description);
                         view.loadUrl("https://haustable.vercel.app/pos/cfd");
