@@ -10,8 +10,8 @@
  * @returns {Array<{ round: number, amount: number, method: string, mode: string, percent?: number, payer?: string, time?: string, splitBookingId?: string }>}
  */
 export function getBookingSplitRounds(booking) {
-    if (!booking) return [];
-    const remark = booking.staff_remark || '';
+    if (!booking || typeof booking !== 'object') return [];
+    const remark = typeof booking.staff_remark === 'string' ? booking.staff_remark : '';
     if (!remark) return [];
 
     // 1. Check for structured JSON [SPLIT_ROUNDS: [...]]
@@ -117,20 +117,24 @@ export function calculateSplitBalance(booking, orderItems = [], includeTax = tru
     const tax = includeTax ? subtotal * 0.07 : 0;
     const fullOrderTotal = Math.ceil(subtotal + tax);
 
-    // If booking already has a total_amount lower than items because of past splits,
-    // ensure remainingBalance respects either fullOrderTotal - alreadyPaid or booking.total_amount
-    let remainingBalance = Math.max(0, fullOrderTotal - alreadyPaid);
+    // If orderItems is empty, fallback to booking.total_amount if available
+    let computedTotal = fullOrderTotal;
+    if (computedTotal === 0 && booking?.total_amount && parseFloat(booking.total_amount) > 0) {
+        computedTotal = Math.ceil(parseFloat(booking.total_amount));
+    }
+
+    let remainingBalance = Math.max(0, computedTotal - alreadyPaid);
     
-    // In case items were already deleted from DB in ITEMS mode, fullOrderTotal might equal remaining
-    if (rounds.length > 0 && fullOrderTotal < alreadyPaid) {
-        remainingBalance = fullOrderTotal;
+    // In case items were already deleted from DB in ITEMS mode, computedTotal might equal remaining
+    if (rounds.length > 0 && computedTotal < alreadyPaid) {
+        remainingBalance = computedTotal;
     }
 
     const currentRoundNumber = rounds.length + 1;
     const isFullySettled = remainingBalance <= 0;
 
     return {
-        fullOrderTotal,
+        fullOrderTotal: computedTotal,
         subtotal,
         tax,
         alreadyPaid,
