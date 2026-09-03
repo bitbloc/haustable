@@ -30,13 +30,10 @@ export default function POSSplitPaymentModal({
     onClose,
     onConfirmSplit
 }) {
-    // 4 Split Modes: 'ITEMS' | 'EQUAL' | 'PERCENT' | 'CUSTOM'
-    const [splitMode, setSplitMode] = useState('PERCENT');
+    // 3 Split Modes: 'EQUAL' | 'PERCENT' | 'CUSTOM'
+    const [splitMode, setSplitMode] = useState('EQUAL');
     
-    // --- Mode 1: By Items States ---
-    const [splitQuantities, setSplitQuantities] = useState({});
-    
-    // --- Mode 2: Equal Split States ---
+    // --- Mode 1: Equal Split States ---
     const [numPeople, setNumPeople] = useState(2);
     const [currentPersonIndex, setCurrentPersonIndex] = useState(0); // 0-indexed: Person 1
 
@@ -370,7 +367,6 @@ export default function POSSplitPaymentModal({
         // Trigger parent split confirmation with rich round metadata
         onConfirmSplit({
             splitMode,
-            paidItems: splitMode === 'ITEMS' ? selectedItems : [],
             splitTotal: currentSplitAmount,
             paymentMethod,
             cashReceived: cashRecvNum,
@@ -388,6 +384,15 @@ export default function POSSplitPaymentModal({
                 alreadyPaidAmount: alreadyPaid
             }
         });
+
+        // Reset inputs for next chunk if balance remains
+        if (remainingBalanceAfterSplit > 0) {
+            setCustomAmountInput('');
+            setCashReceived('');
+            if (splitMode === 'EQUAL') {
+                setCurrentPersonIndex(prev => Math.min(numPeople - 1, prev + 1));
+            }
+        }
     };
 
     return (
@@ -483,21 +488,8 @@ export default function POSSplitPaymentModal({
                 </div>
             )}
 
-            {/* 2. Four Tab Modes Navigation */}
-            <div className="grid grid-cols-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] p-1.5 gap-1 font-mono text-[11px] font-bold uppercase tracking-wider">
-                <button
-                    type="button"
-                    onClick={() => setSplitMode('PERCENT')}
-                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        splitMode === 'PERCENT' 
-                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
-                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                    }`}
-                >
-                    <Percent size={13} />
-                    <span>1. % เปอร์เซ็นต์</span>
-                </button>
-
+            {/* 2. Three Tab Modes Navigation */}
+            <div className="grid grid-cols-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] p-1.5 gap-1 font-mono text-[11px] font-bold uppercase tracking-wider">
                 <button
                     type="button"
                     onClick={() => setSplitMode('EQUAL')}
@@ -508,20 +500,20 @@ export default function POSSplitPaymentModal({
                     }`}
                 >
                     <Users size={13} />
-                    <span>2. หารเท่า</span>
+                    <span>1. หารเท่า (คน)</span>
                 </button>
 
                 <button
                     type="button"
-                    onClick={() => setSplitMode('ITEMS')}
+                    onClick={() => setSplitMode('PERCENT')}
                     className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                        splitMode === 'ITEMS' 
+                        splitMode === 'PERCENT' 
                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
-                    <Receipt size={13} />
-                    <span>3. ตามรายการ</span>
+                    <Percent size={13} />
+                    <span>2. ใส่ % เอง (ปัดเศษ)</span>
                 </button>
 
                 <button
@@ -534,149 +526,14 @@ export default function POSSplitPaymentModal({
                     }`}
                 >
                     <DollarSign size={13} />
-                    <span>4. ระบุยอดบาท</span>
+                    <span>3. ระบุยอดบาท</span>
                 </button>
             </div>
 
             {/* 3. Tab Body Container */}
             <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[380px] scrollbar-none">
                 
-                {/* --- MODE 1: PERCENTAGE SPLIT (%) --- */}
-                {splitMode === 'PERCENT' && (
-                    <div className="space-y-4">
-                        
-                        {/* Basis Switcher (if already partially paid) */}
-                        {alreadyPaid > 0 && (
-                            <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold">
-                                <button
-                                    type="button"
-                                    onClick={() => setPercentBasis('remaining')}
-                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                                        percentBasis === 'remaining'
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                    }`}
-                                >
-                                    % ของยอดคงเหลือ (฿{remainingBalance.toLocaleString()})
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setPercentBasis('total')}
-                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
-                                        percentBasis === 'total'
-                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                    }`}
-                                >
-                                    % ของบิลรวมทั้งโต๊ะ (฿{fullOrderTotal.toLocaleString()})
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Quick Percent Presets Grid */}
-                        <div>
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-mono text-[oklch(55%_0.010_28)] uppercase font-bold">
-                                    เลือกเปอร์เซ็นต์ที่ต้องการแบ่งชำระรอบนี้
-                                </span>
-                                <span className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)]">
-                                    {activePercentValue}% = ฿{percentCalculatedAmount.toLocaleString()}
-                                </span>
-                            </div>
-
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 font-mono">
-                                {[10, 20, 25, 30, 33.33, 40, 50, 60, 70, 75, 80, 100].map(pct => {
-                                    const isSelected = customPercentInput === '' && selectedPercent === pct;
-                                    const baseVal = percentBasis === 'total' ? fullOrderTotal : remainingBalance;
-                                    const calculatedVal = calculatePercentAmount(pct, baseVal);
-
-                                    return (
-                                        <button
-                                            key={pct}
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedPercent(pct);
-                                                setCustomPercentInput('');
-                                            }}
-                                            className={`py-2.5 px-1 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center ${
-                                                isSelected
-                                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)] shadow-sm'
-                                                    : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
-                                            }`}
-                                        >
-                                            <span className="text-xs font-black">{pct === 33.33 ? '1/3 (33%)' : `${pct}%`}</span>
-                                            <span className="text-[10px] opacity-75 mt-0.5">
-                                                ฿{calculatedVal.toLocaleString()}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
-                        {/* Custom Percentage Input Slider */}
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase">
-                                    ระบุเปอร์เซ็นต์แบบกำหนดเอง (CUSTOM %)
-                                </span>
-                                <div className="flex items-center gap-1.5 font-mono text-sm">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="100"
-                                        placeholder="50"
-                                        value={customPercentInput}
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            setCustomPercentInput(val);
-                                        }}
-                                        className="w-16 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2 py-1 text-center font-black text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
-                                    />
-                                    <span className="font-bold text-[oklch(55%_0.010_28)]">%</span>
-                                </div>
-                            </div>
-
-                            {/* Range Slider for quick touch dragging on tablet POS */}
-                            <div className="space-y-1">
-                                <input 
-                                    type="range"
-                                    min="1"
-                                    max="100"
-                                    value={activePercentValue}
-                                    onChange={(e) => {
-                                        setCustomPercentInput(e.target.value);
-                                    }}
-                                    className="w-full accent-[oklch(52%_0.16_28)] cursor-pointer h-2 bg-[oklch(94%_0.010_28)] rounded-lg"
-                                />
-                                <div className="flex justify-between font-mono text-[9px] text-[oklch(55%_0.010_28)] px-0.5">
-                                    <span>1%</span>
-                                    <span>25%</span>
-                                    <span>50%</span>
-                                    <span>75%</span>
-                                    <span>100% (ยอดที่เหลือทั้งหมด)</span>
-                                </div>
-                            </div>
-
-                            {/* Math Summary Badge */}
-                            <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-2.5 flex items-center justify-between font-mono text-xs">
-                                <span className="text-[oklch(55%_0.010_28)]">
-                                    {activePercentValue}% ของ {percentBasis === 'total' ? 'บิลรวม' : 'ยอดคงเหลือ'}
-                                </span>
-                                <div className="flex items-center gap-1 font-bold text-[oklch(18%_0.012_28)]">
-                                    <span>= ฿{percentCalculatedAmount.toLocaleString()}</span>
-                                    {remainingBalanceAfterSplit === 0 && (
-                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">
-                                            ปิดบิล 100%
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* --- MODE 2: EQUAL SPLIT --- */}
+                {/* --- MODE 1: EQUAL SPLIT --- */}
                 {splitMode === 'EQUAL' && (
                     <div className="space-y-4">
                         <div>
@@ -739,103 +596,110 @@ export default function POSSplitPaymentModal({
                     </div>
                 )}
 
-                {/* --- MODE 3: BY ITEMS --- */}
-                {splitMode === 'ITEMS' && (
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between pb-1">
-                            <span className="text-xs font-mono text-[oklch(55%_0.010_28)] uppercase font-bold">
-                                เลือกจำนวนสินค้าที่ต้องการจ่ายรอบนี้ ({selectedItems.length} จาก {orderItems.length} รายการ)
-                            </span>
-                            <div className="flex items-center gap-2 font-mono text-xs">
+                {/* --- MODE 2: PERCENTAGE SPLIT (%) --- */}
+                {splitMode === 'PERCENT' && (
+                    <div className="space-y-4">
+                        
+                        {/* Basis Switcher (if already partially paid) */}
+                        {alreadyPaid > 0 && (
+                            <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold">
                                 <button
                                     type="button"
-                                    onClick={handleSelectAllItems}
-                                    className="px-2.5 py-1 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(18%_0.012_28)] font-bold hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
+                                    onClick={() => setPercentBasis('remaining')}
+                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                        percentBasis === 'remaining'
+                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    }`}
                                 >
-                                    เลือกทั้งหมด
+                                    % ของยอดคงเหลือ (฿{remainingBalance.toLocaleString()})
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleClearAllItems}
-                                    className="px-2.5 py-1 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-red-600 cursor-pointer"
+                                    onClick={() => setPercentBasis('total')}
+                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                        percentBasis === 'total'
+                                            ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                    }`}
                                 >
-                                    ล้าง
+                                    % ของบิลรวมทั้งโต๊ะ (฿{fullOrderTotal.toLocaleString()})
                                 </button>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="space-y-2">
-                            {orderItems.map(item => {
-                                const curSelected = splitQuantities[item.id] || 0;
-                                const isSelected = curSelected > 0;
-                                return (
-                                    <div 
-                                        key={item.id} 
-                                        className={`p-3 rounded-xl border transition-all flex items-center justify-between ${
-                                            isSelected 
-                                                ? 'bg-white border-[oklch(52%_0.16_28)] shadow-xs' 
-                                                : 'bg-[oklch(94%_0.010_28)]/60 border-[oklch(85%_0.012_28)] opacity-85'
-                                        }`}
-                                    >
-                                        <div className="min-w-0 flex-1 mr-3">
-                                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase truncate">
-                                                {item.name}
-                                            </h4>
-                                            <div className="flex items-center gap-2 text-xs mt-0.5">
-                                                <span className="font-mono font-bold text-[oklch(52%_0.16_28)]">
-                                                    ฿{item.price.toLocaleString()}
-                                                </span>
-                                                <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                                                    (สั่งทั้งหมด: {item.quantity})
-                                                </span>
-                                            </div>
-                                            {(() => {
-                                                const opts = formatOrderItemOptions(item.selected_options);
-                                                if (opts.length === 0) return null;
-                                                return (
-                                                    <p className="text-[10px] font-mono text-[oklch(55%_0.010_28)] mt-0.5 line-clamp-1">
-                                                        {opts.join(', ')}
-                                                    </p>
-                                                );
-                                            })()}
-                                        </div>
+                        {/* Direct Percentage Input with Ceil Rounding */}
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <span className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase block">
+                                        ระบุ % ที่ต้องการชำระก้อนนี้
+                                    </span>
+                                    <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                                        คำนวณแบบปัดเศษขึ้นเต็มบาท เพื่อไม่ให้ตกหล่นเศษสตางค์
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1.5 font-mono text-sm">
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="100"
+                                        step="any"
+                                        placeholder="50"
+                                        value={customPercentInput}
+                                        onChange={(e) => {
+                                            setCustomPercentInput(e.target.value);
+                                        }}
+                                        className="w-20 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2.5 py-1.5 text-center font-black text-[oklch(18%_0.012_28)] text-base outline-none focus:border-[oklch(18%_0.012_28)]"
+                                    />
+                                    <span className="font-bold text-[oklch(55%_0.010_28)] text-base">%</span>
+                                </div>
+                            </div>
 
-                                        <div className="flex items-center gap-2 shrink-0">
-                                            <div className="flex items-center bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-1 gap-1">
-                                                <button 
-                                                    type="button"
-                                                    disabled={hasUnsentItems || curSelected <= 0}
-                                                    onClick={() => handleQtyChange(item.id, -1, item.quantity)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-white hover:bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] transition-all cursor-pointer disabled:opacity-30 active:scale-95 shadow-2xs"
-                                                >
-                                                    <Minus size={14} />
-                                                </button>
-                                                
-                                                <span className={`w-8 text-center font-mono font-bold text-sm ${curSelected > 0 ? 'text-[oklch(52%_0.16_28)] font-black' : 'text-[oklch(55%_0.010_28)]'}`}>
-                                                    {curSelected}
-                                                </span>
+                            {/* Quick Percent Presets Grid */}
+                            <div className="grid grid-cols-6 gap-2 font-mono">
+                                {[20, 25, 33.33, 50, 75, 100].map(pct => {
+                                    const isSelected = customPercentInput === '' && selectedPercent === pct;
+                                    const baseVal = percentBasis === 'total' ? fullOrderTotal : remainingBalance;
+                                    const calculatedVal = calculatePercentAmount(pct, baseVal);
 
-                                                <button 
-                                                    type="button"
-                                                    disabled={hasUnsentItems || curSelected >= item.quantity}
-                                                    onClick={() => handleQtyChange(item.id, 1, item.quantity)}
-                                                    className="w-8 h-8 rounded-lg flex items-center justify-center bg-white hover:bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] transition-all cursor-pointer disabled:opacity-30 active:scale-95 shadow-2xs"
-                                                >
-                                                    <Plus size={14} />
-                                                </button>
-                                            </div>
+                                    return (
+                                        <button
+                                            key={pct}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedPercent(pct);
+                                                setCustomPercentInput('');
+                                            }}
+                                            className={`py-2 px-1 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center ${
+                                                isSelected
+                                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)] shadow-sm'
+                                                    : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                            }`}
+                                        >
+                                            <span className="text-xs font-black">{pct === 33.33 ? '33.3%' : `${pct}%`}</span>
+                                            <span className="text-[10px] opacity-75 mt-0.5">
+                                                ฿{calculatedVal.toLocaleString()}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => handleQtyChange(item.id, item.quantity - curSelected, item.quantity)}
-                                                className="px-2.5 py-2 rounded-xl bg-white border border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)] cursor-pointer"
-                                            >
-                                                MAX
-                                            </button>
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                            {/* Math Summary Badge */}
+                            <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-2.5 flex items-center justify-between font-mono text-xs">
+                                <span className="text-[oklch(55%_0.010_28)]">
+                                    {activePercentValue}% ของ {percentBasis === 'total' ? 'บิลรวม' : 'ยอดคงเหลือ'}
+                                </span>
+                                <div className="flex items-center gap-1 font-bold text-[oklch(18%_0.012_28)]">
+                                    <span>= ฿{percentCalculatedAmount.toLocaleString()} (ปัดเศษ)</span>
+                                    {remainingBalanceAfterSplit === 0 && (
+                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">
+                                            ปิดบิล 100%
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1095,7 +959,9 @@ export default function POSSplitPaymentModal({
                 >
                     <Check size={16} />
                     <span>
-                        ยืนยันชำระรอบที่ {currentRoundNumber} (฿{currentSplitAmount.toLocaleString()})
+                        {remainingBalanceAfterSplit <= 0 
+                            ? `🎉 ยืนยันชำระและปิดบิล (฿${currentSplitAmount.toLocaleString()})`
+                            : `บันทึกชำระก้อนที่ ${currentRoundNumber} (฿${currentSplitAmount.toLocaleString()})`}
                     </span>
                 </button>
             </div>

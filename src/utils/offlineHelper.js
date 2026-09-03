@@ -173,6 +173,7 @@ export async function syncOfflineQueue(isManual = false) {
                         table_id: tableId,
                         status: status || 'seated',
                         booking_type: 'walk_in',
+                        source: 'pos',
                         booking_time: bookingTime || new Date().toISOString(),
                         pax: pax || 2,
                         staff_remark: staffRemark || 'Offline Walk-in'
@@ -205,6 +206,7 @@ export async function syncOfflineQueue(isManual = false) {
                         table_id: null,
                         status: status || 'pending',
                         booking_type: 'pickup',
+                        source: 'pos',
                         booking_time: bookingTime || new Date().toISOString(),
                         pax: 1,
                         customer_note: customerNote,
@@ -419,7 +421,7 @@ export async function syncOfflineQueue(isManual = false) {
             }
 
             else if (action.type === 'split_payment') {
-                let { bookingId, tempSplitId, splitMode, paidItems = [], paymentMethod, totalAmount, isFullySettled, bookingMetadata } = action.payload;
+                let { bookingId, splitMode, paymentMethod, totalAmount, isFullySettled, bookingMetadata } = action.payload;
                 if (idMapping[bookingId]) {
                     bookingId = idMapping[bookingId];
                 }
@@ -427,77 +429,17 @@ export async function syncOfflineQueue(isManual = false) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
 
-                // 1. Create a new completed booking for the split
-                const splitBookingPayload = {
-                    table_id: bookingMetadata?.table_id || null,
-                    status: 'completed',
-                    booking_type: bookingMetadata?.booking_type || 'walk_in',
-                    booking_time: new Date().toISOString(),
-                    pax: bookingMetadata?.pax || 0,
-                    user_id: bookingMetadata?.user_id || null,
-                    staff_remark: `Split Paid by ${paymentMethod.toUpperCase()}`,
-                    total_amount: totalAmount,
-                    discount_amount: 0,
-                    tracking_token: crypto.randomUUID()
-                };
+                const updatedRemark = bookingMetadata?.staff_remark;
 
-                const { data: newSplitBooking, error: insertError } = await supabase
-                    .from('bookings')
-                    .insert(splitBookingPayload)
-                    .select('id')
-                    .single();
-
-                if (insertError) throw insertError;
-                const newSplitBookingId = newSplitBooking.id;
-
-                if (tempSplitId) {
-                    idMapping[tempSplitId] = newSplitBookingId;
-                    try { localStorage.setItem('pos_offline_id_mapping', JSON.stringify(idMapping)); } catch(e) {}
-                }
-
-                // 2. Insert paid items to the new split booking if items exist
-                if (paidItems && paidItems.length > 0) {
-                    const splitOrderItemsToInsert = paidItems.map(item => ({
-                        booking_id: newSplitBookingId,
-                        menu_item_id: item.menu_item_id,
-                        quantity: item.quantity,
-                        price_at_time: item.price_at_time || 0,
-                        selected_options: item.selected_options || []
-                    }));
-
-                    const { error: insertItemsError } = await supabase
-                        .from('order_items')
-                        .insert(splitOrderItemsToInsert);
-
-                    if (insertItemsError) throw insertItemsError;
-
-                    // 3. Deduct/Delete from original booking
-                    for (const item of paidItems) {
-                        if (item.menu_item_id) {
-                            const { data: dbItem } = await supabase
-                                .from('order_items')
-                                .select('*')
-                                .eq('booking_id', bookingId)
-                                .eq('menu_item_id', item.menu_item_id)
-                                .limit(1)
-                                .maybeSingle();
-
-                            if (dbItem) {
-                                if (dbItem.quantity <= item.quantity) {
-                                    await supabase.from('order_items').delete().eq('id', dbItem.id);
-                                } else {
-                                    await supabase.from('order_items').update({ quantity: dbItem.quantity - item.quantity }).eq('id', dbItem.id);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 4. Auto-complete original booking & free table if fully settled
                 if (isFullySettled) {
                     await supabase
                         .from('bookings')
-                        .update({ status: 'completed', staff_remark: 'Completed via Split Payments' })
+                        .update({
+                            status: 'completed',
+                            completed_at: new Date().toISOString(),
+                            payment_method: 'split',
+                            staff_remark: updatedRemark
+                        })
                         .eq('id', bookingId);
 
                     if (bookingMetadata?.table_id) {
@@ -506,6 +448,13 @@ export async function syncOfflineQueue(isManual = false) {
                             .update({ status: 'available' })
                             .eq('id', bookingMetadata.table_id);
                     }
+                } else {
+                    await supabase
+                        .from('bookings')
+                        .update({
+                            staff_remark: updatedRemark
+                        })
+                        .eq('id', bookingId);
                 }
             }
             

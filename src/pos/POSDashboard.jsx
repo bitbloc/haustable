@@ -858,7 +858,7 @@ export default function POSDashboard() {
             const { data: pendingData, error } = await supabase
                 .from('bookings')
                 .select(`
-                    id, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
+                    id, short_id, tracking_token, table_id, booking_type, booking_time, created_at, status, source, staff_remark,
                     customer_note, pax, deposit_amount, total_amount, payment_slip_url,
                     slip_verified, slip_provider, slip_trans_ref, slip_verification_status,
                     pickup_contact_name, pickup_contact_phone,
@@ -1352,8 +1352,8 @@ export default function POSDashboard() {
                     const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
 
                     if (eventType === 'INSERT') {
-                        // In-store walk-in pickup created right here at POS: do not fire online toast or modal
-                        if (isWalkInPickup) {
+                        // In-store walk-in pickup or walk-in table created right here at POS: do not fire online toast or modal
+                        if (isWalkInPickup || isExplicitInHouse) {
                             return;
                         }
 
@@ -1522,46 +1522,62 @@ export default function POSDashboard() {
                     const bookingId = payload.new?.booking_id || payload.old?.booking_id;
                     if (bookingId) {
                         if (payload.eventType === 'INSERT') {
-                            // Play loud noti1.mp3 sound for QR / incoming order items (throttled to 1 chime per burst)
-                            const qrItemAlertKey = `order_items_${bookingId}`;
-                            if (checkEventDeduplication(qrItemAlertKey, 4500)) {
-                                console.log(`🔊 [POS Alert] QR / New items incoming for booking: ${bookingId}`);
-                                playOrderAlert(qrItemAlertKey, 1200, 3.4);
-                                
-                                // Lookup table / order details for toast & history
-                                supabase.from('bookings').select('id, table_id, staff_remark, source, booking_type, pickup_contact_name, tables_layout(table_name)').eq('id', bookingId).maybeSingle().then(({ data: bData }) => {
-                                    const sourceLower = (bData?.source || '').toLowerCase();
-                                    const remarkLower = (bData?.staff_remark || '').toLowerCase();
-                                    const isItemPickup = bData?.booking_type === 'pickup' || (!bData?.table_id && (sourceLower === 'online' || remarkLower.includes('pickup')));
-                                    const tName = bData?.tables_layout?.table_name || (bData?.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : null);
-                                    const tId = bData?.table_id;
-                                    
-                                    const itemBadge = isItemPickup ? 'PICKUP ITEMS · เพิ่มรายการ' : 'QR ORDER · ออเดอร์เข้าใหม่';
-                                    const itemTitle = isItemPickup 
-                                        ? `ออเดอร์รับกลับ #${getShortBookingId(bData)} มีรายการสั่งอาหารเข้ามา` 
-                                        : `โต๊ะ ${tName || 'หน้าร้าน'} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`;
+                            // If staff is currently editing or viewing this booking right on this POS terminal, do not alert
+                            const isCurrentPosBooking = activeBookingRef.current?.id === bookingId;
 
-                                    toast.custom((t) => renderPosToast(t, {
-                                        badge: itemBadge,
-                                        title: itemTitle,
-                                        subtitle: isItemPickup ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
-                                        dot: 'emerald',
-                                        onClick: () => {
-                                            if (isItemPickup) {
-                                                setView('online_hub');
-                                            } else if (tId) {
-                                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                                    if (data) handleSelectTable(data);
-                                                });
+                            // Lookup booking details with short_id, tracking_token, status, and sources
+                            supabase.from('bookings')
+                                .select('id, short_id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, customer_name, payment_slip_url, tables_layout(table_name)')
+                                .eq('id', bookingId)
+                                .maybeSingle()
+                                .then(({ data: bData }) => {
+                                    if (!bData) return;
+                                    
+                                    const sourceLower = (bData.source || '').toLowerCase();
+                                    const remarkLower = (bData.staff_remark || '').toLowerCase();
+                                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
+                                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url;
+                                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
+                                    const isWalkInPickup = bData.booking_type === 'pickup' && isExplicitInHouse;
+
+                                    // Strictly suppress notifications and audio for in-store cashier actions or inactive states
+                                    if (isExplicitInHouse || isWalkInPickup || isCurrentPosBooking || bData.status === 'completed' || bData.status === 'cancelled') {
+                                        return;
+                                    }
+
+                                    const qrItemAlertKey = `order_items_${bookingId}`;
+                                    if (checkEventDeduplication(qrItemAlertKey, 4500)) {
+                                        console.log(`🔊 [POS Alert] Verified incoming QR / Online order items for: ${bookingId}`);
+                                        playOrderAlert(qrItemAlertKey, 1200, 3.4);
+
+                                        const isItemPickup = (bData.booking_type === 'pickup' || (!bData.table_id && (sourceLower === 'online' || remarkLower.includes('pickup')))) && !isExplicitInHouse;
+                                        const tName = bData.tables_layout?.table_name || (bData.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : null);
+                                        const tId = bData.table_id;
+                                        const resolvedShortId = getShortBookingId(bData);
+
+                                        const itemBadge = isItemPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : 'QR ORDER · ออเดอร์เข้าใหม่';
+                                        const itemTitle = isItemPickup 
+                                            ? `ออเดอร์รับกลับ #${resolvedShortId} มีรายการสั่งอาหารเข้ามา` 
+                                            : `โต๊ะ ${tName || 'หน้าร้าน'} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`;
+
+                                        toast.custom((t) => renderPosToast(t, {
+                                            badge: itemBadge,
+                                            title: itemTitle,
+                                            subtitle: isItemPickup ? 'แตะเพื่อเปิดดูใน Online Hub' : 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                            dot: 'emerald',
+                                            onClick: () => {
+                                                if (isItemPickup) {
+                                                    setView('online_hub');
+                                                } else if (tId) {
+                                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                                        if (data) handleSelectTable(data);
+                                                    });
+                                                }
                                             }
-                                        }
-                                    }), { id: qrItemAlertKey, duration: 10000 });
-                                    pushNotifHistory('ORDER', isItemPickup ? 'Pickup Order' : 'QR Order', itemTitle, tId);
+                                        }), { id: qrItemAlertKey, duration: 10000 });
+                                        pushNotifHistory('ORDER', isItemPickup ? 'Online Pickup' : 'QR Order', itemTitle, tId);
+                                    }
                                 });
-                            } else {
-                                // Trigger single chime for burst
-                                playOrderAlert(qrItemAlertKey, 1200, 3.4);
-                            }
 
                             if (window.autoPrintDebounceTimer) {
                                 clearTimeout(window.autoPrintDebounceTimer);
@@ -2858,8 +2874,7 @@ export default function POSDashboard() {
     const handleExecuteSplitPayment = async (splitPayload) => {
         if (!activeBooking || !selectedTable) return;
         const {
-            splitMode = 'PERCENT',
-            paidItems = [],
+            splitMode = 'EQUAL',
             splitTotal = 0,
             paymentMethod = 'cash',
             cashReceived = 0,
@@ -2869,58 +2884,15 @@ export default function POSDashboard() {
         } = splitPayload;
 
         const roundNum = splitMeta.roundNumber || 1;
-        const toastId = toast.loading(`กำลังบันทึกแบ่งชำระเงินรอบที่ ${roundNum}...`);
+        const toastId = toast.loading(`กำลังบันทึกชำระก้อนที่ ${roundNum}...`);
 
         if (paymentMethod === 'cash') {
             localStorage.setItem('last_cash_received', cashReceived);
             localStorage.setItem('last_cash_change', changeDue);
         }
 
-        const isItemsMode = splitMode === 'ITEMS';
-        const isPayingAllItems = isItemsMode && paidItems.length > 0 && 
-            currentOrder.items.length === paidItems.length && 
-            paidItems.every(p => p.selectedQty === p.quantity);
-
         const remainingBalanceAfter = splitMeta.remainingBalanceAfterSplit !== undefined ? splitMeta.remainingBalanceAfterSplit : 0;
-        const isFullySettled = remainingBalanceAfter <= 0 || isPayingAllItems;
-
-        const percentTag = splitMode === 'PERCENT' && splitMeta.selectedPercent ? ` (${splitMeta.selectedPercent}%)` : '';
-        const equalTag = splitMode === 'EQUAL' && splitMeta.currentPersonIndex ? ` (คน ${splitMeta.currentPersonIndex}/${splitMeta.totalPeople || 2})` : '';
-
-        const splitChildRemark = `Split (Round ${roundNum}${percentTag || equalTag}) Paid by ${paymentMethod.toUpperCase()}`;
-
-        const mockSplitBooking = {
-            ...activeBooking,
-            id: `split_${Date.now()}`,
-            total_amount: splitTotal,
-            discount_amount: 0,
-            staff_remark: splitChildRemark,
-            user_id: attachedMember?.id || activeBooking.user_id || null,
-            profiles: attachedMember || activeBooking.profiles || null,
-            tables_layout: activeBooking.tables_layout || { table_name: selectedTable.table_name || selectedTable.name || '' },
-            order_items: isItemsMode && paidItems.length > 0 
-                ? paidItems.map(item => ({
-                    id: item.db_id || `split_item_${Date.now()}_${item.id}`,
-                    booking_id: activeBooking.id,
-                    menu_item_id: item.id,
-                    quantity: item.selectedQty,
-                    price_at_time: item.price,
-                    selected_options: item.selected_options || [],
-                    menu_items: { name: item.name }
-                }))
-                : [{
-                    id: `split_item_${Date.now()}`,
-                    booking_id: activeBooking.id,
-                    menu_item_id: null,
-                    custom_name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
-                    name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
-                    is_custom: true,
-                    quantity: 1,
-                    price_at_time: splitTotal,
-                    selected_options: [{ name: `ยอดชำระ ฿${splitTotal.toLocaleString()}` }],
-                    status: 'completed'
-                }]
-        };
+        const isFullySettled = remainingBalanceAfter <= 0;
 
         const updatedParentRemark = appendSplitRoundToRemark(activeBooking.staff_remark || '', {
             round: roundNum,
@@ -2932,30 +2904,15 @@ export default function POSDashboard() {
             time: new Date().toISOString()
         });
 
+        // 1. OFFLINE HANDLING
         if (!isOnline()) {
             const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
-            const mockOfflineSplitId = `local_split_${Date.now()}`;
-            mockSplitBooking.id = mockOfflineSplitId;
-
             const updatedBookings = cachedBookings.map(b => {
                 if (b.id === activeBooking.id) {
-                    let remainingItems = b.order_items || [];
-                    if (isItemsMode) {
-                        remainingItems = (b.order_items || []).map(dbItem => {
-                            const paid = paidItems.find(p => p.id === dbItem.menu_item_id || p.db_id === dbItem.id);
-                            if (paid) {
-                                return { ...dbItem, quantity: Math.max(0, dbItem.quantity - paid.selectedQty) };
-                            }
-                            return dbItem;
-                        }).filter(dbItem => dbItem.quantity > 0);
-                    }
-
                     return {
                         ...b,
                         status: isFullySettled ? 'completed' : b.status,
-                        total_amount: isFullySettled ? 0 : remainingBalanceAfter,
-                        staff_remark: updatedParentRemark,
-                        order_items: remainingItems
+                        staff_remark: updatedParentRemark
                     };
                 }
                 return b;
@@ -2964,14 +2921,7 @@ export default function POSDashboard() {
 
             addToOfflineQueue('split_payment', {
                 bookingId: activeBooking.id,
-                tempSplitId: mockOfflineSplitId,
                 splitMode,
-                paidItems: paidItems.map(p => ({ 
-                    menu_item_id: p.id, 
-                    quantity: p.selectedQty,
-                    price_at_time: p.price,
-                    selected_options: p.selected_options || []
-                })),
                 paymentMethod,
                 totalAmount: splitTotal,
                 isFullySettled,
@@ -2984,104 +2934,38 @@ export default function POSDashboard() {
                 }
             });
 
-            recordShiftTransaction(mockOfflineSplitId, splitTotal, paymentMethod);
+            recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
 
-            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายรอบที่ ${roundNum} (฿${splitTotal.toLocaleString()}) สำเร็จ!`, { id: toastId });
-            setShowSplitModal(false);
-            openSlipOrSilentPrint(mockSplitBooking, 'receipt');
-
+            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายก้อนที่ ${roundNum} (฿${splitTotal.toLocaleString()}) สำเร็จ!`, { id: toastId });
+            
             if (isFullySettled) {
+                setShowSplitModal(false);
+                openSlipOrSilentPrint({ ...activeBooking, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
                 setActiveBooking(null);
                 setSelectedTable(null);
                 setView('tables');
             } else {
-                // Update local activeBooking state with updated remark and balance
-                setActiveBooking(prev => prev ? ({ ...prev, total_amount: remainingBalanceAfter, staff_remark: updatedParentRemark }) : null);
+                const nextBooking = { ...activeBooking, staff_remark: updatedParentRemark };
+                setActiveBooking(nextBooking);
+                activeBookingRef.current = nextBooking;
             }
             setRefreshKey(prev => prev + 1);
             return;
         }
 
+        // 2. ONLINE SUPABASE HANDLING: SINGLE BILL GUARANTEE (NO SUB-BOOKINGS)
         try {
-            // 1. Create a new completed booking record for this split portion
-            const splitBookingPayload = {
-                table_id: activeBooking.table_id || selectedTable?.id || null,
-                status: 'completed',
-                booking_type: activeBooking.booking_type || 'walk_in',
-                booking_time: new Date().toISOString(),
-                pax: activeBooking.pax || 0,
-                user_id: attachedMember?.id || activeBooking.user_id || null,
-                staff_remark: splitChildRemark,
-                total_amount: splitTotal,
-                discount_amount: 0,
-                tracking_token: crypto.randomUUID()
-            };
+            // Record shift transaction against this bill
+            recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
 
-            const { data: newSplitBooking, error: insertError } = await supabase
-                .from('bookings')
-                .insert(splitBookingPayload)
-                .select('id')
-                .single();
-
-            if (insertError) throw insertError;
-            const newSplitBookingId = newSplitBooking.id;
-
-            // 2. Insert items to the new split booking if By Items
-            if (isItemsMode && paidItems.length > 0) {
-                const splitOrderItemsToInsert = paidItems.map(item => ({
-                    booking_id: newSplitBookingId,
-                    menu_item_id: item.id,
-                    quantity: item.selectedQty,
-                    price_at_time: item.price,
-                    selected_options: item.selected_options || []
-                }));
-
-                const { error: insertItemsError } = await supabase
-                    .from('order_items')
-                    .insert(splitOrderItemsToInsert);
-
-                if (insertItemsError) throw insertItemsError;
-
-                // 3. Deduct/Delete from original booking
-                for (const item of paidItems) {
-                    if (item.selectedQty >= item.quantity) {
-                        const { error } = await supabase
-                            .from('order_items')
-                            .delete()
-                            .eq('id', item.db_id);
-                        if (error) throw error;
-                    } else {
-                        const { error } = await supabase
-                            .from('order_items')
-                            .update({ quantity: item.quantity - item.selectedQty })
-                            .eq('id', item.db_id);
-                        if (error) throw error;
-                    }
-                }
-            } else {
-                // Non-items split (PERCENT / EQUAL / CUSTOM): Insert a custom order item so the child booking is never empty
-                const splitOrderItem = {
-                    booking_id: newSplitBookingId,
-                    menu_item_id: null,
-                    custom_name: `แบ่งชำระค่าอาหาร (${splitChildRemark})`,
-                    is_custom: true,
-                    quantity: 1,
-                    price_at_time: splitTotal,
-                    destination: 'pos',
-                    selected_options: [{ name: `ยอดชำระ ฿${splitTotal.toLocaleString()}` }],
-                    status: 'completed'
-                };
-                await supabase.from('order_items').insert([splitOrderItem]);
-            }
-
-            // 4. Check if fully settled or remaining
             if (isFullySettled) {
-                // Complete parent booking with 0 total_amount to prevent shift double-counting
+                // Fully paid: Close the bill
                 await supabase
                     .from('bookings')
                     .update({ 
                         status: 'completed',
-                        total_amount: 0,
+                        completed_at: new Date().toISOString(),
+                        payment_method: 'split',
                         staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
@@ -3093,34 +2977,29 @@ export default function POSDashboard() {
                         .eq('id', selectedTable.id);
                 }
 
-                toast.success(`🎉 ชำระครบถ้วนทั้งโต๊ะแล้ว! (ยอดรอบนี้ ฿${splitTotal.toLocaleString()})`, { id: toastId });
+                toast.success(`🎉 ชำระครบถ้วน ปิดบิลเรียบร้อยแล้ว! (ก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()})`, { id: toastId });
+                setShowSplitModal(false);
+                openSlipOrSilentPrint({ ...activeBooking, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
                 setActiveBooking(null);
                 setSelectedTable(null);
                 setView('tables');
             } else {
-                // Update parent booking's remaining total amount & updated split rounds remark
+                // Partial chunk: Update staff remark with the new split round
                 await supabase
                     .from('bookings')
                     .update({ 
-                        total_amount: remainingBalanceAfter,
                         staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
                 
-                toast.success(`แบ่งจ่ายรอบที่ ${roundNum} ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
+                toast.success(`บันทึกชำระก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
                 
-                // Refresh remaining booking
-                if (selectedTable?.id) {
-                    const updatedBooking = await getActiveBooking(selectedTable.id);
-                    setActiveBooking(updatedBooking);
-                }
+                // Update in-memory state so modal immediately shows the next round & reduced balance
+                const updatedBooking = { ...activeBooking, staff_remark: updatedParentRemark };
+                setActiveBooking(updatedBooking);
+                activeBookingRef.current = updatedBooking;
             }
 
-            mockSplitBooking.id = newSplitBookingId;
-            recordShiftTransaction(newSplitBookingId, splitTotal, paymentMethod);
-
-            setShowSplitModal(false);
-            openSlipOrSilentPrint(mockSplitBooking, 'receipt');
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             console.error("Split payment failed:", err);

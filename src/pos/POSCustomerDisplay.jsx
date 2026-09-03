@@ -569,7 +569,7 @@ export default function POSCustomerDisplay() {
                                 IN THE HAUS
                             </span>
                             <span className="font-sans text-[8.5px] text-[oklch(55%_0.010_28)] tracking-wider mt-0.5">
-                                จริตจัดรสชัดเจน · BANGKOK
+                                จริตจัดรสชัดเจน · นครพนม
                             </span>
                         </div>
                     </div>
@@ -652,11 +652,15 @@ export default function POSCustomerDisplay() {
                                         </div>
                                     </div>
 
-                                    {/* Architectural Progress Indicator */}
+                                    {/* Architectural Progress Indicator & Slide Logo */}
                                     <div className="absolute top-4 left-5 flex items-center gap-1.5 bg-[oklch(18%_0.012_28)]/80 px-2.5 py-1 rounded-full border border-[oklch(85%_0.012_28)]/20 backdrop-blur-xs font-mono text-[9px] text-[oklch(97%_0.008_28)]">
                                         <span className="text-[oklch(52%_0.16_28)] font-bold">{String(currentSlideIndex + 1).padStart(2, '0')}</span>
                                         <span className="text-[oklch(55%_0.010_28)]">/</span>
                                         <span className="text-[oklch(55%_0.010_28)]">{String(slideshowImages.length || 1).padStart(2, '0')}</span>
+                                    </div>
+
+                                    <div className="absolute top-4 right-5 z-10 opacity-90 flex items-center bg-[oklch(18%_0.012_28)]/80 px-3 py-1.5 rounded-full border border-[oklch(85%_0.012_28)]/20 backdrop-blur-xs">
+                                        <VenueLogo className="h-5 max-w-[100px] object-contain filter drop-shadow brightness-110" />
                                     </div>
                                 </motion.div>
                             ) : (
@@ -667,75 +671,42 @@ export default function POSCustomerDisplay() {
                         </AnimatePresence>
                     </div>
 
-                    {/* Right Panel: XHAUS Privilege Pass & LINE LIFF QR (45% Width) */}
-                    <div className="w-[45%] h-full p-5 lg:p-6 flex flex-col justify-between bg-[oklch(18%_0.012_28)]">
+                    {/* Right Panel: LINE LIFF Member QR (45% Width · Dieter Rams Minimalist Structure) */}
+                    <div className="w-[45%] h-full p-6 flex flex-col justify-between bg-[oklch(18%_0.012_28)]">
                         
-                        {/* Membership Pass Card Container */}
-                        <div className="bg-[oklch(22%_0.012_28)] border border-[oklch(85%_0.012_28)]/25 rounded-2xl overflow-hidden flex flex-col shadow-xl">
-                            
-                            {/* Stark Terracotta Accent Banner */}
-                            <div className="bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-4 py-2 flex items-center justify-between font-mono text-[10px] font-bold tracking-[0.2em] uppercase">
-                                <span>XHAUS PRIVILEGE PASS</span>
-                                <span>LINE LIFF PASS</span>
-                            </div>
-
-                            {/* Main Pass Content */}
-                            <div className="p-4 space-y-3">
+                        {/* Member Registration Minimal Enclosure */}
+                        <div className="flex-1 flex flex-col items-center justify-center">
+                            <div className="w-full max-w-[320px] bg-[oklch(22%_0.012_28)] border border-[oklch(85%_0.012_28)]/25 rounded-2xl p-6 flex flex-col items-center shadow-xl">
                                 
-                                {/* Top Half: QR Code + Scan Instruction */}
-                                <div className="flex items-center gap-4 border-b border-[oklch(85%_0.012_28)]/20 pb-3">
-                                    <div className="bg-white p-2 rounded-xl border-2 border-[oklch(85%_0.012_28)] shrink-0 flex flex-col items-center shadow-md">
-                                        <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={76} level="M" />
-                                        <span className="font-mono text-[7px] font-black text-[oklch(18%_0.012_28)] tracking-widest uppercase mt-1">
-                                            SCAN VIA LINE
-                                        </span>
-                                    </div>
+                                <span className="font-mono text-[9px] font-bold tracking-[0.25em] text-[oklch(52%_0.16_28)] uppercase mb-4">
+                                    MEMBER REGISTRATION
+                                </span>
 
-                                    <div className="space-y-1 min-w-0">
-                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
-                                            MEMBER REGISTRATION
-                                        </span>
-                                        <h4 className="text-sm font-bold text-[oklch(97%_0.008_28)] leading-snug">
-                                            สแกนสะสมแต้ม XHAUS
-                                        </h4>
-                                        <p className="text-[11px] text-[oklch(55%_0.010_28)] font-sans leading-relaxed">
-                                            เปิดกล้อง LINE สแกน QR เพื่อเช็คสิทธิ์และสะสมคะแนนได้ทันทีทุกบิล
-                                        </p>
-                                    </div>
+                                {/* Clean QR Code with High Contrast Paper Enclosure */}
+                                <div className="bg-white p-4 rounded-2xl border-2 border-[oklch(85%_0.012_28)] shadow-lg flex flex-col items-center">
+                                    <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={156} level="M" />
+                                    <span className="font-mono text-[8px] font-black text-[oklch(18%_0.012_28)] tracking-[0.2em] uppercase mt-2">
+                                        SCAN VIA LINE
+                                    </span>
                                 </div>
 
-                                {/* Bottom Half: 3 Architectural Privilege Cells */}
-                                <div className="space-y-2 font-mono">
-                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
-                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">01</span>
-                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
-                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">STAMP 10:1</strong> · สะสมเครื่องดื่มครบ 10 แก้ว รับฟรี 1 แก้ว
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
-                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">02</span>
-                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
-                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">XHAUS POINTS</strong> · ทุก ฿100 รับ 5 แต้ม แลกส่วนลดเงินสด
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
-                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">03</span>
-                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
-                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">BIRTHDAY PERK</strong> · สิทธิพิเศษส่วนลดวันเกิด & เมนูลับ
-                                        </div>
-                                    </div>
+                                <div className="text-center mt-4 space-y-1">
+                                    <h4 className="text-base font-bold text-[oklch(97%_0.008_28)] tracking-tight">
+                                        สแกนสมัครสมาชิก
+                                    </h4>
+                                    <p className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        LINE LIFF MEMBER PASS
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Venue Coordinates & Wi-Fi Access Cell */}
-                        <div className="border-t border-[oklch(85%_0.012_28)]/20 pt-3 flex items-center justify-between text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                        {/* Venue Coordinates & Operating Hours */}
+                        <div className="border-t border-[oklch(85%_0.012_28)]/20 pt-3 flex items-center justify-between text-[9.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
                             <div className="flex items-center gap-3">
                                 <span>WI-FI : <strong className="text-[oklch(97%_0.008_28)]">IN THE HAUS 5G</strong></span>
                                 <span>·</span>
-                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">09:00 — 22:00</strong></span>
+                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">11.30 — 23.30</strong></span>
                             </div>
                             <span className="text-[oklch(52%_0.16_28)] font-bold">HAUS TABLE OS</span>
                         </div>
@@ -745,7 +716,7 @@ export default function POSCustomerDisplay() {
                 {/* Bottom Structural Footer Bar */}
                 <footer className="h-7 border-t border-[oklch(85%_0.012_28)]/20 px-5 flex items-center justify-between text-[8.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-[0.2em] bg-[oklch(18%_0.012_28)] shrink-0 z-20">
                     <span>CUSTOMER FACING PRESENTATION</span>
-                    <span className="text-[oklch(97%_0.008_28)] font-bold">IN THE HAUS จริตจัดรสชัดเจน</span>
+                    <span className="text-[oklch(97%_0.008_28)] font-bold">IN THE HAUS จริตจัดรสชัดเจน · นครพนม</span>
                     <span>TOUCHLESS VERIFICATION</span>
                 </footer>
             </div>
