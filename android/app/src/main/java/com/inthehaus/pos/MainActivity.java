@@ -30,6 +30,7 @@ import java.net.SocketTimeoutException;
 public class MainActivity extends BridgeActivity {
     
     private SecondaryDisplayPresentation presentation;
+    private DisplayManager.DisplayListener displayListener;
     private ServerSocket wmaServerSocket;
     private Thread wmaServerThread;
 
@@ -37,6 +38,25 @@ public class MainActivity extends BridgeActivity {
 
     public static MainActivity getInstance() {
         return instance;
+    }
+
+    private synchronized void initSecondaryDisplay() {
+        try {
+            DisplayManager displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+            if (displayManager != null) {
+                Display[] displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
+                if (displays != null && displays.length > 0) {
+                    if (presentation != null && presentation.isShowing()) {
+                        return;
+                    }
+                    presentation = new SecondaryDisplayPresentation(MainActivity.this, displays[0]);
+                    presentation.show();
+                    Log.i("MainActivity", "📺 Sunmi D2s Plus Dual-Screen CFD initialized successfully.");
+                }
+            }
+        } catch (Exception e) {
+            Log.e("MainActivity", "Secondary display initialization error", e);
+        }
     }
 
     public class AndroidCfdBridge {
@@ -85,6 +105,7 @@ public class MainActivity extends BridgeActivity {
 
     public static void dispatchCfdEventToSecondary(final String jsonPayload) {
         if (instance != null && instance.presentation != null) {
+            instance.presentation.setLastEventJson(jsonPayload);
             instance.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -163,23 +184,49 @@ public class MainActivity extends BridgeActivity {
             e.printStackTrace();
         }
 
-        // Auto display Customer Facing Display (CFD) on the secondary screen (Sunmi D2s Plus Dual-Screen Hardware)
+        // Auto display Customer Facing Display (CFD) on secondary screen (Sunmi D2s Plus Dual-Screen Hardware)
+        initSecondaryDisplay();
         try {
             DisplayManager displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
             if (displayManager != null) {
-                Display[] displays = displayManager.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
-                if (displays != null && displays.length > 0) {
-                    presentation = new SecondaryDisplayPresentation(MainActivity.this, displays[0]);
-                    presentation.show();
-                    Log.i("MainActivity", "📺 Sunmi Dual-Screen CFD initialized successfully.");
-                }
+                displayListener = new DisplayManager.DisplayListener() {
+                    @Override
+                    public void onDisplayAdded(int displayId) {
+                        Log.i("MainActivity", "Secondary display connected (id: " + displayId + "), initializing presentation...");
+                        initSecondaryDisplay();
+                    }
+
+                    @Override
+                    public void onDisplayRemoved(int displayId) {
+                        Log.i("MainActivity", "Secondary display disconnected (id: " + displayId + ")");
+                        if (presentation != null) {
+                            try {
+                                presentation.dismiss();
+                            } catch (Exception ignored) {}
+                            presentation = null;
+                        }
+                    }
+
+                    @Override
+                    public void onDisplayChanged(int displayId) {
+                        initSecondaryDisplay();
+                    }
+                };
+                displayManager.registerDisplayListener(displayListener, null);
             }
         } catch (Exception e) {
-            Log.e("MainActivity", "Secondary display initialization error", e);
+            Log.e("MainActivity", "Error registering display listener", e);
         }
 
         // Start native WMA ESC/POS Virtual Printer Bridge Server on Port 9100
         startWmaBridgeServer();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        initSecondaryDisplay();
+        hideSystemBars();
     }
 
     @Override
@@ -323,6 +370,13 @@ public class MainActivity extends BridgeActivity {
             instance = null;
         }
         try {
+            if (displayListener != null) {
+                DisplayManager displayManager = (DisplayManager) getSystemService(Context.DISPLAY_SERVICE);
+                if (displayManager != null) {
+                    displayManager.unregisterDisplayListener(displayListener);
+                }
+                displayListener = null;
+            }
             if (presentation != null) {
                 presentation.dismiss();
                 presentation = null;
@@ -341,6 +395,8 @@ public class MainActivity extends BridgeActivity {
 
     private static class SecondaryDisplayPresentation extends Presentation {
         private WebView webView;
+        private String lastEventJson;
+        private boolean isPageLoaded = false;
 
         public SecondaryDisplayPresentation(Context outerContext, Display display) {
             super(outerContext, display);
@@ -350,9 +406,33 @@ public class MainActivity extends BridgeActivity {
             return webView;
         }
 
+        public void setLastEventJson(String json) {
+            this.lastEventJson = json;
+            if (isPageLoaded && webView != null) {
+                MainActivity.dispatchCfdEventToSecondary(json);
+            }
+        }
+
         @Override
         protected void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
+
+            if (getWindow() != null) {
+                getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+
+                View decorView = getWindow().getDecorView();
+                if (decorView != null) {
+                    decorView.setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        | View.SYSTEM_UI_FLAG_FULLSCREEN
+                    );
+                }
+            }
             
             webView = new WebView(getContext());
             webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
@@ -367,12 +447,30 @@ public class MainActivity extends BridgeActivity {
             settings.setEnableSmoothTransition(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setTextZoom(100); // Strict 100% zoom prevents layout breaking on Sunmi OS font scales
             
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                 settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
             }
+
+            if (instance != null) {
+                AndroidCfdBridge bridge = instance.new AndroidCfdBridge();
+                webView.addJavascriptInterface(bridge, "AndroidCfdBridge");
+                webView.addJavascriptInterface(bridge, "AndroidPosBridge");
+            }
             
             webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    isPageLoaded = true;
+                    if (lastEventJson != null) {
+                        MainActivity.dispatchCfdEventToSecondary(lastEventJson);
+                    }
+                }
+
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     if (failingUrl != null && failingUrl.startsWith("http://localhost")) {

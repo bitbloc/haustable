@@ -1,16 +1,26 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Utensils, CheckCircle2, Smartphone, QrCode, Sparkles, Receipt, ShieldCheck, Coffee, Gift, Coins, Tag } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
-import { normalizePromptPayId, getStorePromptpayId, formatPromptpayDisplay } from '../utils/printerHelper';
+import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 
 const LINE_LIFF_MEMBER_URL = "https://liff.line.me/2008674756-hTEWodVj";
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
+const LOCAL_FEATURED_ITEMS = Object.freeze([
+    { url: '/assets/food-beef-rice.webp', name: 'ข้าวหน้าเนื้อโคขุนคั่วพริกเกลือ', price: 185, category: 'CHEF SIGNATURE' },
+    { url: '/assets/food-pouring-curry.webp', name: 'แกงกะหรี่เนื้อตุ๋นสูตรเข้มข้น', price: 220, category: 'SIGNATURE CURRY' },
+    { url: '/assets/food-pork-belly.webp', name: 'หมูกรอบคั่วพริกเกลือโบราณ', price: 165, category: 'HAUS SPECIALTY' },
+    { url: '/assets/food-green-curry.webp', name: 'แกงเขียวหวานเนื้อริบอาย', price: 240, category: 'CHEF RECOMMENDATION' },
+    { url: '/assets/food-tai-pla-curry.webp', name: 'แกงไตปลาปักษ์ใต้รสจัดจ้าน', price: 175, category: 'TRADITIONAL RECIPE' },
+    { url: '/assets/food-fried-garlic-pork.webp', name: 'หมูสามชั้นทอดน้ำปลาหอมกรอบ', price: 155, category: 'APPETIZER' }
+]);
+
 export default function POSCustomerDisplay() {
-    const [mode, setMode] = useState('IDLE'); // 'IDLE' | 'CART' | 'CHECKOUT' | 'SPLIT_CHECKOUT' | 'SPLIT_SUCCESS' | 'SUCCESS'
+    // Mode state: 'IDLE' | 'CART' | 'ORDER_CONFIRMED' | 'CHECKOUT' | 'SPLIT_CHECKOUT' | 'SPLIT_SUCCESS' | 'SUCCESS'
+    const [mode, setMode] = useState('IDLE');
     const [orderData, setOrderData] = useState({ 
         items: [], 
         subtotal: 0, 
@@ -23,18 +33,29 @@ export default function POSCustomerDisplay() {
         paymentMethod: 'cash',
         cashReceived: 0,
         changeDue: 0,
-        pointsEarned: 0
+        pointsEarned: 0,
+        itemCount: 0,
+        bookingId: null
     });
     const [qrPayload, setQrPayload] = useState(null);
-    const [slideshowImages, setSlideshowImages] = useState([]);
+    const [slideshowImages, setSlideshowImages] = useState(LOCAL_FEATURED_ITEMS);
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
     const [shopLogoUrl, setShopLogoUrl] = useState(null);
-    const [storePromptpayId, setStorePromptpayId] = useState('0985284217');
-    const [storePromptpayName, setStorePromptpayName] = useState('IN THE HAUS');
+    const [storePromptpayId, setStorePromptpayId] = useState('0614232455');
+    const [storePromptpayName, setStorePromptpayName] = useState('ธัญญธร ศรีวิเศษ');
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
+    const [currentTime, setCurrentTime] = useState(new Date());
 
     const autoResetTimerRef = useRef(null);
     const expireAtRef = useRef(null);
+
+    // Live Clock for Standby Terminal
+    useEffect(() => {
+        const clockTimer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(clockTimer);
+    }, []);
 
     // Fetch shop logo & PromptPay settings from app_settings
     useEffect(() => {
@@ -66,7 +87,7 @@ export default function POSCustomerDisplay() {
                     const resolvedPpId = getStorePromptpayId(settingsMap, parsedPrinterConfig);
                     setStorePromptpayId(resolvedPpId);
 
-                    const nameVal = settingsMap.promptpay_name || settingsMap.receipt_promptpay_name || parsedPrinterConfig.promptpay_name || '';
+                    const nameVal = getStorePromptpayName(settingsMap, parsedPrinterConfig);
                     if (nameVal) {
                         setStorePromptpayName(nameVal);
                     }
@@ -164,7 +185,7 @@ export default function POSCustomerDisplay() {
             try {
                 const { data } = await supabase
                     .from('menu_items')
-                    .select('image_url, name, price')
+                    .select('image_url, name, price, category_id, menu_categories(name)')
                     .not('image_url', 'is', null)
                     .neq('image_url', '')
                     .limit(20);
@@ -174,10 +195,13 @@ export default function POSCustomerDisplay() {
                         .map(item => ({
                             url: getValidImageUrl(item.image_url),
                             name: item.name,
-                            price: item.price
+                            price: item.price,
+                            category: item.menu_categories?.name || 'SIGNATURE'
                         }))
                         .filter(item => Boolean(item.url));
-                    setSlideshowImages(validItems);
+                    if (validItems.length > 0) {
+                        setSlideshowImages([...LOCAL_FEATURED_ITEMS, ...validItems]);
+                    }
                 }
             } catch (err) {
                 console.error("Error fetching CFD slideshow images:", err);
@@ -186,12 +210,12 @@ export default function POSCustomerDisplay() {
         fetchImages();
     }, []);
 
-    // Slideshow transition interval
+    // Slideshow transition interval (6.5s per slide)
     useEffect(() => {
         if (!slideshowImages || slideshowImages.length === 0) return;
         const interval = setInterval(() => {
             setCurrentSlideIndex(prev => (prev + 1) % slideshowImages.length);
-        }, 6000);
+        }, 6500);
         return () => clearInterval(interval);
     }, [slideshowImages.length]);
 
@@ -214,7 +238,9 @@ export default function POSCustomerDisplay() {
             paymentMethod: 'cash',
             cashReceived: 0,
             changeDue: 0,
-            pointsEarned: 0
+            pointsEarned: 0,
+            itemCount: 0,
+            bookingId: null
         });
         setQrPayload(null);
         try {
@@ -243,17 +269,43 @@ export default function POSCustomerDisplay() {
                     resetToIdle();
                     break;
 
+                case 'ORDER_CONFIRMED':
+                    if (autoResetTimerRef.current) {
+                        clearTimeout(autoResetTimerRef.current);
+                        autoResetTimerRef.current = null;
+                    }
+                    setMode('ORDER_CONFIRMED');
+                    if (payload) {
+                        setOrderData(prev => ({ ...prev, ...payload }));
+                    }
+                    const orderConfirmDuration = 5000;
+                    expireAtRef.current = Date.now() + orderConfirmDuration;
+                    try {
+                        localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
+                    } catch (e) {}
+
+                    autoResetTimerRef.current = setTimeout(() => {
+                        resetToIdle();
+                    }, orderConfirmDuration);
+                    break;
+
                 case 'UPDATE_CART':
                     if (autoResetTimerRef.current) {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
                     }
-                    expireAtRef.current = null;
                     setMode('CART');
                     setOrderData(prev => ({ ...prev, ...payload }));
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
                     } catch (e) {}
+
+                    // 60-second inactivity watchdog: If cashier stops adding items, gracefully return to IDLE
+                    const cartInactivityDuration = 60000;
+                    expireAtRef.current = Date.now() + cartInactivityDuration;
+                    autoResetTimerRef.current = setTimeout(() => {
+                        resetToIdle();
+                    }, cartInactivityDuration);
                     break;
 
                 case 'SHOW_QR':
@@ -262,12 +314,14 @@ export default function POSCustomerDisplay() {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
                     }
-                    expireAtRef.current = null;
                     setMode('CHECKOUT');
                     if (payload?.orderData) {
                         setOrderData(prev => ({ ...prev, ...payload.orderData, ...payload }));
                     } else {
                         setOrderData(prev => ({ ...prev, ...payload }));
+                    }
+                    if (payload?.promptpayName) {
+                        setStorePromptpayName(payload.promptpayName);
                     }
                     
                     // Generate PromptPay QR if total exists
@@ -284,6 +338,13 @@ export default function POSCustomerDisplay() {
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
                     } catch (e) {}
+
+                    // 120-second checkout watchdog
+                    const checkoutDuration = 120000;
+                    expireAtRef.current = Date.now() + checkoutDuration;
+                    autoResetTimerRef.current = setTimeout(() => {
+                        resetToIdle();
+                    }, checkoutDuration);
                     break;
 
                 case 'SPLIT_CHECKOUT':
@@ -291,10 +352,12 @@ export default function POSCustomerDisplay() {
                         clearTimeout(autoResetTimerRef.current);
                         autoResetTimerRef.current = null;
                     }
-                    expireAtRef.current = null;
                     setMode('SPLIT_CHECKOUT');
                     if (payload) {
                         setOrderData(prev => ({ ...prev, ...payload }));
+                    }
+                    if (payload?.promptpayName) {
+                        setStorePromptpayName(payload.promptpayName);
                     }
                     const splitAmt = parseFloat(payload?.splitTotal || 0);
                     const splitPromptpayId = normalizePromptPayId(payload?.promptpayId || storePromptpayId);
@@ -311,6 +374,12 @@ export default function POSCustomerDisplay() {
                     try {
                         localStorage.setItem('pos_cfd_last_event', JSON.stringify({ type, payload, timestamp: Date.now() }));
                     } catch (e) {}
+
+                    const splitDurationMax = 120000;
+                    expireAtRef.current = Date.now() + splitDurationMax;
+                    autoResetTimerRef.current = setTimeout(() => {
+                        resetToIdle();
+                    }, splitDurationMax);
                     break;
 
                 case 'SPLIT_SUCCESS':
@@ -361,22 +430,35 @@ export default function POSCustomerDisplay() {
             }
         };
 
-        // 1. Initial hydration from localStorage with stale cache expiration check
+        // 1. Initial hydration from localStorage with strict stale cache expiration check
         try {
             const cached = localStorage.getItem('pos_cfd_last_event');
             if (cached) {
                 const parsed = JSON.parse(cached);
                 if (parsed) {
+                    const age = Date.now() - (parsed.timestamp || 0);
                     if (parsed.type === 'PAYMENT_SUCCESS' || parsed.type === 'SPLIT_SUCCESS') {
-                        const age = Date.now() - (parsed.timestamp || 0);
                         const maxAge = parsed.type === 'PAYMENT_SUCCESS' ? 6000 : 5000;
                         if (!parsed.timestamp || age >= maxAge) {
                             resetToIdle();
                         } else {
                             handleMsg(parsed);
                         }
+                    } else if (parsed.type === 'ORDER_CONFIRMED') {
+                        if (!parsed.timestamp || age >= 5000) {
+                            resetToIdle();
+                        } else {
+                            handleMsg(parsed);
+                        }
+                    } else if (['UPDATE_CART', 'SHOW_CHECKOUT', 'SHOW_QR', 'SPLIT_CHECKOUT'].includes(parsed.type)) {
+                        // Stale cart/checkout older than 45 seconds resets immediately to IDLE
+                        if (!parsed.timestamp || age >= 45000) {
+                            resetToIdle();
+                        } else {
+                            handleMsg(parsed);
+                        }
                     } else {
-                        handleMsg(parsed);
+                        resetToIdle();
                     }
                 }
             }
@@ -409,16 +491,29 @@ export default function POSCustomerDisplay() {
             if (e.key === 'pos_cfd_last_event' && e.newValue) {
                 try {
                     const parsed = JSON.parse(e.newValue);
+                    if (!parsed) return;
+                    const age = Date.now() - (parsed.timestamp || 0);
                     if (parsed.type === 'PAYMENT_SUCCESS' || parsed.type === 'SPLIT_SUCCESS') {
-                        const age = Date.now() - (parsed.timestamp || 0);
                         const maxAge = parsed.type === 'PAYMENT_SUCCESS' ? 6000 : 5000;
                         if (parsed.timestamp && age < maxAge) {
                             handleMsg(parsed);
                         } else {
                             resetToIdle();
                         }
+                    } else if (parsed.type === 'ORDER_CONFIRMED') {
+                        if (parsed.timestamp && age < 5000) {
+                            handleMsg(parsed);
+                        } else {
+                            resetToIdle();
+                        }
+                    } else if (['UPDATE_CART', 'SHOW_CHECKOUT', 'SHOW_QR', 'SPLIT_CHECKOUT'].includes(parsed.type)) {
+                        if (parsed.timestamp && age < 45000) {
+                            handleMsg(parsed);
+                        } else {
+                            resetToIdle();
+                        }
                     } else {
-                        handleMsg(parsed);
+                        resetToIdle();
                     }
                 } catch {}
             }
@@ -453,116 +548,282 @@ export default function POSCustomerDisplay() {
     }, [storePromptpayId]);
 
     // -------------------------------------------------------------
-    // RENDER 1: IDLE SHOWCASE (Dieter Rams Minimalist Brand Display - 10.1" 1024x600 Optimized)
+    // RENDER 1: IDLE STANDBY (Neo-Brutalist Architectural Grid · Dieter Rams + Thai Modern)
     // -------------------------------------------------------------
-    const renderIdleMode = () => (
-        <div className="relative w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex overflow-hidden font-sans select-none">
-            {/* Left Column: Brand Statement & Real Member Registration QR */}
-            <div className="w-1/2 h-full p-5 lg:p-7 flex flex-col justify-between z-10 bg-[oklch(18%_0.012_28)] border-r border-[oklch(42%_0.010_28)]/30">
-                <div className="space-y-3">
-                    {/* Venue Logo & Title */}
-                    <div className="flex items-center gap-3 pb-3 border-b border-[oklch(42%_0.010_28)]/40">
-                        <VenueLogo className="h-10 lg:h-12 max-w-[180px] object-contain filter drop-shadow-md brightness-110" />
-                        <div className="h-6 w-px bg-[oklch(42%_0.010_28)]/50" />
-                        <span className="font-mono text-[9px] lg:text-[10px] font-bold tracking-[0.2em] uppercase text-[oklch(52%_0.16_28)]">
-                            HAUS TABLE EXPERIENCE
-                        </span>
+    const renderIdleMode = () => {
+        const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const dateStr = currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+        const activeSlide = slideshowImages[currentSlideIndex];
+
+        return (
+            <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex flex-col font-sans select-none overflow-hidden">
+                
+                {/* Structural Top Masthead (1px Brutalist Cellular Division) */}
+                <header className="h-14 border-b border-[oklch(85%_0.012_28)]/20 flex items-stretch bg-[oklch(18%_0.012_28)] shrink-0 z-20">
+                    {/* Brand Cell */}
+                    <div className="flex items-center gap-3 px-5 border-r border-[oklch(85%_0.012_28)]/20 shrink-0">
+                        <VenueLogo className="h-8 max-w-[140px] object-contain filter drop-shadow brightness-110" />
+                        <div className="h-5 w-px bg-[oklch(85%_0.012_28)]/20" />
+                        <div className="flex flex-col">
+                            <span className="font-mono text-[10px] font-bold tracking-[0.2em] text-[oklch(97%_0.008_28)] uppercase leading-none">
+                                IN THE HAUS
+                            </span>
+                            <span className="font-sans text-[8.5px] text-[oklch(55%_0.010_28)] tracking-wider mt-0.5">
+                                จริตจัดรสชัดเจน · BANGKOK
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="space-y-1">
-                        <h1 className="text-xl lg:text-2xl font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)] leading-tight">
-                            IN THE HAUS
-                        </h1>
-                        <p className="text-xs font-sans text-[oklch(55%_0.010_28)] max-w-sm leading-relaxed">
-                            ยินดีต้อนรับสัมผัสรสชาติอันพิถีพิถัน สั่งอาหารและเครื่องดื่มผ่านแคชเชียร์ หรือสแกนเพื่อสมัครสมาชิก XHAUS รับสิทธิพิเศษทันที
-                        </p>
-                    </div>
-                </div>
-
-                {/* Member Rewards QR Card with real LINE LIFF QR Code */}
-                <div className="bg-[oklch(97%_0.008_28)]/5 border border-[oklch(97%_0.008_28)]/15 p-3.5 rounded-xl flex items-center justify-between gap-4 backdrop-blur-xs">
-                    <div className="space-y-0.5">
-                        <span className="text-[9px] font-mono font-bold tracking-widest text-[oklch(52%_0.16_28)] uppercase">
-                            MEMBERSHIP & REWARDS
-                        </span>
-                        <h3 className="text-sm font-bold text-[oklch(97%_0.008_28)]">
-                            สะสมแต้ม XHAUS POINTS
-                        </h3>
-                        <p className="text-[10px] text-[oklch(55%_0.010_28)] font-sans">
-                            สแกน QR ผ่าน LINE เพื่อสมัครสมาชิกและเช็คคะแนนสะสม
-                        </p>
+                    {/* Ambient Marquee Ticker Cell */}
+                    <div className="flex-1 overflow-hidden flex items-center px-4 border-r border-[oklch(85%_0.012_28)]/20">
+                        <div className="whitespace-nowrap font-mono text-[10px] tracking-[0.25em] text-[oklch(55%_0.010_28)] uppercase animate-marquee">
+                            IN THE HAUS · SPECIALTY COFFEE & MODERN THAI CUISINE · EST. 2024 · ARTISANAL DINING · HAUS TABLE OS · 
+                        </div>
                     </div>
 
-                    <div className="p-2 bg-white rounded-lg border border-[oklch(85%_0.012_28)] shrink-0 flex flex-col items-center shadow-xs">
-                        <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={64} level="M" />
-                        <span className="text-[7px] font-mono font-bold text-[oklch(18%_0.012_28)] mt-1 uppercase tracking-wider">
-                            SCAN VIA LINE
-                        </span>
+                    {/* Live Clock & Terminal Beacon Cell */}
+                    <div className="flex items-center gap-4 px-5 shrink-0 bg-[oklch(22%_0.012_28)]">
+                        <div className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                            <span className="font-mono text-[9px] font-bold tracking-widest text-[oklch(45%_0.08_140)] uppercase">
+                                TERMINAL 01 · ONLINE
+                            </span>
+                        </div>
+                        <div className="h-5 w-px bg-[oklch(85%_0.012_28)]/20" />
+                        <div className="flex flex-col text-right font-mono">
+                            <span className="text-xs font-black tracking-widest text-[oklch(97%_0.008_28)]">
+                                {timeStr}
+                            </span>
+                            <span className="text-[8px] text-[oklch(55%_0.010_28)] tracking-wider">
+                                {dateStr}
+                            </span>
+                        </div>
                     </div>
-                </div>
+                </header>
 
-                {/* Footer Brand Line */}
-                <div className="flex items-center justify-between text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-widest border-t border-[oklch(42%_0.010_28)]/20 pt-2">
-                    <span>ONHAUS SYSTEM</span>
-                    <span className="font-bold text-[oklch(97%_0.008_28)] tracking-wider">IN THE HAUS จริตจัดรสชัดเจน</span>
-                </div>
-            </div>
+                {/* Main Architectural Stage (Split 55% Showcase / 45% Membership Pass) */}
+                <div className="flex-1 flex min-h-0 overflow-hidden">
+                    
+                    {/* Left Panel: Hero Menu Specimen Showcase (55% Width) */}
+                    <div className="w-[55%] h-full relative overflow-hidden bg-black border-r border-[oklch(85%_0.012_28)]/20 flex flex-col justify-between">
+                        <AnimatePresence mode="wait">
+                            {activeSlide ? (
+                                <motion.div
+                                    key={currentSlideIndex}
+                                    initial={{ opacity: 0, scale: 1.05 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                                    className="absolute inset-0"
+                                >
+                                    <img
+                                        src={activeSlide.url}
+                                        alt={activeSlide.name}
+                                        className="w-full h-full object-cover opacity-80"
+                                        onError={() => {
+                                            setSlideshowImages(prev => {
+                                                const next = prev.filter((_, idx) => idx !== currentSlideIndex);
+                                                return next.length > 0 ? next : LOCAL_FEATURED_ITEMS;
+                                            });
+                                            setCurrentSlideIndex(0);
+                                        }}
+                                    />
+                                    {/* Architectural Gradient Wash */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-[oklch(18%_0.012_28)] via-[oklch(18%_0.012_28)]/30 to-black/40" />
 
-            {/* Right Column: Hero Menu Slideshow */}
-            <div className="w-1/2 h-full relative overflow-hidden bg-black">
-                <AnimatePresence mode="wait">
-                    {slideshowImages.length > 0 && slideshowImages[currentSlideIndex] ? (
-                        <motion.div
-                            key={currentSlideIndex}
-                            initial={{ opacity: 0, scale: 1.04 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="absolute inset-0"
-                        >
-                            <img
-                                src={slideshowImages[currentSlideIndex].url}
-                                alt={slideshowImages[currentSlideIndex].name}
-                                className="w-full h-full object-cover opacity-85"
-                                onError={() => {
-                                    setSlideshowImages(prev => prev.filter((_, idx) => idx !== currentSlideIndex));
-                                    setCurrentSlideIndex(0);
-                                }}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-[oklch(18%_0.012_28)] via-transparent to-black/20" />
-                            
-                            {/* Slide Item Title Badge */}
-                            <div className="absolute bottom-4 left-4 right-4 bg-[oklch(97%_0.008_28)]/95 backdrop-blur-md border border-[oklch(85%_0.012_28)] p-3 rounded-xl shadow-lg flex items-center justify-between text-[oklch(18%_0.012_28)]">
-                                <div>
-                                    <span className="text-[8px] font-mono uppercase font-bold tracking-widest text-[oklch(52%_0.16_28)]">
-                                        RECOMMENDED MENU
-                                    </span>
-                                    <h4 className="text-sm font-bold uppercase tracking-tight line-clamp-1">
-                                        {slideshowImages[currentSlideIndex].name}
-                                    </h4>
+                                    {/* Tabular Specimen Badge */}
+                                    <div className="absolute bottom-5 left-5 right-5 bg-[oklch(18%_0.012_28)]/95 backdrop-blur-md border border-[oklch(85%_0.012_28)]/30 p-4 rounded-xl shadow-2xl flex items-center justify-between">
+                                        <div className="min-w-0 pr-3">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-[oklch(52%_0.16_28)] uppercase">
+                                                    SPEC // 0{((currentSlideIndex + 1) % 99)}
+                                                </span>
+                                                <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                    · {activeSlide.category || 'FEATURED'}
+                                                </span>
+                                            </div>
+                                            <h3 className="text-base lg:text-lg font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)] truncate">
+                                                {activeSlide.name}
+                                            </h3>
+                                        </div>
+
+                                        <div className="bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-3 py-1.5 rounded-lg shrink-0 font-mono font-bold text-sm tracking-tight shadow-md">
+                                            ฿{parseFloat(activeSlide.price || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+
+                                    {/* Architectural Progress Indicator */}
+                                    <div className="absolute top-4 left-5 flex items-center gap-1.5 bg-[oklch(18%_0.012_28)]/80 px-2.5 py-1 rounded-full border border-[oklch(85%_0.012_28)]/20 backdrop-blur-xs font-mono text-[9px] text-[oklch(97%_0.008_28)]">
+                                        <span className="text-[oklch(52%_0.16_28)] font-bold">{String(currentSlideIndex + 1).padStart(2, '0')}</span>
+                                        <span className="text-[oklch(55%_0.010_28)]">/</span>
+                                        <span className="text-[oklch(55%_0.010_28)]">{String(slideshowImages.length || 1).padStart(2, '0')}</span>
+                                    </div>
+                                </motion.div>
+                            ) : (
+                                <div className="h-full flex items-center justify-center font-mono text-xs tracking-widest text-[oklch(55%_0.010_28)] uppercase">
+                                    IN THE HAUS TABLE SHOWCASE
                                 </div>
-                                <span className="text-lg font-mono font-bold text-[oklch(52%_0.16_28)] shrink-0 ml-2">
-                                    ฿{slideshowImages[currentSlideIndex].price}
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* Right Panel: XHAUS Privilege Pass & LINE LIFF QR (45% Width) */}
+                    <div className="w-[45%] h-full p-5 lg:p-6 flex flex-col justify-between bg-[oklch(18%_0.012_28)]">
+                        
+                        {/* Membership Pass Card Container */}
+                        <div className="bg-[oklch(22%_0.012_28)] border border-[oklch(85%_0.012_28)]/25 rounded-2xl overflow-hidden flex flex-col shadow-xl">
+                            
+                            {/* Stark Terracotta Accent Banner */}
+                            <div className="bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-4 py-2 flex items-center justify-between font-mono text-[10px] font-bold tracking-[0.2em] uppercase">
+                                <span>XHAUS PRIVILEGE PASS</span>
+                                <span>LINE LIFF PASS</span>
+                            </div>
+
+                            {/* Main Pass Content */}
+                            <div className="p-4 space-y-3">
+                                
+                                {/* Top Half: QR Code + Scan Instruction */}
+                                <div className="flex items-center gap-4 border-b border-[oklch(85%_0.012_28)]/20 pb-3">
+                                    <div className="bg-white p-2 rounded-xl border-2 border-[oklch(85%_0.012_28)] shrink-0 flex flex-col items-center shadow-md">
+                                        <QRCodeSVG value={LINE_LIFF_MEMBER_URL} size={76} level="M" />
+                                        <span className="font-mono text-[7px] font-black text-[oklch(18%_0.012_28)] tracking-widest uppercase mt-1">
+                                            SCAN VIA LINE
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-1 min-w-0">
+                                        <span className="font-mono text-[9px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                                            MEMBER REGISTRATION
+                                        </span>
+                                        <h4 className="text-sm font-bold text-[oklch(97%_0.008_28)] leading-snug">
+                                            สแกนสะสมแต้ม XHAUS
+                                        </h4>
+                                        <p className="text-[11px] text-[oklch(55%_0.010_28)] font-sans leading-relaxed">
+                                            เปิดกล้อง LINE สแกน QR เพื่อเช็คสิทธิ์และสะสมคะแนนได้ทันทีทุกบิล
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Half: 3 Architectural Privilege Cells */}
+                                <div className="space-y-2 font-mono">
+                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
+                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">01</span>
+                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
+                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">STAMP 10:1</strong> · สะสมเครื่องดื่มครบ 10 แก้ว รับฟรี 1 แก้ว
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
+                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">02</span>
+                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
+                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">XHAUS POINTS</strong> · ทุก ฿100 รับ 5 แต้ม แลกส่วนลดเงินสด
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2.5 p-2 rounded-lg bg-[oklch(18%_0.012_28)]/60 border border-[oklch(85%_0.012_28)]/15">
+                                        <span className="text-[10px] font-black text-[oklch(52%_0.16_28)]">03</span>
+                                        <div className="text-[10.5px] text-[oklch(97%_0.008_28)] font-sans">
+                                            <strong className="font-mono font-bold text-[oklch(97%_0.008_28)]">BIRTHDAY PERK</strong> · สิทธิพิเศษส่วนลดวันเกิด & เมนูลับ
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Venue Coordinates & Wi-Fi Access Cell */}
+                        <div className="border-t border-[oklch(85%_0.012_28)]/20 pt-3 flex items-center justify-between text-[9px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                            <div className="flex items-center gap-3">
+                                <span>WI-FI : <strong className="text-[oklch(97%_0.008_28)]">IN THE HAUS 5G</strong></span>
+                                <span>·</span>
+                                <span>HOURS : <strong className="text-[oklch(97%_0.008_28)]">09:00 — 22:00</strong></span>
+                            </div>
+                            <span className="text-[oklch(52%_0.16_28)] font-bold">HAUS TABLE OS</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bottom Structural Footer Bar */}
+                <footer className="h-7 border-t border-[oklch(85%_0.012_28)]/20 px-5 flex items-center justify-between text-[8.5px] font-mono text-[oklch(55%_0.010_28)] uppercase tracking-[0.2em] bg-[oklch(18%_0.012_28)] shrink-0 z-20">
+                    <span>CUSTOMER FACING PRESENTATION</span>
+                    <span className="text-[oklch(97%_0.008_28)] font-bold">IN THE HAUS จริตจัดรสชัดเจน</span>
+                    <span>TOUCHLESS VERIFICATION</span>
+                </footer>
+            </div>
+        );
+    };
+
+    // -------------------------------------------------------------
+    // RENDER 1.5: ORDER CONFIRMED MODE (New Mode · Rams Clean Ticket Confirmation)
+    // -------------------------------------------------------------
+    const renderOrderConfirmedMode = () => (
+        <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
+            <motion.div
+                initial={{ scale: 0.94, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 18 }}
+                className="w-full max-w-lg bg-[oklch(22%_0.012_28)] border-2 border-[oklch(52%_0.16_28)] rounded-2xl p-6 shadow-2xl space-y-4"
+            >
+                <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)]/20 pb-3">
+                    <VenueLogo className="h-7 max-w-[120px] object-contain brightness-110" />
+                    <span className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-2.5 py-1 rounded">
+                        ORDER RECEIVED
+                    </span>
+                </div>
+
+                <div className="space-y-1.5 py-2">
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-[oklch(45%_0.08_140)] font-bold block">
+                        KITCHEN & BAR DISPATCH
+                    </span>
+                    <h2 className="text-2xl font-bold uppercase tracking-tight text-[oklch(97%_0.008_28)]">
+                        บันทึกออเดอร์ส่งเข้าครัวแล้ว
+                    </h2>
+                    <p className="text-xs text-[oklch(55%_0.010_28)] font-sans">
+                        เชฟและบาริสต้ากำลังจัดเตรียมเมนูอย่างพิถีพิถัน
+                    </p>
+                </div>
+
+                <div className="bg-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]/20 rounded-xl p-3.5 flex items-center justify-around font-mono">
+                    <div className="text-center">
+                        <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">TABLE / ORDER</span>
+                        <span className="text-base font-bold text-[oklch(97%_0.008_28)]">
+                            {orderData.tableName || 'COUNTER'}
+                        </span>
+                    </div>
+                    <div className="h-7 w-px bg-[oklch(85%_0.012_28)]/20" />
+                    <div className="text-center">
+                        <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">TOTAL ITEMS</span>
+                        <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
+                            {orderData.itemCount || orderData.items?.length || 1} รายการ
+                        </span>
+                    </div>
+                    {orderData.totalAmount > 0 && (
+                        <>
+                            <div className="h-7 w-px bg-[oklch(85%_0.012_28)]/20" />
+                            <div className="text-center">
+                                <span className="text-[8.5px] uppercase tracking-widest text-[oklch(55%_0.010_28)] block">SUBTOTAL</span>
+                                <span className="text-base font-bold text-[oklch(97%_0.008_28)]">
+                                    ฿{orderData.totalAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                                 </span>
                             </div>
-
-                            {/* Slideshow dots */}
-                            <div className="absolute top-4 right-4 flex gap-1 bg-black/40 px-2 py-1 rounded-full backdrop-blur-xs">
-                                {slideshowImages.slice(0, 8).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className={`w-1.5 h-1.5 rounded-full transition-all ${i === (currentSlideIndex % 8) ? 'bg-[oklch(52%_0.16_28)] w-3' : 'bg-white/40'}`}
-                                    />
-                                ))}
-                            </div>
-                        </motion.div>
-                    ) : (
-                        <div className="h-full flex items-center justify-center font-mono text-xs tracking-widest text-[oklch(55%_0.010_28)] uppercase">
-                            IN THE HAUS TABLE SHOWCASE
-                        </div>
+                        </>
                     )}
-                </AnimatePresence>
-            </div>
+                </div>
+
+                {/* 5-second progress countdown bar */}
+                <div className="space-y-1">
+                    <div className="w-full bg-[oklch(18%_0.012_28)] h-1 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: '100%' }}
+                            animate={{ width: '0%' }}
+                            transition={{ duration: 5, ease: 'linear' }}
+                            className="h-full bg-[oklch(52%_0.16_28)]"
+                        />
+                    </div>
+                    <span className="text-[8px] font-mono text-[oklch(55%_0.010_28)] tracking-widest uppercase">
+                        RETURNING TO STANDBY IN 5 SECONDS...
+                    </span>
+                </div>
+            </motion.div>
         </div>
     );
 
@@ -589,7 +850,7 @@ export default function POSCustomerDisplay() {
                         const coins = Math.max(0, parseFloat(mp.xhaus_balance ?? mp.xhaus_coins ?? mp.points_balance ?? mp.points ?? 0) || 0);
                         const stamps = parseInt(mp.drink_stamp_count || 0, 10);
                         const freeDrinks = parseInt(mp.free_drink_quota || 0, 10);
-                        const tier = mp.current_tier || mp.tier || 'Haus Common';
+                        const tier = mp.current_tier || mp.tier || 'HAUS COMMON';
 
                         return (
                             <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2 shadow-2xs">
@@ -616,7 +877,7 @@ export default function POSCustomerDisplay() {
                                     {/* Points Box */}
                                     <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
                                         <span className="text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase flex items-center gap-1">
-                                            <Coins size={10} className="text-amber-600" /> แต้ม xhaus
+                                            แต้ม XHAUS
                                         </span>
                                         <div className="mt-0.5">
                                             <span className="text-xs font-black text-[oklch(52%_0.16_28)]">
@@ -631,7 +892,7 @@ export default function POSCustomerDisplay() {
                                     {/* Cup Stamps Box */}
                                     <div className="bg-[oklch(94%_0.010_28)]/80 border border-[oklch(85%_0.012_28)] rounded-lg p-1.5 flex flex-col justify-between">
                                         <div className="flex items-center justify-between text-[8px] font-bold text-[oklch(55%_0.010_28)] uppercase">
-                                            <span className="flex items-center gap-1"><Coffee size={10} className="text-[oklch(52%_0.16_28)]" /> แก้วสะสม</span>
+                                            <span>แก้วสะสม</span>
                                             <span>{stamps}/10</span>
                                         </div>
                                         <div className="flex items-center gap-0.5 mt-1">
@@ -654,24 +915,11 @@ export default function POSCustomerDisplay() {
 
                                 {/* Free Drink Alert Badge */}
                                 {freeDrinks > 0 && (
-                                    <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-emerald-950">
-                                        <span className="flex items-center gap-1">
-                                            <Gift size={11} className="text-emerald-700 shrink-0" />
-                                            สิทธิ์เครื่องดื่มฟรี: {freeDrinks} แก้ว
-                                        </span>
-                                        <span className="text-[8px] bg-emerald-700 text-white px-1.5 py-0.2 rounded uppercase">
+                                    <div className="bg-[oklch(45%_0.08_140)]/15 border border-[oklch(45%_0.08_140)]/30 rounded-lg p-1.5 flex items-center justify-between text-[9px] font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                        <span>สิทธิ์เครื่องดื่มฟรี: {freeDrinks} แก้ว</span>
+                                        <span className="text-[8px] bg-[oklch(45%_0.08_140)] text-white px-1.5 py-0.2 rounded uppercase">
                                             พร้อมใช้
                                         </span>
-                                    </div>
-                                )}
-
-                                {/* Customer Prompt / Reminder Banner */}
-                                {(coins >= 10 || freeDrinks > 0) && (
-                                    <div className="bg-[#FFF9E6] border border-amber-300/90 rounded-lg p-1.5 text-center">
-                                        <p className="text-[9.5px] font-bold text-amber-950 flex items-center justify-center gap-1 font-sans">
-                                            <Sparkles size={11} className="text-amber-600 shrink-0" />
-                                            <span>คุณมีสิทธิ์ส่วนลด / เครื่องดื่มฟรี แจ้งพนักงานเพื่อใช้สิทธิ์ในบิลนี้ได้เลยครับ!</span>
-                                        </p>
                                     </div>
                                 )}
                             </div>
@@ -709,9 +957,9 @@ export default function POSCustomerDisplay() {
                         </span>
                     </div>
                     {orderData.discount > 0 && (
-                        <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(45%_0.08_140)]">
-                            <span>SAVINGS</span>
-                            <span className="font-bold">
+                        <div className="flex justify-between items-center text-[10px] font-mono text-[oklch(45%_0.08_140)] font-bold">
+                            <span>SAVINGS / DISCOUNT</span>
+                            <span>
                                 - ฿{orderData.discount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                             </span>
                         </div>
@@ -727,17 +975,19 @@ export default function POSCustomerDisplay() {
                 </div>
             </div>
 
-            {/* Right Pane: Live Itemized Order List with flexbox viewport safety */}
+            {/* Right Pane: Live Itemized Order List */}
             <div className="w-7/12 h-full flex flex-col justify-between p-4 bg-[oklch(97%_0.008_28)] overflow-hidden">
                 <div className="pb-2 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between shrink-0">
-                    <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] flex items-center gap-2">
-                        <Receipt size={14} className="text-[oklch(52%_0.16_28)]" />
-                        YOUR ORDER SUMMARY
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                        <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            YOUR ORDER SUMMARY
+                        </h2>
+                    </div>
                     <VenueLogo className="h-5 max-w-[90px] object-contain opacity-90" />
                 </div>
 
-                {/* Items List (Strict Flexbox for 1024x600 without overflow) */}
+                {/* Items List */}
                 <div className="flex-1 min-h-0 overflow-y-auto cfd-scrollbar py-2 space-y-1.5 pr-1">
                     <AnimatePresence>
                         {orderData.items && orderData.items.length > 0 ? (
@@ -753,9 +1003,16 @@ export default function POSCustomerDisplay() {
                                             {item.quantity}x
                                         </span>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)] uppercase leading-tight truncate">
-                                                {item.name}
-                                            </h3>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-xs text-[oklch(18%_0.012_28)] uppercase leading-tight truncate">
+                                                    {item.name}
+                                                </h3>
+                                                {item.destination && (
+                                                    <span className="text-[8px] font-mono uppercase px-1 py-0.2 rounded bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] shrink-0 border border-[oklch(85%_0.012_28)]">
+                                                        {item.destination === 'bar' ? 'BAR' : 'KITCHEN'}
+                                                    </span>
+                                                )}
+                                            </div>
                                             {item.selected_options && item.selected_options.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-1">
                                                     {item.selected_options.map((opt, i) => (
@@ -764,6 +1021,11 @@ export default function POSCustomerDisplay() {
                                                         </span>
                                                     ))}
                                                 </div>
+                                            )}
+                                            {item.item_note && (
+                                                <p className="text-[9px] font-sans text-[oklch(52%_0.16_28)] mt-0.5">
+                                                    โน้ต: {item.item_note}
+                                                </p>
                                             )}
                                         </div>
                                     </div>
@@ -775,7 +1037,6 @@ export default function POSCustomerDisplay() {
                             ))
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] font-mono text-[11px] uppercase tracking-widest gap-2 py-8">
-                                <Utensils size={24} strokeWidth={1} />
                                 <span>กำลังเลือกรายการอาหาร...</span>
                             </div>
                         )}
@@ -811,7 +1072,7 @@ export default function POSCustomerDisplay() {
     const renderCheckoutMode = () => (
         <div className="w-full h-full bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] flex font-sans overflow-hidden select-none">
             
-            {/* Left Column: Order Bill Recap with flexbox viewport safety */}
+            {/* Left Column: Order Bill Recap */}
             <div className="w-1/2 h-full bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] p-4 flex flex-col justify-between overflow-hidden">
                 <div className="flex flex-col flex-1 min-h-0">
                     <div className="flex items-center justify-between mb-1.5 shrink-0">
@@ -837,9 +1098,9 @@ export default function POSCustomerDisplay() {
                                         สมาชิก: {mp.display_name || mp.name || orderData.customer}
                                     </span>
                                     <span className="text-[8.5px] text-[oklch(55%_0.010_28)] flex items-center gap-1.5 mt-0.5">
-                                        <span className="flex items-center gap-0.5"><Coins size={9} className="text-amber-600" /> {Math.floor(coins).toLocaleString()} pts</span>
+                                        <span>{Math.floor(coins).toLocaleString()} pts</span>
                                         <span>·</span>
-                                        <span className="flex items-center gap-0.5"><Coffee size={9} className="text-[oklch(52%_0.16_28)]" /> {stamps}/10 แก้ว</span>
+                                        <span>{stamps}/10 แก้ว</span>
                                     </span>
                                 </div>
                                 <span className="text-[8px] font-bold bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded uppercase shrink-0">
@@ -927,7 +1188,6 @@ export default function POSCustomerDisplay() {
                         <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
                         <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
-                            <QrCode size={14} />
                             <span>PROMPTPAY QR PAYMENT</span>
                         </div>
 
@@ -967,7 +1227,6 @@ export default function POSCustomerDisplay() {
                 )}
 
                 <div className="mt-3 flex items-center gap-2 text-[oklch(55%_0.010_28)] text-[10px] font-mono uppercase tracking-wider">
-                    <Smartphone size={14} className="text-[oklch(52%_0.16_28)] shrink-0" />
                     <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'กรุณาแสดงสลิปการโอนเงินต่อพนักงาน'}</span>
                 </div>
             </div>
@@ -1105,7 +1364,6 @@ export default function POSCustomerDisplay() {
                         <VenueLogo className="h-6 max-w-[110px] object-contain mb-1.5" />
                         {/* PromptPay Header */}
                         <div className="w-full bg-[#003D7A] text-white py-1.5 font-bold text-[10px] font-mono tracking-wider uppercase mb-2 flex items-center justify-center gap-1.5 rounded-md shadow-2xs">
-                            <QrCode size={14} />
                             <span>SPLIT PROMPTPAY QR</span>
                         </div>
 
@@ -1143,7 +1401,6 @@ export default function POSCustomerDisplay() {
                 )}
 
                 <div className="mt-3 flex items-center gap-2 text-[oklch(55%_0.010_28)] text-[10px] font-mono uppercase tracking-wider">
-                    <Smartphone size={14} className="text-[oklch(52%_0.16_28)] shrink-0" />
                     <span>{orderData.paymentMethod === 'cash' ? 'กรุณาชำระเงินสดที่แคชเชียร์' : 'สแกน QR เพื่อชำระยอดเฉพาะส่วนนี้'}</span>
                 </div>
             </div>
@@ -1162,9 +1419,6 @@ export default function POSCustomerDisplay() {
                 className="flex flex-col items-center space-y-3.5 max-w-md"
             >
                 <VenueLogo className="h-10 max-w-[160px] object-contain brightness-200 filter drop-shadow-md mb-1" />
-                <div className="w-14 h-14 rounded-full bg-white/10 border border-white/30 flex items-center justify-center shadow-xl backdrop-blur-md">
-                    <CheckCircle2 size={36} className="text-white" strokeWidth={1.5} />
-                </div>
 
                 <div className="space-y-1">
                     <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-white/80">
@@ -1206,7 +1460,7 @@ export default function POSCustomerDisplay() {
     );
 
     // -------------------------------------------------------------
-    // RENDER 4: PAYMENT SUCCESS (Thank You & XHAUS Points Earned - Non-Touch Display)
+    // RENDER 4: PAYMENT SUCCESS (Thank You & XHAUS Points Earned)
     // -------------------------------------------------------------
     const renderSuccessMode = () => (
         <div className="w-full h-full bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] flex flex-col items-center justify-center p-6 text-center font-sans relative overflow-hidden select-none">
@@ -1217,9 +1471,6 @@ export default function POSCustomerDisplay() {
                 className="flex flex-col items-center space-y-3.5 max-w-md"
             >
                 <VenueLogo className="h-10 max-w-[160px] object-contain brightness-200 filter drop-shadow-md mb-1" />
-                <div className="w-14 h-14 rounded-full bg-white/10 border border-white/30 flex items-center justify-center shadow-xl backdrop-blur-md">
-                    <CheckCircle2 size={36} className="text-white" strokeWidth={1.5} />
-                </div>
 
                 <div className="space-y-1">
                     <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-white/80">
@@ -1254,7 +1505,6 @@ export default function POSCustomerDisplay() {
                 {orderData.pointsEarned > 0 && (
                     <div className="bg-white/10 border border-white/20 p-3 rounded-xl w-full backdrop-blur-xs space-y-0.5">
                         <span className="text-[8px] font-mono font-bold tracking-widest uppercase text-amber-300 flex items-center justify-center gap-1">
-                            <Sparkles size={11} />
                             XHAUS POINTS EARNED
                         </span>
                         <p className="text-xl font-mono font-black text-white">
@@ -1276,6 +1526,12 @@ export default function POSCustomerDisplay() {
                 {mode === 'IDLE' && (
                     <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="w-full h-full">
                         {renderIdleMode()}
+                    </motion.div>
+                )}
+
+                {mode === 'ORDER_CONFIRMED' && (
+                    <motion.div key="order_confirmed" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.02 }} className="w-full h-full">
+                        {renderOrderConfirmedMode()}
                     </motion.div>
                 )}
 

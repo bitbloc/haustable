@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '../lib/supabaseClient';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSEmergencyItemModal from './POSEmergencyItemModal';
-import { getShortBookingId, normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
+import { getShortBookingId, normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
 
@@ -76,7 +76,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [editNickname, setEditNickname] = React.useState('');
     const [editPhone, setEditPhone] = React.useState('');
     const [isMenuDrawerOpen, setIsMenuDrawerOpen] = React.useState(false);
-    const [storePromptpayId, setStorePromptpayId] = React.useState('0985284217');
+    const [storePromptpayId, setStorePromptpayId] = React.useState('0614232455');
+    const [storePromptpayName, setStorePromptpayName] = React.useState('ธัญญธร ศรีวิเศษ');
 
     const startEditingProfile = (profile) => {
         setEditingProfile(profile);
@@ -316,6 +317,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         'crm_base_spend_amount',
                         'crm_max_redeem_percent',
                         'promptpay_id',
+                        'promptpay_name',
+                        'receipt_promptpay_name',
                         'receipt_shop_phone',
                         'contact_phone',
                         'admin_phone_contact',
@@ -333,6 +336,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     }
                     const resolvedPpId = getStorePromptpayId(settingsObj, parsedCfg);
                     setStorePromptpayId(resolvedPpId);
+
+                    const resolvedPpName = getStorePromptpayName(settingsObj, parsedCfg);
+                    setStorePromptpayName(resolvedPpName);
                     
                     const numObj = {};
                     ['crm_redeem_rate_xhaus', 'crm_min_redeem_xhaus', 'crm_base_spend_amount', 'crm_max_redeem_percent'].forEach(k => {
@@ -673,7 +679,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         memberProfile: enrichedMemberProfile,
                         tableName: order.table?.table_name || booking?.tables_layout?.table_name || null,
                         paymentMethod: 'qr',
-                        promptpayId: storePromptpayId,
+                        promptpayId: storePromptpayId || '0614232455',
+                        promptpayName: storePromptpayName || 'ธัญญธร ศรีวิเศษ',
                         xhausDiscount,
                         freeDrinkDiscount,
                         useFreeDrinkQuota,
@@ -696,7 +703,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         paymentMethod: 'cash',
                         cashReceived: received,
                         changeDue: Math.max(0, received - total),
-                        promptpayId: storePromptpayId,
+                        promptpayId: storePromptpayId || '0614232455',
+                        promptpayName: storePromptpayName || 'ธัญญธร ศรีวิเศษ',
                         xhausDiscount,
                         freeDrinkDiscount,
                         useFreeDrinkQuota,
@@ -831,15 +839,23 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     }, [broadcastCFD]);
 
     React.useEffect(() => {
+        let followUpTimer = null;
         const timer = setTimeout(() => {
             const currentMsg = computeCurrentCFDPayload();
             // If we just completed a payment within 6.5s, do NOT abruptly send IDLE to overwrite the celebration screen unless new items were added
             if (currentMsg?.type === 'IDLE' && Date.now() - lastPaymentSuccessTimeRef.current < 6500) {
+                const remaining = Math.max(100, 6500 - (Date.now() - lastPaymentSuccessTimeRef.current));
+                followUpTimer = setTimeout(() => {
+                    broadcastCFD({ type: 'IDLE', timestamp: Date.now() });
+                }, remaining + 100);
                 return;
             }
             broadcastCFD(currentMsg);
         }, 80);
-        return () => clearTimeout(timer);
+        return () => {
+            clearTimeout(timer);
+            if (followUpTimer) clearTimeout(followUpTimer);
+        };
     }, [computeCurrentCFDPayload, broadcastCFD]);
     
     const hasNewItems = order.items.some(item => !item.db_id);
@@ -2244,12 +2260,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 {/* --- QR FLOW --- */}
                                 {paymentMethod === 'qr' && (
                                     <div className="space-y-2.5 animate-in fade-in duration-150">
-                                        <div className="p-3.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-center space-y-1">
+                                        <div className="p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg text-center space-y-1">
                                             <p className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
                                                 PROMPTPAY READY · พร้อมรับชำระ
                                             </p>
-                                            <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed">
-                                                ลูกค้าสแกนได้จากหน้าจอ CFD หรือพิมพ์ใบแจ้งยอด
+                                            <p className="text-[11px] font-bold text-[oklch(52%_0.16_28)]">
+                                                ชื่อบัญชี: {storePromptpayName || 'ธัญญธร ศรีวิเศษ'}
+                                            </p>
+                                            <p className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                                พร้อมเพย์: {formatPromptpayDisplay(storePromptpayId || '0614232455')}
                                             </p>
                                         </div>
 

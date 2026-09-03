@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
-import { normalizePromptPayId, getStorePromptpayId } from '../utils/printerHelper';
+import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName } from '../utils/printerHelper';
 import { formatOrderItemOptions } from '../utils/menuHelper';
 
 export default function POSSplitPaymentModal({
@@ -44,7 +44,8 @@ export default function POSSplitPaymentModal({
     const [cashReceived, setCashReceived] = useState('');
     
     // PromptPay settings resolution
-    const [storePromptpayId, setStorePromptpayId] = useState(() => normalizePromptPayId(propPromptpayId || '0985284217'));
+    const [storePromptpayId, setStorePromptpayId] = useState(() => normalizePromptPayId(propPromptpayId || '0614232455'));
+    const [storePromptpayName, setStorePromptpayName] = useState('ธัญญธร ศรีวิเศษ');
 
     useEffect(() => {
         if (propPromptpayId) {
@@ -56,7 +57,7 @@ export default function POSSplitPaymentModal({
                 const { data } = await supabase
                     .from('app_settings')
                     .select('key, value')
-                    .in('key', ['promptpay_id', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'printer_config']);
+                    .in('key', ['promptpay_id', 'promptpay_name', 'receipt_promptpay_name', 'receipt_shop_phone', 'contact_phone', 'admin_phone_contact', 'phone_number', 'printer_config']);
                 if (data && data.length > 0) {
                     const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                     let parsedCfg = {};
@@ -65,6 +66,9 @@ export default function POSSplitPaymentModal({
                     }
                     const resolved = getStorePromptpayId(settingsMap, parsedCfg);
                     setStorePromptpayId(resolved);
+                    
+                    const resolvedName = getStorePromptpayName(settingsMap, parsedCfg);
+                    setStorePromptpayName(resolvedName);
                 }
             } catch (e) {}
         };
@@ -206,6 +210,8 @@ export default function POSSplitPaymentModal({
                         amount: currentEqualAmount
                     } : null,
                     qrPayload: splitQrPayload,
+                    promptpayId: storePromptpayId || '0614232455',
+                    promptpayName: storePromptpayName || 'ธัญญธร ศรีวิเศษ',
                     memberProfile: attachedSplitMember
                 }
             });

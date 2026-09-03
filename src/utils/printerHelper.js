@@ -2720,8 +2720,17 @@ export function getStorePromptpayId(settingsMap = {}, printerConfig = {}) {
         || settingsMap.contact_phone 
         || settingsMap.admin_phone_contact 
         || settingsMap.phone_number 
-        || '0985284217';
+        || '0614232455';
     return normalizePromptPayId(raw);
+}
+
+export function getStorePromptpayName(settingsMap = {}, printerConfig = {}) {
+    const raw = settingsMap.promptpay_name 
+        || settingsMap.receipt_promptpay_name 
+        || printerConfig.promptpay_name 
+        || (typeof window !== 'undefined' ? localStorage.getItem('promptpay_name') : null)
+        || 'ธัญญธร ศรีวิเศษ';
+    return raw;
 }
 
 /**

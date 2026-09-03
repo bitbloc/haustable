@@ -2010,6 +2010,13 @@ export default function POSDashboard() {
             setActiveBooking(null);
             setCurrentOrder({ items: [], customer: null, table: null });
             setAttachedMemberCrm(null);
+            const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
+            window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
+            try {
+                if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                    window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdIdleDetail));
+                }
+            } catch (e) {}
         }
     }, [selectedTable, view]);
 
@@ -2224,6 +2231,13 @@ export default function POSDashboard() {
                     setAttachedMemberCrm(null);
                     setRefreshKey(prev => prev + 1);
                     setView('tables');
+                    const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
+                    window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
+                    try {
+                        if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                            window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdIdleDetail));
+                        }
+                    } catch (e) {}
                 }
             }
         } else {
@@ -2234,6 +2248,13 @@ export default function POSDashboard() {
             setActiveBooking(null);
             setAttachedMemberCrm(null);
             setView('tables');
+            const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
+            window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
+            try {
+                if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                    window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdIdleDetail));
+                }
+            } catch (e) {}
             toast.info('เคลียร์รายการและคืนสถานะเรียบร้อยแล้ว');
         }
     };
@@ -3190,6 +3211,25 @@ export default function POSDashboard() {
                                             openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
                                         }
                                         
+                                        // Broadcast ORDER_CONFIRMED to CFD so customer sees confirmation and screen auto-resets to IDLE
+                                        const cfdConfirmedDetail = {
+                                            type: 'ORDER_CONFIRMED',
+                                            payload: {
+                                                tableName: selectedTable?.table_name || finalBooking.tables_layout?.table_name || 'Counter Order',
+                                                customer: finalBooking.profiles?.display_name || finalBooking.pickup_contact_name || finalBooking.customer_name || 'Walk-in Guest',
+                                                itemCount: unprinted.length > 0 ? unprinted.length : (finalBooking.order_items?.length || 0),
+                                                totalAmount: (finalBooking.order_items || []).reduce((sum, i) => sum + (parseFloat(i.price_at_time ?? i.price) * (i.quantity || 1)), 0),
+                                                bookingId: activeBooking.id
+                                            },
+                                            timestamp: Date.now()
+                                        };
+                                        window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdConfirmedDetail }));
+                                        try {
+                                            if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                                                window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdConfirmedDetail));
+                                            }
+                                        } catch (e) {}
+
                                         checkPendingOrders();
                                         }
                                     }
