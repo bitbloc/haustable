@@ -192,7 +192,13 @@ export default function POSSplitPaymentModal({
         };
     }, []);
 
+    const lastSplitBroadcastRef = useRef('');
     const broadcastToCFD = (payload) => {
+        if (!payload) return;
+        const contentStr = JSON.stringify({ type: payload.type, payload: payload.payload });
+        if (contentStr === lastSplitBroadcastRef.current) return;
+        lastSplitBroadcastRef.current = contentStr;
+
         const enriched = { ...payload, timestamp: payload.timestamp || Date.now() };
         if (cfdChannel.current) {
             try { cfdChannel.current.postMessage(enriched); } catch (e) {}

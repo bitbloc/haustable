@@ -772,16 +772,18 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         }
     }, [activeModal, paymentMethod, order.items, order.customer, order.table, subtotal, memberDiscount, promoDiscount, manualDiscount, xhausDiscount, rewardDiscount, freeDrinkDiscount, tax, total, enrichedMemberProfile, booking, cashReceivedInput, storePromptpayId, storePromptpayName, useFreeDrinkQuota, xhausToRedeem]);
 
-    const lastBroadcastMsgRef = React.useRef('');
+    const lastBroadcastContentRef = React.useRef('');
     const cfdDebounceTimerRef = React.useRef(null);
     const lastPaymentSuccessTimeRef = React.useRef(0);
 
     const broadcastCFD = React.useCallback((msg) => {
         if (!msg) return;
+        const contentStr = JSON.stringify({ type: msg.type, payload: msg.payload });
+        if (contentStr === lastBroadcastContentRef.current) return;
+        lastBroadcastContentRef.current = contentStr;
+
         const enrichedMsg = { ...msg, timestamp: msg.timestamp || Date.now() };
         const msgStr = JSON.stringify(enrichedMsg);
-        if (msgStr === lastBroadcastMsgRef.current) return;
-        lastBroadcastMsgRef.current = msgStr;
 
         if (msg.type === 'PAYMENT_SUCCESS') {
             lastPaymentSuccessTimeRef.current = Date.now();
