@@ -395,12 +395,14 @@ export function getCleanStaffRemark(remark) {
         .replace(/\[CALL_STAFF\]/gi, '')
         .replace(/\[CALL_BILL\]/gi, '')
         .replace(/\[CASH:[^\]]+\]/gi, '')
+        .replace(/\[SPLIT_ROUNDS:\s*\[.*?\]\s*\]/gis, '')
         .replace(/\[SPLIT:[^\]]+\]/gi, '')
         .replace(/\[MERGED_TO:[^\]]+\]/gi, '')
         .replace(/\[MERGED_FROM:[^\]]+\]/gi, '')
         .replace(/\[MOVED:[^\]]+\]/gi, '')
         .replace(/\[ORIG_AMT:[^\]]+\]/gi, '')
         .replace(/Merged into Table\s+\w+/gi, '')
+        .replace(/Split \(Round[^)]+\) Paid by \w+/gi, '')
         .trim();
     return cleaned;
 }

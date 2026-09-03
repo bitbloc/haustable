@@ -10,6 +10,7 @@ import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getShortBookingId, normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, formatPromptpayDisplay } from '../utils/printerHelper';
 import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
+import { getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -564,7 +565,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const tax = includeTax ? Math.ceil(netBeforeTax * 0.07) : 0;
     
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
-    const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid));
+    const splitPaidAmount = getSplitTotalPaid(booking);
+    const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid - splitPaidAmount));
     
     // xhaus points earned
     const currentMemberForPoints = attachedMemberCrm || booking?.profiles;
@@ -1270,10 +1272,19 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </div>
                     )}
 
+                    {splitPaidAmount > 0 && (
+                        <div className="flex justify-between items-center text-emerald-700 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
+                            <span>ชำระแบ่งจ่ายแล้ว ({getBookingSplitRounds(booking).length} รอบ)</span>
+                            <span>-฿{Math.ceil(splitPaidAmount).toLocaleString()}</span>
+                        </div>
+                    )}
+
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
-                        <span className="text-xs font-bold pb-1 text-[#767673]">NET TOTAL</span>
+                        <span className="text-xs font-bold pb-1 text-[#767673]">
+                            {splitPaidAmount > 0 ? 'REMAINING DUE / คงเหลือ' : 'NET TOTAL'}
+                        </span>
                         <div className="flex items-center gap-2">
-                            {depositPaid >= (netBeforeTax + tax) && (netBeforeTax + tax) > 0 && (
+                            {(depositPaid + splitPaidAmount) >= (netBeforeTax + tax) && (netBeforeTax + tax) > 0 && (
                                 <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wider">
                                     [ PAID ]
                                 </span>
@@ -1340,9 +1351,14 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     <button 
                                         type="button"
                                         onClick={() => onOpenSplitPayment?.(includeTax)}
-                                        className="flex items-center justify-center gap-2 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2.5 rounded-xl text-[#1A1A1A] transition-all shadow-sm cursor-pointer touch-manipulation"
+                                        className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer touch-manipulation border ${
+                                            splitPaidAmount > 0
+                                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-black'
+                                                : 'bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] text-[#1A1A1A]'
+                                        }`}
                                     >
-                                        <Coins size={14} /> Split Payment
+                                        <Coins size={14} />
+                                        <span>Split ({getBookingSplitRounds(booking).length > 0 ? `รอบ ${getBookingSplitRounds(booking).length + 1}` : 'Payment'})</span>
                                     </button>
                                 )}
                             </div>

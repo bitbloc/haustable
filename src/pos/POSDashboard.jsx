@@ -16,6 +16,7 @@ import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown } from '../utils/shiftHelper';
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
+import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
@@ -2845,7 +2846,7 @@ export default function POSDashboard() {
     const handleExecuteSplitPayment = async (splitPayload) => {
         if (!activeBooking || !selectedTable) return;
         const {
-            splitMode = 'ITEMS',
+            splitMode = 'PERCENT',
             paidItems = [],
             splitTotal = 0,
             paymentMethod = 'cash',
@@ -2855,7 +2856,8 @@ export default function POSDashboard() {
             splitMeta = {}
         } = splitPayload;
 
-        const toastId = toast.loading('กำลังบันทึกแบ่งชำระเงิน...');
+        const roundNum = splitMeta.roundNumber || 1;
+        const toastId = toast.loading(`กำลังบันทึกแบ่งชำระเงินรอบที่ ${roundNum}...`);
 
         if (paymentMethod === 'cash') {
             localStorage.setItem('last_cash_received', cashReceived);
@@ -2870,18 +2872,17 @@ export default function POSDashboard() {
         const remainingBalanceAfter = splitMeta.remainingBalanceAfterSplit !== undefined ? splitMeta.remainingBalanceAfterSplit : 0;
         const isFullySettled = remainingBalanceAfter <= 0 || isPayingAllItems;
 
-        const splitRemark = splitMode === 'EQUAL' 
-            ? `Split (Equal ${splitMeta.currentPersonIndex || 1}/${splitMeta.totalPeople || 2}) Paid by ${paymentMethod.toUpperCase()}`
-            : splitMode === 'CUSTOM'
-                ? `Split (Custom ฿${splitTotal}) Paid by ${paymentMethod.toUpperCase()}`
-                : `Split (Items) Paid by ${paymentMethod.toUpperCase()}`;
+        const percentTag = splitMode === 'PERCENT' && splitMeta.selectedPercent ? ` (${splitMeta.selectedPercent}%)` : '';
+        const equalTag = splitMode === 'EQUAL' && splitMeta.currentPersonIndex ? ` (คน ${splitMeta.currentPersonIndex}/${splitMeta.totalPeople || 2})` : '';
+
+        const splitChildRemark = `Split (Round ${roundNum}${percentTag || equalTag}) Paid by ${paymentMethod.toUpperCase()}`;
 
         const mockSplitBooking = {
             ...activeBooking,
             id: `split_${Date.now()}`,
             total_amount: splitTotal,
             discount_amount: 0,
-            staff_remark: splitRemark,
+            staff_remark: splitChildRemark,
             user_id: attachedMember?.id || activeBooking.user_id || null,
             profiles: attachedMember || activeBooking.profiles || null,
             tables_layout: activeBooking.tables_layout || { table_name: selectedTable.table_name || selectedTable.name || '' },
@@ -2901,32 +2902,45 @@ export default function POSDashboard() {
                 }))
         };
 
+        const updatedParentRemark = appendSplitRoundToRemark(activeBooking.staff_remark || '', {
+            round: roundNum,
+            amount: splitTotal,
+            method: paymentMethod,
+            mode: splitMode,
+            percent: splitMeta.selectedPercent || null,
+            payer: attachedMember?.display_name || attachedMember?.phone_number || null,
+            time: new Date().toISOString()
+        });
+
         if (!isOnline()) {
             const cachedBookings = JSON.parse(localStorage.getItem('pos_cache_active_bookings')) || [];
             const mockOfflineSplitId = `local_split_${Date.now()}`;
             mockSplitBooking.id = mockOfflineSplitId;
 
-            if (isItemsMode) {
-                const updatedBookings = cachedBookings.map(b => {
-                    if (b.id === activeBooking.id) {
-                        const remainingItems = b.order_items.map(dbItem => {
+            const updatedBookings = cachedBookings.map(b => {
+                if (b.id === activeBooking.id) {
+                    let remainingItems = b.order_items || [];
+                    if (isItemsMode) {
+                        remainingItems = (b.order_items || []).map(dbItem => {
                             const paid = paidItems.find(p => p.id === dbItem.menu_item_id || p.db_id === dbItem.id);
                             if (paid) {
                                 return { ...dbItem, quantity: Math.max(0, dbItem.quantity - paid.selectedQty) };
                             }
                             return dbItem;
                         }).filter(dbItem => dbItem.quantity > 0);
-
-                        return {
-                            ...b,
-                            status: isFullySettled ? 'completed' : b.status,
-                            order_items: remainingItems
-                        };
                     }
-                    return b;
-                }).filter(b => isFullySettled ? b.id !== activeBooking.id : true);
-                localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
-            }
+
+                    return {
+                        ...b,
+                        status: isFullySettled ? 'completed' : b.status,
+                        total_amount: isFullySettled ? 0 : remainingBalanceAfter,
+                        staff_remark: updatedParentRemark,
+                        order_items: remainingItems
+                    };
+                }
+                return b;
+            }).filter(b => isFullySettled ? b.id !== activeBooking.id : true);
+            localStorage.setItem('pos_cache_active_bookings', JSON.stringify(updatedBookings));
 
             addToOfflineQueue('split_payment', {
                 bookingId: activeBooking.id,
@@ -2945,13 +2959,14 @@ export default function POSDashboard() {
                     table_id: activeBooking.table_id || selectedTable?.id || null,
                     booking_type: activeBooking.booking_type || 'walk_in',
                     pax: activeBooking.pax || 0,
-                    user_id: attachedMember?.id || activeBooking.user_id || null
+                    user_id: attachedMember?.id || activeBooking.user_id || null,
+                    staff_remark: updatedParentRemark
                 }
             });
 
             recordShiftTransaction(mockOfflineSplitId, splitTotal, paymentMethod);
 
-            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่าย ฿${splitTotal.toLocaleString()} สำเร็จ!`, { id: toastId });
+            toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายรอบที่ ${roundNum} (฿${splitTotal.toLocaleString()}) สำเร็จ!`, { id: toastId });
             setShowSplitModal(false);
             openSlipOrSilentPrint(mockSplitBooking, 'receipt');
 
@@ -2959,6 +2974,9 @@ export default function POSDashboard() {
                 setActiveBooking(null);
                 setSelectedTable(null);
                 setView('tables');
+            } else {
+                // Update local activeBooking state with updated remark and balance
+                setActiveBooking(prev => prev ? ({ ...prev, total_amount: remainingBalanceAfter, staff_remark: updatedParentRemark }) : null);
             }
             setRefreshKey(prev => prev + 1);
             return;
@@ -2973,7 +2991,7 @@ export default function POSDashboard() {
                 booking_time: new Date().toISOString(),
                 pax: activeBooking.pax || 0,
                 user_id: attachedMember?.id || activeBooking.user_id || null,
-                staff_remark: splitRemark,
+                staff_remark: splitChildRemark,
                 total_amount: splitTotal,
                 discount_amount: 0,
                 tracking_token: crypto.randomUUID()
@@ -3024,12 +3042,13 @@ export default function POSDashboard() {
 
             // 4. Check if fully settled or remaining
             if (isFullySettled) {
-                // Complete original booking and free table
+                // Complete parent booking with 0 total_amount to prevent shift double-counting
                 await supabase
                     .from('bookings')
                     .update({ 
                         status: 'completed',
-                        staff_remark: `Completed via Split Payments`
+                        total_amount: 0,
+                        staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
 
@@ -3040,23 +3059,21 @@ export default function POSDashboard() {
                         .eq('id', selectedTable.id);
                 }
 
-                toast.success(`ชำระครบถ้วนทั้งโต๊ะแล้ว! (ยอดรอบนี้ ฿${splitTotal.toLocaleString()})`, { id: toastId });
+                toast.success(`🎉 ชำระครบถ้วนทั้งโต๊ะแล้ว! (ยอดรอบนี้ ฿${splitTotal.toLocaleString()})`, { id: toastId });
                 setActiveBooking(null);
                 setSelectedTable(null);
                 setView('tables');
             } else {
-                // Update original booking's remaining total amount
-                if (!isItemsMode) {
-                    await supabase
-                        .from('bookings')
-                        .update({ 
-                            total_amount: remainingBalanceAfter,
-                            staff_remark: `Partial Split Paid ฿${splitTotal}`
-                        })
-                        .eq('id', activeBooking.id);
-                }
+                // Update parent booking's remaining total amount & updated split rounds remark
+                await supabase
+                    .from('bookings')
+                    .update({ 
+                        total_amount: remainingBalanceAfter,
+                        staff_remark: updatedParentRemark
+                    })
+                    .eq('id', activeBooking.id);
                 
-                toast.success(`แบ่งจ่าย ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
+                toast.success(`แบ่งจ่ายรอบที่ ${roundNum} ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
                 
                 // Refresh remaining booking
                 if (selectedTable?.id) {

@@ -15,20 +15,36 @@ export const getBookingPaymentBreakdown = (b) => {
     // Determine if this is an online e-commerce / shipping order
     const isOnline = orderType === 'hausmade_shipping' || (bookingType === 'hausmade' && !b.table_id && orderType !== 'hausmade_pickup');
     
-    // 1. Check for split payment annotation in remark, e.g. [SPLIT: CASH=100, QR=200, CREDIT=0]
-    const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
-    if (splitMatch) {
-        const splitText = splitMatch[1];
+    // 1. Check for split payment annotation in remark, e.g. [SPLIT_ROUNDS: [...]] or [SPLIT: CASH=100, QR=200, CREDIT=0]
+    const splitRoundsMatch = remark.match(/\[SPLIT_ROUNDS:\s*(\[.*?\])\s*\]/is);
+    const splitMatch = remark.match(/\[split(?![_a-z0-9]):?\s*([^\]]+)\]/i) || remark.match(/\bsplit:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
+    if (splitRoundsMatch || splitMatch) {
         let cash = 0, qr = 0, credit = 0;
         
-        const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (cashM) cash = parseFloat(cashM[1]) || 0;
-        
-        const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (qrM) qr = parseFloat(qrM[1]) || 0;
-        
-        const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
-        if (creditM) credit = parseFloat(creditM[1]) || 0;
+        if (splitMatch) {
+            const splitText = splitMatch[1];
+            const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i);
+            if (cashM) cash = parseFloat(cashM[1]) || 0;
+            
+            const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i);
+            if (qrM) qr = parseFloat(qrM[1]) || 0;
+            
+            const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i);
+            if (creditM) credit = parseFloat(creditM[1]) || 0;
+        } else if (splitRoundsMatch) {
+            try {
+                const parsedRounds = JSON.parse(splitRoundsMatch[1]);
+                if (Array.isArray(parsedRounds)) {
+                    parsedRounds.forEach(r => {
+                        const amt = parseFloat(r.amount) || 0;
+                        const m = (r.method || 'qr').toLowerCase();
+                        if (m === 'cash') cash += amt;
+                        else if (m === 'credit') credit += amt;
+                        else qr += amt;
+                    });
+                }
+            } catch (e) {}
+        }
         
         return {
             cash,

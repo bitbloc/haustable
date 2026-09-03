@@ -25,6 +25,7 @@ import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 import { posCache } from '../utils/offlineHelper';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
+import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
 
 const formatUpcomingResTime = (timeStr) => {
     if (!timeStr) return '';
@@ -642,6 +643,11 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                             ย้าย
                         </span>
                     )}
+                    {table.booking && getBookingSplitRounds(table.booking).length > 0 && (
+                        <span className="bg-emerald-700 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none shadow-xs">
+                            R{getBookingSplitRounds(table.booking).length}
+                        </span>
+                    )}
                     {hasOrder && (
                         <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                             ORDER
@@ -767,6 +773,11 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                      {transfer.isMoved && (
                          <span className="bg-blue-600 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
                              ย้ายจาก {transfer.movedFromTable}
+                         </span>
+                     )}
+                     {table.booking && getBookingSplitRounds(table.booking).length > 0 && (
+                         <span className="bg-emerald-700 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
+                             แบ่งจ่าย R{getBookingSplitRounds(table.booking).length}
                          </span>
                      )}
                      {hasOrder && (
