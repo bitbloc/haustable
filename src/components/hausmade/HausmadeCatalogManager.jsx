@@ -332,89 +332,89 @@ export default function HausmadeCatalogManager() {
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                 <div
                     onClick={() => setStatusFilter('ALL')}
-                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all ${
+                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'ALL'
                             ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider opacity-70">
                         [ สินค้าทั้งหมด // ALL ]
                     </span>
-                    <span className="text-2xl font-black mt-1">{stats.total}</span>
+                    <span className="text-2xl font-black mt-1 tabular-nums">{stats.total}</span>
                 </div>
 
                 <div
                     onClick={() => setStatusFilter('IN_STOCK')}
-                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all ${
+                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'IN_STOCK'
                             ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(45%_0.08_140)]">
                         [ พร้อมส่ง // IN STOCK ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-[oklch(45%_0.08_140)]">{stats.inStock}</span>
+                    <span className="text-2xl font-black mt-1 text-[oklch(45%_0.08_140)] tabular-nums">{stats.inStock}</span>
                 </div>
 
                 <div
                     onClick={() => setStatusFilter('PRE_ORDER')}
-                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all ${
+                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'PRE_ORDER'
                             ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(52%_0.16_28)]">
-                        [ ⏳ เปิดจอง // PRE-ORDER ]
+                        [ เปิดจอง // PRE-ORDER ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-[oklch(52%_0.16_28)]">{stats.preOrder}</span>
+                    <span className="text-2xl font-black mt-1 text-[oklch(52%_0.16_28)] tabular-nums">{stats.preOrder}</span>
                 </div>
 
                 <div
                     onClick={() => setStatusFilter('HERO')}
-                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all ${
+                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'HERO'
                             ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-amber-600">
-                        [ ⭐ ปักหมุด HERO ]
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(28%_0.10_65)]">
+                        [ ปักหมุด HERO ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-amber-600">{stats.hero}</span>
+                    <span className="text-2xl font-black mt-1 text-[oklch(75%_0.18_65)] tabular-nums">{stats.hero}</span>
                 </div>
 
                 <div
                     onClick={() => setStatusFilter('LOW_STOCK')}
-                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all ${
+                    className={`p-3.5 border font-mono flex flex-col justify-between cursor-pointer transition-all rounded-xs ${
                         statusFilter === 'LOW_STOCK'
                             ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                            : 'bg-white border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            : 'bg-[oklch(99%_0.005_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
-                    <span className="text-[10px] uppercase font-bold tracking-wider text-red-600">
-                        [ ⚠️ ใกล้หมด // LOW ]
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-[oklch(52%_0.16_28)]">
+                        [ สต็อกต่ำ // LOW ]
                     </span>
-                    <span className="text-2xl font-black mt-1 text-red-600">{stats.lowStock}</span>
+                    <span className="text-2xl font-black mt-1 text-[oklch(52%_0.16_28)] tabular-nums">{stats.lowStock}</span>
                 </div>
             </div>
 
             {/* SEARCH & ACTION TOOLBAR */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
                 <div className="flex-1 relative">
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="ค้นหาชื่อสินค้า, รายละเอียด, เสื้อยืด, กาแฟ..."
-                        className="w-full px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] font-mono text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                        className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)] rounded-xs"
                     />
                     {searchQuery && (
                         <button
                             onClick={() => setSearchQuery('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[oklch(55%_0.010_28)]"
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-[oklch(55%_0.010_28)] cursor-pointer"
                         >
                             ✕
                         </button>
@@ -426,7 +426,7 @@ export default function HausmadeCatalogManager() {
                         setEditingProduct(null)
                         setIsEditorOpen(true)
                     }}
-                    className="px-5 py-2.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-xs uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] transition-colors shadow-sm cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
+                    className="px-5 py-2.5 bg-[oklch(52%_0.16_28)] text-white font-bold text-xs uppercase tracking-wider hover:bg-[oklch(45%_0.16_28)] transition-colors shadow-2xs cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap rounded-xs"
                 >
                     <span>[ + เพิ่มสินค้าใหม่ // ADD PRODUCT ]</span>
                 </button>
@@ -436,10 +436,10 @@ export default function HausmadeCatalogManager() {
             {loading ? (
                 <div className="p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] flex flex-col items-center gap-2">
                     <div className="w-5 h-5 border-2 border-[oklch(52%_0.16_28)] border-t-transparent rounded-full animate-spin" />
-                    <span>LOADING HAUSMADE CATALOG...</span>
+                    <span className="uppercase tracking-wider">LOADING HAUSMADE CATALOG...</span>
                 </div>
             ) : filteredProducts.length === 0 ? (
-                <div className="p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] bg-white">
+                <div className="p-12 text-center font-mono text-xs text-[oklch(55%_0.010_28)] border-2 border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.006_28)] rounded-xs">
                     [ ไม่พบสินค้าที่ตรงตามเงื่อนไข ]
                 </div>
             ) : (
@@ -456,10 +456,10 @@ export default function HausmadeCatalogManager() {
                         return (
                             <div
                                 key={product.id}
-                                className={`bg-white border transition-all flex flex-col justify-between relative group ${
+                                className={`bg-[oklch(99%_0.005_28)] border transition-all flex flex-col justify-between relative group rounded-xs ${
                                     isHidden
-                                        ? 'border-gray-300 opacity-60 bg-gray-50'
-                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] shadow-xs'
+                                        ? 'border-[oklch(88%_0.010_28)] opacity-60 bg-[oklch(96%_0.008_28)]'
+                                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] shadow-2xs'
                                 }`}
                             >
                                 {/* Top Image & Badges */}
@@ -472,7 +472,7 @@ export default function HausmadeCatalogManager() {
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         ) : (
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase">
+                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
                                                 [ NO IMAGE // ยังไม่มีรูป ]
                                             </span>
                                         )}
@@ -480,18 +480,18 @@ export default function HausmadeCatalogManager() {
                                         {/* Status Badges */}
                                         <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
                                             {isPo ? (
-                                                <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white font-mono text-[9px] font-bold uppercase shadow-sm">
-                                                    ⏳ PRE-ORDER
+                                                <span className="px-2 py-0.5 bg-[oklch(45%_0.08_140)] text-white font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
+                                                    [ PRE-ORDER ]
                                                 </span>
                                             ) : (
-                                                <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold uppercase shadow-sm">
-                                                    📦 IN-STOCK
+                                                <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
+                                                    [ IN-STOCK ]
                                                 </span>
                                             )}
 
                                             {isPinnedHero && (
-                                                <span className="px-2 py-0.5 bg-amber-500 text-white font-mono text-[9px] font-bold uppercase shadow-sm">
-                                                    ⭐ HERO PINNED
+                                                <span className="px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[9px] font-bold uppercase shadow-2xs rounded-xs">
+                                                    [ HERO PINNED ]
                                                 </span>
                                             )}
                                         </div>
@@ -499,10 +499,10 @@ export default function HausmadeCatalogManager() {
                                         <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5">
                                             <button
                                                 onClick={() => handleToggleAvailable(product)}
-                                                className={`px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-sm cursor-pointer ${
+                                                className={`px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-2xs cursor-pointer rounded-xs ${
                                                     product.is_available !== false
-                                                        ? 'bg-emerald-600 text-white'
-                                                        : 'bg-red-600 text-white'
+                                                        ? 'bg-[oklch(45%_0.08_140)] text-white'
+                                                        : 'bg-[oklch(52%_0.16_28)] text-white'
                                                 }`}
                                             >
                                                 {product.is_available !== false ? 'เปิดขาย' : 'ซ่อนอยู่'}
@@ -511,13 +511,11 @@ export default function HausmadeCatalogManager() {
 
                                         {/* Multi-Photo Count Badge */}
                                         {hasMultipleImages && (
-                                            <div className="absolute bottom-2 right-2 bg-[oklch(18%_0.012_28)]/90 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-sm backdrop-blur-xs flex items-center gap-1">
-                                                <span>📷</span>
-                                                <span>{productImages.length} รูป</span>
+                                            <div className="absolute bottom-2 right-2 bg-[oklch(18%_0.012_28)]/90 text-white px-2 py-0.5 font-mono text-[9px] font-bold uppercase shadow-2xs backdrop-blur-xs flex items-center gap-1 rounded-xs">
+                                                <span className="tabular-nums">[ PHOTOS ] {productImages.length}</span>
                                             </div>
                                         )}
                                     </div>
-
 
                                     {/* Product Details */}
                                     <div className="p-4 flex flex-col gap-2">
@@ -530,7 +528,7 @@ export default function HausmadeCatalogManager() {
                                                     {product.name}
                                                 </h3>
                                             </div>
-                                            <span className="font-mono font-black text-sm text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                            <span className="font-mono font-black text-sm text-[oklch(18%_0.012_28)] whitespace-nowrap tabular-nums">
                                                 ฿{product.price}.-
                                             </span>
                                         </div>
@@ -543,7 +541,7 @@ export default function HausmadeCatalogManager() {
 
                                         {/* Pre-Order ETA Info */}
                                         {isPo && (
-                                            <div className="p-2 bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/40 font-mono text-[10px] text-[oklch(45%_0.08_140)]">
+                                            <div className="p-2 bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/40 font-mono text-[10px] text-[oklch(35%_0.08_140)] rounded-xs">
                                                 <strong>รอบส่ง:</strong> {getPreOrderEta(product)}
                                             </div>
                                         )}
@@ -551,7 +549,7 @@ export default function HausmadeCatalogManager() {
                                         {/* Variants Summary */}
                                         {totalVariants > 0 && (
                                             <div className="mt-1 font-mono text-[10px] text-[oklch(55%_0.010_28)] flex items-center justify-between border-t border-[oklch(85%_0.012_28)]/60 pt-2">
-                                                <span>มี {totalVariants} ตัวเลือกไซส์/แบบ</span>
+                                                <span className="tabular-nums">มี {totalVariants} ตัวเลือกไซส์/แบบ</span>
                                                 <span className="text-[oklch(52%_0.16_28)] font-bold">
                                                     {optionGroups[0]?.option_choices?.map(c => c.name.split(' ')[0]).join(', ')}
                                                 </span>
@@ -561,32 +559,32 @@ export default function HausmadeCatalogManager() {
                                 </div>
 
                                 {/* Bottom Action Bar */}
-                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-[10px] gap-1 flex-wrap">
+                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-[10px] gap-1 flex-wrap rounded-b-xs">
                                     <div className="flex items-center gap-1">
                                         <button
                                             type="button"
                                             onClick={() => handleTogglePreOrder(product)}
                                             title="สลับโหมด Pre-Order"
-                                            className={`px-2 py-1 border transition-colors ${
+                                            className={`px-2 py-1 border transition-colors rounded-xs cursor-pointer whitespace-nowrap ${
                                                 isPo
-                                                    ? 'border-[oklch(45%_0.08_140)] text-[oklch(45%_0.08_140)] bg-white'
+                                                    ? 'border-[oklch(45%_0.08_140)] text-[oklch(35%_0.08_140)] bg-[oklch(99%_0.005_28)]'
                                                     : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                             }`}
                                         >
-                                            {isPo ? '⏳ PRE-ORDER' : '📦 IN-STOCK'}
+                                            {isPo ? '[ PRE-ORDER ]' : '[ IN-STOCK ]'}
                                         </button>
 
                                         <button
                                             type="button"
                                             onClick={() => handleToggleHero(product)}
                                             title="ปักหมุดบน Hero Carousel หน้าร้าน"
-                                            className={`px-2 py-1 border transition-colors ${
+                                            className={`px-2 py-1 border transition-colors rounded-xs cursor-pointer whitespace-nowrap ${
                                                 isPinnedHero
-                                                    ? 'border-amber-500 text-amber-700 bg-amber-50 font-bold'
-                                                    : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-amber-600'
+                                                    ? 'border-[oklch(75%_0.18_65)] text-[oklch(28%_0.10_65)] bg-[oklch(96%_0.03_65)] font-bold'
+                                                    : 'border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                             }`}
                                         >
-                                            {isPinnedHero ? '★ HERO' : '☆ HERO'}
+                                            {isPinnedHero ? '[ HERO: ON ]' : '[ HERO: OFF ]'}
                                         </button>
                                     </div>
 
@@ -595,7 +593,7 @@ export default function HausmadeCatalogManager() {
                                             type="button"
                                             onClick={() => handleDuplicate(product)}
                                             title="คัดลอกสินค้านี้"
-                                            className="px-2 py-1 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:bg-white transition-colors"
+                                            className="px-2 py-1 border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(99%_0.005_28)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                                         >
                                             [ คัดลอก ]
                                         </button>
@@ -606,16 +604,16 @@ export default function HausmadeCatalogManager() {
                                                 setEditingProduct(product)
                                                 setIsEditorOpen(true)
                                             }}
-                                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-white font-bold hover:bg-black transition-colors"
+                                            className="px-3 py-1 bg-[oklch(18%_0.012_28)] text-white font-bold hover:bg-[oklch(28%_0.012_28)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                                         >
-                                            [ ✏️ แก้ไข ]
+                                            [ แก้ไข ]
                                         </button>
 
                                         <button
                                             type="button"
                                             onClick={() => handleDelete(product)}
                                             title="ลบสินค้านี้"
-                                            className="p-1 text-red-500 hover:text-red-700"
+                                            className="p-1 text-[oklch(52%_0.16_28)] hover:text-[oklch(40%_0.16_28)] cursor-pointer"
                                         >
                                             ✕
                                         </button>

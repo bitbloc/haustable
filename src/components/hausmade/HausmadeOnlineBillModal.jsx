@@ -249,23 +249,23 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                         <button
                             onClick={handleCopyImageToClipboard}
                             disabled={isCopyingImage}
-                            className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:opacity-90 text-white text-xs font-bold uppercase transition-opacity flex items-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                            className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:opacity-90 text-white text-xs font-bold uppercase transition-opacity flex items-center gap-1.5 cursor-pointer shadow-2xs rounded-xs disabled:opacity-50 whitespace-nowrap"
                             title="คัดลอกภาพบิลเพื่อวางใน LINE / IG แชททันที"
                         >
-                            <span>📋 คัดลอกภาพส่ง LINE</span>
+                            <span>[ คัดลอกภาพ LINE ]</span>
                         </button>
 
                         <button
                             onClick={handleDownloadPng}
                             disabled={isExporting}
-                            className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-white text-[oklch(18%_0.012_28)] text-xs font-bold uppercase border border-[oklch(85%_0.012_28)] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] text-xs font-bold uppercase border border-[oklch(85%_0.012_28)] transition-colors flex items-center gap-1.5 cursor-pointer rounded-xs disabled:opacity-50 whitespace-nowrap"
                         >
-                            <span>📥 บันทึก PNG</span>
+                            <span>[ บันทึก PNG ]</span>
                         </button>
 
                         <button
                             onClick={onClose}
-                            className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] text-[oklch(85%_0.012_28)] hover:text-white uppercase text-xs transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] text-[oklch(85%_0.012_28)] hover:text-white uppercase text-xs transition-colors rounded-xs cursor-pointer"
                         >
                             [ ✕ ]
                         </button>
@@ -280,7 +280,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                         </span>
                         
                         {/* Quick Preset Buttons */}
-                        <div className="flex items-center gap-1 bg-white border border-[oklch(85%_0.012_28)] p-0.5">
+                        <div className="inline-flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] rounded-xs overflow-hidden divide-x divide-[oklch(85%_0.012_28)]">
                             {[
                                 { fee: 0, label: 'ฟรี (0.-)' },
                                 { fee: 50, label: 'ปกติ (50.-)' },
@@ -291,7 +291,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                     key={p.fee}
                                     type="button"
                                     onClick={() => setCustomShippingFee(p.fee)}
-                                    className={`px-2 py-0.5 text-[10px] font-bold transition-colors cursor-pointer ${
+                                    className={`px-2.5 py-1 text-[10px] font-bold transition-colors cursor-pointer whitespace-nowrap tabular-nums ${
                                         customShippingFee === p.fee
                                             ? 'bg-[oklch(18%_0.012_28)] text-white'
                                             : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
@@ -310,7 +310,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                 min="0"
                                 value={customShippingFee}
                                 onChange={(e) => setCustomShippingFee(Math.max(0, Number(e.target.value)))}
-                                className="w-16 px-2 py-0.5 bg-white border border-[oklch(85%_0.012_28)] text-xs font-bold text-center focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                                className="w-16 px-2 py-0.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold text-center focus:outline-none focus:border-[oklch(52%_0.16_28)] rounded-xs tabular-nums"
                             />
                             <span className="text-[10px]">.-</span>
                         </div>
@@ -322,7 +322,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                 type="button"
                                 onClick={handleSaveShippingFeeToDb}
                                 disabled={isSavingDb}
-                                className="px-2.5 py-1 bg-[oklch(45%_0.08_140)] text-white font-bold text-[10px] uppercase hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
+                                className="px-2.5 py-1 bg-[oklch(45%_0.08_140)] text-white font-bold text-[10px] uppercase hover:opacity-90 transition-opacity rounded-xs cursor-pointer disabled:opacity-50 whitespace-nowrap"
                             >
                                 {isSavingDb ? '...' : '[ บันทึกลงออเดอร์ ]'}
                             </button>
@@ -330,9 +330,9 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                         <button
                             type="button"
                             onClick={handleCopyTextQuote}
-                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-white text-[oklch(18%_0.012_28)] font-bold text-[10px] uppercase hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer"
+                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] text-[oklch(18%_0.012_28)] font-bold text-[10px] uppercase hover:bg-[oklch(94%_0.010_28)] transition-colors rounded-xs cursor-pointer whitespace-nowrap"
                         >
-                            [ 💬 ก็อปข้อความ ]
+                            [ คัดลอกข้อความ ]
                         </button>
                     </div>
                 </div>
@@ -360,38 +360,38 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                 </span>
                             </div>
                             <div className="text-right flex flex-col items-end">
-                                <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-xs ${
                                     order.is_preorder || (order.customer_note && order.customer_note.includes('PRE-ORDER'))
                                         ? 'bg-[oklch(45%_0.08_140)] text-white'
                                         : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                 }`}>
                                     {order.is_preorder || (order.customer_note && order.customer_note.includes('PRE-ORDER'))
-                                        ? '⏳ PRE-ORDER INVOICE'
-                                        : 'OFFICIAL INVOICE'
+                                        ? '[ PRE-ORDER INVOICE ]'
+                                        : '[ OFFICIAL INVOICE ]'
                                     }
                                 </span>
-                                <span className="text-xs font-bold mt-1.5 text-[oklch(52%_0.16_28)]">
+                                <span className="text-xs font-bold mt-1.5 text-[oklch(52%_0.16_28)] tabular-nums">
                                     {trackingToken}
                                 </span>
-                                <span className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                <span className="text-[9px] text-[oklch(55%_0.010_28)] tabular-nums">
                                     DATE: {orderDate.toLocaleDateString('th-TH')} {orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                             </div>
                         </div>
 
                         {/* Recipient & Shipping Information */}
-                        <div className="border border-[oklch(18%_0.012_28)] p-3.5 bg-[oklch(94%_0.010_28)] flex flex-col gap-1.5 text-xs">
+                        <div className="border border-[oklch(18%_0.012_28)] p-3.5 bg-[oklch(94%_0.010_28)] flex flex-col gap-1.5 text-xs rounded-xs">
                             <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-1 mb-0.5">
                                 <span className="font-bold text-[10px] text-[oklch(55%_0.010_28)] uppercase">
                                     [ RECIPIENT INFORMATION // ข้อมูลผู้รับ ]
                                 </span>
                                 <span className="text-[10px] font-bold text-[oklch(45%_0.08_140)]">
-                                    {order.order_type === 'hausmade_shipping' ? `🚚 ${courierName}` : '🏪 รับหน้าร้าน'}
+                                    {order.order_type === 'hausmade_shipping' ? `[ ${courierName} ]` : '[ รับหน้าร้าน ]'}
                                 </span>
                             </div>
                             
                             <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
-                                {customerName} <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">(TEL: {customerPhone})</span>
+                                {customerName} <span className="text-xs font-normal text-[oklch(42%_0.010_28)] tabular-nums">(TEL: {customerPhone})</span>
                             </div>
                             
                             <div className="text-[11px] leading-relaxed text-[oklch(25%_0.010_28)] font-sans font-medium">
@@ -406,7 +406,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
 
                             {trackingNumber && (
                                 <div className="mt-0.5 font-bold text-[11px] text-[oklch(18%_0.012_28)]">
-                                    TRACKING #: <span className="bg-white px-1.5 py-0.5 border border-[oklch(85%_0.012_28)]">{trackingNumber}</span>
+                                    TRACKING #: <span className="bg-[oklch(99%_0.005_28)] px-1.5 py-0.5 border border-[oklch(85%_0.012_28)] tabular-nums">{trackingNumber}</span>
                                 </div>
                             )}
                         </div>
@@ -433,7 +433,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                             const itemTotal = price * Number(item.quantity || 1)
                                             return (
                                                 <tr key={idx} className="border-b border-[oklch(85%_0.012_28)] last:border-b-0">
-                                                    <td className="p-2 border-r border-[oklch(85%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    <td className="p-2 border-r border-[oklch(85%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
                                                         {idx + 1}
                                                     </td>
                                                     <td className="p-2 border-r border-[oklch(85%_0.012_28)]">
@@ -446,10 +446,10 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                                             </div>
                                                         )}
                                                     </td>
-                                                    <td className="p-2 border-r border-[oklch(85%_0.012_28)] text-center font-bold">
+                                                    <td className="p-2 border-r border-[oklch(85%_0.012_28)] text-center font-bold tabular-nums">
                                                         {item.quantity}
                                                     </td>
-                                                    <td className="p-2 text-right font-bold text-[oklch(18%_0.012_28)]">
+                                                    <td className="p-2 text-right font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                                         ฿{itemTotal.toLocaleString()}
                                                     </td>
                                                 </tr>
@@ -457,7 +457,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                         })
                                     ) : (
                                         <tr className="border-b border-[oklch(85%_0.012_28)]">
-                                            <td colSpan="4" className="p-3 text-center text-xs text-[oklch(55%_0.010_28)]">
+                                            <td colSpan="4" className="p-3 text-center text-xs text-[oklch(55%_0.010_28)] tabular-nums">
                                                 HAUSMADE CRAFT ORDER (TOTAL: ฿{finalTotal.toLocaleString()}.-)
                                             </td>
                                         </tr>
@@ -468,29 +468,29 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
 
                         {/* Financial Totals Breakdown */}
                         <div className="flex justify-end">
-                            <div className="w-full sm:w-64 border border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 flex flex-col gap-1.5 text-xs">
+                            <div className="w-full sm:w-64 border border-[oklch(18%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 flex flex-col gap-1.5 text-xs rounded-xs">
                                 <div className="flex justify-between text-[oklch(55%_0.010_28)]">
                                     <span>SUBTOTAL:</span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">฿{subtotal.toLocaleString()}.-</span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{subtotal.toLocaleString()}.-</span>
                                 </div>
 
                                 {discountAmount > 0 && (
                                     <div className="flex justify-between text-[oklch(45%_0.08_140)] font-bold">
                                         <span>DISCOUNT:</span>
-                                        <span>-฿{discountAmount.toLocaleString()}.-</span>
+                                        <span className="tabular-nums">-฿{discountAmount.toLocaleString()}.-</span>
                                     </div>
                                 )}
 
                                 <div className="flex justify-between text-[oklch(55%_0.010_28)]">
                                     <span>SHIPPING ({courierName}):</span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                    <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
                                         {Number(customShippingFee) === 0 ? 'FREE' : `฿${Number(customShippingFee).toLocaleString()}.-`}
                                     </span>
                                 </div>
 
                                 <div className="border-t border-[oklch(18%_0.012_28)] pt-2 mt-1 flex justify-between items-baseline font-bold">
                                     <span className="text-xs uppercase text-[oklch(18%_0.012_28)]">TOTAL DUE:</span>
-                                    <span className="text-base text-[oklch(52%_0.16_28)] font-black">
+                                    <span className="text-base text-[oklch(52%_0.16_28)] font-black tabular-nums">
                                         ฿{finalTotal.toLocaleString()}.-
                                     </span>
                                 </div>
@@ -498,9 +498,9 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                         </div>
 
                         {/* Payment & Bank Details Container */}
-                        <div className="border-2 border-[oklch(18%_0.012_28)] bg-white p-3.5 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="border-2 border-[oklch(18%_0.012_28)] bg-[oklch(99%_0.005_28)] p-3.5 flex flex-col sm:flex-row items-center gap-4 rounded-xs">
                             {/* QR Code Container */}
-                            <div className="flex-shrink-0 flex flex-col items-center bg-white p-2 border border-[oklch(85%_0.012_28)] shadow-2xs">
+                            <div className="flex-shrink-0 flex flex-col items-center bg-white p-2 border border-[oklch(85%_0.012_28)] shadow-2xs rounded-xs">
                                 {qrPayload ? (
                                     <QRCodeSVG
                                         value={qrPayload}
@@ -532,7 +532,7 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                                 <div className="font-bold text-xs text-[oklch(18%_0.012_28)]">
                                     {senderInfo.bankName || 'ธนาคารกสิกรไทย (KBank)'}
                                 </div>
-                                <div className="text-xs font-mono font-bold bg-[oklch(94%_0.010_28)] px-2 py-0.5 border border-[oklch(85%_0.012_28)] inline-block self-center sm:self-start">
+                                <div className="text-xs font-mono font-bold bg-[oklch(94%_0.010_28)] px-2 py-0.5 border border-[oklch(85%_0.012_28)] inline-block self-center sm:self-start rounded-xs tabular-nums">
                                     {senderInfo.bankAccountNo || '123-4-56789-0'}
                                 </div>
                                 <div className="text-[10px] text-[oklch(42%_0.010_28)]">
@@ -548,9 +548,9 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                         <div className="border-t-2 border-dashed border-[oklch(18%_0.012_28)] pt-3 flex justify-between items-center text-[8px] text-[oklch(55%_0.010_28)]">
                             <div>
                                 VERIFIED DISPATCH · IN THE HAUS CRAFT STORE<br />
-                                TEL: {senderInfo.senderPhone || '098-528-4217'} | LINE: @inthehaus
+                                <span className="tabular-nums">TEL: {senderInfo.senderPhone || '098-528-4217'}</span> | LINE: @inthehaus
                             </div>
-                            <div className="border border-[oklch(18%_0.012_28)] px-2 py-1 font-bold text-[8px] uppercase text-[oklch(18%_0.012_28)]">
+                            <div className="border border-[oklch(18%_0.012_28)] px-2 py-1 font-bold text-[8px] uppercase text-[oklch(18%_0.012_28)] rounded-xs">
                                 [ STAMPED // AUTHENTIC ]
                             </div>
                         </div>
@@ -560,11 +560,11 @@ ${discountAmount > 0 ? `- ส่วนลด: -฿${discountAmount.toLocaleStrin
                 {/* 4. Footer Dismiss Bar */}
                 <div className="bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] p-3 flex justify-between items-center flex-shrink-0 text-xs">
                     <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                        [ TIP ]: คลิกปุ่ม "📋 คัดลอกภาพส่ง LINE" เพื่อนำภาพไป Paste ในแชทได้ทันที
+                        [ TIP ]: คลิกปุ่ม "[ คัดลอกภาพ LINE ]" เพื่อนำภาพไปวางในแชทได้ทันที
                     </span>
                     <button
                         onClick={onClose}
-                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] font-bold uppercase transition-colors text-xs cursor-pointer"
+                        className="px-4 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] font-bold uppercase transition-colors text-xs cursor-pointer rounded-xs"
                     >
                         [ ปิดหน้าต่าง ]
                     </button>
