@@ -14,56 +14,42 @@ export default class MenuScene extends Phaser.Scene {
     this.bgRiver = this.add.tileSprite(0, height - 160, width, 96, 'bg_river').setOrigin(0, 0).setDepth(1);
     this.bgGround = this.add.tileSprite(0, height - 64, width, 64, 'bg_ground').setOrigin(0, 0).setDepth(2);
 
-    // 2. Logo / Title Section
+    // 2. Logo / Header Section
     if (this.textures.exists('logo_pixelated')) {
-      const logo = this.add.image(width / 2, 75, 'logo_pixelated').setOrigin(0.5).setDepth(5);
-      logo.setScale(2.2); // Chunky retro pixelated scaling
+      const logo = this.add.image(width / 2, 60, 'logo_pixelated').setOrigin(0.5).setDepth(5);
+      logo.setScale(1.8);
     } else {
-      this.add.text(width / 2, 75, 'ในบ้าน', {
-        fontFamily: 'Courier New, monospace',
-        fontSize: '28px',
-        fill: '#DFFF00',
-        stroke: '#000000',
-        strokeThickness: 5,
-        fontStyle: 'bold'
+      this.add.text(width / 2, 60, 'IN THE HAUS', {
+        fontFamily: '"Geist Mono", "Space Mono", monospace',
+        fontSize: '18px',
+        fill: '#FAF7F5',
+        fontStyle: 'bold',
+        letterSpacing: 2
       }).setOrigin(0.5).setDepth(5);
     }
 
-    const titleText = this.add.text(width / 2, 128, 'ตะลุยแดนสตอ', {
-      fontFamily: 'Prompt, Arial, sans-serif',
-      fontSize: '40px',
-      fill: '#DFFF00',
-      stroke: '#000000',
-      strokeThickness: 8,
+    const titleText = this.add.text(width / 2, 110, 'ตะลุยแดนสตอ', {
+      fontFamily: '"Geist Mono", "Prompt", sans-serif',
+      fontSize: '34px',
+      fill: '#FAF7F5',
+      stroke: '#181615',
+      strokeThickness: 6,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(5);
 
-    const subTitleText = this.add.text(width / 2, 172, 'BY IN THE HAUS', {
-      fontFamily: 'Space Mono, Courier New, monospace',
-      fontSize: '13px',
-      fill: '#888888',
-      stroke: '#000000',
-      strokeThickness: 3,
-      fontStyle: 'bold'
+    const subTitleText = this.add.text(width / 2, 145, 'FLAPPY CAT • ATELIER ARCADE', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '11px',
+      fill: '#BD4924', // Terracotta Clay
+      fontStyle: 'bold',
+      letterSpacing: 2
     }).setOrigin(0.5).setDepth(5);
 
-    // Make the title and subtitle pulse together
-    this.tweens.add({
-      targets: [titleText, subTitleText],
-      scaleX: 1.05,
-      scaleY: 1.05,
-      duration: 800,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut'
-    });
-
-    // Add a bouncing animated cat sprite to make menu lively
-    const menuCat = this.add.sprite(width / 2, 222, 'cat').setDepth(5);
-    menuCat.setScale(1.35);
+    // Bouncing animated cat sprite
+    const menuCat = this.add.sprite(width / 2, 195, 'cat').setDepth(5);
+    menuCat.setScale(1.4);
     menuCat.setFlipX(true);
     
-    // Flap animation
     if (!this.anims.exists('flap')) {
       this.anims.create({
         key: 'flap',
@@ -74,94 +60,136 @@ export default class MenuScene extends Phaser.Scene {
     }
     menuCat.play('flap');
 
-    // Bounce the cat up and down
     this.tweens.add({
       targets: menuCat,
-      y: 207,
-      duration: 650,
+      y: 182,
+      duration: 600,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 3. Play Button / Instruction Text
+    // 3. Play Button / Start CTA Card
     const session = this.registry.get('session');
     const isLoggedIn = !!session;
 
-    const startText = this.add.text(width / 2, 275, 'แตะหน้าจอเพื่อเริ่มเล่น', {
-      fontFamily: 'Prompt, Arial, sans-serif',
-      fontSize: '20px',
-      fill: '#DFFF00',
-      stroke: '#000000',
-      strokeThickness: 5,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(5);
+    const startBtnW = Math.min(width - 64, 380);
+    const startCardBg = this.add.rectangle(width / 2, 260, startBtnW, 58, 0x181615, 0.92)
+      .setOrigin(0.5)
+      .setDepth(10)
+      .setStrokeStyle(1, 0xBD4924)
+      .setInteractive({ useHandCursor: true });
 
-    const subPromptText = this.add.text(width / 2, 305, isLoggedIn ? '⚡ สมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '🎮 โหมดเล่นอิสระ / บันทึกแต้ม Guest', {
-      fontFamily: 'Prompt, Arial, sans-serif',
-      fontSize: '12px',
-      fill: isLoggedIn ? '#06C755' : '#CCCCCC',
-      stroke: '#000000',
-      strokeThickness: 3,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(5);
+    const startText = this.add.text(width / 2, 250, 'แตะหน้าจอเพื่อเริ่มเล่น', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '16px',
+      fill: '#FAF7F5',
+      fontStyle: 'bold',
+      letterSpacing: 1
+    }).setOrigin(0.5).setDepth(11);
 
-    // Make instruction blink
+    const subPromptText = this.add.text(width / 2, 274, isLoggedIn ? '● บัญชีสมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '○ โหมดเล่นอิสระ (Guest Mode)', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '10px',
+      fill: isLoggedIn ? '#526A3B' : '#89827B',
+      fontStyle: 'bold',
+      letterSpacing: 0.5
+    }).setOrigin(0.5).setDepth(11);
+
+    // Subtle breathing animation on start card
     this.tweens.add({
-      targets: [startText, subPromptText],
-      alpha: 0.35,
-      duration: 650,
+      targets: [startCardBg, startText, subPromptText],
+      alpha: { from: 1.0, to: 0.75 },
+      duration: 800,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut'
     });
 
-    // 4. Leaderboard Section
-    this.add.text(width / 2, 345, '--- อันดับสูงสุด ---', {
-      fontFamily: 'Prompt, Arial, sans-serif',
-      fontSize: '18px',
-      fill: '#00FFFF',
-      stroke: '#000000',
-      strokeThickness: 4,
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setDepth(5);
+    // 4. Atelier Leaderboard Section (Clean Tabular Grid)
+    const boardW = Math.min(width - 64, 380);
+    const boardH = 260;
+    const boardY = 445;
 
-    // Display Leaderboard entries
+    // Outer card container
+    this.add.rectangle(width / 2, boardY, boardW, boardH, 0x181615, 0.92)
+      .setOrigin(0.5)
+      .setDepth(10)
+      .setStrokeStyle(1, 0x3D3835);
+
+    // Header strip inside card
+    this.add.text(width / 2 - boardW / 2 + 20, boardY - boardH / 2 + 22, 'LEADERBOARD', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '12px',
+      fill: '#FAF7F5',
+      fontStyle: 'bold',
+      letterSpacing: 1.5
+    }).setOrigin(0, 0.5).setDepth(11);
+
+    this.add.text(width / 2 + boardW / 2 - 20, boardY - boardH / 2 + 22, '[ TOP 5 ]', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '10px',
+      fill: '#89827B'
+    }).setOrigin(1, 0.5).setDepth(11);
+
+    // Hairline divider
+    const boardDivider = this.add.graphics().setDepth(11);
+    boardDivider.lineStyle(1, 0x2B2725, 1.0);
+    boardDivider.lineBetween(width / 2 - boardW / 2 + 16, boardY - boardH / 2 + 40, width / 2 + boardW / 2 - 16, boardY - boardH / 2 + 40);
+
+    // Display Leaderboard rows
     const leaderboard = this.registry.get('initialLeaderboard') || [];
-    const startY = 380;
-    
+    const rowStartY = boardY - boardH / 2 + 65;
+
     if (leaderboard.length === 0) {
-      this.add.text(width / 2, startY + 40, 'ยังไม่มีอันดับคะแนน', {
-        fontFamily: 'Prompt, Arial, sans-serif',
-        fontSize: '16px',
-        fill: '#888888',
-        fontStyle: 'bold'
-      }).setOrigin(0.5).setDepth(5);
+      this.add.text(width / 2, boardY + 15, 'ยังไม่มีอันดับคะแนน', {
+        fontFamily: '"Geist Mono", "Space Mono", monospace',
+        fontSize: '12px',
+        fill: '#69635D'
+      }).setOrigin(0.5).setDepth(11);
     } else {
       leaderboard.slice(0, 5).forEach((entry, index) => {
-        // Safe display name logic
         let name = entry.display_name ? entry.display_name.toUpperCase() : 'GUEST';
         if (name.length > 12) name = name.substring(0, 10) + '..';
         const score = entry.score;
-        const rankText = `${index + 1}. ${name.padEnd(14, '.')} ${score}`;
-        
-        this.add.text(width / 2, startY + (index * 40), rankText, {
-          fontFamily: 'Courier New, monospace',
-          fontSize: '18px',
-          fill: index === 0 ? '#DFFF00' : '#FFFFFF',
-          stroke: '#000000',
-          strokeThickness: 3,
+        const rowY = rowStartY + (index * 38);
+
+        // Rank pill
+        const isFirst = index === 0;
+        const rankColor = isFirst ? '#BD4924' : '#89827B';
+        const rankNum = String(index + 1).padStart(2, '0');
+
+        this.add.text(width / 2 - boardW / 2 + 22, rowY, rankNum, {
+          fontFamily: '"Geist Mono", "Space Mono", monospace',
+          fontSize: '12px',
+          fill: rankColor,
           fontStyle: 'bold'
-        }).setOrigin(0.5).setDepth(5);
+        }).setOrigin(0, 0.5).setDepth(11);
+
+        // Player Name
+        this.add.text(width / 2 - boardW / 2 + 56, rowY, name, {
+          fontFamily: '"Geist Mono", "Space Mono", monospace',
+          fontSize: '12px',
+          fill: isFirst ? '#FAF7F5' : '#D9D2CB',
+          fontStyle: isFirst ? 'bold' : 'normal'
+        }).setOrigin(0, 0.5).setDepth(11);
+
+        // Score (Right-aligned)
+        this.add.text(width / 2 + boardW / 2 - 22, rowY, `${score}`, {
+          fontFamily: '"Geist Mono", "Space Mono", monospace',
+          fontSize: '13px',
+          fill: isFirst ? '#BD4924' : '#FAF7F5',
+          fontStyle: 'bold'
+        }).setOrigin(1, 0.5).setDepth(11);
       });
     }
 
-    // 5. Play Background Music if available (handle AudioContext lock gracefully)
+    // 5. Play Background Music if available
     const playBGM = () => {
       try {
         let bgm = this.sound.get('bgm');
         if (!bgm) {
-          this.sound.play('bgm', { loop: true, volume: 0.3 });
+          this.sound.play('bgm', { loop: true, volume: 0.25 });
         } else if (!bgm.isPlaying) {
           bgm.play();
         }
@@ -176,14 +204,23 @@ export default class MenuScene extends Phaser.Scene {
       playBGM();
     }
 
-    // 6. Input Event: Click/Touch to Start (Smooth start for both Member & Guest)
+    // 6. Input Event: Tap to Start
     this.isStarting = false;
-    this.input.on('pointerdown', () => {
+    const startGame = () => {
       if (this.isStarting) return;
       this.isStarting = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(15); } catch (e) {}
+      }
       try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
       this.scene.start('PlayScene');
-    });
+    };
+
+    this.input.on('pointerdown', startGame);
+    if (this.input.keyboard) {
+      this.input.keyboard.on('keydown-SPACE', startGame);
+      this.input.keyboard.on('keydown-ENTER', startGame);
+    }
   }
 
   update() {

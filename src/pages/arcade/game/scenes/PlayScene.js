@@ -40,13 +40,16 @@ export default class PlayScene extends Phaser.Scene {
       cornerLogo.setAlpha(0.65); // Semi-transparent
     }
 
-    // 3. Score Text
-    this.scoreText = this.add.text(width / 2, 80, '0', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '64px',
-      fill: '#DFFF00',
-      stroke: '#000000',
-      strokeThickness: 8,
+    // 3. Atelier Rams Monospace Scoreboard Pill (Top-Center)
+    this.scorePill = this.add.rectangle(width / 2, 54, 88, 42, 0x181615, 0.82)
+      .setOrigin(0.5)
+      .setDepth(99)
+      .setStrokeStyle(1, 0x5C544D);
+
+    this.scoreText = this.add.text(width / 2, 54, '0', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '26px',
+      fill: '#FAF7F5',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(100);
 
@@ -56,12 +59,12 @@ export default class PlayScene extends Phaser.Scene {
     this.player.setFlipX(true); // Face right (direction of flight)
     this.player.setOrigin(0.5);
     this.player.setDepth(5);
-    this.player.body.setGravityY(900); // gentler gravity for mobile
+    this.player.body.setGravityY(920); // gentle responsive gravity
     this.player.body.setCollideWorldBounds(false); // We handle boundary check manually
     
-    // Forgiving collision box (local coordinates scaled)
-    this.player.body.setSize(20, 20);
-    this.player.body.setOffset(6, 6);
+    // Forgiving capsule hitbox (prevents annoying edge clippings)
+    this.player.body.setSize(16, 16);
+    this.player.body.setOffset(8, 8);
 
     // Cat flap animation
     if (!this.anims.exists('flap')) {
@@ -141,13 +144,14 @@ export default class PlayScene extends Phaser.Scene {
     this.bgRiver.tilePositionX += 1.0 * scrollMultiplier;
     this.bgGround.tilePositionX += 2.5 * scrollMultiplier;
 
-    // Cat Rotation/Angle logic based on velocity (Flappy Bird style)
+    // Smooth Cat Rotation/Angle slerp (Parabolic fluid Flappy flight arc)
     if (this.player.body.velocity.y < 0) {
-      // Flapping up
-      this.player.angle = -20;
+      // Flapping up: smoothly ease angle towards -22 deg
+      this.player.angle = Phaser.Math.Linear(this.player.angle, -22, 0.22);
     } else if (this.player.body.velocity.y > 0) {
-      // Falling down
-      this.player.angle = Math.min(70, this.player.angle + 2.5);
+      // Falling down: smoothly pitch towards +72 deg proportional to falling speed
+      const targetDown = Math.min(72, (this.player.body.velocity.y / 480) * 72);
+      this.player.angle = Phaser.Math.Linear(this.player.angle, targetDown, 0.09);
     }
 
     // Boundary check (hit ground/river or fly too high)
@@ -329,21 +333,24 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     // Set upward velocity
-    this.player.body.setVelocityY(-320); // gentler jump velocity for mobile feel
+    this.player.body.setVelocityY(-315); // finely tuned responsive jump velocity
 
-    // Play jump sound
+    // Play jump sound & mobile tactile haptic
     try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(12); } catch (e) {}
+    }
 
     // Subtle jump squish effect scaled properly
     const targetScale = this.isDashing ? 2.7 : 1.35;
-    const squishScaleY = targetScale * 0.74;
-    const squishScaleX = targetScale * 1.18;
+    const squishScaleY = targetScale * 0.78;
+    const squishScaleX = targetScale * 1.15;
 
     this.tweens.add({
       targets: this.player,
       scaleY: squishScaleY,
       scaleX: squishScaleX,
-      duration: 80,
+      duration: 75,
       yoyo: true,
       ease: 'Quad.easeOut',
       onComplete: () => {
@@ -380,8 +387,9 @@ export default class PlayScene extends Phaser.Scene {
     topSatow.body.setImmovable(true);
     topSatow.body.setVelocityX(speed);
     
-    // Scale size of physics body to match graphic
-    topSatow.body.setSize(44, 128);
+    // Forgiving hitbox (avoids edge snagging)
+    topSatow.body.setSize(36, 128);
+    topSatow.body.setOffset(14, 0);
     // Stretch graphic height to fit
     topSatow.setDisplaySize(64, gapY);
 
@@ -403,7 +411,9 @@ export default class PlayScene extends Phaser.Scene {
     bottomSatow.body.setImmovable(true);
     bottomSatow.body.setVelocityX(speed);
     
-    bottomSatow.body.setSize(44, 128);
+    // Forgiving hitbox
+    bottomSatow.body.setSize(36, 128);
+    bottomSatow.body.setOffset(14, 0);
     bottomSatow.setDisplaySize(64, bottomHeight);
 
     // Set movement coordinates
@@ -467,36 +477,43 @@ export default class PlayScene extends Phaser.Scene {
     this.score += 1;
     if (this.scoreText) {
       this.scoreText.setText(this.score.toString());
+      if (this.scorePill) {
+        const digits = this.score.toString().length;
+        this.scorePill.width = Math.max(88, 64 + digits * 18);
+      }
       this.tweens.add({
-        targets: this.scoreText,
-        scaleX: 1.35,
-        scaleY: 1.35,
-        duration: 80,
+        targets: [this.scoreText, this.scorePill],
+        scaleX: 1.15,
+        scaleY: 1.15,
+        duration: 75,
         yoyo: true,
         ease: 'Quad.easeOut'
       });
     }
 
-    // Play score sound
+    // Play score sound & mobile haptics
     try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(15); } catch (e) {}
+    }
 
-    // Floating Score Popup Effect (+1)
+    // Floating Score Popup Effect (+1) in Atelier Terracotta
     const popup = this.add.text(this.player.x + 24, this.player.y - 14, '+1', {
-      fontFamily: 'Courier New, monospace',
-      fontSize: '24px',
-      fill: '#DFFF00',
-      stroke: '#000000',
-      strokeThickness: 6,
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '18px',
+      fill: '#BD4924',
+      stroke: '#181615',
+      strokeThickness: 4,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(110);
 
     this.tweens.add({
       targets: popup,
-      y: popup.y - 36,
+      y: popup.y - 32,
       alpha: 0,
-      scaleX: 1.3,
-      scaleY: 1.3,
-      duration: 450,
+      scaleX: 1.25,
+      scaleY: 1.25,
+      duration: 400,
       ease: 'Quad.easeOut',
       onComplete: () => popup.destroy()
     });
@@ -624,6 +641,11 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isGameOver || this.isDashing || this.isInvincible) return;
     this.isGameOver = true;
 
+    // Mobile tactile feedback on collision
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate([40, 50, 40]); } catch (e) {}
+    }
+
     // Pause physics and timers
     this.physics.pause();
     this.spawnTimer.destroy();
@@ -632,31 +654,48 @@ export default class PlayScene extends Phaser.Scene {
     // Stop flap anim
     this.player.stop();
 
-    // Clean up remaining particles
+    // Clean up flame particles
     if (this.flameParticles) {
       this.flameParticles.forEach(p => {
         if (p && p.rect) p.rect.destroy();
       });
       this.flameParticles = [];
     }
-    if (this.fxParticles) {
-      this.fxParticles.forEach(p => {
-        if (p && p.rect) p.rect.destroy();
-      });
-      this.fxParticles = [];
-    }
 
     // Play hit sound
     try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}
 
-    // Visual red hit tint
-    this.player.setTint(0xff3333);
-    
-    // Shake camera
-    this.cameras.main.shake(200, 0.02);
+    // Visual terracotta / red hit tint
+    this.player.setTint(0xff5544);
 
-    // Delay 1.2s before going to Game Over Scene
-    this.time.delayedCall(1200, () => {
+    // Spawn impact debris particles (cat fur orange/white & satow pod green)
+    const pX = this.player.x;
+    const pY = this.player.y;
+    for (let i = 0; i < 18; i++) {
+      const size = Phaser.Math.Between(3, 7);
+      const rect = this.add.rectangle(pX, pY, size, size).setDepth(20);
+      const colors = [0xff9f43, 0xd35400, 0xffffff, 0x39FF14, 0x006400, 0xBD4924];
+      rect.setFillStyle(Phaser.Utils.Array.GetRandom(colors), 1.0);
+      
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const speed = Phaser.Math.Between(80, 300);
+      this.fxParticles.push({
+        rect,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 80,
+        alpha: 1.0,
+        scale: 1.0
+      });
+    }
+
+    // Micro freeze-frame (60ms) before screen shake & flash for punchy weight
+    this.time.delayedCall(60, () => {
+      this.cameras.main.shake(220, 0.022);
+      this.cameras.main.flash(100, 189, 73, 36, true); // Warm terracotta flash
+    });
+
+    // Delay 1.1s before transitioning to Game Over Scene
+    this.time.delayedCall(1100, () => {
       this.scene.start('GameOverScene', { score: this.score });
     });
   }
@@ -667,8 +706,11 @@ export default class PlayScene extends Phaser.Scene {
     // Destroy the bean
     bean.destroy();
     
-    // Play point/collect sound
+    // Play point/collect sound & tactile haptic
     try { this.sound.play('point', { volume: 0.6 }); } catch (e) {}
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate([25, 35]); } catch (e) {}
+    }
     
     // Set dash state
     this.isDashing = true;

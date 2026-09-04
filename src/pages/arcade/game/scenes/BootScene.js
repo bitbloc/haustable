@@ -10,22 +10,25 @@ export default class BootScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
     
-    // Retro loading text
-    const loadingText = this.add.text(width / 2, height / 2 - 40, 'LOADING...', {
-      fontFamily: '"Press Start 2P", Courier, monospace',
-      fontSize: '20px',
-      fill: '#DFFF00'
+    // Atelier loading text
+    const loadingText = this.add.text(width / 2, height / 2 - 30, 'LOADING ATELIER ARCADE...', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '12px',
+      fill: '#89827B',
+      letterSpacing: 1.5
     }).setOrigin(0.5);
 
     const progressBar = this.add.graphics();
     const progressBox = this.add.graphics();
-    progressBox.fillStyle(0x110022, 0.8);
-    progressBox.fillRect(width / 2 - 160, height / 2 + 10, 320, 24);
+    progressBox.fillStyle(0x181615, 0.9);
+    progressBox.lineStyle(1, 0x3D3835, 1);
+    progressBox.fillRect(width / 2 - 140, height / 2 + 6, 280, 14);
+    progressBox.strokeRect(width / 2 - 140, height / 2 + 6, 280, 14);
 
     this.load.on('progress', (value) => {
       progressBar.clear();
-      progressBar.fillStyle(0xDFFF00, 1);
-      progressBar.fillRect(width / 2 - 152, height / 2 + 16, 304 * value, 12);
+      progressBar.fillStyle(0xBD4924, 1);
+      progressBar.fillRect(width / 2 - 138, height / 2 + 8, 276 * value, 10);
     });
 
     this.load.on('complete', () => {

@@ -97,18 +97,18 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         <button
           onClick={handleFullscreenToggle}
           onTouchStart={handleFullscreenToggle}
-          className="absolute top-4 right-4 z-[1000] p-2.5 bg-neutral-950/80 hover:bg-neutral-900 text-white rounded-full border border-neutral-800 shadow-xl flex items-center gap-1.5 text-[11px] font-mono transition-all active:scale-95 cursor-pointer font-bold tracking-wide"
+          className="absolute top-4 right-4 z-[1000] px-3 py-2 bg-[#181615]/90 hover:bg-[#24201E] text-[#FAF7F5] rounded-lg border border-[#5C544D] shadow-xl flex items-center gap-2 text-[11px] font-mono transition-all active:scale-95 cursor-pointer font-bold tracking-wider"
         >
-          <Minimize2 className="w-3.5 h-3.5 text-[#DFFF00]" />
+          <Minimize2 className="w-3.5 h-3.5 text-[#BD4924]" />
           <span>ออกจากเต็มจอ</span>
         </button>
       ) : (
         <button
           onClick={handleFullscreenToggle}
           onTouchStart={handleFullscreenToggle}
-          className="absolute bottom-4 right-4 z-40 p-2 bg-neutral-950/80 hover:bg-neutral-900 text-[#DFFF00] rounded-xl border border-neutral-800/80 shadow-md flex items-center gap-1 text-[10px] font-mono transition-all active:scale-95 cursor-pointer font-bold"
+          className="absolute bottom-3 right-3 z-40 px-2.5 py-1.5 bg-[#181615]/90 hover:bg-[#24201E] text-[#FAF7F5] rounded-md border border-[#3D3835] shadow-md flex items-center gap-1.5 text-[10px] font-mono transition-all active:scale-95 cursor-pointer font-bold tracking-wide"
         >
-          <Maximize2 className="w-3 h-3" />
+          <Maximize2 className="w-3 h-3 text-[#BD4924]" />
           <span>เต็มจอ</span>
         </button>
       )}
