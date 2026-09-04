@@ -2952,9 +2952,24 @@ export default function POSDashboard() {
             if (isFullySettled) {
                 setShowSplitModal(false);
                 openSlipOrSilentPrint({ ...activeBooking, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
+                
+                // Full cleanup of Order Details and Table state
+                setCurrentOrder({ items: [], customer: null, table: null });
                 setActiveBooking(null);
+                activeBookingRef.current = null;
                 setSelectedTable(null);
+                setAttachedMemberCrm(null);
+                localStorage.removeItem('pos_active_table_id');
                 setView('tables');
+
+                // Reset CFD to IDLE
+                const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
+                window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
+                try {
+                    if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                        window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdIdleDetail));
+                    }
+                } catch (e) {}
             } else {
                 const nextBooking = { ...activeBooking, staff_remark: updatedParentRemark };
                 setActiveBooking(nextBooking);
@@ -2991,9 +3006,24 @@ export default function POSDashboard() {
                 toast.success(`🎉 ชำระครบถ้วน ปิดบิลเรียบร้อยแล้ว! (ก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()})`, { id: toastId });
                 setShowSplitModal(false);
                 openSlipOrSilentPrint({ ...activeBooking, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
+                
+                // Full cleanup of Order Details and Table state
+                setCurrentOrder({ items: [], customer: null, table: null });
                 setActiveBooking(null);
+                activeBookingRef.current = null;
                 setSelectedTable(null);
+                setAttachedMemberCrm(null);
+                localStorage.removeItem('pos_active_table_id');
                 setView('tables');
+
+                // Reset CFD to IDLE
+                const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
+                window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
+                try {
+                    if (window.AndroidCfdBridge && typeof window.AndroidCfdBridge.sendCfdEvent === 'function') {
+                        window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdIdleDetail));
+                    }
+                } catch (e) {}
             } else {
                 // Partial chunk: Update staff remark with the new split round
                 const { error: updateErr } = await supabase

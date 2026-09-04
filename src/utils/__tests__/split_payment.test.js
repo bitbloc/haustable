@@ -200,6 +200,23 @@ describe('splitPaymentHelper', () => {
             expect(rawBytes).toBeInstanceOf(Uint8Array);
             expect(rawBytes.length).toBeGreaterThan(50);
         });
+
+        it('should correctly identify when a bill is fully settled upon final split round', () => {
+            const booking = {
+                id: 'b-full-settle-test',
+                total_amount: 1000,
+                staff_remark: '[SPLIT_ROUNDS: [{"round":1,"amount":400,"method":"qr"}]]'
+            };
+            const balance = calculateSplitBalance(booking, []);
+            expect(balance.alreadyPaid).toBe(400);
+            expect(balance.remainingBalance).toBe(600);
+
+            // Final chunk paying the remaining 600
+            const nextRemaining = balance.remainingBalance - 600;
+            const isFullySettled = nextRemaining <= 0;
+            expect(isFullySettled).toBe(true);
+            expect(nextRemaining).toBe(0);
+        });
     });
 });
 

@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import generatePayload from 'promptpay-qr';
-import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
 import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, printSplitQrSlip } from '../utils/printerHelper';
 import { 
@@ -180,16 +179,16 @@ export default function POSSplitPaymentModal({
         return Math.max(0, remainingBalance - currentSplitAmount);
     }, [remainingBalance, currentSplitAmount]);
 
-    // PromptPay QR Payload for the current split portion
+    // PromptPay QR Payload for the current split portion (only needed when paying by QR)
     const splitQrPayload = useMemo(() => {
-        if (currentSplitAmount <= 0) return null;
+        if (paymentMethod !== 'qr' || currentSplitAmount <= 0) return null;
         try {
             return generatePayload(normalizePromptPayId(storePromptpayId), { amount: currentSplitAmount });
         } catch (e) {
             console.error("Split PromptPay QR generation error:", e);
             return null;
         }
-    }, [currentSplitAmount, storePromptpayId]);
+    }, [paymentMethod, currentSplitAmount, storePromptpayId]);
 
     // CFD Broadcast Communication (Live Sync to Customer Screen)
     const cfdChannel = useRef(null);
@@ -221,9 +220,11 @@ export default function POSSplitPaymentModal({
         } catch (e) {}
     };
 
-    // Live Broadcast to CFD whenever split state changes
+    // Live Broadcast to CFD whenever split state changes (debounced by 120ms to prevent Android WebView lockup)
     useEffect(() => {
-        if (currentSplitAmount > 0) {
+        if (currentSplitAmount <= 0) return;
+
+        const timer = setTimeout(() => {
             broadcastToCFD({
                 type: 'SPLIT_CHECKOUT',
                 payload: {
@@ -253,7 +254,9 @@ export default function POSSplitPaymentModal({
                     memberProfile: attachedSplitMember
                 }
             });
-        }
+        }, 120);
+
+        return () => clearTimeout(timer);
     }, [
         splitMode, 
         currentSplitAmount, 
@@ -411,24 +414,24 @@ export default function POSSplitPaymentModal({
     };
 
     return (
-        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-2xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden text-[oklch(18%_0.012_28)] font-sans select-none animate-in fade-in zoom-in-95 duration-150">
+        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-xl max-h-[92vh] shadow-2xl flex flex-col overflow-hidden text-[oklch(18%_0.012_28)] font-sans select-none animate-in fade-in zoom-in-95 duration-100">
             
             {/* 1. Structural Header */}
-            <div className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] px-5 py-3.5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="font-mono text-xs font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2.5 py-1 rounded-md">
+            <div className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-3 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2.5">
+                    <span className="font-mono text-xs font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-2 py-0.5 rounded-md">
                         โต๊ะ {tableName}
                     </span>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
+                            <h2 className="text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
                                 SPLIT BILL PAYMENT / แบ่งชำระเงิน
                             </h2>
-                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full">
                                 รอบที่ {currentRoundNumber}
                             </span>
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
+                        <div className="flex items-center gap-2.5 text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
                             <span>บิลรวม: <b className="text-[oklch(18%_0.012_28)]">฿{fullOrderTotal.toLocaleString()}</b></span>
                             {alreadyPaid > 0 && (
                                 <>
@@ -447,42 +450,42 @@ export default function POSSplitPaymentModal({
                         <button
                             type="button"
                             onClick={() => setShowRoundsHistory(!showRoundsHistory)}
-                            className={`px-2.5 py-1 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                            className={`px-2 py-1 rounded-lg border text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer ${
                                 showRoundsHistory
                                     ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
                                     : 'bg-white text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
                         >
-                            <History size={13} />
+                            <History size={12} />
                             <span>ประวัติ ({previousRounds.length})</span>
                         </button>
                     )}
 
                     <button 
                         onClick={onClose}
-                        className="w-8 h-8 rounded-full bg-white border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] transition-all cursor-pointer"
+                        className="w-7 h-7 rounded-full bg-white border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] transition-all cursor-pointer"
                     >
-                        <X size={16} />
+                        <X size={15} />
                     </button>
                 </div>
             </div>
 
             {/* Split Rounds History Dropdown Bar */}
             {showRoundsHistory && previousRounds.length > 0 && (
-                <div className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] px-5 py-2.5 space-y-1.5 font-mono text-xs animate-in slide-in-from-top-2 duration-150">
+                <div className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] px-4 py-2 space-y-1 font-mono text-xs animate-in slide-in-from-top-2 duration-100 shrink-0">
                     <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase block">
                         ประวัติการชำระแบ่งจ่ายโต๊ะนี้:
                     </span>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-1.5">
                         {previousRounds.map((r, idx) => (
-                            <div key={idx} className="bg-white border border-[oklch(85%_0.012_28)] px-2.5 py-1 rounded-lg flex items-center gap-2 text-[11px] shadow-2xs">
-                                <span className="w-4 h-4 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[9px] font-black">
+                            <div key={idx} className="bg-white border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded-lg flex items-center gap-1.5 text-[11px] shadow-2xs">
+                                <span className="w-3.5 h-3.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[8px] font-black">
                                     ✓
                                 </span>
                                 <span className="font-bold text-[oklch(18%_0.012_28)]">
                                     รอบ {r.round}: ฿{r.amount.toLocaleString()}
                                 </span>
-                                <span className="text-[9px] uppercase bg-[oklch(94%_0.010_28)] px-1.5 py-0.5 rounded text-[oklch(55%_0.010_28)] font-bold">
+                                <span className="text-[9px] uppercase bg-[oklch(94%_0.010_28)] px-1 py-0.2 rounded text-[oklch(55%_0.010_28)] font-bold">
                                     {r.method}
                                 </span>
                                 {r.percent && (
@@ -495,9 +498,9 @@ export default function POSSplitPaymentModal({
                                     title={`พิมพ์สลิป QR รอบที่ ${r.round}`}
                                     onClick={() => handlePrintChunkQrSlip(r)}
                                     disabled={printingQr}
-                                    className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer transition-colors"
+                                    className="p-0.5 hover:bg-[oklch(94%_0.010_28)] rounded text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer transition-colors"
                                 >
-                                    <Printer size={12} />
+                                    <Printer size={11} />
                                 </button>
                             </div>
                         ))}
@@ -506,65 +509,65 @@ export default function POSSplitPaymentModal({
             )}
 
             {hasUnsentItems && (
-                <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 text-xs text-amber-900 font-bold flex items-center gap-2">
-                    <AlertCircle size={15} className="text-amber-600 shrink-0" />
+                <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-xs text-amber-900 font-bold flex items-center gap-2 shrink-0">
+                    <AlertCircle size={14} className="text-amber-600 shrink-0" />
                     <span>มีรายการยังไม่ส่งครัว! กรุณากดส่งครัวให้เรียบร้อยก่อนทำการแบ่งจ่ายครับ</span>
                 </div>
             )}
 
             {/* 2. Three Tab Modes Navigation */}
-            <div className="grid grid-cols-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] p-1.5 gap-1 font-mono text-[11px] font-bold uppercase tracking-wider">
+            <div className="grid grid-cols-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] p-1 gap-1 font-mono text-[11px] font-bold uppercase tracking-wider shrink-0">
                 <button
                     type="button"
                     onClick={() => setSplitMode('EQUAL')}
-                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         splitMode === 'EQUAL' 
                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
-                    <Users size={13} />
+                    <Users size={12} />
                     <span>1. หารเท่า (คน)</span>
                 </button>
 
                 <button
                     type="button"
                     onClick={() => setSplitMode('PERCENT')}
-                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         splitMode === 'PERCENT' 
                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
-                    <Percent size={13} />
+                    <Percent size={12} />
                     <span>2. ใส่ % เอง (ปัดเศษ)</span>
                 </button>
 
                 <button
                     type="button"
                     onClick={() => setSplitMode('CUSTOM')}
-                    className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                         splitMode === 'CUSTOM' 
                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-xs border border-[oklch(85%_0.012_28)] font-black' 
                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                     }`}
                 >
-                    <DollarSign size={13} />
+                    <DollarSign size={12} />
                     <span>3. ระบุยอดบาท</span>
                 </button>
             </div>
 
             {/* 3. Tab Body Container */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-4 max-h-[380px] scrollbar-none">
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 max-h-[360px] scrollbar-none">
                 
                 {/* --- MODE 1: EQUAL SPLIT --- */}
                 {splitMode === 'EQUAL' && (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         <div>
-                            <span className="text-xs font-mono text-[oklch(55%_0.010_28)] uppercase font-bold block mb-2">
+                            <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)] uppercase font-bold block mb-1.5">
                                 เลือกจำนวนคนที่ต้องการหารเท่า
                             </span>
-                            <div className="grid grid-cols-5 gap-2 font-mono">
+                            <div className="grid grid-cols-5 gap-1.5 font-mono">
                                 {[2, 3, 4, 5, 6].map(num => (
                                     <button
                                         key={num}
@@ -573,15 +576,15 @@ export default function POSSplitPaymentModal({
                                             setNumPeople(num);
                                             setCurrentPersonIndex(0);
                                         }}
-                                        className={`py-3 rounded-xl border text-sm font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
+                                        className={`py-2 rounded-xl border text-xs font-bold transition-all cursor-pointer flex flex-col items-center gap-0.5 ${
                                             numPeople === num 
                                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm' 
                                                 : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                         }`}
                                     >
                                         <span>{num} ท่าน</span>
-                                        <span className="text-[10px] opacity-75 font-normal">
-                                            ฿{Math.ceil(remainingBalance / num).toLocaleString()}/คน
+                                        <span className="text-[9px] opacity-75 font-normal">
+                                            ฿{Math.ceil(remainingBalance / num).toLocaleString()}
                                         </span>
                                     </button>
                                 ))}
@@ -589,30 +592,30 @@ export default function POSSplitPaymentModal({
                         </div>
 
                         {/* Person Selection Stepper */}
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
-                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2.5">
-                                <span className="font-mono text-xs font-bold text-[oklch(55%_0.010_28)] uppercase">
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2">
+                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-1.5">
+                                <span className="font-mono text-[11px] font-bold text-[oklch(55%_0.010_28)] uppercase">
                                     ลำดับการชำระ (PERSON STEPPER)
                                 </span>
-                                <span className="font-mono text-xs font-bold text-[oklch(52%_0.16_28)]">
+                                <span className="font-mono text-[11px] font-bold text-[oklch(52%_0.16_28)]">
                                     ท่านที่ {currentPersonIndex + 1} จากทั้งหมด {numPeople} ท่าน
                                 </span>
                             </div>
 
-                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
                                 {equalSharesArray.map((shareAmt, idx) => (
                                     <button
                                         key={idx}
                                         type="button"
                                         onClick={() => setCurrentPersonIndex(idx)}
-                                        className={`p-2.5 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer ${
+                                        className={`p-2 rounded-lg border text-center font-mono text-xs font-bold transition-all cursor-pointer ${
                                             currentPersonIndex === idx
                                                 ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/30'
                                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-white'
                                         }`}
                                     >
-                                        <div className="text-[10px] opacity-80 uppercase">คนที่ {idx + 1}</div>
-                                        <div className="text-sm font-black mt-0.5">฿{shareAmt.toLocaleString()}</div>
+                                        <div className="text-[9px] opacity-80 uppercase">คนที่ {idx + 1}</div>
+                                        <div className="text-xs font-black mt-0.5">฿{shareAmt.toLocaleString()}</div>
                                     </button>
                                 ))}
                             </div>
@@ -622,15 +625,14 @@ export default function POSSplitPaymentModal({
 
                 {/* --- MODE 2: PERCENTAGE SPLIT (%) --- */}
                 {splitMode === 'PERCENT' && (
-                    <div className="space-y-4">
-                        
+                    <div className="space-y-3">
                         {/* Basis Switcher (if already partially paid) */}
                         {alreadyPaid > 0 && (
-                            <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-[11px] font-bold">
+                            <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-[10px] font-bold">
                                 <button
                                     type="button"
                                     onClick={() => setPercentBasis('remaining')}
-                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                    className={`flex-1 py-1 rounded-lg transition-all cursor-pointer ${
                                         percentBasis === 'remaining'
                                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
                                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -641,7 +643,7 @@ export default function POSSplitPaymentModal({
                                 <button
                                     type="button"
                                     onClick={() => setPercentBasis('total')}
-                                    className={`flex-1 py-1.5 rounded-lg transition-all cursor-pointer ${
+                                    className={`flex-1 py-1 rounded-lg transition-all cursor-pointer ${
                                         percentBasis === 'total'
                                             ? 'bg-white text-[oklch(18%_0.012_28)] shadow-2xs font-black'
                                             : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
@@ -653,17 +655,17 @@ export default function POSSplitPaymentModal({
                         )}
 
                         {/* Direct Percentage Input with Ceil Rounding */}
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2.5">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <span className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)] uppercase block">
                                         ระบุ % ที่ต้องการชำระก้อนนี้
                                     </span>
-                                    <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">
-                                        คำนวณแบบปัดเศษขึ้นเต็มบาท เพื่อไม่ให้ตกหล่นเศษสตางค์
+                                    <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+                                        คำนวณแบบปัดเศษขึ้นเต็มบาท ไม่ตกหล่นเศษสตางค์
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-1.5 font-mono text-sm">
+                                <div className="flex items-center gap-1 font-mono text-sm">
                                     <input
                                         type="number"
                                         min="1"
@@ -674,14 +676,14 @@ export default function POSSplitPaymentModal({
                                         onChange={(e) => {
                                             setCustomPercentInput(e.target.value);
                                         }}
-                                        className="w-20 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2.5 py-1.5 text-center font-black text-[oklch(18%_0.012_28)] text-base outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="w-18 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2 py-1 text-center font-black text-[oklch(18%_0.012_28)] text-sm outline-none focus:border-[oklch(18%_0.012_28)]"
                                     />
-                                    <span className="font-bold text-[oklch(55%_0.010_28)] text-base">%</span>
+                                    <span className="font-bold text-[oklch(55%_0.010_28)]">%</span>
                                 </div>
                             </div>
 
                             {/* Quick Percent Presets Grid */}
-                            <div className="grid grid-cols-6 gap-2 font-mono">
+                            <div className="grid grid-cols-6 gap-1.5 font-mono">
                                 {[20, 25, 33.33, 50, 75, 100].map(pct => {
                                     const isSelected = customPercentInput === '' && selectedPercent === pct;
                                     const baseVal = percentBasis === 'total' ? fullOrderTotal : remainingBalance;
@@ -695,14 +697,14 @@ export default function POSSplitPaymentModal({
                                                 setSelectedPercent(pct);
                                                 setCustomPercentInput('');
                                             }}
-                                            className={`py-2 px-1 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center ${
+                                            className={`py-1.5 px-1 rounded-lg border transition-all cursor-pointer flex flex-col items-center justify-center ${
                                                 isSelected
                                                     ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)] shadow-sm'
                                                     : 'bg-white text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
                                             }`}
                                         >
-                                            <span className="text-xs font-black">{pct === 33.33 ? '33.3%' : `${pct}%`}</span>
-                                            <span className="text-[10px] opacity-75 mt-0.5">
+                                            <span className="text-[11px] font-black">{pct === 33.33 ? '33.3%' : `${pct}%`}</span>
+                                            <span className="text-[9px] opacity-75 mt-0.5">
                                                 ฿{calculatedVal.toLocaleString()}
                                             </span>
                                         </button>
@@ -711,14 +713,14 @@ export default function POSSplitPaymentModal({
                             </div>
 
                             {/* Math Summary Badge */}
-                            <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg p-2.5 flex items-center justify-between font-mono text-xs">
+                            <div className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2.5 py-1.5 flex items-center justify-between font-mono text-xs">
                                 <span className="text-[oklch(55%_0.010_28)]">
                                     {activePercentValue}% ของ {percentBasis === 'total' ? 'บิลรวม' : 'ยอดคงเหลือ'}
                                 </span>
                                 <div className="flex items-center gap-1 font-bold text-[oklch(18%_0.012_28)]">
-                                    <span>= ฿{percentCalculatedAmount.toLocaleString()} (ปัดเศษ)</span>
+                                    <span>= ฿{percentCalculatedAmount.toLocaleString()}</span>
                                     {remainingBalanceAfterSplit === 0 && (
-                                        <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.5 rounded font-bold ml-1">
+                                        <span className="bg-emerald-100 text-emerald-800 text-[9px] px-1.5 py-0.5 rounded font-bold ml-1">
                                             ปิดบิล 100%
                                         </span>
                                     )}
@@ -730,19 +732,19 @@ export default function POSSplitPaymentModal({
 
                 {/* --- MODE 4: CUSTOM BAHT AMOUNT --- */}
                 {splitMode === 'CUSTOM' && (
-                    <div className="space-y-4">
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-4 space-y-3">
+                    <div className="space-y-3">
+                        <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase">
                                     ระบุยอดเงินที่ต้องการชำระในรอบนี้
                                 </span>
-                                <span className="text-xs font-mono text-[oklch(55%_0.010_28)]">
-                                    คงเหลือ: ฿{remainingBalance.toLocaleString()} (บิลรวม ฿{fullOrderTotal.toLocaleString()})
+                                <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                                    คงเหลือ: ฿{remainingBalance.toLocaleString()}
                                 </span>
                             </div>
 
                             <div className="relative">
-                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl font-mono font-black text-[oklch(55%_0.010_28)]">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-mono font-black text-[oklch(55%_0.010_28)]">
                                     ฿
                                 </span>
                                 <input
@@ -750,39 +752,39 @@ export default function POSSplitPaymentModal({
                                     placeholder="0.00"
                                     value={customAmountInput}
                                     onChange={(e) => setCustomAmountInput(e.target.value)}
-                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl pl-10 pr-4 py-3 text-2xl font-mono font-black text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                    className="w-full bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl pl-9 pr-3 py-2 text-xl font-mono font-black text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                                 />
                             </div>
 
                             {/* Quick Presets */}
-                            <div className="grid grid-cols-4 gap-2 font-mono text-xs">
+                            <div className="grid grid-cols-4 gap-1.5 font-mono text-xs">
                                 <button
                                     type="button"
                                     onClick={() => setCustomAmountInput(String(Math.ceil(remainingBalance * 0.25)))}
-                                    className="py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
+                                    className="py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
                                 >
                                     25% (฿{Math.ceil(remainingBalance * 0.25).toLocaleString()})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setCustomAmountInput(String(Math.ceil(remainingBalance * 0.50)))}
-                                    className="py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
+                                    className="py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
                                 >
                                     50% (฿{Math.ceil(remainingBalance * 0.50).toLocaleString()})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setCustomAmountInput(String(Math.ceil(remainingBalance * 0.75)))}
-                                    className="py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
+                                    className="py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-white cursor-pointer"
                                 >
                                     75% (฿{Math.ceil(remainingBalance * 0.75).toLocaleString()})
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setCustomAmountInput(String(remainingBalance))}
-                                    className="py-2 bg-[oklch(18%_0.012_28)] text-white border border-[oklch(18%_0.012_28)] rounded-lg font-bold cursor-pointer"
+                                    className="py-1.5 bg-[oklch(18%_0.012_28)] text-white border border-[oklch(18%_0.012_28)] rounded-lg font-bold cursor-pointer"
                                 >
-                                    คงเหลือทั้งหมด (฿{remainingBalance.toLocaleString()})
+                                    ทั้งหมด (฿{remainingBalance.toLocaleString()})
                                 </button>
                             </div>
                         </div>
@@ -790,7 +792,7 @@ export default function POSSplitPaymentModal({
                 )}
 
                 {/* Optional Member Attachment for this Split Payer */}
-                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3">
+                <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-2.5">
                     {!attachedSplitMember ? (
                         <div>
                             {!showMemberAttach ? (
@@ -800,10 +802,10 @@ export default function POSSplitPaymentModal({
                                     className="w-full flex items-center justify-between text-xs font-mono font-bold text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
                                 >
                                     <span className="flex items-center gap-1.5">
-                                        <Phone size={13} />
-                                        <span>สะสมแต้ม XHAUS สำหรับผู้จ่ายรอบนี้ (คลิกเพื่อระบุเบอร์)</span>
+                                        <Phone size={12} />
+                                        <span>สะสมแต้ม XHAUS สำหรับผู้จ่ายรอบนี้ (ระบุเบอร์)</span>
                                     </span>
-                                    <Plus size={14} />
+                                    <Plus size={13} />
                                 </button>
                             ) : (
                                 <form onSubmit={handleSearchMember} className="flex items-center gap-2">
@@ -812,21 +814,21 @@ export default function POSSplitPaymentModal({
                                         placeholder="ระบุเบอร์โทรสมาชิก (0812345678)"
                                         value={memberPhone}
                                         onChange={(e) => setMemberPhone(e.target.value)}
-                                        className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-3 py-1.5 text-xs font-mono outline-none focus:border-[oklch(18%_0.012_28)]"
+                                        className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg px-2.5 py-1 text-xs font-mono outline-none focus:border-[oklch(18%_0.012_28)]"
                                     />
                                     <button
                                         type="submit"
                                         disabled={searchingMember}
-                                        className="bg-[oklch(18%_0.012_28)] text-white px-3 py-1.5 rounded-lg text-xs font-mono font-bold hover:bg-black cursor-pointer disabled:opacity-50"
+                                        className="bg-[oklch(18%_0.012_28)] text-white px-2.5 py-1 rounded-lg text-xs font-mono font-bold hover:bg-black cursor-pointer disabled:opacity-50"
                                     >
-                                        {searchingMember ? 'ค้นหา...' : 'ค้นหา'}
+                                        {searchingMember ? '...' : 'ค้นหา'}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setShowMemberAttach(false)}
-                                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
                                     >
-                                        <X size={14} />
+                                        <X size={13} />
                                     </button>
                                 </form>
                             )}
@@ -834,11 +836,11 @@ export default function POSSplitPaymentModal({
                     ) : (
                         <div className="flex items-center justify-between text-xs font-mono">
                             <div className="flex items-center gap-2">
-                                <UserCheck size={14} className="text-emerald-600" />
+                                <UserCheck size={13} className="text-emerald-600" />
                                 <span className="font-bold text-[oklch(18%_0.012_28)]">
                                     สมาชิก: {attachedSplitMember.display_name} ({attachedSplitMember.phone_number})
                                 </span>
-                                <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase">
+                                <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] px-1.5 py-0.2 rounded font-bold uppercase">
                                     {attachedSplitMember.current_tier || 'Member'}
                                 </span>
                             </div>
@@ -858,34 +860,34 @@ export default function POSSplitPaymentModal({
             </div>
 
             {/* 4. Split Summary & Payment Tender Bar */}
-            <div className="bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] p-5 space-y-4">
+            <div className="bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] p-4 space-y-3 shrink-0">
                 
                 {/* Live Split Figures */}
-                <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] p-3 rounded-xl">
+                <div className="grid grid-cols-2 gap-2.5">
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] p-2.5 rounded-xl">
                         <span className="text-[10px] font-mono font-bold uppercase text-[oklch(55%_0.010_28)] block">
                             ยอดชำระรอบนี้ (รอบที่ {currentRoundNumber})
                         </span>
-                        <span className="text-2xl font-mono font-black text-[oklch(52%_0.16_28)]">
+                        <span className="text-xl font-mono font-black text-[oklch(52%_0.16_28)]">
                             ฿{currentSplitAmount.toLocaleString()}
                         </span>
                     </div>
 
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] p-3 rounded-xl">
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] p-2.5 rounded-xl">
                         <span className="text-[10px] font-mono font-bold uppercase text-[oklch(55%_0.010_28)] block">
-                            ยอดคงเหลือหลังชำระ (REMAINING AFTER)
+                            ยอดคงเหลือหลังชำระ
                         </span>
-                        <span className={`text-xl font-mono font-bold ${remainingBalanceAfterSplit === 0 ? 'text-emerald-700 font-black' : 'text-[oklch(18%_0.012_28)]'}`}>
+                        <span className={`text-lg font-mono font-bold ${remainingBalanceAfterSplit === 0 ? 'text-emerald-700 font-black' : 'text-[oklch(18%_0.012_28)]'}`}>
                             ฿{remainingBalanceAfterSplit.toLocaleString()}
                             {remainingBalanceAfterSplit === 0 && (
-                                <span className="text-xs text-emerald-600 font-normal ml-1.5">(ปิดบิลครบถ้วน)</span>
+                                <span className="text-[11px] text-emerald-600 font-normal ml-1">(ครบถ้วน)</span>
                             )}
                         </span>
                     </div>
                 </div>
 
                 {/* Payment Method Selector */}
-                <div className="flex bg-[oklch(85%_0.012_28)]/50 p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold uppercase tracking-wider gap-1 h-11">
+                <div className="flex bg-[oklch(85%_0.012_28)]/50 p-1 rounded-xl border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold uppercase tracking-wider gap-1 h-10">
                     <button 
                         type="button"
                         onClick={() => setPaymentMethod('qr')}
@@ -895,7 +897,7 @@ export default function POSSplitPaymentModal({
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        <QrCode size={14} />
+                        <QrCode size={13} />
                         <span>PROMPTPAY QR</span>
                     </button>
 
@@ -908,7 +910,7 @@ export default function POSSplitPaymentModal({
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        <Banknote size={14} />
+                        <Banknote size={13} />
                         <span>CASH (เงินสด)</span>
                     </button>
 
@@ -921,19 +923,19 @@ export default function POSSplitPaymentModal({
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        <CreditCard size={14} />
+                        <CreditCard size={13} />
                         <span>บัตรเครดิต</span>
                     </button>
                 </div>
 
-                {/* PromptPay QR Interactive Sub-panel */}
+                {/* PromptPay QR Sub-panel: Simplified without redundant cashier screen QR */}
                 {paymentMethod === 'qr' && (
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 space-y-3 animate-in fade-in duration-150">
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2.5 animate-in fade-in duration-100">
                         <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 font-mono">
                             <div className="flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-xs font-bold uppercase text-[oklch(18%_0.012_28)]">
-                                    PROMPTPAY QR · ก้อนที่ {currentRoundNumber} (โต๊ะ {tableName})
+                                    แสดง QR บนหน้าจอ CFD (ลูกค้า) แล้ว
                                 </span>
                             </div>
                             <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
@@ -941,54 +943,34 @@ export default function POSSplitPaymentModal({
                             </span>
                         </div>
 
-                        {/* Centered QR Graphic with Account Details */}
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xl">
-                            <div className="bg-white p-2 rounded-lg border border-[oklch(85%_0.012_28)] shadow-2xs flex items-center justify-center shrink-0">
-                                {splitQrPayload ? (
-                                    <QRCodeSVG 
-                                        value={splitQrPayload} 
-                                        size={128} 
-                                        level="M"
-                                        includeMargin={false}
-                                    />
-                                ) : (
-                                    <div className="w-32 h-32 flex items-center justify-center bg-[oklch(94%_0.010_28)] text-[10px] font-mono text-[oklch(55%_0.010_28)] text-center p-2">
-                                        กำลังสร้าง QR พร้อมเพย์...
-                                    </div>
-                                )}
+                        {/* Store Account & PromptPay details row */}
+                        <div className="flex items-center justify-between bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] px-3 py-2 rounded-xl font-mono text-xs">
+                            <div>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
+                                    ชื่อบัญชีรับเงิน
+                                </span>
+                                <span className="font-bold text-[oklch(18%_0.012_28)] text-xs">
+                                    {storePromptpayName || 'ร้านในบ้าน นครพนม'}
+                                </span>
                             </div>
-
-                            <div className="space-y-1 text-center sm:text-left font-mono text-xs">
-                                <div>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
-                                        ชื่อบัญชีรับเงิน
-                                    </span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] text-sm">
-                                        {storePromptpayName || 'ร้านในบ้าน นครพนม'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
-                                        หมายเลขพร้อมเพย์
-                                    </span>
-                                    <span className="font-bold text-[oklch(52%_0.16_28)] bg-white border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded text-xs inline-block">
-                                        {storePromptpayId || '0614232455'}
-                                    </span>
-                                </div>
-                                <p className="text-[10px] text-[oklch(55%_0.010_28)] pt-0.5">
-                                    สแกนผ่านแอปธนาคาร หรือกดปุ่มด้านล่างเพื่อพิมพ์สลิป QR ให้ลูกค้า
-                                </p>
+                            <div className="text-right">
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
+                                    หมายเลขพร้อมเพย์
+                                </span>
+                                <span className="font-bold text-[oklch(52%_0.16_28)] bg-white border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded text-xs inline-block">
+                                    {storePromptpayId || '0614232455'}
+                                </span>
                             </div>
                         </div>
 
-                        {/* Print QR Slip Button */}
+                        {/* Dedicated Thermal QR Slip Print Button */}
                         <button
                             type="button"
                             disabled={printingQr || currentSplitAmount <= 0}
                             onClick={() => handlePrintChunkQrSlip()}
                             className="w-full py-2.5 px-4 bg-white hover:bg-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-xs active:scale-[0.99]"
                         >
-                            <Printer size={14} />
+                            <Printer size={14} className="text-[oklch(52%_0.16_28)]" />
                             <span>{printingQr ? 'กำลังพิมพ์สลิป QR...' : `พิมพ์สลิป QR ก้อนที่ ${currentRoundNumber} (฿${currentSplitAmount.toLocaleString()}.-)`}</span>
                         </button>
                     </div>
@@ -996,7 +978,7 @@ export default function POSSplitPaymentModal({
 
                 {/* Cash Tender Keypad Sub-panel */}
                 {paymentMethod === 'cash' && (
-                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 space-y-3">
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 space-y-2.5 animate-in fade-in duration-100">
                         <div className="flex items-center justify-between">
                             <span className="text-xs font-mono font-bold uppercase text-[oklch(55%_0.010_28)]">
                                 รับเงินสดมา (CASH RECEIVED)
@@ -1006,16 +988,16 @@ export default function POSSplitPaymentModal({
                                 placeholder="0.00"
                                 value={cashReceived}
                                 onChange={(e) => setCashReceived(e.target.value)}
-                                className="w-36 text-right bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl px-3 py-1.5 text-base font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
+                                className="w-32 text-right bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xl px-2.5 py-1 text-sm font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(18%_0.012_28)]"
                             />
                         </div>
 
                         {/* Quick cash denomination chips */}
-                        <div className="flex gap-2 font-mono text-xs">
+                        <div className="flex gap-1.5 font-mono text-xs">
                             <button
                                 type="button"
                                 onClick={() => setCashReceived(String(currentSplitAmount))}
-                                className="flex-1 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-[oklch(97%_0.008_28)] cursor-pointer"
+                                className="flex-1 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-[oklch(97%_0.008_28)] cursor-pointer"
                             >
                                 พอดี
                             </button>
@@ -1024,14 +1006,14 @@ export default function POSSplitPaymentModal({
                                     key={den}
                                     type="button"
                                     onClick={() => setCashReceived(String(den))}
-                                    className="flex-1 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-[oklch(97%_0.008_28)] cursor-pointer"
+                                    className="flex-1 py-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-lg font-bold hover:bg-[oklch(97%_0.008_28)] cursor-pointer"
                                 >
                                     ฿{den}
                                 </button>
                             ))}
                         </div>
 
-                        <div className="flex justify-between items-center text-xs border-t border-dashed border-[oklch(85%_0.012_28)] pt-2 font-mono">
+                        <div className="flex justify-between items-center text-xs border-t border-dashed border-[oklch(85%_0.012_28)] pt-1.5 font-mono">
                             <span className="font-bold text-[oklch(55%_0.010_28)]">เงินทอน (CHANGE DUE)</span>
                             <span className={`font-bold text-sm ${parseFloat(cashReceived) >= currentSplitAmount ? 'text-emerald-700 font-black' : 'text-red-600'}`}>
                                 {parseFloat(cashReceived) >= currentSplitAmount 
@@ -1039,6 +1021,13 @@ export default function POSSplitPaymentModal({
                                     : cashReceived ? `ขาดอีก ฿${Math.ceil(currentSplitAmount - parseFloat(cashReceived)).toLocaleString()}` : '฿0'}
                             </span>
                         </div>
+                    </div>
+                )}
+
+                {/* Credit Card Sub-panel */}
+                {paymentMethod === 'credit' && (
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3 font-mono text-xs text-[oklch(55%_0.010_28)] text-center animate-in fade-in duration-100">
+                        <span>ชำระผ่านเครื่องรูดบัตร (EDC) เรียบร้อยแล้วกดบันทึกชำระด้านล่าง</span>
                     </div>
                 )}
 
