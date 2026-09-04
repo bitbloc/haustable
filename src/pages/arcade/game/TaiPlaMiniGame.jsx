@@ -1,7 +1,8 @@
-/* Hallmark · component: TaiPlaMiniGame · genre: Retro Chunky Pixel Arcade · theme: Cute Nakhon Phanom x Happiness Fever & Multi-Character */
+/* Hallmark · component: TaiPlaMiniGame · genre: 128-Bit Neo-Arcade Pixel Runner · theme: Nakhon Phanom Riverfront x Progressive Difficulty */
 import React, { useState, useEffect, useRef } from 'react';
 import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, Zap, Flame, Heart, ChevronRight, User, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { taiPlaRenderer } from './renderers/TaiPla128Renderer';
 
 const CHARACTERS = {
   tai_pla: {
@@ -62,7 +63,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [happiness, setHappiness] = useState(0); // 0 to 100%
   const [isFeverActive, setIsFeverActive] = useState(false);
   const [feverRemaining, setFeverRemaining] = useState(0);
-  const [currentSpicyTier, setCurrentSpicyTier] = useState(1); // 1: เผ็ดอนุบาล, 2: เผ็ดปากเปิด, 3: เผ็ดหูดับตับไหม้
+  const [currentSpicyTier, setCurrentSpicyTier] = useState(1); // 1: เผ็ดอนุบาล, 2: เผ็ดปากเปิด, 3: เผ็ดหูดับตับไหม้, 4: เผ็ดนรกแตก
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canRestart, setCanRestart] = useState(true);
@@ -86,6 +87,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       else if (type === 'fever_start') navigator.vibrate([35, 45, 55]);
       else if (type === 'smash') navigator.vibrate([20, 30]);
       else if (type === 'hit') navigator.vibrate([40, 50, 40]);
+      else if (type === 'spring') navigator.vibrate([15, 25]);
+      else if (type === 'thunder') navigator.vibrate([30, 20, 40]);
+      else if (type === 'mortar_smash') navigator.vibrate([50, 40, 60]);
+      else if (type === 'tier_up') navigator.vibrate([20, 30, 40]);
     } catch (e) {}
   };
 
@@ -109,21 +114,25 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     lastDistanceScore: 0,
     items: [],
     monsters: [],
+    elements: [],
     particles: [],
     floatingTexts: [],
     lastSpawn: 0,
     groundY: 185,
-    speed: 3.6,
+    speed: 3.8,
     frame: 0,
     scaleX: 1.0,
     scaleY: 1.0,
     magnetRadius: 50,
     spicyTier: 1,
     lastUiSync: 0,
-    hitShakeTimer: 0
+    hitShakeTimer: 0,
+    tierAnnounceTimer: 0,
+    tierAnnounceTitle: '',
+    tierAnnounceSubtitle: ''
   });
 
-  // 8-Bit / Retro Chiptune Synthesizer
+  // 8-Bit / 128-Bit Retro Synthesizer
   const playRetroSound = (type) => {
     if (!soundEnabled) return;
     try {
@@ -154,6 +163,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
         osc.start(now);
         osc.stop(now + 0.15);
+      } else if (type === 'spring') {
+        // High bouncy spring launch
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.start(now);
+        osc.stop(now + 0.23);
       } else if (type === 'collect') {
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(587.33, now); // D5
@@ -163,6 +181,18 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
         osc.start(now);
         osc.stop(now + 0.19);
+      } else if (type === 'golden_mortar') {
+        // Sparkly golden fanfare
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(659.25, now); // E5
+        osc.frequency.setValueAtTime(880.00, now + 0.06); // A5
+        osc.frequency.setValueAtTime(1046.50, now + 0.12); // C6
+        osc.frequency.setValueAtTime(1318.51, now + 0.18); // E6
+        osc.frequency.setValueAtTime(1760.00, now + 0.24); // A6
+        gain.gain.setValueAtTime(0.16, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now);
+        osc.stop(now + 0.46);
       } else if (type === 'god_mode') {
         // Super Saiyan Satow Powerup Fanfare
         osc.type = 'square';
@@ -195,6 +225,35 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.start(now);
         osc.stop(now + 0.22);
+      } else if (type === 'mortar_smash') {
+        // Heavy bass explosion for giant mortar
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
+        gain.gain.setValueAtTime(0.20, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'thunder') {
+        // Crackling lightning
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+        osc.start(now);
+        osc.stop(now + 0.30);
+      } else if (type === 'tier_up') {
+        // Ascending Tier Brass Fanfare
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(392.00, now); // G4
+        osc.frequency.setValueAtTime(523.25, now + 0.08); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.16); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.24); // G5
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        osc.start(now);
+        osc.stop(now + 0.40);
       } else if (type === 'pot_complete') {
         osc.type = 'square';
         osc.frequency.setValueAtTime(523.25, now); // C5
@@ -261,18 +320,22 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       lastDistanceScore: 0,
       items: [],
       monsters: [],
+      elements: [],
       particles: [],
       floatingTexts: [],
       lastSpawn: Date.now(),
       groundY: 185,
-      speed: 3.6,
+      speed: 3.8,
       frame: 0,
       scaleX: 1.0,
       scaleY: 1.0,
       magnetRadius: char.magnetRadius,
       spicyTier: 1,
       lastUiSync: performance.now(),
-      hitShakeTimer: 0
+      hitShakeTimer: 0,
+      tierAnnounceTimer: 0,
+      tierAnnounceTitle: '',
+      tierAnnounceSubtitle: ''
     };
 
     playRetroSound('meow');
@@ -423,30 +486,46 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         });
       }
 
-      // 4. Progressive Difficulty & Spicy Tiers Scaling
+      // 4. Progressive Difficulty & 4 Spicy Tiers Scaling
       let tier = 1;
-      if (g.score >= 25) {
-        tier = 3;
-        g.speed = Math.min(7.6, 5.8 + Math.floor((g.score - 25) / 6) * 0.3);
-      } else if (g.score >= 10) {
-        tier = 2;
-        g.speed = Math.min(5.6, 4.4 + Math.floor((g.score - 10) / 4) * 0.25);
+      if (g.score >= 60) {
+        tier = 4; // เผ็ดนรกแตก EXTREME
+        g.speed = Math.min(9.4, 8.0 + Math.floor((g.score - 60) / 8) * 0.2);
+      } else if (g.score >= 35) {
+        tier = 3; // เผ็ดหูดับตับไหม้
+        g.speed = Math.min(7.8, 6.4 + Math.floor((g.score - 35) / 5) * 0.25);
+      } else if (g.score >= 15) {
+        tier = 2; // เผ็ดปากเปิด
+        g.speed = Math.min(6.2, 4.8 + Math.floor((g.score - 15) / 4) * 0.25);
       } else {
-        tier = 1;
-        g.speed = Math.min(4.3, 3.6 + Math.floor(g.score / 3) * 0.2);
+        tier = 1; // เผ็ดอนุบาล
+        g.speed = Math.min(4.6, 3.8 + Math.floor(g.score / 3) * 0.2);
       }
+
       if (tier !== g.spicyTier) {
         g.spicyTier = tier;
+        playRetroSound('tier_up');
+
+        const tierMeta = {
+          2: { title: '🌶️ TIER 2: เผ็ดปากเปิด', sub: 'ความเร็วเพิ่มขึ้น • เพิ่มเหยี่ยวโขง 🦅, ผีหม้อดิน & ท่อไอน้ำเดือด' },
+          3: { title: '🔥⚡ TIER 3: เผ็ดหูดับตับไหม้', sub: 'กุ๊กกระทะร้อน 🔥 & สายฟ้าพญานาค ⚡ • ใช้สปริงสะตอกระโดดหลบ!' },
+          4: { title: '💀🔥⚡ TIER 4: เผ็ดนรกแตก EXTREME', sub: 'ครกหินยักษ์ทุบพื้น 💥 • เก็บครกหินทองคำลอยฟ้า 🏆 +15 PTS!' }
+        };
+        const info = tierMeta[tier] || { title: `TIER ${tier}`, sub: '' };
+        g.tierAnnounceTimer = 2.5;
+        g.tierAnnounceTitle = info.title;
+        g.tierAnnounceSubtitle = info.sub;
+
         g.floatingTexts.push({
-          x: canvas.width / 2 - 60,
-          y: 60,
-          text: tier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3)' : (tier === 2 ? 'เผ็ดปากเปิด (TIER 2)' : 'เผ็ดอนุบาล'),
-          color: tier === 3 ? '#ef4444' : '#f97316',
-          life: 1.8
+          x: canvas.width / 2 - 80,
+          y: 65,
+          text: info.title,
+          color: tier === 4 ? '#ef4444' : (tier === 3 ? '#f97316' : '#eab308'),
+          life: 2.2
         });
       }
 
-      // Throttled UI state sync: update React state every 200ms (5fps instead of 60fps) to eliminate stutter
+      // Throttled UI state sync: update React state every 200ms (5fps instead of 60fps)
       if (currentTime - g.lastUiSync >= 200) {
         g.lastUiSync = currentTime;
         setScore(g.score);
@@ -491,67 +570,223 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         }
       }
 
-      // 6. Spawn Items & Enemies
+      // 6. Spawn Director (Enemies, Elements, Ingredients based on Tier)
       const nowMs = Date.now();
-      const spawnInterval = Math.max(750, 1450 - g.score * 20);
+      let spawnInterval = 1400 - g.score * 20;
+      if (g.spicyTier === 2) spawnInterval = 1100 - (g.score - 15) * 15;
+      else if (g.spicyTier === 3) spawnInterval = 900 - (g.score - 35) * 10;
+      else if (g.spicyTier === 4) spawnInterval = 720;
+      spawnInterval = Math.max(680, spawnInterval);
+
       if (nowMs - g.lastSpawn > spawnInterval) {
         g.lastSpawn = nowMs;
-        const isMonster = Math.random() > (g.feverTimer > 0 ? 0.65 : 0.42);
 
-        if (isMonster) {
-          const r = Math.random();
-          let monsterType = 'hop_chili';
+        // A. Chance to spawn an Interactive Element (Satow Spring in Tier 3+, Steam Jet in Tier 2+)
+        const hasSpring = g.elements.some(e => e.type === 'satow_spring');
+        const hasSteam = g.elements.some(e => e.type === 'steam_jet');
 
-          if (g.spicyTier >= 2 && r > 0.7) {
-            monsterType = 'hawk'; // 🦅 Flying Hawk
-          } else if (g.spicyTier >= 2 && r > 0.45) {
-            monsterType = 'coconut'; // 🥥 Fast rolling coconut
-          } else if (g.score >= 5 && r > 0.25) {
-            monsterType = 'hot_runner'; // 🔥 Charging flaming man
-          } else if (r > 0.12) {
-            monsterType = 'hop_chili'; // 🌶️ Hopping chili
+        if (g.spicyTier >= 3 && !hasSpring && Math.random() < 0.22) {
+          g.elements.push({
+            type: 'satow_spring',
+            x: canvas.width + 40,
+            width: 36,
+            isCompressed: false,
+            compressTimer: 0
+          });
+        } else if (g.spicyTier >= 2 && !hasSteam && Math.random() < 0.20) {
+          g.elements.push({
+            type: 'steam_jet',
+            x: canvas.width + 40,
+            width: 28,
+            cycleTimer: 0,
+            isBursting: false
+          });
+        } 
+        // B. Spawn Hazard Monster or Food Item
+        else {
+          const isMonster = Math.random() > (g.feverTimer > 0 ? 0.65 : 0.40);
+
+          if (isMonster) {
+            const r = Math.random();
+            let monsterType = 'hop_chili';
+
+            if (g.spicyTier === 4) {
+              // Tier 4: Giant Mortar, Naga Thunder, Hot Runner, Hawk
+              if (r > 0.70) monsterType = 'giant_mortar';
+              else if (r > 0.45) monsterType = 'naga_thunder';
+              else if (r > 0.22) monsterType = 'hot_runner';
+              else monsterType = 'hawk';
+            } else if (g.spicyTier === 3) {
+              // Tier 3: Hot Runner, Naga Thunder, Hawk, Pot Ghost, Hop Chili
+              if (r > 0.72) monsterType = 'hot_runner';
+              else if (r > 0.48) monsterType = 'naga_thunder';
+              else if (r > 0.28) monsterType = 'hawk';
+              else if (r > 0.14) monsterType = 'pot_ghost';
+              else monsterType = 'hop_chili';
+            } else if (g.spicyTier === 2) {
+              // Tier 2: Hawk, Pot Ghost, Coconut, Hop Chili
+              if (r > 0.70) monsterType = 'hawk';
+              else if (r > 0.45) monsterType = 'pot_ghost';
+              else if (r > 0.22) monsterType = 'coconut';
+              else monsterType = 'hop_chili';
+            } else {
+              // Tier 1: Hop Chili, Coconut
+              if (r > 0.40) monsterType = 'hop_chili';
+              else monsterType = 'coconut';
+            }
+
+            const isFlying = monsterType === 'hawk';
+            const isSkyFalling = monsterType === 'giant_mortar';
+            const isThunder = monsterType === 'naga_thunder';
+
+            const monY = isFlying ? g.groundY - 55 : (isSkyFalling ? -40 : g.groundY);
+            const monW = isSkyFalling ? 52 : (isThunder ? 24 : (monsterType === 'hawk' ? 36 : (monsterType === 'hot_runner' ? 36 : (monsterType === 'coconut' ? 28 : 32))));
+            const monH = isSkyFalling ? 52 : (isThunder ? g.groundY : (monsterType === 'hawk' ? 30 : (monsterType === 'hot_runner' ? 40 : (monsterType === 'coconut' ? 28 : 32))));
+            const speedMul = monsterType === 'hot_runner' ? 1.45 : (monsterType === 'coconut' ? 1.35 : (monsterType === 'hawk' ? 1.2 : 1.0));
+
+            g.monsters.push({
+              x: canvas.width + 30,
+              y: monY,
+              vy: isSkyFalling ? 4.0 : 0,
+              type: monsterType,
+              width: monW,
+              height: monH,
+              speedMultiplier: speedMul,
+              animPhase: Math.random() * Math.PI * 2,
+              timer: 0,
+              isTelegraph: isThunder
+            });
           } else {
-            monsterType = 'run_chili';
+            // Food / Power-up Item
+            const r = Math.random();
+            // In Tier 4, chance to spawn rare Golden Mortar!
+            let foodType = 'fish';
+            if (g.spicyTier === 4 && r > 0.88) {
+              foodType = 'golden_mortar';
+            } else if (r > 0.62) {
+              foodType = 'satow';
+            } else if (r > 0.30) {
+              foodType = 'fish';
+            } else {
+              foodType = 'bamboo';
+            }
+
+            const itemY = foodType === 'golden_mortar' ? g.groundY - 60 : (g.groundY - (Math.random() > 0.5 ? 42 : 14));
+            g.items.push({
+              x: canvas.width + 20,
+              y: itemY,
+              type: foodType,
+              bobOffset: Math.random() * Math.PI * 2,
+              size: foodType === 'golden_mortar' ? 36 : 28
+            });
           }
-
-          const monY = monsterType === 'hawk' ? g.groundY - 55 : g.groundY;
-          const monW = monsterType === 'hawk' ? 28 : (monsterType === 'hot_runner' ? 26 : (monsterType === 'coconut' ? 20 : 24));
-          const monH = monsterType === 'hawk' ? 20 : (monsterType === 'hot_runner' ? 34 : (monsterType === 'coconut' ? 20 : 28));
-          const speedMul = monsterType === 'hot_runner' ? 1.45 : (monsterType === 'coconut' ? 1.35 : (monsterType === 'hawk' ? 1.2 : 1.0));
-
-          g.monsters.push({
-            x: canvas.width + 30,
-            y: monY,
-            type: monsterType,
-            width: monW,
-            height: monH,
-            speedMultiplier: speedMul,
-            animPhase: Math.random() * Math.PI * 2
-          });
-        } else {
-          const r = Math.random();
-          const foodType = r > 0.65 ? 'satow' : (r > 0.3 ? 'fish' : 'bamboo');
-          g.items.push({
-            x: canvas.width + 20,
-            y: g.groundY - (Math.random() > 0.5 ? 42 : 14),
-            type: foodType,
-            bobOffset: Math.random() * Math.PI * 2,
-            size: 22
-          });
         }
       }
 
-      // 7. Update Collectible Items (With Magnetic Pull)
-      g.items.forEach((item, idx) => {
+      // 7. Update Interactive Elements (Satow Spring, Steam Jet)
+      for (let idx = g.elements.length - 1; idx >= 0; idx--) {
+        const elem = g.elements[idx];
+        elem.x -= g.speed;
+
+        if (elem.type === 'satow_spring') {
+          if (elem.isCompressed) {
+            elem.compressTimer -= dt;
+            if (elem.compressTimer <= 0) elem.isCompressed = false;
+          }
+
+          // Cat lands on spring from above
+          const catBottom = g.catY;
+          const springTop = g.groundY - 24;
+          if (
+            g.catX + 24 > elem.x &&
+            g.catX + 8 < elem.x + elem.width &&
+            catBottom >= springTop &&
+            catBottom <= g.groundY + 8 &&
+            g.catVy >= 0
+          ) {
+            g.catVy = -15.5; // Mega spring launch!
+            g.isGrounded = false;
+            g.jumpCount = 1;
+            elem.isCompressed = true;
+            elem.compressTimer = 0.25;
+            g.scaleX = 0.7;
+            g.scaleY = 1.4;
+            playRetroSound('spring');
+
+            const springPts = g.feverTimer > 0 ? 6 : 3;
+            g.score += springPts;
+            setScore(g.score);
+
+            g.floatingTexts.push({
+              x: elem.x,
+              y: springTop - 15,
+              text: `🟢 SPRING LAUNCH! +${springPts}`,
+              color: '#22c55e',
+              life: 1.2
+            });
+
+            for (let p = 0; p < 8; p++) {
+              g.particles.push({
+                x: elem.x + 18,
+                y: springTop + 4,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -Math.random() * 4 - 1,
+                size: 3,
+                color: '#86efac',
+                life: 0.6
+              });
+            }
+          }
+        } else if (elem.type === 'steam_jet') {
+          elem.cycleTimer = (elem.cycleTimer || 0) + dt;
+          const cycle = elem.cycleTimer % 3.0;
+          elem.isBursting = cycle > 1.8;
+
+          // Steam hazard collision
+          if (elem.isBursting) {
+            const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 24, bottom: g.catY };
+            const steamBox = { left: elem.x + 6, right: elem.x + 22, top: g.groundY - 75, bottom: g.groundY };
+
+            if (
+              catBox.right > steamBox.left &&
+              catBox.left < steamBox.right &&
+              catBox.bottom > steamBox.top &&
+              catBox.top < steamBox.bottom
+            ) {
+              if (g.godModeTimer > 0) {
+                // Dissipate steam safely in God Mode
+                elem.isBursting = false;
+                g.score += 2;
+                g.floatingTexts.push({
+                  x: elem.x,
+                  y: g.groundY - 40,
+                  text: '💨 STEAM DEFLECTED! +2',
+                  color: '#38bdf8',
+                  life: 1.0
+                });
+              } else {
+                // Scalded by steam -> Game Over
+                triggerGameOver('hit');
+                return;
+              }
+            }
+          }
+        }
+      }
+      g.elements = g.elements.filter(e => e.x > -50);
+
+      // 8. Update Collectible Items (With Magnetic Pull)
+      for (let idx = g.items.length - 1; idx >= 0; idx--) {
+        const item = g.items[idx];
         item.x -= g.speed;
-        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
+        const bob = Math.sin(g.frame * 0.1 + (item.bobOffset || 0)) * 4;
         const currentItemY = item.y + bob;
 
-        const distCatX = g.catX + 14 - (item.x + 11);
-        const distCatY = g.catY - 14 - (currentItemY + 11);
+        const distCatX = g.catX + 16 - (item.x + item.size / 2);
+        const distCatY = g.catY - 14 - (currentItemY + item.size / 2);
         const dist = Math.hypot(distCatX, distCatY);
         if (dist < g.magnetRadius) {
-          const pullSpeed = g.charId === 'khao_lam' ? 0.35 : 0.24;
+          const pullSpeed = g.charId === 'khao_lam' ? 0.38 : 0.24;
           item.x += distCatX * pullSpeed;
           item.y += distCatY * pullSpeed;
         }
@@ -566,6 +801,33 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           catBox.top < itemBox.bottom
         ) {
           g.items.splice(idx, 1);
+
+          // Secret Item: Golden Mortar
+          if (item.type === 'golden_mortar') {
+            g.score += 15;
+            setScore(g.score);
+            g.happiness = 100;
+            setHappiness(100);
+            g.feverTimer = 10.0;
+            setIsFeverActive(true);
+            setFeverRemaining(10);
+            setEarnedXhaus(ex => {
+              const updated = +(ex + 0.25).toFixed(2);
+              if (onCoinEarned) onCoinEarned(0.25);
+              return updated;
+            });
+            playRetroSound('golden_mortar');
+            confetti({ particleCount: 90, spread: 80, origin: { y: 0.5 } });
+
+            g.floatingTexts.push({
+              x: g.catX + 10,
+              y: g.catY - 48,
+              text: '🏆 ครกหินทองคำ! +15 PTS // +0.25 XH!',
+              color: '#facc15',
+              life: 2.2
+            });
+            continue;
+          }
 
           const basePts = item.type === 'satow' ? 3 : (item.type === 'fish' ? 1 : 2);
           const pts = g.feverTimer > 0 ? basePts * 2 : basePts;
@@ -627,8 +889,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
           for (let p = 0; p < 6; p++) {
             g.particles.push({
-              x: item.x + 11,
-              y: currentItemY + 11,
+              x: item.x + 14,
+              y: currentItemY + 14,
               vx: (Math.random() - 0.5) * 3.5,
               vy: (Math.random() - 0.5) * 3.5,
               size: Math.random() * 4 + 2,
@@ -637,25 +899,96 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             });
           }
         }
-      });
+      }
       g.items = g.items.filter(i => i.x > -40);
 
-      // 8. Update Enemies Physics & Collision
+      // Helper for Game Over Trigger
+      function triggerGameOver(soundType = 'hit') {
+        playRetroSound(soundType);
+        triggerHaptic('hit');
+        g.hitShakeTimer = 0.28;
+
+        for (let p = 0; p < 20; p++) {
+          g.particles.push({
+            x: g.catX + 16,
+            y: g.catY - 12,
+            vx: (Math.random() - 0.5) * 8,
+            vy: (Math.random() - 0.5) * 8,
+            size: Math.random() * 5 + 3,
+            color: Math.random() > 0.5 ? '#ef4444' : '#ea580c',
+            life: 0.9
+          });
+        }
+
+        setScore(g.score);
+        setHappiness(Math.floor(g.happiness));
+        setCanRestart(false);
+        setIsClaiming(false);
+
+        setTimeout(() => {
+          setGameState('gameover');
+          setTimeout(() => {
+            setCanRestart(true);
+          }, 750);
+        }, 80);
+
+        if (g.score > highScore) {
+          setHighScore(g.score);
+          localStorage.setItem('tai_pla_high_score', g.score.toString());
+          confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
+        }
+      }
+
+      // 9. Update Enemy Hazards (7 Types)
       for (let idx = g.monsters.length - 1; idx >= 0; idx--) {
         const mon = g.monsters[idx];
         mon.x -= g.speed * (mon.speedMultiplier || 1.0);
+        mon.timer = (mon.timer || 0) + dt;
 
         let monY = mon.y;
         if (mon.type === 'hop_chili') {
-          monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
+          monY = mon.y - Math.abs(Math.sin(g.frame * 0.12 + (mon.animPhase || 0))) * 24;
         } else if (mon.type === 'hawk') {
-          monY = mon.y + Math.sin(g.frame * 0.08 + mon.animPhase) * 8;
+          monY = mon.y + Math.sin(g.frame * 0.09 + (mon.animPhase || 0)) * 10;
+        } else if (mon.type === 'giant_mortar') {
+          if (mon.y < g.groundY) {
+            mon.vy += 35 * dt;
+            mon.y += mon.vy;
+            if (mon.y >= g.groundY) {
+              mon.y = g.groundY;
+              mon.vy = 0;
+              g.hitShakeTimer = 0.2;
+              playRetroSound('mortar_smash');
+              // Ground shock dust
+              for (let p = 0; p < 10; p++) {
+                g.particles.push({
+                  x: mon.x + 26 + (Math.random() - 0.5) * 30,
+                  y: g.groundY + 2,
+                  vx: (Math.random() - 0.5) * 4,
+                  vy: -Math.random() * 2,
+                  size: 3,
+                  color: '#94a3b8',
+                  life: 0.6
+                });
+              }
+            }
+          }
+          monY = mon.y;
+        } else if (mon.type === 'naga_thunder') {
+          if (mon.timer >= 0.8 && mon.isTelegraph) {
+            mon.isTelegraph = false;
+            playRetroSound('thunder');
+          }
+          if (mon.timer > 1.1) {
+            g.monsters.splice(idx, 1);
+            continue;
+          }
         }
 
-        // Ember smoke behind flamer
-        if (mon.type === 'hot_runner' && Math.random() > 0.5) {
+        // Ember smoke behind hot runner
+        if (mon.type === 'hot_runner' && Math.random() > 0.4) {
           g.particles.push({
-            x: mon.x + 18,
+            x: mon.x + 22,
             y: monY - 24,
             vx: Math.random() * 2 + 1,
             vy: -Math.random() * 2 - 0.5,
@@ -665,13 +998,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           });
         }
 
-        const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 20, bottom: g.catY - 2 };
-        const monBox = { 
+        // Collision Check
+        const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 22, bottom: g.catY - 2 };
+        let monBox = { 
           left: mon.x + 4, 
           right: mon.x + mon.width - 4, 
           top: monY - mon.height + 4, 
           bottom: monY 
         };
+
+        if (mon.type === 'naga_thunder') {
+          if (mon.isTelegraph) continue; // Safe during warning telegraph
+          monBox = { left: mon.x - 12, right: mon.x + 12, top: 0, bottom: g.groundY };
+        }
 
         if (
           catBox.right > monBox.left &&
@@ -681,75 +1020,43 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ) {
           // IF IN GOD MODE: SMASH ENEMY!
           if (g.godModeTimer > 0) {
-            playRetroSound('smash');
+            const isGiant = mon.type === 'giant_mortar';
+            playRetroSound(isGiant ? 'mortar_smash' : 'smash');
             g.monsters.splice(idx, 1);
-            const smashPts = g.feverTimer > 0 ? 4 : 2;
+            const smashPts = isGiant ? 8 : (g.feverTimer > 0 ? 4 : 2);
             g.score += smashPts;
             setScore(g.score);
 
             g.floatingTexts.push({
               x: mon.x,
               y: monY - 30,
-              text: `💥 SMASH! +${smashPts}`,
+              text: isGiant ? `💥 MORTAR SMASHED! +${smashPts}` : `💥 SMASH! +${smashPts}`,
               color: '#facc15',
-              life: 1.2
+              life: 1.4
             });
 
-            for (let p = 0; p < 12; p++) {
+            for (let p = 0; p < (isGiant ? 20 : 12); p++) {
               g.particles.push({
-                x: mon.x + 12,
-                y: monY - 15,
-                vx: (Math.random() - 0.5) * 6,
-                vy: (Math.random() - 0.5) * 6,
-                size: Math.random() * 4 + 2,
-                color: '#facc15',
+                x: mon.x + mon.width / 2,
+                y: monY - mon.height / 2,
+                vx: (Math.random() - 0.5) * 7,
+                vy: (Math.random() - 0.5) * 7,
+                size: Math.random() * 5 + 2,
+                color: isGiant ? '#64748b' : '#facc15',
                 life: 0.8
               });
             }
             continue;
           }
 
-          // Otherwise: Player is hit -> Game Over with micro freeze-frame & screen shake
-          playRetroSound('hit');
-          triggerHaptic('hit');
-          g.hitShakeTimer = 0.25;
-
-          // Spawn collision impact debris
-          for (let p = 0; p < 18; p++) {
-            g.particles.push({
-              x: g.catX + 16,
-              y: g.catY - 12,
-              vx: (Math.random() - 0.5) * 7,
-              vy: (Math.random() - 0.5) * 7,
-              size: Math.random() * 5 + 3,
-              color: Math.random() > 0.5 ? '#ef4444' : '#ea580c',
-              life: 0.9
-            });
-          }
-
-          setScore(g.score);
-          setHappiness(Math.floor(g.happiness));
-          setCanRestart(false);
-          setIsClaiming(false);
-
-          setTimeout(() => {
-            setGameState('gameover');
-            setTimeout(() => {
-              setCanRestart(true);
-            }, 750);
-          }, 80);
-
-          if (g.score > highScore) {
-            setHighScore(g.score);
-            localStorage.setItem('tai_pla_high_score', g.score.toString());
-            confetti({ particleCount: 90, spread: 75, origin: { y: 0.6 } });
-          }
+          // Otherwise: Player is hit -> Game Over
+          triggerGameOver('hit');
           return;
         }
       }
-      g.monsters = g.monsters.filter(m => m.x > -50);
+      g.monsters = g.monsters.filter(m => m.x > -60);
 
-      // 9. Update Particles & Floating Texts
+      // 10. Update Particles & Floating Texts
       g.particles.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
@@ -764,567 +1071,86 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.floatingTexts = g.floatingTexts.filter(ft => ft.life > 0);
 
       // ============================================================
-      // 🎨 RETRO CHUNKY PIXEL ART RENDERING
+      // 🎨 128-BIT NEO-ARCADE PIXEL ART RENDERING (VIA TaiPla128Renderer)
       // ============================================================
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
 
-      // Screen shake on hit
+      // Screen shake on hit / mortar slam
       if (g.hitShakeTimer > 0) {
         g.hitShakeTimer = Math.max(0, g.hitShakeTimer - dt);
-        const shakeMag = g.hitShakeTimer * 14;
+        const shakeMag = g.hitShakeTimer * 16;
         ctx.translate((Math.random() - 0.5) * shakeMag, (Math.random() - 0.5) * shakeMag);
       }
 
-      // Sky Background according to Spicy Tier and Fever Mode
-      if (g.feverTimer > 0) {
-        ctx.fillStyle = '#fefce8';
-      } else if (g.spicyTier === 3) {
-        ctx.fillStyle = '#1e1b4b';
-      } else if (g.spicyTier === 2) {
-        ctx.fillStyle = '#fde68a';
-      } else {
-        ctx.fillStyle = '#fef8e7';
-      }
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // 1. 5-Layer Parallax Background
+      taiPlaRenderer.drawBackground(ctx, canvas.width, canvas.height, g.groundY, g.distanceRun, g.frame, g.spicyTier, g.feverTimer);
 
-      // Sun / Moon Display
-      const sunX = canvas.width - 65;
-      const sunY = 38;
-      if (g.spicyTier === 3) {
-        ctx.fillStyle = '#fef08a';
-        ctx.beginPath();
-        ctx.arc(sunX, sunY, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#1e1b4b';
-        ctx.beginPath();
-        ctx.arc(sunX + 6, sunY - 4, 12, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        ctx.fillStyle = g.spicyTier === 2 ? '#ea580c' : '#f59e0b';
-        ctx.fillRect(sunX - 16, sunY - 4, 32, 8);
-        ctx.fillRect(sunX - 4, sunY - 16, 8, 32);
-        ctx.fillRect(sunX - 12, sunY - 12, 24, 24);
-        ctx.fillStyle = g.spicyTier === 2 ? '#fbbf24' : '#fde047';
-        ctx.fillRect(sunX - 10, sunY - 10, 20, 20);
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(sunX - 5, sunY - 3, 2, 4);
-        ctx.fillRect(sunX + 3, sunY - 3, 2, 4);
-        ctx.fillRect(sunX - 1, sunY + 2, 2, 2);
-      }
-
-      // Clouds
-      const drawCuteCloud = (cx, cy) => {
-        const cloudTint = g.spicyTier === 3 ? '#4338ca' : (g.spicyTier === 2 ? '#fdba74' : '#93c5fd');
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cx, cy + 6, 44, 16);
-        ctx.fillRect(cx + 8, cy, 28, 24);
-        ctx.fillRect(cx + 14, cy - 4, 16, 30);
-
-        ctx.fillStyle = cloudTint;
-        ctx.fillRect(cx + 2, cy + 8, 40, 12);
-        ctx.fillRect(cx + 10, cy + 2, 24, 20);
-        ctx.fillRect(cx + 16, cy - 2, 12, 24);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cx + 12, cy + 8, 3, 3);
-        ctx.fillRect(cx + 26, cy + 8, 3, 3);
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillRect(cx + 8, cy + 12, 4, 2);
-        ctx.fillRect(cx + 30, cy + 12, 4, 2);
-      };
-
-      const cloud1X = (canvas.width - ((g.distanceRun * 0.2) % (canvas.width + 120)) + canvas.width + 120) % (canvas.width + 120) - 60;
-      const cloud2X = (canvas.width - (((g.distanceRun * 0.2) + 260) % (canvas.width + 120)) + canvas.width + 120) % (canvas.width + 120) - 60;
-      drawCuteCloud(cloud1X, 26);
-      drawCuteCloud(cloud2X, 46);
-
-      // Distant Lao Mountains Silhouette
-      ctx.fillStyle = g.spicyTier === 3 ? '#312e81' : (g.spicyTier === 2 ? '#d97706' : '#ebd5b3');
-      ctx.beginPath();
-      ctx.moveTo(0, 145);
-      for (let mx = 0; mx <= canvas.width; mx += 20) {
-        const peak = Math.sin((mx + g.distanceRun * 0.15) * 0.02) * 14;
-        ctx.lineTo(mx, 135 + peak);
-      }
-      ctx.lineTo(canvas.width, 155);
-      ctx.lineTo(0, 155);
-      ctx.closePath();
-      ctx.fill();
-
-      // Mekong River Shimmer Band
-      ctx.fillStyle = g.spicyTier === 3 ? '#0284c7' : '#38bdf8';
-      ctx.fillRect(0, 146, canvas.width, 14);
-      ctx.fillStyle = g.spicyTier === 3 ? '#38bdf8' : '#bae6fd';
-      const waveShift = (g.frame * 2) % 28;
-      for (let wx = -28; wx < canvas.width; wx += 28) {
-        ctx.fillRect(wx + waveShift, 150, 14, 2);
-      }
-
-      // Continuous Scenery & Landmarks
-      const totalLoop = 1800;
-      const getSceneX = (baseX) => {
-        const scrolled = (baseX - (g.distanceRun * 0.85)) % totalLoop;
-        return ((scrolled % totalLoop) + totalLoop) % totalLoop - 100;
-      };
-
-      // 1. วัดมหาธาตุ
-      const watX = getSceneX(200);
-      if (watX > -120 && watX < canvas.width + 80) {
-        const gy = g.groundY;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(watX, gy - 46, 44, 46);
-        ctx.fillRect(watX + 6, gy - 66, 32, 20);
-        ctx.fillRect(watX + 12, gy - 86, 20, 20);
-        ctx.fillRect(watX + 18, gy - 110, 8, 24);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(watX + 3, gy - 43, 38, 43);
-        ctx.fillStyle = '#f59e0b';
-        ctx.fillRect(watX + 9, gy - 63, 26, 17);
-        ctx.fillStyle = '#fbbf24';
-        ctx.fillRect(watX + 15, gy - 83, 14, 17);
-        ctx.fillStyle = '#fde047';
-        ctx.fillRect(watX + 20, gy - 108, 4, 22);
-      }
-
-      // 2. รถเข็นผลไม้ไทย
-      const cartX = getSceneX(650);
-      if (cartX > -120 && cartX < canvas.width + 80) {
-        const gy = g.groundY;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cartX, gy - 44, 44, 34);
-        ctx.fillStyle = '#0284c7';
-        ctx.fillRect(cartX + 2, gy - 42, 40, 30);
-
-        ctx.fillStyle = '#ef4444';
-        ctx.fillRect(cartX + 5, gy - 38, 9, 9);
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(cartX + 16, gy - 38, 9, 9);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(cartX + 27, gy - 38, 9, 9);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.beginPath();
-        ctx.arc(cartX + 14, gy - 8, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#e2e8f0';
-        ctx.beginPath();
-        ctx.arc(cartX + 14, gy - 8, 4, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(cartX + 46, gy - 24, 18, 24);
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(cartX + 48, gy - 22, 14, 22);
-      }
-
-      // 3. พญาศรีสัตตนาคราช
-      const nagaX = getSceneX(1450);
-      if (nagaX > -120 && nagaX < canvas.width + 80) {
-        const gy = g.groundY;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX, gy - 36, 52, 36);
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(nagaX + 3, gy - 33, 46, 33);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(nagaX + 8, gy - 66, 34, 32);
-        ctx.fillStyle = '#eab308';
-        ctx.fillRect(nagaX + 11, gy - 63, 28, 26);
-
-        const headColors = ['#fde047', '#facc15', '#eab308'];
-        const heads = [4, 11, 18, 25, 32, 39, 46];
-        heads.forEach((hx, i) => {
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(nagaX + hx - 3, gy - 86 - (i === 3 ? 10 : (i === 2 || i === 4 ? 5 : 0)), 8, 18);
-          ctx.fillStyle = headColors[i % 3];
-          ctx.fillRect(nagaX + hx - 1, gy - 84 - (i === 3 ? 10 : (i === 2 || i === 4 ? 5 : 0)), 4, 14);
-        });
-
-        ctx.fillStyle = '#38bdf8';
-        const waterSpurt = (g.frame * 3) % 20;
-        ctx.fillRect(nagaX - 8 - waterSpurt, gy - 80 + waterSpurt * 1.5, 4, 4);
-      }
-
-      // Solid Ground Line & Checkered Grass
-      ctx.fillStyle = '#1f1d24';
-      ctx.fillRect(0, g.groundY, canvas.width, 3);
-      ctx.fillStyle = g.spicyTier === 3 ? '#166534' : '#65a30d';
-      ctx.fillRect(0, g.groundY + 3, canvas.width, canvas.height - (g.groundY + 3));
-
-      ctx.fillStyle = g.spicyTier === 3 ? '#14532d' : '#4d7c0f';
-      const tileShift = (g.distanceRun * 2.4) % 24;
-      for (let tx = -24; tx < canvas.width; tx += 24) {
-        ctx.fillRect(tx + tileShift, g.groundY + 3, 12, 10);
-        ctx.fillRect(tx + tileShift + 12, g.groundY + 13, 12, 18);
-      }
-
-      // ============================================================
-      // 🌶️ 🔥 🦅 🥥 DRAW ENEMIES
-      // ============================================================
-      g.monsters.forEach(mon => {
-        ctx.save();
-        let monY = mon.y;
-        if (mon.type === 'hop_chili') {
-          monY = mon.y - Math.abs(Math.sin(g.frame * 0.09 + mon.animPhase)) * 22;
-        } else if (mon.type === 'hawk') {
-          monY = mon.y + Math.sin(g.frame * 0.08 + mon.animPhase) * 8;
-        }
-
-        const mx = mon.x;
-
-        if (mon.type !== 'hawk') {
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-          ctx.beginPath();
-          ctx.ellipse(mx + (mon.type === 'hot_runner' ? 13 : 10), g.groundY + 2, 10, 3, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        if (mon.type === 'hawk') {
-          // 🦅 Flying Hawk
-          const flap = Math.sin(g.frame * 0.25) * 6;
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 6, monY - 14, 16, 12);
-          ctx.fillStyle = '#78350f';
-          ctx.fillRect(mx + 8, monY - 12, 12, 8);
-
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 2, monY - 16, 8, 8);
-          ctx.fillStyle = '#f59e0b';
-          ctx.fillRect(mx - 2, monY - 14, 5, 4);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(mx + 3, monY - 14, 3, 3);
-          ctx.fillStyle = '#ef4444';
-          ctx.fillRect(mx + 4, monY - 13, 2, 2);
-
-          ctx.fillStyle = '#451a03';
-          ctx.beginPath();
-          ctx.moveTo(mx + 8, monY - 10);
-          ctx.lineTo(mx + 16, monY - 22 - flap);
-          ctx.lineTo(mx + 22, monY - 8);
-          ctx.closePath();
-          ctx.fill();
-        } else if (mon.type === 'coconut') {
-          // 🥥 Rolling Coconut
-          const rot = g.frame * 0.2;
-          ctx.save();
-          ctx.translate(mx + 10, monY - 10);
-          ctx.rotate(rot);
-          ctx.fillStyle = '#1f1d24';
-          ctx.beginPath();
-          ctx.arc(0, 0, 10, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#78350f';
-          ctx.beginPath();
-          ctx.arc(0, 0, 8, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#451a03';
-          ctx.fillRect(-3, -4, 2, 2);
-          ctx.fillRect(2, -4, 2, 2);
-          ctx.fillRect(0, 2, 3, 2);
-          ctx.restore();
-        } else if (mon.type === 'hot_runner') {
-          // 🔥 Hot Runner
-          const runCycle = Math.floor((g.frame / 4) % 4);
-          const flamePulse = Math.sin(g.frame * 0.3) * 3;
-          ctx.fillStyle = '#f97316';
-          ctx.beginPath();
-          ctx.moveTo(mx + 6, monY - 26);
-          ctx.lineTo(mx + 13, monY - 38 - flamePulse);
-          ctx.lineTo(mx + 20, monY - 26);
-          ctx.closePath();
-          ctx.fill();
-          ctx.fillStyle = '#fde047';
-          ctx.fillRect(mx + 10, monY - 34 - flamePulse * 0.6, 6, 8);
-
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 4, monY - 28, 18, 16);
-          ctx.fillStyle = '#ef4444';
-          ctx.fillRect(mx + 6, monY - 26, 14, 12);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(mx + 7, monY - 22, 3, 3);
-          ctx.fillRect(mx + 15, monY - 22, 3, 3);
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 8, monY - 21, 2, 2);
-          ctx.fillRect(mx + 15, monY - 21, 2, 2);
-
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 6, monY - 12, 14, 10);
-          ctx.fillStyle = '#b91c1c';
-          ctx.fillRect(mx + 8, monY - 10, 10, 8);
-
-          ctx.fillStyle = '#1f1d24';
-          if (runCycle === 0) {
-            ctx.fillRect(mx + 4, monY - 2, 5, 4);
-            ctx.fillRect(mx + 16, monY - 2, 5, 4);
-          } else {
-            ctx.fillRect(mx + 8, monY - 2, 5, 4);
-            ctx.fillRect(mx + 12, monY - 2, 5, 4);
-          }
-        } else {
-          // 🌶️ Chili Demon
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 3, monY - 24, 18, 22);
-          ctx.fillRect(mx + 6, monY - 28, 12, 26);
-          ctx.fillRect(mx + 1, monY - 16, 22, 12);
-
-          ctx.fillStyle = '#ef4444';
-          ctx.fillRect(mx + 5, monY - 22, 14, 18);
-          ctx.fillRect(mx + 8, monY - 26, 8, 22);
-          ctx.fillRect(mx + 3, monY - 14, 18, 8);
-
-          ctx.fillStyle = '#22c55e';
-          ctx.fillRect(mx + 10, monY - 30, 4, 4);
-
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(mx + 6, monY - 16, 4, 4);
-          ctx.fillRect(mx + 14, monY - 16, 4, 4);
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 8, monY - 15, 2, 3);
-          ctx.fillRect(mx + 16, monY - 15, 2, 3);
-
-          const walkCycle = Math.sin(g.frame * 0.25) * 3;
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(mx + 5 + walkCycle, monY - 3, 4, 3);
-          ctx.fillRect(mx + 15 - walkCycle, monY - 3, 4, 3);
-        }
-
-        ctx.restore();
+      // 2. Interactive Stage Elements (Satow Spring Pad, Steam Jet)
+      g.elements.forEach(elem => {
+        taiPlaRenderer.drawElement(ctx, elem, g.frame, g.groundY);
       });
 
-      // ============================================================
-      // 🐟 🌿 🎋 DRAW INGREDIENTS
-      // ============================================================
+      // 3. Collectible Ingredients & Golden Mortar
       g.items.forEach(item => {
-        ctx.save();
-        const bob = Math.sin(g.frame * 0.09 + item.bobOffset) * 3.5;
-        const ix = item.x;
-        const iy = item.y + bob;
-
-        if (item.type === 'satow') {
-          const satowGlow = Math.sin(g.frame * 0.2) * 2;
-          ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
-          ctx.beginPath();
-          ctx.arc(ix + 11, iy + 10, 14 + satowGlow, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(ix + 2, iy + 2, 18, 16);
-          ctx.fillStyle = '#22c55e';
-          ctx.fillRect(ix + 4, iy + 4, 14, 12);
-          ctx.fillStyle = '#86efac';
-          ctx.fillRect(ix + 6, iy + 6, 4, 4);
-          ctx.fillRect(ix + 12, iy + 9, 4, 4);
-        } else if (item.type === 'fish') {
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(ix + 2, iy + 4, 18, 12);
-          ctx.fillRect(ix + 18, iy + 2, 4, 16);
-          ctx.fillStyle = '#38bdf8';
-          ctx.fillRect(ix + 4, iy + 6, 14, 8);
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(ix + 6, iy + 8, 2, 2);
-        } else {
-          ctx.fillStyle = '#1f1d24';
-          ctx.fillRect(ix + 4, iy + 2, 14, 18);
-          ctx.fillStyle = '#fde047';
-          ctx.fillRect(ix + 6, iy + 4, 10, 14);
-          ctx.fillStyle = '#ca8a04';
-          ctx.fillRect(ix + 6, iy + 10, 10, 2);
-        }
-        ctx.restore();
+        taiPlaRenderer.drawItem(ctx, item, g.frame);
       });
 
-      // ============================================================
-      // 🐱 🐕 DRAW HERO SPRITES
-      // ============================================================
-      ctx.save();
-      const catX = g.catX;
-      const catY = g.catY;
-      const legRun = Math.floor((g.frame / 5) % 4);
+      // 4. Enemy Hazards (7 Types)
+      g.monsters.forEach(mon => {
+        taiPlaRenderer.drawEnemy(ctx, mon, g.frame, g.groundY);
+      });
 
-      // Ground Shadow
-      const shadowScale = Math.max(0.4, 1.0 - (g.groundY - catY) / 100);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.14)';
-      ctx.beginPath();
-      ctx.ellipse(catX + 16, g.groundY + 2, 13 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // 5. Hero Character
+      taiPlaRenderer.drawCharacter(
+        ctx,
+        g.charId,
+        g.catX,
+        g.catY,
+        g.frame,
+        g.isGrounded,
+        g.godModeTimer,
+        g.feverTimer,
+        g.scaleX,
+        g.scaleY
+      );
 
-      // GOD MODE / FEVER AURA
-      if (g.feverTimer > 0) {
-        const auraPulse = Math.sin(g.frame * 0.35) * 5;
-        ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
-        ctx.beginPath();
-        ctx.arc(catX + 16, catY - 14, 26 + auraPulse, 0, Math.PI * 2);
-        ctx.fill();
-
-        if (Math.random() > 0.4) {
-          g.particles.push({
-            x: catX + (Math.random() * 24 - 4),
-            y: catY - (Math.random() * 28 + 4),
-            vx: (Math.random() - 0.5) * 1.5,
-            vy: -Math.random() * 2.5,
-            size: Math.random() * 4 + 2,
-            color: Math.random() > 0.5 ? '#f43f5e' : '#facc15',
-            life: 0.7
-          });
-        }
-      } else if (g.godModeTimer > 0) {
-        const auraPulse = Math.sin(g.frame * 0.3) * 4;
-        ctx.fillStyle = 'rgba(234, 179, 8, 0.35)';
-        ctx.beginPath();
-        ctx.arc(catX + 16, catY - 14, 24 + auraPulse, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      ctx.translate(catX + 16, catY);
-      ctx.scale(g.scaleX, g.scaleY);
-      ctx.translate(-(catX + 16), -catY);
-
-      if (g.charId === 'som_satow') {
-        // พี่ส้มสตอ
-        const tailWag = Math.sin(g.frame * 0.2) * 3;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
-        ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 4, catY - 22, 24, 18);
-        ctx.fillRect(catX + 8, catY - 26, 16, 22);
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(catX + 6, catY - 20, 20, 14);
-
-        ctx.fillStyle = '#c2410c';
-        ctx.fillRect(catX + 10, catY - 20, 3, 10);
-        ctx.fillRect(catX + 16, catY - 20, 3, 10);
-
-        ctx.fillStyle = '#16a34a';
-        ctx.fillRect(catX + 18, catY - 14, 5, 8);
-        ctx.fillStyle = '#22c55e';
-        ctx.fillRect(catX + 19, catY - 12, 3, 6);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 18, catY - 28, 16, 16);
-        ctx.fillRect(catX + 20, catY - 34, 4, 6);
-        ctx.fillRect(catX + 28, catY - 34, 4, 6);
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(catX + 20, catY - 26, 12, 12);
-      } else if (g.charId === 'khao_lam') {
-        // เจ้าตูบข้าวหลาม
-        const tailWag = Math.sin(g.frame * 0.3) * 4;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 1 + tailWag, catY - 18, 5, 5);
-        ctx.fillStyle = '#854d0e';
-        ctx.fillRect(catX + 2 + tailWag, catY - 17, 3, 3);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 4, catY - 22, 24, 18);
-        ctx.fillStyle = '#d97706';
-        ctx.fillRect(catX + 6, catY - 20, 20, 14);
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(catX + 10, catY - 12, 10, 6);
-
-        ctx.fillStyle = '#dc2626';
-        ctx.fillRect(catX + 18, catY - 14, 4, 5);
-        ctx.fillStyle = '#facc15';
-        ctx.fillRect(catX + 19, catY - 10, 2, 2);
-
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 18, catY - 28, 16, 16);
-        ctx.fillRect(catX + 18, catY - 32, 5, 6);
-        ctx.fillRect(catX + 29, catY - 32, 5, 6);
-        ctx.fillStyle = '#b45309';
-        ctx.fillRect(catX + 19, catY - 31, 3, 4);
-        ctx.fillRect(catX + 30, catY - 31, 3, 4);
-
-        ctx.fillStyle = '#d97706';
-        ctx.fillRect(catX + 20, catY - 26, 12, 12);
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(catX + 26, catY - 20, 6, 6);
-      } else {
-        // น้องไตปลา
-        const tailWag = Math.sin(g.frame * 0.2) * 3;
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 2 + tailWag, catY - 14, 4, 4);
-        ctx.fillRect(catX - 2 + tailWag, catY - 18, 4, 6);
-
-        ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
-        ctx.fillRect(catX + 4, catY - 22, 24, 18);
-        ctx.fillRect(catX + 8, catY - 26, 16, 22);
-
-        ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
-        ctx.fillRect(catX + 6, catY - 20, 20, 14);
-
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(catX + 8, catY - 20, 8, 8);
-        ctx.fillRect(catX + 18, catY - 14, 6, 6);
-        ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
-        ctx.fillRect(catX + 18, catY - 20, 6, 6);
-
-        ctx.fillStyle = g.godModeTimer > 0 ? '#ca8a04' : '#1f1d24';
-        ctx.fillRect(catX + 18, catY - 28, 16, 16);
-        ctx.fillRect(catX + 20, catY - 34, 4, 6);
-        ctx.fillRect(catX + 28, catY - 34, 4, 6);
-        ctx.fillStyle = g.godModeTimer > 0 ? '#fef08a' : '#fef3c7';
-        ctx.fillRect(catX + 20, catY - 26, 12, 12);
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(catX + 21, catY - 32, 2, 4);
-        ctx.fillStyle = g.godModeTimer > 0 ? '#eab308' : '#1f1d24';
-        ctx.fillRect(catX + 29, catY - 32, 2, 4);
-      }
-
-      // Eyes
-      if (g.feverTimer > 0) {
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 27, catY - 23, 4, 2);
-        ctx.fillRect(catX + 26, catY - 22, 2, 2);
-        ctx.fillRect(catX + 30, catY - 22, 2, 2);
-
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillRect(catX + 24, catY - 18, 4, 3);
-        ctx.fillRect(catX + 31, catY - 18, 3, 3);
-      } else {
-        ctx.fillStyle = g.godModeTimer > 0 ? '#b45309' : '#1f1d24';
-        ctx.fillRect(catX + 28, catY - 22, 3, 4);
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillRect(catX + 31, catY - 19, 2, 2);
-        ctx.fillRect(catX + 24, catY - 18, 3, 2);
-      }
-
-      // Running Paws
-      ctx.fillStyle = '#1f1d24';
-      if (g.isGrounded) {
-        if (legRun === 0) {
-          ctx.fillRect(catX + 8, catY - 3, 4, 4);
-          ctx.fillRect(catX + 20, catY - 3, 4, 4);
-        } else {
-          ctx.fillRect(catX + 12, catY - 3, 4, 4);
-          ctx.fillRect(catX + 16, catY - 3, 4, 4);
-        }
-      } else {
-        ctx.fillRect(catX + 10, catY - 5, 4, 4);
-        ctx.fillRect(catX + 20, catY - 5, 4, 4);
-      }
-
-      ctx.restore();
-
-      // ============================================================
-      // PARTICLES & FLOATING REWARD TEXTS
-      // ============================================================
+      // 6. Particles
       g.particles.forEach(p => {
         ctx.fillStyle = p.color;
         ctx.fillRect(p.x, p.y, p.size * p.life, p.size * p.life);
       });
 
+      // 7. Floating Texts
       g.floatingTexts.forEach(ft => {
         ctx.font = 'bold 12px Space Mono, monospace';
-        ctx.fillStyle = '#1f1d24';
+        ctx.fillStyle = '#1c1917';
         ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
         ctx.fillStyle = ft.color;
         ctx.fillText(ft.text, ft.x, ft.y);
       });
+
+      // 8. Tier Transition Big Announcement Banner
+      if (g.tierAnnounceTimer > 0) {
+        g.tierAnnounceTimer = Math.max(0, g.tierAnnounceTimer - dt);
+        const alpha = Math.min(1.0, g.tierAnnounceTimer * 1.5);
+        ctx.save();
+        ctx.fillStyle = `rgba(24, 22, 21, ${alpha * 0.88})`;
+        ctx.fillRect(20, 60, canvas.width - 40, 56);
+        ctx.strokeStyle = g.spicyTier === 4 ? '#ef4444' : (g.spicyTier === 3 ? '#f97316' : '#facc15');
+        ctx.lineWidth = 2;
+        ctx.strokeRect(20, 60, canvas.width - 40, 56);
+
+        ctx.font = 'bold 14px Space Mono, monospace';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = g.spicyTier === 4 ? '#fca5a5' : '#fef08a';
+        ctx.fillText(g.tierAnnounceTitle, canvas.width / 2, 84);
+
+        ctx.font = '11px sans-serif';
+        ctx.fillStyle = '#f5f5f4';
+        ctx.fillText(g.tierAnnounceSubtitle, canvas.width / 2, 102);
+        ctx.restore();
+      }
 
       ctx.restore();
 
@@ -1502,10 +1328,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
         {/* Spicy Tier Indicator Overlay */}
         {gameState === 'playing' && (
-          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-[#181615]/80 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px]">
-            <Flame size={11} className={currentSpicyTier === 3 ? 'text-red-400' : 'text-amber-400'} />
+          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-[#181615]/85 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px]">
+            <Flame size={11} className={currentSpicyTier >= 3 ? 'text-red-400' : 'text-amber-400'} />
             <span className="font-bold tracking-wide">
-              {currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3)' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2)' : 'เผ็ดอนุบาล (TIER 1)')}
+              {currentSpicyTier === 4 ? 'เผ็ดนรกแตก (TIER 4) 💀⚡' : (currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3) 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2) 🌶️' : 'เผ็ดอนุบาล (TIER 1)'))}
             </span>
           </div>
         )}
@@ -1514,15 +1340,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'idle' && (
           <div 
             onClick={(e) => { e.stopPropagation(); startGame(); }}
-            className="absolute inset-0 bg-[#FAF7F5]/92 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5 cursor-pointer"
+            className="absolute inset-0 bg-[#FAF7F5]/94 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5 cursor-pointer"
           >
             <span className="text-4xl animate-bounce">{activeChar.icon}</span>
             <h4 className="font-mono text-base font-bold text-[#181615] uppercase tracking-widest">
               {activeChar.name} ตะลุยเมืองนครพนม
             </h4>
-            <p className="text-xs text-[#69635D] font-sans max-w-sm leading-relaxed">
-              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวน้ำโขง 🦅, มะพร้าว 🥥 และคนหัวร้อน 🔥</strong><br/>
-              เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเป็น <strong>เทพสะตอ</strong> และสะสม <strong>หลอดความสุข</strong> รับ 2X Fever!
+            <p className="text-xs text-[#69635D] font-sans max-w-md leading-relaxed">
+              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวโขง 🦅, ผีหม้อดิน, คนหัวร้อน 🔥 และครกหินยักษ์ 💥</strong><br/>
+              ใช้ <strong>กระดานสปริงฝักสะตอ 🟢</strong> ดีดตัวขึ้นฟ้า • เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเป็นเทพสะตอทุบศัตรูแหลก!
             </p>
             <button
               onClick={(e) => { e.stopPropagation(); startGame(); }}
@@ -1594,12 +1420,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         )}
       </div>
 
-      {/* Clean Ingredients & Guidelines Dashboard */}
-      <div className="flex flex-col sm:flex-row items-center justify-between bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded-md text-xs font-mono gap-2">
-        <div className="flex items-center gap-2 text-[var(--color-ink)]">
-          <span className="font-bold">สะสมวัตถุดิบ (ครบ 3 อย่าง = +6 PTS & +0.10 XH):</span>
+      {/* Progressive Tiers & Guidelines Dashboard */}
+      <div className="flex flex-col sm:flex-row items-center justify-between bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded-md text-xs font-mono gap-3">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-2 text-[var(--color-ink)]">
+            <span className="font-bold">ระดับความยาก 4 Tiers:</span>
+            <span className="text-[10px] text-[oklch(45%_0.010_28)] font-sans">
+              (1) อนุบาล 0-14p → (2) ปากเปิด 15-34p → (3) หูดับ 35-59p → (4) นรกแตก 60+p
+            </span>
+          </div>
+          <div className="text-[10px] text-zinc-600 font-sans">
+            🟢 <strong>สปริงฝักสะตอ</strong>: ดีดตัวสูงข้ามสิ่งกีดขวาง • 🏆 <strong>ครกทองคำ (Tier 4)</strong>: +15 PTS & +0.25 XH!
+          </div>
         </div>
-        <div className="flex items-center gap-3 text-[11px] font-bold">
+
+        <div className="flex items-center gap-2 text-[11px] font-bold shrink-0">
           <span className="text-[var(--color-ink)] bg-sky-500/10 px-2.5 py-1 rounded border border-sky-300/60">
             ปลาทู (+1 pt): {potIngredients.fish}/1
           </span>
