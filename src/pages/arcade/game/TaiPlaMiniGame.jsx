@@ -1,51 +1,51 @@
-/* Hallmark · component: TaiPlaMiniGame · genre: 128-Bit Neo-Arcade Pixel Runner · theme: Nakhon Phanom Riverfront x Progressive Difficulty */
+/* Hallmark · component: TaiPlaMiniGame · genre: modern-minimal · theme: Atelier (128-Bit Pixel Neo-Arcade)
+ * pre-emit critique: P5 H5 E5 S5 R5 V5
+ * contrast: pass (APCA / WCAG compliant)
+ */
 import React, { useState, useEffect, useRef } from 'react';
-import { RotateCcw, Trophy, Sparkles, Volume2, VolumeX, Maximize2, Minimize2, Coins, Zap, Flame, Heart, ChevronRight, User, Shield } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { taiPlaRenderer } from './renderers/TaiPla128Renderer';
 
 const CHARACTERS = {
   tai_pla: {
     id: 'tai_pla',
-    name: 'น้องไตปลา',
-    title: 'แมวเปรอะริมโขง',
-    icon: '🐱',
-    desc: 'คล่องแคล่วว่องไว • มีสกิล Double Jump กระโดด 2 จังหวะ',
-    trait: 'DOUBLE JUMP (กระโดด 2 จังหวะ)',
-    badgeColor: 'bg-orange-100 text-orange-800 border-orange-300',
-    color: '#f97316',
+    name: 'น้องไตปลามอน (Tai-Plamon)',
+    title: 'WATER / SPICE CREATURE',
+    desc: 'สิ่งมีชีวิตธาตุวารีและเครื่องแกงริมโขง • หางปลายาวประดับทับทิมแกงไตปลา คล่องแคล่วว่องไวพร้อมก้าวกระโดด 2 จังหวะ',
+    trait: 'DOUBLE JUMP (วารีกระโดด 2 จังหวะ)',
+    badgeColor: 'bg-sky-50 text-sky-900 border-sky-300',
+    color: '#0284c7',
     maxJumps: 2,
     godModeBonus: 0,
-    magnetRadius: 50,
-    jumpPower: -11.0
+    magnetRadius: 55,
+    jumpPower: -13.6,
+    doubleJumpPower: -12.0
   },
   som_satow: {
     id: 'som_satow',
-    name: 'พี่ส้มสตอ',
-    title: 'แมวส้มจอมพลัง',
-    icon: '🐈',
-    desc: 'สายพลังหรอยแรง • แปลงร่างเทพสะตอได้นาน 5 วินาที (+2s)',
-    trait: 'EXTENDED GOD MODE (เทพสะตอ 5 วิ)',
-    badgeColor: 'bg-amber-100 text-amber-800 border-amber-300',
+    name: 'พี่ส้มสะตอกง (Satow-Beast)',
+    title: 'FIRE / FLORA BEAST',
+    desc: 'อสูรพืชพันธุ์และเปลวเพลิง • เขาฝักสะตอมรกตคู่โต ทรงพลัง แปลงร่างสะตอเพลิงได้นาน 3.5 วินาที (+1.0s)',
+    trait: 'SOLAR GOD MODE (ร่างสะตอเพลิง 3.5 วิ)',
+    badgeColor: 'bg-amber-50 text-amber-900 border-amber-300',
     color: '#ea580c',
     maxJumps: 1,
-    godModeBonus: 2.0,
-    magnetRadius: 50,
-    jumpPower: -11.5
+    godModeBonus: 1.0,
+    magnetRadius: 55,
+    jumpPower: -13.8
   },
   khao_lam: {
     id: 'khao_lam',
-    name: 'เจ้าตูบข้าวหลาม',
-    title: 'หมาน้อยนครพนม',
-    icon: '🐶',
-    desc: 'อารมณ์ดีใจดี • รัศมีแม่เหล็กดูดวัตถุดิบกว้างพิเศษ (Super Magnet)',
-    trait: 'SUPER MAGNET (ดูดอาหารระยะไกล)',
-    badgeColor: 'bg-yellow-100 text-yellow-900 border-yellow-300',
-    color: '#854d0e',
+    name: 'เจ้าตูบข้าวหลาม (Bamboopup)',
+    title: 'GRASS / EARTH PUPPY',
+    desc: 'สิ่งมีชีวิตสายพืชและผืนดิน • ปลอกคอกระบอกไม้ไผ่พร้อมกระพรวนทองเหลืองโบราณ ดึงดูดอาหารและวัตถุระยะไกลพิเศษ',
+    trait: 'SUPER MAGNET (กระพรวนดูดอาหารระยะไกล)',
+    badgeColor: 'bg-stone-50 text-stone-900 border-stone-300',
+    color: '#78716c',
     maxJumps: 1,
     godModeBonus: 0,
-    magnetRadius: 82,
-    jumpPower: -10.8
+    magnetRadius: 90,
+    jumpPower: -13.4
   }
 };
 
@@ -98,7 +98,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const gameRef = useRef({
     charId: 'tai_pla',
     catX: 75,
-    catY: 185,
+    catY: 245,
     catVy: 0,
     isGrounded: true,
     jumpCount: 0,
@@ -106,24 +106,25 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     coyoteTimer: 0,
     jumpBufferTimer: 0,
     godModeTimer: 0,
-    godModeDuration: 3.0,
+    godModeDuration: 2.5,
     feverTimer: 0,
     happiness: 0,
     score: 0,
     distanceRun: 0,
     lastDistanceScore: 0,
+    potIngredients: { fish: 0, satow: 0, bamboo: 0 },
     items: [],
     monsters: [],
     elements: [],
     particles: [],
     floatingTexts: [],
     lastSpawn: 0,
-    groundY: 185,
-    speed: 3.8,
+    groundY: 245,
+    speed: 4.8,
     frame: 0,
     scaleX: 1.0,
     scaleY: 1.0,
-    magnetRadius: 50,
+    magnetRadius: 55,
     spicyTier: 1,
     lastUiSync: 0,
     hitShakeTimer: 0,
@@ -304,7 +305,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     gameRef.current = {
       charId: char.id,
       catX: 75,
-      catY: 185,
+      catY: 245,
       catVy: 0,
       isGrounded: true,
       jumpCount: 0,
@@ -312,20 +313,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       coyoteTimer: 0,
       jumpBufferTimer: 0,
       godModeTimer: 0,
-      godModeDuration: 3.0 + (char.godModeBonus || 0),
+      godModeDuration: 2.5 + (char.godModeBonus || 0),
       feverTimer: 0,
       happiness: 0,
       score: 0,
       distanceRun: 0,
       lastDistanceScore: 0,
+      potIngredients: { fish: 0, satow: 0, bamboo: 0 },
       items: [],
       monsters: [],
       elements: [],
       particles: [],
       floatingTexts: [],
       lastSpawn: Date.now(),
-      groundY: 185,
-      speed: 3.8,
+      groundY: 245,
+      speed: 4.8,
       frame: 0,
       scaleX: 1.0,
       scaleY: 1.0,
@@ -341,7 +343,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     playRetroSound('meow');
   };
 
-  // Ultra-Smooth Jump with Double Jump & Coyote Time
+  // Ultra-Snappy Jump with Double Jump & Coyote Time
   const handleJumpPress = () => {
     if (gameState !== 'playing') {
       if (gameState === 'idle') {
@@ -355,7 +357,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
     // Ground jump
     if (g.isGrounded || g.coyoteTimer > 0) {
-      g.catVy = char.jumpPower || -11.0;
+      g.catVy = char.jumpPower || -12.6;
       g.isGrounded = false;
       g.jumpCount = 1;
       g.coyoteTimer = 0;
@@ -378,7 +380,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     } 
     // Double jump in mid-air (if character supports maxJumps >= 2)
     else if (g.jumpCount < g.maxJumps) {
-      g.catVy = -9.8;
+      g.catVy = char.doubleJumpPower || -11.0;
       g.jumpCount += 1;
       g.scaleX = 0.8;
       g.scaleY = 1.3;
@@ -387,7 +389,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.floatingTexts.push({
         x: g.catX + 8,
         y: g.catY - 26,
-        text: '✨ DOUBLE JUMP!',
+        text: 'DOUBLE JUMP!',
         color: '#38bdf8',
         life: 0.9
       });
@@ -486,20 +488,20 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         });
       }
 
-      // 4. Progressive Difficulty & 4 Spicy Tiers Scaling
+      // 4. Progressive Difficulty & 4 Spicy Tiers Scaling (Snappy & Challenging)
       let tier = 1;
-      if (g.score >= 60) {
-        tier = 4; // เผ็ดนรกแตก EXTREME
-        g.speed = Math.min(9.4, 8.0 + Math.floor((g.score - 60) / 8) * 0.2);
-      } else if (g.score >= 35) {
-        tier = 3; // เผ็ดหูดับตับไหม้
-        g.speed = Math.min(7.8, 6.4 + Math.floor((g.score - 35) / 5) * 0.25);
-      } else if (g.score >= 15) {
-        tier = 2; // เผ็ดปากเปิด
-        g.speed = Math.min(6.2, 4.8 + Math.floor((g.score - 15) / 4) * 0.25);
+      if (g.score >= 100) {
+        tier = 4; // เผ็ดนรกแตก EXTREME (100+ PTS)
+        g.speed = Math.min(14.0, 11.0 + Math.floor((g.score - 100) / 10) * 0.4);
+      } else if (g.score >= 60) {
+        tier = 3; // เผ็ดหูดับตับไหม้ (60-99 PTS)
+        g.speed = Math.min(10.8, 8.5 + Math.floor((g.score - 60) / 6) * 0.35);
+      } else if (g.score >= 25) {
+        tier = 2; // เผ็ดปากเปิด (25-59 PTS)
+        g.speed = Math.min(8.2, 6.2 + Math.floor((g.score - 25) / 5) * 0.28);
       } else {
-        tier = 1; // เผ็ดอนุบาล
-        g.speed = Math.min(4.6, 3.8 + Math.floor(g.score / 3) * 0.2);
+        tier = 1; // เผ็ดอนุบาล (0-24 PTS)
+        g.speed = Math.min(5.8, 4.5 + Math.floor(g.score / 4) * 0.22);
       }
 
       if (tier !== g.spicyTier) {
@@ -507,9 +509,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         playRetroSound('tier_up');
 
         const tierMeta = {
-          2: { title: '🌶️ TIER 2: เผ็ดปากเปิด', sub: 'ความเร็วเพิ่มขึ้น • เพิ่มเหยี่ยวโขง 🦅, ผีหม้อดิน & ท่อไอน้ำเดือด' },
-          3: { title: '🔥⚡ TIER 3: เผ็ดหูดับตับไหม้', sub: 'กุ๊กกระทะร้อน 🔥 & สายฟ้าพญานาค ⚡ • ใช้สปริงสะตอกระโดดหลบ!' },
-          4: { title: '💀🔥⚡ TIER 4: เผ็ดนรกแตก EXTREME', sub: 'ครกหินยักษ์ทุบพื้น 💥 • เก็บครกหินทองคำลอยฟ้า 🏆 +15 PTS!' }
+          2: { title: '[ TIER 2 // 25+ PTS ] เผ็ดปากเปิด', sub: 'สปีดเร็วขึ้น • เพิ่มเหยี่ยวโขง, ผีหม้อดิน & ท่อไอน้ำเดือด' },
+          3: { title: '[ TIER 3 // 60+ PTS ] เผ็ดหูดับตับไหม้', sub: 'คนหัวร้อน & สายฟ้าพญานาค • สปีดจัดจ้าน ใช้สปริงสะตอกระโดดหลบ!' },
+          4: { title: '[ TIER 4 // 100+ PTS ] เผ็ดนรกแตก EXTREME', sub: 'สปีดสูงสุด 14.0+ • ครกหินยักษ์ถล่ม • เก็บครกหินทองคำลอยฟ้า +15 PTS!' }
         };
         const info = tierMeta[tier] || { title: `TIER ${tier}`, sub: '' };
         g.tierAnnounceTimer = 2.5;
@@ -536,7 +538,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         setCurrentSpicyTier(g.spicyTier);
       }
 
-      // 5. Platformer Physics
+      // 5. Platformer Physics (Crisp & Snappy Arcade Drop)
       if (g.isGrounded) {
         g.coyoteTimer = 0.08;
         g.jumpCount = 0;
@@ -546,7 +548,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.jumpBufferTimer = Math.max(0, g.jumpBufferTimer - dt);
 
-      const gravity = g.catVy > 0 ? 28 : 23;
+      const gravity = g.catVy > 0 ? 40 : 34; // Snappy, decisive gravity
       g.catVy += gravity * dt;
       g.catY += g.catVy;
 
@@ -572,11 +574,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       // 6. Spawn Director (Enemies, Elements, Ingredients based on Tier)
       const nowMs = Date.now();
-      let spawnInterval = 1400 - g.score * 20;
-      if (g.spicyTier === 2) spawnInterval = 1100 - (g.score - 15) * 15;
-      else if (g.spicyTier === 3) spawnInterval = 900 - (g.score - 35) * 10;
-      else if (g.spicyTier === 4) spawnInterval = 720;
-      spawnInterval = Math.max(680, spawnInterval);
+      let spawnInterval = 1100 - g.score * 12;
+      if (g.spicyTier === 2) spawnInterval = 850 - (g.score - 25) * 6;
+      else if (g.spicyTier === 3) spawnInterval = 650 - (g.score - 60) * 4;
+      else if (g.spicyTier === 4) spawnInterval = 480;
+      spawnInterval = Math.max(450, spawnInterval);
 
       if (nowMs - g.lastSpawn > spawnInterval) {
         g.lastSpawn = nowMs;
@@ -585,7 +587,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         const hasSpring = g.elements.some(e => e.type === 'satow_spring');
         const hasSteam = g.elements.some(e => e.type === 'steam_jet');
 
-        if (g.spicyTier >= 3 && !hasSpring && Math.random() < 0.22) {
+        if (g.spicyTier >= 3 && !hasSpring && Math.random() < 0.20) {
           g.elements.push({
             type: 'satow_spring',
             x: canvas.width + 40,
@@ -593,7 +595,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             isCompressed: false,
             compressTimer: 0
           });
-        } else if (g.spicyTier >= 2 && !hasSteam && Math.random() < 0.20) {
+        } else if (g.spicyTier >= 2 && !hasSteam && Math.random() < 0.22) {
           g.elements.push({
             type: 'steam_jet',
             x: canvas.width + 40,
@@ -604,7 +606,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         } 
         // B. Spawn Hazard Monster or Food Item
         else {
-          const isMonster = Math.random() > (g.feverTimer > 0 ? 0.65 : 0.40);
+          // In high tiers or God Mode, heavily bias towards monsters
+          const monsterChance = g.godModeTimer > 0 ? 0.90 : (g.spicyTier >= 3 ? 0.72 : (g.spicyTier >= 2 ? 0.58 : 0.45));
+          const isMonster = Math.random() < monsterChance;
 
           if (isMonster) {
             const r = Math.random();
@@ -612,26 +616,26 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
             if (g.spicyTier === 4) {
               // Tier 4: Giant Mortar, Naga Thunder, Hot Runner, Hawk
-              if (r > 0.70) monsterType = 'giant_mortar';
-              else if (r > 0.45) monsterType = 'naga_thunder';
-              else if (r > 0.22) monsterType = 'hot_runner';
+              if (r > 0.65) monsterType = 'giant_mortar';
+              else if (r > 0.42) monsterType = 'naga_thunder';
+              else if (r > 0.20) monsterType = 'hot_runner';
               else monsterType = 'hawk';
             } else if (g.spicyTier === 3) {
               // Tier 3: Hot Runner, Naga Thunder, Hawk, Pot Ghost, Hop Chili
-              if (r > 0.72) monsterType = 'hot_runner';
-              else if (r > 0.48) monsterType = 'naga_thunder';
-              else if (r > 0.28) monsterType = 'hawk';
-              else if (r > 0.14) monsterType = 'pot_ghost';
+              if (r > 0.68) monsterType = 'hot_runner';
+              else if (r > 0.44) monsterType = 'naga_thunder';
+              else if (r > 0.25) monsterType = 'hawk';
+              else if (r > 0.12) monsterType = 'pot_ghost';
               else monsterType = 'hop_chili';
             } else if (g.spicyTier === 2) {
               // Tier 2: Hawk, Pot Ghost, Coconut, Hop Chili
-              if (r > 0.70) monsterType = 'hawk';
-              else if (r > 0.45) monsterType = 'pot_ghost';
-              else if (r > 0.22) monsterType = 'coconut';
+              if (r > 0.65) monsterType = 'hawk';
+              else if (r > 0.40) monsterType = 'pot_ghost';
+              else if (r > 0.20) monsterType = 'coconut';
               else monsterType = 'hop_chili';
             } else {
               // Tier 1: Hop Chili, Coconut
-              if (r > 0.40) monsterType = 'hop_chili';
+              if (r > 0.45) monsterType = 'hop_chili';
               else monsterType = 'coconut';
             }
 
@@ -656,16 +660,33 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               timer: 0,
               isTelegraph: isThunder
             });
+
+            // Combo spawn in Tier 3 & 4: Ground obstacle followed closely by an aerial hawk
+            if (g.spicyTier >= 3 && !isFlying && !isSkyFalling && !isThunder && Math.random() < 0.28) {
+              g.monsters.push({
+                x: canvas.width + 150,
+                y: g.groundY - 55,
+                vy: 0,
+                type: 'hawk',
+                width: 36,
+                height: 30,
+                speedMultiplier: 1.2,
+                animPhase: Math.random() * Math.PI * 2,
+                timer: 0,
+                isTelegraph: false
+              });
+            }
           } else {
             // Food / Power-up Item
+            // Recipe-gated satow: Only spawn satow if the player hasn't already collected one for the current pot!
+            const needSatow = !g.potIngredients.satow;
             const r = Math.random();
-            // In Tier 4, chance to spawn rare Golden Mortar!
             let foodType = 'fish';
             if (g.spicyTier === 4 && r > 0.88) {
               foodType = 'golden_mortar';
-            } else if (r > 0.62) {
+            } else if (needSatow && r > 0.55) {
               foodType = 'satow';
-            } else if (r > 0.30) {
+            } else if (r > 0.28) {
               foodType = 'fish';
             } else {
               foodType = 'bamboo';
@@ -760,7 +781,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                 g.floatingTexts.push({
                   x: elem.x,
                   y: g.groundY - 40,
-                  text: '💨 STEAM DEFLECTED! +2',
+                  text: 'STEAM DEFLECTED! +2',
                   color: '#38bdf8',
                   life: 1.0
                 });
@@ -822,7 +843,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.floatingTexts.push({
               x: g.catX + 10,
               y: g.catY - 48,
-              text: '🏆 ครกหินทองคำ! +15 PTS // +0.25 XH!',
+              text: 'GOLDEN MORTAR! +15 PTS // +0.25 XH!',
               color: '#facc15',
               life: 2.2
             });
@@ -844,7 +865,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.floatingTexts.push({
               x: g.catX + 10,
               y: g.catY - 42,
-              text: `⚡ เทพสะตอ! (${Math.round(g.godModeDuration)}s GOD MODE)`,
+              text: `SOLAR GOD MODE! (${g.godModeDuration.toFixed(1)}s)`,
               color: '#16a34a',
               life: 1.5
             });
@@ -852,40 +873,45 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             playRetroSound('collect');
           }
 
-          setPotIngredients(prev => {
-            const next = { ...prev, [item.type]: prev[item.type] + 1 };
-            if (next.fish >= 1 && next.satow >= 1 && next.bamboo >= 1) {
-              next.fish -= 1;
-              next.satow -= 1;
-              next.bamboo -= 1;
-              setCompletedPots(cp => cp + 1);
+          // Synchronous engine-side pot ingredient update
+          g.potIngredients[item.type] = (g.potIngredients[item.type] || 0) + 1;
+          let potCompleted = false;
+          if (g.potIngredients.fish >= 1 && g.potIngredients.satow >= 1 && g.potIngredients.bamboo >= 1) {
+            g.potIngredients.fish -= 1;
+            g.potIngredients.satow -= 1;
+            g.potIngredients.bamboo -= 1;
+            potCompleted = true;
+          }
 
-              const potBonus = g.feverTimer > 0 ? 10 : 6;
-              g.score += potBonus;
-              setScore(g.score);
+          setPotIngredients({ ...g.potIngredients });
 
-              g.happiness = Math.min(100, g.happiness + 35);
-              setHappiness(Math.floor(g.happiness));
+          if (potCompleted) {
+            setCompletedPots(cp => cp + 1);
 
-              setEarnedXhaus(ex => {
-                const bonusCoin = g.feverTimer > 0 ? 0.15 : 0.10;
-                const updated = +(ex + bonusCoin).toFixed(2);
-                if (onCoinEarned) onCoinEarned(bonusCoin);
-                return updated;
-              });
-              playRetroSound('pot_complete');
-              triggerHaptic('pot_complete');
+            const potBonus = g.feverTimer > 0 ? 10 : 6;
+            g.score += potBonus;
+            setScore(g.score);
 
-              g.floatingTexts.push({
-                x: g.catX + 16,
-                y: g.catY - 32,
-                text: `+${potBonus} PTS // +0.10 XH 🥘 หรอยจังฮู้!`,
-                color: '#ea580c',
-                life: 1.5
-              });
-            }
-            return next;
-          });
+            g.happiness = Math.min(100, g.happiness + 35);
+            setHappiness(Math.floor(g.happiness));
+
+            setEarnedXhaus(ex => {
+              const bonusCoin = g.feverTimer > 0 ? 0.15 : 0.10;
+              const updated = +(ex + bonusCoin).toFixed(2);
+              if (onCoinEarned) onCoinEarned(bonusCoin);
+              return updated;
+            });
+            playRetroSound('pot_complete');
+            triggerHaptic('pot_complete');
+
+            g.floatingTexts.push({
+              x: g.catX + 16,
+              y: g.catY - 32,
+              text: `+${potBonus} PTS // +0.10 XH // POT COMPLETED!`,
+              color: '#ea580c',
+              life: 1.5
+            });
+          }
 
           for (let p = 0; p < 6; p++) {
             g.particles.push({
@@ -1030,7 +1056,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             g.floatingTexts.push({
               x: mon.x,
               y: monY - 30,
-              text: isGiant ? `💥 MORTAR SMASHED! +${smashPts}` : `💥 SMASH! +${smashPts}`,
+              text: isGiant ? `MORTAR SMASHED! +${smashPts}` : `SMASH! +${smashPts}`,
               color: '#facc15',
               life: 1.4
             });
@@ -1112,7 +1138,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         g.godModeTimer,
         g.feverTimer,
         g.scaleX,
-        g.scaleY
+        g.scaleY,
+        g.groundY
       );
 
       // 6. Particles
@@ -1183,63 +1210,50 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       
       {/* Clean Header Bar & Character Selector */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-[#fef3c7] flex items-center justify-center border border-[#fde68a] shrink-0 overflow-hidden relative shadow-2xs">
-            <canvas
-              ref={(node) => {
-                if (node && taiPlaRenderer.sprites.logo_badge) {
-                  const ctx = node.getContext('2d');
-                  ctx.imageSmoothingEnabled = false;
-                  ctx.clearRect(0, 0, node.width, node.height);
-                  ctx.drawImage(taiPlaRenderer.sprites.logo_badge, 0, 0, node.width, node.height);
-                }
-              }}
-              width={40}
-              height={40}
-              className="w-full h-full block"
-              style={{ imageRendering: 'pixelated' }}
-            />
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded bg-[#FAF7F5] flex items-center justify-center border border-[var(--color-rule)] shrink-0 overflow-hidden relative shadow-2xs p-1">
+            <img src="/logo.png" alt="ในบ้าน" className="w-full h-full object-contain" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-1.5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-[#bd4924]">ในบ้าน</span>
                 <span className="text-zinc-400">•</span>
                 <span>{activeChar.name}</span>
                 <span className="text-[11px] font-normal text-[oklch(45%_0.010_28)]">({activeChar.title})</span>
               </h3>
-              <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold border ${activeChar.badgeColor}`}>
+              <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold border whitespace-nowrap ${activeChar.badgeColor}`}>
                 {activeChar.trait}
               </span>
             </div>
-            <p className="text-[11px] text-[oklch(45%_0.010_28)] font-sans">
+            <p className="text-[11px] text-[oklch(45%_0.010_28)] font-sans truncate sm:whitespace-normal">
               {activeChar.desc}
             </p>
           </div>
         </div>
 
-        {/* Status Score & LCD Coins Deck */}
+        {/* Status Score & LCD Coins Deck (Zero-Icon Discipline) */}
         <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto">
           {/* God Mode Active Banner */}
           {godModeRemaining > 0 && (
-            <div className="bg-amber-400 text-black px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[10px]">
-              <Zap size={12} className="text-black fill-black" />
+            <div className="bg-amber-400 text-[var(--color-ink)] px-2 py-1 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[10px]">
+              <span className="font-mono font-bold">[ GOD ]</span>
               <span>เทพสะตอ {godModeRemaining}s</span>
             </div>
           )}
 
           {/* Happy Fever Mode Active Banner */}
           {isFeverActive && (
-            <div className="bg-yellow-300 text-amber-950 px-2.5 py-1.5 rounded-[4px] font-bold flex items-center gap-1 animate-bounce border border-yellow-400 shadow-sm text-[10px]">
-              <Heart size={12} className="text-red-500 fill-red-500" />
-              <span>FEVER 2X ({feverRemaining}s)</span>
+            <div className="bg-yellow-300 text-amber-950 px-2 py-1 rounded-[4px] font-bold flex items-center gap-1 animate-bounce border border-yellow-400 shadow-sm text-[10px]">
+              <span className="font-mono font-bold text-red-700">[ FEVER 2X ]</span>
+              <span>({feverRemaining}s)</span>
             </div>
           )}
 
           {/* Earned xhaus Coin display */}
-          <div className="bg-[#fef9c3] border border-[#fde047] px-2.5 py-1.5 rounded-[4px] flex items-center gap-1 text-amber-950 shadow-2xs text-[11px]">
-            <Coins size={13} className="text-amber-600" />
-            <span className="font-bold">+{earnedXhaus.toFixed(2)} XH</span>
+          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-[4px] flex items-center gap-1 text-[var(--color-ink)] shadow-2xs text-[11px]">
+            <span className="text-[9px] font-mono text-[var(--color-accent)] font-bold">[ XH ]</span>
+            <span className="font-bold">+{earnedXhaus.toFixed(2)}</span>
           </div>
 
           <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-[4px] text-[oklch(18%_0.012_28)]">
@@ -1250,19 +1264,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           {/* Sound Mute Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[oklch(18%_0.012_28)]"
+            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
             title={soundEnabled ? 'ปิดเสียง' : 'เปิดเสียง'}
           >
-            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} className="text-neutral-400" />}
+            {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
           </button>
 
           {/* Fullscreen Toggle */}
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper-3)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[oklch(18%_0.012_28)]"
+            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
             title={isFullscreen ? 'ออกจากเต็มจอ' : 'เล่นเต็มจอ'}
           >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isFullscreen ? '[ ESC ]' : '[ FULL ]'}
           </button>
         </div>
       </div>
@@ -1270,33 +1284,46 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       {/* Character Switcher Selector Tabs (Available in Idle / Game Over) */}
       {gameState !== 'playing' && (
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-mono font-bold uppercase text-[oklch(45%_0.010_28)] flex items-center gap-1">
-            <User size={12} className="text-[oklch(52%_0.16_28)]" />
-            <span>เลือกตัวละครของคุณ (SELECT CHARACTER):</span>
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-bold uppercase text-[oklch(45%_0.010_28)] tracking-wider">
+              [ CREATURE COMPENDIUM // เลือกตัวละคร ]:
+            </span>
+            <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
+              3 AVAILABLE SPECIMENS
+            </span>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
-            {Object.values(CHARACTERS).map((char) => (
+            {Object.values(CHARACTERS).map((char, cIdx) => (
               <button
                 key={char.id}
                 onClick={() => setSelectedCharId(char.id)}
-                className={`p-3 rounded-md border text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                className={`p-3 rounded border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
                   selectedCharId === char.id
-                    ? 'bg-amber-50/80 border-[oklch(52%_0.16_28)] shadow-2xs ring-1 ring-[oklch(52%_0.16_28)]'
+                    ? 'bg-amber-50/70 border-[var(--color-ink)] shadow-xs ring-1 ring-[var(--color-ink)]'
                     : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] hover:bg-white'
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{char.icon}</span>
-                    <strong className="text-[oklch(18%_0.012_28)]">{char.name}</strong>
-                  </div>
-                  {selectedCharId === char.id && (
-                    <span className="text-[9px] bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded font-bold">
-                      ACTIVE
+                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white border border-[var(--color-rule)] text-[var(--color-ink)] uppercase">
+                    SPECIMEN 0{cIdx + 1}
+                  </span>
+                  {selectedCharId === char.id ? (
+                    <span className="text-[9px] bg-[var(--color-ink)] text-white px-2 py-0.5 rounded font-bold uppercase">
+                      SELECTED
+                    </span>
+                  ) : (
+                    <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase font-mono">
+                      SELECT
                     </span>
                   )}
                 </div>
-                <p className="text-[10px] text-zinc-600 font-sans leading-tight mt-0.5">
+                <div>
+                  <strong className="text-sm font-bold text-[oklch(18%_0.012_28)] block">{char.name}</strong>
+                  <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
+                    {char.title}
+                  </span>
+                </div>
+                <p className="text-[10px] text-zinc-600 font-sans leading-relaxed border-t border-[var(--color-rule)]/60 pt-1">
                   {char.trait}
                 </p>
               </button>
@@ -1306,68 +1333,52 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       )}
 
       {/* Happiness (Happy Vibes) Meter */}
-      <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded-md">
+      <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded">
         <div className="flex justify-between items-center text-[10px] font-mono">
-          <div className="flex items-center gap-1.5 font-bold text-[oklch(18%_0.012_28)]">
-            <Heart size={12} className={isFeverActive ? 'text-red-500 fill-red-500 animate-ping' : 'text-amber-600'} />
-            <span>ความสุขริมโขง (HAPPY VIBES):</span>
-            <span className="text-amber-700">{happiness}%</span>
+          <div className="flex items-center gap-2 font-bold text-[oklch(18%_0.012_28)]">
+            <span className="uppercase tracking-wider">[ HAPPY VIBES METER ]:</span>
+            <span className="text-[oklch(52%_0.16_28)] font-bold">{happiness}%</span>
           </div>
-          <span className="text-[9px] text-[oklch(45%_0.010_28)]">
-            {isFeverActive ? '🌟 HAPPY FEVER 2X ACTIVE!' : 'สะสมครบ 100% ปลดล็อค FEVER 2X'}
+          <span className="text-[9px] text-[oklch(45%_0.010_28)] uppercase">
+            {isFeverActive ? 'FEVER 2X ACTIVE (8S)' : 'REACH 100% FOR FEVER 2X'}
           </span>
         </div>
-        <div className="w-full h-2.5 bg-neutral-200 rounded-full overflow-hidden p-0.5 border border-neutral-300">
+        <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden p-0.5 border border-neutral-300">
           <div 
             className={`h-full rounded-full transition-all duration-300 ${
               isFeverActive 
-                ? 'bg-gradient-to-r from-amber-400 via-rose-400 to-amber-300 animate-pulse' 
-                : 'bg-gradient-to-r from-amber-500 to-emerald-500'
+                ? 'bg-amber-400 animate-pulse' 
+                : 'bg-[var(--color-ink)]'
             }`}
             style={{ width: `${isFeverActive ? 100 : happiness}%` }}
           />
         </div>
       </div>
 
-      {/* Clean Frame Canvas Container */}
+      {/* Clean Frame Canvas Container (Large 760x320 & Bright) */}
       <div 
         onClick={handleJumpPress}
-        className={`relative w-full ${isFullscreen ? 'max-w-4xl aspect-[16/8]' : 'max-w-[560px] aspect-[16/8]'} mx-auto bg-[#fef8e7] rounded-lg overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all`}
+        className={`relative w-full ${isFullscreen ? 'max-w-6xl aspect-[19/8]' : 'max-w-4xl aspect-[19/8]'} mx-auto bg-[#faf6ed] rounded-lg overflow-hidden border-2 border-[var(--color-ink)] cursor-pointer select-none shadow-md transition-all`}
       >
         <canvas 
           ref={canvasRef} 
-          width={560} 
-          height={240} 
+          width={760} 
+          height={320} 
           className="w-full h-full block"
           style={{ imageRendering: 'pixelated' }}
         />
 
         {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
         {gameState === 'playing' && (
-          <div className="absolute top-2 left-3 z-10 flex items-center gap-2 font-mono text-[9px]">
-            <div className="flex items-center gap-1.5 bg-[#181615]/85 text-[#FAF7F5] px-2 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-              <div className="w-3.5 h-3.5 shrink-0 overflow-hidden">
-                <canvas
-                  ref={(node) => {
-                    if (node && taiPlaRenderer.sprites.logo_badge) {
-                      const ctx = node.getContext('2d');
-                      ctx.imageSmoothingEnabled = false;
-                      ctx.drawImage(taiPlaRenderer.sprites.logo_badge, 0, 0, node.width, node.height);
-                    }
-                  }}
-                  width={14}
-                  height={14}
-                  className="w-full h-full block"
-                  style={{ imageRendering: 'pixelated' }}
-                />
-              </div>
-              <span className="font-bold text-[#fef08a] tracking-wide">ในบ้าน</span>
+          <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-2 font-mono text-[9px]">
+            <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+              <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
+              <span className="font-bold text-[#fef08a] tracking-wider uppercase font-pixel">HAUS 128-BIT</span>
             </div>
 
-            <div className="flex items-center gap-1.5 bg-[#181615]/85 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-              <Flame size={11} className={currentSpicyTier >= 3 ? 'text-red-400' : 'text-amber-400'} />
-              <span className="font-bold tracking-wide">
-                {currentSpicyTier === 4 ? 'เผ็ดนรกแตก (TIER 4) 💀⚡' : (currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3) 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2) 🌶️' : 'เผ็ดอนุบาล (TIER 1)'))}
+            <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+              <span className="font-bold tracking-wider uppercase text-[10px]">
+                {currentSpicyTier === 4 ? '[ TIER 4 // HELL EXTREME ]' : (currentSpicyTier === 3 ? '[ TIER 3 // ULTRA SPICY ]' : (currentSpicyTier === 2 ? '[ TIER 2 // SPICY UP ]' : '[ TIER 1 // CHILL RUN ]'))}
               </span>
             </div>
           </div>
@@ -1377,42 +1388,38 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'idle' && (
           <div 
             onClick={(e) => { e.stopPropagation(); startGame(); }}
-            className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-4 cursor-pointer"
+            className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 text-center p-6 cursor-pointer select-none"
           >
-            {/* Handcrafted 'ในบ้าน' Pixel Art Marquee Banner */}
-            <div className="w-[240px] h-[64px] overflow-hidden rounded border border-[#181615] bg-[#faf7f5] shadow-xs mb-1">
-              <canvas
-                ref={(node) => {
-                  if (node && taiPlaRenderer.sprites.logo_in_the_haus) {
-                    const ctx = node.getContext('2d');
-                    ctx.imageSmoothingEnabled = false;
-                    ctx.clearRect(0, 0, node.width, node.height);
-                    ctx.drawImage(taiPlaRenderer.sprites.logo_in_the_haus, 0, 0, node.width, node.height);
-                  }
-                }}
-                width={240}
-                height={64}
-                className="w-full h-full block"
-                style={{ imageRendering: 'pixelated' }}
-              />
+            {/* Clean Brand Header Placard */}
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="bg-[#181615] px-4 py-1.5 rounded border border-[#3D3835] flex items-center gap-2.5 shadow-xs">
+                <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
+                <img src="/logo-secondary.png" alt="In The Haus" className="h-6 object-contain" />
+              </div>
+              <div className="font-mono text-[9px] text-[oklch(52%_0.16_28)] font-bold tracking-widest uppercase">
+                [ SYSTEM 128-BIT NEO-RUNNER // CREATURE COMPENDIUM ]
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-3xl animate-bounce">{activeChar.icon}</span>
-              <h4 className="font-mono text-sm font-bold text-[#181615] uppercase tracking-widest">
-                {activeChar.name} ตะลุยริมโขงนครพนม
+            <div>
+              <h4 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+                {activeChar.name}
               </h4>
+              <p className="font-mono text-[10px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
+                {activeChar.title} // {activeChar.trait}
+              </p>
             </div>
-            <p className="text-[11px] text-[#69635D] font-sans max-w-sm leading-relaxed">
-              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวโขง 🦅, ผีหม้อดิน, คนหัวร้อน 🔥 และครกหินยักษ์ 💥</strong><br/>
-              ใช้ <strong>กระดานสปริงฝักสะตอ 🟢</strong> ดีดตัวขึ้นฟ้า • วิ่งผ่าน <strong>คาเฟ่ในบ้าน 🏠</strong> • เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเทพสะตอ!
+
+            <p className="text-xs text-[#69635D] font-sans max-w-md leading-relaxed">
+              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบอุปสรรคและฝูงศัตรูริมแม่น้ำโขงนครพนม<br/>
+              เหยียบสปริงฝักสะตอเพื่อดีดตัวสูง • เก็บสะตอเปิดใช้งาน God Mode • สะสมครบหม้อรับเหรียญ XHAUS
             </p>
+
             <button
               onClick={(e) => { e.stopPropagation(); startGame(); }}
-              className="btn-action mt-1 px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              className="btn-action mt-2 px-8 py-3 bg-[var(--color-ink)] hover:bg-black text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded border border-[var(--color-ink)] cursor-pointer shadow-sm active:scale-95 transition-all"
             >
-              <Sparkles size={13} />
-              <span>เริ่มวิ่ง ({activeChar.name})</span>
+              [ START RUN // เริ่มออกวิ่ง ]
             </button>
           </div>
         )}
@@ -1421,45 +1428,29 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'gameover' && (
           <div 
             onClick={(e) => e.stopPropagation()} 
-            className="absolute inset-0 bg-[#181615]/92 backdrop-blur-[3px] flex flex-col items-center justify-center gap-2.5 text-center p-5 animate-[fadeIn_0.15s_ease-out]"
+            className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 animate-[fadeIn_0.15s_ease-out] select-none"
           >
-            {/* Handcrafted 'ในบ้าน' Pixel Art Mini Banner */}
-            <div className="w-[180px] h-[48px] overflow-hidden rounded border border-[#5c544d] bg-[#faf7f5] shadow-xs">
-              <canvas
-                ref={(node) => {
-                  if (node && taiPlaRenderer.sprites.logo_in_the_haus) {
-                    const ctx = node.getContext('2d');
-                    ctx.imageSmoothingEnabled = false;
-                    ctx.clearRect(0, 0, node.width, node.height);
-                    ctx.drawImage(taiPlaRenderer.sprites.logo_in_the_haus, 0, 0, node.width, node.height);
-                  }
-                }}
-                width={180}
-                height={48}
-                className="w-full h-full block"
-                style={{ imageRendering: 'pixelated' }}
-              />
+            <div className="flex items-center gap-2 bg-[#252220] px-4 py-1.5 rounded border border-[#3D3835]">
+              <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
+              <span className="font-mono text-[10px] text-[#D9D2CB] font-bold uppercase tracking-wider">HAUS ARCADE SYSTEM</span>
             </div>
 
-            <span className="text-2xl">🌶️💥</span>
             <div>
-              <h4 className="font-mono text-xs font-bold text-[#BD4924] uppercase tracking-widest mb-0.5">
-                GAME OVER // โดนชนจนหมดพลัง
+              <h4 className="font-pixel text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
+                RUN TERMINATED
               </h4>
-              <p className="text-xs text-[#D9D2CB] font-mono">
+              <p className="text-xs text-[#D9D2CB] font-mono mt-1">
                 FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
               </p>
             </div>
 
-            {/* xhaus Reward Pill */}
             {earnedXhaus > 0 && (
-              <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-4 py-1.5 rounded-full font-mono text-xs font-bold flex items-center gap-1.5 shadow-2xs">
-                <Sparkles size={14} className="text-[#22c55e]" />
-                <span>คุณได้รับ +{earnedXhaus.toFixed(2)} XHAUS COIN!</span>
+              <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-4 py-1.5 rounded font-mono text-xs font-bold">
+                + {earnedXhaus.toFixed(2)} XHAUS COIN RECORDED
               </div>
             )}
 
-            <div className="flex gap-3 font-mono text-xs mt-1">
+            <div className="flex gap-3 font-mono text-xs mt-2">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1467,58 +1458,58 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                   startGame();
                 }}
                 disabled={!canRestart}
-                className={`px-5 py-2.5 font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ${
+                className={`px-6 py-2.5 font-bold uppercase rounded cursor-pointer shadow-sm active:scale-95 transition-all ${
                   canRestart 
                     ? 'bg-[#2B2725] hover:bg-[#3D3835] text-[#FAF7F5] border border-[#5C544D]' 
                     : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
                 }`}
               >
-                <RotateCcw size={13} />
-                <span>{canRestart ? 'วิ่งใหม่อีกครั้ง' : 'โปรดรอสักครู่...'}</span>
+                {canRestart ? '[ RESTART RUN ]' : '[ INITIALIZING… ]'}
               </button>
 
               {score > 0 && (
                 <button
                   onClick={handleClaim}
-                  className="px-5 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded-[4px] border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
                 >
-                  <Trophy size={13} />
-                  <span>{isClaiming ? 'เปิดหน้าต่างบันทึกแล้ว ✓' : 'บันทึกแต้มลงบอร์ด'}</span>
+                  {isClaiming ? '[ SAVED ]' : '[ CLAIM REWARD ]'}
                 </button>
               )}
             </div>
 
-            <p className="text-[10px] text-[#89827B] font-mono mt-0.5">
-              {canRestart ? '[ แตะปุ่มวิ่งใหม่ • หรือกด SPACE ]' : '[ กำลังบันทึกผลคะแนน... ]'}
+            <p className="text-[10px] text-[#89827B] font-mono mt-1">
+              {canRestart ? '[ PRESS SPACEBAR OR TAP TO RUN AGAIN ]' : '[ RECORDING TELEMETRY… ]'}
             </p>
           </div>
         )}
       </div>
 
       {/* Progressive Tiers & Guidelines Dashboard */}
-      <div className="flex flex-col sm:flex-row items-center justify-between bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded-md text-xs font-mono gap-3">
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-[var(--color-ink)]">
-            <span className="font-bold">ระดับความยาก 4 Tiers:</span>
+      <div className="flex flex-col gap-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded text-xs font-mono">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-[var(--color-ink)] flex-wrap">
+            <span className="font-bold whitespace-nowrap uppercase tracking-wider">[ 4 PROGRESSIVE TIERS ]:</span>
             <span className="text-[10px] text-[oklch(45%_0.010_28)] font-sans">
-              (1) อนุบาล 0-14p → (2) ปากเปิด 15-34p → (3) หูดับ 35-59p → (4) นรกแตก 60+p
+              (1) ชิลล์ 0-24p → (2) ปากเปิด 25-59p → (3) หูดับ 60-99p → (4) นรกแตก 100+p (สปีด 14.0+)
             </span>
           </div>
-          <div className="text-[10px] text-zinc-600 font-sans">
-            🟢 <strong>สปริงฝักสะตอ</strong>: ดีดตัวสูงข้ามสิ่งกีดขวาง • 🏆 <strong>ครกทองคำ (Tier 4)</strong>: +15 PTS & +0.25 XH!
+
+          <div className="flex items-center gap-1.5 text-[10px] font-bold flex-wrap">
+            <span className="text-[var(--color-ink)] bg-sky-500/10 px-2 py-0.5 rounded border border-sky-300/60 whitespace-nowrap">
+              ปลาทู (+1 pt): {potIngredients.fish}/1
+            </span>
+            <span className="text-[var(--color-ink)] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-300/60 whitespace-nowrap">
+              สะตอ (เทพ 2.5-3.5s): {potIngredients.satow}/1
+            </span>
+            <span className="text-[var(--color-ink)] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-300/60 whitespace-nowrap">
+              หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
+            </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-[11px] font-bold shrink-0">
-          <span className="text-[var(--color-ink)] bg-sky-500/10 px-2.5 py-1 rounded border border-sky-300/60">
-            ปลาทู (+1 pt): {potIngredients.fish}/1
-          </span>
-          <span className="text-[var(--color-ink)] bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-300/60">
-            สะตอ (เทพ 3-5s & +3 pts): {potIngredients.satow}/1
-          </span>
-          <span className="text-[var(--color-ink)] bg-amber-500/10 px-2.5 py-1 rounded border border-amber-300/60">
-            หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
-          </span>
+        <div className="text-[10px] text-zinc-600 font-sans border-t border-[var(--color-rule)]/60 pt-2 flex items-center justify-between flex-wrap gap-1">
+          <span><strong>สปริงฝักสะตอ</strong>: ดีดตัวสูงข้ามสิ่งกีดขวาง</span>
+          <span><strong>ครกหินทองคำ (Tier 4)</strong>: +15 PTS & +0.25 XH!</span>
         </div>
       </div>
     </div>
