@@ -1534,7 +1534,7 @@ export default function POSDashboard() {
 
                             // Lookup booking details with tracking_token, status, and sources
                             supabase.from('bookings')
-                                .select('id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, customer_name, payment_slip_url, tables_layout(table_name)')
+                                .select('id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, payment_slip_url, tables_layout(table_name)')
                                 .eq('id', bookingId)
                                 .maybeSingle()
                                 .then(({ data: bData }) => {
