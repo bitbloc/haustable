@@ -49,7 +49,7 @@ const CHARACTERS = {
   }
 };
 
-export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned }) {
+export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned, isDedicated = false, onBackToHub = null }) {
   const [selectedCharId, setSelectedCharId] = useState('tai_pla');
   const [gameState, setGameState] = useState('idle'); // 'idle' | 'playing' | 'gameover'
   const [score, setScore] = useState(0);
@@ -68,6 +68,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canRestart, setCanRestart] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(() => {
+    return typeof window !== 'undefined' ? window.innerWidth < 640 : false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const defaultGroundY = isMobileView ? 280 : 245;
 
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
@@ -97,8 +110,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   // Smooth Game Physics & Engine References
   const gameRef = useRef({
     charId: 'tai_pla',
-    catX: 75,
-    catY: 245,
+    catX: isMobileView ? 65 : 75,
+    catY: defaultGroundY,
     catVy: 0,
     isGrounded: true,
     jumpCount: 0,
@@ -119,7 +132,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     particles: [],
     floatingTexts: [],
     lastSpawn: 0,
-    groundY: 245,
+    groundY: defaultGroundY,
     speed: 4.8,
     frame: 0,
     scaleX: 1.0,
@@ -132,6 +145,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     tierAnnounceTitle: '',
     tierAnnounceSubtitle: ''
   });
+
+  useEffect(() => {
+    if (gameState === 'idle') {
+      const gy = isMobileView ? 280 : 245;
+      gameRef.current.groundY = gy;
+      gameRef.current.catY = gy;
+      gameRef.current.catX = isMobileView ? 65 : 75;
+    }
+  }, [isMobileView, gameState]);
 
   // 8-Bit / 128-Bit Retro Synthesizer
   const playRetroSound = (type) => {
@@ -302,10 +324,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     setCanRestart(true);
     setIsClaiming(false);
 
+    const startGroundY = isMobileView ? 280 : 245;
     gameRef.current = {
       charId: char.id,
-      catX: 75,
-      catY: 245,
+      catX: isMobileView ? 65 : 75,
+      catY: startGroundY,
       catVy: 0,
       isGrounded: true,
       jumpCount: 0,
@@ -326,7 +349,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       particles: [],
       floatingTexts: [],
       lastSpawn: Date.now(),
-      groundY: 245,
+      groundY: startGroundY,
       speed: 4.8,
       frame: 0,
       scaleX: 1.0,
@@ -1201,22 +1224,248 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     }
   };
 
+  if (isDedicated || isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-[#FAF7F2] flex flex-col justify-between select-none overflow-hidden touch-none font-sans">
+        {/* Top Navigation & Status Bar */}
+        <header className="w-full bg-[#FAF7F2] border-b-2 border-[#181615] px-3 sm:px-6 py-2.5 flex items-center justify-between z-20 shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={onBackToHub || (() => setIsFullscreen(false))}
+              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono font-bold text-xs shadow-xs active:scale-95 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <span>[ ← กลับโถงเกม ]</span>
+            </button>
+            <div className="flex items-center gap-1.5">
+              <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
+              <span className="font-pixel text-xs sm:text-sm font-bold text-[#181615] uppercase tracking-wider">
+                TAI-PLA RUN // 128-BIT
+              </span>
+            </div>
+          </div>
+
+          {/* Right score and sound controls */}
+          <div className="flex items-center gap-2 font-mono text-xs">
+            <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold">
+              <span>{score} PTS</span>
+            </div>
+            {earnedXhaus > 0 && (
+              <div className="bg-[#E9F344] text-[#181615] px-2 py-1 rounded-lg border-2 border-[#181615] text-[10px] font-bold">
+                +{earnedXhaus.toFixed(2)} XH
+              </div>
+            )}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="px-2 py-1 bg-[#FAF7F2] hover:bg-white text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
+            >
+              {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
+            </button>
+          </div>
+        </header>
+
+        {/* Central Game Arena */}
+        <main className="flex-1 w-full flex flex-col justify-center items-center px-2 sm:px-6 min-h-0 relative">
+          <div 
+            onClick={handleJumpPress}
+            onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
+            className={`relative w-full max-w-2xl ${
+              isMobileView ? 'aspect-[3/2] max-h-[50vh]' : 'aspect-[19/8] max-h-[56vh]'
+            } bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all`}
+          >
+            <canvas 
+              ref={canvasRef} 
+              width={isMobileView ? 540 : 760} 
+              height={isMobileView ? 360 : 320} 
+              className="w-full h-full block"
+              style={{ imageRendering: 'pixelated' }}
+            />
+
+            {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
+            {gameState === 'playing' && (
+              <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-2 font-mono text-[9px]">
+                <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+                  <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
+                  <span className="font-bold text-[#fef08a] tracking-wider uppercase font-pixel">HAUS 128-BIT</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+                  <span className="font-bold tracking-wider uppercase text-[10px]">
+                    {currentSpicyTier === 4 ? '[ TIER 4 // HELL EXTREME ]' : (currentSpicyTier === 3 ? '[ TIER 3 // ULTRA SPICY ]' : (currentSpicyTier === 2 ? '[ TIER 2 // SPICY UP ]' : '[ TIER 1 // CHILL RUN ]'))}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Start Overlay */}
+            {gameState === 'idle' && (
+              <div 
+                onClick={(e) => { e.stopPropagation(); startGame(); }}
+                className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 cursor-pointer select-none"
+              >
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="bg-[#181615] px-3.5 py-1 rounded border border-[#3D3835] flex items-center gap-2 shadow-xs">
+                    <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
+                    <img src="/logo-secondary.png" alt="In The Haus" className="h-5 object-contain" />
+                  </div>
+                  <div className="font-mono text-[9px] text-[oklch(52%_0.16_28)] font-bold tracking-widest uppercase">
+                    [ MEKONG SPEED RUNNER // CREATURE COMPENDIUM ]
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-pixel text-xl sm:text-2xl font-bold text-[#181615] uppercase tracking-wider">
+                    {activeChar.name}
+                  </h4>
+                  <p className="font-mono text-[10px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
+                    {activeChar.title} // {activeChar.trait}
+                  </p>
+                </div>
+
+                <p className="text-xs text-[#69635D] font-sans max-w-sm leading-relaxed hidden sm:block">
+                  แตะหน้าจอเพื่อกระโดดหลบสิ่งกีดขวางริมแม่น้ำโขงนครพนม<br/>
+                  สะสมวัตถุดิบครบหม้อรับเหรียญ XHAUS เข้ากระเป๋า!
+                </p>
+
+                <button
+                  onClick={(e) => { e.stopPropagation(); startGame(); }}
+                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-all"
+                >
+                  [ ▶ START RUN // แตะเพื่อเริ่มวิ่ง ]
+                </button>
+              </div>
+            )}
+
+            {/* Game Over Overlay */}
+            {gameState === 'gameover' && (
+              <div 
+                onClick={(e) => e.stopPropagation()} 
+                className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 animate-[fadeIn_0.15s_ease-out] select-none"
+              >
+                <div className="flex items-center gap-2 bg-[#252220] px-3.5 py-1 rounded border border-[#3D3835]">
+                  <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
+                  <span className="font-mono text-[9px] text-[#D9D2CB] font-bold uppercase tracking-wider">HAUS ARCADE SYSTEM</span>
+                </div>
+
+                <div>
+                  <h4 className="font-pixel text-xl sm:text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
+                    RUN TERMINATED
+                  </h4>
+                  <p className="text-xs text-[#D9D2CB] font-mono mt-1">
+                    FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
+                  </p>
+                </div>
+
+                {earnedXhaus > 0 && (
+                  <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-3 py-1 rounded font-mono text-xs font-bold">
+                    + {earnedXhaus.toFixed(2)} XHAUS COIN RECORDED
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2 justify-center font-mono text-xs mt-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!canRestart) return;
+                      startGame();
+                    }}
+                    disabled={!canRestart}
+                    className={`px-5 py-2.5 font-bold uppercase rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all ${
+                      canRestart 
+                        ? 'bg-[#E9F344] text-[#181615] border-2 border-[#181615]' 
+                        : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
+                    }`}
+                  >
+                    {canRestart ? '[ ▶ เล่นอีกครั้ง ]' : '[ INITIALIZING… ]'}
+                  </button>
+
+                  {score > 0 && (
+                    <button
+                      onClick={handleClaim}
+                      className="px-5 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded-xl border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-colors"
+                    >
+                      {isClaiming ? '[ SAVED ]' : '[ บันทึกคะแนน ]'}
+                    </button>
+                  )}
+
+                  {onBackToHub && (
+                    <button
+                      onClick={onBackToHub}
+                      className="px-4 py-2.5 bg-[#FAF7F2] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-sm active:scale-95"
+                    >
+                      [ กลับโถงเกม ]
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Bottom Mobile Action Deck (Giant Touch Zone & Controls) */}
+        <footer className="w-full bg-[#FAF7F2] border-t-2 border-[#181615] p-3 sm:p-4 flex flex-col items-center gap-2.5 shrink-0 select-none shadow-2xs">
+          {/* Ingredient & Happy Vibes telemetry strip */}
+          <div className="flex items-center justify-between w-full max-w-md px-1 text-[10px] font-mono">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-[#181615] uppercase">[ VIBES: {happiness}% ]</span>
+              <div className="w-16 sm:w-24 h-2 bg-neutral-200 rounded-full overflow-hidden border border-neutral-300">
+                <div 
+                  className={`h-full ${isFeverActive ? 'bg-amber-400 animate-pulse' : 'bg-[#181615]'}`}
+                  style={{ width: `${isFeverActive ? 100 : happiness}%` }}
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 font-bold text-[#181615]">
+              <span className="bg-sky-100 px-1.5 py-0.5 rounded border border-sky-300">ปลา {potIngredients.fish}/1</span>
+              <span className="bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">สะตอ {potIngredients.satow}/1</span>
+              <span className="bg-amber-100 px-1.5 py-0.5 rounded border border-amber-300">หน่อไม้ {potIngredients.bamboo}/1</span>
+            </div>
+          </div>
+
+          {/* Giant Mobile Touch Jump Zone */}
+          <div 
+            onClick={handleJumpPress}
+            onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
+            className="w-full max-w-md py-3.5 sm:py-4 px-4 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm sm:text-base rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] transition-transform text-center flex flex-col items-center justify-center cursor-pointer select-none"
+          >
+            <span className="tracking-wide uppercase">[ แตะตรงไหนก็ได้เพื่อกระโดด // TAP TO JUMP ]</span>
+            <span className="text-[10px] font-normal text-[#181615]/80 mt-0.5">แตะ 2 ครั้งเพื่อกระโดด 2 จังหวะ (Double Jump)</span>
+          </div>
+
+          {/* Companion character switcher when idle */}
+          {gameState !== 'playing' && (
+            <div className="flex items-center gap-1.5 w-full max-w-md overflow-x-auto pb-0.5 text-[10px] font-mono">
+              {Object.values(CHARACTERS).map((char) => (
+                <button
+                  key={char.id}
+                  onClick={() => setSelectedCharId(char.id)}
+                  className={`flex-1 py-1 px-2 rounded-xl border font-bold uppercase truncate transition-colors cursor-pointer ${
+                    selectedCharId === char.id
+                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                      : 'bg-white text-[#181615] border-[#181615]/30 hover:bg-neutral-100'
+                  }`}
+                >
+                  {char.name.split(' ')[0]}
+                </button>
+              ))}
+            </div>
+          )}
+        </footer>
+      </div>
+    );
+  }
+
+  // Standard inline frame fallback
   return (
-    <div className={`${
-      isFullscreen 
-        ? 'fixed inset-0 z-[9999] bg-[#fbf8eb] p-4 sm:p-8 flex flex-col justify-center items-center overflow-auto' 
-        : 'w-full bg-white rounded-lg border border-[var(--color-rule)] p-5 sm:p-6 shadow-sm flex flex-col gap-5'
-    }`}>
-      
+    <div className="w-full bg-[var(--color-paper)] rounded-2xl border-2 border-[#181615] p-4 sm:p-6 shadow-sm flex flex-col gap-4 font-sans">
       {/* Clean Header Bar & Character Selector */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded bg-[#FAF7F5] flex items-center justify-center border border-[var(--color-rule)] shrink-0 overflow-hidden relative shadow-2xs p-1">
+          <div className="w-10 h-10 rounded-xl bg-[#FAF7F5] flex items-center justify-center border-2 border-[#181615] shrink-0 overflow-hidden relative shadow-2xs p-1">
             <img src="/logo.png" alt="ในบ้าน" className="w-full h-full object-contain" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
+              <h3 className="font-mono text-sm font-bold text-[#181615] uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap">
                 <span className="text-[#bd4924]">ในบ้าน</span>
                 <span className="text-zinc-400">•</span>
                 <span>{activeChar.name}</span>
@@ -1232,133 +1481,37 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           </div>
         </div>
 
-        {/* Status Score & LCD Coins Deck (Zero-Icon Discipline) */}
+        {/* Status Score & LCD Coins Deck */}
         <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto">
-          {/* God Mode Active Banner */}
-          {godModeRemaining > 0 && (
-            <div className="bg-amber-400 text-[var(--color-ink)] px-2 py-1 rounded-[4px] font-bold flex items-center gap-1 animate-pulse border border-amber-500 shadow-sm text-[10px]">
-              <span className="font-mono font-bold">[ GOD ]</span>
-              <span>เทพสะตอ {godModeRemaining}s</span>
+          {earnedXhaus > 0 && (
+            <div className="bg-[#E9F344] border-2 border-[#181615] px-2.5 py-1 rounded-xl text-[#181615] font-bold text-[11px]">
+              +{earnedXhaus.toFixed(2)} XH
             </div>
           )}
-
-          {/* Happy Fever Mode Active Banner */}
-          {isFeverActive && (
-            <div className="bg-yellow-300 text-amber-950 px-2 py-1 rounded-[4px] font-bold flex items-center gap-1 animate-bounce border border-yellow-400 shadow-sm text-[10px]">
-              <span className="font-mono font-bold text-red-700">[ FEVER 2X ]</span>
-              <span>({feverRemaining}s)</span>
-            </div>
-          )}
-
-          {/* Earned xhaus Coin display */}
-          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-[4px] flex items-center gap-1 text-[var(--color-ink)] shadow-2xs text-[11px]">
-            <span className="text-[9px] font-mono text-[var(--color-accent)] font-bold">[ XH ]</span>
-            <span className="font-bold">+{earnedXhaus.toFixed(2)}</span>
-          </div>
-
-          <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-2.5 py-1.5 rounded-[4px] text-[oklch(18%_0.012_28)]">
-            <span className="text-[8px] text-[oklch(45%_0.010_28)] block">SCORE</span>
+          <div className="bg-[#181615] text-[#FAF7F5] border border-[#3D3835] px-3 py-1 rounded-xl">
+            <span className="text-[8px] text-[#A8A29E] block">SCORE</span>
             <span className="font-bold text-sm">{score}</span>
           </div>
-
-          {/* Sound Mute Toggle */}
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
-            title={soundEnabled ? 'ปิดเสียง' : 'เปิดเสียง'}
+            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-white rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer"
           >
             {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
           </button>
-
-          {/* Fullscreen Toggle */}
           <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
-            className="px-2 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] rounded-[4px] border border-[var(--color-rule)] cursor-pointer text-[10px] font-mono font-bold text-[oklch(18%_0.012_28)] transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
-            title={isFullscreen ? 'ออกจากเต็มจอ' : 'เล่นเต็มจอ'}
+            onClick={() => setIsFullscreen(true)}
+            className="px-3 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer"
           >
-            {isFullscreen ? '[ ESC ]' : '[ FULL ]'}
+            [ เต็มจอ / FULL ]
           </button>
         </div>
       </div>
 
-      {/* Character Switcher Selector Tabs (Available in Idle / Game Over) */}
-      {gameState !== 'playing' && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-mono font-bold uppercase text-[oklch(45%_0.010_28)] tracking-wider">
-              [ CREATURE COMPENDIUM // เลือกตัวละคร ]:
-            </span>
-            <span className="text-[9px] font-mono text-[oklch(55%_0.010_28)]">
-              3 AVAILABLE SPECIMENS
-            </span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 font-mono text-xs">
-            {Object.values(CHARACTERS).map((char, cIdx) => (
-              <button
-                key={char.id}
-                onClick={() => setSelectedCharId(char.id)}
-                className={`p-3 rounded border text-left transition-all cursor-pointer flex flex-col gap-1.5 ${
-                  selectedCharId === char.id
-                    ? 'bg-amber-50/70 border-[var(--color-ink)] shadow-xs ring-1 ring-[var(--color-ink)]'
-                    : 'bg-[var(--color-paper-2)] border-[var(--color-rule)] hover:bg-white'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-white border border-[var(--color-rule)] text-[var(--color-ink)] uppercase">
-                    SPECIMEN 0{cIdx + 1}
-                  </span>
-                  {selectedCharId === char.id ? (
-                    <span className="text-[9px] bg-[var(--color-ink)] text-white px-2 py-0.5 rounded font-bold uppercase">
-                      SELECTED
-                    </span>
-                  ) : (
-                    <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase font-mono">
-                      SELECT
-                    </span>
-                  )}
-                </div>
-                <div>
-                  <strong className="text-sm font-bold text-[oklch(18%_0.012_28)] block">{char.name}</strong>
-                  <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
-                    {char.title}
-                  </span>
-                </div>
-                <p className="text-[10px] text-zinc-600 font-sans leading-relaxed border-t border-[var(--color-rule)]/60 pt-1">
-                  {char.trait}
-                </p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Happiness (Happy Vibes) Meter */}
-      <div className="flex flex-col gap-1.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2.5 rounded">
-        <div className="flex justify-between items-center text-[10px] font-mono">
-          <div className="flex items-center gap-2 font-bold text-[oklch(18%_0.012_28)]">
-            <span className="uppercase tracking-wider">[ HAPPY VIBES METER ]:</span>
-            <span className="text-[oklch(52%_0.16_28)] font-bold">{happiness}%</span>
-          </div>
-          <span className="text-[9px] text-[oklch(45%_0.010_28)] uppercase">
-            {isFeverActive ? 'FEVER 2X ACTIVE (8S)' : 'REACH 100% FOR FEVER 2X'}
-          </span>
-        </div>
-        <div className="w-full h-2 bg-neutral-200 rounded-full overflow-hidden p-0.5 border border-neutral-300">
-          <div 
-            className={`h-full rounded-full transition-all duration-300 ${
-              isFeverActive 
-                ? 'bg-amber-400 animate-pulse' 
-                : 'bg-[var(--color-ink)]'
-            }`}
-            style={{ width: `${isFeverActive ? 100 : happiness}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Clean Frame Canvas Container (Large 760x320 & Bright) */}
+      {/* Canvas Container */}
       <div 
         onClick={handleJumpPress}
-        className={`relative w-full ${isFullscreen ? 'max-w-6xl aspect-[19/8]' : 'max-w-4xl aspect-[19/8]'} mx-auto bg-[#faf6ed] rounded-lg overflow-hidden border-2 border-[var(--color-ink)] cursor-pointer select-none shadow-md transition-all`}
+        onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
+        className="relative w-full max-w-4xl aspect-[19/8] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all"
       >
         <canvas 
           ref={canvasRef} 
@@ -1368,148 +1521,61 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           style={{ imageRendering: 'pixelated' }}
         />
 
-        {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
-        {gameState === 'playing' && (
-          <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-2 font-mono text-[9px]">
-            <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-              <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
-              <span className="font-bold text-[#fef08a] tracking-wider uppercase font-pixel">HAUS 128-BIT</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
-              <span className="font-bold tracking-wider uppercase text-[10px]">
-                {currentSpicyTier === 4 ? '[ TIER 4 // HELL EXTREME ]' : (currentSpicyTier === 3 ? '[ TIER 3 // ULTRA SPICY ]' : (currentSpicyTier === 2 ? '[ TIER 2 // SPICY UP ]' : '[ TIER 1 // CHILL RUN ]'))}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Start Overlay */}
         {gameState === 'idle' && (
           <div 
             onClick={(e) => { e.stopPropagation(); startGame(); }}
             className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 text-center p-6 cursor-pointer select-none"
           >
-            {/* Clean Brand Header Placard */}
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="bg-[#181615] px-4 py-1.5 rounded border border-[#3D3835] flex items-center gap-2.5 shadow-xs">
-                <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
-                <img src="/logo-secondary.png" alt="In The Haus" className="h-6 object-contain" />
-              </div>
-              <div className="font-mono text-[9px] text-[oklch(52%_0.16_28)] font-bold tracking-widest uppercase">
-                [ SYSTEM 128-BIT NEO-RUNNER // CREATURE COMPENDIUM ]
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
-                {activeChar.name}
-              </h4>
-              <p className="font-mono text-[10px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
-                {activeChar.title} // {activeChar.trait}
-              </p>
-            </div>
-
-            <p className="text-xs text-[#69635D] font-sans max-w-md leading-relaxed">
-              แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบอุปสรรคและฝูงศัตรูริมแม่น้ำโขงนครพนม<br/>
-              เหยียบสปริงฝักสะตอเพื่อดีดตัวสูง • เก็บสะตอเปิดใช้งาน God Mode • สะสมครบหม้อรับเหรียญ XHAUS
-            </p>
-
+            <h4 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
+              {activeChar.name}
+            </h4>
             <button
               onClick={(e) => { e.stopPropagation(); startGame(); }}
-              className="btn-action mt-2 px-8 py-3 bg-[var(--color-ink)] hover:bg-black text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded border border-[var(--color-ink)] cursor-pointer shadow-sm active:scale-95 transition-all"
+              className="px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95"
             >
               [ START RUN // เริ่มออกวิ่ง ]
             </button>
           </div>
         )}
 
-        {/* Game Over Overlay with 750ms Lockout Cooldown */}
         {gameState === 'gameover' && (
           <div 
             onClick={(e) => e.stopPropagation()} 
-            className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 animate-[fadeIn_0.15s_ease-out] select-none"
+            className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 select-none"
           >
-            <div className="flex items-center gap-2 bg-[#252220] px-4 py-1.5 rounded border border-[#3D3835]">
-              <img src="/logo.png" alt="ในบ้าน" className="w-4 h-4 object-contain" />
-              <span className="font-mono text-[10px] text-[#D9D2CB] font-bold uppercase tracking-wider">HAUS ARCADE SYSTEM</span>
-            </div>
-
-            <div>
-              <h4 className="font-pixel text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
-                RUN TERMINATED
-              </h4>
-              <p className="text-xs text-[#D9D2CB] font-mono mt-1">
-                FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
-              </p>
-            </div>
-
-            {earnedXhaus > 0 && (
-              <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-4 py-1.5 rounded font-mono text-xs font-bold">
-                + {earnedXhaus.toFixed(2)} XHAUS COIN RECORDED
-              </div>
-            )}
-
+            <h4 className="font-pixel text-2xl font-bold text-[#BD4924] uppercase tracking-widest">
+              RUN TERMINATED
+            </h4>
+            <p className="text-xs text-[#D9D2CB] font-mono mt-1">
+              FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong>
+            </p>
             <div className="flex gap-3 font-mono text-xs mt-2">
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (!canRestart) return;
-                  startGame();
-                }}
-                disabled={!canRestart}
-                className={`px-6 py-2.5 font-bold uppercase rounded cursor-pointer shadow-sm active:scale-95 transition-all ${
-                  canRestart 
-                    ? 'bg-[#2B2725] hover:bg-[#3D3835] text-[#FAF7F5] border border-[#5C544D]' 
-                    : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
-                }`}
+                onClick={(e) => { e.stopPropagation(); startGame(); }}
+                className="px-6 py-2.5 bg-[#E9F344] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95"
               >
-                {canRestart ? '[ RESTART RUN ]' : '[ INITIALIZING… ]'}
+                [ RESTART RUN ]
               </button>
-
               {score > 0 && (
                 <button
                   onClick={handleClaim}
-                  className="px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+                  className="px-6 py-2.5 bg-[#BD4924] text-[#FAF7F5] font-bold uppercase rounded-xl border border-[#E05A36] cursor-pointer shadow-sm active:scale-95"
                 >
-                  {isClaiming ? '[ SAVED ]' : '[ CLAIM REWARD ]'}
+                  [ CLAIM REWARD ]
                 </button>
               )}
             </div>
-
-            <p className="text-[10px] text-[#89827B] font-mono mt-1">
-              {canRestart ? '[ PRESS SPACEBAR OR TAP TO RUN AGAIN ]' : '[ RECORDING TELEMETRY… ]'}
-            </p>
           </div>
         )}
       </div>
 
-      {/* Progressive Tiers & Guidelines Dashboard */}
-      <div className="flex flex-col gap-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3 rounded text-xs font-mono">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-[var(--color-ink)] flex-wrap">
-            <span className="font-bold whitespace-nowrap uppercase tracking-wider">[ 4 PROGRESSIVE TIERS ]:</span>
-            <span className="text-[10px] text-[oklch(45%_0.010_28)] font-sans">
-              (1) ชิลล์ 0-24p → (2) ปากเปิด 25-59p → (3) หูดับ 60-99p → (4) นรกแตก 100+p (สปีด 14.0+)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-[10px] font-bold flex-wrap">
-            <span className="text-[var(--color-ink)] bg-sky-500/10 px-2 py-0.5 rounded border border-sky-300/60 whitespace-nowrap">
-              ปลาทู (+1 pt): {potIngredients.fish}/1
-            </span>
-            <span className="text-[var(--color-ink)] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-300/60 whitespace-nowrap">
-              สะตอ (เทพ 2.5-3.5s): {potIngredients.satow}/1
-            </span>
-            <span className="text-[var(--color-ink)] bg-amber-500/10 px-2 py-0.5 rounded border border-amber-300/60 whitespace-nowrap">
-              หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
-            </span>
-          </div>
-        </div>
-
-        <div className="text-[10px] text-zinc-600 font-sans border-t border-[var(--color-rule)]/60 pt-2 flex items-center justify-between flex-wrap gap-1">
-          <span><strong>สปริงฝักสะตอ</strong>: ดีดตัวสูงข้ามสิ่งกีดขวาง</span>
-          <span><strong>ครกหินทองคำ (Tier 4)</strong>: +15 PTS & +0.25 XH!</span>
+      {/* Progressive Tiers Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FAF7F2] border-2 border-[#181615] p-3 rounded-xl text-xs font-mono">
+        <span className="font-bold text-[#181615]">[ 4 TIERS ]: (1) ชิลล์ → (2) ปากเปิด → (3) หูดับ → (4) นรกแตก 100+p</span>
+        <div className="flex items-center gap-2">
+          <span>ปลา: {potIngredients.fish}/1</span>
+          <span>สะตอ: {potIngredients.satow}/1</span>
+          <span>หน่อไม้: {potIngredients.bamboo}/1</span>
         </div>
       </div>
     </div>

@@ -7,7 +7,7 @@ import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
 
 // Zero-icon discipline: purely monospace typographic indicators
-export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin, isFullscreen, setIsFullscreen }) {
+export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin, isFullscreen, setIsFullscreen, onBackToHub = null }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
 
@@ -73,6 +73,10 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
   const handleFullscreenToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (onBackToHub && isFullscreen) {
+      onBackToHub();
+      return;
+    }
     setIsFullscreen(!isFullscreen);
   };
 
@@ -96,15 +100,26 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         }} 
       />
 
-      {/* Fullscreen Toggle Buttons - Zero Icon Discipline */}
+      {/* Navigation Controls in Fullscreen Mode */}
       {isFullscreen ? (
-        <button
-          onClick={handleFullscreenToggle}
-          onTouchStart={handleFullscreenToggle}
-          className="absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
-        >
-          [ ESC // ออกจากเต็มจอ ]
-        </button>
+        <>
+          {onBackToHub && (
+            <button
+              onClick={onBackToHub}
+              onTouchStart={onBackToHub}
+              className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <span>[ ← กลับโถงเกม ]</span>
+            </button>
+          )}
+          <button
+            onClick={handleFullscreenToggle}
+            onTouchStart={handleFullscreenToggle}
+            className="absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+          >
+            [ ESC // ออกจากเต็มจอ ]
+          </button>
+        </>
       ) : (
         <button
           onClick={handleFullscreenToggle}
