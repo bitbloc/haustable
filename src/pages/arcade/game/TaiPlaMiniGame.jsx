@@ -65,12 +65,29 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [currentSpicyTier, setCurrentSpicyTier] = useState(1); // 1: เผ็ดอนุบาล, 2: เผ็ดปากเปิด, 3: เผ็ดหูดับตับไหม้
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canRestart, setCanRestart] = useState(true);
+  const [isClaiming, setIsClaiming] = useState(false);
 
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const audioCtxRef = useRef(null);
 
   const activeChar = CHARACTERS[selectedCharId] || CHARACTERS.tai_pla;
+
+  // Mobile Tactile Haptic Trigger
+  const triggerHaptic = (type) => {
+    if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+    try {
+      if (type === 'jump') navigator.vibrate(10);
+      else if (type === 'double_jump') navigator.vibrate([10, 10]);
+      else if (type === 'collect') navigator.vibrate(15);
+      else if (type === 'pot_complete') navigator.vibrate([25, 35, 25]);
+      else if (type === 'god_mode') navigator.vibrate([30, 40, 50]);
+      else if (type === 'fever_start') navigator.vibrate([35, 45, 55]);
+      else if (type === 'smash') navigator.vibrate([20, 30]);
+      else if (type === 'hit') navigator.vibrate([40, 50, 40]);
+    } catch (e) {}
+  };
 
   // Smooth Game Physics & Engine References
   const gameRef = useRef({
@@ -101,7 +118,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     scaleX: 1.0,
     scaleY: 1.0,
     magnetRadius: 50,
-    spicyTier: 1
+    spicyTier: 1,
+    lastUiSync: 0,
+    hitShakeTimer: 0
   });
 
   // 8-Bit / Retro Chiptune Synthesizer
@@ -204,6 +223,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         osc.start(now);
         osc.stop(now + 0.26);
       }
+      triggerHaptic(type);
     } catch (e) {}
   };
 
@@ -219,6 +239,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     setIsFeverActive(false);
     setFeverRemaining(0);
     setCurrentSpicyTier(1);
+    setCanRestart(true);
+    setIsClaiming(false);
 
     gameRef.current = {
       charId: char.id,
@@ -248,7 +270,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       scaleX: 1.0,
       scaleY: 1.0,
       magnetRadius: char.magnetRadius,
-      spicyTier: 1
+      spicyTier: 1,
+      lastUiSync: performance.now(),
+      hitShakeTimer: 0
     };
 
     playRetroSound('meow');
@@ -257,7 +281,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   // Ultra-Smooth Jump with Double Jump & Coyote Time
   const handleJumpPress = () => {
     if (gameState !== 'playing') {
-      if (gameState === 'idle' || gameState === 'gameover') {
+      if (gameState === 'idle') {
         startGame();
       }
       return;
@@ -325,16 +349,20 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
+      if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'Enter') {
         e.preventDefault();
-        handleJumpPress();
+        if (gameState === 'gameover') {
+          if (canRestart && !isClaiming) startGame();
+        } else {
+          handleJumpPress();
+        }
       } else if (e.code === 'Escape' && isFullscreen) {
         setIsFullscreen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, isFullscreen, selectedCharId]);
+  }, [gameState, isFullscreen, selectedCharId, canRestart, isClaiming]);
 
   // Main Canvas Render & Physics Loop
   useEffect(() => {
@@ -356,19 +384,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       // 1. God Mode Timer
       if (g.godModeTimer > 0) {
         g.godModeTimer = Math.max(0, g.godModeTimer - dt);
-        setGodModeRemaining(Math.ceil(g.godModeTimer));
-      } else if (godModeRemaining > 0) {
-        setGodModeRemaining(0);
       }
 
       // 2. Happy Fever Mode Timer (8 seconds of 2x Multiplier + Golden Joy)
       if (g.feverTimer > 0) {
         g.feverTimer = Math.max(0, g.feverTimer - dt);
-        setIsFeverActive(true);
-        setFeverRemaining(Math.ceil(g.feverTimer));
-      } else if (isFeverActive) {
-        setIsFeverActive(false);
-        setFeverRemaining(0);
       }
 
       // 3. Distance Milestone Score (+1 point every 140px run, 2x in Fever)
@@ -376,19 +396,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         g.lastDistanceScore = g.distanceRun;
         const addPts = g.feverTimer > 0 ? 2 : 1;
         g.score += addPts;
-        setScore(g.score);
 
         // Slowly build happiness while running smoothly
         g.happiness = Math.min(100, g.happiness + 1.5);
-        setHappiness(Math.floor(g.happiness));
       }
 
       // Check Happiness Meter Trigger for Happy Fever Mode
       if (g.happiness >= 100 && g.feverTimer <= 0) {
         g.happiness = 0;
         g.feverTimer = 8.0;
-        setHappiness(0);
-        setIsFeverActive(true);
         playRetroSound('fever_start');
 
         confetti({
@@ -401,7 +417,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         g.floatingTexts.push({
           x: g.catX + 10,
           y: g.catY - 48,
-          text: '🎉 HAPPY FEVER! 2X PTS',
+          text: 'HAPPY FEVER! 2X PTS',
           color: '#f59e0b',
           life: 2.0
         });
@@ -421,14 +437,24 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       }
       if (tier !== g.spicyTier) {
         g.spicyTier = tier;
-        setCurrentSpicyTier(tier);
         g.floatingTexts.push({
           x: canvas.width / 2 - 60,
           y: 60,
-          text: tier === 3 ? '🔥 เผ็ดหูดับตับไหม้! (TIER 3)' : (tier === 2 ? '🌶️ เผ็ดปากเปิด! (TIER 2)' : '🌱 เผ็ดอนุบาล'),
+          text: tier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3)' : (tier === 2 ? 'เผ็ดปากเปิด (TIER 2)' : 'เผ็ดอนุบาล'),
           color: tier === 3 ? '#ef4444' : '#f97316',
           life: 1.8
         });
+      }
+
+      // Throttled UI state sync: update React state every 200ms (5fps instead of 60fps) to eliminate stutter
+      if (currentTime - g.lastUiSync >= 200) {
+        g.lastUiSync = currentTime;
+        setScore(g.score);
+        setHappiness(Math.floor(g.happiness));
+        setGodModeRemaining(Math.ceil(g.godModeTimer));
+        setIsFeverActive(g.feverTimer > 0);
+        setFeverRemaining(Math.ceil(g.feverTimer));
+        setCurrentSpicyTier(g.spicyTier);
       }
 
       // 5. Platformer Physics
@@ -586,6 +612,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                 return updated;
               });
               playRetroSound('pot_complete');
+              triggerHaptic('pot_complete');
 
               g.floatingTexts.push({
                 x: g.catX + 16,
@@ -682,9 +709,35 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             continue;
           }
 
-          // Otherwise: Player is hit -> Game Over
+          // Otherwise: Player is hit -> Game Over with micro freeze-frame & screen shake
           playRetroSound('hit');
-          setGameState('gameover');
+          triggerHaptic('hit');
+          g.hitShakeTimer = 0.25;
+
+          // Spawn collision impact debris
+          for (let p = 0; p < 18; p++) {
+            g.particles.push({
+              x: g.catX + 16,
+              y: g.catY - 12,
+              vx: (Math.random() - 0.5) * 7,
+              vy: (Math.random() - 0.5) * 7,
+              size: Math.random() * 5 + 3,
+              color: Math.random() > 0.5 ? '#ef4444' : '#ea580c',
+              life: 0.9
+            });
+          }
+
+          setScore(g.score);
+          setHappiness(Math.floor(g.happiness));
+          setCanRestart(false);
+          setIsClaiming(false);
+
+          setTimeout(() => {
+            setGameState('gameover');
+            setTimeout(() => {
+              setCanRestart(true);
+            }, 750);
+          }, 80);
 
           if (g.score > highScore) {
             setHighScore(g.score);
@@ -714,6 +767,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       // 🎨 RETRO CHUNKY PIXEL ART RENDERING
       // ============================================================
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+
+      // Screen shake on hit
+      if (g.hitShakeTimer > 0) {
+        g.hitShakeTimer = Math.max(0, g.hitShakeTimer - dt);
+        const shakeMag = g.hitShakeTimer * 14;
+        ctx.translate((Math.random() - 0.5) * shakeMag, (Math.random() - 0.5) * shakeMag);
+      }
 
       // Sky Background according to Spicy Tier and Fever Mode
       if (g.feverTimer > 0) {
@@ -1265,6 +1326,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         ctx.fillText(ft.text, ft.x, ft.y);
       });
 
+      ctx.restore();
+
       animationFrameRef.current = requestAnimationFrame(loop);
     };
 
@@ -1275,7 +1338,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     };
   }, [gameState, soundEnabled, highScore, selectedCharId]);
 
-  const handleClaim = () => {
+  const handleClaim = (e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    setIsClaiming(true);
+    triggerHaptic('collect');
     const finalScore = gameRef.current.score || score;
     if (onClaimScore) {
       onClaimScore(finalScore);
@@ -1424,7 +1490,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       {/* Clean Frame Canvas Container */}
       <div 
         onClick={handleJumpPress}
-        className={`relative w-full ${isFullscreen ? 'max-w-4xl aspect-[16/8]' : 'max-w-[560px] aspect-[16/8]'} mx-auto bg-[#fef8e7] rounded-lg overflow-hidden border-2 border-[#1f1d24] cursor-pointer select-none shadow-md transition-all`}
+        className={`relative w-full ${isFullscreen ? 'max-w-4xl aspect-[16/8]' : 'max-w-[560px] aspect-[16/8]'} mx-auto bg-[#fef8e7] rounded-lg overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all`}
       >
         <canvas 
           ref={canvasRef} 
@@ -1436,28 +1502,31 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
         {/* Spicy Tier Indicator Overlay */}
         {gameState === 'playing' && (
-          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-black/60 text-white px-2 py-0.5 rounded backdrop-blur-[2px]">
+          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-[#181615]/80 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px]">
             <Flame size={11} className={currentSpicyTier === 3 ? 'text-red-400' : 'text-amber-400'} />
-            <span>
-              {currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด 🌶️' : 'เผ็ดอนุบาล 🌱')}
+            <span className="font-bold tracking-wide">
+              {currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3)' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2)' : 'เผ็ดอนุบาล (TIER 1)')}
             </span>
           </div>
         )}
 
         {/* Start Overlay */}
         {gameState === 'idle' && (
-          <div className="absolute inset-0 bg-[#fef8e7]/90 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5">
+          <div 
+            onClick={(e) => { e.stopPropagation(); startGame(); }}
+            className="absolute inset-0 bg-[#FAF7F5]/92 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5 cursor-pointer"
+          >
             <span className="text-4xl animate-bounce">{activeChar.icon}</span>
-            <h4 className="font-mono text-base font-bold text-[#1f1d24] uppercase tracking-widest">
+            <h4 className="font-mono text-base font-bold text-[#181615] uppercase tracking-widest">
               {activeChar.name} ตะลุยเมืองนครพนม
             </h4>
-            <p className="text-xs text-[#4b5563] font-sans max-w-sm leading-relaxed">
+            <p className="text-xs text-[#69635D] font-sans max-w-sm leading-relaxed">
               แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวน้ำโขง 🦅, มะพร้าว 🥥 และคนหัวร้อน 🔥</strong><br/>
               เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเป็น <strong>เทพสะตอ</strong> และสะสม <strong>หลอดความสุข</strong> รับ 2X Fever!
             </p>
             <button
-              onClick={startGame}
-              className="btn-action mt-2 px-6 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              onClick={(e) => { e.stopPropagation(); startGame(); }}
+              className="btn-action mt-2 px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <Sparkles size={13} />
               <span>เริ่มวิ่ง ({activeChar.name})</span>
@@ -1465,64 +1534,80 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           </div>
         )}
 
-        {/* Game Over Overlay */}
+        {/* Game Over Overlay with 750ms Lockout Cooldown */}
         {gameState === 'gameover' && (
-          <div className="absolute inset-0 bg-[#fef8e7]/90 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 animate-[fadeIn_0.15s_ease-out]">
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="absolute inset-0 bg-[#181615]/90 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 animate-[fadeIn_0.15s_ease-out]"
+          >
             <span className="text-3xl">🌶️💥</span>
             <div>
-              <h4 className="font-mono text-base font-bold text-red-600 uppercase tracking-widest mb-1">
-                โดนชนจนหมดพลัง! (GAME OVER)
+              <h4 className="font-mono text-sm font-bold text-[#BD4924] uppercase tracking-widest mb-1">
+                GAME OVER // โดนชนจนหมดพลัง
               </h4>
-              <p className="text-xs text-[#374151] font-mono">
-                FINAL SCORE: <strong className="text-[#ea580c]">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
+              <p className="text-xs text-[#D9D2CB] font-mono">
+                FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
               </p>
             </div>
 
             {/* xhaus Reward Pill */}
             {earnedXhaus > 0 && (
-              <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 px-4 py-1.5 rounded-full font-mono text-xs font-bold flex items-center gap-1.5 shadow-2xs">
-                <Sparkles size={14} className="text-emerald-600" />
+              <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-4 py-1.5 rounded-full font-mono text-xs font-bold flex items-center gap-1.5 shadow-2xs">
+                <Sparkles size={14} className="text-[#22c55e]" />
                 <span>คุณได้รับ +{earnedXhaus.toFixed(2)} XHAUS COIN!</span>
               </div>
             )}
 
             <div className="flex gap-3 font-mono text-xs mt-1">
               <button
-                onClick={startGame}
-                className="btn-action px-5 py-2.5 bg-[#1f1d24] hover:bg-black text-white font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!canRestart) return;
+                  startGame();
+                }}
+                disabled={!canRestart}
+                className={`px-5 py-2.5 font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5 ${
+                  canRestart 
+                    ? 'bg-[#2B2725] hover:bg-[#3D3835] text-[#FAF7F5] border border-[#5C544D]' 
+                    : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
+                }`}
               >
                 <RotateCcw size={13} />
-                <span>วิ่งใหม่อีกครั้ง</span>
+                <span>{canRestart ? 'วิ่งใหม่อีกครั้ง' : 'โปรดรอสักครู่...'}</span>
               </button>
 
               {score > 0 && (
                 <button
                   onClick={handleClaim}
-                  className="btn-action px-5 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-bold uppercase rounded-[4px] border border-[#E05A36] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
                 >
                   <Trophy size={13} />
-                  <span>บันทึกแต้มลงบอร์ด</span>
+                  <span>{isClaiming ? 'เปิดหน้าต่างบันทึกแล้ว ✓' : 'บันทึกแต้มลงบอร์ด'}</span>
                 </button>
               )}
             </div>
+
+            <p className="text-[10px] text-[#89827B] font-mono mt-0.5">
+              {canRestart ? '[ แตะปุ่มวิ่งใหม่ • หรือกด SPACE ]' : '[ กำลังบันทึกผลคะแนน... ]'}
+            </p>
           </div>
         )}
       </div>
 
       {/* Clean Ingredients & Guidelines Dashboard */}
-      <div className="flex flex-col sm:flex-row items-center justify-between bg-[#fef8e7] border border-[#fde68a] p-3.5 rounded-[4px] text-xs font-mono gap-2">
-        <div className="flex items-center gap-2 text-[#451a03]">
-          <span className="font-bold">🥘 สะสมวัตถุดิบ (ครบ 3 อย่าง = +6 PTS & +0.10 XH):</span>
+      <div className="flex flex-col sm:flex-row items-center justify-between bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-3.5 rounded-md text-xs font-mono gap-2">
+        <div className="flex items-center gap-2 text-[var(--color-ink)]">
+          <span className="font-bold">สะสมวัตถุดิบ (ครบ 3 อย่าง = +6 PTS & +0.10 XH):</span>
         </div>
         <div className="flex items-center gap-3 text-[11px] font-bold">
-          <span className="text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
-            🐟 ปลาทู (+1 pt): {potIngredients.fish}/1
+          <span className="text-[var(--color-ink)] bg-sky-500/10 px-2.5 py-1 rounded border border-sky-300/60">
+            ปลาทู (+1 pt): {potIngredients.fish}/1
           </span>
-          <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-            🌿 สะตอ (เทพ 3-5s & +3 pts): {potIngredients.satow}/1
+          <span className="text-[var(--color-ink)] bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-300/60">
+            สะตอ (เทพ 3-5s & +3 pts): {potIngredients.satow}/1
           </span>
-          <span className="text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-            🎋 หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
+          <span className="text-[var(--color-ink)] bg-amber-500/10 px-2.5 py-1 rounded border border-amber-300/60">
+            หน่อไม้ (+2 pts): {potIngredients.bamboo}/1
           </span>
         </div>
       </div>
