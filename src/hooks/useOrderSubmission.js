@@ -176,7 +176,13 @@ export function useOrderSubmission() {
                 if (orderItemsPayload && orderItemsPayload.length > 0) {
                     const items = orderItemsPayload.map(item => ({
                         booking_id: bookingData.id,
-                        ...item
+                        menu_item_id: item.menu_item_id || item.id,
+                        quantity: Number(item.quantity || item.qty || 1),
+                        price_at_time: Number(item.price_at_time ?? item.price ?? 0),
+                        selected_options: item.selected_options || null,
+                        ...(item.custom_name ? { custom_name: item.custom_name } : {}),
+                        ...(item.status ? { status: item.status } : {}),
+                        ...(item.destination ? { destination: item.destination } : {})
                     }))
                     const { error: itemsError } = await supabase.from('order_items').insert(items)
                     if (itemsError) throw itemsError
@@ -227,7 +233,13 @@ export function useOrderSubmission() {
                 if (orderItemsPayload && orderItemsPayload.length > 0) {
                     const items = orderItemsPayload.map(item => ({
                         booking_id: bookingData.id,
-                        ...item
+                        menu_item_id: item.menu_item_id || item.id,
+                        quantity: Number(item.quantity || item.qty || 1),
+                        price_at_time: Number(item.price_at_time ?? item.price ?? 0),
+                        selected_options: item.selected_options || null,
+                        ...(item.custom_name ? { custom_name: item.custom_name } : {}),
+                        ...(item.status ? { status: item.status } : {}),
+                        ...(item.destination ? { destination: item.destination } : {})
                     }))
                     const { error: itemsError } = await supabase.from('order_items').insert(items)
                     if (itemsError) throw itemsError
@@ -289,7 +301,7 @@ export function useOrderSubmission() {
                         const checkInUrl = `${origin}/staff/checkin?id=${resultData.tracking_token || resultData.id}`
                         
                         const itemsSummary = orderItemsPayload && orderItemsPayload.length > 0
-                            ? orderItemsPayload.map(i => `${i.quantity}x ${i.name}`).join(', ') 
+                            ? orderItemsPayload.map(i => `${i.quantity || i.qty || 1}x ${i.name || i.custom_name || 'Item'}`).join(', ') 
                             : 'No items'
 
                         await supabase.functions.invoke('send-booking-ticket', {
@@ -311,17 +323,20 @@ export function useOrderSubmission() {
                     console.error("Failed to trigger ticket:", e)
                 }
 
-                // Automatically trigger email notification to Rithawat@gmail.com for Hausmade orders
+                // Automatically trigger notification (Email, LINE, Webhook) for online orders (Hausmade, Food Pickup, Bookings)
                 try {
-                    const isHausmadeOrder = resultData.booking_type === 'hausmade' || 
+                    const isOnlineOrder = resultData.booking_type === 'hausmade' || 
+                        resultData.booking_type === 'pickup' || 
                         resultData.order_type?.includes('hausmade') || 
-                        resultData.shipping_address !== undefined
+                        resultData.order_type?.includes('pickup') || 
+                        Boolean(resultData.shipping_address) ||
+                        (orderItemsPayload && orderItemsPayload.length > 0)
                     
-                    if (isHausmadeOrder) {
+                    if (isOnlineOrder) {
                         sendOrderNotificationEmail(resultData, orderItemsPayload)
                     }
                 } catch (emailErr) {
-                    console.warn('[useOrderSubmission] Failed to dispatch email notification:', emailErr)
+                    console.warn('[useOrderSubmission] Failed to dispatch order notification:', emailErr)
                 }
             }
 

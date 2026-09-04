@@ -40,11 +40,37 @@ export default async function handler(req, res) {
         const trackingToken = orderData.tracking_token || orderId
         const shortId = (trackingToken && typeof trackingToken === 'string') ? trackingToken.slice(-6).toUpperCase() : String(orderId).slice(-4)
         
-        const customerName = orderData.pickup_contact_name || orderData.customer_name || 'ลูกค้า HAUSMADE'
-        const customerPhone = orderData.pickup_contact_phone || orderData.phone_number || '-'
-        const orderType = orderData.order_type || (orderData.shipping_address ? 'hausmade_shipping' : 'hausmade_pickup')
-        const isShipping = orderType === 'hausmade_shipping' || (orderData.shipping_address && orderData.shipping_address !== 'รับหน้าร้าน IN THE HAUS')
-        const orderTypeLabel = isShipping ? '🚚 จัดส่งพัสดุ (Shipping)' : '🏪 รับหน้าร้าน (Store Pickup)'
+        // 1. Order Classification & Titles
+        const bookingType = orderData.booking_type || (orderData.shipping_address ? 'hausmade' : 'pickup')
+        const isHausmade = bookingType === 'hausmade' || (orderData.order_type && String(orderData.order_type).includes('hausmade'))
+        const isShipping = isHausmade && (orderData.order_type === 'hausmade_shipping' || (orderData.shipping_address && orderData.shipping_address !== 'รับหน้าร้าน IN THE HAUS'))
+        const isFoodPickup = bookingType === 'pickup' || orderData.order_type === 'pickup'
+        const isDineIn = bookingType === 'dine_in'
+
+        let channelTitle = '🧾 มีออเดอร์ใหม่เข้าระบบ!'
+        let orderTypeLabel = '🏪 รับหน้าร้าน (Store Pickup)'
+        let orderCategoryName = 'ORDER'
+        let adminUrl = `${appOrigin}/admin`
+
+        if (isHausmade) {
+            channelTitle = isShipping ? '📦 มีออเดอร์ HAUSMADE (จัดส่งพัสดุ) เข้าใหม่!' : '🛍️ มีออเดอร์ HAUSMADE (รับหน้าร้าน) เข้าใหม่!'
+            orderTypeLabel = isShipping ? '🚚 จัดส่งพัสดุ (Shipping)' : '🏪 รับหน้าร้าน (Store Pickup)'
+            orderCategoryName = 'HAUSMADE'
+            adminUrl = `${appOrigin}/admin/hausmade`
+        } else if (isFoodPickup) {
+            channelTitle = '🥡 มีออเดอร์สั่งกลับบ้าน (Food Pickup) เข้าใหม่!'
+            orderTypeLabel = '🏪 รับกลับบ้าน (Takeaway Pickup)'
+            orderCategoryName = 'FOOD PICKUP'
+            adminUrl = `${appOrigin}/pos?view=online`
+        } else if (isDineIn) {
+            channelTitle = '🍽️ มีการจองโต๊ะ (Dine-in) เข้าใหม่!'
+            orderTypeLabel = '🍽️ ทานที่ร้าน (Dine-in)'
+            orderCategoryName = 'DINE-IN RESERVATION'
+            adminUrl = `${appOrigin}/admin?tab=bookings`
+        }
+
+        const customerName = orderData.pickup_contact_name || orderData.customer_name || (isHausmade ? 'ลูกค้า HAUSMADE' : 'ลูกค้าออนไลน์')
+        const customerPhone = orderData.pickup_contact_phone || orderData.phone_number || orderData.customer_phone || '-'
         
         const totalAmount = Number(orderData.total_amount || 0)
         const shippingFee = Number(orderData.shipping_fee || 0)
@@ -52,21 +78,105 @@ export default async function handler(req, res) {
         const subtotal = totalAmount + discountAmount - (isShipping ? shippingFee : 0)
         
         const shippingAddress = orderData.shipping_address || '-'
-        const pickupSchedule = orderData.booking_time ? new Date(orderData.booking_time).toLocaleString('th-TH') : '-'
+        const pickupSchedule = orderData.booking_time ? new Date(orderData.booking_time).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }) : '-'
         const customerNote = orderData.customer_note || '-'
         const paymentSlipUrl = orderData.payment_slip_url || ''
         const trackingUrl = `${appOrigin}/track/${trackingToken}`
-        const adminUrl = `${appOrigin}/admin/hausmade`
+
+        // Expand slip URL if relative
+        let slipFullUrl = ''
+        if (paymentSlipUrl) {
+            if (paymentSlipUrl.startsWith('http')) {
+                slipFullUrl = paymentSlipUrl
+            } else {
+                const supabaseHost = process.env.VITE_SUPABASE_URL || 'https://lxfavbzmebqqsffgyyph.supabase.co'
+                slipFullUrl = `${supabaseHost}/storage/v1/object/public/slips/${paymentSlipUrl}`
+            }
+        }
+
+        // 2. Resolve missing item names via Supabase if needed (guarantees zero "undefined" names)
+        let resolvedItems = Array.isArray(orderItems) ? [...orderItems] : []
+        const missingNameItemIds = resolvedItems
+            .filter(i => !(i.name || i.custom_name || i.menu_item_name || i.item_name) && (i.menu_item_id || i.id))
+            .map(i => i.menu_item_id || i.id)
+
+        if (missingNameItemIds.length > 0) {
+            try {
+                const { createClient } = await import('@supabase/supabase-js')
+                const supabaseUrl = process.env.VITE_SUPABASE_URL || 'https://lxfavbzmebqqsffgyyph.supabase.co'
+                const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZmF2YnptZWJxcXNmZmd5eXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0MjI5MTMsImV4cCI6MjA4MDk5ODkxM30.oMFT06OnUFzrmGjGpW12jizbxvwcwFeKV7r6HykrLfI'
+                const supabase = createClient(supabaseUrl, supabaseKey)
+
+                const { data: menuData } = await supabase
+                    .from('menu_items')
+                    .select('id, name, price')
+                    .in('id', missingNameItemIds)
+
+                if (menuData && menuData.length > 0) {
+                    const nameMap = new Map(menuData.map(m => [m.id, m]))
+                    resolvedItems = resolvedItems.map(item => {
+                        const itemId = item.menu_item_id || item.id
+                        const found = nameMap.get(itemId)
+                        if (found) {
+                            return {
+                                ...item,
+                                name: item.name || item.custom_name || found.name,
+                                price: item.price ?? item.price_at_time ?? found.price
+                            }
+                        }
+                        return item
+                    })
+                }
+            } catch (dbErr) {
+                console.warn('[send-order-email] Failed to query menu_items for missing names:', dbErr)
+            }
+        }
+
+        // Build items summary for LINE / Discord
+        const formatItemSummary = (item, idx) => {
+            const qty = Number(item.quantity || item.qty || 1)
+            const name = item.name || item.custom_name || item.menu_item_name || item.item_name || item.menu_items?.name || `สินค้า #${idx + 1}`
+            const unitPrice = Number(item.price_at_time ?? item.price ?? 0)
+
+            let optText = ''
+            if (item.selected_options) {
+                if (typeof item.selected_options === 'string') {
+                    optText = item.selected_options
+                } else if (Array.isArray(item.selected_options)) {
+                    optText = item.selected_options
+                        .map(o => (typeof o === 'string' ? o : o.name || o.choice_name || o.value || ''))
+                        .filter(Boolean)
+                        .join(', ')
+                } else if (typeof item.selected_options === 'object') {
+                    optText = Object.values(item.selected_options).flat().filter(Boolean).join(', ')
+                }
+            }
+            const optDisplay = optText ? ` (${optText})` : ''
+            return `• ${qty}x ${name}${optDisplay} (฿${unitPrice.toLocaleString()})`
+        }
+
+        const lineItemsSummary = resolvedItems.length > 0
+            ? resolvedItems.map(formatItemSummary).join('\n')
+            : '• 1x รายการสั่งซื้อ'
 
         // Build HTML Email
-        const emailSubject = `[HAUSMADE] ออเดอร์ใหม่ #${shortId} (${isShipping ? 'จัดส่ง' : 'รับหน้าร้าน'}) ยอด ฿${totalAmount.toLocaleString()}.-`
+        const emailSubject = `[${orderCategoryName}] ออเดอร์ใหม่ #${shortId} (${orderTypeLabel}) ยอด ฿${totalAmount.toLocaleString()}.-`
         
-        const itemsRowsHtml = orderItems.map((item, idx) => {
-            const name = item.custom_name || item.name || item.menu_items?.name || `สินค้า #${idx + 1}`
-            const qty = item.quantity || 1
-            const unitPrice = Number(item.price_at_time || item.price || 0)
+        const itemsRowsHtml = resolvedItems.map((item, idx) => {
+            const name = item.name || item.custom_name || item.menu_item_name || item.item_name || item.menu_items?.name || `สินค้า #${idx + 1}`
+            const qty = Number(item.quantity || item.qty || 1)
+            const unitPrice = Number(item.price_at_time ?? item.price ?? 0)
             const rowTotal = unitPrice * qty
-            const optText = item.selected_options ? (typeof item.selected_options === 'string' ? item.selected_options : JSON.stringify(item.selected_options)) : ''
+            let optText = ''
+            if (item.selected_options) {
+                if (typeof item.selected_options === 'string') {
+                    optText = item.selected_options
+                } else if (Array.isArray(item.selected_options)) {
+                    optText = item.selected_options.map(o => (typeof o === 'string' ? o : o.name || o.choice_name || o.value || '')).filter(Boolean).join(', ')
+                } else if (typeof item.selected_options === 'object') {
+                    optText = Object.values(item.selected_options).flat().filter(Boolean).join(', ')
+                }
+            }
 
             return `
                 <tr style="border-bottom: 1px solid #e5e5e5;">
@@ -104,7 +214,7 @@ export default async function handler(req, res) {
                 // IN THE HAUS ATELIER · NAKHON PHANOM
             </div>
             <h1 style="margin: 6px 0 0 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px; color: #1f1d1b;">
-                HAUSMADE NEW ORDER
+                ${orderCategoryName} NEW ORDER
             </h1>
             <div style="display: inline-block; background: #1f1d1b; color: #ffffff; padding: 4px 10px; font-family: monospace; font-size: 12px; font-weight: bold; margin-top: 8px;">
                 ${orderTypeLabel} · #${shortId}
@@ -133,7 +243,7 @@ export default async function handler(req, res) {
                 </tr>
                 ` : `
                 <tr>
-                    <td style="padding: 6px 0; font-size: 13px; color: #666;">เวลารับหน้าร้าน:</td>
+                    <td style="padding: 6px 0; font-size: 13px; color: #666;">เวลารับสินค้า:</td>
                     <td style="padding: 6px 0; font-size: 13px; font-weight: bold; color: #1f1d1b;">${pickupSchedule}</td>
                 </tr>
                 `}
@@ -192,14 +302,14 @@ export default async function handler(req, res) {
                     [ 🔍 เปิดดูและอัปเดตสถานะในระบบแอดมิน ➔ ]
                 </a>
                 <a href="${trackingUrl}" style="display: block; background: #ffffff; color: #1f1d1b; text-decoration: none; padding: 10px; text-align: center; font-family: monospace; font-weight: bold; font-size: 12px; border: 1px solid #1f1d1b;">
-                    [ 📦 เปิดหน้า TRACKING ลูกค้า (${trackingToken}) ]
+                    [ 📦 เปิดหน้า TRACKING ลูกค้า (${shortId}) ]
                 </a>
             </div>
 
-            ${paymentSlipUrl ? `
+            ${slipFullUrl ? `
             <div style="margin-top: 20px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 12px; color: #166534;">
                 <strong>✓ มีการแนบสลิปชำระเงินเรียบร้อย</strong><br/>
-                <span style="font-family: monospace; font-size: 11px;">ไฟล์สลิป: ${paymentSlipUrl}</span>
+                <a href="${slipFullUrl}" target="_blank" style="color: #15803d; font-family: monospace; font-size: 11px; word-break: break-all;">เปิดดูไฟล์สลิป ➔ ${slipFullUrl}</a>
             </div>
             ` : ''}
         </div>
@@ -227,7 +337,7 @@ export default async function handler(req, res) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        from: 'HAUSMADE Store <orders@inthehaus.co>',
+                        from: `${orderCategoryName} Store <orders@inthehaus.co>`,
                         to: [targetEmail],
                         subject: emailSubject,
                         html: htmlContent
@@ -247,13 +357,26 @@ export default async function handler(req, res) {
             }
         }
 
-        // 2. Dual Fallback / Redundancy: Dispatch to LINE Group to guarantee zero missed orders!
+        // Construct notification message for LINE & Discord
+        const notificationMessage = `${channelTitle}
+━━━━━━━━━━━━━━━
+🏷️ รหัส: #${shortId} (${orderTypeLabel})
+👤 ลูกค้า: ${customerName}
+📞 โทร: ${customerPhone}
+💰 ยอดสุทธิ: ฿${totalAmount.toLocaleString()} บาท
+${isShipping ? `📍 ที่อยู่จัดส่ง: ${shippingAddress}\n` : ''}${orderData.booking_time ? `🕒 กำหนดเวลารับ: ${pickupSchedule}\n` : ''}${customerNote && customerNote !== '-' ? `📝 หมายเหตุ: ${customerNote}\n` : ''}
+📦 สินค้า:
+${lineItemsSummary}
+${slipFullUrl ? `\n🧾 สลิปชำระเงิน: ${slipFullUrl}` : ''}
+✉️ ส่งอีเมลแจ้งเตือนไปที่: ${targetEmail}
+━━━━━━━━━━━━━━━
+🔍 ตรวจสอบ: ${adminUrl}
+📦 Tracking: ${trackingUrl}`
+
+        // 2. Dispatch to LINE Group
         let lineSent = false
         if (LINE_CHANNEL_ACCESS_TOKEN && LINE_GROUP_ID) {
             try {
-                const lineItemsSummary = orderItems.map(i => `• ${i.quantity || 1}x ${i.name || i.custom_name} (฿${i.price || i.price_at_time})`).join('\n')
-                const lineMessage = `🛍️ มีออเดอร์ HAUSMADE เข้าใหม่!\n━━━━━━━━━━━━━━━\n🏷️ รหัส: #${shortId} (${orderTypeLabel})\n👤 ลูกค้า: ${customerName}\n📞 โทร: ${customerPhone}\n💰 ยอดสุทธิ: ฿${totalAmount.toLocaleString()} บาท\n${isShipping ? `📍 ที่อยู่: ${shippingAddress}\n` : ''}\n📦 สินค้า:\n${lineItemsSummary}\n\n✉️ ส่งอีเมลแจ้งเตือนไปที่: ${targetEmail}\n━━━━━━━━━━━━━━━\n🔍 ตรวจสอบ: ${adminUrl}\n📦 Tracking: ${trackingUrl}`
-
                 const lineResp = await fetch('https://api.line.me/v2/bot/message/push', {
                     method: 'POST',
                     headers: {
@@ -262,7 +385,7 @@ export default async function handler(req, res) {
                     },
                     body: JSON.stringify({
                         to: LINE_GROUP_ID,
-                        messages: [{ type: 'text', text: lineMessage }]
+                        messages: [{ type: 'text', text: notificationMessage }]
                     })
                 })
                 if (lineResp.ok) {
@@ -273,10 +396,29 @@ export default async function handler(req, res) {
             }
         }
 
+        // 3. Dispatch to Discord Webhook (if DISCORD_WEBHOOK_URL is configured)
+        let discordSent = false
+        const discordWebhookUrl = process.env.DISCORD_WEBHOOK_URL
+        if (discordWebhookUrl) {
+            try {
+                const discordResp = await fetch(discordWebhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: notificationMessage })
+                })
+                if (discordResp.ok) {
+                    discordSent = true
+                }
+            } catch (dErr) {
+                console.warn('[send-order-email] Discord dispatch exception:', dErr)
+            }
+        }
+
         return res.status(200).json({
             success: true,
             emailSent,
             lineSent,
+            discordSent,
             targetEmail,
             orderId,
             message: `Order notification processed for ${targetEmail}`

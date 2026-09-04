@@ -310,8 +310,10 @@ export default function HausmadeCartDrawer({
 
         const orderItemsPayload = cart.map(item => ({
             menu_item_id: item.id,
+            name: item.name || item.title || item.custom_name || 'สินค้า HAUSMADE',
             quantity: item.quantity,
             price_at_time: item.price + (item.optionsPrice || 0),
+            price: item.price + (item.optionsPrice || 0),
             selected_options: item.optionsText || null
         }))
 

@@ -355,8 +355,10 @@ export default function PickupPage() {
 
             const orderItemsPayload = cart.map(item => ({
                 menu_item_id: item.id,
+                name: item.name || item.custom_name || 'สินค้า',
                 quantity: item.qty,
                 price_at_time: item.totalPricePerUnit,
+                price: item.totalPricePerUnit,
                 selected_options: item.optionsSummary 
             }))
             

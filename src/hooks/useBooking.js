@@ -189,8 +189,10 @@ export function useBooking() {
 
             const orderItemsPayload = state.cart.map(item => ({
                 menu_item_id: item.id,
+                name: item.name || item.title || item.custom_name || 'รายการอาหาร',
                 quantity: item.qty,
                 price_at_time: item.totalPricePerUnit || item.price,
+                price: item.totalPricePerUnit || item.price,
                 selected_options: item.selectedOptions || {}
             }))
 
