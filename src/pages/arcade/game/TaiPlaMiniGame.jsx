@@ -1184,13 +1184,29 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       {/* Clean Header Bar & Character Selector */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-[#fef3c7] text-2xl flex items-center justify-center border border-[#fde68a] shrink-0">
-            {activeChar.icon}
+          <div className="w-10 h-10 rounded bg-[#fef3c7] flex items-center justify-center border border-[#fde68a] shrink-0 overflow-hidden relative shadow-2xs">
+            <canvas
+              ref={(node) => {
+                if (node && taiPlaRenderer.sprites.logo_badge) {
+                  const ctx = node.getContext('2d');
+                  ctx.imageSmoothingEnabled = false;
+                  ctx.clearRect(0, 0, node.width, node.height);
+                  ctx.drawImage(taiPlaRenderer.sprites.logo_badge, 0, 0, node.width, node.height);
+                }
+              }}
+              width={40}
+              height={40}
+              className="w-full h-full block"
+              style={{ imageRendering: 'pixelated' }}
+            />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                {activeChar.name} // {activeChar.title}
+              <h3 className="font-mono text-sm font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-[#bd4924]">ในบ้าน</span>
+                <span className="text-zinc-400">•</span>
+                <span>{activeChar.name}</span>
+                <span className="text-[11px] font-normal text-[oklch(45%_0.010_28)]">({activeChar.title})</span>
               </h3>
               <span className={`text-[9px] px-2 py-0.5 rounded font-mono font-bold border ${activeChar.badgeColor}`}>
                 {activeChar.trait}
@@ -1326,13 +1342,34 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           style={{ imageRendering: 'pixelated' }}
         />
 
-        {/* Spicy Tier Indicator Overlay */}
+        {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
         {gameState === 'playing' && (
-          <div className="absolute top-2 left-3 z-10 flex items-center gap-1.5 font-mono text-[9px] bg-[#181615]/85 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px]">
-            <Flame size={11} className={currentSpicyTier >= 3 ? 'text-red-400' : 'text-amber-400'} />
-            <span className="font-bold tracking-wide">
-              {currentSpicyTier === 4 ? 'เผ็ดนรกแตก (TIER 4) 💀⚡' : (currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3) 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2) 🌶️' : 'เผ็ดอนุบาล (TIER 1)'))}
-            </span>
+          <div className="absolute top-2 left-3 z-10 flex items-center gap-2 font-mono text-[9px]">
+            <div className="flex items-center gap-1.5 bg-[#181615]/85 text-[#FAF7F5] px-2 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+              <div className="w-3.5 h-3.5 shrink-0 overflow-hidden">
+                <canvas
+                  ref={(node) => {
+                    if (node && taiPlaRenderer.sprites.logo_badge) {
+                      const ctx = node.getContext('2d');
+                      ctx.imageSmoothingEnabled = false;
+                      ctx.drawImage(taiPlaRenderer.sprites.logo_badge, 0, 0, node.width, node.height);
+                    }
+                  }}
+                  width={14}
+                  height={14}
+                  className="w-full h-full block"
+                  style={{ imageRendering: 'pixelated' }}
+                />
+              </div>
+              <span className="font-bold text-[#fef08a] tracking-wide">ในบ้าน</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-[#181615]/85 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
+              <Flame size={11} className={currentSpicyTier >= 3 ? 'text-red-400' : 'text-amber-400'} />
+              <span className="font-bold tracking-wide">
+                {currentSpicyTier === 4 ? 'เผ็ดนรกแตก (TIER 4) 💀⚡' : (currentSpicyTier === 3 ? 'เผ็ดหูดับตับไหม้ (TIER 3) 🔥' : (currentSpicyTier === 2 ? 'เผ็ดปากเปิด (TIER 2) 🌶️' : 'เผ็ดอนุบาล (TIER 1)'))}
+              </span>
+            </div>
           </div>
         )}
 
@@ -1340,19 +1377,39 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'idle' && (
           <div 
             onClick={(e) => { e.stopPropagation(); startGame(); }}
-            className="absolute inset-0 bg-[#FAF7F5]/94 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-5 cursor-pointer"
+            className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-center p-4 cursor-pointer"
           >
-            <span className="text-4xl animate-bounce">{activeChar.icon}</span>
-            <h4 className="font-mono text-base font-bold text-[#181615] uppercase tracking-widest">
-              {activeChar.name} ตะลุยเมืองนครพนม
-            </h4>
-            <p className="text-xs text-[#69635D] font-sans max-w-md leading-relaxed">
+            {/* Handcrafted 'ในบ้าน' Pixel Art Marquee Banner */}
+            <div className="w-[240px] h-[64px] overflow-hidden rounded border border-[#181615] bg-[#faf7f5] shadow-xs mb-1">
+              <canvas
+                ref={(node) => {
+                  if (node && taiPlaRenderer.sprites.logo_in_the_haus) {
+                    const ctx = node.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.clearRect(0, 0, node.width, node.height);
+                    ctx.drawImage(taiPlaRenderer.sprites.logo_in_the_haus, 0, 0, node.width, node.height);
+                  }
+                }}
+                width={240}
+                height={64}
+                className="w-full h-full block"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-3xl animate-bounce">{activeChar.icon}</span>
+              <h4 className="font-mono text-sm font-bold text-[#181615] uppercase tracking-widest">
+                {activeChar.name} ตะลุยริมโขงนครพนม
+              </h4>
+            </div>
+            <p className="text-[11px] text-[#69635D] font-sans max-w-sm leading-relaxed">
               แตะหน้าจอ หรือกด Spacebar เพื่อกระโดดหลบ <strong>ปีศาจพริก, เหยี่ยวโขง 🦅, ผีหม้อดิน, คนหัวร้อน 🔥 และครกหินยักษ์ 💥</strong><br/>
-              ใช้ <strong>กระดานสปริงฝักสะตอ 🟢</strong> ดีดตัวขึ้นฟ้า • เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเป็นเทพสะตอทุบศัตรูแหลก!
+              ใช้ <strong>กระดานสปริงฝักสะตอ 🟢</strong> ดีดตัวขึ้นฟ้า • วิ่งผ่าน <strong>คาเฟ่ในบ้าน 🏠</strong> • เก็บ <strong>🌿 สะตอ</strong> แปลงร่างเทพสะตอ!
             </p>
             <button
               onClick={(e) => { e.stopPropagation(); startGame(); }}
-              className="btn-action mt-2 px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
+              className="btn-action mt-1 px-6 py-2.5 bg-[#BD4924] hover:bg-[#A33C1B] text-[#FAF7F5] font-mono text-xs font-bold uppercase rounded-[4px] cursor-pointer shadow-sm active:scale-95 transition-all flex items-center gap-1.5"
             >
               <Sparkles size={13} />
               <span>เริ่มวิ่ง ({activeChar.name})</span>
@@ -1364,11 +1421,29 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'gameover' && (
           <div 
             onClick={(e) => e.stopPropagation()} 
-            className="absolute inset-0 bg-[#181615]/90 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-6 animate-[fadeIn_0.15s_ease-out]"
+            className="absolute inset-0 bg-[#181615]/92 backdrop-blur-[3px] flex flex-col items-center justify-center gap-2.5 text-center p-5 animate-[fadeIn_0.15s_ease-out]"
           >
-            <span className="text-3xl">🌶️💥</span>
+            {/* Handcrafted 'ในบ้าน' Pixel Art Mini Banner */}
+            <div className="w-[180px] h-[48px] overflow-hidden rounded border border-[#5c544d] bg-[#faf7f5] shadow-xs">
+              <canvas
+                ref={(node) => {
+                  if (node && taiPlaRenderer.sprites.logo_in_the_haus) {
+                    const ctx = node.getContext('2d');
+                    ctx.imageSmoothingEnabled = false;
+                    ctx.clearRect(0, 0, node.width, node.height);
+                    ctx.drawImage(taiPlaRenderer.sprites.logo_in_the_haus, 0, 0, node.width, node.height);
+                  }
+                }}
+                width={180}
+                height={48}
+                className="w-full h-full block"
+                style={{ imageRendering: 'pixelated' }}
+              />
+            </div>
+
+            <span className="text-2xl">🌶️💥</span>
             <div>
-              <h4 className="font-mono text-sm font-bold text-[#BD4924] uppercase tracking-widest mb-1">
+              <h4 className="font-mono text-xs font-bold text-[#BD4924] uppercase tracking-widest mb-0.5">
                 GAME OVER // โดนชนจนหมดพลัง
               </h4>
               <p className="text-xs text-[#D9D2CB] font-mono">
