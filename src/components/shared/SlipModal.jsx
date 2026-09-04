@@ -292,7 +292,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                 setIsAutoPrinting(true);
                 try {
-                    let activePaperSize = printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm';
+                    let activePaperSize = (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other')
+                        ? (printerConfig.kitchen_paper_size || printerConfig.paper_width || '80mm')
+                        : (printerConfig.cashier_paper_size || printerConfig.paper_width || '80mm');
                     if (activeTab === 'kitchen') {
                         let printedAny = false;
                         const kitchenBytes = encodeReceiptData(booking, 'kitchen', paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
@@ -316,7 +318,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     } else {
                         const rawBytes = encodeReceiptData(booking, activeTab, paymentMethod, currentOptionMap, activePaperSize, loadedConfig, 'sunmi');
                         if (rawBytes) {
-                            const qrToPrint = (activeTab === 'billing') ? (loadedConfig.paymentQrUrl || qrCodeUrl) : null;
+                            const qrToPrint = (activeTab === 'billing') ? (qrCodeUrl || loadedConfig.paymentQrUrl) : null;
                             const logoToPrint = (activeTab !== 'kitchen' && activeTab !== 'bar' && activeTab !== 'other' && activeTab !== 'kitchen_all') ? (loadedConfig.shopLogoUrl || `${window.location.origin}/logo.png`) : null;
                             await printToSunmiBuiltIn(rawBytes, logoToPrint, qrToPrint);
                         }

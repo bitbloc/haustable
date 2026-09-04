@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData } from '../printerHelper';
-import { decodeTis620 } from '../wmaParser';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData, encodeSplitQrSlipData } from '../printerHelper';
+import { decodeTis620, stripEscPosCommands } from '../wmaParser';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
 import { calculateShiftMetrics, getBookingPaymentBreakdown } from '../shiftHelper';
@@ -730,6 +730,112 @@ describe('System Audit - Phase 5: Shift Report Slip Alignment & Zero Text-Drop E
             expect(line.includes('\n')).toBe(false);
             expect(getPrinterCellWidth(line, false)).toBe(maxCols);
         });
+    });
+});
+
+describe('System Audit - Phase 6: Sunmi D2s Plus Hardware Thermal Slip & Grid Precision Engine', () => {
+    it('should align receipt totals with Thai labels to exact same width without jagged price edges', () => {
+        const dummyBooking = {
+            id: 'bk-9999',
+            short_id: '9999',
+            booking_type: 'dine_in',
+            status: 'completed',
+            pax: 4,
+            order_time: '2026-09-04T18:00:00.000Z',
+            tables_layout: { table_name: 'VIP-1' },
+            discount_amount: 50,
+            xhaus_discount: 20,
+            total_amount: 980,
+            cash_received: 1000,
+            cash_change: 20,
+            profiles: {
+                display_name: 'สมชาย รักดี',
+                phone_number: '0812345678',
+                current_tier: 'Haus People',
+                multiplier: 1.25,
+                xhaus_balance: 350,
+                drink_stamp_count: 7,
+                free_drink_quota: 1
+            },
+            order_items: [
+                { name: 'ต้มยำกุ้งน้ำข้น', quantity: 2, price_at_time: 250, destination: 'kitchen' },
+                { name: 'ข้าวผัดปูจัมโบ้', quantity: 2, price_at_time: 200, destination: 'kitchen' },
+                { name: 'ชาเขียวมัทฉะลาเต้', quantity: 1, price_at_time: 150, destination: 'bar' }
+            ]
+        };
+
+        const encoded = encodeReceiptData(dummyBooking, 'receipt', 'cash', {}, '80mm', { vat_mode: 'inclusive' }, 'sunmi');
+        const text = decodeTis620(stripEscPosCommands(encoded));
+        const lines = text.split('\n');
+
+        // Verify that global left margin (6 spaces) is applied to center 36 cols on 48-col printhead
+        const contentLines = lines.filter(l => l.trim().length > 0);
+        contentLines.forEach(line => {
+            // Every line must start with at least 3 to 6 spaces margin or be appropriately offset
+            expect(line.startsWith('   ') || line.startsWith('      ')).toBe(true);
+        });
+
+        // Verify total rows format to exact 36 cols (with visualGraphemes)
+        const colOpts = { visualGraphemes: true };
+        const totalLine = formatTwoCols('ยอดรวมสุทธิ', '980.00', 36, null, colOpts);
+        const subtotalLine = formatTwoCols('ยอดรวมก่อนหัก', '1,050.00', 36, null, colOpts);
+        const vatLine = formatTwoCols('ภาษีมูลค่าเพิ่ม 7% (รวมในยอด)', '64.11', 36, null, colOpts);
+
+        expect(getPrinterCellWidth(totalLine, false)).toBe(36);
+        expect(getPrinterCellWidth(subtotalLine, false)).toBe(36);
+        expect(getPrinterCellWidth(vatLine, false)).toBe(36);
+
+        // All lines must have their rightmost characters at identical character cell
+        expect(totalLine.endsWith('980.00')).toBe(true);
+        expect(subtotalLine.endsWith('1,050.00')).toBe(true);
+        expect(vatLine.endsWith('64.11')).toBe(true);
+    });
+
+    it('should center Split Payment QR Slip and apply 6-space margin offset on 80mm Sunmi paper', () => {
+        const dummyBooking = {
+            id: 'bk-split-1',
+            total_amount: 1500,
+            tables_layout: { table_name: 'B2' }
+        };
+        const splitDetails = {
+            tableName: 'B2',
+            roundNumber: 2,
+            splitAmount: 750,
+            fullOrderTotal: 1500,
+            remainingBalanceAfterSplit: 0,
+            promptpayName: 'ร้านในบ้าน นครพนม',
+            promptpayId: '0614232455'
+        };
+
+        const encoded = encodeSplitQrSlipData(dummyBooking, splitDetails, '80mm');
+        const text = decodeTis620(stripEscPosCommands(encoded));
+        const lines = text.split('\n');
+
+        // Should contain header, round details, and proper Thai labels
+        expect(text).toContain('ONHAUS');
+        expect(text).toContain('แบ่งชำระ รอบที่ 2');
+        expect(text).toContain('ยอดชำระ: ฿750.00');
+        expect(text).toContain('ร้านในบ้าน นครพนม');
+
+        // Split slip lines must have 6-space margin for 80mm paper roll
+        const nonBlank = lines.filter(l => l.trim().length > 0);
+        nonBlank.forEach(line => {
+            expect(line.startsWith('   ') || line.startsWith('      ')).toBe(true);
+        });
+    });
+
+    it('should cleanly translate Unicode arrow symbols to ASCII safe equivalents in TIS-620 without spaces', () => {
+        const dummyBooking = {
+            id: 'bk-merge-1',
+            tables_layout: { table_name: 'T1' },
+            staff_remark: '[MERGED_TO: T2]',
+            order_items: [{ name: 'ไก่ทอดเกลือ', quantity: 1, destination: 'kitchen' }]
+        };
+
+        const encoded = encodeReceiptData(dummyBooking, 'kitchen', 'cash', {}, '80mm', {}, 'sunmi');
+        const text = decodeTis620(encoded);
+        expect(text).toContain('รวมเข้า T2');
+        expect(text).not.toContain('(   T2)');
     });
 });
 

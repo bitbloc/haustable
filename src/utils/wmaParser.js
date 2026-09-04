@@ -35,6 +35,8 @@ export function stripEscPosCommands(buffer) {
             const next = buffer[i + 1];
             if (next === 0x40) { // ESC @
                 i += 2; continue;
+            } else if (next === 0x70) { // ESC p (drawer pulse)
+                i += 5; continue;
             } else if (next === 0x61 || next === 0x45 || next === 0x21 || next === 0x74 || next === 0x64 || next === 0x2D || next === 0x4D) {
                 i += 3; continue;
             } else {

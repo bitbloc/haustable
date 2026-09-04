@@ -282,7 +282,8 @@ class EscPosEncoder {
     }
 
     kickDrawer() {
-        // Sunmi/ESC/POS cash drawer kick command DLE DC4 m t1 t2 (10 14 00 3c ff)
+        // Standard ESC/POS drawer kick command (pin 2: 1B 70 00 19 FA) + Sunmi/ESC/POS DLE DC4 (10 14 00 3C FF)
+        this.buffer.push(ESC, 0x70, 0x00, 0x19, 0xFA);
         this.buffer.push(0x10, 0x14, 0x00, 0x3C, 0xFF);
         return this;
     }
@@ -306,7 +307,7 @@ function encodeThaiTIS620(str) {
         } else {
             // Map common non-TIS620 symbols to TIS620 / ASCII safe equivalents
             if (code === 0x2605 || code === 0x2B50) bytes.push(42); // ★ / ⭐ -> *
-            else if (code === 0x25B6 || code === 0x25B7) bytes.push(62); // ▶ -> >
+            else if (code === 0x25B6 || code === 0x25B7 || code === 0x2794 || code === 0x2192 || code === 0x21D2) bytes.push(62); // ▶ / ➔ / → / ⇒ -> >
             else if (code === 0x2022 || code === 0x2023) bytes.push(45); // • -> -
             else bytes.push(32); // Space for unknown characters
         }
@@ -842,6 +843,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     encoder.initialize();
 
     const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols);
+    const colOpts = { visualGraphemes: true };
 
     // CRITICAL TIS-620 CENTERING INTERCEPTOR:
     // To ensure headers and body align perfectly, we intercept align() and size() calls.
@@ -880,7 +882,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const lines = str.split('\n');
         const processedLines = lines.map(line => {
             let processedLine = line;
-            const width = getPrinterCellWidth(processedLine, true);
+            const width = getPrinterCellWidth(processedLine, false);
             if (currentSizeW >= 1) {
                 const scale = currentSizeW + 1;
                 const targetCols = Math.floor(maxCols / scale);
@@ -1127,8 +1129,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         if (depositAmt > 0) {
             encoder.line(divider)
                    .bold(true)
-                   .line(`ยอดโอนมัดจำแล้ว: ฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}`)
-                   .line(`ยอดคงเหลือชำระเพิ่ม: ฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}`)
+                   .line(formatTwoCols('ยอดโอนมัดจำแล้ว:', `฿${depositAmt.toLocaleString(undefined, {minimumFractionDigits: 2})}`, maxCols, null, colOpts))
+                   .line(formatTwoCols('ยอดคงเหลือชำระเพิ่ม:', `฿${balanceDue.toLocaleString(undefined, {minimumFractionDigits: 2})}`, maxCols, null, colOpts))
                    .bold(false);
         }
     }
@@ -1157,7 +1159,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
                 
-                const nameLines = wrapTextByWords(name, nameColWidth);
+                const nameLines = wrapTextByWords(name, nameColWidth, false);
                 if (nameLines.length === 0) nameLines.push('');
                 
                 const kitchenItemLines = [`${qtyStr}${nameLines[0]}`];
@@ -1198,7 +1200,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
                     optionsList.forEach(opt => {
                         const optLine = `> ${String(opt).toUpperCase()}`;
-                        wrapTextByWords(optLine, maxDoubleCols).forEach(l => {
+                        wrapTextByWords(optLine, maxDoubleCols, false).forEach(l => {
                             encoder.line(l);
                         });
                     });
@@ -1253,7 +1255,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
                     optionsList.forEach(opt => {
                         const optionText = `+ ${String(opt)}`;
-                        wrapTextByWords(optionText, maxCols - 4)
+                        wrapTextByWords(optionText, maxCols - 4, false)
                             .forEach(l => encoder.line(`    ${l}`));
                     });
                 }
@@ -1282,7 +1284,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (row.type === 'total') {
                 encoder.line(divider).bold(true);
             }
-            encoder.line(formatTwoCols(row.label, row.value, maxCols));
+            encoder.line(formatTwoCols(row.label, row.value, maxCols, null, colOpts));
             if (row.type === 'total') {
                 encoder.bold(false);
             }
@@ -1294,14 +1296,14 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     if (!isKitchenTab && activeTab === 'receipt' && booking.profiles) {
         encoder.align('center').bold(true).line('--- ข้อมูลสมาชิก (MEMBER) ---').bold(false).align('left');
         
-        encoder.line(formatTwoCols('ชื่อสมาชิก:', booking.profiles.display_name || '-', maxCols));
+        encoder.line(formatTwoCols('ชื่อสมาชิก:', booking.profiles.display_name || '-', maxCols, null, colOpts));
         if (booking.profiles.phone_number) {
-            encoder.line(formatTwoCols('เบอร์โทรศัพท์:', booking.profiles.phone_number, maxCols));
+            encoder.line(formatTwoCols('เบอร์โทรศัพท์:', booking.profiles.phone_number, maxCols, null, colOpts));
         }
 
         const tierName = booking.profiles.current_tier || booking.profiles.tier || 'Haus Common';
         const mult = booking.profiles.multiplier ? `${parseFloat(booking.profiles.multiplier).toFixed(2).replace(/\.00$/, '')}x` : (tierName === 'Inner Haus' ? '1.5x' : (tierName === 'Haus People' ? '1.25x' : '1.0x'));
-        encoder.line(formatTwoCols('ระดับสมาชิก:', `${tierName} (แต้ม ${mult})`, maxCols));
+        encoder.line(formatTwoCols('ระดับสมาชิก:', `${tierName} (แต้ม ${mult})`, maxCols, null, colOpts));
 
         const earned = Number(booking.xhaus_earned) || 0;
         const redeemed = Number(booking.xhaus_redeemed) || 0;
@@ -1312,18 +1314,18 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
         encoder.line(divider);
         if (earned > 0) {
-            encoder.line(formatTwoCols('ได้รับ xhaus ครั้งนี้:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols));
+            encoder.line(formatTwoCols('ได้รับ xhaus ครั้งนี้:', `+${earned.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols, null, colOpts));
         }
         if (redeemed > 0) {
             const discStr = xhausDisc > 0 ? ` (-฿${xhausDisc.toLocaleString()})` : '';
-            encoder.line(formatTwoCols('ตัดยอดแต้มที่ใช้ไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus${discStr}`, maxCols));
+            encoder.line(formatTwoCols('ตัดยอดแต้มที่ใช้ไป:', `-${redeemed.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus${discStr}`, maxCols, null, colOpts));
         }
-        encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols));
+        encoder.line(formatTwoCols('แต้มสะสมคงเหลือ:', `${balance.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2})} xhaus`, maxCols, null, colOpts));
         
         encoder.line(divider);
-        encoder.line(formatTwoCols('แสตมป์เครื่องดื่ม:', `${stamps}/10 แก้ว`, maxCols));
+        encoder.line(formatTwoCols('แสตมป์เครื่องดื่ม:', `${stamps}/10 แก้ว`, maxCols, null, colOpts));
         if (freeQuota > 0) {
-            encoder.line(formatTwoCols('สิทธิ์เครื่องดื่มฟรี:', `${freeQuota} แก้ว`, maxCols));
+            encoder.line(formatTwoCols('สิทธิ์เครื่องดื่มฟรี:', `${freeQuota} แก้ว`, maxCols, null, colOpts));
         }
         encoder.line(doubleDivider);
     }
@@ -1356,8 +1358,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (cashDetails.received !== null && cashDetails.received > 0) {
                 const cashRecvVal = formatReceiptMoney(cashDetails.received);
                 const cashChangeVal = formatReceiptMoney(cashDetails.change || 0);
-                encoder.line(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols));
-                encoder.line(formatTwoCols('เงินทอน', cashChangeVal, maxCols));
+                encoder.line(formatTwoCols('รับเงินสดมา', cashRecvVal, maxCols, null, colOpts));
+                encoder.line(formatTwoCols('เงินทอน', cashChangeVal, maxCols, null, colOpts));
             }
         }
         
@@ -1383,7 +1385,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                    .size(0, 0)
                    .line('หมายเหตุ:');
             combinedNotes.forEach(noteLine => {
-                const lines = wrapTextByWords(noteLine, maxCols - 2);
+                const lines = wrapTextByWords(noteLine, maxCols - 2, false);
                 lines.forEach(l => encoder.line(`- ${l}`));
             });
             encoder.bold(false);
@@ -1393,7 +1395,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                    .line('หมายเหตุ:')
                    .bold(false);
             combinedNotes.forEach(noteLine => {
-                const lines = wrapTextByWords(noteLine, maxCols - 2);
+                const lines = wrapTextByWords(noteLine, maxCols - 2, false);
                 lines.forEach(l => encoder.line(l));
             });
         }
@@ -1437,7 +1439,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             footerTableTitle = `LINE MAN #${queueNo}`;
         } else if (!isPickupOrder) {
             if (transfer.isMergedSource) {
-                footerTableTitle = `โต๊ะ ${tableName} (➔ ${transfer.mergedToTable})`;
+                footerTableTitle = `โต๊ะ ${tableName} (รวมเข้า ${transfer.mergedToTable})`;
             } else if (transfer.isMergedTarget) {
                 footerTableTitle = `โต๊ะ ${tableName} (+${transfer.mergedFromTables.join(',')})`;
             } else if (transfer.isMoved) {
@@ -1449,7 +1451,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         const paxCount = booking.pax || booking.guest_count || 1;
 
         // Choose size magnification: 2x larger height and width
-        const tableTitleWidth = getPrinterCellWidth(footerTableTitle, true);
+        const tableTitleWidth = getPrinterCellWidth(footerTableTitle, false);
         const targetTripleWidthCols = Math.floor(maxCols / 3);
         const sizeW = (tableTitleWidth <= targetTripleWidthCols) ? 2 : 1;
         const sizeH = (tableTitleWidth <= targetTripleWidthCols) ? 2 : 2;
@@ -1690,7 +1692,7 @@ function formatReceiptMoney(value) {
 
 function formatItemLine(calculationText, name, priceStr, maxCols) {
     const totalWidth = Math.max(20, Number(maxCols) || 36);
-    const nameLines = wrapTextByWords(String(name ?? ''), totalWidth);
+    const nameLines = wrapTextByWords(String(name ?? ''), totalWidth, false);
     if (nameLines.length === 0) nameLines.push('');
 
     const left = String(calculationText ?? '');
@@ -2115,9 +2117,10 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         const processedLines = lines.map(line => {
             let processedLine = line;
             const width = getPrinterCellWidth(processedLine, false);
-            if (currentSizeW === 1) {
-                const targetCols = Math.floor(maxCols / 2);
-                const halfOffset = Math.floor(offset / 2);
+            if (currentSizeW >= 1) {
+                const scale = currentSizeW + 1;
+                const targetCols = Math.floor(maxCols / scale);
+                const halfOffset = Math.floor(offset / scale);
                 const margin = ' '.repeat(halfOffset);
                 if (currentAlign === 'center' && width < targetCols) {
                     const padding = Math.floor((targetCols - width) / 2);
@@ -2535,7 +2538,7 @@ async function downloadAndResizeLogoToBase64(logoUrl, targetWidth = 200) {
                 ctx.fillStyle = '#FFFFFF';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                const base64Data = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+                const base64Data = canvas.toDataURL('image/png').split(',')[1];
                 resolve(base64Data);
             } catch (err) {
                 reject(err);
@@ -2639,7 +2642,7 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
                             logger.info("SUNMI: printing QR code bitmap");
                             await SunmiPrinter.setAlignment({ alignment: "center" });
                             await SunmiPrinter.printBitmap({ bitmap: base64Qr });
-                            await SunmiPrinter.lineWrap({ lines: 1 });
+                            await SunmiPrinter.lineWrap({ lines: 4 });
                             await SunmiPrinter.setAlignment({ alignment: "left" });
                             didPrintQr = true;
                         }
@@ -2871,7 +2874,7 @@ export async function resolveBillingQrCode(booking, config = {}, customAmount = 
         const QRCode = (await import('qrcode')).default;
 
         const payload = generatePayload(promptpayId, { amount: amountToPay > 0 ? amountToPay : undefined });
-        const dataUrl = await QRCode.toDataURL(payload, { width: 300, margin: 1 });
+        const dataUrl = await QRCode.toDataURL(payload, { width: 320, margin: 4 });
         return dataUrl;
     } catch (err) {
         console.error('[PrinterHelper] Failed to generate dynamic PromptPay QR code:', err);
@@ -3029,6 +3032,66 @@ export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize
     const maxCols = resolveMaxCols(paperSize, booking?.maxCols);
     const colOpts = { visualGraphemes: true };
     const divider = generateDivider('dashed', maxCols);
+
+    let currentAlign = 'left';
+    let currentSizeW = 0;
+
+    const originalAlign = encoder.align.bind(encoder);
+    encoder.align = function(type) {
+        currentAlign = type;
+        originalAlign('left'); // Force hardware to always be left-aligned
+        return this;
+    };
+
+    const originalSize = encoder.size.bind(encoder);
+    encoder.size = function(width, height) {
+        currentSizeW = width;
+        originalSize(width, height);
+        return this;
+    };
+
+    const is80mm = String(paperSize ?? '').toLowerCase().includes('80');
+    const hardwareCols = is80mm ? 48 : 32;
+    const paddingCols = Math.max(0, hardwareCols - maxCols);
+    const offset = Math.floor(paddingCols / 2);
+    const globalLeftMargin = ' '.repeat(offset);
+
+    const originalLine = encoder.line.bind(encoder);
+    encoder.line = function(value) {
+        let str = String(value ?? '');
+        const lines = str.split('\n');
+        const processedLines = lines.map(line => {
+            let processedLine = line;
+            const width = getPrinterCellWidth(processedLine, false);
+            if (currentSizeW >= 1) {
+                const scale = currentSizeW + 1;
+                const targetCols = Math.floor(maxCols / scale);
+                const halfOffset = Math.floor(offset / scale);
+                const margin = ' '.repeat(halfOffset);
+                if (currentAlign === 'center' && width < targetCols) {
+                    const padding = Math.floor((targetCols - width) / 2);
+                    processedLine = ' '.repeat(padding) + processedLine;
+                } else if (currentAlign === 'right' && width < targetCols) {
+                    const padding = targetCols - width;
+                    processedLine = ' '.repeat(padding) + processedLine;
+                }
+                return margin + processedLine;
+            } else {
+                const targetCols = maxCols;
+                if (currentAlign === 'center' && width < targetCols) {
+                    const padding = Math.floor((targetCols - width) / 2);
+                    processedLine = ' '.repeat(padding) + processedLine;
+                } else if (currentAlign === 'right' && width < targetCols) {
+                    const padding = targetCols - width;
+                    processedLine = ' '.repeat(padding) + processedLine;
+                }
+                return globalLeftMargin + processedLine;
+            }
+        });
+
+        originalLine(processedLines.join('\n'));
+        return this;
+    };
 
     const tableName = splitDetails.tableName || booking?.tables_layout?.table_name || booking?.table_name || 'WALK-IN';
     const roundNum = splitDetails.roundNumber || 1;
