@@ -9,15 +9,12 @@ import {
     CreditCard, QrCode, Banknote, Sparkles, Phone, UserCheck, 
     RefreshCw, ChevronRight, AlertCircle, ArrowRight, Percent, History
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
 import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName } from '../utils/printerHelper';
-import { formatOrderItemOptions } from '../utils/menuHelper';
 import { 
-    getBookingSplitRounds, 
     calculateSplitBalance, 
     calculatePercentAmount 
 } from '../utils/splitPaymentHelper';
@@ -32,6 +29,9 @@ export default function POSSplitPaymentModal({
 }) {
     // 3 Split Modes: 'EQUAL' | 'PERCENT' | 'CUSTOM'
     const [splitMode, setSplitMode] = useState('EQUAL');
+    
+    // Item Quantities Mapping State (Required for items selection calculation and steppers)
+    const [splitQuantities, setSplitQuantities] = useState({});
     
     // --- Mode 1: Equal Split States ---
     const [numPeople, setNumPeople] = useState(2);
@@ -88,7 +88,7 @@ export default function POSSplitPaymentModal({
 
     // Table / Booking Info
     const tableName = activeBooking?.tables_layout?.table_name || activeBooking?.table_name || (activeBooking?.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN');
-    const orderItems = order?.items || [];
+    const orderItems = useMemo(() => order?.items || [], [order?.items]);
     const hasUnsentItems = orderItems.some(item => !item.db_id);
 
     // Initial item quantities mapping
@@ -272,31 +272,6 @@ export default function POSSplitPaymentModal({
         storePromptpayId,
         storePromptpayName
     ]);
-
-    // Handle Item Qty Steppers
-    const handleQtyChange = (itemId, delta, maxQty) => {
-        setSplitQuantities(prev => {
-            const cur = prev[itemId] || 0;
-            const next = Math.max(0, Math.min(maxQty, cur + delta));
-            return { ...prev, [itemId]: next };
-        });
-    };
-
-    const handleSelectAllItems = () => {
-        const all = {};
-        orderItems.forEach(item => {
-            all[item.id] = item.quantity;
-        });
-        setSplitQuantities(all);
-    };
-
-    const handleClearAllItems = () => {
-        const cleared = {};
-        orderItems.forEach(item => {
-            cleared[item.id] = 0;
-        });
-        setSplitQuantities(cleared);
-    };
 
     // Member Phone Lookup
     const handleSearchMember = async (e) => {

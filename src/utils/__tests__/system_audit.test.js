@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData } from '../printerHelper';
 import { decodeTis620 } from '../wmaParser';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
@@ -656,6 +656,80 @@ describe('System Audit - Phase 6: CRM Loyalty Dominance on Merged Bills', () => 
         const result = resolveDominantCrmMember(sourceBooking, targetBooking);
         expect(result.wasSourceChosen).toBe(true);
         expect(result.dominantMember.id).toBe('user_registered');
+    });
+});
+
+describe('System Audit - Phase 5: Shift Report Slip Alignment & Zero Text-Drop Engine', () => {
+    it('should format item and category names to single line by stripping parenthesized English and long suffixes', () => {
+        expect(formatReportItemName('กับข้าวถึงเครื่อง (Main Dishes)')).toBe('กับข้าวถึงเครื่อง');
+        expect(formatReportItemName('จานเดียวรสเด็ด (Rice Bowl)')).toBe('จานเดียวรสเด็ด');
+        expect(formatReportItemName('ของทานเล่น (Appetizer&Snacks)')).toBe('ของทานเล่น');
+        expect(formatReportItemName('Coffee (in the haus co.)')).toBe('Coffee');
+        expect(formatReportItemName('Set : จับคู่จานเดียว + Set : ใหญ่')).toBe('Set จับคู่จานเดียว');
+        expect(formatReportItemName('3. ใบเหลียงผัดไข่ในบ้าน')).toBe('3. ใบเหลียงผัดไข่ในบ้าน');
+    });
+
+    it('should align all table rows to exact same physical width and straight vertical columns with visualGraphemes', () => {
+        const maxCols = 36;
+        const colOpts = { visualGraphemes: true };
+        const truncateOpts = { visualGraphemes: true, truncate: true };
+
+        const header = formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts);
+        expect(getPrinterCellWidth(header, false)).toBe(maxCols);
+
+        const rows = [
+            ['กับข้าวถึงเครื่อง', 21, '3,549.00'],
+            ['จานเดียวรสเด็ด', 10, '1,420.00'],
+            ['ของทานเล่น', 6, '830.00'],
+            ['PRO ฉ่ำๆ', 1, '500.00'],
+            ['เบียร์สด & Craft Beer', 1, '379.00'],
+            ['Bottled Beverages', 13, '360.00'],
+            ['Mocktail & Cocktail', 2, '298.00'],
+            ['Soft Drink', 4, '258.00'],
+            ['สปาเก็ตตี้', 1, '199.00'],
+            ['Coffee', 2, '170.00'],
+            ['Set : จับคู่จานเดียว', 1, '149.00'],
+            ['เพิ่มเติม', 8, '120.00'],
+            ['1. ข้าวสวย', 8, '120.00'],
+            ['2. หมูหวานกะปิ', 4, '556.00'],
+            ['3. ใบเหลียงผัดไข่ในบ้าน', 4, '556.00'],
+            ['QR PromptPay', 15, '7,487.00'],
+            ['เงินสด', 2, '745.00'],
+            ['กินที่ร้าน', 15, '7,526.00'],
+            ['กลับบ้าน / รับเอง', 2, '706.00'],
+            ['หน้าร้าน / Direct', 17, '8,232.00']
+        ];
+
+        rows.forEach(([name, qty, amt]) => {
+            const cleanName = formatReportItemName(name, 20);
+            const line = formatThreeCols(cleanName, qty, amt, maxCols, 5, 9, truncateOpts);
+            // Must NOT have newline (single line guaranteed)
+            expect(line.includes('\n')).toBe(false);
+            // Must be exact printhead width
+            expect(getPrinterCellWidth(line, false)).toBe(maxCols);
+        });
+    });
+
+    it('should right-align summary metrics and cash reconciliation with visualGraphemes without left-edge jitter', () => {
+        const maxCols = 36;
+        const colOpts = { visualGraphemes: true };
+
+        const summaryLines = [
+            formatTwoCols('ยอดขายสุทธิ', '8,232.00', maxCols, null, colOpts),
+            formatTwoCols('จำนวนลูกค้า (Pax)', '35', maxCols, null, colOpts),
+            formatTwoCols('ยอดขายเฉลี่ยต่อบิล', '484.24', maxCols, null, colOpts),
+            formatTwoCols('ยอดขายเฉลี่ยต่อหัว', '235.20', maxCols, null, colOpts),
+            formatTwoCols('เงินสดเริ่มต้น', '3,957.00', maxCols, null, colOpts),
+            formatTwoCols('ยอดขายเงินสด (+)', '+745.00', maxCols, null, colOpts),
+            formatTwoCols('เงินออกลิ้นชัก (-)', '-554.00', maxCols, null, colOpts),
+            formatTwoCols('เงินที่ควรมีในลิ้นชัก', '4,148.00', maxCols, null, colOpts),
+            formatTwoCols('จำนวนจริงในลิ้นชัก', '4,148.00', maxCols, null, colOpts)
+        ];
+
+        summaryLines.forEach(line => {
+            expect(line.includes('\n')).toBe(false);
+            expect(getPrinterCellWidth(line, false)).toBe(maxCols);
+        });
     });
 });
 
