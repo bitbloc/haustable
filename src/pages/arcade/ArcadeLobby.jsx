@@ -1169,10 +1169,10 @@ export default function ArcadeLobby() {
                       setTimeout(() => startChillAudio(), 100);
                     }
                   }}
-                  className={`p-2.5 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col gap-1 ${
+                  className={`p-2.5 rounded-xl border-2 text-left transition-colors duration-150 cursor-pointer flex flex-col gap-1 ${
                     chillPreset === p.id 
                       ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-xs' 
-                      : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615] hover:bg-white'
+                      : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615] hover:bg-[#F2ECE4]'
                   }`}
                 >
                   <span className={`text-[9px] font-bold ${chillPreset === p.id ? 'text-[#E9F344]' : 'text-[#78716c]'}`}>
@@ -1263,7 +1263,7 @@ export default function ArcadeLobby() {
                     className={`flex-1 py-1 rounded-lg text-center font-bold cursor-pointer transition-colors ${
                       sleepMinutes === m 
                         ? 'bg-[#181615] text-[#FAF7F5]' 
-                        : 'bg-white text-[#181615] border border-[#181615]/30 hover:bg-neutral-100'
+                        : 'bg-[#FAF7F2] text-[#181615] border border-[#181615]/30 hover:bg-[#F2ECE4]'
                     }`}
                   >
                     {m === 0 ? 'OFF' : `${m}m`}
@@ -1276,9 +1276,9 @@ export default function ArcadeLobby() {
           <div className="flex items-center justify-between pt-1">
             <button
               onClick={handlePlayClick}
-              className={`px-6 py-3 rounded-xl border-2 border-[#181615] font-mono font-bold text-xs uppercase cursor-pointer transition-all shadow-xs ${
+              className={`px-6 py-3 rounded-xl border-2 border-[#181615] font-mono font-bold text-xs uppercase cursor-pointer transition-transform duration-100 ease-out shadow-xs ${
                 chillPlaying 
-                  ? 'bg-[#FAF7F2] text-[#181615] hover:bg-white' 
+                  ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]' 
                   : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
               }`}
             >
@@ -1316,7 +1316,7 @@ export default function ArcadeLobby() {
             </button>
             <button
               onClick={() => setShowHeadphonePrompt(false)}
-              className="px-4 py-2.5 bg-[#FAF7F2] text-[#181615] font-bold uppercase rounded-xl cursor-pointer hover:bg-white border-2 border-[#181615]"
+              className="px-4 py-2.5 bg-[#FAF7F2] text-[#181615] font-bold uppercase rounded-xl cursor-pointer hover:bg-[#F2ECE4] border-2 border-[#181615]"
             >
               [ ยกเลิก ]
             </button>
@@ -1377,7 +1377,7 @@ export default function ArcadeLobby() {
                 <button
                   type="submit"
                   disabled={isSubmittingGuest}
-                  className="px-5 py-2 bg-[#181615] hover:bg-black text-[#FAF7F5] text-[10px] font-bold uppercase rounded-xl cursor-pointer transition-colors"
+                  className="px-5 py-2 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] text-[10px] font-bold uppercase rounded-xl cursor-pointer transition-colors"
                 >
                   {isSubmittingGuest ? '[ บันทึก… ]' : '[ บันทึกบอร์ด ]'}
                 </button>
@@ -1442,7 +1442,7 @@ export default function ArcadeLobby() {
               </div>
               <button
                 onClick={() => setShowClaimModal(false)}
-                className="w-full bg-[#181615] hover:bg-black text-[#FAF7F5] font-bold py-3 rounded-2xl cursor-pointer font-mono text-[10px] uppercase shadow-sm"
+                className="w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-bold py-3 rounded-2xl cursor-pointer font-mono text-[10px] uppercase shadow-sm"
               >
                 [ DISMISS PANEL ]
               </button>
@@ -1463,13 +1463,13 @@ export default function ArcadeLobby() {
               <div className="flex w-full gap-3 mt-2">
                 <button
                   onClick={session ? processClaimScore : handleLineLogin}
-                  className="flex-1 bg-[#181615] hover:bg-black text-[#FAF7F5] font-bold py-2.5 rounded-xl cursor-pointer font-mono text-[10px] uppercase text-center"
+                  className="flex-1 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-bold py-2.5 rounded-xl cursor-pointer font-mono text-[10px] uppercase text-center"
                 >
                   [ RETRY ]
                 </button>
                 <button
                   onClick={() => setShowClaimModal(false)}
-                  className="flex-1 bg-[#FAF7F2] hover:bg-white text-[#181615] font-bold py-2.5 rounded-xl text-[10px] uppercase text-center border-2 border-[#181615] cursor-pointer"
+                  className="flex-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] font-bold py-2.5 rounded-xl text-[10px] uppercase text-center border-2 border-[#181615] cursor-pointer"
                 >
                   [ CANCEL ]
                 </button>
@@ -1580,7 +1580,7 @@ export default function ArcadeLobby() {
                 localStorage.removeItem('active_customer_table_name');
               }}
               title="ปิดแถบแจ้งเตือนโต๊ะ"
-              className="px-2 py-1 rounded-lg bg-black/20 hover:bg-black/30 text-[var(--color-paper)] font-mono text-[10px] font-bold transition-colors cursor-pointer"
+              className="px-2 py-1 rounded-lg bg-black/20 hover:bg-[#252220]/40 text-[var(--color-paper)] font-mono text-[10px] font-bold transition-colors cursor-pointer"
             >
               [ × ]
             </button>
@@ -1590,7 +1590,7 @@ export default function ArcadeLobby() {
 
       <header className="w-full border-b-2 border-[#181615] bg-[#FAF7F2] py-4 px-4 sm:px-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 select-none">
         <div className="flex items-center gap-3">
-          <Link to="/" className="w-10 h-10 bg-[#181615] flex items-center justify-center p-1.5 rounded-2xl border-2 border-[#181615] shrink-0 shadow-xs hover:scale-105 transition-transform">
+          <Link to="/" className="w-10 h-10 bg-[#181615] flex items-center justify-center p-1.5 rounded-2xl border-2 border-[#181615] shrink-0 shadow-xs hover:border-[#bd4924] active:scale-95 transition-transform">
             <img 
               src="/logo.png" 
               alt="ในบ้าน" 
@@ -1619,7 +1619,7 @@ export default function ArcadeLobby() {
           </div>
 
           {session ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono text-[#181615] bg-white border-2 border-[#181615] rounded-2xl shadow-xs">
+            <div className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-mono text-[#181615] bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <span className="font-bold uppercase tracking-wider">
                 {profile?.nickname || profile?.display_name || 'MEMBER'}
@@ -1628,7 +1628,7 @@ export default function ArcadeLobby() {
           ) : (
             <button
               onClick={handleRequireLogin}
-              className="flex items-center gap-2 px-3.5 py-1.5 bg-[#181615] hover:bg-black text-[#FAF7F5] text-[10px] font-mono font-bold uppercase tracking-wider rounded-2xl border-2 border-[#181615] shadow-xs transition-transform active:scale-95 cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-1.5 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] text-[10px] font-mono font-bold uppercase tracking-wider rounded-2xl border-2 border-[#181615] shadow-xs transition-transform active:scale-95 cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-[#E9F344]"></span>
               <span>[ CONNECT LINE ]</span>
@@ -1663,10 +1663,10 @@ export default function ArcadeLobby() {
                 TODAY QUESTS (ภารกิจวัน)
               </span>
               <div className="flex items-center gap-1.5 text-xs font-bold text-[#181615] mt-1">
-                <span className={`px-1.5 py-0.5 rounded border text-[10px] ${userStats.todayPipe20 ? 'bg-emerald-100 border-emerald-400 text-emerald-800' : 'bg-white border-neutral-300 text-neutral-500'}`}>
+                <span className={`px-1.5 py-0.5 rounded border text-[10px] ${userStats.todayPipe20 ? 'bg-emerald-100 border-emerald-400 text-emerald-800' : 'bg-[#FAF7F2] border-[#181615]/20 text-neutral-500'}`}>
                   20P: {userStats.todayPipe20 ? '✓' : 'รอ'}
                 </span>
-                <span className={`px-1.5 py-0.5 rounded border text-[10px] ${userStats.todayPipe35 ? 'bg-emerald-100 border-emerald-400 text-emerald-800' : 'bg-white border-neutral-300 text-neutral-500'}`}>
+                <span className={`px-1.5 py-0.5 rounded border text-[10px] ${userStats.todayPipe35 ? 'bg-emerald-100 border-emerald-400 text-emerald-800' : 'bg-[#FAF7F2] border-[#181615]/20 text-neutral-500'}`}>
                   35P: {userStats.todayPipe35 ? '✓' : 'รอ'}
                 </span>
               </div>
@@ -1696,7 +1696,7 @@ export default function ArcadeLobby() {
         </div>
 
         <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-all group">
+          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[9px] font-bold text-[#181615] bg-[#E9F344] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
@@ -1759,13 +1759,13 @@ export default function ArcadeLobby() {
 
             <button
               onClick={() => setActiveMode('tai_pla')}
-              className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-all"
+              className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
             >
-              <span>[ ▶ เล่นเลย // PLAY RUNNER ]</span>
+              <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY RUNNER ]</span>
             </button>
           </div>
 
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-all group">
+          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[9px] font-bold text-[#FAF7F5] bg-[#181615] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
@@ -1816,13 +1816,13 @@ export default function ArcadeLobby() {
 
             <button
               onClick={() => setActiveMode('flappy')}
-              className="w-full bg-[#181615] hover:bg-black text-[#FAF7F5] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-all"
+              className="w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
             >
-              <span>[ ▶ เล่นเลย // PLAY FLAPPY ]</span>
+              <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY FLAPPY ]</span>
             </button>
           </div>
 
-          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-all group">
+          <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col justify-between gap-5 hover:border-black hover:shadow-md transition-colors duration-150 group">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-[9px] font-bold text-[#181615] bg-[#E9F344] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
@@ -1879,7 +1879,7 @@ export default function ArcadeLobby() {
                 onClick={handlePlayClick}
                 className={`flex-1 py-3 px-2 rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs ${
                   chillPlaying 
-                    ? 'bg-[#FAF7F2] text-[#181615] hover:bg-white' 
+                    ? 'bg-[#FAF7F2] text-[#181615] hover:bg-[#F2ECE4]' 
                     : 'bg-[#E9F344] text-[#181615] hover:bg-[#d9e334]'
                 }`}
               >
@@ -1887,7 +1887,7 @@ export default function ArcadeLobby() {
               </button>
               <button
                 onClick={() => setShowStudioModal(true)}
-                className="py-3 px-3.5 bg-[#181615] hover:bg-black text-[#FAF7F5] rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs"
+                className="py-3 px-3.5 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs"
               >
                 [ สตูดิโอ ]
               </button>
@@ -1905,7 +1905,7 @@ export default function ArcadeLobby() {
             </div>
             <button
               onClick={fetchLeaderboard}
-              className="px-3 py-1.5 bg-white hover:bg-[#FAF7F2] text-[#181615] font-mono text-xs font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform"
+              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] font-mono text-xs font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform"
             >
               [ REFRESH // รีเฟรช ]
             </button>
@@ -1916,7 +1916,7 @@ export default function ArcadeLobby() {
               LOADING ROSTER DATA…
             </div>
           ) : leaderboard.length === 0 ? (
-            <div className="py-8 text-center text-[#78716c] font-mono text-xs bg-white rounded-2xl border border-[#181615]/20">
+            <div className="py-8 text-center text-[#78716c] font-mono text-xs bg-[#FAF7F2] rounded-2xl border border-[#181615]/20">
               ยังไม่มีข้อมูลคะแนนในสัปดาห์นี้ เป็นคนแรกที่เริ่มทำสถิติเลย!
             </div>
           ) : (
@@ -1927,7 +1927,7 @@ export default function ArcadeLobby() {
                   className={`flex items-center justify-between py-2.5 px-3.5 rounded-xl border-2 transition-colors ${
                     index === 0 
                       ? 'bg-[#E9F344]/30 border-[#181615] text-[#181615] font-bold' 
-                      : 'bg-white border-[#181615]/30 hover:border-[#181615] text-[#181615]'
+                      : 'bg-[#FAF7F2] border-[#181615]/30 hover:border-[#181615] text-[#181615]'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">

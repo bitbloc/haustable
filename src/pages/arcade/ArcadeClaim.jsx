@@ -400,7 +400,7 @@ export default function ArcadeClaim() {
               </button>
               <button
                 onClick={() => navigate('/')}
-                className="btn-action w-full bg-white hover:bg-[var(--color-paper)] text-[var(--color-ink-2)] font-mono py-2.5 rounded-[4px] border border-[var(--color-rule)] text-xs uppercase transition-all cursor-pointer"
+                className="btn-action w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink-2)] font-mono py-2.5 rounded-[4px] border border-[var(--color-rule)] text-xs uppercase transition-colors duration-150 cursor-pointer"
               >
                 RETURN TO STORE FRONT
               </button>

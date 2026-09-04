@@ -1256,7 +1256,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             )}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
-              className="px-2 py-1 bg-[#FAF7F2] hover:bg-white text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
+              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
             >
               {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
             </button>
@@ -1270,7 +1270,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
             className={`relative w-full max-w-2xl ${
               isMobileView ? 'aspect-[3/2] max-h-[50vh]' : 'aspect-[19/8] max-h-[56vh]'
-            } bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all`}
+            } bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out`}
           >
             <canvas 
               ref={canvasRef} 
@@ -1328,7 +1328,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
                 <button
                   onClick={(e) => { e.stopPropagation(); startGame(); }}
-                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-all"
+                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform duration-100 ease-out"
                 >
                   [ ▶ START RUN // แตะเพื่อเริ่มวิ่ง ]
                 </button>
@@ -1369,7 +1369,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                       startGame();
                     }}
                     disabled={!canRestart}
-                    className={`px-5 py-2.5 font-bold uppercase rounded-xl cursor-pointer shadow-sm active:scale-95 transition-all ${
+                    className={`px-5 py-2.5 font-bold uppercase rounded-xl cursor-pointer shadow-sm active:scale-95 transition-transform duration-100 ease-out ${
                       canRestart 
                         ? 'bg-[#E9F344] text-[#181615] border-2 border-[#181615]' 
                         : 'bg-[#181615] text-[#69635D] border border-[#2B2725] cursor-not-allowed'
@@ -1441,7 +1441,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                   className={`flex-1 py-1 px-2 rounded-xl border font-bold uppercase truncate transition-colors cursor-pointer ${
                     selectedCharId === char.id
                       ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
-                      : 'bg-white text-[#181615] border-[#181615]/30 hover:bg-neutral-100'
+                      : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
                   }`}
                 >
                   {char.name.split(' ')[0]}
@@ -1494,7 +1494,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           </div>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-white rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer"
+            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors"
           >
             {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
           </button>
@@ -1511,7 +1511,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       <div 
         onClick={handleJumpPress}
         onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-        className="relative w-full max-w-4xl aspect-[19/8] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all"
+        className="relative w-full max-w-4xl aspect-[19/8] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
       >
         <canvas 
           ref={canvasRef} 
