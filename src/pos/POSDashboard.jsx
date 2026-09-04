@@ -14,7 +14,7 @@ import POSSplitPaymentModal from './POSSplitPaymentModal';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown, recordShiftTransaction } from '../utils/shiftHelper';
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
@@ -2879,7 +2879,11 @@ export default function POSDashboard() {
     };
 
     const handleExecuteSplitPayment = async (splitPayload) => {
-        if (!activeBooking || !selectedTable) return;
+        if (!activeBooking) {
+            console.warn("[Split Payment] No active booking to settle");
+            toast.error("ไม่พบบิลที่เปิดอยู่สำหรับแบ่งชำระ");
+            return;
+        }
         const {
             splitMode = 'EQUAL',
             splitTotal = 0,
@@ -2967,7 +2971,7 @@ export default function POSDashboard() {
 
             if (isFullySettled) {
                 // Fully paid: Close the bill
-                await supabase
+                const { error: completeErr } = await supabase
                     .from('bookings')
                     .update({ 
                         status: 'completed',
@@ -2976,6 +2980,8 @@ export default function POSDashboard() {
                         staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
+
+                if (completeErr) throw completeErr;
 
                 if (selectedTable?.id) {
                     await supabase
@@ -2992,13 +2998,15 @@ export default function POSDashboard() {
                 setView('tables');
             } else {
                 // Partial chunk: Update staff remark with the new split round
-                await supabase
+                const { error: updateErr } = await supabase
                     .from('bookings')
                     .update({ 
                         staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
                 
+                if (updateErr) throw updateErr;
+
                 toast.success(`บันทึกชำระก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()} สำเร็จ! คงเหลือ ฿${remainingBalanceAfter.toLocaleString()}`, { id: toastId });
                 
                 // Update in-memory state so modal immediately shows the next round & reduced balance
@@ -3010,7 +3018,8 @@ export default function POSDashboard() {
             setRefreshKey(prev => prev + 1);
         } catch (err) {
             console.error("Split payment failed:", err);
-            toast.error("บันทึกแบ่งจ่ายไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+            const errDetail = err?.message ? ` (${err.message})` : '';
+            toast.error(`บันทึกแบ่งจ่ายไม่สำเร็จ${errDetail} กรุณาลองใหม่อีกครั้ง`, { id: toastId });
         }
     };
 
