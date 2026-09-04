@@ -46,13 +46,27 @@ export const getBookingPaymentBreakdown = (b) => {
             } catch (e) {}
         }
         
+        const activeMethods = [];
+        if (cash > 0) activeMethods.push('cash');
+        if (qr > 0) activeMethods.push('qr');
+        if (credit > 0) activeMethods.push('credit');
+
+        let methodLabel = 'Split (ผสม)';
+        let isSplit = true;
+        if (activeMethods.length === 1) {
+            isSplit = false;
+            if (activeMethods[0] === 'cash') methodLabel = 'Cash';
+            else if (activeMethods[0] === 'credit') methodLabel = 'Credit Card';
+            else methodLabel = 'QR Transfer';
+        }
+
         return {
             cash,
             qr,
             credit,
-            isSplit: true,
+            isSplit,
             isOnline,
-            methodLabel: 'Split (ผสม)'
+            methodLabel
         };
     }
 
@@ -62,7 +76,7 @@ export const getBookingPaymentBreakdown = (b) => {
     }
 
     // 3. Explicit Credit Card Check
-    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || /credit[:=\s]+[1-9]/i.test(remark) || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
         return { cash: 0, qr: 0, credit: total, isSplit: false, isOnline, methodLabel: 'Credit Card' };
     }
 

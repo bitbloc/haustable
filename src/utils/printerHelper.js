@@ -2,6 +2,7 @@ import { logger } from './logger';
 import { supabase } from '../lib/supabaseClient';
 import { getBookingPaymentBreakdown } from './shiftHelper';
 import { parseTableTransferInfo } from './tableTransferHelper';
+import { getBookingSplitRounds } from './splitPaymentHelper';
 
 let cachedPrinterConfig = null;
 let printerConfigChannel = null;
@@ -65,13 +66,27 @@ export function getBookingPaymentMethod(booking) {
     const remark = (booking.staff_remark || '').toLowerCase();
     const explicitMethod = (booking.payment_method || '').toLowerCase();
 
+    // 0. Check split payment rounds in remark first
+    const splitRounds = getBookingSplitRounds(booking);
+    if (splitRounds && splitRounds.length > 0) {
+        const methods = new Set(splitRounds.map(r => (r.method || 'qr').toLowerCase()));
+        if (methods.size === 1) {
+            const single = [...methods][0];
+            if (single === 'cash') return 'CASH';
+            if (single === 'credit') return 'CREDIT';
+            return 'QR';
+        }
+        return 'SPLIT';
+    }
+
     // 1. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
     if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
         return 'CASH';
     }
 
     // 2. Explicit Credit Card Check
-    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || remark.includes('credit') || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+    // Guard against matching "credit=0" in [SPLIT: ... CREDIT=0] or generic substrings
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || /credit[:=\s]+[1-9]/i.test(remark) || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
         return 'CREDIT';
     }
 
@@ -1315,9 +1330,21 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
     // Payment details
     if (activeTab === 'receipt') {
-        const isCashMethod = String(paymentMethod || '').toLowerCase() === 'cash';
-        const isCreditMethod = String(paymentMethod || '').toLowerCase() === 'credit';
-        const methodLabel = isCashMethod ? 'เงินสด' : (isCreditMethod ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR');
+        const pMethod = String(paymentMethod || '').toLowerCase();
+        const isCashMethod = pMethod === 'cash';
+        const isCreditMethod = pMethod === 'credit';
+        const isSplitMethod = pMethod === 'split';
+        
+        let methodLabel = 'โอนเงินผ่าน QR (PromptPay)';
+        if (isCashMethod) {
+            methodLabel = 'เงินสด';
+        } else if (isCreditMethod) {
+            methodLabel = 'บัตรเครดิต';
+        } else if (isSplitMethod) {
+            methodLabel = 'แบ่งชำระ (Split Payment)';
+        } else if (pMethod === 'promptpay' || pMethod === 'qr' || pMethod === 'transfer') {
+            methodLabel = 'โอนเงินผ่าน QR (PromptPay)';
+        }
         
         encoder.align('center')
                .line(`ช่องทางชำระเงิน: ${methodLabel}`);

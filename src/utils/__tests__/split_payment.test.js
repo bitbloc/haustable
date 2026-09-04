@@ -213,9 +213,76 @@ describe('splitPaymentHelper', () => {
 
             // Final chunk paying the remaining 600
             const nextRemaining = balance.remainingBalance - 600;
-            const isFullySettled = nextRemaining <= 0;
-            expect(isFullySettled).toBe(true);
             expect(nextRemaining).toBe(0);
+        });
+    });
+
+    describe('Table 02 Bug Fix: Split PromptPay wrongly identified as Credit Card', () => {
+        it('resolves 100% QR split round to QR payment method instead of CREDIT even with CREDIT=0 in remark', async () => {
+            const { getBookingPaymentMethod } = await import('../printerHelper');
+            const { getBookingPaymentBreakdown } = await import('../shiftHelper');
+
+            const table02Booking = {
+                id: 'table-02-test',
+                total_amount: 170,
+                staff_remark: '[SPLIT_ROUNDS: [{"round":1,"amount":170,"method":"qr"}]] [SPLIT: CASH=0, QR=170, CREDIT=0]'
+            };
+
+            // Must NOT return CREDIT!
+            const method = getBookingPaymentMethod(table02Booking);
+            expect(method).toBe('QR');
+
+            const breakdown = getBookingPaymentBreakdown(table02Booking);
+            expect(breakdown.qr).toBe(170);
+            expect(breakdown.cash).toBe(0);
+            expect(breakdown.credit).toBe(0);
+            expect(breakdown.isSplit).toBe(false);
+            expect(breakdown.methodLabel).toBe('QR Transfer');
+        });
+
+        it('resolves multi-method split rounds to SPLIT', async () => {
+            const { getBookingPaymentMethod } = await import('../printerHelper');
+            const { getBookingPaymentBreakdown } = await import('../shiftHelper');
+
+            const mixedBooking = {
+                id: 'mixed-test',
+                total_amount: 300,
+                staff_remark: '[SPLIT_ROUNDS: [{"round":1,"amount":100,"method":"cash"},{"round":2,"amount":200,"method":"qr"}]] [SPLIT: CASH=100, QR=200, CREDIT=0]'
+            };
+
+            const method = getBookingPaymentMethod(mixedBooking);
+            expect(method).toBe('SPLIT');
+
+            const breakdown = getBookingPaymentBreakdown(mixedBooking);
+            expect(breakdown.cash).toBe(100);
+            expect(breakdown.qr).toBe(200);
+            expect(breakdown.credit).toBe(0);
+            expect(breakdown.isSplit).toBe(true);
+            expect(breakdown.methodLabel).toBe('Split (ผสม)');
+        });
+
+        it('generates receipt text with PromptPay label instead of Credit Card for Table 02 scenario', async () => {
+            const { encodeReceiptData, getBookingPaymentMethod } = await import('../printerHelper');
+            const table02Booking = {
+                id: 'table-02-test',
+                total_amount: 170,
+                table_name: '02',
+                staff_remark: '[SPLIT_ROUNDS: [{"round":1,"amount":170,"method":"qr"}]] [SPLIT: CASH=0, QR=170, CREDIT=0]',
+                order_items: [
+                    { name: 'ข้าวไข่เจียว', quantity: 1, price: 55 },
+                    { name: 'ข้าวไข่ดาว 2 ฟอง', quantity: 1, price: 50 },
+                    { name: 'ข้าวไข่เจียวหมูสับ', quantity: 1, price: 65 }
+                ]
+            };
+
+            const detectedMethod = getBookingPaymentMethod(table02Booking);
+            const encoded = encodeReceiptData(table02Booking, 'receipt', detectedMethod.toLowerCase(), {}, '80mm', {}, 'browser');
+            
+            // Decoded text verification
+            const decoded = new TextDecoder('tis-620', { fatal: false }).decode(encoded);
+            expect(decoded).toContain('ช่องทางชำระเงิน:');
+            expect(decoded).toContain('PromptPay');
+            expect(decoded).not.toContain('บัตรเครดิต');
         });
     });
 });

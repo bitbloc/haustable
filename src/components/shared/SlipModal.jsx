@@ -4,7 +4,7 @@ import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { Capacitor } from '@capacitor/core'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
@@ -113,13 +113,18 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     }, []);
 
     // Determine initial payment method:
-    // Check booking.payment_slip_url or booking.staff_remark
+    // Check split payment, explicit method, booking.payment_slip_url or staff_remark
     const getInitialPaymentMethod = () => {
-        if (booking?.payment_slip_url) return 'qr'
-        const remark = (booking?.staff_remark || '').toLowerCase()
-        if (remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr'
-        if (remark.includes('cash') || remark.includes('เงินสด')) return 'cash'
-        return 'cash'
+        try {
+            const detected = getBookingPaymentMethod(booking);
+            if (detected) return detected.toLowerCase();
+        } catch (e) {}
+        if (booking?.payment_method) return String(booking.payment_method).toLowerCase();
+        if (booking?.payment_slip_url) return 'qr';
+        const remark = (booking?.staff_remark || '').toLowerCase();
+        if (remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน')) return 'qr';
+        if (remark.includes('cash') || remark.includes('เงินสด')) return 'cash';
+        return 'cash';
     }
     const [paymentMethod, setPaymentMethod] = useState(getInitialPaymentMethod)
 
@@ -639,9 +644,17 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         // Payment Method / PAID Badge Section for Receipt
         let paymentMethodHtml = ''
         if (activeTab === 'receipt') {
-            const methodLabel = paymentMethod === 'cash' 
-                ? 'เงินสด' 
-                : (paymentMethod === 'credit' ? 'บัตรเครดิต' : 'โอนเงินผ่าน QR')
+            const pMethod = String(paymentMethod || '').toLowerCase();
+            let methodLabel = 'โอนเงินผ่าน QR (PromptPay)';
+            if (pMethod === 'cash') {
+                methodLabel = 'เงินสด';
+            } else if (pMethod === 'credit') {
+                methodLabel = 'บัตรเครดิต';
+            } else if (pMethod === 'split') {
+                methodLabel = 'แบ่งชำระ (Split Payment)';
+            } else if (pMethod === 'qr' || pMethod === 'promptpay' || pMethod === 'transfer') {
+                methodLabel = 'โอนเงินผ่าน QR (PromptPay)';
+            }
             
             let cashChangeHtml = ''
             if (paymentMethod === 'cash') {
