@@ -140,7 +140,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     )
                 `)
                 .eq('status', 'completed')
-                .or(`booking_time.gte.${current.openedAt},updated_at.gte.${current.openedAt}`);
+                .gte('booking_time', current.openedAt);
 
             if (!error && data) {
                 const metrics = calculateShiftMetrics(current, data);
@@ -216,7 +216,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         )
                     `)
                     .eq('status', 'completed')
-                    .or(`and(booking_time.gte.${openedAt},booking_time.lte.${closedAt}),and(updated_at.gte.${openedAt},updated_at.lte.${closedAt})`);
+                    .gte('booking_time', openedAt)
+                    .lte('booking_time', closedAt);
 
                 if (error) throw error;
 
@@ -276,7 +277,7 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                     ),
                     promotion_codes (code)
                 `)
-                .or(`and(booking_time.gte.${startOfDay},booking_time.lte.${endOfDay}),and(updated_at.gte.${startOfDay},updated_at.lte.${endOfDay},status.eq.completed)`)
+                .or(`and(booking_time.gte.${startOfDay},booking_time.lte.${endOfDay}),and(created_at.gte.${startOfDay},created_at.lte.${endOfDay})`)
                 .order('booking_time', { ascending: false });
 
             let finalBookings = bookingsData || [];
@@ -668,7 +669,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                         )
                     `)
                     .eq('status', 'completed')
-                    .or(`and(booking_time.gte.${shift.openedAt},booking_time.lte.${shift.closedAt || new Date().toISOString()}),and(updated_at.gte.${shift.openedAt},updated_at.lte.${shift.closedAt || new Date().toISOString()})`);
+                    .gte('booking_time', shift.openedAt)
+                    .lte('booking_time', shift.closedAt || new Date().toISOString());
                 if (!error && data) {
                     bookingsData = data;
                 }

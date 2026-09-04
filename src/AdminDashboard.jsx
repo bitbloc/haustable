@@ -177,7 +177,7 @@ export default function AdminDashboard() {
                 .order('booking_time', { ascending: true })
 
             // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
-            // Robust matching across booking_time, created_at, or updated_at to ensure orders are NEVER lost!
+            // Strict matching across booking_time or created_at (NEVER match on updated_at to prevent historical backfills from polluting daily revenue)
             const dateReq = supabase
                 .from('bookings')
                 .select(`
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
-                .or(`and(booking_time.gte.${selectedDate}T00:00:00+07:00,booking_time.lte.${selectedDate}T23:59:59+07:00),and(created_at.gte.${selectedDate}T00:00:00+07:00,created_at.lte.${selectedDate}T23:59:59+07:00),and(updated_at.gte.${selectedDate}T00:00:00+07:00,updated_at.lte.${selectedDate}T23:59:59+07:00)`)
+                .or(`and(booking_time.gte.${selectedDate}T00:00:00+07:00,booking_time.lte.${selectedDate}T23:59:59+07:00),and(created_at.gte.${selectedDate}T00:00:00+07:00,created_at.lte.${selectedDate}T23:59:59+07:00)`)
                 .order('created_at', { ascending: false })
 
             // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
@@ -260,11 +260,13 @@ export default function AdminDashboard() {
     // --- DERIVED STATE ---
     // 1. All Daily Bookings (for the selected date, all statuses + active tables on floor)
     const dailyBookings = useMemo(() => {
+        const isToday = selectedDate === getThaiDate()
         return bookings.filter(b => {
-            if (b.status === 'seated' || b.status === 'confirmed') return true
-            const bDate = new Date(b.booking_time || b.created_at || b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            const isDateMatch = bDate === selectedDate || (b.updated_at && new Date(b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) === selectedDate)
-            return isDateMatch
+            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isDateMatch = bDate === selectedDate
+            // When viewing today, include currently seated active tables even if opened before midnight
+            const isCurrentSeated = isToday && b.status === 'seated'
+            return isDateMatch || isCurrentSeated
         }).sort((a, b) => {
             const getPriority = (st) => {
                 if (st === 'seated') return 1
@@ -288,8 +290,8 @@ export default function AdminDashboard() {
     // 3. Schedule: Confirmed / Seated / Ready for selected date
     const scheduleBookings = useMemo(() => {
         return bookings.filter(b => {
-            const bDate = new Date(b.booking_time || b.created_at || b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
-            const isDateMatch = bDate === selectedDate || (b.updated_at && new Date(b.updated_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }) === selectedDate)
+            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isDateMatch = bDate === selectedDate
             const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'
             return isDateMatch && isConfirmed
         }).sort((a, b) => new Date(a.booking_time || a.created_at) - new Date(b.booking_time || b.created_at))

@@ -124,7 +124,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
                 .in('status', ['confirmed', 'pending', 'seated', 'ready', 'approved', 'paid'])
-                .or(`and(booking_time.gte.${start},booking_time.lte.${end}),and(created_at.gte.${start},created_at.lte.${end}),and(updated_at.gte.${start},updated_at.lte.${end})`)
+                .or(`and(booking_time.gte.${start},booking_time.lte.${end}),and(created_at.gte.${start},created_at.lte.${end})`)
 
             const seatedReq = supabase
                 .from('bookings')

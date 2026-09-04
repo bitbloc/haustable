@@ -486,7 +486,7 @@ export default function POSDashboard() {
                 .from('bookings')
                 .select('id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at')
                 .eq('status', 'completed')
-                .or(`booking_time.gte.${openedAt},updated_at.gte.${openedAt}`);
+                .gte('booking_time', openedAt);
 
             if (error) throw error;
 
@@ -636,7 +636,8 @@ export default function POSDashboard() {
                         )
                     `)
                     .eq('status', 'completed')
-                    .or(`and(booking_time.gte.${currentShift.openedAt},booking_time.lte.${nowIso}),and(updated_at.gte.${currentShift.openedAt},updated_at.lte.${nowIso})`);
+                    .gte('booking_time', currentShift.openedAt)
+                    .lte('booking_time', nowIso);
                 bookingsData = data || [];
             }
             
