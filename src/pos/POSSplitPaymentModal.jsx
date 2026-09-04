@@ -7,13 +7,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     X, Plus, Minus, Check, Users, Receipt, DollarSign, 
     CreditCard, QrCode, Banknote, Sparkles, Phone, UserCheck, 
-    RefreshCw, ChevronRight, AlertCircle, ArrowRight, Percent, History
+    RefreshCw, ChevronRight, AlertCircle, ArrowRight, Percent, History,
+    Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import generatePayload from 'promptpay-qr';
 import { QRCodeSVG } from 'qrcode.react';
 import { supabase } from '../lib/supabaseClient';
-import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName } from '../utils/printerHelper';
+import { normalizePromptPayId, getStorePromptpayId, getStorePromptpayName, printSplitQrSlip } from '../utils/printerHelper';
 import { 
     calculateSplitBalance, 
     calculatePercentAmount 
@@ -25,7 +26,8 @@ export default function POSSplitPaymentModal({
     includeTax = true,
     storePromptpayId: propPromptpayId,
     onClose,
-    onConfirmSplit
+    onConfirmSplit,
+    onPrintSplitQr
 }) {
     // 3 Split Modes: 'EQUAL' | 'PERCENT' | 'CUSTOM'
     const [splitMode, setSplitMode] = useState('EQUAL');
@@ -53,6 +55,7 @@ export default function POSSplitPaymentModal({
     const [attachedSplitMember, setAttachedSplitMember] = useState(null);
     const [showMemberAttach, setShowMemberAttach] = useState(false);
     const [showRoundsHistory, setShowRoundsHistory] = useState(false);
+    const [printingQr, setPrintingQr] = useState(false);
 
     // PromptPay settings resolution
     const [storePromptpayId, setStorePromptpayId] = useState(() => normalizePromptPayId(propPromptpayId || '0614232455'));
@@ -305,6 +308,43 @@ export default function POSSplitPaymentModal({
         }
     };
 
+    // Print Dedicated PromptPay QR Thermal Slip for the current or custom split chunk
+    const handlePrintChunkQrSlip = async (customRound = null) => {
+        const roundToPrint = customRound?.round || currentRoundNumber;
+        const amountToPrint = customRound ? Number(customRound.amount) : currentSplitAmount;
+        if (amountToPrint <= 0) {
+            toast.error("ยอดชำระต้องมากกว่า ฿0 ครับ");
+            return;
+        }
+
+        setPrintingQr(true);
+        const toastId = toast.loading(`กำลังพิมพ์สลิป QR ยอด ฿${amountToPrint.toLocaleString()}...`);
+        try {
+            const splitDetails = {
+                tableName,
+                roundNumber: roundToPrint,
+                splitAmount: amountToPrint,
+                fullOrderTotal,
+                remainingBalanceAfterSplit: customRound ? Math.max(0, fullOrderTotal - alreadyPaid) : remainingBalanceAfterSplit,
+                payerName: customRound?.payer || attachedSplitMember?.display_name || null,
+                promptpayName: storePromptpayName,
+                promptpayId: storePromptpayId
+            };
+
+            if (onPrintSplitQr) {
+                await onPrintSplitQr(splitDetails);
+            } else {
+                await printSplitQrSlip(activeBooking, splitDetails);
+            }
+            toast.success(`พิมพ์สลิป QR รอบที่ ${roundToPrint} (฿${amountToPrint.toLocaleString()}) เรียบร้อยแล้ว`, { id: toastId });
+        } catch (err) {
+            console.error("Print split QR failed:", err);
+            toast.error("พิมพ์สลิป QR ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อเครื่องพิมพ์", { id: toastId });
+        } finally {
+            setPrintingQr(false);
+        }
+    };
+
     // Confirm Split Payment Execution
     const handleConfirm = () => {
         if (hasUnsentItems) {
@@ -450,6 +490,15 @@ export default function POSSplitPaymentModal({
                                         ({r.percent}%)
                                     </span>
                                 )}
+                                <button
+                                    type="button"
+                                    title={`พิมพ์สลิป QR รอบที่ ${r.round}`}
+                                    onClick={() => handlePrintChunkQrSlip(r)}
+                                    disabled={printingQr}
+                                    className="p-1 hover:bg-[oklch(94%_0.010_28)] rounded text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer transition-colors"
+                                >
+                                    <Printer size={12} />
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -876,6 +925,74 @@ export default function POSSplitPaymentModal({
                         <span>บัตรเครดิต</span>
                     </button>
                 </div>
+
+                {/* PromptPay QR Interactive Sub-panel */}
+                {paymentMethod === 'qr' && (
+                    <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 space-y-3 animate-in fade-in duration-150">
+                        <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2 font-mono">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-xs font-bold uppercase text-[oklch(18%_0.012_28)]">
+                                    PROMPTPAY QR · ก้อนที่ {currentRoundNumber} (โต๊ะ {tableName})
+                                </span>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
+                                ยอด ฿{currentSplitAmount.toLocaleString()}.-
+                            </span>
+                        </div>
+
+                        {/* Centered QR Graphic with Account Details */}
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xl">
+                            <div className="bg-white p-2 rounded-lg border border-[oklch(85%_0.012_28)] shadow-2xs flex items-center justify-center shrink-0">
+                                {splitQrPayload ? (
+                                    <QRCodeSVG 
+                                        value={splitQrPayload} 
+                                        size={128} 
+                                        level="M"
+                                        includeMargin={false}
+                                    />
+                                ) : (
+                                    <div className="w-32 h-32 flex items-center justify-center bg-[oklch(94%_0.010_28)] text-[10px] font-mono text-[oklch(55%_0.010_28)] text-center p-2">
+                                        กำลังสร้าง QR พร้อมเพย์...
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-1 text-center sm:text-left font-mono text-xs">
+                                <div>
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
+                                        ชื่อบัญชีรับเงิน
+                                    </span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)] text-sm">
+                                        {storePromptpayName || 'ร้านในบ้าน นครพนม'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase font-bold block">
+                                        หมายเลขพร้อมเพย์
+                                    </span>
+                                    <span className="font-bold text-[oklch(52%_0.16_28)] bg-white border border-[oklch(85%_0.012_28)] px-2 py-0.5 rounded text-xs inline-block">
+                                        {storePromptpayId || '0614232455'}
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-[oklch(55%_0.010_28)] pt-0.5">
+                                    สแกนผ่านแอปธนาคาร หรือกดปุ่มด้านล่างเพื่อพิมพ์สลิป QR ให้ลูกค้า
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Print QR Slip Button */}
+                        <button
+                            type="button"
+                            disabled={printingQr || currentSplitAmount <= 0}
+                            onClick={() => handlePrintChunkQrSlip()}
+                            className="w-full py-2.5 px-4 bg-white hover:bg-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed hover:shadow-xs active:scale-[0.99]"
+                        >
+                            <Printer size={14} />
+                            <span>{printingQr ? 'กำลังพิมพ์สลิป QR...' : `พิมพ์สลิป QR ก้อนที่ ${currentRoundNumber} (฿${currentSplitAmount.toLocaleString()}.-)`}</span>
+                        </button>
+                    </div>
+                )}
 
                 {/* Cash Tender Keypad Sub-panel */}
                 {paymentMethod === 'cash' && (

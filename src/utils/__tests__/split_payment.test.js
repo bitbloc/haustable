@@ -177,4 +177,29 @@ describe('splitPaymentHelper', () => {
             expect(breakdown.qr).toBe(300);
         });
     });
+
+    describe('Dedicated Split Payment QR Slip Generator', () => {
+        it('should correctly encode ESC/POS binary data for a split chunk QR slip', async () => {
+            const { encodeSplitQrSlipData } = await import('../printerHelper');
+            const booking = {
+                id: 'b-split-test',
+                table_name: '02',
+                total_amount: 170
+            };
+            const splitDetails = {
+                tableName: '02',
+                roundNumber: 3,
+                splitAmount: 55,
+                fullOrderTotal: 170,
+                remainingBalanceAfterSplit: 0,
+                promptpayId: '0614232455',
+                promptpayName: 'ร้านในบ้าน นครพนม'
+            };
+
+            const rawBytes = encodeSplitQrSlipData(booking, splitDetails, '80mm');
+            expect(rawBytes).toBeInstanceOf(Uint8Array);
+            expect(rawBytes.length).toBeGreaterThan(50);
+        });
+    });
 });
+

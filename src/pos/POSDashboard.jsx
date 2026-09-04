@@ -18,7 +18,7 @@ import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRe
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId } from '../utils/printerHelper';
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
@@ -2975,8 +2975,6 @@ export default function POSDashboard() {
                     .from('bookings')
                     .update({ 
                         status: 'completed',
-                        completed_at: new Date().toISOString(),
-                        payment_method: 'split',
                         staff_remark: updatedParentRemark
                     })
                     .eq('id', activeBooking.id);
@@ -3021,6 +3019,11 @@ export default function POSDashboard() {
             const errDetail = err?.message ? ` (${err.message})` : '';
             toast.error(`บันทึกแบ่งจ่ายไม่สำเร็จ${errDetail} กรุณาลองใหม่อีกครั้ง`, { id: toastId });
         }
+    };
+
+    const handlePrintSplitQr = async (splitDetails) => {
+        if (!activeBooking) return false;
+        return await printSplitQrSlip(activeBooking, splitDetails);
     };
 
     return (
@@ -3875,6 +3878,7 @@ export default function POSDashboard() {
                         includeTax={splitIncludeTax}
                         onClose={() => setShowSplitModal(false)}
                         onConfirmSplit={handleExecuteSplitPayment}
+                        onPrintSplitQr={handlePrintSplitQr}
                     />
                 </div>
             )}

@@ -2798,7 +2798,7 @@ export function getStorePromptpayName(settingsMap = {}, printerConfig = {}) {
  * Returns true if successfully printed silently (so the caller doesn't need to show a modal).
  * Returns false if it fails or if the printer type doesn't support silent printing (e.g. browser).
  */
-export async function resolveBillingQrCode(booking, config = {}) {
+export async function resolveBillingQrCode(booking, config = {}, customAmount = null) {
     if (!booking) return null;
 
     // Calculate exact outstanding bill balance (deduct deposit if already paid)
@@ -2819,7 +2819,7 @@ export async function resolveBillingQrCode(booking, config = {}) {
         totalAmt = Math.max(0, subtotalAmt - discountAmt);
     }
     const balanceDue = Math.max(0, totalAmt - depositAmt);
-    const amountToPay = balanceDue > 0 ? balanceDue : totalAmt;
+    const amountToPay = (customAmount !== null && customAmount !== undefined && Number(customAmount) > 0) ? Number(customAmount) : (balanceDue > 0 ? balanceDue : totalAmt);
 
     try {
         let promptpayId = '0985284217';
@@ -2991,5 +2991,110 @@ export async function silentPrintSlip(booking, slipType = 'receipt', optionMap =
     } catch (err) {
         console.error("Silent print failed:", err);
         return false;
+    }
+}
+
+// Encode Dedicated Split Payment PromptPay QR Thermal Slip
+export function encodeSplitQrSlipData(booking = {}, splitDetails = {}, paperSize = '80mm') {
+    const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
+    encoder.initialize();
+
+    const maxCols = resolveMaxCols(paperSize, booking?.maxCols);
+    const colOpts = { visualGraphemes: true };
+    const divider = generateDivider('dashed', maxCols);
+
+    const tableName = splitDetails.tableName || booking?.tables_layout?.table_name || booking?.table_name || 'WALK-IN';
+    const roundNum = splitDetails.roundNumber || 1;
+    const splitAmount = Number(splitDetails.splitAmount || splitDetails.amount || 0);
+    const fullTotal = Number(splitDetails.fullOrderTotal || splitDetails.fullTotal || booking?.total_amount || 0);
+    const remainingBalance = Number(splitDetails.remainingBalanceAfterSplit ?? splitDetails.remainingBalance ?? 0);
+    const payerName = splitDetails.payerName || splitDetails.attachedMember?.display_name || null;
+    const promptpayName = splitDetails.promptpayName || 'ร้านในบ้าน นครพนม';
+    const promptpayId = splitDetails.promptpayId || '0614232455';
+
+    // Header
+    encoder.align('center')
+           .bold(true)
+           .size(1, 1)
+           .line('ONHAUS')
+           .size(0, 0)
+           .line('POS SYSTEM')
+           .line(divider)
+           .bold(true)
+           .line('สแกนชำระเงิน PROMPTPAY QR')
+           .line(`(แบ่งชำระ รอบที่ ${roundNum})`)
+           .bold(false)
+           .line(divider)
+           .align('left');
+
+    // Split details
+    encoder.line(formatTwoCols('โต๊ะ / รายการ', `โต๊ะ ${tableName}`, maxCols, null, colOpts));
+    encoder.line(formatTwoCols('รอบแบ่งชำระ', `รอบที่ ${roundNum}`, maxCols, null, colOpts));
+    if (payerName) {
+        encoder.line(formatTwoCols('ผู้ชำระ', payerName, maxCols, null, colOpts));
+    }
+    encoder.line(divider);
+
+    // Big prominent amount
+    encoder.align('center')
+           .bold(true)
+           .size(0, 1)
+           .line(`ยอดชำระ: ฿${formatReceiptMoney(splitAmount)}`)
+           .size(0, 0)
+           .bold(false)
+           .line('')
+           .align('left');
+
+    // Account info
+    encoder.line(formatTwoCols('บัญชีรับเงิน', promptpayName, maxCols, null, colOpts));
+    encoder.line(formatTwoCols('พร้อมเพย์', promptpayId, maxCols, null, colOpts));
+    encoder.line(divider);
+
+    // Bill context
+    encoder.line(formatTwoCols('บิลรวมทั้งหมด', `฿${formatReceiptMoney(fullTotal)}`, maxCols, null, colOpts));
+    encoder.line(formatTwoCols('คงเหลือหลังก้อนนี้', `฿${formatReceiptMoney(remainingBalance)}`, maxCols, null, colOpts));
+    encoder.line(divider);
+
+    // Footer
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('th-TH', { year: '2-digit', month: '2-digit', day: '2-digit' });
+    const timeStr = now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    encoder.align('center')
+           .line(`วันที่ ${dateStr} เวลา ${timeStr}`)
+           .line('กรุณาสแกน QR ด้านล่างเพื่อชำระเงิน')
+           .line('')
+           .feed(1);
+
+    return encoder.encode();
+}
+
+// Print Dedicated Split Payment PromptPay QR Thermal Slip directly to printer
+export async function printSplitQrSlip(booking = {}, splitDetails = {}) {
+    if (!booking && !splitDetails.amount && !splitDetails.splitAmount) return false;
+    try {
+        const config = getPrinterConfig() || {};
+        const printerType = config.cashier_printer_type || 'sunmi';
+        const paperSize = config.cashier_paper_size || config.paper_width || '80mm';
+
+        const amount = Number(splitDetails.splitAmount || splitDetails.amount || 0);
+        const qrDataUrl = await resolveBillingQrCode(booking, config, amount);
+        const rawBytes = encodeSplitQrSlipData(booking, splitDetails, paperSize);
+
+        if (printerType === 'sunmi') {
+            const storedLogo = typeof window !== 'undefined' ? localStorage.getItem('receipt_shop_logo_url') : null;
+            const logoToPrint = config.shop_logo_url || storedLogo || null;
+            await printToSunmiBuiltIn(rawBytes, logoToPrint, qrDataUrl);
+            return true;
+        } else if (printerType === 'rawbt') {
+            await printToRawBTWebSocket(rawBytes);
+            return true;
+        } else if (printerType === 'bluetooth') {
+            await printToBluetoothDirect(config.bluetooth_device_name || '', rawBytes);
+            return true;
+        }
+        return false;
+    } catch (err) {
+        console.error('[PrinterHelper] Failed to print split QR slip:', err);
+        throw err;
     }
 }
