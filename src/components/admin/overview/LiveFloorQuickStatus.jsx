@@ -365,8 +365,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                         let tagStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
 
                         const transfer = parseTableTransferInfo(state.booking)
-                        const hasCallStaff = state.booking?.staff_remark?.includes('[CALL_STAFF]')
-                        const hasCallBill = state.booking?.staff_remark?.includes('[CALL_BILL]')
+                        const hasCallStaff = state.status === 'occupied' && Boolean(state.booking?.staff_remark?.includes('[CALL_STAFF]'))
+                        const hasCallBill = state.status === 'occupied' && Boolean(state.booking?.staff_remark?.includes('[CALL_BILL]'))
                         const orderItems = state.booking?.order_items || []
                         const billTotal = orderItems.length > 0 
                             ? orderItems.reduce((sum, item) => sum + (Number(item.price_at_time || 0) * Number(item.quantity || 1)), 0)

@@ -34,6 +34,8 @@ import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
+import { supabase } from '../../../lib/supabaseClient'
+import { toast } from 'sonner'
 
 // Real-time Service Duration Badge Component
 function LiveServiceDurationBadge({ booking }) {
@@ -131,6 +133,29 @@ export default function AllDailyBillsHub({
     const [paymentFilter, setPaymentFilter] = useState('all') // all, cash, qr, credit, split
     const [channelFilter, setChannelFilter] = useState('all') // all, dine_in, pickup
     const [expandedBillIds, setExpandedBillIds] = useState(new Set())
+    const [dismissedCallBillIds, setDismissedCallBillIds] = useState(new Set())
+
+    const handleDismissCallBill = async (booking) => {
+        if (!booking?.id) return
+        try {
+            const cleanRemark = (booking.staff_remark || '')
+                .replace(/\[CALL_BILL\]/gi, '')
+                .replace(/\[CALL_STAFF\]/gi, '')
+                .trim()
+            const { error } = await supabase
+                .from('bookings')
+                .update({ staff_remark: cleanRemark || null })
+                .eq('id', booking.id)
+            if (error) throw error
+            booking.staff_remark = cleanRemark
+            setDismissedCallBillIds(prev => new Set(prev).add(booking.id))
+            toast.success('เคลียร์สถานะเรียกเช็คบิลเรียบร้อยแล้ว')
+        } catch (err) {
+            console.error('Failed to dismiss call bill:', err)
+            toast.error('ไม่สามารถเคลียร์แจ้งเตือนได้: ' + err.message)
+        }
+    }
+
     const [viewMode, setViewMode] = useState(() => {
         try {
             return localStorage.getItem('onhaus_bills_view_mode') || 'grid'
@@ -440,12 +465,19 @@ export default function AllDailyBillsHub({
                 price_at_time: totalAmt
             }] : [])
         const itemsCount = items.length > 0 ? items.reduce((sum, item) => sum + (item.quantity || 1), 0) : (isSplitBill && totalAmt > 0 ? 1 : 0)
-        const hasCallBill = b.staff_remark && b.staff_remark.includes('[CALL_BILL]')
-        const transfer = parseTableTransferInfo(b, bookings)
         const status = (b.status || '').toLowerCase()
         const isSeated = status === 'seated'
         const isPending = status === 'pending'
         const isPaid = status === 'completed' || status === 'paid' || status === 'success'
+        const isCancelled = status === 'cancelled' || status === 'void'
+        const hasCallBill = Boolean(
+            b.staff_remark && 
+            b.staff_remark.includes('[CALL_BILL]') && 
+            !isPaid && 
+            !isCancelled && 
+            !dismissedCallBillIds.has(b.id)
+        )
+        const transfer = parseTableTransferInfo(b, bookings)
 
         // Distinct border styling based on operational priority (Dieter Rams + Thai Modern OKLCH)
         let cardStyle = 'border-2 border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] hover:border-[oklch(52%_0.16_28)]'
@@ -471,7 +503,20 @@ export default function AllDailyBillsHub({
                     {hasCallBill && (
                         <div className="mb-2 px-2.5 py-1 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-black rounded-xs flex items-center justify-between animate-pulse">
                             <span className="tracking-wider">[CALL BILL] ลูกค้าเรียกเช็คบิล</span>
-                            <span className="text-[9px] uppercase tracking-widest font-bold">URGENT</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[9px] uppercase tracking-widest font-bold">URGENT</span>
+                                <button
+                                    type="button"
+                                    onClick={async (e) => {
+                                        e.stopPropagation()
+                                        await handleDismissCallBill(b)
+                                    }}
+                                    className="ml-1 px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] hover:bg-black text-white text-[9px] rounded-xs font-mono font-bold tracking-tight transition-colors cursor-pointer"
+                                    title="เคลียร์แจ้งเตือนเรียกเช็คบิล"
+                                >
+                                    เคลียร์
+                                </button>
+                            </div>
                         </div>
                     )}
                     {transfer.isMergedSource && (
@@ -1001,6 +1046,28 @@ export default function AllDailyBillsHub({
 
                                         {/* Payment Badge */}
                                         {getPaymentBadge(b)}
+
+                                        {/* Call Bill Badge if active and unpaid */}
+                                        {Boolean(
+                                            b.staff_remark && 
+                                            b.staff_remark.includes('[CALL_BILL]') && 
+                                            !(b.status === 'completed' || b.status === 'paid' || b.status === 'success' || b.status === 'cancelled' || b.status === 'void') && 
+                                            !dismissedCallBillIds.has(b.id)
+                                        ) && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-black rounded-sm animate-pulse">
+                                                <span>[CALL BILL]</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation()
+                                                        await handleDismissCallBill(b)
+                                                    }}
+                                                    className="ml-1 px-1 bg-[oklch(18%_0.012_28)] hover:bg-black text-white text-[8px] rounded-xs font-mono font-bold tracking-tight cursor-pointer"
+                                                >
+                                                    เคลียร์
+                                                </button>
+                                            </span>
+                                        )}
                                     </div>
 
                                     {/* Middle: Customer & Value */}

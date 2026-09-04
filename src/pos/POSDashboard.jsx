@@ -2950,12 +2950,16 @@ export default function POSDashboard() {
             toast.success(`⚠️ ออฟไลน์: บันทึกแบ่งจ่ายก้อนที่ ${roundNum} (฿${splitTotal.toLocaleString()}) สำเร็จ!`, { id: toastId });
             
             if (isFullySettled) {
-                const allSplitRounds = getBookingSplitRounds({ staff_remark: updatedParentRemark });
+                const cleanedParentRemark = updatedParentRemark
+                    .replace(/\[CALL_BILL\]/gi, '')
+                    .replace(/\[CALL_STAFF\]/gi, '')
+                    .trim();
+                const allSplitRounds = getBookingSplitRounds({ staff_remark: cleanedParentRemark });
                 const splitMethods = [...new Set((allSplitRounds || []).map(r => (r.method || 'qr').toLowerCase()))];
                 const resolvedPaymentMethod = splitMethods.length === 1 ? splitMethods[0] : (splitMethods.length > 1 ? 'split' : (paymentMethod || 'qr'));
 
                 setShowSplitModal(false);
-                openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
+                openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: cleanedParentRemark, status: 'completed' }, 'receipt');
                 
                 // Full cleanup of Order Details and Table state
                 setCurrentOrder({ items: [], customer: null, table: null });
@@ -2989,7 +2993,11 @@ export default function POSDashboard() {
             recordShiftTransaction(activeBooking.id, splitTotal, paymentMethod);
 
             if (isFullySettled) {
-                const allSplitRounds = getBookingSplitRounds({ staff_remark: updatedParentRemark });
+                const cleanedParentRemark = updatedParentRemark
+                    .replace(/\[CALL_BILL\]/gi, '')
+                    .replace(/\[CALL_STAFF\]/gi, '')
+                    .trim();
+                const allSplitRounds = getBookingSplitRounds({ staff_remark: cleanedParentRemark });
                 const splitMethods = [...new Set((allSplitRounds || []).map(r => (r.method || 'qr').toLowerCase()))];
                 const resolvedPaymentMethod = splitMethods.length === 1 ? splitMethods[0] : (splitMethods.length > 1 ? 'split' : (paymentMethod || 'qr'));
 
@@ -2999,7 +3007,7 @@ export default function POSDashboard() {
                     .update({ 
                         status: 'completed',
                         payment_method: resolvedPaymentMethod,
-                        staff_remark: updatedParentRemark
+                        staff_remark: cleanedParentRemark
                     })
                     .eq('id', activeBooking.id);
 
@@ -3014,7 +3022,7 @@ export default function POSDashboard() {
 
                 toast.success(`🎉 ชำระครบถ้วน ปิดบิลเรียบร้อยแล้ว! (ก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()})`, { id: toastId });
                 setShowSplitModal(false);
-                openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: updatedParentRemark, status: 'completed' }, 'receipt');
+                openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: cleanedParentRemark, status: 'completed' }, 'receipt');
                 
                 // Full cleanup of Order Details and Table state
                 setCurrentOrder({ items: [], customer: null, table: null });

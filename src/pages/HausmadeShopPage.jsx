@@ -75,11 +75,11 @@ export default function HausmadeShopPage() {
         setQuickTrackError('')
 
         try {
-            // Search for matching booking by tracking_token, pickup_contact_phone, or phone
+            // Search for matching booking by tracking_token or pickup_contact_phone
             const { data: match, error } = await supabase
                 .from('bookings')
                 .select('tracking_token, id')
-                .or(`tracking_token.ilike.%${clean}%,pickup_contact_phone.ilike.%${clean}%,phone.ilike.%${clean}%`)
+                .or(`tracking_token.ilike.%${clean}%,pickup_contact_phone.ilike.%${clean}%`)
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()
