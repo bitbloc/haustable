@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
 import { TSHIRT_SIZE_CHART, getSizingInfo } from './HausmadeProductModal'
-import { getProductImages } from '../../hooks/useHausmadeShop'
+import { isPreOrderItem, getProductImages } from '../../hooks/useHausmadeShop'
 
 const CATEGORY_PRESETS = [
     { key: 'APPAREL', label: 'APPAREL & MERCH // เสื้อผ้า & สินค้าที่ระลึก' },
@@ -83,7 +83,7 @@ export default function HausmadeProductEditorModal({
             setTagsText(tags)
 
             // Pre-Order
-            const isPo = product.is_preorder === true || (product.sub_category || '').toLowerCase().includes('preorder')
+            const isPo = isPreOrderItem(product)
             setIsPreOrder(isPo)
             setPreOrderEta(product.preorder_eta || product.preorder_release_date || '')
 
@@ -349,13 +349,30 @@ export default function HausmadeProductEditorModal({
             const categoryId = matchedCategory ? matchedCategory.id : null
 
             // Clean Tags
-            const parsedTags = tagsText
+            let parsedTags = tagsText
                 .split(',')
                 .map(t => t.trim())
                 .filter(Boolean)
 
-            if (isPreOrder && !parsedTags.includes('PRE-ORDER')) {
-                parsedTags.push('PRE-ORDER')
+            if (isPreOrder) {
+                if (!parsedTags.includes('PRE-ORDER')) {
+                    parsedTags.push('PRE-ORDER')
+                }
+            } else {
+                parsedTags = parsedTags.filter(t => {
+                    const s = String(t).toLowerCase()
+                    return !s.includes('preorder') && !s.includes('pre-order') && !s.includes('พรีออเดอร์') && !s.includes('เปิดจอง')
+                })
+            }
+
+            let cleanName = name.trim()
+            if (!isPreOrder) {
+                cleanName = cleanName.replace(/^\[PRE-ORDER\]\s*/i, '').trim()
+            }
+
+            let cleanDesc = description.trim()
+            if (!isPreOrder) {
+                cleanDesc = cleanDesc.replace(/\[PRE-ORDER[^\]]*\]\s*/gi, '').trim()
             }
 
             // Primary Image & Gallery Array
@@ -370,13 +387,17 @@ export default function HausmadeProductEditorModal({
             if (process) craftSpecsObj.process = process
             if (tastingNotes) craftSpecsObj.tasting_notes = tastingNotes
 
+            const targetSubCategory = isPreOrder 
+                ? 'PRE-ORDER' 
+                : (subCategory === 'PREORDER' || subCategory === 'PRE-ORDER' ? 'APPAREL' : subCategory)
+
             const payload = {
-                name: name.trim(),
+                name: cleanName,
                 price: numericPrice,
                 category_id: categoryId,
                 category: categoryName,
-                sub_category: isPreOrder ? 'PRE-ORDER' : subCategory,
-                description: description.trim(),
+                sub_category: targetSubCategory,
+                description: cleanDesc,
                 image_url: primaryCover,
                 is_available: isAvailable,
                 is_recommended: isHeroFeatured,
@@ -403,13 +424,13 @@ export default function HausmadeProductEditorModal({
 
                 if (updateError && updateError.message && updateError.message.includes('column')) {
                     console.warn('[HausmadeProductEditorModal] DB column missing, using resilient fallback:', updateError.message)
-                    let enrichedDesc = description.trim()
+                    let enrichedDesc = cleanDesc
                     if (isPreOrder && !enrichedDesc.includes('[PRE-ORDER')) {
                         const eta = preOrderEta.trim() || 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
                         enrichedDesc = `[PRE-ORDER รอบส่ง: ${eta}]\n${enrichedDesc}`.trim()
                     }
                     const fallbackPayload = {
-                        name: isPreOrder && !name.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${name.trim()}` : name.trim(),
+                        name: isPreOrder && !cleanName.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${cleanName}` : cleanName,
                         price: numericPrice,
                         category_id: categoryId,
                         category: categoryName || 'HAUSMADE',
@@ -438,13 +459,13 @@ export default function HausmadeProductEditorModal({
 
                 if (insertError && insertError.message && insertError.message.includes('column')) {
                     console.warn('[HausmadeProductEditorModal] DB column missing, using resilient fallback insert:', insertError.message)
-                    let enrichedDesc = description.trim()
+                    let enrichedDesc = cleanDesc
                     if (isPreOrder && !enrichedDesc.includes('[PRE-ORDER')) {
                         const eta = preOrderEta.trim() || 'จัดส่งตามรอบการผลิต (ภายใน 5-7 วันทำการ)'
                         enrichedDesc = `[PRE-ORDER รอบส่ง: ${eta}]\n${enrichedDesc}`.trim()
                     }
                     const fallbackPayload = {
-                        name: isPreOrder && !name.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${name.trim()}` : name.trim(),
+                        name: isPreOrder && !cleanName.includes('[PRE-ORDER]') ? `[PRE-ORDER] ${cleanName}` : cleanName,
                         price: numericPrice,
                         category_id: categoryId,
                         category: categoryName || 'HAUSMADE',
@@ -799,7 +820,13 @@ export default function HausmadeProductEditorModal({
                                 </label>
                                 <select
                                     value={subCategory}
-                                    onChange={(e) => setSubCategory(e.target.value)}
+                                    onChange={(e) => {
+                                        const val = e.target.value
+                                        setSubCategory(val)
+                                        if (val === 'PREORDER') {
+                                            setIsPreOrder(true)
+                                        }
+                                    }}
                                     className="px-3 py-2 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                                 >
                                     {CATEGORY_PRESETS.map(c => (
@@ -841,7 +868,13 @@ export default function HausmadeProductEditorModal({
                                     <input
                                         type="checkbox"
                                         checked={isPreOrder}
-                                        onChange={(e) => setIsPreOrder(e.target.checked)}
+                                        onChange={(e) => {
+                                            const checked = e.target.checked
+                                            setIsPreOrder(checked)
+                                            if (!checked && (subCategory === 'PREORDER' || subCategory === 'PRE-ORDER')) {
+                                                setSubCategory('APPAREL')
+                                            }
+                                        }}
                                         className="sr-only peer"
                                     />
                                     <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[oklch(45%_0.08_140)]"></div>

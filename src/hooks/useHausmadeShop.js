@@ -14,24 +14,28 @@ const CART_STORAGE_KEY = 'hausmade_cart_items_v2'
 
 export function isPreOrderItem(item) {
     if (!item) return false
+    // 1. Explicit boolean is source of truth
     if (item.is_preorder === true) return true
+    if (item.is_preorder === false) return false
+
+    // 2. Fallbacks only when item.is_preorder is undefined or null (e.g. legacy data or views)
     if (item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date) return true
     const tags = Array.isArray(item.tags) ? item.tags : (item.tags ? [item.tags] : [])
     if (tags.some(t => {
         const s = String(t).toLowerCase()
-        return s.includes('preorder') || s.includes('pre-order') || s.includes('พรีออเดอร์') || s.includes('เปิดจอง')
+        return s.includes('preorder') || s.includes('pre-order')
     })) return true
     const sub = (item.sub_category || '').toLowerCase()
-    if (sub.includes('preorder') || sub.includes('pre-order') || sub.includes('พรีออเดอร์') || sub.includes('เปิดจอง')) return true
+    if (sub.includes('preorder') || sub.includes('pre-order')) return true
     const name = (item.name || '').toLowerCase()
-    if (name.includes('[pre-order]') || name.includes('pre-order') || name.includes('พรีออเดอร์') || name.includes('เปิดจอง')) return true
+    if (name.includes('[pre-order]')) return true
     const desc = (item.description || '').toLowerCase()
-    if (desc.includes('[pre-order') || desc.includes('พรีออเดอร์') || desc.includes('เปิดจอง')) return true
+    if (desc.includes('[pre-order')) return true
     return false
 }
 
 export function getPreOrderEta(item) {
-    if (!item) return ''
+    if (!item || !isPreOrderItem(item)) return ''
     if (item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date || item.metadata?.preorder_eta) {
         return item.preorder_eta || item.preorder_release_date || item.preorder_delivery_date || item.metadata?.preorder_eta
     }

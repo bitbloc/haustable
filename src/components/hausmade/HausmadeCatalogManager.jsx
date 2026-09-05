@@ -99,9 +99,36 @@ export default function HausmadeCatalogManager() {
     const handleTogglePreOrder = async (item) => {
         const nextState = !isPreOrderItem(item)
         try {
+            const cleanName = (item.name || '').replace(/^\[PRE-ORDER\]\s*/i, '').trim()
+            const updatedName = nextState ? `[PRE-ORDER] ${cleanName}` : cleanName
+
+            let desc = item.description || ''
+            if (nextState) {
+                if (!desc.includes('[PRE-ORDER')) {
+                    desc = `[PRE-ORDER รอบส่ง: จัดส่งตามรอบการผลิต (ภายใน 7 วันทำการ)]\n${desc}`.trim()
+                }
+            } else {
+                desc = desc.replace(/\[PRE-ORDER[^\]]*\]\s*/gi, '').trim()
+            }
+
+            const currentTags = Array.isArray(item.tags) ? item.tags : []
+            const updatedTags = nextState
+                ? (currentTags.includes('PRE-ORDER') ? currentTags : [...currentTags, 'PRE-ORDER'])
+                : currentTags.filter(t => {
+                    const s = String(t).toLowerCase()
+                    return !s.includes('preorder') && !s.includes('pre-order') && !s.includes('พรีออเดอร์') && !s.includes('เปิดจอง')
+                })
+
+            const subCat = nextState
+                ? 'PRE-ORDER'
+                : (item.sub_category === 'PRE-ORDER' || item.sub_category === 'PREORDER' ? 'APPAREL' : (item.sub_category || 'HAUSMADE'))
+
             let payload = {
+                name: updatedName,
+                description: desc,
+                tags: updatedTags,
                 is_preorder: nextState,
-                sub_category: nextState ? 'PRE-ORDER' : (item.sub_category === 'PRE-ORDER' ? 'APPAREL' : (item.sub_category || 'HAUSMADE')),
+                sub_category: subCat,
                 preorder_eta: nextState ? (item.preorder_eta || 'จัดส่งตามรอบการผลิต (ภายใน 7 วันทำการ)') : null
             }
             
@@ -113,18 +140,6 @@ export default function HausmadeCatalogManager() {
             // If column is_preorder does not exist in DB schema, fallback gracefully to encoding in name/description
             if (error && error.message && error.message.includes('column')) {
                 console.warn('[HausmadeCatalogManager] Column not found, applying fallback update:', error.message)
-                let cleanName = item.name.replace(/^\[PRE-ORDER\]\s*/i, '').trim()
-                const updatedName = nextState ? `[PRE-ORDER] ${cleanName}` : cleanName
-                
-                let desc = item.description || ''
-                if (nextState) {
-                    if (!desc.includes('[PRE-ORDER')) {
-                        desc = `[PRE-ORDER รอบส่ง: จัดส่งตามรอบการผลิต (ภายใน 7 วันทำการ)]\n${desc}`.trim()
-                    }
-                } else {
-                    desc = desc.replace(/\[PRE-ORDER[^\]]*\]\s*/gi, '').trim()
-                }
-
                 const fallbackPayload = {
                     name: updatedName,
                     description: desc
@@ -146,8 +161,17 @@ export default function HausmadeCatalogManager() {
                 throw error
             }
 
-            setProducts(prev => prev.map(p => p.id === item.id ? { ...p, ...payload, is_preorder: nextState } : p))
-            toast.success(nextState ? `ตั้งค่า "${item.name}" เป็นสินค้า Pre-Order ⏳` : `เปลี่ยน "${item.name}" เป็นสินค้าพร้อมส่งปกติ 📦`)
+            setProducts(prev => prev.map(p => p.id === item.id ? { 
+                ...p, 
+                ...payload, 
+                is_preorder: nextState,
+                name: updatedName,
+                description: desc,
+                tags: updatedTags,
+                sub_category: subCat,
+                preorder_eta: payload.preorder_eta
+            } : p))
+            toast.success(nextState ? `ตั้งค่า "${cleanName}" เป็นสินค้า Pre-Order ⏳` : `เปลี่ยน "${cleanName}" เป็นสินค้าพร้อมส่งปกติ 📦`)
         } catch (err) {
             console.error('[HausmadeCatalogManager] Toggle pre-order error:', err)
             toast.error('ไม่สามารถเปลี่ยนโหมด Pre-Order ได้: ' + err.message)
