@@ -262,6 +262,12 @@ export default function AdminDashboard() {
     const dailyBookings = useMemo(() => {
         const isToday = selectedDate === getThaiDate()
         return bookings.filter(b => {
+            // Exclude internal floor blocks / maintenance holds that are not customer orders
+            const isInternalBlock = (b.customer_note === 'Internal Block' || b.customer_note === 'Maintenance Block') && 
+                                    (!b.order_items || b.order_items.length === 0) && 
+                                    parseFloat(b.total_amount || b.total_price || 0) === 0
+            if (isInternalBlock) return false
+
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
             // When viewing today, include currently seated active tables even if opened before midnight

@@ -249,10 +249,16 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
     const handleReleaseTable = async (bookingId, tableName) => {
         setActionLoading(true);
         try {
+            const currentB = inspectedTable?.state?.booking;
+            const isInternalBlock = currentB?.customer_note === 'Internal Block' || 
+                                    currentB?.customer_note === 'Maintenance Block' ||
+                                    ((!currentB?.order_items || currentB?.order_items?.length === 0) && parseFloat(currentB?.total_amount || 0) === 0);
+            const targetStatus = isInternalBlock ? 'cancelled' : 'completed';
+
             const { error } = await supabase
                 .from('bookings')
                 .update({ 
-                    status: 'completed', 
+                    status: targetStatus, 
                     end_time: new Date().toISOString() 
                 })
                 .eq('id', bookingId);

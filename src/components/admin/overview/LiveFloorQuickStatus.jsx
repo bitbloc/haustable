@@ -264,9 +264,15 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const handleReleaseTable = async (bookingId, tableName) => {
         setActionLoading(true)
         try {
+            const currentBooking = selectedTableData?.state?.booking
+            const isInternalBlock = currentBooking?.customer_note === 'Internal Block' || 
+                                    currentBooking?.customer_note === 'Maintenance Block' ||
+                                    ((!currentBooking?.order_items || currentBooking?.order_items?.length === 0) && parseFloat(currentBooking?.total_amount || 0) === 0)
+            const targetStatus = isInternalBlock ? 'cancelled' : 'completed'
+
             const { error } = await supabase
                 .from('bookings')
-                .update({ status: 'completed', end_time: new Date().toISOString() })
+                .update({ status: targetStatus, end_time: new Date().toISOString() })
                 .eq('id', bookingId)
 
             if (error) throw error

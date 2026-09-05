@@ -585,6 +585,12 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
+                    const transferTags = (b.staff_remark?.match(/\[(MERGED_FROM|MERGED_TO|MOVED|SPLIT_ROUNDS|ORIG_AMT|SPLIT)[^\]]*\]/gi) || []).join(' ');
+                    const baseRemark = rewardCode 
+                        ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
+                        : `Paid by ${paymentMethod.toUpperCase()}${cashTag}`;
+                    const remarkText = transferTags ? `${baseRemark} ${transferTags}`.trim() : baseRemark;
+
                     return { 
                         ...b, 
                         status: 'completed', 
@@ -597,9 +603,7 @@ export function usePOSOrder() {
                         user_id: profileId || b.user_id,
                         cash_received: numCashRecv > 0 ? numCashRecv : null,
                         cash_change: numCashRecv > 0 ? numChangeDue : null,
-                        staff_remark: rewardCode 
-                            ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
-                            : `Paid by ${paymentMethod.toUpperCase()}${cashTag}` 
+                        staff_remark: remarkText
                     };
                 }
                 return b;
@@ -628,10 +632,20 @@ export function usePOSOrder() {
         }
 
         try {
-            // 1. Complete booking status
-            const remarkText = rewardCode 
+            // 1. Fetch current remark to preserve transfer tags (e.g. [MERGED_FROM:...], [MOVED:...])
+            let existingRemark = '';
+            try {
+                const { data: curB } = await supabase.from('bookings').select('staff_remark').eq('id', bookingId).maybeSingle();
+                existingRemark = curB?.staff_remark || '';
+            } catch (e) {}
+
+            const transferTags = (existingRemark.match(/\[(MERGED_FROM|MERGED_TO|MOVED|SPLIT_ROUNDS|ORIG_AMT|SPLIT)[^\]]*\]/gi) || []).join(' ');
+
+            const baseRemark = rewardCode 
                 ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
                 : `Paid by ${paymentMethod.toUpperCase()}${cashTag}`;
+
+            const remarkText = transferTags ? `${baseRemark} ${transferTags}`.trim() : baseRemark;
 
             const updatePayload = {
                 status: 'completed',
