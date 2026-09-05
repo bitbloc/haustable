@@ -29,7 +29,7 @@ export default class MenuScene extends Phaser.Scene {
     }
 
     const titleText = this.add.text(width / 2, 110, 'ตะลุยแดนสตอ', {
-      fontFamily: '"Geist Mono", "Prompt", sans-serif',
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '34px',
       fill: '#FAF7F5',
       stroke: '#181615',
@@ -38,7 +38,7 @@ export default class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(5);
 
     const subTitleText = this.add.text(width / 2, 145, 'FLAPPY CAT • ATELIER ARCADE', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontFamily: '"Space Mono", monospace',
       fontSize: '11px',
       fill: '#BD4924', // Terracotta Clay
       fontStyle: 'bold',
@@ -81,19 +81,17 @@ export default class MenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     const startText = this.add.text(width / 2, 250, 'แตะหน้าจอเพื่อเริ่มเล่น', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '16px',
       fill: '#FAF7F5',
-      fontStyle: 'bold',
-      letterSpacing: 1
+      fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(11);
 
     const subPromptText = this.add.text(width / 2, 274, isLoggedIn ? '● บัญชีสมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '○ โหมดเล่นอิสระ (Guest Mode)', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
-      fontSize: '10px',
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontSize: '11px',
       fill: isLoggedIn ? '#526A3B' : '#89827B',
-      fontStyle: 'bold',
-      letterSpacing: 0.5
+      fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(11);
 
     // Subtle breathing animation on start card
@@ -143,7 +141,7 @@ export default class MenuScene extends Phaser.Scene {
 
     if (leaderboard.length === 0) {
       this.add.text(width / 2, boardY + 15, 'ยังไม่มีอันดับคะแนน', {
-        fontFamily: '"Geist Mono", "Space Mono", monospace',
+        fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: '12px',
         fill: '#69635D'
       }).setOrigin(0.5).setDepth(11);
@@ -168,7 +166,7 @@ export default class MenuScene extends Phaser.Scene {
 
         // Player Name
         this.add.text(width / 2 - boardW / 2 + 56, rowY, name, {
-          fontFamily: '"Geist Mono", "Space Mono", monospace',
+          fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           fontSize: '12px',
           fill: isFirst ? '#FAF7F5' : '#D9D2CB',
           fontStyle: isFirst ? 'bold' : 'normal'
@@ -188,13 +186,18 @@ export default class MenuScene extends Phaser.Scene {
     const playBGM = () => {
       try {
         let bgm = this.sound.get('bgm');
-        if (!bgm) {
-          this.sound.play('bgm', { loop: true, volume: 0.25 });
-        } else if (!bgm.isPlaying) {
+        if (bgm) {
+          if (!bgm.isPlaying) {
+            bgm.setLoop(true);
+            bgm.setVolume(0.25);
+            bgm.play();
+          }
+        } else {
+          bgm = this.sound.add('bgm', { loop: true, volume: 0.25 });
           bgm.play();
         }
       } catch (e) {
-        console.warn('BGM play failed:', e);
+        console.warn('BGM play failed in MenuScene:', e);
       }
     };
 

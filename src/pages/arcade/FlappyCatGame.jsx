@@ -11,15 +11,43 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
   const containerRef = useRef(null);
   const gameRef = useRef(null);
 
-  // Initialize Phaser Game
+  // Initialize Phaser Game after ensuring Thai web fonts are loaded
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return;
 
-    const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore, session, onRequireLogin);
-    const game = new Phaser.Game(config);
-    gameRef.current = game;
+    let isMounted = true;
+    let fallbackTimer = null;
+
+    const initPhaser = () => {
+      if (!isMounted || gameRef.current || !containerRef.current) return;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore, session, onRequireLogin);
+      const game = new Phaser.Game(config);
+      gameRef.current = game;
+    };
+
+    // Preload Thai unicode chunk via Font Loading API
+    if (typeof document !== 'undefined' && document.fonts) {
+      Promise.all([
+        document.fonts.load('16px "IBM Plex Sans Thai"', 'ตะลุยแดนสตอคะแนนสุทธิเล่นอีกครั้ง'),
+        document.fonts.load('bold 34px "IBM Plex Sans Thai"', 'ตะลุยแดนสตอ'),
+        document.fonts.load('13px "IBM Plex Sans Thai"', 'บันทึกแต้มเล่นอีกครั้ง'),
+        document.fonts.ready
+      ]).then(() => {
+        initPhaser();
+      }).catch(() => {
+        initPhaser();
+      });
+
+      // Safety timeout: boot Phaser anyway after max 350ms if network is slow
+      fallbackTimer = setTimeout(initPhaser, 350);
+    } else {
+      initPhaser();
+    }
 
     return () => {
+      isMounted = false;
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
@@ -91,12 +119,28 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         Double protection for crisp retro styling:
         Phaser configuration uses pixelArt: true, and the canvas container uses CSS pixelated rendering.
       */}
+      {/* Hidden DOM font preloader ensuring browser fetches the Thai unicode-range chunk */}
+      <span 
+        aria-hidden="true"
+        style={{ 
+          fontFamily: '"IBM Plex Sans Thai", sans-serif',
+          position: 'absolute',
+          left: -9999,
+          top: -9999,
+          opacity: 0,
+          pointerEvents: 'none',
+          visibility: 'hidden'
+        }}
+      >
+        ตะลุยแดนสตอ แตะหน้าจอเพื่อเริ่มเล่น คะแนนสุทธิ เล่นอีกครั้ง บันทึกแต้ม กำลังเปิดหน้าต่างบันทึกคะแนน โปรดรอสักครู่ แตะเพื่อเริ่มใหม่
+      </span>
+
       <div 
         ref={containerRef} 
         className="game-canvas-container max-w-full max-h-full" 
         style={{ 
           imageRendering: 'pixelated',
-          WebkitFontSmoothing: 'none'
+          WebkitFontSmoothing: 'antialiased'
         }} 
       />
 

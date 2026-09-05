@@ -28,6 +28,31 @@ export default class PlayScene extends Phaser.Scene {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
+    // 0. Ensure Background Music is playing (especially when restarting from GameOverScene)
+    const playBGM = () => {
+      try {
+        let bgm = this.sound.get('bgm');
+        if (bgm) {
+          if (!bgm.isPlaying) {
+            bgm.setLoop(true);
+            bgm.setVolume(0.25);
+            bgm.play();
+          }
+        } else {
+          bgm = this.sound.add('bgm', { loop: true, volume: 0.25 });
+          bgm.play();
+        }
+      } catch (e) {
+        console.warn('PlayScene BGM play failed:', e);
+      }
+    };
+
+    if (this.sound.locked) {
+      this.sound.once('unlocked', playBGM);
+    } else {
+      playBGM();
+    }
+
     // 1. Scrolling background layers (Riverside sunset parallax)
     this.bgWall = this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0).setDepth(0);
     this.bgRiver = this.add.tileSprite(0, height - 160, width, 96, 'bg_river').setOrigin(0, 0).setDepth(1);
@@ -661,6 +686,14 @@ export default class PlayScene extends Phaser.Scene {
       });
       this.flameParticles = [];
     }
+
+    // Stop BGM immediately on death so hit SFX & Game Over impact feel punchy
+    try {
+      const bgm = this.sound.get('bgm');
+      if (bgm && bgm.isPlaying) {
+        bgm.stop();
+      }
+    } catch (e) {}
 
     // Play hit sound
     try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}

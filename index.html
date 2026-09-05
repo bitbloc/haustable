@@ -131,6 +131,10 @@
     </div>
     <!-- Dedicated Print Portal Root to eliminate all background document trees from browser print dialogs -->
     <div id="print-portal-root"></div>
+    <!-- Global Thai Font Preloader to ensure browser fetches Thai unicode-range chunk immediately -->
+    <div style="font-family: 'IBM Plex Sans Thai', sans-serif; position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none; visibility: hidden;" aria-hidden="true">
+      กขคงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮะัาำิีึืุูเแโใไ่้๊๋็์ ตะลุยแดนสตอ แตะหน้าจอเพื่อเริ่มเล่น คะแนนสุทธิ เล่นอีกครั้ง บันทึกแต้ม
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

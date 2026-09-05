@@ -82,10 +82,9 @@ export default class GameOverScene extends Phaser.Scene {
     // 5. Monospace Score Panel (Minimalist Instrument readout)
     const scoreY = headerLineY + 54;
     this.add.text(width / 2, scoreY - 18, 'FINAL SCORE / คะแนนสุทธิ', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '11px',
-      fill: '#89827B',
-      letterSpacing: 1
+      fill: '#89827B'
     }).setOrigin(0.5).setDepth(12);
 
     const scoreDisplay = this.add.text(width / 2, scoreY + 16, `${this.finalScore}`, {
@@ -131,11 +130,10 @@ export default class GameOverScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true });
 
       claimBtn = this.add.text(width / 2, currentBtnY, 'บันทึกแต้ม / SAVE SCORE', {
-        fontFamily: '"Geist Mono", "Space Mono", monospace',
+        fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: '13px',
         fill: '#FAF7F5',
-        fontStyle: 'bold',
-        letterSpacing: 1
+        fontStyle: 'bold'
       }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
 
       const handleClaimClick = (pointer) => {
@@ -144,7 +142,7 @@ export default class GameOverScene extends Phaser.Scene {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate([20, 30]); } catch (e) {}
         }
-        claimBtn.setText('กำลังเปิดหน้าต่างบันทึกคะแนน...');
+        claimBtn.setText('กำลังเปิดหน้าต่างบันทึกคะแนน…');
         claimBtnBg.setFillStyle(0x2B2725);
         claimBtnBg.setStrokeStyle(1, 0x5C544D);
 
@@ -169,11 +167,10 @@ export default class GameOverScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     const restartBtn = this.add.text(width / 2, currentBtnY, 'เล่นอีกครั้ง / PLAY AGAIN', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '13px',
       fill: '#FAF7F5',
-      fontStyle: 'bold',
-      letterSpacing: 1
+      fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
 
     const handleRestartClick = (pointer) => {
@@ -188,13 +185,12 @@ export default class GameOverScene extends Phaser.Scene {
     restartBtn.on('pointerdown', handleRestartClick);
     restartBtnBg.on('pointerdown', handleRestartClick);
 
-    // 7. Cooldown Lockout & Monospace Helper Subtext
+    // 7. Cooldown Lockout & Helper Subtext
     const subtextY = currentBtnY + 36;
-    const helperSubtext = this.add.text(width / 2, subtextY, 'โปรดรอสักครู่...', {
-      fontFamily: '"Geist Mono", "Space Mono", monospace',
+    const helperSubtext = this.add.text(width / 2, subtextY, 'โปรดรอสักครู่…', {
+      fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '10px',
-      fill: '#69635D',
-      letterSpacing: 1
+      fill: '#69635D'
     }).setOrigin(0.5).setDepth(15);
 
     // 800ms cooldown timer to prevent accidental taps from death
