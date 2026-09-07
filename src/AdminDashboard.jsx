@@ -303,10 +303,12 @@ export default function AdminDashboard() {
         }).sort((a, b) => new Date(a.booking_time || a.created_at) - new Date(b.booking_time || b.created_at))
     }, [bookings, selectedDate])
 
-    // 4. Live Financial Metrics & Payment Breakdown for the selected date
-    const { revenueToday, completedOrdersCount, dineInCount, pickupCount, paymentBreakdown } = useMemo(() => {
+    // 4. Live Financial Metrics & Payment Breakdown for the selected date (Strictly Settled / Checked-Out Bills)
+    const { revenueToday, completedOrdersCount, activeUnpaidRevenue, activeUnpaidCount, dineInCount, pickupCount, paymentBreakdown } = useMemo(() => {
         let rev = 0
         let paidCount = 0
+        let activeUnpaid = 0
+        let activeCount = 0
         let dineIn = 0
         let pickup = 0
         let cash = 0
@@ -315,31 +317,38 @@ export default function AdminDashboard() {
 
         dailyBookings.forEach(b => {
             const amount = Number(b.total_amount || b.total_price || 0)
-            const isRevenueStatus = b.status === 'confirmed' || b.status === 'completed' || b.status === 'paid' || b.status === 'seated' || b.status === 'success'
+            const isCompleted = b.status === 'completed' || b.status === 'paid' || b.status === 'success'
+            const isActiveUnpaid = b.status === 'seated' || b.status === 'confirmed'
 
-            if (isRevenueStatus) {
+            if (isCompleted) {
                 rev += amount
-                if (b.status === 'completed' || b.status === 'paid' || b.status === 'success') {
-                    paidCount++
-                }
-
-                if (b.booking_type === 'dine_in' || b.booking_type === 'walk_in') {
-                    dineIn++
-                } else if (b.booking_type === 'pickup') {
-                    pickup++
-                }
+                paidCount++
 
                 // Payment breakdown
                 const breakdown = getBookingPaymentBreakdown(b)
                 cash += breakdown.cash
                 qr += breakdown.qr
                 credit += breakdown.credit
+            } else if (isActiveUnpaid) {
+                activeUnpaid += amount
+                activeCount++
+            }
+
+            // Active channels tracking
+            if (b.status !== 'cancelled' && b.status !== 'void') {
+                if (b.booking_type === 'dine_in' || b.booking_type === 'walk_in') {
+                    dineIn++
+                } else if (b.booking_type === 'pickup') {
+                    pickup++
+                }
             }
         })
 
         return {
             revenueToday: rev,
             completedOrdersCount: paidCount,
+            activeUnpaidRevenue: activeUnpaid,
+            activeUnpaidCount: activeCount,
             dineInCount: dineIn,
             pickupCount: pickup,
             paymentBreakdown: { cash, qr, credit }
@@ -566,6 +575,8 @@ export default function AdminDashboard() {
                 <LivePulseMetrics 
                     revenueToday={revenueToday}
                     completedOrdersCount={completedOrdersCount}
+                    activeUnpaidRevenue={activeUnpaidRevenue}
+                    activeUnpaidCount={activeUnpaidCount}
                     totalTables={floorOccupancy.totalTables}
                     occupiedTables={floorOccupancy.occupiedTables}
                     totalGuests={floorOccupancy.totalGuests}
@@ -630,6 +641,7 @@ export default function AdminDashboard() {
                 <DailySummarySlipModal
                     bookings={dailyBookings}
                     selectedDate={selectedDate}
+                    companySettings={companySettings}
                     onClose={() => setShowDailySummaryModal(false)}
                 />
             )}

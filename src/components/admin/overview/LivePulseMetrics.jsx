@@ -4,6 +4,8 @@ import React from 'react'
 export default function LivePulseMetrics({
     revenueToday = 0,
     completedOrdersCount = 0,
+    activeUnpaidRevenue = 0,
+    activeUnpaidCount = 0,
     totalTables = 0,
     occupiedTables = 0,
     totalGuests = 0,
@@ -17,7 +19,7 @@ export default function LivePulseMetrics({
 
     return (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-            {/* 1. Today's Revenue */}
+            {/* 1. Today's Revenue (Settled / Paid Only) */}
             <div className="bg-[oklch(98%_0.006_28)] border border-[oklch(85%_0.012_28)] p-3.5 md:p-4 rounded-sm flex flex-col justify-between relative overflow-hidden group">
                 <div className="flex items-center justify-between">
                     <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
@@ -33,7 +35,14 @@ export default function LivePulseMetrics({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
-                    <span className="tabular-nums">{completedOrdersCount} PAID ORDERS</span>
+                    <div className="flex flex-col">
+                        <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{completedOrdersCount} PAID ORDERS</span>
+                        {activeUnpaidCount > 0 && (
+                            <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                +{activeUnpaidCount} รอเช็คบิล (฿{Number(activeUnpaidRevenue).toLocaleString()})
+                            </span>
+                        )}
+                    </div>
                     <span className="text-[oklch(45%_0.08_140)] font-bold tracking-wider text-[10px]">LIVE SYNC</span>
                 </div>
             </div>

@@ -1,109 +1,250 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useRef, useState, useMemo } from 'react'
-import { X, Download, Copy, Printer, Check, FileText } from 'lucide-react'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
+import { X, Download, Copy, Printer, Check, AlertCircle } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
-import { formatThaiTimeOnly, getThaiDate } from '../../../utils/timeUtils'
+import { supabase } from '../../../lib/supabaseClient'
+import { getThaiDate } from '../../../utils/timeUtils'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
+import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../../../utils/printerHelper'
 
 export default function DailySummarySlipModal({
     bookings = [],
     selectedDate = getThaiDate(),
+    companySettings = {},
     onClose,
     onPrintSlip
 }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
     const [copied, setCopied] = useState(false)
+    const [printing, setPrinting] = useState(false)
+    const [categories, setCategories] = useState([])
 
-    // Compute comprehensive daily financial and sales metrics
+    // Load category mapping (from cache and cloud)
+    useEffect(() => {
+        try {
+            const cached = localStorage.getItem('pos_cache_menu_categories')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setCategories(parsed)
+                }
+            }
+        } catch (e) {}
+
+        supabase
+            .from('menu_categories')
+            .select('id, name')
+            .then(({ data }) => {
+                if (data && data.length > 0) {
+                    setCategories(data)
+                }
+            })
+            .catch(() => {})
+    }, [])
+
+    const categoryMap = useMemo(() => {
+        return (categories || []).reduce((acc, cat) => ({ ...acc, [cat.id]: cat.name }), {})
+    }, [categories])
+
+    // Shop metadata from settings
+    const shopName = companySettings.receipt_shop_name || 'IN THE HAUS'
+    const shopPhone = companySettings.receipt_shop_phone || '098-528-4217'
+    const isVatEnabled = companySettings.default_vat_enabled === 'true' || companySettings.tax_vat_registered === 'true'
+
+    // Compute comprehensive daily financial and sales metrics strictly from checked-out / completed orders
     const reportData = useMemo(() => {
-        let totalRev = 0
-        let completedCount = 0
-        let cancelledCount = 0
-        let seatedCount = 0
-        let pendingCount = 0
-
-        let cashTotal = 0
-        let qrTotal = 0
-        let creditTotal = 0
-
-        let dineInCount = 0
-        let pickupCount = 0
-
-        // Item popularity tracker
-        const itemMap = new Map()
+        // 1. Separate bookings by lifecycle
+        const completedBookings = []
+        const activeUnpaidBookings = []
+        const cancelledBookings = []
 
         ;(bookings || []).forEach(b => {
+            const st = b.status
+            if (st === 'completed' || st === 'paid' || st === 'success') {
+                completedBookings.push(b)
+            } else if (st === 'seated' || st === 'confirmed') {
+                activeUnpaidBookings.push(b)
+            } else if (st === 'cancelled' || st === 'void') {
+                cancelledBookings.push(b)
+            }
+        })
+
+        // 2. Financial totals (Strictly from settled/completed bills per user rule)
+        let totalSettledSales = 0
+        let totalDiscounts = 0
+        let totalGuests = 0
+
+        let cashTotal = 0
+        let cashCount = 0
+        let qrTotal = 0
+        let qrCount = 0
+        let creditTotal = 0
+        let creditCount = 0
+
+        let dineInSettledCount = 0
+        let dineInSettledAmount = 0
+        let pickupSettledCount = 0
+        let pickupSettledAmount = 0
+
+        let walkinCount = 0
+        let walkinAmount = 0
+        let linemanCount = 0
+        let linemanAmount = 0
+
+        let totalItemsSold = 0
+        const itemMap = new Map()
+        const categorySalesMap = new Map()
+
+        completedBookings.forEach(b => {
             const amt = parseFloat(b.total_amount || b.total_price || 0)
-            const isCompleted = b.status === 'completed' || b.status === 'paid' || b.status === 'success'
+            const disc = parseFloat(b.discount_amount || 0)
+            const pax = parseInt(b.pax || 1, 10)
 
-            if (isCompleted) {
-                totalRev += amt
-                completedCount++
+            totalSettledSales += amt
+            totalDiscounts += disc
+            totalGuests += pax
 
-                // Payment breakdown
-                const breakdown = getBookingPaymentBreakdown(b)
+            // Payment breakdown
+            const breakdown = getBookingPaymentBreakdown(b)
+            if (breakdown.cash > 0) {
                 cashTotal += breakdown.cash
+                cashCount++
+            }
+            if (breakdown.qr > 0) {
                 qrTotal += breakdown.qr
+                qrCount++
+            }
+            if (breakdown.credit > 0) {
                 creditTotal += breakdown.credit
-
-                // Item aggregation
-                ;(b.order_items || []).forEach(item => {
-                    const name = item.custom_name || item.menu_items?.name || item.name || 'Custom Item'
-                    const qty = item.quantity || 1
-                    const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
-                    const total = price * qty
-
-                    if (itemMap.has(name)) {
-                        const existing = itemMap.get(name)
-                        existing.qty += qty
-                        existing.total += total
-                    } else {
-                        itemMap.set(name, { name, qty, total })
-                    }
-                })
-            } else if (b.status === 'cancelled' || b.status === 'void') {
-                cancelledCount++
-            } else if (b.status === 'seated') {
-                seatedCount++
-            } else if (b.status === 'pending') {
-                pendingCount++
+                creditCount++
             }
 
+            // Service mix (Dine-in vs Pickup)
             const bType = (b.booking_type || 'dine_in').toLowerCase()
-            if (bType === 'dine_in' || bType === 'walk_in') dineInCount++
-            else pickupCount++
+            if (bType === 'dine_in' || bType === 'walk_in') {
+                dineInSettledCount++
+                dineInSettledAmount += amt
+            } else {
+                pickupSettledCount++
+                pickupSettledAmount += amt
+            }
+
+            // Channel detection (Lineman delivery vs in-store walk-in)
+            const remark = (b.staff_remark || '').toLowerCase()
+            const note = (b.customer_note || '').toLowerCase()
+            const isLineman = remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')
+
+            if (isLineman) {
+                linemanCount++
+                linemanAmount += amt
+            } else {
+                walkinCount++
+                walkinAmount += amt
+            }
+
+            // Order items aggregation
+            ;(b.order_items || []).forEach(item => {
+                if (item.status === 'void' || item.status === 'cancelled') return
+
+                const name = item.custom_name || item.menu_items?.name || item.name || 'รายการทั่วไป'
+                const qty = parseInt(item.quantity || 1, 10)
+                const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
+                const lineTotal = price * qty
+                totalItemsSold += qty
+
+                // Best seller item tracking
+                if (itemMap.has(name)) {
+                    const existing = itemMap.get(name)
+                    existing.qty += qty
+                    existing.total += lineTotal
+                } else {
+                    itemMap.set(name, { name, qty, total: lineTotal })
+                }
+
+                // Category sales tracking
+                const catId = item.menu_items?.category_id || item.category_id || 'other'
+                const catName = categoryMap[catId] || 
+                                (item.destination === 'bar' ? 'เครื่องดื่ม' : item.destination === 'kitchen' ? 'อาหาร' : 'อื่นๆ / General')
+
+                if (categorySalesMap.has(catName)) {
+                    const existingCat = categorySalesMap.get(catName)
+                    existingCat.qty += qty
+                    existingCat.amount += lineTotal
+                } else {
+                    categorySalesMap.set(catName, { name: catName, qty, amount: lineTotal })
+                }
+            })
+        })
+
+        // 3. Active / Seated tables that are NOT yet checked out
+        let activeUnpaidTotal = 0
+        const activeTablesList = activeUnpaidBookings.map(b => {
+            const amt = parseFloat(b.total_amount || b.total_price || 0)
+            activeUnpaidTotal += amt
+            const tableName = b.tables_layout?.table_name || 
+                              (b.booking_type === 'pickup' ? 'Walk-in Pick-up' : (b.pickup_contact_name || b.customer_name || 'โต๊ะรับประทาน'))
+            return {
+                id: b.id,
+                name: tableName,
+                amount: amt,
+                itemsCount: b.order_items?.length || 0
+            }
         })
 
         // Sort Top 5 Items
         const topItems = Array.from(itemMap.values())
-            .sort((a, b) => b.qty - a.qty)
+            .sort((a, b) => b.qty - a.qty || b.total - a.total)
             .slice(0, 5)
 
-        // VAT 7% Breakdown
-        const netBeforeVat = totalRev / 1.07
-        const vatAmount = totalRev - netBeforeVat
+        // Sort Categories by Amount
+        const categorySales = Array.from(categorySalesMap.values())
+            .sort((a, b) => b.amount - a.amount)
+
+        // Averages
+        const grossSettledRevenue = totalSettledSales + totalDiscounts
+        const avgPerBill = completedBookings.length > 0 ? (totalSettledSales / completedBookings.length) : 0
+        const avgPerGuest = totalGuests > 0 ? (totalSettledSales / totalGuests) : 0
+
+        // Total day business volume (Settled + Active in-service)
+        const totalDayVolume = totalSettledSales + activeUnpaidTotal
 
         return {
-            totalRev,
-            completedCount,
-            cancelledCount,
-            seatedCount,
-            pendingCount,
+            settledNetRevenue: totalSettledSales,
+            grossSettledRevenue,
+            totalDiscounts,
+            completedCount: completedBookings.length,
+            activeCount: activeUnpaidBookings.length,
+            cancelledCount: cancelledBookings.length,
             totalBills: bookings.length,
+            activeUnpaidTotal,
+            activeTablesList,
+            totalDayVolume,
             cashTotal,
+            cashCount,
             qrTotal,
+            qrCount,
             creditTotal,
-            dineInCount,
-            pickupCount,
+            creditCount,
+            dineInSettledCount,
+            dineInSettledAmount,
+            pickupSettledCount,
+            pickupSettledAmount,
+            walkinCount,
+            walkinAmount,
+            linemanCount,
+            linemanAmount,
             topItems,
-            netBeforeVat,
-            vatAmount
+            categorySales,
+            totalItemsSold,
+            totalGuests,
+            avgPerBill,
+            avgPerGuest
         }
-    }, [bookings])
+    }, [bookings, categoryMap])
 
-    // Save Slip as High-Res PNG
+    // Save Slip as High-Res PNG (Thermal 80mm Proportion)
     const handleSavePng = async () => {
         if (!slipRef.current || saving) return
         setSaving(true)
@@ -119,11 +260,11 @@ export default function DailySummarySlipModal({
             })
 
             const link = document.createElement('a')
-            link.download = `DAILY_SUMMARY_${selectedDate}.png`
+            link.download = `Z_REPORT_${selectedDate}.png`
             link.href = dataUrl
             link.click()
 
-            toast.success('บันทึกรูปภาพสลิปสรุปยอดวันเรียบร้อยแล้ว (PNG)')
+            toast.success('บันทึกรูปภาพสลิปสรุปยอดปิดวันเรียบร้อยแล้ว (PNG)')
         } catch (err) {
             console.error('Failed to export PNG slip:', err)
             toast.error('ไม่สามารถบันทึกรูปภาพได้: ' + err.message)
@@ -132,7 +273,7 @@ export default function DailySummarySlipModal({
         }
     }
 
-    // Copy Slip Image to Clipboard
+    // Copy Slip Image to Clipboard (Instant LINE Sharing)
     const handleCopyImage = async () => {
         if (!slipRef.current) return
         try {
@@ -147,23 +288,70 @@ export default function DailySummarySlipModal({
                 new ClipboardItem({ 'image/png': blob })
             ])
             setCopied(true)
-            toast.success('คัดลอกรูปสลิปลง Clipboard แล้ว (พร้อมส่งเข้า LINE)')
+            toast.success('คัดลอกรูปสลิปลง Clipboard แล้ว (พร้อมวางส่งเข้า LINE)')
             setTimeout(() => setCopied(false), 2500)
         } catch (err) {
             console.error('Failed to copy image:', err)
-            toast.error('เบราว์เซอร์ไม่รองรับการคัดลอกภาพโดยตรง ให้กดปุ่ม Save PNG')
+            toast.error('เบราว์เซอร์ไม่รองรับการคัดลอกภาพ ให้กดปุ่ม SAVE PNG')
+        }
+    }
+
+    // Direct Thermal Receipt Printing (Sunmi Built-In or Window Print fallback)
+    const handlePrint = async () => {
+        if (printing) return
+        setPrinting(true)
+        try {
+            // Check if onPrintSlip callback provided
+            if (typeof onPrintSlip === 'function') {
+                await onPrintSlip()
+                setPrinting(false)
+                return
+            }
+
+            // Direct compilation to ESC/POS for Sunmi
+            const dayShift = {
+                staffName: 'ADMIN / CASHIER',
+                openedAt: bookings.length > 0 ? bookings[bookings.length - 1].booking_time : new Date().toISOString(),
+                closedAt: new Date().toISOString(),
+                openingFloat: 0,
+                expectedCash: reportData.cashTotal,
+                closedCash: reportData.cashTotal,
+                difference: 0,
+                cashSales: reportData.cashTotal,
+                qrSales: reportData.qrTotal,
+                creditSales: reportData.creditTotal,
+                totalSales: reportData.settledNetRevenue,
+                totalIn: 0,
+                totalOut: 0
+            }
+
+            const compiledReport = compileShiftReportData(dayShift, bookings, categories)
+            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi')
+            const printed = await printToSunmiBuiltIn(rawBytes)
+
+            if (printed) {
+                toast.success('สั่งพิมพ์สลิปสรุปยอดออกเครื่องพิมพ์ Thermal สำเร็จ')
+            } else {
+                // Fallback to browser window print
+                window.print()
+            }
+        } catch (err) {
+            console.error('Print failed:', err)
+            window.print()
+        } finally {
+            setPrinting(false)
         }
     }
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 md:p-6 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
+            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
                 
                 {/* Modal Header */}
-                <div className="p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono">
+                <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono">
                     <div>
                         <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)]">
-                            DAILY SALES Z-REPORT EXPORTER
+                            DAILY SALES Z-REPORT AUDIT
                         </span>
                         <h3 className="text-sm md:text-base font-black text-[oklch(18%_0.012_28)] uppercase tracking-tight">
                             สลิปสรุปยอดปิดวัน // {selectedDate}
@@ -171,96 +359,155 @@ export default function DailySummarySlipModal({
                     </div>
                     <button 
                         onClick={onClose}
-                        className="p-1.5 rounded-sm hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-black transition-colors"
+                        className="p-1.5 rounded-sm hover:bg-[oklch(90%_0.012_28)] text-[oklch(42%_0.010_28)] hover:text-black transition-colors cursor-pointer"
+                        title="ปิดหน้าต่าง"
                     >
                         <X size={18} />
                     </button>
                 </div>
 
-                {/* Slip Preview Area (Styled as 80mm Thermal Receipt) */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[oklch(95%_0.008_28)] flex justify-center">
+                {/* Slip Preview Area (Styled strictly as 80mm Thermal Receipt) */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 bg-[oklch(95%_0.008_28)] flex justify-center">
                     <div 
                         ref={slipRef}
                         className="w-full max-w-[360px] bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] shadow-md font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3.5 select-none"
                     >
-                        {/* Shop Header */}
+                        {/* 1. Shop Header & Metadata */}
                         <div className="text-center space-y-1 pb-3 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">
-                            <h2 className="text-base font-black tracking-widest uppercase">IN THE HAUS</h2>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] font-semibold">DAILY SALES CLOSE SUMMARY</p>
-                            <div className="text-[10px] text-[oklch(55%_0.010_28)] pt-1">
-                                DATE: <strong>{selectedDate}</strong>
-                            </div>
-                            <div className="text-[9px] text-[oklch(55%_0.010_28)]">
-                                PRINTED: {new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
-                            </div>
-                        </div>
-
-                        {/* Grand Revenue Total */}
-                        <div className="bg-[oklch(98%_0.006_28)] p-3 rounded-sm border border-[oklch(88%_0.010_28)] space-y-1">
-                            <div className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase">
-                                TOTAL NET SALES (ยอดขายสุทธิ)
-                            </div>
-                            <div className="text-2xl font-black text-[oklch(18%_0.012_28)] tracking-tight">
-                                ฿{reportData.totalRev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </div>
-                            <div className="text-[10px] text-[oklch(55%_0.010_28)] flex justify-between pt-1 border-t border-[oklch(90%_0.008_28)]">
-                                <span>บิลปิดสำเร็จ: {reportData.completedCount} บิล</span>
-                                <span>ยกเลิก: {reportData.cancelledCount} บิล</span>
+                            <h2 className="text-base font-black tracking-widest uppercase">{shopName}</h2>
+                            <p className="text-[10px] text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider">
+                                DAILY SALES Z-REPORT (สลิปปิดวัน)
+                            </p>
+                            {shopPhone && (
+                                <p className="text-[9px] text-[oklch(55%_0.010_28)]">TEL: {shopPhone}</p>
+                            )}
+                            <div className="text-[10px] text-[oklch(42%_0.010_28)] pt-1 space-y-0.5">
+                                <div>วันที่: <strong>{selectedDate}</strong></div>
+                                <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                    เวลาพิมพ์: {new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+                                </div>
+                                <div className="text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                    ผู้ตรวจสอบ: ADMIN / CASHIER
+                                </div>
                             </div>
                         </div>
 
-                        {/* Payment Methods Breakdown */}
+                        {/* 2. Main Revenue Card (Strictly Settled Sales) */}
+                        <div className="bg-[oklch(98%_0.006_28)] p-3 rounded-sm border border-[oklch(88%_0.010_28)] space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                    TOTAL NET SALES (ยอดขายสุทธิ)
+                                </span>
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] font-bold">
+                                    เช็คบิลแล้ว
+                                </span>
+                            </div>
+                            
+                            <div className="text-2xl sm:text-3xl font-black text-[oklch(18%_0.012_28)] tracking-tight">
+                                ฿{reportData.settledNetRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+
+                            <div className="text-[10px] text-[oklch(55%_0.010_28)] pt-1 border-t border-[oklch(90%_0.008_28)] flex justify-between">
+                                <span>บิลปิดสำเร็จ: <strong>{reportData.completedCount} บิล</strong></span>
+                                <span>ยกเลิก: <strong>{reportData.cancelledCount} บิล</strong></span>
+                            </div>
+
+                            {reportData.totalDiscounts > 0 && (
+                                <div className="text-[10px] text-[oklch(55%_0.010_28)] flex justify-between">
+                                    <span>ยอดรวมก่อนลด: ฿{reportData.grossSettledRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="text-[oklch(52%_0.16_28)] font-bold">ส่วนลด: -฿{reportData.totalDiscounts.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 3. Warning Alert for Active Unpaid Tables (If any tables still open) */}
+                        {reportData.activeCount > 0 && (
+                            <div className="p-2.5 bg-[oklch(97%_0.012_28)] border border-[oklch(82%_0.08_28)] rounded-xs space-y-1 text-[10px]">
+                                <div className="flex items-center justify-between font-bold text-[oklch(52%_0.16_28)]">
+                                    <span className="flex items-center gap-1">
+                                        <AlertCircle size={12} />
+                                        <span>ยังมีโต๊ะค้างชำระ ({reportData.activeCount} โต๊ะ)</span>
+                                    </span>
+                                    <span>฿{reportData.activeUnpaidTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                                <div className="space-y-0.5 text-[9px] text-[oklch(42%_0.010_28)] pt-0.5 border-t border-[oklch(88%_0.012_28)]">
+                                    {reportData.activeTablesList.map((t, idx) => (
+                                        <div key={idx} className="flex justify-between">
+                                            <span>• {t.name} ({t.itemsCount} รายการ)</span>
+                                            <span className="font-bold">฿{t.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-[9px] text-[oklch(55%_0.010_28)] pt-1 italic">
+                                    * ยอดนี้ยังไม่เช็คบิล จึงยังไม่ถูกรวมในยอดขายสุทธิ
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 4. Payment Methods Breakdown (Strictly Realized) */}
                         <div className="space-y-1.5 pt-1">
-                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
-                                PAYMENT BREAKDOWN (แยกตามช่องทาง)
+                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                                <span>PAYMENT BREAKDOWN (ช่องทางชำระ)</span>
+                                <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
                             </div>
                             <div className="space-y-1 text-xs">
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center">
                                     <span className="text-[oklch(42%_0.010_28)]">เงินสด (CASH):</span>
-                                    <span className="font-bold">฿{reportData.cashTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="font-bold">
+                                        {reportData.cashCount > 0 ? `${reportData.cashCount} บิล · ` : ''}฿{reportData.cashTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center">
                                     <span className="text-[oklch(42%_0.010_28)]">PROMPTPAY QR:</span>
-                                    <span className="font-bold text-emerald-900">฿{reportData.qrTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="font-bold text-emerald-900">
+                                        {reportData.qrCount > 0 ? `${reportData.qrCount} บิล · ` : ''}฿{reportData.qrTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
                                 </div>
-                                <div className="flex justify-between">
+                                <div className="flex justify-between items-center">
                                     <span className="text-[oklch(42%_0.010_28)]">บัตรเครดิต (CREDIT):</span>
-                                    <span className="font-bold">฿{reportData.creditTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    <span className="font-bold">
+                                        {reportData.creditCount > 0 ? `${reportData.creditCount} บิล · ` : ''}฿{reportData.creditTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Tax & Invoicing Summary */}
-                        <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
-                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
-                                TAX BREAKDOWN (สรุปภาษี VAT 7%)
+                        {/* 5. Sales by Category (ยอดขายแยกตามหมวดหมู่) */}
+                        {reportData.categorySales.length > 0 && (
+                            <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                                    <span>SALES BY CATEGORY (ยอดขายตามหมวด)</span>
+                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                    {reportData.categorySales.map((cat, idx) => (
+                                        <div key={idx} className="flex justify-between items-center">
+                                            <span className="truncate max-w-[190px] text-[oklch(35%_0.010_28)]">
+                                                {cat.name}
+                                            </span>
+                                            <span className="font-bold shrink-0">
+                                                {cat.qty}x (฿{cat.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })})
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <div className="flex justify-between font-bold pt-1 border-t border-[oklch(90%_0.008_28)] text-[11px]">
+                                        <span>รวมทุกหมวดหมู่ ({reportData.totalItemsSold} ชิ้น):</span>
+                                        <span>฿{reportData.settledNetRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="space-y-1 text-xs">
-                                <div className="flex justify-between">
-                                    <span className="text-[oklch(42%_0.010_28)]">ยอดก่อนภาษี (BEFORE VAT):</span>
-                                    <span>฿{reportData.netBeforeVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-[oklch(42%_0.010_28)]">ภาษีมูลค่าเพิ่ม (VAT 7%):</span>
-                                    <span>฿{reportData.vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                                <div className="flex justify-between font-black pt-1 border-t border-[oklch(90%_0.008_28)]">
-                                    <span>ยอดรวมสุทธิ (GRAND TOTAL):</span>
-                                    <span className="text-sm">฿{reportData.totalRev.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                </div>
-                            </div>
-                        </div>
+                        )}
 
-                        {/* Top Best-Selling Items */}
+                        {/* 6. Top 5 Best-Selling Items */}
                         {reportData.topItems.length > 0 && (
                             <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
                                 <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
-                                    TOP BEST-SELLERS (5 เมนูขายดี)
+                                    TOP 5 BEST-SELLERS (5 เมนูขายดี)
                                 </div>
                                 <div className="space-y-1 text-[11px]">
                                     {reportData.topItems.map((item, idx) => (
                                         <div key={idx} className="flex justify-between items-center">
-                                            <span className="truncate max-w-[200px]">
+                                            <span className="truncate max-w-[210px]">
                                                 {idx + 1}. {item.name}
                                             </span>
                                             <span className="font-bold shrink-0">
@@ -272,34 +519,127 @@ export default function DailySummarySlipModal({
                             </div>
                         )}
 
-                        {/* Service Mix & Footer */}
-                        <div className="pt-3 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-1">
-                            <div className="flex justify-between font-bold">
-                                <span>ทานที่ร้าน (DINE-IN): {reportData.dineInCount}</span>
-                                <span>รับกลับ (PICKUP): {reportData.pickupCount}</span>
+                        {/* 7. Service Mix & Channels Breakdown */}
+                        <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
+                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
+                                SERVICE MIX & CHANNELS (ประเภทและช่องทาง)
                             </div>
-                            <div className="pt-2 text-[9px] uppercase tracking-widest">
-                                END OF DAY REPORT VERIFIED
+                            <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                <div className="space-y-0.5">
+                                    <span className="text-[9px] uppercase text-[oklch(55%_0.010_28)] font-bold">ประเภทบริการ:</span>
+                                    <div className="flex justify-between">
+                                        <span>ทานที่ร้าน:</span>
+                                        <span className="font-bold">{reportData.dineInSettledCount} บิล</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>รับกลับบ้าน:</span>
+                                        <span className="font-bold">{reportData.pickupSettledCount} บิล</span>
+                                    </div>
+                                </div>
+                                <div className="space-y-0.5">
+                                    <span className="text-[9px] uppercase text-[oklch(55%_0.010_28)] font-bold">ช่องทางขาย:</span>
+                                    <div className="flex justify-between">
+                                        <span>หน้าร้าน:</span>
+                                        <span className="font-bold">{reportData.walkinCount} บิล</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>เดลิเวอรี่:</span>
+                                        <span className="font-bold">{reportData.linemanCount} บิล</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 8. Operational Performance & Guest Statistics */}
+                        <div className="space-y-1 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)] text-[11px]">
+                            <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
+                                SALES STATISTICS (สถิติการขาย)
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[oklch(42%_0.010_28)]">จำนวนลูกค้าทั้งหมด (PAX):</span>
+                                <span className="font-bold">{reportData.totalGuests} ท่าน</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[oklch(42%_0.010_28)]">ยอดขายเฉลี่ยต่อบิล:</span>
+                                <span className="font-bold">฿{reportData.avgPerBill.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[oklch(42%_0.010_28)]">ยอดขายเฉลี่ยต่อหัว (PAX):</span>
+                                <span className="font-bold">฿{reportData.avgPerGuest.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            </div>
+                        </div>
+
+                        {/* 9. Tax Status Notice (Strictly NON-VAT per Store Settings) */}
+                        <div className="pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                            {isVatEnabled ? (
+                                <div className="space-y-1 text-xs">
+                                    <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider pb-1">
+                                        TAX SUMMARY (สรุปภาษี VAT 7%)
+                                    </div>
+                                    <div className="flex justify-between text-[11px]">
+                                        <span>ยอดก่อนภาษี:</span>
+                                        <span>฿{(reportData.settledNetRevenue / 1.07).toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[11px]">
+                                        <span>ภาษีมูลค่าเพิ่ม (7%):</span>
+                                        <span>฿{(reportData.settledNetRevenue - (reportData.settledNetRevenue / 1.07)).toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="bg-[oklch(96%_0.008_28)] p-2 rounded-xs text-center space-y-0.5">
+                                    <div className="text-[10px] font-bold text-[oklch(35%_0.010_28)] uppercase tracking-wider">
+                                        NON-VAT REGISTERED (ไม่คิดภาษีมูลค่าเพิ่ม)
+                                    </div>
+                                    <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                        ร้านค้ายังไม่เปิดระบบ VAT 7% · ยอดทั้งหมดเป็นยอดสุทธิ
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 10. Audit Verification & Sign-off Footer */}
+                        <div className="pt-3 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-2">
+                            <div className="pt-1 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.010_28)]">
+                                DAILY Z-REPORT AUDITED & VERIFIED
+                            </div>
+                            <div className="pt-2 border-t border-[oklch(90%_0.008_28)] flex justify-between items-end text-[9px] text-[oklch(50%_0.010_28)]">
+                                <div>
+                                    <span>เวลาปิดรายงาน: {new Date().toLocaleTimeString('th-TH')}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span>ผู้ตรวจสอบ: ______________</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Modal Footer Controls */}
-                <div className="p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                <div className="p-3 sm:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 border border-[oklch(85%_0.012_28)] hover:bg-[oklch(95%_0.010_28)] rounded-sm font-bold text-[oklch(42%_0.010_28)] transition-colors"
+                        className="px-3.5 py-2 border border-[oklch(85%_0.012_28)] hover:bg-[oklch(95%_0.010_28)] rounded-sm font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
                     >
                         ปิดหน้าต่าง
                     </button>
 
                     <div className="flex items-center gap-2">
+                        {/* Thermal Print Button */}
+                        <button
+                            onClick={handlePrint}
+                            disabled={printing}
+                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="พิมพ์ออกเครื่องพิมพ์ความร้อน (Thermal 80mm)"
+                        >
+                            <Printer size={14} />
+                            <span>{printing ? 'กำลังพิมพ์...' : 'พิมพ์สลิป'}</span>
+                        </button>
+
                         {/* Copy Image Button */}
                         <button
                             onClick={handleCopyImage}
-                            className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors"
-                            title="คัดลอกรูปภาพลง Clipboard"
+                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            title="คัดลอกรูปภาพลง Clipboard สำหรับส่งเข้า LINE"
                         >
                             {copied ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
                             <span>{copied ? 'คัดลอกแล้ว' : 'คัดลอกรูป'}</span>
@@ -309,7 +649,7 @@ export default function DailySummarySlipModal({
                         <button
                             onClick={handleSavePng}
                             disabled={saving}
-                            className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm font-black flex items-center gap-1.5 transition-colors shadow-sm"
+                            className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black text-white rounded-sm font-black flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
                         >
                             <Download size={14} />
                             <span>{saving ? 'กำลังบันทึก...' : 'SAVE PNG SLIP'}</span>
