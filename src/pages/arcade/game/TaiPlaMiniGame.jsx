@@ -1628,7 +1628,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors uppercase"
               title="เปลี่ยนแนวเพลง Lo-Fi"
             >
-              [ ♫ {bgmTrack.replace('_', ' ')} ]
+              [ ♫ {currentBgmTrack.replace('_', ' ')} ]
             </button>
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
@@ -1871,7 +1871,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors uppercase"
             title="เปลี่ยนแนวเพลง Lo-Fi"
           >
-            [ ♫ {bgmTrack.replace('_', ' ')} ]
+            [ ♫ {currentBgmTrack.replace('_', ' ')} ]
           </button>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
