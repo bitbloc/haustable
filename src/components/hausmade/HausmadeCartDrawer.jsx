@@ -636,11 +636,21 @@ export default function HausmadeCartDrawer({
                                                     key={item.cartKey}
                                                     className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] flex items-center justify-between gap-3"
                                                 >
-                                                    <div className="flex flex-col">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-[13px] text-[oklch(18%_0.012_28)]">
-                                                                {item.name}
-                                                            </span>
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        {item.image_url && (
+                                                            <div className="w-12 h-12 shrink-0 border border-[oklch(85%_0.012_28)] bg-white overflow-hidden p-0.5 flex items-center justify-center">
+                                                                <img
+                                                                    src={item.image_url}
+                                                                    alt={item.name}
+                                                                    className="w-full h-full object-contain"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                        <div className="flex flex-col min-w-0">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-bold text-[13px] text-[oklch(18%_0.012_28)] truncate">
+                                                                    {item.name}
+                                                                </span>
                                                             {item.isPreOrder && (
                                                                 <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white font-mono text-[9px] font-bold uppercase rounded-2xs">
                                                                     ⏳ PRE-ORDER
@@ -661,8 +671,9 @@ export default function HausmadeCartDrawer({
                                                             ฿{(item.price + (item.optionsPrice || 0)).toLocaleString()}.-
                                                         </span>
                                                     </div>
+                                                </div>
 
-                                                    <div className="flex items-center gap-3">
+                                                <div className="flex items-center gap-3 shrink-0">
                                                         <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
                                                             <button
                                                                 type="button"

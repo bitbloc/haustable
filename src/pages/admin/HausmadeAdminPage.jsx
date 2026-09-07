@@ -8,6 +8,7 @@ import HausmadeCatalogManager from '../../components/hausmade/HausmadeCatalogMan
 import { supabase } from '../../lib/supabaseClient'
 import { toast } from 'sonner'
 import { exportFlashExpressCSV, exportKexCSV, exportThailandPostCSV } from '../../utils/courierExportHelper'
+import { exportToSTL, exportToSTEP } from '../../utils/keychain3dExporter'
 
 export default function HausmadeAdminPage() {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -50,8 +51,29 @@ export default function HausmadeAdminPage() {
         senderName: settings.senderName,
         senderPhone: settings.senderPhone,
         senderAddress: settings.senderAddress,
-        senderTaxId: settings.senderTaxId
+        senderTaxId: settings.senderTaxId,
+        keychainPricing: settings.keychainPricing || {
+            basePrice: 180,
+            baseCharLimit: 4,
+            extraCharPrice: 15,
+            maxChars: 10,
+            maxElements: 2,
+            elementPrice: 20,
+            dualTonePrice: 30,
+            reverseEngravePrice: 35,
+            heavyDutyPrice: 20
+        },
+        keychainCharms: settings.keychainCharms || [
+            { id: 'flower', name: 'HAUS Flower (ดอกไม้เอกลักษณ์)', symbol: '✿', is_default: true, price: 20, stl_url: null }
+        ]
     })
+
+    // Brand Charm STL Upload Form State
+    const [newCharmName, setNewCharmName] = useState('')
+    const [newCharmSymbol, setNewCharmSymbol] = useState('✿')
+    const [newCharmPrice, setNewCharmPrice] = useState(20)
+    const [newCharmFile, setNewCharmFile] = useState(null)
+    const [isUploadingCharm, setIsUploadingCharm] = useState(false)
 
     const [settingsSaveMsg, setSettingsSaveMsg] = useState('')
 
@@ -65,9 +87,81 @@ export default function HausmadeAdminPage() {
             senderName: settings.senderName,
             senderPhone: settings.senderPhone,
             senderAddress: settings.senderAddress,
-            senderTaxId: settings.senderTaxId
+            senderTaxId: settings.senderTaxId,
+            keychainPricing: settings.keychainPricing || {
+                basePrice: 180,
+                baseCharLimit: 4,
+                extraCharPrice: 15,
+                maxChars: 10,
+                maxElements: 2,
+                elementPrice: 20,
+                dualTonePrice: 30,
+                reverseEngravePrice: 35,
+                heavyDutyPrice: 20
+            },
+            keychainCharms: settings.keychainCharms || [
+                { id: 'flower', name: 'HAUS Flower (ดอกไม้เอกลักษณ์)', symbol: '✿', is_default: true, price: 20, stl_url: null }
+            ]
         })
     }, [settings])
+
+    // Handler to Add a Brand Charm STL
+    const handleAddBrandCharm = async (e) => {
+        e.preventDefault()
+        if (!newCharmName.trim()) {
+            toast.error('กรุณาระบุชื่อชาร์ม')
+            return
+        }
+
+        try {
+            setIsUploadingCharm(true)
+            let stlUrl = null
+            if (newCharmFile) {
+                const path = `charms/${Date.now()}_${newCharmFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+                const { data, error } = await supabase.storage.from('public-assets').upload(path, newCharmFile, { upsert: true })
+                if (!error && data) {
+                    const { data: publicUrlData } = supabase.storage.from('public-assets').getPublicUrl(path)
+                    stlUrl = publicUrlData.publicUrl
+                }
+            }
+
+            const newCharm = {
+                id: `charm-${Date.now()}`,
+                name: newCharmName.trim(),
+                symbol: newCharmSymbol.trim() || '✿',
+                price: Number(newCharmPrice) || 0,
+                stl_url: stlUrl,
+                created_at: new Date().toISOString()
+            }
+
+            const updatedCharms = [...(formSettings.keychainCharms || []), newCharm]
+            setFormSettings(prev => ({
+                ...prev,
+                keychainCharms: updatedCharms
+            }))
+
+            setNewCharmName('')
+            setNewCharmFile(null)
+            toast.success(`เพิ่มชาร์มแบรนด์ "${newCharm.name}" สำเร็จ (อย่าลืมกดบันทึกการตั้งค่าด้านล่าง)`)
+        } catch (err) {
+            console.error('Error adding charm:', err)
+            toast.error('ไม่สามารถอัปโหลดชาร์มได้: ' + err.message)
+        } finally {
+            setIsUploadingCharm(false)
+        }
+    }
+
+    const handleRemoveBrandCharm = (charmId) => {
+        if (charmId === 'flower') {
+            toast.error('ไม่สามารถลบชาร์มดอกไม้หลักของแบรนด์ได้')
+            return
+        }
+        setFormSettings(prev => ({
+            ...prev,
+            keychainCharms: (prev.keychainCharms || []).filter(c => c.id !== charmId)
+        }))
+        toast.info('ลบชาร์มเรียบร้อยแล้ว (อย่าลืมกดบันทึกการตั้งค่าด้านล่าง)')
+    }
 
     // Order Tracking Form State (per order ID)
     const [trackingInputs, setTrackingInputs] = useState({})
@@ -199,6 +293,34 @@ export default function HausmadeAdminPage() {
             setTimeout(() => setSettingsSaveMsg(''), 3000)
         } else {
             setSettingsSaveMsg('เกิดข้อผิดพลาด: ' + res.error)
+        }
+    }
+
+    // 3D Keychain Exporter for Staff & Print Operators
+    const handleAdminExport3D = (item, format) => {
+        try {
+            const textMatch = (item.name || '').match(/["'“](.*?)["'”]/) || (item.selected_options || '').match(/ชื่อ:\s*["'“]?(.*?)["'”]?\s*\|/)
+            const customText = textMatch ? textMatch[1] : 'CUSTOM'
+            const is5mm = (item.selected_options || '').includes('5mm')
+            const holeDiameter = is5mm ? 5.0 : 4.0
+
+            const specs = {
+                text: customText,
+                holeDiameter,
+                baseStyle: (item.selected_options || '').includes('CAPSULE') ? 'capsule' : ((item.selected_options || '').includes('CONNECTED') ? 'connected' : 'rail'),
+                eyeletPosition: 'left'
+            }
+
+            if (format === 'stl') {
+                const filename = exportToSTL(specs)
+                toast.success(`ดาวน์โหลดไฟล์ STL "${filename}" สำหรับพิมพ์ 3D เรียบร้อย`)
+            } else {
+                const filename = exportToSTEP(specs)
+                toast.success(`ดาวน์โหลดไฟล์ CAD STEP "${filename}" เรียบร้อย`)
+            }
+        } catch (e) {
+            console.error('3D export error:', e)
+            toast.error('ไม่สามารถส่งออกไฟล์ 3D ได้: ' + e.message)
         }
     }
 
@@ -583,17 +705,54 @@ export default function HausmadeAdminPage() {
                                                 [ ORDER ITEMS CHECKLIST ]
                                             </span>
                                             <div className="flex flex-col gap-1">
-                                                {order.order_items?.map((item, idx) => (
-                                                    <div key={idx} className="flex justify-between border-b border-[oklch(85%_0.012_28)] last:border-b-0 py-1">
-                                                        <span>
-                                                             <span className="font-bold text-[oklch(18%_0.012_28)]">{item.menu_items?.name || 'HAUSMADE ITEM'}</span>
-                                                            {item.selected_options && (
-                                                                <span className="text-[10px] text-[oklch(55%_0.010_28)] ml-2">({item.selected_options})</span>
-                                                            )}
-                                                        </span>
-                                                        <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums">x{item.quantity}</span>
-                                                    </div>
-                                                ))}
+                                                {order.order_items?.map((item, idx) => {
+                                                    const itemName = item.name || item.menu_items?.name || 'HAUSMADE ITEM'
+                                                    const is3dKeychain = itemName.includes('3D') || 
+                                                                         itemName.includes('พวงกุญแจ') || 
+                                                                         (item.selected_options || '').includes('รูเชือก') ||
+                                                                         (item.selected_options || '').includes('CORD')
+
+                                                    return (
+                                                        <div key={idx} className="flex flex-col sm:flex-row justify-between sm:items-center border-b border-[oklch(85%_0.012_28)] last:border-b-0 py-1.5 gap-2">
+                                                            <div className="flex flex-col">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-[oklch(18%_0.012_28)]">{itemName}</span>
+                                                                    {is3dKeychain && (
+                                                                        <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-white font-mono text-[9px] font-bold uppercase rounded-2xs">
+                                                                            🖨️ 3D PRINT
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {item.selected_options && (
+                                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">({item.selected_options})</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 self-end sm:self-center">
+                                                                {is3dKeychain && (
+                                                                    <div className="flex items-center gap-1 font-mono">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleAdminExport3D(item, 'stl')}
+                                                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white text-[10px] font-bold uppercase hover:bg-[oklch(52%_0.16_28)] cursor-pointer rounded-2xs"
+                                                                            title="ดาวน์โหลดไฟล์ 3D STL สำหรับเปิดใน Bambu Studio หรือ PrusaSlicer"
+                                                                        >
+                                                                            [ STL ]
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleAdminExport3D(item, 'step')}
+                                                                            className="px-2 py-0.5 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[10px] font-bold uppercase hover:bg-[oklch(94%_0.010_28)] cursor-pointer rounded-2xs"
+                                                                            title="ดาวน์โหลดไฟล์ CAD STEP สำหรับเปิดในโปรแกรม CAD"
+                                                                        >
+                                                                            [ STEP ]
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums ml-2">x{item.quantity}</span>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
                                             </div>
                                         </div>
 
@@ -841,6 +1000,293 @@ export default function HausmadeAdminPage() {
                                     onChange={(e) => setFormSettings({ ...formSettings, freeShippingMinAmount: Number(e.target.value) })}
                                     className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 3: 3D Keychain Dynamic Pricing & Boundaries */}
+                    <div className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                                [ 3. 3D KEYCHAIN PRICING & BOUNDARIES // โครงสร้างราคาและขอบเขตการผลิต ]
+                            </span>
+                            <span className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                คำนวณอัตโนมัติที่หน้า Canvas ตามสูตรที่กำหนด
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ราคาตั้งต้น (Base Price - THB)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formSettings.keychainPricing?.basePrice ?? 180}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, basePrice: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    จำนวนตัวอักษรฟรีในราคาตั้งต้น (Included Characters)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="20"
+                                    value={formSettings.keychainPricing?.baseCharLimit ?? 4}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, baseCharLimit: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ราคาตัวอักษรส่วนเกิน (Extra Char Price - THB/ตัว)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formSettings.keychainPricing?.extraCharPrice ?? 15}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, extraCharPrice: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ขีดจำกัดตัวอักษรสูงสุด (Max Physical Characters Limit)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="3"
+                                    max="20"
+                                    value={formSettings.keychainPricing?.maxChars ?? 10}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, maxChars: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ขีดจำกัดชาร์ม/องค์ประกอบ (Max Elements Limit)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="5"
+                                    value={formSettings.keychainPricing?.maxElements ?? 2}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, maxElements: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ค่าบริการพิมพ์สองสี (Dual-Tone Palette - THB)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formSettings.keychainPricing?.dualTonePrice ?? 30}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, dualTonePrice: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ค่าสลักข้อความด้านหลัง (Reverse Engraving - THB)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formSettings.keychainPricing?.reverseEngravePrice ?? 35}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, reverseEngravePrice: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                    ค่าความหนาพิเศษ 5.0mm (Heavy-Duty Thickness - THB)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formSettings.keychainPricing?.heavyDutyPrice ?? 20}
+                                    onChange={(e) => setFormSettings({
+                                        ...formSettings,
+                                        keychainPricing: { ...formSettings.keychainPricing, heavyDutyPrice: Number(e.target.value) }
+                                    })}
+                                    className="w-full px-3 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] text-xs font-bold focus:outline-none rounded-xs tabular-nums"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 4: Brand STL Charm Library Manager */}
+                    <div className="flex flex-col gap-4 border-t border-[oklch(85%_0.012_28)] pt-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                                [ 4. BRAND STL CHARMS & 3D LIBRARY // คลังชาร์มและไฟล์ 3D โมเดลแบรนด์ ]
+                            </span>
+                            <span className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                ลูกค้าเลือกได้สูงสุด {formSettings.keychainPricing?.maxElements || 2} ชิ้น
+                            </span>
+                        </div>
+
+                        {/* List of active charms */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(99%_0.005_28)] rounded-xs overflow-hidden">
+                            <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[10px] uppercase text-[oklch(42%_0.010_28)]">
+                                        <th className="p-2.5 w-12 text-center">สัญลักษณ์</th>
+                                        <th className="p-2.5">ชื่อชาร์ม / โมเดล 3D</th>
+                                        <th className="p-2.5 w-24">ราคาบวกเพิ่ม</th>
+                                        <th className="p-2.5 w-32">ไฟล์ STL / 3D MESH</th>
+                                        <th className="p-2.5 w-20 text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(formSettings.keychainCharms || []).map((charm) => (
+                                        <tr key={charm.id} className="border-b border-[oklch(85%_0.012_28)] last:border-b-0 hover:bg-[oklch(96%_0.008_28)]">
+                                            <td className="p-2.5 text-center text-base font-serif">{charm.symbol || '✿'}</td>
+                                            <td className="p-2.5 font-bold">
+                                                {charm.name}
+                                                {charm.is_default && (
+                                                    <span className="ml-2 text-[9px] px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white uppercase rounded-xs">
+                                                        [ BRAND SIGNATURE ]
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="p-2.5 tabular-nums font-bold">+{charm.price} ฿</td>
+                                            <td className="p-2.5 text-[10px]">
+                                                {charm.stl_url ? (
+                                                    <a
+                                                        href={charm.stl_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[oklch(52%_0.16_28)] underline hover:text-[oklch(18%_0.012_28)] truncate block max-w-[120px]"
+                                                        title={charm.stl_url}
+                                                    >
+                                                        [ ดาวน์โหลด .STL ]
+                                                    </a>
+                                                ) : (
+                                                    <span className="text-[oklch(55%_0.010_28)]">โมเดลในระบบ (Procedural)</span>
+                                                )}
+                                            </td>
+                                            <td className="p-2.5 text-center">
+                                                {!charm.is_default ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRemoveBrandCharm(charm.id)}
+                                                        className="text-[10px] text-red-600 hover:text-red-800 underline uppercase cursor-pointer"
+                                                    >
+                                                        ลบ
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">หลัก</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Add New Charm Upload Box */}
+                        <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-3 rounded-xs">
+                            <span className="text-[10px] font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                + อัปโหลดชาร์ม / ไฟล์โมเดล 3D (.STL) ใหม่เข้าระบบแบรนด์
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                <div className="sm:col-span-1">
+                                    <label className="text-[9px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        ชื่อชาร์ม *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="เช่น HAUS Monogram"
+                                        value={newCharmName}
+                                        onChange={(e) => setNewCharmName(e.target.value)}
+                                        className="w-full px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none rounded-xs"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[9px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        สัญลักษณ์ย่อ / Emoji
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="✿"
+                                        value={newCharmSymbol}
+                                        onChange={(e) => setNewCharmSymbol(e.target.value)}
+                                        className="w-full px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none rounded-xs text-center"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[9px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        ราคาบวกเพิ่ม (THB)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={newCharmPrice}
+                                        onChange={(e) => setNewCharmPrice(Number(e.target.value))}
+                                        className="w-full px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] text-xs focus:outline-none rounded-xs tabular-nums"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[9px] text-[oklch(42%_0.010_28)] uppercase block mb-1">
+                                        ไฟล์โมเดล 3D (.STL)
+                                    </label>
+                                    <input
+                                        type="file"
+                                        accept=".stl"
+                                        onChange={(e) => setNewCharmFile(e.target.files[0] || null)}
+                                        className="w-full text-[10px] text-[oklch(42%_0.010_28)] file:mr-2 file:py-1 file:px-2 file:border-0 file:text-[10px] file:bg-[oklch(18%_0.012_28)] file:text-white file:rounded-xs cursor-pointer"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <button
+                                    type="button"
+                                    disabled={isUploadingCharm}
+                                    onClick={handleAddBrandCharm}
+                                    className="py-1.5 px-4 bg-[oklch(52%_0.16_28)] text-white text-[11px] font-bold uppercase hover:bg-[oklch(18%_0.012_28)] transition-colors cursor-pointer rounded-xs disabled:opacity-50"
+                                >
+                                    {isUploadingCharm ? '[ กำลังอัปโหลด... ]' : '[ + เพิ่มชาร์มลงแคตตาล็อก ]'}
+                                </button>
                             </div>
                         </div>
                     </div>

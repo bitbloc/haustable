@@ -52,6 +52,7 @@ const ArcadeLobby = lazy(() => import('./pages/arcade/ArcadeLobby'))
 const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
 const HausmadeShopPage = lazy(() => import('./pages/HausmadeShopPage'))
 const HausmadeAdminPage = lazy(() => import('./pages/admin/HausmadeAdminPage'))
+const HausmadeKeychainPage = lazy(() => import('./pages/HausmadeKeychainPage'))
 
 const FallbackLoader = () => (
   <div className="min-h-screen bg-[#ECECE9] flex flex-col items-center justify-center text-[#181815] font-mono text-xs uppercase tracking-widest gap-3 select-none">
@@ -189,6 +190,9 @@ function App() {
                   <Route path="/booking" element={<BookingPage />} />
                   <Route path="/pickup" element={<PickupPage />} />
                   <Route path="/hausmade" element={<HausmadeShopPage />} />
+                  <Route path="/hausmade/studio" element={<HausmadeKeychainPage />} />
+                  <Route path="/hausmade/keychain" element={<HausmadeKeychainPage />} />
+                  <Route path="/custom-keychain" element={<HausmadeKeychainPage />} />
                   <Route path="/shop" element={<HausmadeShopPage />} />
                   <Route path="/member" element={<Navigate to="/member-card" replace />} />
                   <Route path="/tracking/:token" element={<TrackingPage />} />

@@ -6,6 +6,7 @@ import { useHausmadeShop, isPreOrderItem, getPreOrderEta, getProductImages } fro
 import { useServiceGuard } from '../hooks/useServiceGuard'
 import HausmadeProductModal from '../components/hausmade/HausmadeProductModal'
 import HausmadeCartDrawer from '../components/hausmade/HausmadeCartDrawer'
+import HausmadeKeychainPlayground from '../components/hausmade/HausmadeKeychainPlayground'
 import AuthModal from '../components/AuthModal'
 
 /**
@@ -58,6 +59,7 @@ export default function HausmadeShopPage() {
     const navigate = useNavigate()
     const [selectedProduct, setSelectedProduct] = useState(null)
     const [isCartOpen, setIsCartOpen] = useState(false)
+    const [isPlaygroundOpen, setIsPlaygroundOpen] = useState(false)
     const [showAuthModal, setShowAuthModal] = useState(false)
     const [heroSlideIdx, setHeroSlideIdx] = useState(0)
 
@@ -928,6 +930,36 @@ export default function HausmadeShopPage() {
                     setIsCartOpen(true)
                 }}
             />
+
+            {/* 3D Keychain Playground Atelier Modal */}
+            <AnimatePresence>
+                {isPlaygroundOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsPlaygroundOpen(false)}
+                            className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.96, opacity: 0, y: 16 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.96, opacity: 0, y: 16 }}
+                            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-2xl z-10"
+                        >
+                            <HausmadeKeychainPlayground
+                                onClose={() => setIsPlaygroundOpen(false)}
+                                onAddToCart={(item, specs, qty, optPrice, optText) => {
+                                    addToCart(item, specs, qty, optPrice, optText)
+                                    setIsPlaygroundOpen(false)
+                                    setIsCartOpen(true)
+                                }}
+                            />
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Cart Drawer */}
             <HausmadeCartDrawer

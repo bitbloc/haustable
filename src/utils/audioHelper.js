@@ -14,10 +14,13 @@
  */
 
 import noti1SoundUrl from '../assets/noti1.mp3';
+import notibillSoundUrl from '../assets/notibill.mp3';
 
 let sharedAudioContext = null;
 let noti1AudioBuffer = null;
+let notibillAudioBuffer = null;
 let isPreloadingNoti1 = false;
+let isPreloadingNotibill = false;
 let lastAlertPlayedTime = 0;
 let isAudioEngineUnlocked = false;
 const eventDeduplicationMap = new Map(); // key -> timestamp
@@ -204,56 +207,71 @@ export function getSharedAudioContext(shouldResume = false) {
 }
 
 /**
- * Preload and decode noti1.mp3 into memory for instant, non-blocking playback on Android APK
+ * Helper to fetch and decode audio buffer with multi-URL fallback
+ */
+async function loadAndDecodeBuffer(urlsToTry, soundLabel) {
+    const ctx = getSharedAudioContext();
+    if (!ctx) return null;
+
+    let arrayBuffer = null;
+    for (const soundUrl of urlsToTry) {
+        try {
+            const response = await fetch(soundUrl, { cache: 'force-cache' });
+            if (response.ok) {
+                const ab = await response.arrayBuffer();
+                if (ab && ab.byteLength > 0) {
+                    arrayBuffer = ab;
+                    break;
+                }
+            }
+        } catch (e) {
+            // Try next url
+        }
+    }
+
+    if (!arrayBuffer) return null;
+
+    return new Promise((resolve) => {
+        try {
+            ctx.decodeAudioData(
+                arrayBuffer,
+                (decoded) => {
+                    console.log(`🔊 [AudioEngine] ${soundLabel} preloaded & decoded into memory successfully.`);
+                    resolve(decoded);
+                },
+                (err) => {
+                    console.warn(`[AudioEngine] decodeAudioData error for ${soundLabel}:`, err);
+                    resolve(null);
+                }
+            );
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+/**
+ * Preload and decode noti1.mp3 and notibill.mp3 into memory for instant, non-blocking playback on Android APK
  */
 export async function preloadNotificationAudio() {
-    if (typeof window === 'undefined' || noti1AudioBuffer || isPreloadingNoti1) return;
-    isPreloadingNoti1 = true;
+    if (typeof window === 'undefined') return;
 
-    try {
-        const ctx = getSharedAudioContext();
-        if (!ctx) {
+    if (!noti1AudioBuffer && !isPreloadingNoti1) {
+        isPreloadingNoti1 = true;
+        const urls = [noti1SoundUrl, '/noti1.mp3', './noti1.mp3'].filter(Boolean);
+        loadAndDecodeBuffer(urls, 'noti1.mp3').then((buf) => {
+            if (buf) noti1AudioBuffer = buf;
             isPreloadingNoti1 = false;
-            return;
-        }
+        });
+    }
 
-        const urlsToTry = [noti1SoundUrl, '/noti1.mp3', './noti1.mp3'].filter(Boolean);
-        let arrayBuffer = null;
-
-        for (const soundUrl of urlsToTry) {
-            try {
-                const response = await fetch(soundUrl, { cache: 'force-cache' });
-                if (response.ok) {
-                    const ab = await response.arrayBuffer();
-                    if (ab && ab.byteLength > 0) {
-                        arrayBuffer = ab;
-                        break;
-                    }
-                }
-            } catch (e) {
-                // Try next url
-            }
-        }
-
-        if (!arrayBuffer) {
-            throw new Error('Could not fetch noti1.mp3 from any URL');
-        }
-
-        ctx.decodeAudioData(
-            arrayBuffer,
-            (decoded) => {
-                noti1AudioBuffer = decoded;
-                isPreloadingNoti1 = false;
-                console.log('🔊 [AudioEngine] noti1.mp3 preloaded & decoded into memory successfully.');
-            },
-            (err) => {
-                console.warn('[AudioEngine] decodeAudioData error for noti1.mp3:', err);
-                isPreloadingNoti1 = false;
-            }
-        );
-    } catch (err) {
-        console.warn('[AudioEngine] Preload noti1.mp3 fetch failed:', err);
-        isPreloadingNoti1 = false;
+    if (!notibillAudioBuffer && !isPreloadingNotibill) {
+        isPreloadingNotibill = true;
+        const urls = [notibillSoundUrl, '/notibill.mp3', './notibill.mp3'].filter(Boolean);
+        loadAndDecodeBuffer(urls, 'notibill.mp3').then((buf) => {
+            if (buf) notibillAudioBuffer = buf;
+            isPreloadingNotibill = false;
+        });
     }
 }
 
@@ -289,8 +307,8 @@ export function unlockAudioEngine() {
         source.connect(ctx.destination);
         source.start(0);
 
-        // Preload noti1.mp3 if not already in memory
-        if (!noti1AudioBuffer) {
+        // Preload noti1.mp3 & notibill.mp3 if not already in memory
+        if (!noti1AudioBuffer || !notibillAudioBuffer) {
             preloadNotificationAudio();
         }
     } catch (e) {
@@ -412,18 +430,29 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
     }
 }
 
-let primedHtml5Audio = null;
+let primedHtml5AudioNoti1 = null;
+let primedHtml5AudioNotibill = null;
 
-function getPrimedHtml5Audio() {
+function getPrimedHtml5Audio(soundType = 'noti1') {
     if (typeof window === 'undefined') return null;
     try {
-        if (!primedHtml5Audio) {
-            const soundSrc = noti1SoundUrl || '/noti1.mp3';
-            primedHtml5Audio = new Audio(soundSrc);
-            primedHtml5Audio.preload = 'auto';
-            primedHtml5Audio.load();
+        if (soundType === 'notibill') {
+            if (!primedHtml5AudioNotibill) {
+                const soundSrc = notibillSoundUrl || '/notibill.mp3';
+                primedHtml5AudioNotibill = new Audio(soundSrc);
+                primedHtml5AudioNotibill.preload = 'auto';
+                primedHtml5AudioNotibill.load();
+            }
+            return primedHtml5AudioNotibill;
+        } else {
+            if (!primedHtml5AudioNoti1) {
+                const soundSrc = noti1SoundUrl || '/noti1.mp3';
+                primedHtml5AudioNoti1 = new Audio(soundSrc);
+                primedHtml5AudioNoti1.preload = 'auto';
+                primedHtml5AudioNoti1.load();
+            }
+            return primedHtml5AudioNoti1;
         }
-        return primedHtml5Audio;
     } catch (e) {
         return null;
     }
@@ -437,15 +466,15 @@ export function checkEventDeduplication(eventKey, cooldownMs = 4500) {
     if (!eventKey) return true;
     const now = Date.now();
 
-    // Clean old entries (older than 30s)
+    // Clean old entries (older than 30s or invalid future clock jumps)
     for (const [key, time] of eventDeduplicationMap.entries()) {
-        if (now - time > 30000) {
+        if (now < time || now - time > 30000) {
             eventDeduplicationMap.delete(key);
         }
     }
 
     const lastTime = eventDeduplicationMap.get(eventKey);
-    if (lastTime && (now - lastTime < cooldownMs)) {
+    if (lastTime && now >= lastTime && (now - lastTime < cooldownMs)) {
         return false; // Already handled within cooldown window
     }
 
@@ -680,6 +709,9 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
     const now = Date.now();
 
     // 1. Global Burst Throttle: If multiple orders arrive simultaneously, ring ONCE cleanly without stutter
+    if (now < lastAlertPlayedTime) {
+        lastAlertPlayedTime = 0; // Handle clock jumps backwards or timer resets
+    }
     if (now - lastAlertPlayedTime < throttleMs) {
         return false;
     }
@@ -726,11 +758,14 @@ let lastTestAlertPlayedTime = 0;
 
 /**
  * Test play alert sound for immediate auditory feedback during volume adjustment
- * Unlocks engine and plays noti1.mp3 at preview volume (or current effective volume).
+ * Unlocks engine and plays sound at preview volume (or current effective volume).
  * Throttled to prevent overlapping audio glitches on rapid double clicks.
  */
-export function testPlayAlertSound(previewVol = null, throttleMs = 1200) {
+export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundType = 'noti1') {
     const now = Date.now();
+    if (now < lastTestAlertPlayedTime) {
+        lastTestAlertPlayedTime = 0; // Handle clock jumps backwards or timer resets
+    }
     if (now - lastTestAlertPlayedTime < throttleMs) {
         return false; // Prevent rapid repeated clicks / double tap
     }
@@ -750,9 +785,13 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200) {
         return true;
     }
 
+    const targetBuffer = soundType === 'notibill' 
+        ? (notibillAudioBuffer || noti1AudioBuffer) 
+        : (noti1AudioBuffer || notibillAudioBuffer);
+
     // Play buffer directly with custom gain and active node tracking
-    if (noti1AudioBuffer) {
-        const played = playAudioBufferDirectly(noti1AudioBuffer, 3.2);
+    if (targetBuffer) {
+        const played = playAudioBufferDirectly(targetBuffer, 3.2);
         if (played) return true;
     }
 
@@ -778,9 +817,11 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200) {
                 activeHtml5Audio.pause();
                 activeHtml5Audio.currentTime = 0;
             } catch (e) {}
-            activeHtml5Audio = null;
+                activeHtml5Audio = null;
         }
-        const soundSrc = noti1SoundUrl || '/noti1.mp3';
+        const soundSrc = soundType === 'notibill' 
+            ? (notibillSoundUrl || '/notibill.mp3') 
+            : (noti1SoundUrl || '/noti1.mp3');
         const audio = new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, factor));
         activeHtml5Audio = audio;
@@ -795,17 +836,80 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200) {
 }
 
 /**
- * Staff Call Alert (Call Staff / Service Request)
+ * Dedicated Sound Alert for Staff Call & Bill Call (plays notibill.mp3)
+ * Plays /notibill.mp3 through the High-Gain Web Audio Mastering Chain with multi-level fallbacks.
+ * 
+ * @param {string|null} eventKey - Deduplication identifier (optional)
+ * @param {number} throttleMs - Minimum interval between alerts (default: 1000ms)
+ * @param {number} boostLevel - Output gain multiplier (default: 3.4x / +14dB)
+ * @returns {boolean} - Whether audio playback was triggered
  */
-export function playStaffCallAlert(eventKey = null) {
-    return playOrderAlert(eventKey ? `call_staff_${eventKey}` : null, 1000, 3.4);
+export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLevel = 3.4) {
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) {
+        return false; // Sound muted or volume 0
+    }
+
+    const now = Date.now();
+
+    // 1. Global Burst Throttle: If multiple alerts arrive simultaneously, ring ONCE cleanly without stutter
+    if (now < lastAlertPlayedTime) {
+        lastAlertPlayedTime = 0; // Handle clock jumps backwards or timer resets
+    }
+    if (now - lastAlertPlayedTime < throttleMs) {
+        return false;
+    }
+    lastAlertPlayedTime = now;
+
+    // Record deduplication timestamp for event key if supplied
+    if (eventKey) {
+        eventDeduplicationMap.set(eventKey, now);
+    }
+
+    // 2. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
+    if (notibillAudioBuffer) {
+        const played = playAudioBufferDirectly(notibillAudioBuffer, boostLevel);
+        if (played) return true;
+    }
+
+    // If buffer is still loading, trigger preload
+    if (!notibillAudioBuffer && !isPreloadingNotibill) {
+        preloadNotificationAudio();
+    }
+
+    // 3. Secondary Playback: HTML5 Audio with bundled notibill.mp3
+    try {
+        const primed = getPrimedHtml5Audio('notibill');
+        const soundSrc = notibillSoundUrl || '/notibill.mp3';
+        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
+        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
+        const promise = audio.play();
+        if (promise !== undefined) {
+            promise.catch((e) => {
+                console.warn('[AudioEngine] HTML5 Audio (notibill.mp3) play prevented, falling back to synth chime:', e);
+                playSynthChime();
+            });
+        }
+        return true;
+    } catch (e) {
+        console.warn('[AudioEngine] HTML5 Audio (notibill.mp3) error, falling back to synth chime:', e);
+        playSynthChime();
+        return true;
+    }
 }
 
 /**
- * Bill Call Alert (Call Bill / Check Out)
+ * Staff Call Alert (Call Staff / Service Request) - Uses notibill.mp3
+ */
+export function playStaffCallAlert(eventKey = null) {
+    return playBillSoundAlert(eventKey ? `call_staff_${eventKey}` : null, 1000, 3.4);
+}
+
+/**
+ * Bill Call Alert (Call Bill / Check Out) - Uses notibill.mp3
  */
 export function playBillAlert(eventKey = null) {
-    return playOrderAlert(eventKey ? `call_bill_${eventKey}` : null, 1000, 3.4);
+    return playBillSoundAlert(eventKey ? `call_bill_${eventKey}` : null, 1000, 3.4);
 }
 
 /**

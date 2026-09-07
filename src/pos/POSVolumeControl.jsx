@@ -84,11 +84,11 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
         toggleAudioMute();
     }, []);
 
-    const handleTestSound = useCallback(() => {
+    const handleTestSound = useCallback((type = 'noti1') => {
         if (isTesting) return;
         unlockAudioEngine();
-        setIsTesting(true);
-        testPlayAlertSound(null, 1200);
+        setIsTesting(type);
+        testPlayAlertSound(null, 1200, type);
         setTimeout(() => setIsTesting(false), 1200);
     }, [isTesting]);
 
@@ -222,20 +222,36 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
                         })}
                     </div>
 
-                    {/* Test Sound Button */}
-                    <button
-                        type="button"
-                        onClick={handleTestSound}
-                        disabled={isTesting}
-                        className={`w-full min-h-[40px] flex items-center justify-center gap-2 rounded-md font-mono text-xs font-bold uppercase transition-all shadow-xs ${
-                            isTesting
-                                ? 'bg-[var(--color-accent)] text-white opacity-90 cursor-not-allowed'
-                                : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
-                        }`}
-                    >
-                        <Play size={13} className={isTesting ? 'animate-spin' : 'text-[var(--color-accent)]'} />
-                        <span>{isTesting ? 'กำลังทดสอบเสียง...' : 'ทดสอบเสียงแจ้งเตือน (TEST)'}</span>
-                    </button>
+                    {/* Test Sound Buttons */}
+                    <div className="flex flex-col gap-1.5">
+                        <button
+                            type="button"
+                            onClick={() => handleTestSound('noti1')}
+                            disabled={Boolean(isTesting)}
+                            className={`w-full min-h-[36px] flex items-center justify-center gap-2 rounded-md font-mono text-xs font-bold uppercase transition-all shadow-xs ${
+                                isTesting === 'noti1'
+                                    ? 'bg-[var(--color-accent)] text-white opacity-90 cursor-not-allowed'
+                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
+                            }`}
+                        >
+                            <Play size={12} className={isTesting === 'noti1' ? 'animate-spin' : 'text-[var(--color-accent)]'} />
+                            <span>{isTesting === 'noti1' ? 'กำลังเล่น...' : 'ทดสอบเสียงออเดอร์ (noti1)'}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => handleTestSound('notibill')}
+                            disabled={Boolean(isTesting)}
+                            className={`w-full min-h-[36px] flex items-center justify-center gap-2 rounded-md font-mono text-xs font-bold uppercase transition-all shadow-xs ${
+                                isTesting === 'notibill'
+                                    ? 'bg-[var(--color-accent-2)] text-white opacity-90 cursor-not-allowed'
+                                    : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] cursor-pointer touch-manipulation active:scale-95'
+                            }`}
+                        >
+                            <Play size={12} className={isTesting === 'notibill' ? 'animate-spin' : 'text-[var(--color-accent-2)]'} />
+                            <span>{isTesting === 'notibill' ? 'กำลังเล่น...' : 'ทดสอบเสียงเรียกบิล/พนักงาน (notibill)'}</span>
+                        </button>
+                    </div>
                 </div>
             )}
         </div>

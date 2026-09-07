@@ -7,7 +7,9 @@ import {
     setAudioMuted, 
     getEffectiveGainFactor,
     testPlayAlertSound,
-    playOrderAlert
+    playOrderAlert,
+    playBillAlert,
+    playStaffCallAlert
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -109,6 +111,59 @@ describe('Audio Engine & Notification Resilience', () => {
 
             const played = playOrderAlert('test_muted', 1200, 3.4);
             expect(played).toBe(false);
+        });
+
+        it('should correctly trigger playBillAlert and throttle repeated bursts', () => {
+            setAudioMuted(false);
+            setAudioVolume(80);
+
+            // First bill alert should succeed
+            const firstCall = playBillAlert('table_4_bill');
+            expect(firstCall).toBe(true);
+
+            // Burst duplicate within 500ms should be throttled
+            vi.advanceTimersByTime(500);
+            const secondCall = playBillAlert('table_4_bill');
+            expect(secondCall).toBe(false);
+
+            // After throttle window passes (1100ms)
+            vi.advanceTimersByTime(1100);
+            const thirdCall = playBillAlert('table_5_bill');
+            expect(thirdCall).toBe(true);
+        });
+
+        it('should suppress playBillAlert when POS is muted', () => {
+            setAudioMuted(true);
+            const played = playBillAlert('table_4_bill');
+            expect(played).toBe(false);
+        });
+
+        it('should correctly trigger playStaffCallAlert and throttle repeated bursts', () => {
+            setAudioMuted(false);
+            setAudioVolume(80);
+
+            const firstStaffCall = playStaffCallAlert('table_7_staff');
+            expect(firstStaffCall).toBe(true);
+
+            vi.advanceTimersByTime(300);
+            const burstStaffCall = playStaffCallAlert('table_7_staff');
+            expect(burstStaffCall).toBe(false);
+
+            vi.advanceTimersByTime(1100);
+            const secondStaffCall = playStaffCallAlert('table_8_staff');
+            expect(secondStaffCall).toBe(true);
+        });
+
+        it('should support testPlayAlertSound for both noti1 and notibill sound types', () => {
+            setAudioMuted(false);
+            setAudioVolume(80);
+
+            const noti1Result = testPlayAlertSound(80, 1200, 'noti1');
+            expect(noti1Result).toBe(true);
+
+            vi.advanceTimersByTime(1300);
+            const notibillResult = testPlayAlertSound(80, 1200, 'notibill');
+            expect(notibillResult).toBe(true);
         });
     });
 

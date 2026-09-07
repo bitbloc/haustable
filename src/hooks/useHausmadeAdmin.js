@@ -34,7 +34,38 @@ export function useHausmadeAdmin() {
             }
 
             if (settingsRes.data) {
-                const map = settingsRes.data.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {})
+                const map = {}
+                settingsRes.data.forEach(item => {
+                    map[item.key] = item.value
+                })
+
+                let keychainPricing = {
+                    basePrice: 180,
+                    baseCharLimit: 4,
+                    extraCharPrice: 15,
+                    maxChars: 10,
+                    maxElements: 2,
+                    elementPrice: 20,
+                    dualTonePrice: 30,
+                    reverseEngravePrice: 35,
+                    heavyDutyPrice: 20
+                }
+                try {
+                    if (map.hausmade_3d_keychain_config) {
+                        keychainPricing = { ...keychainPricing, ...JSON.parse(map.hausmade_3d_keychain_config) }
+                    }
+                } catch {}
+
+                let keychainCharms = [
+                    { id: 'flower', name: 'HAUS Flower (ดอกไม้เอกลักษณ์)', symbol: '✿', is_default: true, price: 20, stl_url: null }
+                ]
+                try {
+                    if (map.hausmade_3d_keychain_charms) {
+                        const parsed = JSON.parse(map.hausmade_3d_keychain_charms)
+                        if (Array.isArray(parsed) && parsed.length > 0) keychainCharms = parsed
+                    }
+                } catch {}
+
                 setSettings({
                     shopModeHausmade: map.shop_mode_hausmade || 'manual_close',
                     shippingFee: Number(map.hausmade_shipping_fee ?? 50),
@@ -43,7 +74,9 @@ export function useHausmadeAdmin() {
                     senderName: map.sender_name || 'HAUSMADE by IN THE HAUS',
                     senderPhone: map.sender_phone || '098-528-4217',
                     senderAddress: map.sender_address || '430 ถนนสุนทรวิจิตร ตำบลในเมือง อำเภอเมือง จังหวัดนครพนม 48000',
-                    senderTaxId: map.sender_tax_id || '0485566001234'
+                    senderTaxId: map.sender_tax_id || '0485566001234',
+                    keychainPricing,
+                    keychainCharms
                 })
             }
         } catch (err) {
@@ -89,6 +122,20 @@ export function useHausmadeAdmin() {
                 { key: 'sender_address', value: newSettings.senderAddress },
                 { key: 'sender_tax_id', value: newSettings.senderTaxId }
             ]
+
+            if (newSettings.keychainPricing) {
+                updates.push({
+                    key: 'hausmade_3d_keychain_config',
+                    value: JSON.stringify(newSettings.keychainPricing)
+                })
+            }
+
+            if (newSettings.keychainCharms) {
+                updates.push({
+                    key: 'hausmade_3d_keychain_charms',
+                    value: JSON.stringify(newSettings.keychainCharms)
+                })
+            }
 
             const { error } = await supabase.from('app_settings').upsert(updates, { onConflict: 'key' })
             if (error) throw error
