@@ -403,7 +403,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         if (!audioCtxRef.current || !soundEnabled) return;
         const now = ctx.currentTime;
         const s = step % 16;
-        const bar = Math.floor(step / 16) % 4;
+        const bar = Math.floor(step / 16) % 8;
 
         // 1. Drum / Rhythm Percussion
         if (track.id === 'swing_jazz') {
@@ -505,10 +505,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           // Walking Upright Bass on quarter beats (0, 4, 8, 12)
           if (s % 4 === 0) {
             const jazzWalking = [
-              [73.42, 98.00, 110.00, 123.47],  // D2 - G2 - A2 - B2
-              [98.00, 123.47, 130.81, 146.83], // G2 - B2 - C3 - D3
-              [130.81, 164.81, 146.83, 123.47], // C3 - E3 - D3 - B2
-              [110.00, 138.59, 146.83, 164.81]  // A2 - C#3 - D3 - E3
+              // Part A: ii - V - I - VI
+              [73.42, 98.00, 110.00, 123.47],  // D2 - G2 - A2 - B2 (Dm9)
+              [98.00, 123.47, 130.81, 146.83], // G2 - B2 - C3 - D3 (G13)
+              [130.81, 164.81, 146.83, 123.47], // C3 - E3 - D3 - B2 (Cmaj9)
+              [110.00, 138.59, 146.83, 164.81], // A2 - C#3 - D3 - E3 (A7alt)
+              // Part B: Bridge & Tritone Substitution Turnaround
+              [92.50, 110.00, 130.81, 146.83],  // F#2 - A2 - C3 - D3 (F#m7b5)
+              [123.47, 155.56, 174.61, 196.00], // B2 - D#3 - F3 - G3 (B7b9)
+              [82.41, 123.47, 146.83, 164.81],  // E2 - B2 - D3 - E3 (Em9)
+              [69.30, 103.83, 123.47, 138.59]   // Db2 - Ab2 - B2 - Db3 (Db9 Tritone resolution)
             ];
             const quarter = Math.floor(s / 4);
             const freq = jazzWalking[bar][quarter];
@@ -527,10 +533,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           // Comping piano chords on syncopated off-beats (2, 7, 11)
           if (s === 2 || s === 7 || s === 11) {
             const jazzChords = [
+              // Part A
               [293.66, 349.23, 440.00, 493.88], // Dm9
               [246.94, 329.63, 349.23, 440.00], // G13
               [261.63, 329.63, 392.00, 493.88], // Cmaj9
-              [220.00, 277.18, 349.23, 415.30]  // A7alt
+              [220.00, 277.18, 349.23, 415.30], // A7alt
+              // Part B
+              [349.23, 440.00, 523.25, 659.25], // F#m7b5
+              [311.13, 392.00, 493.88, 622.25], // B7b9
+              [329.63, 392.00, 493.88, 587.33], // Em9
+              [277.18, 349.23, 415.30, 493.88]  // Db9
             ];
             const chordNotes = jazzChords[bar];
             chordNotes.forEach((f, idx) => {
@@ -547,9 +559,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             });
           }
         } else if (track.id === 'indie_rock') {
-          // Driving 8th-note Bass
+          // Driving 8th-note Bass across Verse & Chorus (8 bars)
           if (s % 2 === 0) {
-            const rockRoots = [110.00, 87.31, 130.81, 98.00]; // A2, F2, C3, G2
+            const rockRoots = [
+              110.00, 87.31, 130.81, 98.00,  // Verse: A2 - F2 - C3 - G2
+              73.42, 82.41, 92.50, 82.41     // Chorus: D2 - E2 - F#2 - E2
+            ];
             const bass = ctx.createOscillator();
             const bg = ctx.createGain();
             bass.type = 'sawtooth';
@@ -562,13 +577,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             bass.stop(now + 0.14);
           }
 
-          // Melodic Overdrive Guitar Riff
+          // Melodic Overdrive Guitar Riff across 8 bars (Verse + Chorus Hook)
           if (s === 0 || s === 3 || s === 6 || s === 8 || s === 11 || s === 14) {
             const guitarMelody = [
+              // Verse
               [440.00, 523.25, 659.25, 523.25, 440.00, 392.00],
               [349.23, 440.00, 523.25, 440.00, 349.23, 329.63],
               [523.25, 659.25, 783.99, 659.25, 523.25, 440.00],
-              [392.00, 493.88, 587.33, 493.88, 392.00, 349.23]
+              [392.00, 493.88, 587.33, 493.88, 392.00, 349.23],
+              // Chorus Hook
+              [587.33, 659.25, 783.99, 880.00, 783.99, 659.25],
+              [659.25, 783.99, 880.00, 987.77, 880.00, 783.99],
+              [739.99, 880.00, 987.77, 1108.73, 987.77, 880.00],
+              [659.25, 783.99, 880.00, 783.99, 659.25, 587.33]
             ];
             const noteIdx = Math.floor(s / 2.5) % 6;
             const freq = guitarMelody[bar][noteIdx];
@@ -593,9 +614,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             gOsc.stop(now + 0.20);
           }
         } else if (track.id === 'mekong_funk') {
-          // Isan Surf Pentatonic Riffs (A, C, D, E, G)
+          // Isan Surf Pentatonic Riffs with A/B variation
           if (s === 0 || s === 3 || s === 6 || s === 10 || s === 12) {
-            const funkScale = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            const funkScale = bar < 4 
+              ? [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25]
+              : [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25];
             const fNote = funkScale[(s + bar * 2) % funkScale.length];
             const fOsc = ctx.createOscillator();
             const fg = ctx.createGain();
@@ -612,10 +635,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           // Ambient Warm Lo-Fi Chords every 8 steps
           if (s === 0 || s === 8) {
             const lofiChords = [
+              // Part A
               [174.61, 261.63, 329.63, 392.00, 440.00], // Fmaj9
               [164.81, 246.94, 293.66, 349.23, 392.00], // Em7
               [146.83, 293.66, 349.23, 440.00, 523.25], // Dm9
-              [130.81, 261.63, 329.63, 392.00, 493.88]  // Cmaj7
+              [130.81, 261.63, 329.63, 392.00, 493.88], // Cmaj7
+              // Part B
+              [116.54, 233.08, 293.66, 349.23, 440.00], // Bbmaj7
+              [110.00, 220.00, 261.63, 329.63, 392.00], // Am7
+              [98.00, 196.00, 293.66, 349.23, 440.00],  // Gm9
+              [130.81, 261.63, 349.23, 392.00, 523.25]  // C13sus4
             ];
             const notes = lofiChords[bar];
             notes.forEach((f, idx) => {

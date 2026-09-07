@@ -73,6 +73,15 @@ export default function ArcadeLobby() {
   const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(0); // 0 = off, 15, 30, 45
   const [sleepSecondsLeft, setSleepSecondsLeft] = useState(0);
+  const [chordVariation, setChordVariation] = useState('auto'); // 'auto' | 'part_a' | 'part_b'
+  const [currentPlayingChordName, setCurrentPlayingChordName] = useState('');
+  const [chordIndexState, setChordIndexState] = useState(0);
+  const chordCycleRef = useRef(0);
+  const chordVariationRef = useRef('auto');
+
+  useEffect(() => {
+    chordVariationRef.current = chordVariation;
+  }, [chordVariation]);
 
   const audioCtxRef = useRef(null);
   const masterGainRef = useRef(null);
@@ -568,7 +577,7 @@ export default function ArcadeLobby() {
     }
   };
 
-  // --- Lo-Fi & Jazz Lounge Web Audio Synthesizer Presets (10 Chill Soundscapes) ---
+  // --- Lo-Fi & Jazz Lounge Web Audio Synthesizer Presets (13 Chill Soundscapes with Multi-Section Progressions) ---
   const CHILL_PRESETS = {
     jazz: {
       id: 'jazz',
@@ -579,10 +588,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.32,
       type: 'jazz',
       chords: [
-        [146.83, 293.66, 349.23, 440.00, 493.88, 659.25], // Dm9
-        [98.00, 246.94, 329.63, 349.23, 440.00, 587.33],  // G13
-        [130.81, 261.63, 329.63, 392.00, 493.88, 587.33], // Cmaj9
-        [110.00, 220.00, 277.18, 349.23, 415.30, 523.25]  // A7alt
+        // Section A (Theme)
+        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 493.88, 659.25] },
+        { name: 'G13', section: 'A', notes: [98.00, 246.94, 329.63, 349.23, 440.00, 587.33] },
+        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'A7alt', section: 'A', notes: [110.00, 220.00, 277.18, 349.23, 415.30, 523.25] },
+        // Section B (Bridge & Color)
+        { name: 'Fmaj9', section: 'B', notes: [174.61, 261.63, 329.63, 392.00, 440.00, 523.25] },
+        { name: 'Fm9', section: 'B', notes: [174.61, 261.63, 311.13, 392.00, 440.00, 523.25] },
+        { name: 'Em9', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'Dbmaj7#11', section: 'B', notes: [138.59, 277.18, 329.63, 369.99, 415.30, 523.25] }
       ]
     },
     cafe_jazz: {
@@ -594,12 +609,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.28,
       type: 'bossa',
       chords: [
-        [174.61, 261.63, 329.63, 392.00, 440.00, 523.25], // Fmaj9
-        [164.81, 246.94, 293.66, 349.23, 392.00],         // Em7b5
-        [110.00, 220.00, 277.18, 349.23, 466.16, 554.37], // A7b9
-        [146.83, 293.66, 349.23, 440.00, 523.25, 659.25], // Dm9
-        [98.00, 246.94, 349.23, 369.99, 440.00],          // G7#11
-        [130.81, 261.63, 329.63, 369.99, 493.88, 587.33]  // Cmaj7#11
+        // Section A
+        { name: 'Fmaj9', section: 'A', notes: [174.61, 261.63, 329.63, 392.00, 440.00, 523.25] },
+        { name: 'Em7b5', section: 'A', notes: [164.81, 246.94, 293.66, 349.23, 392.00] },
+        { name: 'A7b9', section: 'A', notes: [110.00, 220.00, 277.18, 349.23, 466.16, 554.37] },
+        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25, 659.25] },
+        // Section B
+        { name: 'Gm9', section: 'B', notes: [196.00, 293.66, 349.23, 440.00, 523.25, 587.33] },
+        { name: 'C13', section: 'B', notes: [130.81, 261.63, 329.63, 440.00, 493.88, 587.33] },
+        { name: 'Gb7#11', section: 'B', notes: [185.00, 277.18, 329.63, 369.99, 440.00, 523.25] },
+        { name: 'Fmaj7', section: 'B', notes: [174.61, 261.63, 329.63, 349.23, 440.00, 523.25] }
       ]
     },
     sunset: {
@@ -611,10 +630,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.35,
       type: 'lofi',
       chords: [
-        [130.81, 261.63, 329.63, 392.00, 493.88], // Cmaj7
-        [110.00, 220.00, 261.63, 329.63, 392.00], // Am7
-        [87.31, 174.61, 220.00, 261.63, 329.63],  // Fmaj7
-        [98.00, 196.00, 246.94, 293.66, 349.23]   // G7
+        // Section A
+        { name: 'Cmaj7', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88] },
+        { name: 'Am7', section: 'A', notes: [110.00, 220.00, 261.63, 329.63, 392.00] },
+        { name: 'Fmaj7', section: 'A', notes: [87.31, 174.61, 220.00, 261.63, 329.63] },
+        { name: 'G7', section: 'A', notes: [98.00, 196.00, 246.94, 293.66, 349.23] },
+        // Section B
+        { name: 'Em7', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
+        { name: 'A7b9', section: 'B', notes: [110.00, 220.00, 277.18, 349.23, 466.16] },
+        { name: 'Dm9', section: 'B', notes: [146.83, 261.63, 293.66, 349.23, 440.00] },
+        { name: 'Fm6', section: 'B', notes: [174.61, 261.63, 293.66, 349.23, 440.00] }
       ]
     },
     rain: {
@@ -626,10 +651,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.42,
       type: 'piano',
       chords: [
-        [146.83, 293.66, 349.23, 440.00, 523.25], // Dm7
-        [164.81, 329.63, 392.00, 493.88, 587.33], // Em7
-        [174.61, 349.23, 440.00, 523.25, 659.25], // Fmaj7
-        [220.00, 440.00, 523.25, 659.25, 783.99]  // Am7
+        // Section A
+        { name: 'Dm7', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25] },
+        { name: 'Em7', section: 'A', notes: [164.81, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'Fmaj7', section: 'A', notes: [174.61, 349.23, 440.00, 523.25, 659.25] },
+        { name: 'Am7', section: 'A', notes: [220.00, 440.00, 523.25, 659.25, 783.99] },
+        // Section B
+        { name: 'Bbmaj7', section: 'B', notes: [116.54, 233.08, 293.66, 349.23, 440.00] },
+        { name: 'Am7', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 392.00] },
+        { name: 'Gm7', section: 'B', notes: [98.00, 196.00, 233.08, 293.66, 349.23] },
+        { name: 'A7b9', section: 'B', notes: [110.00, 220.00, 277.18, 349.23, 466.16] }
       ]
     },
     campfire: {
@@ -641,10 +672,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.32,
       type: 'ambient',
       chords: [
-        [146.83, 293.66, 369.99, 440.00, 587.33], // Dsus2
-        [110.00, 220.00, 293.66, 329.63, 440.00], // Asus4
-        [98.00, 196.00, 246.94, 293.66, 392.00],  // Gsus2
-        [123.47, 246.94, 293.66, 369.99, 440.00]  // Bm7
+        // Section A
+        { name: 'Dsus2', section: 'A', notes: [146.83, 293.66, 369.99, 440.00, 587.33] },
+        { name: 'Asus4', section: 'A', notes: [110.00, 220.00, 293.66, 329.63, 440.00] },
+        { name: 'Gsus2', section: 'A', notes: [98.00, 196.00, 246.94, 293.66, 392.00] },
+        { name: 'Bm7', section: 'A', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
+        // Section B
+        { name: 'Gmaj7', section: 'B', notes: [98.00, 196.00, 246.94, 293.66, 369.99] },
+        { name: 'F#m7', section: 'B', notes: [92.50, 185.00, 220.00, 277.18, 369.99] },
+        { name: 'Em9', section: 'B', notes: [82.41, 164.81, 246.94, 329.63, 392.00] },
+        { name: 'A7sus4', section: 'B', notes: [110.00, 220.00, 293.66, 329.63, 440.00] }
       ]
     },
     rhodes: {
@@ -656,10 +693,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.25,
       type: 'jazz',
       chords: [
-        [164.81, 329.63, 392.00, 493.88, 622.25, 739.99], // Emaj9
-        [138.59, 277.18, 329.63, 415.30, 493.88, 622.25], // C#m9
-        [185.00, 369.99, 440.00, 554.37, 659.25, 830.61], // F#m9
-        [123.47, 246.94, 392.00, 440.00, 493.88, 659.25]  // B13
+        // Section A
+        { name: 'Emaj9', section: 'A', notes: [164.81, 329.63, 392.00, 493.88, 622.25, 739.99] },
+        { name: 'C#m9', section: 'A', notes: [138.59, 277.18, 329.63, 415.30, 493.88, 622.25] },
+        { name: 'F#m9', section: 'A', notes: [185.00, 369.99, 440.00, 554.37, 659.25, 830.61] },
+        { name: 'B13', section: 'A', notes: [123.47, 246.94, 392.00, 440.00, 493.88, 659.25] },
+        // Section B
+        { name: 'G#m7', section: 'B', notes: [103.83, 207.65, 311.13, 369.99, 415.30] },
+        { name: 'C#7alt', section: 'B', notes: [138.59, 277.18, 329.63, 392.00, 523.25] },
+        { name: 'F#m9', section: 'B', notes: [185.00, 369.99, 440.00, 554.37, 659.25] },
+        { name: 'B7b9', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 466.16] }
       ]
     },
     breeze: {
@@ -671,10 +714,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.36,
       type: 'lofi',
       chords: [
-        [196.00, 293.66, 392.00, 440.00, 493.88, 587.33], // Gmaj9
-        [164.81, 246.94, 329.63, 392.00, 493.88, 587.33], // Em9
-        [130.81, 261.63, 329.63, 392.00, 493.88],         // Cmaj7
-        [146.83, 293.66, 392.00, 440.00, 587.33]          // D7sus4
+        // Section A
+        { name: 'Gmaj9', section: 'A', notes: [196.00, 293.66, 392.00, 440.00, 493.88, 587.33] },
+        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'Cmaj7', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88] },
+        { name: 'D7sus4', section: 'A', notes: [146.83, 293.66, 392.00, 440.00, 587.33] },
+        // Section B
+        { name: 'Bm7', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
+        { name: 'E7b9', section: 'B', notes: [164.81, 246.94, 311.13, 392.00, 466.16] },
+        { name: 'Am9', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 493.88] },
+        { name: 'Cm6', section: 'B', notes: [130.81, 261.63, 311.13, 392.00, 440.00] }
       ]
     },
     midnight: {
@@ -686,10 +735,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.30,
       type: 'bossa',
       chords: [
-        [123.47, 246.94, 293.66, 369.99, 440.00, 554.37], // Bm9
-        [98.00, 196.00, 293.66, 369.99, 440.00],          // Gmaj7
-        [164.81, 246.94, 329.63, 392.00, 493.88, 587.33], // Em9
-        [92.50, 185.00, 277.18, 349.23, 440.00, 523.25]   // F#7alt
+        // Section A
+        { name: 'Bm9', section: 'A', notes: [123.47, 246.94, 293.66, 369.99, 440.00, 554.37] },
+        { name: 'Gmaj7', section: 'A', notes: [98.00, 196.00, 293.66, 369.99, 440.00] },
+        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'F#7alt', section: 'A', notes: [92.50, 185.00, 277.18, 349.23, 440.00, 523.25] },
+        // Section B
+        { name: 'Dmaj9', section: 'B', notes: [146.83, 293.66, 369.99, 440.00, 554.37, 659.25] },
+        { name: 'C#m7b5', section: 'B', notes: [138.59, 277.18, 329.63, 392.00, 493.88] },
+        { name: 'F#7b9', section: 'B', notes: [92.50, 185.00, 277.18, 369.99, 440.00] },
+        { name: 'Bm9', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00, 554.37] }
       ]
     },
     sleeper: {
@@ -701,10 +756,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.38,
       type: 'ambient',
       chords: [
-        [110.00, 220.00, 293.66, 329.63, 440.00],         // Asus2
-        [92.50, 185.00, 277.18, 329.63, 440.00],          // F#m7
-        [146.83, 293.66, 369.99, 440.00, 554.37, 659.25], // Dmaj9
-        [164.81, 246.94, 329.63, 415.30, 493.88, 659.25]  // E6
+        // Section A
+        { name: 'Asus2', section: 'A', notes: [110.00, 220.00, 293.66, 329.63, 440.00] },
+        { name: 'F#m7', section: 'A', notes: [92.50, 185.00, 277.18, 329.63, 440.00] },
+        { name: 'Dmaj9', section: 'A', notes: [146.83, 293.66, 369.99, 440.00, 554.37, 659.25] },
+        { name: 'E6', section: 'A', notes: [164.81, 246.94, 329.63, 415.30, 493.88, 659.25] },
+        // Section B
+        { name: 'C#m7', section: 'B', notes: [138.59, 277.18, 329.63, 415.30, 493.88] },
+        { name: 'F#m7', section: 'B', notes: [92.50, 185.00, 277.18, 329.63, 440.00] },
+        { name: 'Bm9', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
+        { name: 'E7sus4', section: 'B', notes: [164.81, 246.94, 329.63, 369.99, 440.00] }
       ]
     },
     acoustic: {
@@ -716,10 +777,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.22,
       type: 'piano',
       chords: [
-        [146.83, 220.00, 293.66, 369.99, 440.00, 587.33], // D
-        [146.83, 196.00, 246.94, 293.66, 392.00, 587.33], // G/D
-        [146.83, 220.00, 277.18, 329.63, 440.00, 554.37], // A/D
-        [146.83, 220.00, 293.66, 369.99, 440.00, 587.33]  // D
+        // Section A
+        { name: 'D', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 587.33] },
+        { name: 'G/D', section: 'A', notes: [146.83, 196.00, 246.94, 293.66, 392.00, 587.33] },
+        { name: 'A/D', section: 'A', notes: [146.83, 220.00, 277.18, 329.63, 440.00, 554.37] },
+        { name: 'D', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 587.33] },
+        // Section B
+        { name: 'Bm7', section: 'B', notes: [123.47, 246.94, 293.66, 369.99, 440.00] },
+        { name: 'Gmaj7', section: 'B', notes: [98.00, 196.00, 246.94, 293.66, 369.99] },
+        { name: 'Em7', section: 'B', notes: [82.41, 164.81, 246.94, 293.66, 392.00] },
+        { name: 'A7', section: 'B', notes: [110.00, 220.00, 277.18, 329.63, 440.00] }
       ]
     },
     swing_jazz: {
@@ -731,10 +798,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.25,
       type: 'jazz',
       chords: [
-        [130.81, 261.63, 329.63, 392.00, 493.88, 587.33], // Cmaj9
-        [110.00, 220.00, 261.63, 329.63, 440.00, 523.25], // Am9
-        [146.83, 293.66, 349.23, 440.00, 523.25, 659.25], // Dm9
-        [98.00, 246.94, 293.66, 349.23, 440.00, 587.33]   // G13
+        // Section A
+        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 493.88, 587.33] },
+        { name: 'Am9', section: 'A', notes: [110.00, 220.00, 261.63, 329.63, 440.00, 523.25] },
+        { name: 'Dm9', section: 'A', notes: [146.83, 293.66, 349.23, 440.00, 523.25, 659.25] },
+        { name: 'G13', section: 'A', notes: [98.00, 246.94, 293.66, 349.23, 440.00, 587.33] },
+        // Section B
+        { name: 'F#m7b5', section: 'B', notes: [92.50, 185.00, 220.00, 261.63, 329.63] },
+        { name: 'B7b9', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 440.00] },
+        { name: 'Em9', section: 'B', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
+        { name: 'Db9', section: 'B', notes: [138.59, 277.18, 349.23, 415.30, 493.88] }
       ]
     },
     indie_rock: {
@@ -746,10 +819,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.30,
       type: 'lofi',
       chords: [
-        [110.00, 164.81, 220.00, 329.63, 440.00], // A5/Asus2
-        [146.83, 220.00, 293.66, 369.99, 440.00], // Dsus2
-        [164.81, 246.94, 329.63, 392.00, 493.88], // Em
-        [130.81, 196.00, 261.63, 329.63, 392.00]  // Cadd9
+        // Section A (Verse)
+        { name: 'A5', section: 'A', notes: [110.00, 164.81, 220.00, 329.63, 440.00] },
+        { name: 'Dsus2', section: 'A', notes: [146.83, 220.00, 293.66, 369.99, 440.00] },
+        { name: 'Em', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88] },
+        { name: 'Cadd9', section: 'A', notes: [130.81, 196.00, 261.63, 329.63, 392.00] },
+        // Section B (Chorus)
+        { name: 'F#m', section: 'B', notes: [92.50, 185.00, 277.18, 369.99, 440.00] },
+        { name: 'Dsus2', section: 'B', notes: [146.83, 220.00, 293.66, 440.00, 587.33] },
+        { name: 'A', section: 'B', notes: [110.00, 220.00, 277.18, 329.63, 440.00] },
+        { name: 'E', section: 'B', notes: [82.41, 164.81, 246.94, 329.63, 415.30] }
       ]
     },
     mekong_funk: {
@@ -761,10 +840,16 @@ export default function ArcadeLobby() {
       noiseGain: 0.26,
       type: 'jazz',
       chords: [
-        [164.81, 246.94, 329.63, 392.00, 493.88, 659.25], // Em9
-        [110.00, 220.00, 277.18, 329.63, 440.00, 554.37], // A13
-        [130.81, 261.63, 329.63, 392.00, 523.25, 659.25], // Cmaj9
-        [123.47, 246.94, 311.13, 369.99, 440.00, 554.37]  // B7#9
+        // Section A (Groove)
+        { name: 'Em9', section: 'A', notes: [164.81, 246.94, 329.63, 392.00, 493.88, 659.25] },
+        { name: 'A13', section: 'A', notes: [110.00, 220.00, 277.18, 329.63, 554.37] },
+        { name: 'Cmaj9', section: 'A', notes: [130.81, 261.63, 329.63, 392.00, 523.25, 659.25] },
+        { name: 'B7#9', section: 'A', notes: [123.47, 246.94, 311.13, 369.99, 554.37] },
+        // Section B (Bridge)
+        { name: 'Am9', section: 'B', notes: [110.00, 220.00, 261.63, 329.63, 440.00, 493.88] },
+        { name: 'D9', section: 'B', notes: [146.83, 220.00, 293.66, 369.99, 440.00, 523.25] },
+        { name: 'Gmaj9', section: 'B', notes: [98.00, 196.00, 293.66, 369.99, 440.00, 493.88] },
+        { name: 'B7alt', section: 'B', notes: [123.47, 246.94, 311.13, 369.99, 466.16, 554.37] }
       ]
     }
   };
@@ -852,9 +937,9 @@ export default function ArcadeLobby() {
 
       noiseNodeRef.current = { noise, gain, filter };
 
-      // Chime / Mellow Jazz & Lo-Fi Chords
+      // Chime / Mellow Jazz & Lo-Fi Chords with Section A/B Variations
       const chords = preset.chords;
-      let chordIndex = 0;
+      let chordIndex = chordCycleRef.current || 0;
 
       const playChordNote = (freq, delay = 0, isBass = false) => {
         if (!audioCtxRef.current) return;
@@ -884,18 +969,120 @@ export default function ArcadeLobby() {
         osc.stop(ctx.currentTime + delay + 3.6);
       };
 
-      synthIntervalRef.current = setInterval(() => {
-        const currentChord = chords[chordIndex % chords.length];
-        currentChord.forEach((freq, idx) => {
-          const delay = idx === 0 ? 0 : (idx * 0.14);
-          playChordNote(freq, delay, idx === 0);
+      const getActiveChordPool = () => {
+        if (chordVariationRef.current === 'part_a') {
+          const aChords = preset.chords.filter(c => c.section === 'A');
+          if (aChords.length) return aChords;
+        } else if (chordVariationRef.current === 'part_b') {
+          const bChords = preset.chords.filter(c => c.section === 'B');
+          if (bChords.length) return bChords;
+        }
+        return preset.chords;
+      };
+
+      const triggerChordAtIndex = (idx) => {
+        const pool = getActiveChordPool();
+        const currentChord = pool[idx % pool.length];
+        const chordNotes = Array.isArray(currentChord) ? currentChord : (currentChord?.notes || []);
+        const chordName = (currentChord && currentChord.name) ? currentChord.name : `CHORD ${idx % pool.length + 1}`;
+        setCurrentPlayingChordName(chordName);
+        setChordIndexState(idx % pool.length);
+
+        chordNotes.forEach((freq, nIdx) => {
+          const delay = nIdx === 0 ? 0 : (nIdx * 0.14);
+          playChordNote(freq, delay, nIdx === 0);
         });
+      };
+
+      // Sound the initial chord immediately
+      triggerChordAtIndex(chordIndex);
+
+      synthIntervalRef.current = setInterval(() => {
         chordIndex++;
+        chordCycleRef.current = chordIndex;
+        triggerChordAtIndex(chordIndex);
       }, preset.id === 'swing_jazz' ? 2400 : (preset.id === 'mekong_funk' ? 2600 : (preset.type === 'jazz' ? 3200 : 3600)));
 
       setChillPlaying(true);
     } catch (e) {
       console.warn('Audio synthesis warning:', e);
+    }
+  };
+
+  const handleManualChordChange = () => {
+    chordCycleRef.current = (chordCycleRef.current || 0) + 1;
+    const idx = chordCycleRef.current;
+    setChordIndexState(idx);
+    if (!chillPlaying) {
+      startChillAudio();
+      return;
+    }
+    if (audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+      let pool = preset.chords;
+      if (chordVariation === 'part_a') {
+        const a = preset.chords.filter(c => c.section === 'A');
+        if (a.length) pool = a;
+      } else if (chordVariation === 'part_b') {
+        const b = preset.chords.filter(c => c.section === 'B');
+        if (b.length) pool = b;
+      }
+      const item = pool[idx % pool.length];
+      const notes = Array.isArray(item) ? item : (item?.notes || []);
+      setCurrentPlayingChordName(item.name || `CHORD ${idx % pool.length + 1}`);
+
+      notes.forEach((freq, noteIdx) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const isBass = noteIdx === 0;
+        osc.type = (preset.type === 'jazz' || preset.type === 'bossa') ? (isBass ? 'triangle' : 'sine') : 'triangle';
+        const delay = isBass ? 0 : noteIdx * 0.08;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        const vol = isBass ? chordVolume * 0.42 : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
+        g.gain.setValueAtTime(0, ctx.currentTime + delay);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + (isBass ? 0.06 : 0.12));
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.2));
+        osc.connect(g);
+        if (masterGainRef.current) g.connect(masterGainRef.current);
+        else g.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 3.4);
+      });
+    }
+  };
+
+  const handleSelectSpecificChord = (targetIndex) => {
+    chordCycleRef.current = targetIndex;
+    setChordIndexState(targetIndex);
+    if (!chillPlaying) {
+      startChillAudio();
+      return;
+    }
+    if (audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+      const item = preset.chords[targetIndex % preset.chords.length];
+      const notes = Array.isArray(item) ? item : (item?.notes || []);
+      setCurrentPlayingChordName(item.name || `CHORD ${targetIndex + 1}`);
+
+      notes.forEach((freq, noteIdx) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const isBass = noteIdx === 0;
+        osc.type = (preset.type === 'jazz' || preset.type === 'bossa') ? (isBass ? 'triangle' : 'sine') : 'triangle';
+        const delay = isBass ? 0 : noteIdx * 0.08;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        const vol = isBass ? chordVolume * 0.42 : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
+        g.gain.setValueAtTime(0, ctx.currentTime + delay);
+        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + (isBass ? 0.06 : 0.12));
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.2));
+        osc.connect(g);
+        if (masterGainRef.current) g.connect(masterGainRef.current);
+        else g.connect(ctx.destination);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 3.4);
+      });
     }
   };
 
@@ -1142,6 +1329,11 @@ export default function ArcadeLobby() {
             <div className="flex items-center gap-1.5 font-mono text-[10px] text-[#A8A29E]">
               <span className="text-[#E9F344] font-bold">[ ON AIR ]</span>
               <span className="truncate">{currentPreset.tag}</span>
+              {currentPlayingChordName && (
+                <span className="text-[#E9F344] font-bold px-1.5 py-0.2 bg-[#3D3835] rounded text-[9px]">
+                  {currentPlayingChordName}
+                </span>
+              )}
             </div>
             <p className="font-bold text-xs truncate text-[#FAF7F5]">
               {currentPreset.name.split(' (')[0]}
@@ -1150,6 +1342,13 @@ export default function ArcadeLobby() {
         </div>
 
         <div className="flex items-center gap-2 font-mono text-xs shrink-0">
+          <button
+            onClick={handleManualChordChange}
+            className="px-2.5 py-1.5 bg-[#2A2624] hover:bg-[#3D3835] text-[#E9F344] rounded-xl border border-[#4A433F] text-[10px] font-bold cursor-pointer transition-colors active:scale-95"
+            title="เปลี่ยนทางคอร์ดถัดไป"
+          >
+            [ ⏭ คอร์ด ]
+          </button>
           <button
             onClick={stopChillAudio}
             className="px-3 py-1.5 bg-[#2A2624] hover:bg-[#3D3835] text-[#FAF7F5] rounded-xl border border-[#4A433F] text-[10px] font-bold cursor-pointer transition-colors"
@@ -1277,7 +1476,7 @@ export default function ArcadeLobby() {
 
             <div className="bg-[#FAF7F2] p-3 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
               <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ CHORD VELOCITY ]</span>
+                <span>[ CHORD VELOCITY (น้ำหนักเสียง) ]</span>
                 <span>{Math.round(chordVolume * 100)}%</span>
               </div>
               <input 
@@ -1315,6 +1514,92 @@ export default function ArcadeLobby() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Chord Progression & Harmonic Variations Control Deck */}
+          <div className="bg-[#FAF7F2] p-3.5 sm:p-4 rounded-2xl border-2 border-[#181615] flex flex-col gap-2.5 font-mono shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#181615]/20 pb-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#181615]">
+                  [ ♫ ทางคอร์ด & CHORD PROGRESSION ]:
+                </span>
+                {currentPlayingChordName ? (
+                  <span className="px-2.5 py-0.5 bg-[#181615] text-[#E9F344] text-[10px] font-bold rounded-md border border-[#181615] animate-pulse">
+                    กำลังเล่น: {currentPlayingChordName}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 bg-[#181615]/10 text-[#57534e] text-[9px] rounded-md font-bold">
+                    [ STANDBY ]
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleManualChordChange}
+                className="px-3.5 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] text-[10px] font-bold cursor-pointer transition-transform active:scale-95 shadow-2xs self-start sm:self-auto flex items-center gap-1.5"
+                title="กดเพื่อเปลี่ยนไปยังคอร์ดถัดไปทันที"
+              >
+                <span>[ ⏭ สลับคอร์ดถัดไป // NEXT CHORD ]</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+              <span className="text-[#57534e] mr-1">[ โหมดทางคอร์ด ]:</span>
+              <button
+                onClick={() => setChordVariation('auto')}
+                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
+                  chordVariation === 'auto'
+                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
+                }`}
+              >
+                [ 🔀 สลับท่อนต่อเนื่อง (A ➔ B อัตโนมัติ) ]
+              </button>
+              <button
+                onClick={() => setChordVariation('part_a')}
+                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
+                  chordVariation === 'part_a'
+                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
+                }`}
+              >
+                [ ท่อน A // THEME ]
+              </button>
+              <button
+                onClick={() => setChordVariation('part_b')}
+                className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
+                  chordVariation === 'part_b'
+                    ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                    : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
+                }`}
+              >
+                [ ท่อน B // BRIDGE & COLOR ]
+              </button>
+            </div>
+
+            {/* Visual Interactive Chord Progression Strip */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
+              <span className="text-[9px] text-[#78716c] shrink-0">[ แตะเพื่อเปลี่ยนคอร์ด ]:</span>
+              {(CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz).chords.map((ch, idx) => {
+                const cName = typeof ch === 'object' && ch.name ? ch.name : `CH-${idx+1}`;
+                const cSec = typeof ch === 'object' && ch.section ? ch.section : (idx < 4 ? 'A' : 'B');
+                const isCurrent = currentPlayingChordName === cName;
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleSelectSpecificChord(idx)}
+                    className={`px-2.5 py-1 rounded-lg text-[9px] font-bold border transition-all cursor-pointer whitespace-nowrap flex items-center gap-1 ${
+                      isCurrent
+                        ? 'bg-[#181615] text-[#E9F344] border-[#181615] scale-105 shadow-2xs ring-2 ring-[#E9F344]'
+                        : 'bg-white/80 text-[#181615] border-[#181615]/20 hover:border-[#181615] hover:bg-[#E9F344]/30'
+                    }`}
+                    title={`เล่นคอร์ด ${cName} (ท่อน ${cSec})`}
+                  >
+                    <span className="text-[7px] text-[#78716c] font-normal">{cSec}:</span>
+                    <span>{cName}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1899,7 +2184,9 @@ export default function ArcadeLobby() {
                     <span className="font-bold truncate max-w-[130px]">
                       {CHILL_PRESETS[chillPreset]?.name.split(' (')[0] || 'MEKONG JAZZ'}
                     </span>
-                    <span className="text-[#94a3b8] text-[8px]">3D STEREO SYNTHESIS</span>
+                    <span className="text-[#E9F344] text-[8px] font-bold truncate">
+                      {currentPlayingChordName ? `CHORD: ${currentPlayingChordName}` : '3D STEREO SYNTHESIS'}
+                    </span>
                   </div>
                 </div>
 
