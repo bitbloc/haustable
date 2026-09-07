@@ -44,6 +44,8 @@ export class TaiPla128Renderer {
     this.sprites.tai_pla = this.bakePokemonTaiPla();
     this.sprites.som_satow = this.bakePokemonSomSatow();
     this.sprites.khao_lam = this.bakePokemonKhaoLam();
+    this.sprites.barista_cat = this.bakePokemonBaristaCat();
+    this.sprites.baby_naga = this.bakePokemonBabyNaga();
   }
 
   /**
@@ -528,6 +530,325 @@ export class TaiPla128Renderer {
     return canvas;
   }
 
+  /**
+   * ☕ บาริสต้าเหมียวในบ้าน (Barista Cat "Nong Haus") - Coffee / Wind Feline
+   * Classic tuxedo cat with linen barista apron, flat cap, and cappuccino foam spring
+   */
+  bakePokemonBaristaCat() {
+    const frameW = 48, frameH = 48;
+    const { canvas, ctx } = createOffscreen(frameW * 6, frameH);
+
+    for (let f = 0; f < 6; f++) {
+      ctx.save();
+      ctx.translate(f * frameW, 0);
+      const isJump = f === 4;
+      const isHurt = f === 5;
+      const run = f % 4;
+      const bob = isJump ? -5 : (run === 1 || run === 3 ? -2 : 0);
+
+      // 1. Sleek Black Tuxedo Tail with White Tip
+      ctx.save();
+      const tailWag = isJump ? -6 : (run === 0 || run === 2 ? 3 : -2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(7, 20 + bob + tailWag, 6, 6);
+      ctx.fillRect(4, 15 + bob + tailWag, 6, 7);
+      ctx.fillRect(3, 9 + bob + tailWag, 6, 8);
+      ctx.fillRect(5, 5 + bob + tailWag, 6, 6);
+      // White tip
+      ctx.fillStyle = '#faf7f5';
+      ctx.fillRect(6, 6 + bob + tailWag, 4, 4);
+      ctx.restore();
+
+      // 2. Back Paws with White Mittens
+      ctx.fillStyle = '#0f172a';
+      if (isJump) {
+        ctx.fillRect(9, 32, 7, 10);
+        ctx.fillStyle = '#faf7f5';
+        ctx.fillRect(9, 38, 7, 4); // White sock
+      } else {
+        const bX = run === 0 ? 8 : (run === 1 ? 12 : (run === 2 ? 16 : 10));
+        const bH = run === 1 ? 6 : 9;
+        ctx.fillRect(bX, 35 + bob, 7, bH);
+        ctx.fillStyle = '#faf7f5';
+        ctx.fillRect(bX, 35 + bob + bH - 3, 7, 3);
+      }
+
+      // 3. Tuxedo Body (Black Coat + Linen Barista Apron)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(11, 16 + bob, 25, 20);
+      ctx.fillRect(9, 18 + bob, 29, 16);
+      ctx.fillRect(13, 14 + bob, 21, 24);
+
+      // White Tuxedo Chest
+      ctx.fillStyle = '#faf7f5';
+      ctx.fillRect(18, 16 + bob, 14, 18);
+      ctx.fillRect(20, 14 + bob, 10, 20);
+
+      // Barista Apron (Warm Terracotta / Coffee Brown)
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(14, 20 + bob, 18, 14);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(16, 21 + bob, 14, 12);
+      // Apron Neck Straps & Haus Badge
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(18, 17 + bob, 3, 4);
+      ctx.fillRect(25, 17 + bob, 3, 4);
+      ctx.fillStyle = '#facc15'; // Golden "HAUS" Barista Pin
+      ctx.fillRect(22, 23 + bob, 3, 3);
+
+      // 4. Steaming Espresso Cup / Foam Pack
+      if (isJump) {
+        // Frothy steam puffs below paws
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(18, 42, 10, 4);
+        ctx.fillRect(20, 40, 6, 6);
+        ctx.fillStyle = '#fde68a';
+        ctx.fillRect(21, 41, 4, 4);
+      } else {
+        // Small coffee bean pouch on hip
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(10, 24 + bob, 6, 7);
+        ctx.fillStyle = '#d97706';
+        ctx.fillRect(11, 25 + bob, 4, 5);
+      }
+
+      // 5. Front Paws with White Mittens
+      ctx.fillStyle = '#0f172a';
+      if (isJump) {
+        ctx.fillRect(28, 28, 8, 12);
+        ctx.fillStyle = '#faf7f5';
+        ctx.fillRect(28, 36, 8, 4);
+      } else {
+        const fX = run === 0 ? 28 : (run === 1 ? 24 : (run === 2 ? 20 : 27));
+        const fH = run === 3 ? 6 : 9;
+        ctx.fillRect(fX, 35 + bob, 8, fH);
+        ctx.fillStyle = '#faf7f5';
+        ctx.fillRect(fX, 35 + bob + fH - 3, 8, 3);
+      }
+
+      // 6. Tuxedo Cat Head & Vintage Beret Cap
+      const hX = 25, hY = 8 + bob;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX - 2, hY - 1, 25, 19);
+      ctx.fillRect(hX - 4, hY + 2, 29, 14);
+      ctx.fillRect(hX, hY - 4, 21, 24);
+
+      // Cat Ears (Pointed Black with Pink Inner)
+      ctx.fillRect(hX - 2, hY - 8, 6, 8);
+      ctx.fillRect(hX + 17, hY - 8, 6, 8);
+      ctx.fillStyle = '#fda4af';
+      ctx.fillRect(hX - 1, hY - 6, 4, 5);
+      ctx.fillRect(hX + 18, hY - 6, 4, 5);
+
+      // Vintage Barista Flat Cap (Charcoal Grey, angled chic)
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(hX + 2, hY - 7, 18, 6);
+      ctx.fillRect(hX + 5, hY - 10, 13, 5);
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(hX + 4, hY - 6, 14, 3);
+
+      // White Muzzle (Mask of Tuxedo Cat)
+      ctx.fillStyle = '#faf7f5';
+      ctx.fillRect(hX + 3, hY + 6, 15, 11);
+      ctx.fillRect(hX + 5, hY + 3, 11, 14);
+
+      // Expressive Anime Cat Eyes (Amber Gold)
+      if (isHurt) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(hX + 5, hY + 4, 5, 5);
+        ctx.fillRect(hX + 13, hY + 4, 5, 5);
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(hX + 6, hY + 5, 3, 3);
+        ctx.fillRect(hX + 14, hY + 5, 3, 3);
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(hX + 4, hY + 3, 6, 8);
+        ctx.fillRect(hX + 13, hY + 3, 6, 8);
+        ctx.fillStyle = '#f59e0b'; // Amber Gold Iris
+        ctx.fillRect(hX + 5, hY + 4, 4, 6);
+        ctx.fillRect(hX + 14, hY + 4, 4, 6);
+        ctx.fillStyle = '#fef08a'; // Inner Glow
+        ctx.fillRect(hX + 5, hY + 7, 4, 3);
+        ctx.fillRect(hX + 14, hY + 7, 4, 3);
+        // Catchlights
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(hX + 5, hY + 4, 2, 2);
+        ctx.fillRect(hX + 14, hY + 4, 2, 2);
+        ctx.fillRect(hX + 7, hY + 8, 1, 1);
+        ctx.fillRect(hX + 16, hY + 8, 1, 1);
+      }
+
+      // Pink Nose & Cat Whiskers
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(hX + 9, hY + 9, 3, 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX - 2, hY + 9, 4, 1);
+      ctx.fillRect(hX - 2, hY + 12, 4, 1);
+      ctx.fillRect(hX + 19, hY + 9, 4, 1);
+      ctx.fillRect(hX + 19, hY + 12, 4, 1);
+
+      ctx.restore();
+    }
+    return canvas;
+  }
+
+  /**
+   * 🐉 พญานาคาน้อย (Baby Nakkhi) - Spirit / Water Serpent
+   * Cute 3-headed baby Naga with golden crown, floating cloud vortex, and ruby pearl tail
+   */
+  bakePokemonBabyNaga() {
+    const frameW = 48, frameH = 48;
+    const { canvas, ctx } = createOffscreen(frameW * 6, frameH);
+
+    for (let f = 0; f < 6; f++) {
+      ctx.save();
+      ctx.translate(f * frameW, 0);
+      const isJump = f === 4;
+      const isHurt = f === 5;
+      const run = f % 4;
+      const bob = isJump ? -6 : (run === 1 || run === 3 ? -3 : 0);
+
+      // 1. Floating Mist / Cloud Vortex underneath (replaces legs)
+      ctx.save();
+      const wavePhase = (run * 0.5) * Math.PI;
+      const cloudShift = Math.sin(wavePhase) * 3;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+      ctx.fillRect(10 + cloudShift, 36 + bob, 26, 6);
+      ctx.fillRect(14 - cloudShift, 39 + bob, 18, 5);
+      ctx.fillStyle = '#bae6fd';
+      ctx.fillRect(12 + cloudShift, 37 + bob, 22, 4);
+      ctx.restore();
+
+      // 2. Serpentine Tail holding Mekong River Pearl
+      ctx.save();
+      const tailOsc = isJump ? -8 : (run === 0 || run === 2 ? 4 : -3);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(6, 22 + bob + tailOsc, 8, 8);
+      ctx.fillRect(2, 16 + bob + tailOsc, 7, 9);
+      ctx.fillRect(1, 9 + bob + tailOsc, 8, 9);
+      // Traditional Thai Kranok Flame Fin on tail
+      ctx.fillRect(-2, 4 + bob + tailOsc, 8, 8);
+      ctx.fillRect(5, 5 + bob + tailOsc, 6, 6);
+
+      // Jade Green Body
+      ctx.fillStyle = '#059669';
+      ctx.fillRect(7, 23 + bob + tailOsc, 6, 6);
+      ctx.fillRect(3, 17 + bob + tailOsc, 5, 7);
+      ctx.fillRect(2, 10 + bob + tailOsc, 6, 7);
+      // Emerald fin
+      ctx.fillStyle = '#10b981';
+      ctx.fillRect(-1, 5 + bob + tailOsc, 6, 6);
+      ctx.fillRect(6, 6 + bob + tailOsc, 4, 4);
+
+      // Glowing Mekong Blue Pearl on Tail Tip
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(1, 9 + bob + tailOsc, 5, 5);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(2, 10 + bob + tailOsc, 2, 2);
+      ctx.restore();
+
+      // 3. Serpentine Torso with Golden Belly Scales
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(12, 18 + bob, 24, 18);
+      ctx.fillRect(15, 14 + bob, 20, 22);
+
+      // Shimmering Jade Green Back
+      ctx.fillStyle = '#059669';
+      ctx.fillRect(13, 19 + bob, 22, 16);
+      ctx.fillRect(16, 15 + bob, 18, 20);
+
+      // Golden Belly Scales
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(18, 20 + bob, 12, 15);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(20, 22 + bob, 8, 3);
+      ctx.fillRect(20, 27 + bob, 8, 3);
+      ctx.fillRect(20, 32 + bob, 8, 2);
+
+      // 4. Three Baby Naga Heads (Center Head + 2 Smiling Side Heads)
+      const hX = 26, hY = 8 + bob;
+
+      // Left Mini-Head
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX - 9, hY + 1, 10, 11);
+      ctx.fillRect(hX - 7, hY - 4, 6, 6); // Left crown
+      ctx.fillStyle = '#059669';
+      ctx.fillRect(hX - 8, hY + 2, 8, 9);
+      ctx.fillStyle = '#facc15'; // Gold Crown
+      ctx.fillRect(hX - 6, hY - 3, 4, 5);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX - 6, hY + 4, 2, 3); // Happy eye
+
+      // Right Mini-Head
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX + 17, hY + 1, 10, 11);
+      ctx.fillRect(hX + 19, hY - 4, 6, 6); // Right crown
+      ctx.fillStyle = '#059669';
+      ctx.fillRect(hX + 18, hY + 2, 8, 9);
+      ctx.fillStyle = '#facc15'; // Gold Crown
+      ctx.fillRect(hX + 20, hY - 3, 4, 5);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX + 22, hY + 4, 2, 3); // Happy eye
+
+      // Center Main Head (Grand Crowned)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX - 2, hY - 3, 22, 19);
+      ctx.fillRect(hX - 4, hY, 26, 14);
+
+      // Golden Naga Crest (Crown of Phaya Si Satta Nakarat)
+      ctx.fillRect(hX + 5, hY - 14, 8, 12);
+      ctx.fillRect(hX + 7, hY - 17, 4, 5);
+      ctx.fillStyle = '#facc15'; // Brilliant Gold
+      ctx.fillRect(hX + 6, hY - 13, 6, 10);
+      ctx.fillRect(hX + 8, hY - 16, 2, 4);
+      ctx.fillStyle = '#ef4444'; // Red Ruby Crest Gem
+      ctx.fillRect(hX + 7, hY - 10, 4, 4);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(hX + 8, hY - 9, 2, 2);
+
+      // Jade Face Fill
+      ctx.fillStyle = '#059669';
+      ctx.fillRect(hX - 1, hY - 2, 20, 17);
+      ctx.fillRect(hX - 3, hY + 1, 24, 12);
+
+      // Large Emerald / Sapphire Dragon Eyes
+      if (isHurt) {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(hX + 4, hY + 3, 5, 5);
+        ctx.fillRect(hX + 12, hY + 3, 5, 5);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(hX + 5, hY + 4, 3, 3);
+        ctx.fillRect(hX + 13, hY + 4, 3, 3);
+      } else {
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(hX + 3, hY + 2, 6, 8);
+        ctx.fillRect(hX + 12, hY + 2, 6, 8);
+        ctx.fillStyle = '#0284c7'; // Deep Blue Naga Eye
+        ctx.fillRect(hX + 4, hY + 3, 4, 6);
+        ctx.fillRect(hX + 13, hY + 3, 4, 6);
+        ctx.fillStyle = '#38bdf8'; // Water sheen
+        ctx.fillRect(hX + 4, hY + 6, 4, 3);
+        ctx.fillRect(hX + 13, hY + 6, 4, 3);
+        // Double Catchlights
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(hX + 4, hY + 3, 2, 2);
+        ctx.fillRect(hX + 13, hY + 3, 2, 2);
+        ctx.fillRect(hX + 6, hY + 7, 1, 1);
+        ctx.fillRect(hX + 15, hY + 7, 1, 1);
+      }
+
+      // Snout & Water droplet nose
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(hX + 7, hY + 8, 7, 6);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(hX + 8, hY + 9, 2, 2);
+      ctx.fillRect(hX + 11, hY + 9, 2, 2);
+
+      ctx.restore();
+    }
+    return canvas;
+  }
+
   // =========================================================================
   // 2. CRISP FOOD INGREDIENTS (32x32)
   // =========================================================================
@@ -816,129 +1137,318 @@ export class TaiPla128Renderer {
   }
 
   // =========================================================================
-  // 5. CLEAN MINIMALIST LANDMARKS (LAYER 3)
+  // 5. CLEAN MINIMALIST NAKHON PHANOM ARCHITECTURAL LANDMARKS (LAYER 3)
   // =========================================================================
   bakeLandmarks() {
     // 1. "ในบ้าน" (In The Haus) Riverside Heritage Cafe Landmark
-    const cafe = createOffscreen(140, 110);
+    const cafe = createOffscreen(150, 125);
     const cctx = cafe.ctx;
-    const cy = 100;
+    const cy = 115;
 
     cctx.fillStyle = '#181615';
-    cctx.fillRect(10, cy - 85, 120, 85);
-    cctx.fillStyle = '#faf7f5';
-    cctx.fillRect(12, cy - 83, 116, 81);
+    cctx.fillRect(10, cy - 95, 130, 95);
+    cctx.fillStyle = '#faf7f5'; // Cream limestone facade
+    cctx.fillRect(12, cy - 93, 126, 91);
 
-    cctx.fillStyle = '#bd4924';
-    cctx.fillRect(12, cy - 18, 116, 18);
+    cctx.fillStyle = '#bd4924'; // Warm Terracotta base
+    cctx.fillRect(12, cy - 20, 126, 20);
 
-    // Warm Lit Display Window with Barista silhouette
+    // Warm Lit Display Window with Roastery & Barista silhouette
     cctx.fillStyle = '#181615';
-    cctx.fillRect(20, cy - 50, 48, 30);
+    cctx.fillRect(18, cy - 56, 52, 34);
     cctx.fillStyle = '#fef08a';
-    cctx.fillRect(22, cy - 48, 44, 26);
+    cctx.fillRect(20, cy - 54, 48, 30);
     cctx.fillStyle = '#181615';
-    cctx.fillRect(38, cy - 40, 12, 16);
-    cctx.fillRect(40, cy - 44, 8, 6);
+    cctx.fillRect(36, cy - 44, 14, 18);
+    cctx.fillRect(38, cy - 48, 10, 6);
+    // Coffee roaster / espresso machine silhouette
+    cctx.fillRect(52, cy - 38, 12, 12);
+    cctx.fillStyle = '#ea580c';
+    cctx.fillRect(54, cy - 36, 4, 4);
 
-    // Door
+    // Teak Wood Door & Brass Handle
     cctx.fillStyle = '#181615';
-    cctx.fillRect(78, cy - 54, 26, 52);
-    cctx.fillStyle = '#43634b';
-    cctx.fillRect(80, cy - 52, 22, 50);
-    cctx.fillStyle = '#facc15';
-    cctx.fillRect(96, cy - 28, 3, 3);
+    cctx.fillRect(82, cy - 60, 30, 58);
+    cctx.fillStyle = '#43634b'; // Deep olive green
+    cctx.fillRect(84, cy - 58, 26, 56);
+    cctx.fillStyle = '#facc15'; // Brass handle
+    cctx.fillRect(104, cy - 32, 3, 4);
 
-    // Striped Awning
-    const awningY = cy - 56;
+    // Striped Terracotta & Olive Awning
+    const awningY = cy - 62;
     cctx.fillStyle = '#181615';
-    cctx.fillRect(14, awningY - 4, 112, 14);
-    for (let ax = 16; ax < 124; ax += 12) {
+    cctx.fillRect(14, awningY - 4, 122, 14);
+    for (let ax = 16; ax < 134; ax += 12) {
       cctx.fillStyle = ((ax / 12) % 2 === 0) ? '#bd4924' : '#43634b';
       cctx.fillRect(ax, awningY - 3, 11, 11);
     }
 
-    // Signboard: "HAUS CAFE"
+    // Signboard: "IN THE HAUS // COFFEE & ROASTERY"
     cctx.fillStyle = '#181615';
-    cctx.fillRect(22, cy - 78, 70, 20);
+    cctx.fillRect(20, cy - 86, 80, 20);
     cctx.fillStyle = '#fef08a';
-    cctx.fillRect(24, cy - 76, 66, 16);
+    cctx.fillRect(22, cy - 84, 76, 16);
     cctx.fillStyle = '#181615';
-    cctx.font = 'bold 10px monospace';
-    cctx.fillText('IN THE HAUS', 26, cy - 65);
+    cctx.font = 'bold 9px monospace';
+    cctx.fillText('IN THE HAUS', 26, cy - 73);
 
-    // Roof & Chimney
+    // Roof & Chimney with gentle coffee smoke
     cctx.fillStyle = '#181615';
-    cctx.fillRect(8, cy - 94, 124, 11);
-    cctx.fillRect(110, cy - 104, 12, 12);
+    cctx.fillRect(8, cy - 104, 134, 11);
+    cctx.fillRect(118, cy - 116, 14, 14);
     cctx.fillStyle = '#ea580c';
-    cctx.fillRect(10, cy - 93, 120, 9);
+    cctx.fillRect(10, cy - 103, 130, 9);
     cctx.fillStyle = '#bd4924';
-    cctx.fillRect(112, cy - 103, 8, 10);
+    cctx.fillRect(120, cy - 115, 10, 12);
 
-    // Roof Cat
+    // Veranda Tabby Cat
     cctx.fillStyle = '#181615';
-    cctx.fillRect(50, cy - 100, 16, 9);
+    cctx.fillRect(52, cy - 110, 18, 10);
     cctx.fillStyle = '#faf7f5';
-    cctx.fillRect(51, cy - 99, 14, 7);
-    cctx.fillStyle = '#bd4924';
-    cctx.fillRect(52, cy - 99, 5, 4);
+    cctx.fillRect(53, cy - 109, 16, 8);
+    cctx.fillStyle = '#ea580c';
+    cctx.fillRect(54, cy - 109, 6, 5);
 
     this.sprites.cafe_in_the_haus = cafe.canvas;
 
-    // 2. Vietnamese Memorial Clock Tower
-    const clockTower = createOffscreen(60, 130);
+    // 2. โบสถ์นักบุญอันนา หนองแสง (St. Anne's Catholic Church)
+    // Iconic twin-spired French-Colonial Catholic Cathedral on the Mekong riverbank
+    const church = createOffscreen(110, 210);
+    const chctx = church.ctx;
+    const chy = 200;
+
+    // Outer Dark Silhouette
+    chctx.fillStyle = '#181615';
+    chctx.fillRect(20, chy - 110, 70, 110); // Center nave
+    chctx.fillRect(10, chy - 165, 26, 165); // Left Spire Tower
+    chctx.fillRect(74, chy - 165, 26, 165); // Right Spire Tower
+    // Crosses on spires
+    chctx.fillRect(21, chy - 188, 4, 25);
+    chctx.fillRect(17, chy - 182, 12, 4);
+    chctx.fillRect(85, chy - 188, 4, 25);
+    chctx.fillRect(81, chy - 182, 12, 4);
+
+    // Pastel Colonial Yellow & White Facade
+    chctx.fillStyle = '#fef08a'; // French Colonial Mustard/Cream
+    chctx.fillRect(22, chy - 108, 66, 106);
+    chctx.fillRect(12, chy - 163, 22, 161);
+    chctx.fillRect(76, chy - 163, 22, 161);
+
+    // White Trims & Spire roofs
+    chctx.fillStyle = '#faf7f5';
+    chctx.fillRect(14, chy - 160, 18, 20);
+    chctx.fillRect(78, chy - 160, 18, 20);
+    chctx.fillRect(30, chy - 105, 50, 10);
+
+    // Golden Crosses
+    chctx.fillStyle = '#facc15';
+    chctx.fillRect(22, chy - 187, 2, 23);
+    chctx.fillRect(18, chy - 181, 10, 2);
+    chctx.fillRect(86, chy - 187, 2, 23);
+    chctx.fillRect(82, chy - 181, 10, 2);
+
+    // Arched Stained Glass Windows & Central Rose Window
+    chctx.fillStyle = '#181615';
+    chctx.fillRect(44, chy - 85, 22, 22); // Rose window box
+    chctx.fillStyle = '#0284c7'; // Blue stained glass
+    chctx.fillRect(46, chy - 83, 18, 18);
+    chctx.fillStyle = '#ef4444';
+    chctx.fillRect(52, chy - 77, 6, 6);
+
+    // Church Arched Portal Door
+    chctx.fillStyle = '#181615';
+    chctx.fillRect(42, chy - 50, 26, 50);
+    chctx.fillStyle = '#78350f'; // Teak doors
+    chctx.fillRect(44, chy - 48, 22, 48);
+
+    // Tower Belfry Arches
+    chctx.fillStyle = '#181615';
+    chctx.fillRect(17, chy - 130, 12, 24);
+    chctx.fillRect(81, chy - 130, 12, 24);
+    chctx.fillStyle = '#ca8a04'; // Brass bells inside
+    chctx.fillRect(21, chy - 124, 4, 8);
+    chctx.fillRect(85, chy - 124, 4, 8);
+
+    this.sprites.st_anne_church = church.canvas;
+
+    // 3. หอนาฬิกาเวียดนามอนุสรณ์ (Vietnamese Memorial Clock Tower)
+    const clockTower = createOffscreen(64, 160);
     const ctctx = clockTower.ctx;
-    const baseH = 120;
+    const baseH = 150;
+
     ctctx.fillStyle = '#181615';
-    ctctx.fillRect(12, baseH - 85, 36, 85);
-    ctctx.fillRect(8, baseH - 15, 44, 15);
-    ctctx.fillRect(16, baseH - 110, 28, 26);
-    ctctx.fillRect(26, baseH - 124, 8, 15);
-    ctctx.fillStyle = '#fed7aa';
-    ctctx.fillRect(14, baseH - 83, 32, 68);
-    ctctx.fillStyle = '#ea580c';
-    ctctx.fillRect(10, baseH - 13, 40, 12);
-    ctctx.fillRect(18, baseH - 108, 24, 23);
+    ctctx.fillRect(14, baseH - 105, 36, 105);
+    ctctx.fillRect(10, baseH - 18, 44, 18);
+    ctctx.fillRect(16, baseH - 136, 32, 33);
+    ctctx.fillRect(27, baseH - 152, 10, 18);
+    // Spire needle tip
+    ctctx.fillRect(31, baseH - 158, 2, 8);
+
+    ctctx.fillStyle = '#fed7aa'; // Terracotta clay brick body
+    ctctx.fillRect(16, baseH - 103, 32, 86);
+    ctctx.fillStyle = '#ea580c'; // Red brick accent
+    ctctx.fillRect(12, baseH - 16, 40, 14);
+    ctctx.fillRect(18, baseH - 134, 28, 29);
+
+    // Working Clock Face with Black Hands
     ctctx.fillStyle = '#ffffff';
     ctctx.beginPath();
-    ctctx.arc(30, baseH - 96, 8, 0, Math.PI * 2);
+    ctctx.arc(32, baseH - 120, 10, 0, Math.PI * 2);
     ctctx.fill();
     ctctx.fillStyle = '#181615';
-    ctctx.fillRect(29, baseH - 101, 2, 6);
-    ctctx.fillRect(29, baseH - 96, 5, 2);
+    ctctx.fillRect(31, baseH - 126, 2, 7);
+    ctctx.fillRect(31, baseH - 120, 6, 2);
+
     this.sprites.clock_tower = clockTower.canvas;
 
-    // 3. Phaya Si Sattanakharat
-    const naga = createOffscreen(72, 110);
-    const nctx = naga.ctx;
-    const ny = 100;
-    nctx.fillStyle = '#181615';
-    nctx.fillRect(8, ny - 30, 56, 30);
-    nctx.fillStyle = '#334155';
-    nctx.fillRect(10, ny - 28, 52, 27);
-    nctx.fillStyle = '#181615';
-    nctx.fillRect(16, ny - 60, 40, 32);
-    nctx.fillStyle = '#ca8a04';
-    nctx.fillRect(18, ny - 58, 36, 28);
-    const headXOffsets = [6, 13, 20, 27, 34, 41, 48];
-    headXOffsets.forEach((hx, i) => {
-      const peak = i === 3 ? 14 : (i === 2 || i === 4 ? 8 : 2);
-      nctx.fillStyle = '#181615';
-      nctx.fillRect(hx, ny - 80 - peak, 8, 24 + peak);
-      nctx.fillStyle = '#facc15';
-      nctx.fillRect(hx + 1, ny - 78 - peak, 6, 22 + peak);
-      nctx.fillStyle = '#ef4444';
-      nctx.fillRect(hx + 2, ny - 76 - peak, 2, 2);
+    // 4. พิพิธภัณฑ์จวนผู้ว่าราชการจังหวัดนครพนม (Old Governor's Residence Museum)
+    // 1914 Stately French-Colonial yellow brick residence
+    const gov = createOffscreen(140, 115);
+    const gctx = gov.ctx;
+    const govy = 105;
+
+    gctx.fillStyle = '#181615';
+    gctx.fillRect(8, govy - 75, 124, 75);
+    gctx.fillRect(4, govy - 88, 132, 15); // Roof eaves
+    gctx.fillStyle = '#fef08a'; // Rich yellow colonial stucco
+    gctx.fillRect(10, govy - 73, 120, 71);
+    gctx.fillStyle = '#ea580c'; // Terracotta roof
+    gctx.fillRect(6, govy - 86, 128, 12);
+
+    // Colonial Arched Windows with Olive Shutters
+    const winX = [18, 44, 78, 104];
+    winX.forEach(wx => {
+      // 2nd floor arched windows
+      gctx.fillStyle = '#181615';
+      gctx.fillRect(wx, govy - 66, 18, 24);
+      gctx.fillStyle = '#43634b'; // Green shutters
+      gctx.fillRect(wx - 2, govy - 64, 4, 20);
+      gctx.fillRect(wx + 16, govy - 64, 4, 20);
+      gctx.fillStyle = '#fef9c3';
+      gctx.fillRect(wx + 3, govy - 63, 12, 18);
+
+      // 1st floor arched portico
+      gctx.fillStyle = '#181615';
+      gctx.fillRect(wx, govy - 36, 18, 34);
+      gctx.fillStyle = '#faf7f5';
+      gctx.fillRect(wx + 2, govy - 34, 14, 32);
     });
+
+    this.sprites.governor_residence = gov.canvas;
+
+    // 5. องค์พญาศรีสัตตนาคราช (Phaya Si Satta Nakarat)
+    // Seven-headed grand brass Naga monument spitting turquoise river spray
+    const naga = createOffscreen(88, 140);
+    const nctx = naga.ctx;
+    const ny = 130;
+
+    // Monument Pedestal Base
+    nctx.fillStyle = '#181615';
+    nctx.fillRect(8, ny - 38, 72, 38);
+    nctx.fillStyle = '#334155'; // Dark slate pedestal
+    nctx.fillRect(10, ny - 36, 68, 34);
+    nctx.fillStyle = '#cbd5e1';
+    nctx.fillRect(14, ny - 32, 60, 4);
+
+    // Coiled Serpent Body
+    nctx.fillStyle = '#181615';
+    nctx.fillRect(16, ny - 78, 56, 42);
+    nctx.fillStyle = '#ca8a04'; // Burnished Brass / Gold
+    nctx.fillRect(18, ny - 76, 52, 38);
+    nctx.fillStyle = '#eab308';
+    nctx.fillRect(22, ny - 72, 44, 12);
+
+    // Seven Crowned Golden Naga Heads
+    const headXOffsets = [6, 15, 24, 33, 42, 51, 60];
+    headXOffsets.forEach((hx, i) => {
+      // Middle head (index 3) is tallest
+      const peak = i === 3 ? 20 : (i === 2 || i === 4 ? 13 : (i === 1 || i === 5 ? 7 : 0));
+      nctx.fillStyle = '#181615';
+      nctx.fillRect(hx, ny - 105 - peak, 10, 32 + peak);
+      nctx.fillStyle = '#facc15'; // Brilliant gold
+      nctx.fillRect(hx + 1, ny - 103 - peak, 8, 30 + peak);
+      // Red Ruby Eyes
+      nctx.fillStyle = '#ef4444';
+      nctx.fillRect(hx + 3, ny - 100 - peak, 3, 3);
+      // Dragon horn crest
+      nctx.fillStyle = '#ca8a04';
+      nctx.fillRect(hx + 4, ny - 108 - peak, 2, 6);
+    });
+
     this.sprites.phaya_naga = naga.canvas;
 
-    // 4. Antique Street Lamp
-    const streetLamp = createOffscreen(24, 75);
+    // 6. ประเพณีไหลเรือไฟนครพนม (Lai Ruea Fai - Mekong Illuminated Boat)
+    // Giant bamboo boat on the Mekong with flaming oil torches and naga silhouette
+    const boat = createOffscreen(144, 90);
+    const bctx = boat.ctx;
+    const by = 80;
+
+    // Bamboo Hull floating on water
+    bctx.fillStyle = '#181615';
+    bctx.fillRect(10, by - 12, 124, 12);
+    bctx.fillRect(2, by - 8, 140, 8);
+    bctx.fillStyle = '#78350f'; // Dark bamboo
+    bctx.fillRect(12, by - 10, 120, 8);
+
+    // Glowing Bamboo Scaffold & Lantern Silhouette
+    bctx.fillStyle = '#f59e0b';
+    bctx.fillRect(24, by - 55, 96, 44);
+    bctx.fillStyle = '#facc15';
+    bctx.fillRect(36, by - 70, 72, 58);
+    // Golden Stupa / Phra That Phanom motif on the fireboat
+    bctx.fillRect(66, by - 82, 12, 14);
+
+    // Thousands of flickering flame dots
+    bctx.fillStyle = '#ef4444';
+    for (let lx = 20; lx < 125; lx += 8) {
+      bctx.fillRect(lx, by - 14, 4, 4);
+      bctx.fillRect(lx + 4, by - 35, 4, 4);
+      bctx.fillRect(lx + 2, by - 55, 4, 4);
+    }
+    bctx.fillStyle = '#fef08a';
+    for (let lx = 22; lx < 122; lx += 8) {
+      bctx.fillRect(lx, by - 13, 2, 2);
+      bctx.fillRect(lx + 4, by - 34, 2, 2);
+    }
+
+    this.sprites.lai_ruea_fai = boat.canvas;
+
+    // 7. ต้นหางนกยูงฝรั่งริมโขง (Riverside Poinciana / Flame Tree)
+    const tree = createOffscreen(72, 120);
+    const tctx = tree.ctx;
+    const ty = 115;
+
+    // Gnarled Wooden Trunk
+    tctx.fillStyle = '#181615';
+    tctx.fillRect(30, ty - 65, 12, 65);
+    tctx.fillRect(24, ty - 25, 24, 25);
+    tctx.fillStyle = '#451a03';
+    tctx.fillRect(32, ty - 63, 8, 61);
+
+    // Vibrant Vermilion & Emerald Leaf Canopy
+    tctx.fillStyle = '#181615';
+    tctx.fillRect(8, ty - 110, 56, 52);
+    tctx.fillRect(18, ty - 118, 36, 12);
+    tctx.fillStyle = '#15803d'; // Forest foliage
+    tctx.fillRect(10, ty - 108, 52, 48);
+    tctx.fillRect(20, ty - 116, 32, 10);
+    // Blazing red poinciana blossoms
+    tctx.fillStyle = '#ea580c';
+    tctx.fillRect(14, ty - 104, 18, 18);
+    tctx.fillRect(38, ty - 106, 20, 20);
+    tctx.fillRect(24, ty - 92, 24, 16);
+    tctx.fillStyle = '#facc15'; // Golden stamen dots
+    tctx.fillRect(20, ty - 98, 4, 4);
+    tctx.fillRect(44, ty - 100, 4, 4);
+
+    this.sprites.poinciana_tree = tree.canvas;
+
+    // 8. Antique Sunthorn Wichit Street Lamp
+    const streetLamp = createOffscreen(24, 85);
     const lctx = streetLamp.ctx;
     lctx.fillStyle = '#181615';
-    lctx.fillRect(10, 18, 4, 56);
-    lctx.fillRect(6, 70, 12, 5);
+    lctx.fillRect(10, 18, 4, 66);
+    lctx.fillRect(6, 80, 12, 5);
     lctx.fillRect(4, 6, 16, 14);
     lctx.fillStyle = '#fef08a';
     lctx.fillRect(6, 8, 12, 10);
@@ -946,125 +1456,215 @@ export class TaiPla128Renderer {
   }
 
   // =========================================================================
-  // 6. CLEAN MEKONG RIVERFRONT RENDERING (FLAT & MINIMALIST)
+  // 6. MEKONG RIVERFRONT MULTI-PLANE RENDERING (VERTICAL 9:16 AWARE)
   // =========================================================================
   drawBackground(ctx, width, height, groundY, distanceRun, frame, spicyTier, feverTimer) {
-    // 1. Clean Flat Sky (Zero Muddy Gradient Noise)
-    let skyColor = '#f5f2eb';      // Tier 1: Crisp Warm Ivory
+    // 1. Dynamic 4-Period Sky Palette
+    let skyColor = '#f5f2eb';        // Tier 1: Crisp Morning Ivory
+    let horizonColor = '#fef3c7';    // Soft warm dawn glow
     if (feverTimer > 0) {
-      skyColor = '#fef9c3';      // Golden Joy
+      skyColor = '#fef9c3';          // Happy Golden Joy
+      horizonColor = '#fde047';
     } else if (spicyTier === 4) {
-      skyColor = '#151816';      // Tier 4: Obsidian Night
+      skyColor = '#090d16';          // Tier 4: Midnight Lai Ruea Fai
+      horizonColor = '#172554';
     } else if (spicyTier === 3) {
-      skyColor = '#1e3326';      // Tier 3: Deep Sage Emerald
+      skyColor = '#1c1917';          // Tier 3: Sunset Terracotta Twilight
+      horizonColor = '#ea580c';
     } else if (spicyTier === 2) {
-      skyColor = '#ea580c';      // Tier 2: Terracotta Sunset
+      skyColor = '#38bdf8';          // Tier 2: Midday Clear Cyan Sky
+      horizonColor = '#bae6fd';
     }
 
-    ctx.fillStyle = skyColor;
+    // Sky Vertical Gradient
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+    skyGrad.addColorStop(0, skyColor);
+    skyGrad.addColorStop(0.85, horizonColor);
+    skyGrad.addColorStop(1, horizonColor);
+    ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Lightning flash in Tier 4
-    if (spicyTier === 4 && (frame % 150 < 3 || frame % 210 < 2)) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    // Stars in Tier 4 / Midnight Mode
+    if (spicyTier === 4) {
+      ctx.fillStyle = '#fef08a';
+      for (let s = 0; s < 30; s++) {
+        const sx = ((s * 47) + (distanceRun * 0.02)) % width;
+        const sy = (s * 19) % (groundY - 120);
+        const blink = Math.sin(frame * 0.1 + s) > 0.3 ? 2 : 1;
+        ctx.fillRect(sx, sy, blink, blink);
+      }
+    }
+
+    // Lightning Flash in Extreme Tiers
+    if (spicyTier === 4 && (frame % 180 < 3 || frame % 240 < 2)) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.fillRect(0, 0, width, groundY);
     }
 
-    // 2. Celestial Body (Clean Flat Sun / Moon)
-    const sunX = width - 65;
-    const sunY = 38;
-    if (spicyTier >= 3) {
+    // 2. Celestial Body (Midday Sun / Sunset Sun / Night Moon)
+    const sunX = width - 75;
+    const sunY = 55;
+    if (spicyTier === 4) {
+      // Crescent Moon
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
-      ctx.arc(sunX, sunY, 14, 0, Math.PI * 2);
+      ctx.arc(sunX, sunY, 18, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = skyColor;
       ctx.beginPath();
-      ctx.arc(sunX + 6, sunY - 4, 12, 0, Math.PI * 2);
+      ctx.arc(sunX + 7, sunY - 5, 15, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (spicyTier === 3) {
+      // Golden Hour Sunset Sun sinking behind Lao Mountains
+      ctx.fillStyle = '#c2410c';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY + 20, 26, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(sunX, sunY + 20, 20, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      ctx.fillStyle = spicyTier === 2 ? '#c2410c' : '#f59e0b';
-      ctx.fillRect(sunX - 14, sunY - 4, 28, 8);
-      ctx.fillRect(sunX - 4, sunY - 14, 8, 28);
-      ctx.fillRect(sunX - 10, sunY - 10, 20, 20);
+      // Midday / Morning Sun with retro rays
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(sunX - 16, sunY - 5, 32, 10);
+      ctx.fillRect(sunX - 5, sunY - 16, 10, 32);
+      ctx.fillRect(sunX - 12, sunY - 12, 24, 24);
       ctx.fillStyle = '#fde047';
-      ctx.fillRect(sunX - 8, sunY - 8, 16, 16);
+      ctx.fillRect(sunX - 9, sunY - 9, 18, 18);
     }
 
-    // 3. Clean Clouds
-    const cloudColor = spicyTier >= 3 ? '#2d4a37' : (spicyTier === 2 ? '#fed7aa' : '#ffffff');
-    const cloud1X = ((width - ((distanceRun * 0.12) % (width + 160)) + width + 160) % (width + 160)) - 80;
-    const cloud2X = ((width - (((distanceRun * 0.12) + 280) % (width + 160)) + width + 160) % (width + 160)) - 80;
-    this.drawCleanCloud(ctx, cloud1X, 22, cloudColor, spicyTier);
-    this.drawCleanCloud(ctx, cloud2X, 48, cloudColor, spicyTier);
+    // 3. Clouds & Mekong Hawks (Layer 0)
+    const cloudColor = spicyTier === 4 ? '#1e293b' : (spicyTier === 3 ? '#fed7aa' : '#ffffff');
+    const cloud1X = ((width - ((distanceRun * 0.10) % (width + 200)) + width + 200) % (width + 200)) - 80;
+    const cloud2X = ((width - (((distanceRun * 0.10) + 320) % (width + 200)) + width + 200) % (width + 200)) - 80;
+    this.drawCleanCloud(ctx, cloud1X, 35, cloudColor, spicyTier);
+    this.drawCleanCloud(ctx, cloud2X, 75, cloudColor, spicyTier);
 
-    // 4. Flat Lao Mountains (Layer 1)
-    const mountainColor = spicyTier >= 3 ? '#16261c' : (spicyTier === 2 ? '#9a3412' : '#cbd5e1');
-    ctx.fillStyle = mountainColor;
+    // 4. Far Lao Limestone Mountains - Khammouane Karst (Layer 1)
+    const mountainColorFar = spicyTier === 4 ? '#0b132b' : (spicyTier === 3 ? '#431407' : '#94a3b8');
+    const mountainColorNear = spicyTier === 4 ? '#1e293b' : (spicyTier === 3 ? '#7c2d12' : '#cbd5e1');
+
+    // Ridge 1 (Distant Jagged Peaks)
+    ctx.fillStyle = mountainColorFar;
     ctx.beginPath();
-    ctx.moveTo(0, groundY - 38);
-    for (let mx = 0; mx <= width; mx += 25) {
-      const peak = Math.sin((mx + distanceRun * 0.15) * 0.015) * 14;
-      ctx.lineTo(mx, groundY - 42 + peak);
+    ctx.moveTo(0, groundY - 75);
+    for (let mx = 0; mx <= width; mx += 20) {
+      const peak = Math.sin((mx + distanceRun * 0.08) * 0.012) * 28 + Math.cos(mx * 0.04) * 8;
+      ctx.lineTo(mx, groundY - 95 + peak);
     }
-    ctx.lineTo(width, groundY - 22);
-    ctx.lineTo(0, groundY - 22);
+    ctx.lineTo(width, groundY - 45);
+    ctx.lineTo(0, groundY - 45);
+    ctx.closePath();
+    ctx.fill();
+
+    // Ridge 2 (Closer Karst Hills)
+    ctx.fillStyle = mountainColorNear;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY - 55);
+    for (let mx = 0; mx <= width; mx += 25) {
+      const peak = Math.sin((mx + distanceRun * 0.16) * 0.018) * 16;
+      ctx.lineTo(mx, groundY - 65 + peak);
+    }
+    ctx.lineTo(width, groundY - 35);
+    ctx.lineTo(0, groundY - 35);
     ctx.closePath();
     ctx.fill();
 
     // 5. Mekong River Waters (Layer 2)
-    const riverColor = spicyTier >= 3 ? '#0e7490' : (spicyTier === 2 ? '#c2410c' : '#38bdf8');
+    const riverWaterH = Math.max(28, Math.floor(height * 0.06));
+    const riverY = groundY - riverWaterH;
+    const riverColor = spicyTier === 4 ? '#082f49' : (spicyTier === 3 ? '#9a3412' : '#0284c7');
     ctx.fillStyle = riverColor;
-    ctx.fillRect(0, groundY - 28, width, 16);
+    ctx.fillRect(0, riverY, width, riverWaterH);
 
-    ctx.fillStyle = spicyTier >= 3 ? '#38bdf8' : '#e0f2fe';
-    const waveShift = (frame * 1.8) % 32;
-    for (let wx = -32; wx < width; wx += 32) {
-      ctx.fillRect(wx + waveShift, groundY - 24, 14, 2);
+    // Animated Specular River Waves
+    ctx.fillStyle = spicyTier === 4 ? '#38bdf8' : '#e0f2fe';
+    const waveShift = (frame * 1.5) % 36;
+    for (let wx = -36; wx < width; wx += 36) {
+      ctx.fillRect(wx + waveShift, riverY + 8, 16, 2);
+      ctx.fillRect(wx + waveShift + 18, riverY + 18, 12, 2);
     }
 
-    // 6. Landmarks (Layer 3)
-    const scenePeriod = 1800;
+    // In Tier 4 (Night): Lai Ruea Fai Illuminated Boat floating on the river!
+    if (spicyTier === 4 && this.sprites.lai_ruea_fai) {
+      const boatPos = ((width + 300) - ((distanceRun * 0.35) % (width + 600))) - 150;
+      ctx.drawImage(this.sprites.lai_ruea_fai, boatPos, riverY - 45);
+      // Golden light reflection in river water
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.3)';
+      ctx.fillRect(boatPos + 10, riverY + 2, 120, 8);
+    }
+
+    // 6. Real Nakhon Phanom Heritage Landmarks on Promenade (Layer 3)
+    const scenePeriod = 2600; // Expanded sequence loop
     const getPos = (baseX) => {
       const pos = (baseX - (distanceRun * 0.75)) % scenePeriod;
-      return ((pos % scenePeriod) + scenePeriod) % scenePeriod - 150;
+      return ((pos % scenePeriod) + scenePeriod) % scenePeriod - 160;
     };
 
-    // Landmark A: "ในบ้าน" Riverside Heritage Cafe
+    // Landmark 1: "ในบ้าน" (In The Haus Heritage Cafe & Roastery)
     const cafeX = getPos(220);
-    if (cafeX > -150 && cafeX < width + 80 && this.sprites.cafe_in_the_haus) {
-      ctx.drawImage(this.sprites.cafe_in_the_haus, cafeX, groundY - 106);
+    if (cafeX > -160 && cafeX < width + 80 && this.sprites.cafe_in_the_haus) {
+      ctx.drawImage(this.sprites.cafe_in_the_haus, cafeX, groundY - 118);
     }
 
-    // Landmark B: หอนาฬิกาเวียดนามอนุสรณ์
-    const clockX = getPos(800);
-    if (clockX > -80 && clockX < width + 80 && this.sprites.clock_tower) {
-      ctx.drawImage(this.sprites.clock_tower, clockX, groundY - 118);
+    // Landmark 2: โบสถ์นักบุญอันนา หนองแสง (St. Anne's Catholic Church)
+    const churchX = getPos(850);
+    if (churchX > -120 && churchX < width + 80 && this.sprites.st_anne_church) {
+      ctx.drawImage(this.sprites.st_anne_church, churchX, groundY - 198);
     }
 
-    // Landmark C: องค์พญาศรีสัตตนาคราช
-    const nagaX = getPos(1350);
-    if (nagaX > -90 && nagaX < width + 90 && this.sprites.phaya_naga) {
-      ctx.drawImage(this.sprites.phaya_naga, nagaX, groundY - 96);
+    // Landmark 3: หอนาฬิกาเวียดนามอนุสรณ์ (Vietnamese Memorial Clock Tower)
+    const clockX = getPos(1480);
+    if (clockX > -90 && clockX < width + 80 && this.sprites.clock_tower) {
+      ctx.drawImage(this.sprites.clock_tower, clockX, groundY - 148);
+    }
+
+    // Landmark 4: พิพิธภัณฑ์จวนผู้ว่าราชการจังหวัดนครพนม (Old Governor's Residence)
+    const govX = getPos(2050);
+    if (govX > -150 && govX < width + 80 && this.sprites.governor_residence) {
+      ctx.drawImage(this.sprites.governor_residence, govX, groundY - 105);
+    }
+
+    // Landmark 5: องค์พญาศรีสัตตนาคราช (Phaya Si Satta Nakarat)
+    const nagaX = getPos(2420);
+    if (nagaX > -100 && nagaX < width + 90 && this.sprites.phaya_naga) {
+      ctx.drawImage(this.sprites.phaya_naga, nagaX, groundY - 128);
+      // Dynamic turquoise river mist spray from naga mouths
       ctx.fillStyle = '#38bdf8';
-      const waterDrop = (frame * 3) % 24;
-      ctx.fillRect(nagaX - 8 - waterDrop, groundY - 80 + waterDrop * 1.5, 4, 4);
+      const sprayCycle = (frame * 4) % 36;
+      ctx.fillRect(nagaX - 10 - sprayCycle, groundY - 105 + sprayCycle * 0.8, 5, 5);
+      ctx.fillRect(nagaX - 18 - sprayCycle, groundY - 100 + sprayCycle * 0.9, 4, 4);
     }
 
-    // Landmark D: Street Lamps
-    for (let lx = 50; lx < scenePeriod; lx += 450) {
-      const lampX = getPos(lx);
-      if (lampX > -40 && lampX < width + 40 && this.sprites.street_lamp) {
-        ctx.drawImage(this.sprites.street_lamp, lampX, groundY - 72);
+    // Landmark 6: Poinciana Trees & Street Lamps along the Promenade
+    for (let tx = 60; tx < scenePeriod; tx += 650) {
+      const pX = getPos(tx);
+      if (pX > -80 && pX < width + 80 && this.sprites.poinciana_tree) {
+        ctx.drawImage(this.sprites.poinciana_tree, pX, groundY - 110);
       }
     }
 
-    // 7. Clean Dieter Rams Promenade (Layer 4)
+    for (let lx = 380; lx < scenePeriod; lx += 450) {
+      const lampX = getPos(lx);
+      if (lampX > -40 && lampX < width + 40 && this.sprites.street_lamp) {
+        ctx.drawImage(this.sprites.street_lamp, lampX, groundY - 80);
+      }
+    }
+
+    // 7. Decorative Riverfront Wrought-Iron Railing (Layer 4)
+    ctx.fillStyle = '#181615';
+    ctx.fillRect(0, groundY - 14, width, 2); // Top rail
+    ctx.fillRect(0, groundY - 2, width, 2);  // Bottom rail
+    for (let rx = 0; rx < width; rx += 14) {
+      ctx.fillRect(rx, groundY - 14, 2, 14); // Balusters
+    }
+
     // 2px Solid Ground Line
     ctx.fillStyle = '#181615';
     ctx.fillRect(0, groundY, width, 2);
 
-    // Stone Sidewalk
+    // Stone Sidewalk Promenade
     const groundBg = spicyTier >= 3 ? '#1e293b' : '#78716c';
     const tileColor = spicyTier >= 3 ? '#0f172a' : '#57534e';
     ctx.fillStyle = groundBg;
@@ -1074,8 +1674,18 @@ export class TaiPla128Renderer {
     ctx.fillStyle = tileColor;
     const tileShift = (distanceRun * 2.2) % 28;
     for (let tx = -28; tx < width; tx += 28) {
-      ctx.fillRect(tx + tileShift, groundY + 2, 14, 12);
-      ctx.fillRect(tx + tileShift + 14, groundY + 14, 14, 20);
+      ctx.fillRect(tx + tileShift, groundY + 2, 14, 14);
+      ctx.fillRect(tx + tileShift + 14, groundY + 16, 14, 24);
+      ctx.fillRect(tx + tileShift, groundY + 40, 14, 30);
+    }
+
+    // 8. Drifting Poinciana Blossom Petals in the River Breeze (Layer 5)
+    ctx.fillStyle = '#ea580c';
+    for (let p = 0; p < 8; p++) {
+      const px = ((p * 73) - (frame * 1.8 + distanceRun * 0.5)) % width;
+      const actualPx = px < 0 ? px + width : px;
+      const py = groundY - 80 + Math.sin(frame * 0.08 + p) * 45;
+      ctx.fillRect(actualPx, py, 3, 2);
     }
   }
 

@@ -17,9 +17,9 @@ const CHARACTERS = {
     color: '#0284c7',
     maxJumps: 2,
     godModeBonus: 0,
-    magnetRadius: 55,
-    jumpPower: -13.6,
-    doubleJumpPower: -12.0
+    magnetRadius: 65,
+    jumpPower: -17.2,
+    doubleJumpPower: -15.2
   },
   som_satow: {
     id: 'som_satow',
@@ -31,8 +31,8 @@ const CHARACTERS = {
     color: '#ea580c',
     maxJumps: 1,
     godModeBonus: 1.0,
-    magnetRadius: 55,
-    jumpPower: -13.8
+    magnetRadius: 65,
+    jumpPower: -17.5
   },
   khao_lam: {
     id: 'khao_lam',
@@ -44,10 +44,45 @@ const CHARACTERS = {
     color: '#78716c',
     maxJumps: 1,
     godModeBonus: 0,
-    magnetRadius: 90,
-    jumpPower: -13.4
+    magnetRadius: 105,
+    jumpPower: -17.0
+  },
+  barista_cat: {
+    id: 'barista_cat',
+    name: 'บาริสต้าเหมียว (Barista Cat)',
+    title: 'COFFEE / WIND FELINE',
+    desc: 'แมวทักซิโด้บาริสต้าประจำร้านในบ้าน • สวมผ้ากันเปื้อนลินินและหมวกเบเร่ต์ ทะยานตัวด้วยสปริงฟองนมและดึงดูดเมล็ดกาแฟ',
+    trait: 'STEAM LAUNCH (สปริงฟองนมดีดตัวสูง)',
+    badgeColor: 'bg-amber-50 text-amber-900 border-amber-300',
+    color: '#b45309',
+    maxJumps: 2,
+    godModeBonus: 0.5,
+    magnetRadius: 80,
+    jumpPower: -18.2,
+    doubleJumpPower: -16.0
+  },
+  baby_naga: {
+    id: 'baby_naga',
+    name: 'พญานาคาน้อย (Baby Nakkhi)',
+    title: 'SPIRIT / WATER SERPENT',
+    desc: 'นาคาน้อยผู้พิทักษ์สายน้ำโขง • ลอยละล่องบนเมฆหมอกมรกต มีเศียรทองคำ 3 เศียร ร่อนเหินเวหา 3 จังหวะพร้อมรัศมีคุ้มภัย',
+    trait: 'TRIPLE JUMP (ร่อนเหิน 3 จังหวะ)',
+    badgeColor: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+    color: '#059669',
+    maxJumps: 3,
+    godModeBonus: 1.0,
+    magnetRadius: 95,
+    jumpPower: -16.5,
+    doubleJumpPower: -14.5
   }
 };
+
+const BGM_TRACKS = [
+  { id: 'swing_jazz', name: 'SWING JAZZ', title: 'สวิงแจ๊สริมโขง (Mekong Swing)', bpm: 122 },
+  { id: 'indie_rock', name: 'INDIE ROCK', title: 'ร็อกอินดี้ในบ้าน (Haus Rock)', bpm: 132 },
+  { id: 'mekong_funk', name: 'SURF FUNK', title: 'ฟังก์หมอลำริมโขง (Surf Funk)', bpm: 112 },
+  { id: 'sunset_lofi', name: 'SUNSET LO-FI', title: 'พระอาทิตย์อัสดง (Sunset Chords)', bpm: 86 }
+];
 
 export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, onCoinEarned, isDedicated = false, onBackToHub = null }) {
   const [selectedCharId, setSelectedCharId] = useState('tai_pla');
@@ -65,6 +100,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [feverRemaining, setFeverRemaining] = useState(0);
   const [currentSpicyTier, setCurrentSpicyTier] = useState(1); // 1: เผ็ดอนุบาล, 2: เผ็ดปากเปิด, 3: เผ็ดหูดับตับไหม้, 4: เผ็ดนรกแตก
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [currentBgmTrack, setCurrentBgmTrack] = useState('swing_jazz');
+  const [isBgmPlaying, setIsBgmPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canRestart, setCanRestart] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
@@ -80,11 +117,14 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const defaultGroundY = isMobileView ? 280 : 245;
+  // Vertical Portrait Ground Plane (Height 700, ground at 550)
+  const defaultGroundY = 550;
 
   const canvasRef = useRef(null);
   const animationFrameRef = useRef(null);
   const audioCtxRef = useRef(null);
+  const bgmIntervalRef = useRef(null);
+  const bgmGainRef = useRef(null);
 
   const activeChar = CHARACTERS[selectedCharId] || CHARACTERS.tai_pla;
 
@@ -110,7 +150,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   // Smooth Game Physics & Engine References
   const gameRef = useRef({
     charId: 'tai_pla',
-    catX: isMobileView ? 65 : 75,
+    catX: 75,
     catY: defaultGroundY,
     catVy: 0,
     isGrounded: true,
@@ -137,7 +177,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     frame: 0,
     scaleX: 1.0,
     scaleY: 1.0,
-    magnetRadius: 55,
+    magnetRadius: 65,
     spicyTier: 1,
     lastUiSync: 0,
     hitShakeTimer: 0,
@@ -148,12 +188,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
   useEffect(() => {
     if (gameState === 'idle') {
-      const gy = isMobileView ? 280 : 245;
+      const gy = 550;
       gameRef.current.groundY = gy;
       gameRef.current.catY = gy;
-      gameRef.current.catX = isMobileView ? 65 : 75;
+      gameRef.current.catX = 75;
     }
-  }, [isMobileView, gameState]);
+  }, [gameState]);
 
   // 8-Bit / 128-Bit Retro Synthesizer
   const playRetroSound = (type) => {
@@ -309,6 +349,309 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     } catch (e) {}
   };
 
+  // =========================================================================
+  // 🎶 MULTI-GENRE WEB AUDIO BGM SYNTHESIZER (SWING JAZZ / ROCK / FUNK / LO-FI)
+  // =========================================================================
+  const stopBgm = () => {
+    if (bgmIntervalRef.current) {
+      clearInterval(bgmIntervalRef.current);
+      bgmIntervalRef.current = null;
+    }
+    if (bgmGainRef.current) {
+      try {
+        bgmGainRef.current.gain.linearRampToValueAtTime(0.001, (audioCtxRef.current?.currentTime || 0) + 0.15);
+      } catch (e) {}
+    }
+    setIsBgmPlaying(false);
+  };
+
+  const startBgm = (trackId = currentBgmTrack) => {
+    stopBgm();
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const track = BGM_TRACKS.find(t => t.id === trackId) || BGM_TRACKS[0];
+      const effectiveBpm = isFeverActive ? track.bpm * 1.22 : track.bpm;
+      const stepTimeMs = (60000 / effectiveBpm) / 4; // 16th note in ms
+      let step = 0;
+
+      // Master BGM gain
+      const bgmGain = ctx.createGain();
+      bgmGain.gain.setValueAtTime(0.16, ctx.currentTime);
+      bgmGain.connect(ctx.destination);
+      bgmGainRef.current = bgmGain;
+
+      // Warm overdrive distortion curve for Indie Rock
+      let distortionCurve = null;
+      if (track.id === 'indie_rock') {
+        const n = 256;
+        const curve = new Float32Array(n);
+        const deg = Math.PI / 180;
+        const k = 40;
+        for (let i = 0; i < n; i++) {
+          const x = (i * 2) / n - 1;
+          curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+        }
+        distortionCurve = curve;
+      }
+
+      const scheduleStep = () => {
+        if (!audioCtxRef.current || !soundEnabled) return;
+        const now = ctx.currentTime;
+        const s = step % 16;
+        const bar = Math.floor(step / 16) % 4;
+
+        // 1. Drum / Rhythm Percussion
+        if (track.id === 'swing_jazz') {
+          // Swing Hi-hat on 0, 4, 6, 8, 12, 14 (swung feel)
+          if (s === 0 || s === 4 || s === 6 || s === 8 || s === 12 || s === 14) {
+            const hatOsc = ctx.createOscillator();
+            const hatGain = ctx.createGain();
+            hatOsc.type = 'highpass';
+            hatOsc.frequency.setValueAtTime(s === 6 || s === 14 ? 7500 : 9200, now);
+            hatGain.gain.setValueAtTime(s === 6 || s === 14 ? 0.03 : 0.06, now);
+            hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+            hatOsc.connect(hatGain);
+            hatGain.connect(bgmGain);
+            hatOsc.start(now);
+            hatOsc.stop(now + 0.05);
+          }
+          // Soft brush kick on 0, 8
+          if (s === 0 || s === 8) {
+            const kick = ctx.createOscillator();
+            const kg = ctx.createGain();
+            kick.frequency.setValueAtTime(115, now);
+            kick.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+            kg.gain.setValueAtTime(0.12, now);
+            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            kick.connect(kg);
+            kg.connect(bgmGain);
+            kick.start(now);
+            kick.stop(now + 0.1);
+          }
+        } else if (track.id === 'indie_rock') {
+          // Driving Rock Drum Groove: Kick on 0, 8, 10; Snare on 4, 12
+          if (s === 0 || s === 8 || s === 10) {
+            const kick = ctx.createOscillator();
+            const kg = ctx.createGain();
+            kick.frequency.setValueAtTime(140, now);
+            kick.frequency.exponentialRampToValueAtTime(36, now + 0.09);
+            kg.gain.setValueAtTime(0.18, now);
+            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+            kick.connect(kg);
+            kg.connect(bgmGain);
+            kick.start(now);
+            kick.stop(now + 0.11);
+          }
+          if (s === 4 || s === 12) {
+            const snare = ctx.createOscillator();
+            const sg = ctx.createGain();
+            snare.type = 'triangle';
+            snare.frequency.setValueAtTime(190, now);
+            snare.frequency.exponentialRampToValueAtTime(55, now + 0.11);
+            sg.gain.setValueAtTime(0.14, now);
+            sg.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+            snare.connect(sg);
+            sg.connect(bgmGain);
+            snare.start(now);
+            snare.stop(now + 0.13);
+          }
+          if (s % 2 === 0) {
+            const hat = ctx.createOscillator();
+            const hg = ctx.createGain();
+            hat.type = 'sine';
+            hat.frequency.setValueAtTime(8500, now);
+            hg.gain.setValueAtTime(0.035, now);
+            hg.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+            hat.connect(hg);
+            hg.connect(bgmGain);
+            hat.start(now);
+            hat.stop(now + 0.035);
+          }
+        } else if (track.id === 'mekong_funk') {
+          // Funk Slap Kick on 0, 6, 10; Clap on 4, 12
+          if (s === 0 || s === 6 || s === 10) {
+            const kick = ctx.createOscillator();
+            const kg = ctx.createGain();
+            kick.frequency.setValueAtTime(125, now);
+            kick.frequency.exponentialRampToValueAtTime(42, now + 0.08);
+            kg.gain.setValueAtTime(0.16, now);
+            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+            kick.connect(kg);
+            kg.connect(bgmGain);
+            kick.start(now);
+            kick.stop(now + 0.1);
+          }
+          if (s === 4 || s === 12) {
+            const clap = ctx.createOscillator();
+            const cg = ctx.createGain();
+            clap.type = 'sawtooth';
+            clap.frequency.setValueAtTime(320, now);
+            cg.gain.setValueAtTime(0.08, now);
+            cg.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+            clap.connect(cg);
+            cg.connect(bgmGain);
+            clap.start(now);
+            clap.stop(now + 0.09);
+          }
+        }
+
+        // 2. Bass & Harmonic Melodies
+        if (track.id === 'swing_jazz') {
+          // Walking Upright Bass on quarter beats (0, 4, 8, 12)
+          if (s % 4 === 0) {
+            const jazzWalking = [
+              [73.42, 98.00, 110.00, 123.47],  // D2 - G2 - A2 - B2
+              [98.00, 123.47, 130.81, 146.83], // G2 - B2 - C3 - D3
+              [130.81, 164.81, 146.83, 123.47], // C3 - E3 - D3 - B2
+              [110.00, 138.59, 146.83, 164.81]  // A2 - C#3 - D3 - E3
+            ];
+            const quarter = Math.floor(s / 4);
+            const freq = jazzWalking[bar][quarter];
+            const bass = ctx.createOscillator();
+            const bg = ctx.createGain();
+            bass.type = 'triangle';
+            bass.frequency.setValueAtTime(freq, now);
+            bg.gain.setValueAtTime(0.14, now);
+            bg.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            bass.connect(bg);
+            bg.connect(bgmGain);
+            bass.start(now);
+            bass.stop(now + 0.23);
+          }
+
+          // Comping piano chords on syncopated off-beats (2, 7, 11)
+          if (s === 2 || s === 7 || s === 11) {
+            const jazzChords = [
+              [293.66, 349.23, 440.00, 493.88], // Dm9
+              [246.94, 329.63, 349.23, 440.00], // G13
+              [261.63, 329.63, 392.00, 493.88], // Cmaj9
+              [220.00, 277.18, 349.23, 415.30]  // A7alt
+            ];
+            const chordNotes = jazzChords[bar];
+            chordNotes.forEach((f, idx) => {
+              const pOsc = ctx.createOscillator();
+              const pGain = ctx.createGain();
+              pOsc.type = 'sine';
+              pOsc.frequency.setValueAtTime(f, now + idx * 0.012);
+              pGain.gain.setValueAtTime(0.05, now + idx * 0.012);
+              pGain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.012 + 0.22);
+              pOsc.connect(pGain);
+              pGain.connect(bgmGain);
+              pOsc.start(now + idx * 0.012);
+              pOsc.stop(now + idx * 0.012 + 0.24);
+            });
+          }
+        } else if (track.id === 'indie_rock') {
+          // Driving 8th-note Bass
+          if (s % 2 === 0) {
+            const rockRoots = [110.00, 87.31, 130.81, 98.00]; // A2, F2, C3, G2
+            const bass = ctx.createOscillator();
+            const bg = ctx.createGain();
+            bass.type = 'sawtooth';
+            bass.frequency.setValueAtTime(rockRoots[bar], now);
+            bg.gain.setValueAtTime(0.10, now);
+            bg.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+            bass.connect(bg);
+            bg.connect(bgmGain);
+            bass.start(now);
+            bass.stop(now + 0.14);
+          }
+
+          // Melodic Overdrive Guitar Riff
+          if (s === 0 || s === 3 || s === 6 || s === 8 || s === 11 || s === 14) {
+            const guitarMelody = [
+              [440.00, 523.25, 659.25, 523.25, 440.00, 392.00],
+              [349.23, 440.00, 523.25, 440.00, 349.23, 329.63],
+              [523.25, 659.25, 783.99, 659.25, 523.25, 440.00],
+              [392.00, 493.88, 587.33, 493.88, 392.00, 349.23]
+            ];
+            const noteIdx = Math.floor(s / 2.5) % 6;
+            const freq = guitarMelody[bar][noteIdx];
+            const gOsc = ctx.createOscillator();
+            const gGain = ctx.createGain();
+            gOsc.type = 'triangle';
+            gOsc.frequency.setValueAtTime(freq, now);
+
+            if (distortionCurve) {
+              const shaper = ctx.createWaveShaper();
+              shaper.curve = distortionCurve;
+              gOsc.connect(shaper);
+              shaper.connect(gGain);
+            } else {
+              gOsc.connect(gGain);
+            }
+
+            gGain.gain.setValueAtTime(0.08, now);
+            gGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            gGain.connect(bgmGain);
+            gOsc.start(now);
+            gOsc.stop(now + 0.20);
+          }
+        } else if (track.id === 'mekong_funk') {
+          // Isan Surf Pentatonic Riffs (A, C, D, E, G)
+          if (s === 0 || s === 3 || s === 6 || s === 10 || s === 12) {
+            const funkScale = [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25];
+            const fNote = funkScale[(s + bar * 2) % funkScale.length];
+            const fOsc = ctx.createOscillator();
+            const fg = ctx.createGain();
+            fOsc.type = 'sawtooth';
+            fOsc.frequency.setValueAtTime(fNote, now);
+            fg.gain.setValueAtTime(0.07, now);
+            fg.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+            fOsc.connect(fg);
+            fg.connect(bgmGain);
+            fOsc.start(now);
+            fOsc.stop(now + 0.16);
+          }
+        } else if (track.id === 'sunset_lofi') {
+          // Ambient Warm Lo-Fi Chords every 8 steps
+          if (s === 0 || s === 8) {
+            const lofiChords = [
+              [174.61, 261.63, 329.63, 392.00, 440.00], // Fmaj9
+              [164.81, 246.94, 293.66, 349.23, 392.00], // Em7
+              [146.83, 293.66, 349.23, 440.00, 523.25], // Dm9
+              [130.81, 261.63, 329.63, 392.00, 493.88]  // Cmaj7
+            ];
+            const notes = lofiChords[bar];
+            notes.forEach((f, idx) => {
+              const lOsc = ctx.createOscillator();
+              const lg = ctx.createGain();
+              lOsc.type = 'sine';
+              lOsc.frequency.setValueAtTime(f, now + idx * 0.03);
+              lg.gain.setValueAtTime(0.07, now + idx * 0.03);
+              lg.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.03 + 0.55);
+              lOsc.connect(lg);
+              lg.connect(bgmGain);
+              lOsc.start(now + idx * 0.03);
+              lOsc.stop(now + idx * 0.03 + 0.6);
+            });
+          }
+        }
+
+        step++;
+      };
+
+      bgmIntervalRef.current = setInterval(scheduleStep, stepTimeMs);
+      setIsBgmPlaying(true);
+    } catch (e) {
+      console.error('Failed to start in-game BGM:', e);
+    }
+  };
+
+  const cycleBgmTrack = () => {
+    const currIdx = BGM_TRACKS.findIndex(t => t.id === currentBgmTrack);
+    const nextTrack = BGM_TRACKS[(currIdx + 1) % BGM_TRACKS.length];
+    setCurrentBgmTrack(nextTrack.id);
+    if (gameState === 'playing' && soundEnabled) {
+      startBgm(nextTrack.id);
+    }
+  };
+
   const startGame = () => {
     const char = CHARACTERS[selectedCharId] || CHARACTERS.tai_pla;
     setGameState('playing');
@@ -324,10 +667,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     setCanRestart(true);
     setIsClaiming(false);
 
-    const startGroundY = isMobileView ? 280 : 245;
+    const startGroundY = 550;
     gameRef.current = {
       charId: char.id,
-      catX: isMobileView ? 65 : 75,
+      catX: 75,
       catY: startGroundY,
       catVy: 0,
       isGrounded: true,
@@ -364,6 +707,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     };
 
     playRetroSound('meow');
+    startBgm(currentBgmTrack);
   };
 
   // Ultra-Snappy Jump with Double Jump & Coyote Time
@@ -380,7 +724,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
     // Ground jump
     if (g.isGrounded || g.coyoteTimer > 0) {
-      g.catVy = char.jumpPower || -12.6;
+      g.catVy = char.jumpPower || -17.2;
       g.isGrounded = false;
       g.jumpCount = 1;
       g.coyoteTimer = 0;
@@ -403,7 +747,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     } 
     // Double jump in mid-air (if character supports maxJumps >= 2)
     else if (g.jumpCount < g.maxJumps) {
-      g.catVy = char.doubleJumpPower || -11.0;
+      g.catVy = char.doubleJumpPower || -15.2;
       g.jumpCount += 1;
       g.scaleX = 0.8;
       g.scaleY = 1.3;
@@ -434,6 +778,25 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       g.jumpBufferTimer = 0.16;
     }
   };
+
+  // BGM Life-cycle & Mute Synchronization
+  useEffect(() => {
+    if (!soundEnabled || gameState !== 'playing') {
+      stopBgm();
+    }
+  }, [soundEnabled, gameState]);
+
+  useEffect(() => {
+    if (gameState === 'playing' && soundEnabled) {
+      startBgm(currentBgmTrack);
+    }
+  }, [isFeverActive]);
+
+  useEffect(() => {
+    return () => {
+      stopBgm();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -571,7 +934,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       g.jumpBufferTimer = Math.max(0, g.jumpBufferTimer - dt);
 
-      const gravity = g.catVy > 0 ? 40 : 34; // Snappy, decisive gravity
+      const gravity = g.catVy > 0 ? 46 : 38; // Snappy, decisive gravity for 700px height
       g.catVy += gravity * dt;
       g.catY += g.catVy;
 
@@ -666,7 +1029,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             const isSkyFalling = monsterType === 'giant_mortar';
             const isThunder = monsterType === 'naga_thunder';
 
-            const monY = isFlying ? g.groundY - 55 : (isSkyFalling ? -40 : g.groundY);
+            const monY = isFlying ? g.groundY - 130 : (isSkyFalling ? -40 : g.groundY);
             const monW = isSkyFalling ? 52 : (isThunder ? 24 : (monsterType === 'hawk' ? 36 : (monsterType === 'hot_runner' ? 36 : (monsterType === 'coconut' ? 28 : 32))));
             const monH = isSkyFalling ? 52 : (isThunder ? g.groundY : (monsterType === 'hawk' ? 30 : (monsterType === 'hot_runner' ? 40 : (monsterType === 'coconut' ? 28 : 32))));
             const speedMul = monsterType === 'hot_runner' ? 1.45 : (monsterType === 'coconut' ? 1.35 : (monsterType === 'hawk' ? 1.2 : 1.0));
@@ -688,7 +1051,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             if (g.spicyTier >= 3 && !isFlying && !isSkyFalling && !isThunder && Math.random() < 0.28) {
               g.monsters.push({
                 x: canvas.width + 150,
-                y: g.groundY - 55,
+                y: g.groundY - 130,
                 vy: 0,
                 type: 'hawk',
                 width: 36,
@@ -715,7 +1078,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               foodType = 'bamboo';
             }
 
-            const itemY = foodType === 'golden_mortar' ? g.groundY - 60 : (g.groundY - (Math.random() > 0.5 ? 42 : 14));
+            // Multi-altitude vertical spawning (Low / Mid / High altitudes)
+            const randH = Math.random();
+            const itemY = foodType === 'golden_mortar' 
+              ? g.groundY - 210 
+              : (randH > 0.65 ? g.groundY - 170 : (randH > 0.35 ? g.groundY - 80 : g.groundY - 18));
+
             g.items.push({
               x: canvas.width + 20,
               y: itemY,
@@ -748,7 +1116,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             catBottom <= g.groundY + 8 &&
             g.catVy >= 0
           ) {
-            g.catVy = -15.5; // Mega spring launch!
+            g.catVy = -22.5; // Mega spring launch high into the upper vertical sky!
             g.isGrounded = false;
             g.jumpCount = 1;
             elem.isCompressed = true;
@@ -953,6 +1321,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
       // Helper for Game Over Trigger
       function triggerGameOver(soundType = 'hit') {
+        stopBgm();
         playRetroSound(soundType);
         triggerHaptic('hit');
         g.hitShakeTimer = 0.28;
@@ -1244,7 +1613,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             </div>
           </div>
 
-          {/* Right score and sound controls */}
+          {/* Right score, music and sound controls */}
           <div className="flex items-center gap-2 font-mono text-xs">
             <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold">
               <span>{score} PTS</span>
@@ -1255,6 +1624,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               </div>
             )}
             <button
+              onClick={cycleBgmTrack}
+              className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors uppercase"
+              title="เปลี่ยนแนวเพลง Lo-Fi"
+            >
+              [ ♫ {bgmTrack.replace('_', ' ')} ]
+            </button>
+            <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               className="px-2 py-1 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] rounded-lg border border-[#181615] text-[10px] font-bold cursor-pointer transition-colors"
             >
@@ -1263,19 +1639,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           </div>
         </header>
 
-        {/* Central Game Arena */}
-        <main className="flex-1 w-full flex flex-col justify-center items-center px-2 sm:px-6 min-h-0 relative">
+        {/* Central Game Arena - Vertical Portrait (Flappy Cat style 480x700) */}
+        <main className="flex-1 w-full flex flex-col justify-center items-center px-2 sm:px-4 min-h-0 relative py-1 sm:py-2">
           <div 
             onClick={handleJumpPress}
             onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className={`relative w-full max-w-2xl ${
-              isMobileView ? 'aspect-[3/2] max-h-[50vh]' : 'aspect-[19/8] max-h-[56vh]'
-            } bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out`}
+            className="relative w-full max-w-[420px] aspect-[9/16] max-h-[72vh] sm:max-h-[76vh] bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
           >
             <canvas 
               ref={canvasRef} 
-              width={isMobileView ? 540 : 760} 
-              height={isMobileView ? 360 : 320} 
+              width={480} 
+              height={700} 
               className="w-full h-full block"
               style={{ imageRendering: 'pixelated' }}
             />
@@ -1482,7 +1856,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         </div>
 
         {/* Status Score & LCD Coins Deck */}
-        <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto">
+        <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto flex-wrap">
           {earnedXhaus > 0 && (
             <div className="bg-[#E9F344] border-2 border-[#181615] px-2.5 py-1 rounded-xl text-[#181615] font-bold text-[11px]">
               +{earnedXhaus.toFixed(2)} XH
@@ -1492,6 +1866,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             <span className="text-[8px] text-[#A8A29E] block">SCORE</span>
             <span className="font-bold text-sm">{score}</span>
           </div>
+          <button
+            onClick={cycleBgmTrack}
+            className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors uppercase"
+            title="เปลี่ยนแนวเพลง Lo-Fi"
+          >
+            [ ♫ {bgmTrack.replace('_', ' ')} ]
+          </button>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="px-2.5 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer transition-colors"
@@ -1507,16 +1888,35 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         </div>
       </div>
 
-      {/* Canvas Container */}
+      {/* Companion character switcher when idle in inline mode */}
+      {gameState !== 'playing' && (
+        <div className="flex items-center gap-1.5 w-full max-w-md mx-auto overflow-x-auto pb-1 text-[10px] font-mono">
+          {Object.values(CHARACTERS).map((char) => (
+            <button
+              key={char.id}
+              onClick={() => setSelectedCharId(char.id)}
+              className={`flex-1 py-1.5 px-2 rounded-xl border font-bold uppercase truncate transition-colors cursor-pointer ${
+                selectedCharId === char.id
+                  ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                  : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
+              }`}
+            >
+              {char.name.split(' ')[0]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Canvas Container - Vertical 9:16 Portrait */}
       <div 
         onClick={handleJumpPress}
         onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-        className="relative w-full max-w-4xl aspect-[19/8] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
+        className="relative w-full max-w-[420px] aspect-[9/16] max-h-[72vh] mx-auto bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
       >
         <canvas 
           ref={canvasRef} 
-          width={760} 
-          height={320} 
+          width={480} 
+          height={700} 
           className="w-full h-full block"
           style={{ imageRendering: 'pixelated' }}
         />

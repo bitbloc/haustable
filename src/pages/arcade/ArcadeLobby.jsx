@@ -721,6 +721,51 @@ export default function ArcadeLobby() {
         [146.83, 220.00, 277.18, 329.63, 440.00, 554.37], // A/D
         [146.83, 220.00, 293.66, 369.99, 440.00, 587.33]  // D
       ]
+    },
+    swing_jazz: {
+      id: 'swing_jazz',
+      tag: '[ TRK-11 ]',
+      name: 'สวิงแจ๊สริมโขง (Mekong Swing)',
+      desc: 'Walking Bass กระฉับกระเฉง & สวิงริธึมสไตล์บิ๊กแบนด์ริมแม่น้ำโขง',
+      filterFreq: 950,
+      noiseGain: 0.25,
+      type: 'jazz',
+      chords: [
+        [130.81, 261.63, 329.63, 392.00, 493.88, 587.33], // Cmaj9
+        [110.00, 220.00, 261.63, 329.63, 440.00, 523.25], // Am9
+        [146.83, 293.66, 349.23, 440.00, 523.25, 659.25], // Dm9
+        [98.00, 246.94, 293.66, 349.23, 440.00, 587.33]   // G13
+      ]
+    },
+    indie_rock: {
+      id: 'indie_rock',
+      tag: '[ TRK-12 ]',
+      name: 'อินดี้ร็อกถนนคนเดิน (Indie Rock)',
+      desc: 'กีตาร์คอร์ดดิบสไตล์อินดี้ & บีททรงพลังริมถนนคนเดินนครพนม',
+      filterFreq: 1200,
+      noiseGain: 0.30,
+      type: 'lofi',
+      chords: [
+        [110.00, 164.81, 220.00, 329.63, 440.00], // A5/Asus2
+        [146.83, 220.00, 293.66, 369.99, 440.00], // Dsus2
+        [164.81, 246.94, 329.63, 392.00, 493.88], // Em
+        [130.81, 196.00, 261.63, 329.63, 392.00]  // Cadd9
+      ]
+    },
+    mekong_funk: {
+      id: 'mekong_funk',
+      tag: '[ TRK-13 ]',
+      name: 'โขงเซิร์ฟฟังก์ (Mekong Surf Funk)',
+      desc: 'กรูฟฟังก์สนุกสนาน & คอร์ด 9th สดใสรับลมโขงสไตล์อีสานฟังก์',
+      filterFreq: 1100,
+      noiseGain: 0.26,
+      type: 'jazz',
+      chords: [
+        [164.81, 246.94, 329.63, 392.00, 493.88, 659.25], // Em9
+        [110.00, 220.00, 277.18, 329.63, 440.00, 554.37], // A13
+        [130.81, 261.63, 329.63, 392.00, 523.25, 659.25], // Cmaj9
+        [123.47, 246.94, 311.13, 369.99, 440.00, 554.37]  // B7#9
+      ]
     }
   };
 
@@ -846,7 +891,7 @@ export default function ArcadeLobby() {
           playChordNote(freq, delay, idx === 0);
         });
         chordIndex++;
-      }, preset.type === 'jazz' ? 3200 : 3600);
+      }, preset.id === 'swing_jazz' ? 2400 : (preset.id === 'mekong_funk' ? 2600 : (preset.type === 'jazz' ? 3200 : 3600)));
 
       setChillPlaying(true);
     } catch (e) {
@@ -1131,7 +1176,7 @@ export default function ArcadeLobby() {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615] animate-pulse" />
               <h2 className="font-pixel text-lg sm:text-xl font-bold uppercase tracking-wider text-[#181615]">
-                HAUS BINAURAL LO-FI STUDIO // 10 SOUNDSCAPES
+                HAUS BINAURAL LO-FI STUDIO // 13 SOUNDSCAPES
               </h2>
             </div>
             <button
@@ -1836,7 +1881,7 @@ export default function ArcadeLobby() {
               <div className="w-full aspect-[16/9] bg-[#1c2541] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
                 <div className="flex items-center justify-between z-10 font-mono text-[8px]">
                   <span className="bg-sky-900/80 text-sky-200 px-2 py-0.5 rounded-md font-bold uppercase">
-                    10 SOUNDSCAPES
+                    13 SOUNDSCAPES
                   </span>
                   <span className="text-[#93c5fd]">
                     MEKONG BALCONY
@@ -1869,7 +1914,7 @@ export default function ArcadeLobby() {
                   HAUS BINAURAL LO-FI
                 </h3>
                 <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  10 ซาวด์แทร็คแจ๊สเปียโนและคลื่นแม่น้ำโขงสังเคราะห์ • มิติเสียง 3D Binaural ฟังสบายสมอง เปิดคลอระหว่างเลือกเกมได้
+                  13 ซาวด์แทร็คแจ๊ส สวิงร็อก ฟังก์ และคลื่นแม่น้ำโขงสังเคราะห์ • มิติเสียง 3D Binaural ฟังสบายสมอง เปิดคลอระหว่างเลือกเกมได้
                 </p>
               </div>
             </div>
