@@ -55,7 +55,6 @@ export default function DailySummarySlipModal({
 
     // Compute comprehensive daily financial and sales metrics strictly from checked-out / completed orders
     const reportData = useMemo(() => {
-        // 1. Separate bookings by lifecycle
         const completedBookings = []
         const activeUnpaidBookings = []
         const cancelledBookings = []
@@ -71,7 +70,6 @@ export default function DailySummarySlipModal({
             }
         })
 
-        // 2. Financial totals (Strictly from settled/completed bills per user rule)
         let totalSettledSales = 0
         let totalDiscounts = 0
         let totalGuests = 0
@@ -106,7 +104,6 @@ export default function DailySummarySlipModal({
             totalDiscounts += disc
             totalGuests += pax
 
-            // Payment breakdown
             const breakdown = getBookingPaymentBreakdown(b)
             if (breakdown.cash > 0) {
                 cashTotal += breakdown.cash
@@ -121,7 +118,6 @@ export default function DailySummarySlipModal({
                 creditCount++
             }
 
-            // Service mix (Dine-in vs Pickup)
             const bType = (b.booking_type || 'dine_in').toLowerCase()
             if (bType === 'dine_in' || bType === 'walk_in') {
                 dineInSettledCount++
@@ -131,7 +127,6 @@ export default function DailySummarySlipModal({
                 pickupSettledAmount += amt
             }
 
-            // Channel detection (Lineman delivery vs in-store walk-in)
             const remark = (b.staff_remark || '').toLowerCase()
             const note = (b.customer_note || '').toLowerCase()
             const isLineman = remark.includes('lineman') || remark.includes('line man') || note.includes('lineman') || note.includes('line man')
@@ -144,7 +139,6 @@ export default function DailySummarySlipModal({
                 walkinAmount += amt
             }
 
-            // Order items aggregation
             ;(b.order_items || []).forEach(item => {
                 if (item.status === 'void' || item.status === 'cancelled') return
 
@@ -154,7 +148,6 @@ export default function DailySummarySlipModal({
                 const lineTotal = price * qty
                 totalItemsSold += qty
 
-                // Best seller item tracking
                 if (itemMap.has(name)) {
                     const existing = itemMap.get(name)
                     existing.qty += qty
@@ -163,7 +156,6 @@ export default function DailySummarySlipModal({
                     itemMap.set(name, { name, qty, total: lineTotal })
                 }
 
-                // Category sales tracking
                 const catId = item.menu_items?.category_id || item.category_id || 'other'
                 const catName = categoryMap[catId] || 
                                 (item.destination === 'bar' ? 'เครื่องดื่ม' : item.destination === 'kitchen' ? 'อาหาร' : 'อื่นๆ / General')
@@ -178,7 +170,6 @@ export default function DailySummarySlipModal({
             })
         })
 
-        // 3. Active / Seated tables that are NOT yet checked out
         let activeUnpaidTotal = 0
         const activeTablesList = activeUnpaidBookings.map(b => {
             const amt = parseFloat(b.total_amount || b.total_price || 0)
@@ -193,21 +184,16 @@ export default function DailySummarySlipModal({
             }
         })
 
-        // Sort Top 5 Items
         const topItems = Array.from(itemMap.values())
             .sort((a, b) => b.qty - a.qty || b.total - a.total)
             .slice(0, 5)
 
-        // Sort Categories by Amount
         const categorySales = Array.from(categorySalesMap.values())
             .sort((a, b) => b.amount - a.amount)
 
-        // Averages
         const grossSettledRevenue = totalSettledSales + totalDiscounts
         const avgPerBill = completedBookings.length > 0 ? (totalSettledSales / completedBookings.length) : 0
         const avgPerGuest = totalGuests > 0 ? (totalSettledSales / totalGuests) : 0
-
-        // Total day business volume (Settled + Active in-service)
         const totalDayVolume = totalSettledSales + activeUnpaidTotal
 
         return {
@@ -244,27 +230,74 @@ export default function DailySummarySlipModal({
         }
     }, [bookings, categoryMap])
 
-    // Save Slip as High-Res PNG (Thermal 80mm Proportion)
-    const handleSavePng = async () => {
-        if (!slipRef.current || saving) return
-        setSaving(true)
+    /**
+     * Bulletproof Full-Slip Image Exporter
+     * Creates an isolated off-screen clone with natural height (no parent scroll clipping)
+     */
+    const exportFullSlipImage = async () => {
+        if (!slipRef.current) return null
+        const source = slipRef.current
+
+        // Create an isolated clone attached to document.body
+        const clone = source.cloneNode(true)
+        clone.style.position = 'fixed'
+        clone.style.left = '-9999px'
+        clone.style.top = '0'
+        clone.style.width = '360px'
+        clone.style.maxWidth = '360px'
+        clone.style.height = 'auto'
+        clone.style.maxHeight = 'none'
+        clone.style.overflow = 'visible'
+        clone.style.margin = '0'
+        clone.style.padding = '20px'
+        clone.style.backgroundColor = '#ffffff'
+        clone.style.zIndex = '-9999'
+        clone.style.boxShadow = 'none'
+        document.body.appendChild(clone)
+
         try {
-            const dataUrl = await toPng(slipRef.current, {
+            // Wait 80ms for layout & webfonts to stabilize
+            await new Promise(r => setTimeout(r, 80))
+
+            const fullHeight = clone.scrollHeight || clone.offsetHeight
+            const fullWidth = clone.scrollWidth || 360
+
+            const dataUrl = await toPng(clone, {
                 pixelRatio: 3,
                 quality: 1.0,
                 cacheBust: true,
+                width: fullWidth,
+                height: fullHeight,
                 style: {
                     transform: 'none',
                     margin: '0',
+                    maxHeight: 'none',
+                    height: 'auto',
+                    overflow: 'visible'
                 }
             })
+            return dataUrl
+        } finally {
+            if (clone && clone.parentNode) {
+                clone.parentNode.removeChild(clone)
+            }
+        }
+    }
+
+    // Save Slip as High-Res PNG (Complete, Uncut Slip)
+    const handleSavePng = async () => {
+        if (saving) return
+        setSaving(true)
+        try {
+            const dataUrl = await exportFullSlipImage()
+            if (!dataUrl) throw new Error('ไม่พบข้อมูลสลิป')
 
             const link = document.createElement('a')
             link.download = `Z_REPORT_${selectedDate}.png`
             link.href = dataUrl
             link.click()
 
-            toast.success('บันทึกรูปภาพสลิปสรุปยอดปิดวันเรียบร้อยแล้ว (PNG)')
+            toast.success('บันทึกรูปภาพสลิปสรุปยอดปิดวันครบถ้วนเรียบร้อยแล้ว (PNG)')
         } catch (err) {
             console.error('Failed to export PNG slip:', err)
             toast.error('ไม่สามารถบันทึกรูปภาพได้: ' + err.message)
@@ -273,22 +306,19 @@ export default function DailySummarySlipModal({
         }
     }
 
-    // Copy Slip Image to Clipboard (Instant LINE Sharing)
+    // Copy Complete Slip Image to Clipboard (Instant LINE Sharing)
     const handleCopyImage = async () => {
-        if (!slipRef.current) return
         try {
-            const dataUrl = await toPng(slipRef.current, {
-                pixelRatio: 3,
-                quality: 1.0,
-                cacheBust: true
-            })
+            const dataUrl = await exportFullSlipImage()
+            if (!dataUrl) throw new Error('ไม่พบข้อมูลสลิป')
+
             const res = await fetch(dataUrl)
             const blob = await res.blob()
             await navigator.clipboard.write([
                 new ClipboardItem({ 'image/png': blob })
             ])
             setCopied(true)
-            toast.success('คัดลอกรูปสลิปลง Clipboard แล้ว (พร้อมวางส่งเข้า LINE)')
+            toast.success('คัดลอกรูปสลิปเต็มใบลง Clipboard แล้ว (พร้อมวางส่งเข้า LINE)')
             setTimeout(() => setCopied(false), 2500)
         } catch (err) {
             console.error('Failed to copy image:', err)
@@ -301,14 +331,12 @@ export default function DailySummarySlipModal({
         if (printing) return
         setPrinting(true)
         try {
-            // Check if onPrintSlip callback provided
             if (typeof onPrintSlip === 'function') {
                 await onPrintSlip()
                 setPrinting(false)
                 return
             }
 
-            // Direct compilation to ESC/POS for Sunmi
             const dayShift = {
                 staffName: 'ADMIN / CASHIER',
                 openedAt: bookings.length > 0 ? bookings[bookings.length - 1].booking_time : new Date().toISOString(),
@@ -332,7 +360,6 @@ export default function DailySummarySlipModal({
             if (printed) {
                 toast.success('สั่งพิมพ์สลิปสรุปยอดออกเครื่องพิมพ์ Thermal สำเร็จ')
             } else {
-                // Fallback to browser window print
                 window.print()
             }
         } catch (err) {
@@ -345,10 +372,10 @@ export default function DailySummarySlipModal({
 
     return (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[94vh]">
+            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
                 
                 {/* Modal Header */}
-                <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono">
+                <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono shrink-0">
                     <div>
                         <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)]">
                             DAILY SALES Z-REPORT AUDIT
@@ -366,14 +393,14 @@ export default function DailySummarySlipModal({
                     </button>
                 </div>
 
-                {/* Slip Preview Area (Styled strictly as 80mm Thermal Receipt) */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 bg-[oklch(95%_0.008_28)] flex justify-center">
+                {/* Slip Preview Area with generous bottom padding so footer never clips content */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 pb-28 sm:pb-32 bg-[oklch(95%_0.008_28)] flex justify-center">
                     <div 
                         ref={slipRef}
-                        className="w-full max-w-[360px] bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] shadow-md font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3.5 select-none"
+                        className="w-full max-w-[360px] bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] shadow-md font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3 select-none"
                     >
                         {/* 1. Shop Header & Metadata */}
-                        <div className="text-center space-y-1 pb-3 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">
+                        <div className="text-center space-y-1 pb-2.5 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">
                             <h2 className="text-base font-black tracking-widest uppercase">{shopName}</h2>
                             <p className="text-[10px] text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider">
                                 DAILY SALES Z-REPORT (สลิปปิดวัน)
@@ -445,7 +472,7 @@ export default function DailySummarySlipModal({
                         )}
 
                         {/* 4. Payment Methods Breakdown (Strictly Realized) */}
-                        <div className="space-y-1.5 pt-1">
+                        <div className="space-y-1 pt-1">
                             <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
                                 <span>PAYMENT BREAKDOWN (ช่องทางชำระ)</span>
                                 <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
@@ -474,7 +501,7 @@ export default function DailySummarySlipModal({
 
                         {/* 5. Sales by Category (ยอดขายแยกตามหมวดหมู่) */}
                         {reportData.categorySales.length > 0 && (
-                            <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
                                 <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
                                     <span>SALES BY CATEGORY (ยอดขายตามหมวด)</span>
                                     <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">จำนวน / ยอดเงิน</span>
@@ -500,7 +527,7 @@ export default function DailySummarySlipModal({
 
                         {/* 6. Top 5 Best-Selling Items */}
                         {reportData.topItems.length > 0 && (
-                            <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
                                 <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
                                     TOP 5 BEST-SELLERS (5 เมนูขายดี)
                                 </div>
@@ -520,7 +547,7 @@ export default function DailySummarySlipModal({
                         )}
 
                         {/* 7. Service Mix & Channels Breakdown */}
-                        <div className="space-y-1.5 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
+                        <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
                             <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
                                 SERVICE MIX & CHANNELS (ประเภทและช่องทาง)
                             </div>
@@ -551,7 +578,7 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 8. Operational Performance & Guest Statistics */}
-                        <div className="space-y-1 pt-2 border-t border-dashed border-[oklch(85%_0.012_28)] text-[11px]">
+                        <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-[11px]">
                             <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1">
                                 SALES STATISTICS (สถิติการขาย)
                             </div>
@@ -570,7 +597,7 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 9. Tax Status Notice (Strictly NON-VAT per Store Settings) */}
-                        <div className="pt-2 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                        <div className="pt-1.5 border-t border-dashed border-[oklch(85%_0.012_28)]">
                             {isVatEnabled ? (
                                 <div className="space-y-1 text-xs">
                                     <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider pb-1">
@@ -598,11 +625,11 @@ export default function DailySummarySlipModal({
                         </div>
 
                         {/* 10. Audit Verification & Sign-off Footer */}
-                        <div className="pt-3 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-2">
-                            <div className="pt-1 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.010_28)]">
+                        <div className="pt-2 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-1.5">
+                            <div className="pt-0.5 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.010_28)]">
                                 DAILY Z-REPORT AUDITED & VERIFIED
                             </div>
-                            <div className="pt-2 border-t border-[oklch(90%_0.008_28)] flex justify-between items-end text-[9px] text-[oklch(50%_0.010_28)]">
+                            <div className="pt-1.5 border-t border-[oklch(90%_0.008_28)] flex justify-between items-end text-[9px] text-[oklch(50%_0.010_28)]">
                                 <div>
                                     <span>เวลาปิดรายงาน: {new Date().toLocaleTimeString('th-TH')}</span>
                                 </div>
@@ -615,7 +642,7 @@ export default function DailySummarySlipModal({
                 </div>
 
                 {/* Modal Footer Controls */}
-                <div className="p-3 sm:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                <div className="p-3 sm:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs shrink-0 shadow-lg">
                     <button
                         onClick={onClose}
                         className="px-3.5 py-2 border border-[oklch(85%_0.012_28)] hover:bg-[oklch(95%_0.010_28)] rounded-sm font-bold text-[oklch(42%_0.010_28)] transition-colors cursor-pointer"
