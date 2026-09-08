@@ -10,7 +10,25 @@ import {
     DEFAULT_CRM_SETTINGS
 } from '../utils/crmHelper'
 
-const CART_STORAGE_KEY = 'hausmade_cart_items_v2'
+const CART_STORAGE_KEY = 'hausmade_cart_session_v3'
+const LEGACY_STORAGE_KEYS = [
+    'hausmade_cart_items_v2',
+    'hausmade_cart_items_v1',
+    'hausmade_cart_items',
+    'hausmade_cart'
+]
+const CART_MAX_AGE_MS = 2 * 60 * 60 * 1000 // 2 hours active session timeout
+
+function purgeLegacyCartStorage() {
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            LEGACY_STORAGE_KEYS.forEach(key => localStorage.removeItem(key))
+        }
+    } catch {}
+}
+
+// Immediately purge persistent legacy cart from localStorage on script evaluation
+purgeLegacyCartStorage()
 
 export function isPreOrderItem(item) {
     if (!item) return false
@@ -86,17 +104,33 @@ export function useHausmadeShop() {
     const [redeemedCoinsInput, setRedeemedCoinsInput] = useState(0)
     const [activeOrders, setActiveOrders] = useState([])
 
-    // Cart State with LocalStorage initialization & sanitization
+    // Cart State with SessionStorage initialization & auto-expiry
     const [cart, setCart] = useState(() => {
+        // Ensure legacy localStorage is wiped so nothing lingers from past visits
+        purgeLegacyCartStorage()
+
         try {
-            const saved = localStorage.getItem(CART_STORAGE_KEY)
+            if (typeof window === 'undefined' || !window.sessionStorage) return []
+            const saved = sessionStorage.getItem(CART_STORAGE_KEY)
             if (!saved) return []
             const parsed = JSON.parse(saved)
-            if (!Array.isArray(parsed)) return []
+            
+            // Allow both array format or object { items, timestamp }
+            const items = Array.isArray(parsed) ? parsed : parsed?.items
+            const timestamp = parsed?.timestamp
+
+            if (!Array.isArray(items) || items.length === 0) return []
+
+            // If session payload has timestamp and is older than 2 hours, expire it
+            if (timestamp && (Date.now() - timestamp > CART_MAX_AGE_MS)) {
+                sessionStorage.removeItem(CART_STORAGE_KEY)
+                return []
+            }
+
             // Sanitize items and ensure valid cartKey & numbers
-            return parsed
+            return items
                 .filter(item => item && item.id && (item.name || item.custom_name))
-                .map((item, idx) => ({
+                .map((item) => ({
                     ...item,
                     cartKey: item.cartKey || `${item.id}-${JSON.stringify(item.selectedOptions || {})}`,
                     quantity: Math.max(1, Number(item.quantity) || 1),
@@ -108,16 +142,22 @@ export function useHausmadeShop() {
         }
     })
 
-    // Sync Cart to LocalStorage
+    // Sync Cart to SessionStorage (tab session only, no permanent lingering)
     useEffect(() => {
         try {
+            purgeLegacyCartStorage()
+            if (typeof window === 'undefined' || !window.sessionStorage) return
+
             if (cart.length === 0) {
-                localStorage.removeItem(CART_STORAGE_KEY)
+                sessionStorage.removeItem(CART_STORAGE_KEY)
             } else {
-                localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart))
+                sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify({
+                    items: cart,
+                    timestamp: Date.now()
+                }))
             }
         } catch (e) {
-            console.error('Failed to sync cart to localStorage:', e)
+            console.error('Failed to sync cart to sessionStorage:', e)
         }
     }, [cart])
 
@@ -577,7 +617,10 @@ return () => {
         setCart([])
         setRedeemedCoinsInput(0)
         try {
-            localStorage.removeItem(CART_STORAGE_KEY)
+            purgeLegacyCartStorage()
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+                sessionStorage.removeItem(CART_STORAGE_KEY)
+            }
         } catch {}
     }, [])
 

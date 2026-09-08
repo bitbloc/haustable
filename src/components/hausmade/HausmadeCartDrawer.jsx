@@ -204,6 +204,14 @@ export default function HausmadeCartDrawer({
         setTimeout(() => setCopyFeedback(''), 2500)
     }
 
+    const handleClearCart = () => {
+        clearCart()
+        if (removePromo) removePromo()
+        setPromoCode('')
+        setRedeemedCoinsInput(0)
+        setValidationError('')
+    }
+
     const handleApplyPromoCode = async () => {
         if (!promoCode.trim()) return
         await applyCode(promoCode.trim().toUpperCase(), cartSubtotal, 'ordering')
@@ -334,6 +342,9 @@ export default function HausmadeCartDrawer({
                     isPreOrder: hasPreOrderInCart
                 })
                 clearCart()
+                if (removePromo) removePromo()
+                setPromoCode('')
+                setRedeemedCoinsInput(0)
             }
         })
     }
@@ -602,7 +613,7 @@ export default function HausmadeCartDrawer({
                                         {cart.length > 0 && (
                                             <button
                                                 type="button"
-                                                onClick={clearCart}
+                                                onClick={handleClearCart}
                                                 className="font-mono text-[10px] text-[oklch(52%_0.16_28)] hover:underline uppercase font-bold cursor-pointer transition-colors"
                                             >
                                                 [ ✕ ล้างตะกร้า ]
