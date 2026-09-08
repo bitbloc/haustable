@@ -1,15 +1,48 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabaseClient'
-import { Plus, Edit2, Trash2, X, Image as ImageIcon, Check, AlertCircle, Camera, ShoppingBag, GripVertical, Search, Copy, CheckCircle2, XCircle, ChevronDown, Layers, Percent } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Plus, Edit2, Trash2, X, Image as ImageIcon, GripVertical, Search, Copy, LayoutGrid, List } from 'lucide-react'
 import { DndContext, closestCorners, MouseSensor, TouchSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
-import { arrayMove, SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { arrayMove, SortableContext, rectSortingStrategy, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toast } from 'sonner'
 
-// --- Sortable Item Card Component ---
+// --- Reusable Rams Confirmation Dialog ---
+function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', isDanger = false, onConfirm, onCancel }) {
+    if (!isOpen) return null
+    return createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[10000] flex items-center justify-center p-4">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 rounded-sm shadow-xl font-sans">
+                <h3 className="font-mono text-sm font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">{title}</h3>
+                <p className="text-xs text-[oklch(42%_0.010_28)] font-sans mt-2 whitespace-pre-line leading-relaxed">{message}</p>
+                <div className="flex gap-2 mt-5">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="flex-1 px-3 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-bold uppercase rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    >
+                        {cancelText}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className={`flex-1 px-3 py-2 text-xs font-mono font-bold uppercase rounded-sm transition-colors duration-150 cursor-pointer text-[oklch(97%_0.008_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
+                            isDanger
+                                ? 'bg-red-700 hover:bg-red-800'
+                                : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(14%_0.010_28)]'
+                        }`}
+                    >
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body
+    )
+}
+
+// --- Sortable Item Card Component (Grid Mode) ---
 const SortableMenuItem = React.memo(function SortableMenuItem({ 
     item, 
     handleEdit, 
@@ -50,7 +83,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
     // Overlay Render (Dragging Preview)
     if (isOverlay) {
         return (
-            <div className="bg-white border-2 border-[oklch(52%_0.16_28)] rounded-sm p-3 flex gap-3 shadow-2xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
+            <div className="bg-[oklch(98%_0.004_28)] border-2 border-[oklch(52%_0.16_28)] rounded-sm p-3 flex gap-3 shadow-2xl cursor-grabbing select-none z-50 scale-105 w-[320px] md:w-[340px]">
                 <div className="w-16 h-16 bg-[oklch(94%_0.010_28)] rounded-sm overflow-hidden shrink-0 border border-[oklch(85%_0.012_28)]">
                     {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
@@ -60,7 +93,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-center">
                     <h4 className="font-bold truncate text-sm text-[oklch(18%_0.012_28)]">{item.name}</h4>
-                    <div className="text-[oklch(52%_0.16_28)] font-mono font-bold text-sm mt-0.5">฿{item.price}</div>
+                    <div className="text-[oklch(52%_0.16_28)] font-mono font-bold text-sm mt-0.5 tabular-nums">฿{item.price}</div>
                 </div>
             </div>
         )
@@ -70,14 +103,12 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
         <div 
             ref={setNodeRef} 
             style={style} 
-            className={`bg-white border rounded-sm p-3 flex justify-between gap-3 items-stretch relative select-none group transition-all shadow-xs ${
+            className={`bg-[oklch(98%_0.004_28)] border rounded-sm p-3 flex justify-between gap-3 items-stretch relative select-none group transition-colors duration-150 shadow-xs ${
                 isOutOfStock 
-                    ? 'border-gray-200 bg-gray-50/70 opacity-75' 
-                    : isRecommended 
-                        ? 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]' 
-                        : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                    ? 'border-[oklch(88%_0.010_28)] bg-[oklch(95%_0.008_28)]/70 opacity-75' 
+                    : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
             }`}
-            onClick={(e) => {
+            onClick={() => {
                 if (!isDragging) handleEdit(item)
             }}
         >
@@ -94,7 +125,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     )}
                     {isOutOfStock && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                            <span className="text-[10px] font-mono font-bold text-white uppercase tracking-wider bg-red-600 px-1 py-0.5 rounded-xs">
+                            <span className="text-[10px] font-mono font-bold text-[oklch(97%_0.008_28)] uppercase tracking-wider bg-red-700 px-1 py-0.5 rounded-xs">
                                 หมด
                             </span>
                         </div>
@@ -109,12 +140,12 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                                 {item.name}
                             </h4>
                             {isRecommended && (
-                                <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
-                                    ★ REC
+                                <span className="text-[9px] font-mono font-bold uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-300 px-1.5 py-0.2 rounded-xs">
+                                    REC
                                 </span>
                             )}
                         </div>
-                        <div className="font-mono font-bold text-[oklch(52%_0.16_28)] text-sm mt-0.5">
+                        <div className="font-mono font-bold text-[oklch(52%_0.16_28)] text-sm mt-0.5 tabular-nums">
                             ฿{item.price}
                         </div>
                         <div className="text-xs text-[oklch(55%_0.010_28)] line-clamp-1 mt-0.5 font-sans" title={item.description}>
@@ -127,7 +158,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             {item.menu_categories?.name || item.category || 'ทั่วไป'}
                         </span>
                         {item.remaining_stock !== null && item.remaining_stock !== undefined && (
-                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs border ${
+                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
                                 item.remaining_stock <= 0
                                     ? 'bg-red-50 text-red-700 border-red-300'
                                     : item.remaining_stock <= 5
@@ -159,7 +190,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             e.stopPropagation()
                             handleDuplicate(item)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors cursor-pointer"
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                         title="คัดลอกเมนูนี้"
                     >
                         <Copy size={14} />
@@ -169,7 +200,7 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                             e.stopPropagation()
                             handleEdit(item)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors cursor-pointer"
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                         title="แก้ไขเมนู"
                     >
                         <Edit2 size={14} />
@@ -177,9 +208,9 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                     <button 
                         onClick={(e) => {
                             e.stopPropagation()
-                            handleDelete(item.id)
+                            handleDelete(item.id, item.name)
                         }} 
-                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-600 hover:bg-red-50 rounded-sm transition-colors cursor-pointer"
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-sm transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                         title="ลบเมนู"
                     >
                         <Trash2 size={14} />
@@ -190,8 +221,8 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
                         ref={setActivatorNodeRef}
                         {...attributes}
                         {...listeners}
-                        className="p-1 text-[oklch(55%_0.010_28)] hover:text-black cursor-grab active:cursor-grabbing hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors flex items-center justify-center touch-none"
-                        style={{ width: '24px', height: '24px', touchAction: 'none' }}
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-grab active:cursor-grabbing hover:bg-[oklch(94%_0.010_28)] rounded-sm transition-colors duration-150 flex items-center justify-center touch-none"
+                        style={{ width: '28px', height: '28px', touchAction: 'none' }}
                         title="ลากเพื่อเรียงลำดับ"
                     >
                         <GripVertical size={15} />
@@ -200,30 +231,30 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
 
                 {/* Bottom Quick Toggles */}
                 <div 
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-1.5"
                     onPointerDown={(e) => e.stopPropagation()} 
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Quick Stock Toggle */}
+                    {/* Quick Stock Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleToggleStock(e, item)}
-                        className={`px-1.5 py-0.5 rounded-xs text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                        className={`px-2 py-1 rounded-xs text-[10px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_available !== false 
                                 ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100' 
                                 : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
                         }`}
-                        title={item.is_available !== false ? 'คลิกเพื่อเปลี่ยนเป็นของหมด' : 'คลิกเพื่อเปิดขาย'}
+                        title={item.is_available !== false ? 'คลิกเพื่อตั้งเป็นของหมด' : 'คลิกเพื่อเปิดขาย'}
                     >
                         {item.is_available !== false ? '● มีของ' : '○ หมด'}
                     </button>
 
-                    {/* Quick Pickup Toggle */}
+                    {/* Quick Pickup Toggle (Silent Update) */}
                     <button
                         onClick={(e) => handleTogglePickup(e, item)}
-                        className={`px-1.5 py-0.5 rounded-xs text-[10px] font-mono font-bold border transition-colors cursor-pointer ${
+                        className={`px-2 py-1 rounded-xs text-[10px] font-mono font-bold border transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             item.is_pickup_available !== false 
-                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]' 
-                                : 'bg-gray-100 text-gray-400 border-gray-200'
+                                ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]' 
+                                : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
                         }`}
                         title="สิทธิ์สั่ง Pick-up ล่วงหน้า"
                     >
@@ -235,6 +266,165 @@ const SortableMenuItem = React.memo(function SortableMenuItem({
     )
 })
 
+// --- Sortable Table Row Component (Dense Tabular Mode) ---
+const SortableMenuTableRow = React.memo(function SortableMenuTableRow({
+    item,
+    handleEdit,
+    handleDelete,
+    handleDuplicate,
+    handleToggleStock,
+    handleTogglePickup
+}) {
+    const isOutOfStock = item.is_available === false
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        setActivatorNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: item.id })
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.3 : 1
+    }
+
+    return (
+        <tr
+            ref={setNodeRef}
+            style={style}
+            onClick={() => handleEdit(item)}
+            className={`border-b border-[oklch(85%_0.012_28)] text-xs font-mono hover:bg-[oklch(95%_0.008_28)] transition-colors duration-150 cursor-pointer ${
+                isOutOfStock ? 'bg-[oklch(96%_0.006_28)]/60 text-[oklch(55%_0.010_28)]' : 'bg-[oklch(98%_0.004_28)] text-[oklch(18%_0.012_28)]'
+            }`}
+        >
+            {/* Drag Handle */}
+            <td className="py-2 px-3 w-8 text-center" onClick={e => e.stopPropagation()}>
+                <div
+                    ref={setActivatorNodeRef}
+                    {...attributes}
+                    {...listeners}
+                    className="p-1 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-grab active:cursor-grabbing hover:bg-[oklch(92%_0.010_28)] rounded-xs inline-flex items-center justify-center touch-none"
+                    title="ลากเพื่อเรียงลำดับ"
+                >
+                    <GripVertical size={14} />
+                </div>
+            </td>
+
+            {/* Thumbnail */}
+            <td className="py-2 px-3 w-12">
+                <div className="w-10 h-10 bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden border border-[oklch(85%_0.012_28)] flex items-center justify-center shrink-0">
+                    {item.image_url ? (
+                        <img src={item.image_url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    ) : (
+                        <ImageIcon size={14} className="text-[oklch(55%_0.010_28)]" />
+                    )}
+                </div>
+            </td>
+
+            {/* Name & Category */}
+            <td className="py-2 px-3">
+                <div className="flex items-center gap-2">
+                    <span className="font-bold font-sans text-sm text-[oklch(18%_0.012_28)]">{item.name}</span>
+                    {item.is_recommended && (
+                        <span className="text-[9px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
+                            REC
+                        </span>
+                    )}
+                    {item.is_drink_stamp_eligible && (
+                        <span className="text-[9px] font-mono font-bold bg-amber-50 text-amber-900 border border-amber-300 px-1 py-0.2 rounded-xs">
+                            10 FREE 1
+                        </span>
+                    )}
+                </div>
+                <div className="text-[11px] text-[oklch(55%_0.010_28)] font-sans truncate max-w-xs">
+                    {item.menu_categories?.name || item.category || 'ทั่วไป'} {item.description && `• ${item.description}`}
+                </div>
+            </td>
+
+            {/* Price */}
+            <td className="py-2 px-3 text-right font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
+                ฿{item.price}
+            </td>
+
+            {/* Stock Count */}
+            <td className="py-2 px-3 text-center">
+                {item.remaining_stock !== null && item.remaining_stock !== undefined ? (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-xs border tabular-nums ${
+                        item.remaining_stock <= 0
+                            ? 'bg-red-50 text-red-700 border-red-300'
+                            : item.remaining_stock <= 5
+                                ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                : 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
+                    }`}>
+                        {item.remaining_stock}
+                    </span>
+                ) : (
+                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">ไม่จำกัด</span>
+                )}
+            </td>
+
+            {/* Quick In Stock Toggle */}
+            <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={(e) => handleToggleStock(e, item)}
+                    className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer ${
+                        item.is_available !== false
+                            ? 'bg-green-50 text-green-800 border-green-300 hover:bg-green-100'
+                            : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100'
+                    }`}
+                >
+                    {item.is_available !== false ? 'มีของ' : 'หมด'}
+                </button>
+            </td>
+
+            {/* Quick Pickup Toggle */}
+            <td className="py-2 px-3 text-center" onClick={e => e.stopPropagation()}>
+                <button
+                    onClick={(e) => handleTogglePickup(e, item)}
+                    className={`px-2 py-1 rounded-xs text-[10px] font-bold border transition-colors duration-150 cursor-pointer ${
+                        item.is_pickup_available !== false
+                            ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-[oklch(85%_0.012_28)]'
+                            : 'bg-[oklch(92%_0.008_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                    }`}
+                >
+                    {item.is_pickup_available !== false ? 'Pick-up' : 'No-Pick'}
+                </button>
+            </td>
+
+            {/* Row Actions */}
+            <td className="py-2 px-3 text-right" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-end gap-1">
+                    <button
+                        onClick={() => handleDuplicate(item)}
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer"
+                        title="คัดลอก"
+                    >
+                        <Copy size={13} />
+                    </button>
+                    <button
+                        onClick={() => handleEdit(item)}
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] rounded-xs transition-colors duration-150 cursor-pointer"
+                        title="แก้ไข"
+                    >
+                        <Edit2 size={13} />
+                    </button>
+                    <button
+                        onClick={() => handleDelete(item.id, item.name)}
+                        className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-red-700 hover:bg-red-50 rounded-xs transition-colors duration-150 cursor-pointer"
+                        title="ลบ"
+                    >
+                        <Trash2 size={13} />
+                    </button>
+                </div>
+            </td>
+        </tr>
+    )
+})
+
 // --- Main MenuItemList Component ---
 export default function MenuItemList() {
     const [menuItems, setMenuItems] = useState([])
@@ -243,11 +433,22 @@ export default function MenuItemList() {
 
     const [loading, setLoading] = useState(true)
     const [isSavingOrder, setIsSavingOrder] = useState(false)
+    const [viewMode, setViewMode] = useState(() => localStorage.getItem('menu_admin_view_mode') || 'grid')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingItem, setEditingItem] = useState(null)
     const [imageFile, setImageFile] = useState(null)
     const [previewUrl, setPreviewUrl] = useState(null)
     const [imageRemoved, setImageRemoved] = useState(false)
+
+    // Reusable custom confirm modal state
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        confirmText: 'ยืนยัน',
+        isDanger: false,
+        onConfirm: () => {}
+    })
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -269,8 +470,8 @@ export default function MenuItemList() {
 
     // Filters and Search State
     const [searchQuery, setSearchQuery] = useState('')
-    const [selectedCategoryTab, setSelectedCategoryTab] = useState('all') // 'all', 'recommended', or category_id
-    const [statusFilter, setStatusFilter] = useState('all') // 'all', 'in_stock', 'out_of_stock', 'pickup', 'stamp'
+    const [selectedCategoryTab, setSelectedCategoryTab] = useState('all')
+    const [statusFilter, setStatusFilter] = useState('all')
 
     const [activeDragItem, setActiveDragItem] = useState(null) 
 
@@ -287,7 +488,6 @@ export default function MenuItemList() {
         const debouncedFetch = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
-                // Don't disturb active editing/saving
                 if (!isModalOpen && !isSavingOrder) {
                     fetchData(false)
                 }
@@ -306,6 +506,11 @@ export default function MenuItemList() {
             supabase.removeChannel(channel)
         }
     }, [isModalOpen, isSavingOrder])
+
+    const toggleViewMode = (mode) => {
+        setViewMode(mode)
+        localStorage.setItem('menu_admin_view_mode', mode)
+    }
 
     const fetchData = async (showLoadingState = false) => {
         if (showLoadingState) setLoading(true)
@@ -337,20 +542,17 @@ export default function MenuItemList() {
     // Filtered Menu Items
     const filteredMenuItems = useMemo(() => {
         return menuItems.filter(item => {
-            // Category Tab Filter
             if (selectedCategoryTab === 'recommended') {
                 if (!item.is_recommended) return false
             } else if (selectedCategoryTab !== 'all') {
                 if (item.category_id !== selectedCategoryTab && item.category !== selectedCategoryTab) return false
             }
 
-            // Status Filter
             if (statusFilter === 'in_stock' && item.is_available === false) return false
             if (statusFilter === 'out_of_stock' && item.is_available !== false) return false
             if (statusFilter === 'pickup' && item.is_pickup_available === false) return false
             if (statusFilter === 'stamp' && !item.is_drink_stamp_eligible) return false
 
-            // Search Query Filter
             if (searchQuery.trim()) {
                 const query = searchQuery.toLowerCase().trim()
                 const nameMatch = (item.name || '').toLowerCase().includes(query)
@@ -408,7 +610,7 @@ export default function MenuItemList() {
             material_cost: 0
         })
 
-        // Fetch Material Cost from Recipe with correct foreign key link
+        // Fetch Material Cost from Recipe
         try {
             const { data: recipeIng } = await supabase
                 .from('recipe_ingredients')
@@ -459,26 +661,22 @@ export default function MenuItemList() {
         setFormData(prev => ({
             ...prev,
             category_id: catId,
-            // If category has automatic drink stamp eligibility, inherit it if creating or editing
             is_drink_stamp_eligible: cat ? cat.is_drink_stamp_eligible === true : prev.is_drink_stamp_eligible
         }))
     }
 
-    // --- Fast Inline Toggles ---
+    // --- Fast Inline Toggles (Silent Success) ---
     const handleToggleStock = async (e, item) => {
         if (e && e.stopPropagation) e.stopPropagation()
-        const newValue = item.is_available === false ? true : false
+        const newValue = item.is_available === false
 
-        // Optimistic update
         setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: newValue } : i))
 
         try {
             const { error } = await supabase.from('menu_items').update({ is_available: newValue }).eq('id', item.id)
             if (error) throw error
-            toast.success(`${item.name}: ${newValue ? 'เปิดขายแล้ว (มีสต็อก)' : 'ตั้งสถานะของหมดแล้ว'}`, { duration: 1500 })
         } catch (err) {
             console.error('Toggle stock error:', err)
-            // Rollback
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !newValue } : i))
             toast.error('อัปเดตสถานะไม่สำเร็จ')
         }
@@ -486,112 +684,133 @@ export default function MenuItemList() {
 
     const handleTogglePickup = async (e, item) => {
         if (e && e.stopPropagation) e.stopPropagation()
-        const newValue = item.is_pickup_available === false ? true : false
+        const newValue = item.is_pickup_available === false
 
-        // Optimistic update
         setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: newValue } : i))
 
         try {
             const { error } = await supabase.from('menu_items').update({ is_pickup_available: newValue }).eq('id', item.id)
             if (error) throw error
-            toast.success(`${item.name}: ${newValue ? 'เปิดรับ Pick-up' : 'ปิดรับ Pick-up'}`, { duration: 1500 })
         } catch (err) {
             console.error('Toggle pickup error:', err)
-            // Rollback
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: !newValue } : i))
             toast.error('อัปเดต Pick-up ไม่สำเร็จ')
         }
     }
 
-    const handleDuplicate = async (item) => {
-        if (!confirm(`คุณต้องการคัดลอกเมนู "${item.name}" ใช่หรือไม่?`)) return
-        
-        try {
-            const newName = `${item.name} (คัดลอก)`
-            const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0
+    const handleDuplicate = (item) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'ยืนยันการคัดลอกเมนู',
+            message: `คุณต้องการคัดลอกเมนู "${item.name}" เพื่อสร้างเป็นเมนูใหม่ใช่หรือไม่?`,
+            confirmText: 'คัดลอกเมนู',
+            isDanger: false,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                try {
+                    const newName = `${item.name} (คัดลอก)`
+                    const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0
 
-            const selectedCat = categories.find(c => c.id === item.category_id)
-            const selectedCatName = selectedCat ? selectedCat.name : (item.category || 'Uncategorized')
+                    const selectedCat = categories.find(c => c.id === item.category_id)
+                    const selectedCatName = selectedCat ? selectedCat.name : (item.category || 'Uncategorized')
 
-            const payload = {
-                name: newName,
-                price: item.price,
-                category_id: item.category_id || null,
-                category: selectedCatName,
-                description: item.description || '',
-                is_available: item.is_available !== false,
-                is_recommended: item.is_recommended === true,
-                is_pickup_available: item.is_pickup_available !== false,
-                is_drink_stamp_eligible: item.is_drink_stamp_eligible === true,
-                image_url: item.image_url || '',
-                sort_order: maxSort + 1
-            }
+                    const payload = {
+                        name: newName,
+                        price: item.price,
+                        category_id: item.category_id || null,
+                        category: selectedCatName,
+                        description: item.description || '',
+                        is_available: item.is_available !== false,
+                        is_recommended: item.is_recommended === true,
+                        is_pickup_available: item.is_pickup_available !== false,
+                        is_drink_stamp_eligible: item.is_drink_stamp_eligible === true,
+                        image_url: item.image_url || '',
+                        sort_order: maxSort + 1
+                    }
 
-            const { data: newInserted, error: insertError } = await supabase
-                .from('menu_items')
-                .insert(payload)
-                .select(`*, menu_categories (id, name, display_order, is_drink_stamp_eligible)`)
-                .single()
+                    const { data: newInserted, error: insertError } = await supabase
+                        .from('menu_items')
+                        .insert(payload)
+                        .select(`*, menu_categories (id, name, display_order, is_drink_stamp_eligible)`)
+                        .single()
 
-            if (insertError) throw insertError
+                    if (insertError) throw insertError
 
-            // Duplicate linked option groups
-            if (newInserted && newInserted.id) {
-                const { data: options } = await supabase
-                    .from('menu_item_options')
-                    .select('option_group_id, display_order')
-                    .eq('menu_item_id', item.id)
+                    if (newInserted && newInserted.id) {
+                        const { data: options } = await supabase
+                            .from('menu_item_options')
+                            .select('option_group_id, display_order')
+                            .eq('menu_item_id', item.id)
 
-                if (options && options.length > 0) {
-                    const links = options.map(opt => ({
-                        menu_item_id: newInserted.id,
-                        option_group_id: opt.option_group_id,
-                        display_order: opt.display_order
-                    }))
-                    await supabase.from('menu_item_options').insert(links)
+                        if (options && options.length > 0) {
+                            const links = options.map(opt => ({
+                                menu_item_id: newInserted.id,
+                                option_group_id: opt.option_group_id,
+                                display_order: opt.display_order
+                            }))
+                            await supabase.from('menu_item_options').insert(links)
+                        }
+                    }
+
+                    setMenuItems(prev => [...prev, newInserted])
+                    toast.success(`คัดลอกเมนู "${newName}" เรียบร้อย`)
+                } catch (err) {
+                    console.error('Duplicate error:', err)
+                    toast.error('คัดลอกเมนูไม่สำเร็จ: ' + err.message)
                 }
             }
-
-            setMenuItems(prev => [...prev, newInserted])
-            toast.success(`คัดลอกเมนู "${newName}" เรียบร้อย`)
-        } catch (err) {
-            console.error('Duplicate error:', err)
-            toast.error('คัดลอกเมนูไม่สำเร็จ: ' + err.message)
-        }
+        })
     }
 
-    const handleDelete = async (id) => {
-        if (!confirm('คุณต้องการลบเมนูนี้ใช่หรือไม่? (การลบจะไม่สามารถกู้คืนได้)')) return
-        try {
-            const { error } = await supabase.from('menu_items').delete().eq('id', id)
-            if (error) {
-                if (error.code === '23503') {
-                    if (!confirm('เมนูนี้มีประวัติการสั่งซื้ออยู่ ไม่สามารถลบออกจากฐานข้อมูลได้โดยตรง\nระบบจะทำการย้ายไปหมวดหมู่ "Archived" และซ่อนเมนูนี้แทน ต้องการดำเนินการต่อหรือไม่?')) return
-                    
-                    const { error: archiveError } = await supabase.from('menu_items').update({
-                        category: 'Archived',
-                        category_id: null,
-                        is_available: false,
-                        is_pickup_available: false,
-                        is_recommended: false
-                    }).eq('id', id)
+    const handleDelete = (id, name) => {
+        setConfirmModal({
+            isOpen: true,
+            title: 'ยืนยันการลบเมนู',
+            message: `คุณต้องการลบเมนู "${name}" ใช่หรือไม่?\nการลบจะไม่สามารถกู้คืนได้`,
+            confirmText: 'ลบเมนู',
+            isDanger: true,
+            onConfirm: async () => {
+                setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                try {
+                    const { error } = await supabase.from('menu_items').delete().eq('id', id)
+                    if (error) {
+                        if (error.code === '23503') {
+                            setConfirmModal({
+                                isOpen: true,
+                                title: 'เมนูมีประวัติการสั่งซื้อ',
+                                message: 'เมนูนี้มีประวัติการสั่งซื้อในระบบ ไม่สามารถลบออกจากฐานข้อมูลได้\nระบบจะทำการย้ายไปหมวดหมู่ "Archived" และซ่อนเมนูนี้แทน ยืนยันหรือไม่?',
+                                confirmText: 'ย้ายไป Archived',
+                                isDanger: true,
+                                onConfirm: async () => {
+                                    setConfirmModal(prev => ({ ...prev, isOpen: false }))
+                                    const { error: archiveError } = await supabase.from('menu_items').update({
+                                        category: 'Archived',
+                                        category_id: null,
+                                        is_available: false,
+                                        is_pickup_available: false,
+                                        is_recommended: false
+                                    }).eq('id', id)
 
-                    if (archiveError) throw archiveError
+                                    if (archiveError) throw archiveError
+                                    setMenuItems(prev => prev.filter(i => i.id !== id))
+                                    setIsModalOpen(false)
+                                    toast.success('ย้ายเมนูไปที่ Archived เรียบร้อย')
+                                }
+                            })
+                            return
+                        }
+                        throw error
+                    }
+                    
                     setMenuItems(prev => prev.filter(i => i.id !== id))
                     setIsModalOpen(false)
-                    toast.success('ย้ายเมนูไปที่ Archived เรียบร้อย')
-                    return
+                    toast.success('ลบเมนูเรียบร้อย')
+                } catch (err) {
+                    console.error('Delete error:', err)
+                    toast.error('ไม่สามารถลบเมนูได้: ' + err.message)
                 }
-                throw error
             }
-            
-            setMenuItems(prev => prev.filter(i => i.id !== id))
-            setIsModalOpen(false)
-            toast.success('ลบเมนูเรียบร้อย')
-        } catch (err) {
-            console.error('Delete error:', err)
-            toast.error('ไม่สามารถลบเมนูได้: ' + err.message)
-        }
+        })
     }
 
     // --- Image Resize Helper ---
@@ -681,7 +900,6 @@ export default function MenuItemList() {
         try {
             let imageUrl = previewUrl
 
-            // 1. Upload new image if present
             if (imageFile) {
                 const fileExt = imageFile.name.split('.').pop()
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
@@ -738,7 +956,7 @@ export default function MenuItemList() {
                 savedItemId = inserted.id
             }
 
-            // 2. Sync Option Groups
+            // Sync Option Groups
             if (savedItemId) {
                 await supabase.from('menu_item_options').delete().eq('menu_item_id', savedItemId)
 
@@ -783,7 +1001,6 @@ export default function MenuItemList() {
         const reordered = arrayMove(menuItems, oldIndex, newIndex)
         setMenuItems(reordered)
 
-        // Batch update sort_order to DB
         setIsSavingOrder(true)
         try {
             const updates = reordered.map((item, idx) => ({
@@ -795,7 +1012,7 @@ export default function MenuItemList() {
 
             const { error } = await supabase.from('menu_items').upsert(updates, { onConflict: 'id' })
             if (error) throw error
-            toast.success('บันทึกลำดับเมนูแล้ว', { duration: 1200 })
+            // Silent success - header indicator already shows status
         } catch (err) {
             console.error('Reorder error:', err)
             toast.error('บันทึกลำดับไม่สำเร็จ')
@@ -826,11 +1043,11 @@ export default function MenuItemList() {
                         <h2 className="text-xl font-bold font-mono uppercase tracking-tight text-[oklch(18%_0.012_28)]">
                             Catalog Menu Items
                         </h2>
-                        <span className="font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)]">
+                        <span className="font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)] tabular-nums">
                             {filteredMenuItems.length} / {menuItems.length} รายการ
                         </span>
                         {isSavingOrder && (
-                            <span className="text-xs font-mono text-[oklch(52%_0.16_28)] animate-pulse font-bold">
+                            <span className="text-xs font-mono text-[oklch(52%_0.16_28)] font-bold">
                                 กำลังบันทึกลำดับ...
                             </span>
                         )}
@@ -840,16 +1057,46 @@ export default function MenuItemList() {
                     </p>
                 </div>
 
-                <button 
-                    onClick={handleCreate} 
-                    className="bg-[oklch(18%_0.012_28)] text-white px-4 py-2 rounded-sm font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-black transition-colors shadow-sm cursor-pointer"
-                >
-                    <Plus size={15} /> สร้างเมนูใหม่ (New Menu Item)
-                </button>
+                <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
+                    {/* View Switcher (Grid vs Dense Tabular List) */}
+                    <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-xs overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => toggleViewMode('grid')}
+                            className={`p-1.5 transition-colors duration-150 cursor-pointer ${
+                                viewMode === 'grid'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                            }`}
+                            title="มุมมองการ์ด (Card Grid)"
+                        >
+                            <LayoutGrid size={15} />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => toggleViewMode('table')}
+                            className={`p-1.5 transition-colors duration-150 cursor-pointer ${
+                                viewMode === 'table'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
+                            }`}
+                            title="มุมมองตารางหนาแน่น (Dense Table)"
+                        >
+                            <List size={15} />
+                        </button>
+                    </div>
+
+                    <button 
+                        onClick={handleCreate} 
+                        className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-4 py-2 rounded-xs font-mono font-bold text-xs uppercase tracking-wider flex items-center gap-2 hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
+                    >
+                        <Plus size={15} /> สร้างเมนูใหม่
+                    </button>
+                </div>
             </div>
 
-            {/* Search & Filter Bar */}
-            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-3 mb-5 space-y-3 shadow-xs">
+            {/* Search & Filter Bar (Rams Tabular Style) */}
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-3 mb-5 space-y-3 shadow-xs">
                 <div className="flex flex-col sm:flex-row gap-2.5">
                     {/* Search Input */}
                     <div className="relative flex-1">
@@ -859,10 +1106,10 @@ export default function MenuItemList() {
                             placeholder="ค้นหาชื่อเมนู, คำอธิบาย หรือหมวดหมู่..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-8 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono focus:bg-white focus:border-[oklch(52%_0.16_28)] outline-none transition-all"
+                            className="w-full pl-9 pr-8 py-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-mono focus:bg-[oklch(98%_0.004_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                         />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black">
+                            <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer">
                                 <X size={14} />
                             </button>
                         )}
@@ -880,10 +1127,10 @@ export default function MenuItemList() {
                             <button
                                 key={chip.id}
                                 onClick={() => setStatusFilter(chip.id)}
-                                className={`px-2.5 py-1.5 rounded-sm text-xs font-mono font-bold whitespace-nowrap transition-colors border cursor-pointer ${
+                                className={`px-2.5 py-1.5 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                                     statusFilter === chip.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)] shadow-xs'
-                                        : 'bg-white text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
+                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                             >
                                 {chip.label}
@@ -892,7 +1139,7 @@ export default function MenuItemList() {
                     </div>
                 </div>
 
-                {/* Category Pills Navigation */}
+                {/* Category Navigation (Horizontal Tabular Strip) */}
                 <div 
                     className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-[oklch(85%_0.012_28)] no-scrollbar"
                     onWheel={e => {
@@ -904,10 +1151,10 @@ export default function MenuItemList() {
                 >
                     <button
                         onClick={() => setSelectedCategoryTab('all')}
-                        className={`px-3 py-1 rounded-sm text-xs font-mono font-bold whitespace-nowrap transition-colors border cursor-pointer ${
+                        className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             selectedCategoryTab === 'all'
-                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-black'
+                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
+                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
                         [ทุกหมวดหมู่ • {menuItems.length}]
@@ -915,13 +1162,13 @@ export default function MenuItemList() {
 
                     <button
                         onClick={() => setSelectedCategoryTab('recommended')}
-                        className={`px-3 py-1 rounded-sm text-xs font-mono font-bold whitespace-nowrap transition-colors border cursor-pointer ${
+                        className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                             selectedCategoryTab === 'recommended'
-                                ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-black'
+                                ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
+                                : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
                         }`}
                     >
-                        ★ เมนูแนะนำ ({menuItems.filter(i => i.is_recommended).length})
+                        REC ({menuItems.filter(i => i.is_recommended).length})
                     </button>
 
                     {categories.map(cat => {
@@ -930,10 +1177,10 @@ export default function MenuItemList() {
                             <button
                                 key={cat.id}
                                 onClick={() => setSelectedCategoryTab(cat.id)}
-                                className={`px-3 py-1 rounded-sm text-xs font-mono font-bold whitespace-nowrap transition-colors border cursor-pointer ${
+                                className={`px-3 py-1 rounded-xs text-xs font-mono font-bold whitespace-nowrap transition-colors duration-150 border cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] ${
                                     selectedCategoryTab === cat.id
-                                        ? 'bg-[oklch(52%_0.16_28)] text-white border-[oklch(52%_0.16_28)]'
-                                        : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-black'
+                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] border-[oklch(52%_0.16_28)]'
+                                        : 'bg-transparent text-[oklch(55%_0.010_28)] border-transparent hover:text-[oklch(18%_0.012_28)]'
                                 }`}
                             >
                                 {cat.name} ({count})
@@ -943,7 +1190,7 @@ export default function MenuItemList() {
                 </div>
             </div>
 
-            {/* Menu Items Grid with Dnd-Kit */}
+            {/* Menu Items Rendering (Grid vs Tabular Mode) */}
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {[1, 2, 3, 4, 5, 6].map(i => (
@@ -951,10 +1198,51 @@ export default function MenuItemList() {
                     ))}
                 </div>
             ) : filteredMenuItems.length === 0 ? (
-                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-white text-[oklch(55%_0.010_28)] font-mono text-xs">
+                <div className="text-center py-16 border border-dashed border-[oklch(85%_0.012_28)] rounded-sm bg-[oklch(98%_0.004_28)] text-[oklch(55%_0.010_28)] font-mono text-xs">
                     ไม่พบเมนูที่ตรงกับเงื่อนไขการค้นหา
                 </div>
+            ) : viewMode === 'table' ? (
+                /* Dense Tabular List View */
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCorners}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] rounded-sm overflow-x-auto shadow-xs">
+                        <table className="w-full border-collapse font-mono text-xs text-left min-w-[700px]">
+                            <thead>
+                                <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase text-[10px]">
+                                    <th className="py-2.5 px-3 w-8 text-center">#</th>
+                                    <th className="py-2.5 px-3 w-12 text-center">รูป</th>
+                                    <th className="py-2.5 px-3 font-bold">ชื่อเมนู / หมวดหมู่</th>
+                                    <th className="py-2.5 px-3 text-right">ราคา</th>
+                                    <th className="py-2.5 px-3 text-center">สต็อก</th>
+                                    <th className="py-2.5 px-3 text-center">สถานะขาย</th>
+                                    <th className="py-2.5 px-3 text-center">PICK-UP</th>
+                                    <th className="py-2.5 px-3 text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <SortableContext items={filteredMenuItems.map(i => i.id)} strategy={verticalListSortingStrategy}>
+                                <tbody>
+                                    {filteredMenuItems.map(item => (
+                                        <SortableMenuTableRow
+                                            key={item.id}
+                                            item={item}
+                                            handleEdit={handleEdit}
+                                            handleDelete={handleDelete}
+                                            handleDuplicate={handleDuplicate}
+                                            handleToggleStock={handleToggleStock}
+                                            handleTogglePickup={handleTogglePickup}
+                                        />
+                                    ))}
+                                </tbody>
+                            </SortableContext>
+                        </table>
+                    </div>
+                </DndContext>
             ) : (
+                /* Standard Card Grid View */
                 <DndContext
                     sensors={sensors}
                     collisionDetection={closestCorners}
@@ -983,12 +1271,12 @@ export default function MenuItemList() {
                 </DndContext>
             )}
 
-            {/* Create / Edit Modal */}
+            {/* Create / Edit Planar Modal */}
             {isModalOpen && createPortal(
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-                    <div className="bg-[oklch(97%_0.008_28)] w-full max-w-xl rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] font-sans">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
+                    <div className="bg-[oklch(98%_0.004_28)] w-full max-w-xl rounded-sm border border-[oklch(85%_0.012_28)] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] font-sans">
                         {/* Modal Header */}
-                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-white z-10">
+                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-[oklch(98%_0.004_28)] z-10">
                             <div>
                                 <h3 className="font-mono text-base font-bold uppercase tracking-tight text-[oklch(18%_0.012_28)]">
                                     {editingItem ? 'แก้ไขเมนู' : 'สร้างเมนูใหม่'}
@@ -999,28 +1287,28 @@ export default function MenuItemList() {
                             </div>
                             <button 
                                 onClick={() => setIsModalOpen(false)}
-                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)] rounded-sm cursor-pointer transition-colors"
+                                className="p-1.5 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs cursor-pointer transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                             >
                                 <X size={18} />
                             </button>
                         </div>
 
-                        {/* Modal Body */}
-                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.006_28)]">
-                            {/* Image Upload Area */}
-                            <div>
-                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1.5">
+                        {/* Modal Body: Planar Form Sections */}
+                        <div className="p-5 overflow-y-auto flex-1 space-y-4 bg-[oklch(98%_0.004_28)]">
+                            {/* Section 1: Image Upload */}
+                            <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
+                                <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-2">
                                     รูปภาพเมนู (Menu Image)
                                 </label>
                                 <div className="flex items-center gap-4">
-                                    <div className="w-24 h-24 bg-white border border-[oklch(85%_0.012_28)] rounded-sm overflow-hidden relative group shrink-0">
+                                    <div className="w-20 h-20 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden relative group shrink-0">
                                         {previewUrl ? (
                                             <>
                                                 <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
                                                 <button
                                                     type="button"
                                                     onClick={handleRemoveImage}
-                                                    className="absolute top-1 right-1 bg-black/70 text-white p-1 rounded-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    className="absolute top-1 right-1 bg-black/70 text-[oklch(97%_0.008_28)] p-1 rounded-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                                                     title="ลบรูปภาพ"
                                                 >
                                                     <X size={12} />
@@ -1028,14 +1316,14 @@ export default function MenuItemList() {
                                             </>
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] gap-1">
-                                                <ImageIcon size={24} />
+                                                <ImageIcon size={20} />
                                                 <span className="text-[9px] font-mono">ไม่มีรูป</span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="inline-block bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-sm font-mono font-bold text-xs cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors shadow-xs">
-                                            <span>📷 เลือกรูปภาพ</span>
+                                        <label className="inline-block bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-3 py-1.5 rounded-xs font-mono font-bold text-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 shadow-xs">
+                                            <span>เลือกรูปภาพ</span>
                                             <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                                         </label>
                                         <p className="text-[11px] text-[oklch(55%_0.010_28)] font-mono leading-tight">
@@ -1045,8 +1333,8 @@ export default function MenuItemList() {
                                 </div>
                             </div>
 
-                            {/* Name & Category Row */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Section 2: Name & Category Inputs */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
                                 <div>
                                     <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
                                         ชื่อเมนู *
@@ -1056,7 +1344,7 @@ export default function MenuItemList() {
                                         value={formData.name}
                                         onChange={e => setFormData({ ...formData, name: e.target.value })}
                                         placeholder="เช่น Iced Americano, Matcha Latte"
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] outline-none"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                         required
                                     />
                                 </div>
@@ -1068,7 +1356,7 @@ export default function MenuItemList() {
                                     <select
                                         value={formData.category_id}
                                         onChange={e => handleCategoryChangeInForm(e.target.value)}
-                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] outline-none cursor-pointer"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs font-bold text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150 cursor-pointer"
                                         required
                                     >
                                         {categories.map(c => (
@@ -1078,8 +1366,8 @@ export default function MenuItemList() {
                                 </div>
                             </div>
 
-                            {/* Price, Stock & Costing Breakdown */}
-                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 bg-white p-3 border border-[oklch(85%_0.012_28)] rounded-sm">
+                            {/* Section 3: Pricing, Stock & Food Cost Breakdown */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pb-4 border-b border-[oklch(85%_0.012_28)]">
                                 <div>
                                     <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
                                         ราคาขาย (บาท) *
@@ -1090,13 +1378,13 @@ export default function MenuItemList() {
                                         value={formData.price}
                                         onChange={e => setFormData({ ...formData, price: e.target.value })}
                                         placeholder="0.00"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] text-right focus:bg-white focus:border-[oklch(52%_0.16_28)] outline-none"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-xs font-mono font-bold text-[oklch(18%_0.012_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] tabular-nums transition-colors duration-150"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1" title="เว้นว่างไว้หากไม่จำกัดสต็อก (เครื่องดื่ม) หรือระบุจำนวน (ขนม/สินค้า)">
+                                    <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
                                         สต็อกคงเหลือ (ชิ้น)
                                     </label>
                                     <input
@@ -1106,7 +1394,7 @@ export default function MenuItemList() {
                                         value={formData.remaining_stock}
                                         onChange={e => setFormData({ ...formData, remaining_stock: e.target.value })}
                                         placeholder="ไม่จำกัด"
-                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-2 text-xs font-mono font-bold text-[oklch(52%_0.16_28)] text-right focus:bg-white focus:border-[oklch(52%_0.16_28)] outline-none"
+                                        className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2 text-xs font-mono font-bold text-[oklch(52%_0.16_28)] text-right focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] tabular-nums transition-colors duration-150"
                                     />
                                 </div>
 
@@ -1114,7 +1402,7 @@ export default function MenuItemList() {
                                     <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                         ต้นทุน (Recipe Cost)
                                     </label>
-                                    <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-sm text-xs font-mono font-bold text-right text-[oklch(42%_0.010_28)]">
+                                    <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs font-mono font-bold text-right text-[oklch(42%_0.010_28)] tabular-nums">
                                         ฿{modalCost.toFixed(2)}
                                     </div>
                                 </div>
@@ -1123,7 +1411,7 @@ export default function MenuItemList() {
                                     <label className="block text-xs font-mono font-bold text-[oklch(55%_0.010_28)] uppercase mb-1">
                                         GP Margin (%)
                                     </label>
-                                    <div className={`p-2 border rounded-sm text-xs font-mono font-bold text-right ${
+                                    <div className={`p-2 border rounded-xs text-xs font-mono font-bold text-right tabular-nums ${
                                         modalMargin >= 65 ? 'bg-green-50 text-green-800 border-green-200' : 'bg-amber-50 text-amber-800 border-amber-200'
                                     }`}>
                                         {modalMargin}% (฿{modalProfit.toFixed(1)})
@@ -1131,8 +1419,8 @@ export default function MenuItemList() {
                                 </div>
                             </div>
 
-                            {/* Description */}
-                            <div>
+                            {/* Section 4: Description */}
+                            <div className="pb-4 border-b border-[oklch(85%_0.012_28)]">
                                 <label className="block text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase mb-1">
                                     คำอธิบายเมนู (Description)
                                 </label>
@@ -1141,13 +1429,13 @@ export default function MenuItemList() {
                                     onChange={e => setFormData({ ...formData, description: e.target.value })}
                                     rows={2}
                                     placeholder="เช่น เมล็ด House Blend คั่วกลาง โน้ตช็อกโกแลตและคาราเมล"
-                                    className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-2.5 text-xs text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] outline-none"
+                                    className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-2.5 text-xs text-[oklch(18%_0.012_28)] focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] transition-colors duration-150"
                                 />
                             </div>
 
-                            {/* Operational Status Toggles */}
-                            <div className="grid grid-cols-2 gap-2.5">
-                                <label className="flex items-center gap-2.5 bg-white p-3 rounded-sm border border-[oklch(85%_0.012_28)] cursor-pointer">
+                            {/* Section 5: Planar Operational Toggles */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-4 border-b border-[oklch(85%_0.012_28)]">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_available}
@@ -1160,7 +1448,7 @@ export default function MenuItemList() {
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 bg-white p-3 rounded-sm border border-[oklch(85%_0.012_28)] cursor-pointer">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_recommended}
@@ -1169,11 +1457,11 @@ export default function MenuItemList() {
                                     />
                                     <div>
                                         <div className="text-xs font-mono font-bold text-[oklch(18%_0.012_28)]">เมนูแนะนำ (Recommended)</div>
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">แสดงแถบดาวและไฮไลต์</div>
+                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono">แสดงแถบไฮไลต์ REC</div>
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 bg-white p-3 rounded-sm border border-[oklch(85%_0.012_28)] cursor-pointer">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_pickup_available}
@@ -1186,7 +1474,7 @@ export default function MenuItemList() {
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-2.5 bg-white p-3 rounded-sm border border-[oklch(85%_0.012_28)] cursor-pointer">
+                                <label className="flex items-center gap-2.5 p-2.5 bg-[oklch(97%_0.008_28)] rounded-xs border border-[oklch(85%_0.012_28)] cursor-pointer hover:bg-[oklch(94%_0.010_28)] transition-colors duration-150">
                                     <input 
                                         type="checkbox"
                                         checked={formData.is_drink_stamp_eligible}
@@ -1200,8 +1488,8 @@ export default function MenuItemList() {
                                 </label>
                             </div>
 
-                            {/* Option Groups Linking (React State Controlled) */}
-                            <div className="space-y-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                            {/* Section 6: Option Groups Linking */}
+                            <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <div>
                                         <label className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase block">
@@ -1214,21 +1502,20 @@ export default function MenuItemList() {
                                     <button
                                         type="button"
                                         onClick={() => setIsOptionPickerOpen(!isOptionPickerOpen)}
-                                        className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-sm hover:bg-[oklch(52%_0.16_28)] hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+                                        className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)] px-2.5 py-1 rounded-xs hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] transition-colors duration-150 cursor-pointer flex items-center gap-1 focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                     >
                                         <Plus size={13} /> {isOptionPickerOpen ? 'ปิดหน้าต่างเลือก' : 'เลือกกลุ่มตัวเลือก'}
                                     </button>
                                 </div>
 
-                                {/* Option Picker Popover */}
                                 {isOptionPickerOpen && (
-                                    <div className="bg-white border border-[oklch(85%_0.012_28)] p-3 rounded-sm space-y-2 shadow-sm animate-fade-in">
+                                    <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-3 rounded-xs space-y-2 shadow-sm">
                                         <input
                                             type="text"
                                             placeholder="ค้นหากลุ่มตัวเลือก..."
                                             value={optionPickerSearch}
                                             onChange={e => setOptionPickerSearch(e.target.value)}
-                                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm px-2.5 py-1.5 text-xs font-mono outline-none"
+                                            className="w-full bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs px-2.5 py-1.5 text-xs font-mono focus:border-[oklch(52%_0.16_28)] focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                                         />
 
                                         <div className="max-h-40 overflow-y-auto space-y-1 pr-1">
@@ -1237,8 +1524,8 @@ export default function MenuItemList() {
                                                 return (
                                                     <label 
                                                         key={og.id} 
-                                                        className={`flex items-center justify-between p-2 rounded-sm border text-xs cursor-pointer transition-colors ${
-                                                            isChecked ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-white border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                                        className={`flex items-center justify-between p-2 rounded-xs border text-xs cursor-pointer transition-colors duration-150 ${
+                                                            isChecked ? 'bg-[oklch(94%_0.010_28)] border-[oklch(52%_0.16_28)] font-bold' : 'bg-[oklch(98%_0.004_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                                                         }`}
                                                     >
                                                         <div className="flex items-center gap-2">
@@ -1254,7 +1541,7 @@ export default function MenuItemList() {
                                                             />
                                                             <span>{og.name}</span>
                                                         </div>
-                                                        <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">
+                                                        <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] tabular-nums">
                                                             {(og.option_choices || []).length} choices
                                                         </span>
                                                     </label>
@@ -1272,13 +1559,13 @@ export default function MenuItemList() {
                                         return (
                                             <span 
                                                 key={groupId}
-                                                className="bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 shadow-2xs"
+                                                className="bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] px-2.5 py-1 rounded-xs text-xs font-mono font-bold flex items-center gap-1.5 shadow-2xs"
                                             >
                                                 <span>{group.name}</span>
                                                 <button
                                                     type="button"
                                                     onClick={() => setSelectedOptionGroups(prev => prev.filter(id => id !== groupId))}
-                                                    className="text-gray-400 hover:text-red-600"
+                                                    className="text-[oklch(55%_0.010_28)] hover:text-red-700 cursor-pointer"
                                                 >
                                                     <X size={12} />
                                                 </button>
@@ -1286,7 +1573,7 @@ export default function MenuItemList() {
                                         )
                                     })}
                                     {selectedOptionGroups.length === 0 && (
-                                        <span className="text-xs font-mono text-[oklch(55%_0.010_28)] italic">
+                                        <span className="text-xs font-mono text-[oklch(55%_0.010_28)]">
                                             ยังไม่ได้เชื่อมโยงกลุ่มตัวเลือกเสริม
                                         </span>
                                     )}
@@ -1295,18 +1582,18 @@ export default function MenuItemList() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-white flex gap-2">
+                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-2">
                             <button 
                                 type="button"
                                 onClick={() => setIsModalOpen(false)}
-                                className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-sm hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                                className="flex-1 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(90%_0.012_28)] transition-colors duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                             >
                                 ยกเลิก
                             </button>
                             <button 
                                 type="button"
                                 onClick={handleSubmit} 
-                                className="flex-1 bg-[oklch(18%_0.012_28)] text-white font-mono font-bold text-xs uppercase py-2.5 rounded-sm hover:bg-black transition-colors shadow-sm cursor-pointer"
+                                className="flex-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs uppercase py-2.5 rounded-xs hover:bg-[oklch(14%_0.010_28)] transition-colors duration-150 shadow-sm cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                             >
                                 บันทึกเมนู
                             </button>
@@ -1315,6 +1602,17 @@ export default function MenuItemList() {
                 </div>,
                 document.body
             )}
+
+            {/* Custom Confirm Dialog Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                title={confirmModal.title}
+                message={confirmModal.message}
+                confirmText={confirmModal.confirmText}
+                isDanger={confirmModal.isDanger}
+                onConfirm={confirmModal.onConfirm}
+                onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+            />
         </div>
     )
 }

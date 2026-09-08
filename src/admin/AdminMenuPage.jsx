@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, Utensils, Award, ShoppingBag } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { LayoutGrid, List, Layers, Calculator, FlaskConical, BookOpen, ShoppingBag } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../lib/supabaseClient'
 
@@ -96,16 +96,16 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
 
     return (
         <div className="flex flex-col min-h-[calc(100vh-140px)] font-sans pb-16">
-            {/* Header & Sub-Tab Bar */}
+            {/* Header & Tabular Nav Bar */}
             <div className="flex flex-col gap-4 mb-5 pb-4 border-b border-[oklch(85%_0.012_28)]">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.02_28)] px-2 py-0.5 rounded-sm border border-[oklch(85%_0.012_28)]">
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)]">
                                 CULINARY & BEVERAGE WORKBENCH
                             </span>
                         </div>
-                        <h1 className="font-mono text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] uppercase mt-1">
+                        <h1 className="font-mono text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)] uppercase mt-0.5">
                             Menu & Kitchen Lab Hub
                         </h1>
                         <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
@@ -113,21 +113,21 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         </p>
                     </div>
 
-                    {/* Quick Metric Badges */}
-                    <div className="flex items-center gap-2 self-start sm:self-auto font-mono text-xs">
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm shadow-2xs">
+                    {/* Quick Metric Badges (Rams Tabular Cells) */}
+                    <div className="flex items-stretch border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] self-start sm:self-auto font-mono text-xs">
+                        <div className="px-3 py-1.5">
                             <span className="text-[oklch(55%_0.010_28)] text-[10px] block">IN STOCK</span>
-                            <span className="font-bold text-[oklch(18%_0.012_28)]">{stats.availableItems} / {stats.totalItems} เมนู</span>
+                            <span className="font-bold tabular-nums text-[oklch(18%_0.012_28)]">{stats.availableItems} / {stats.totalItems} เมนู</span>
                         </div>
-                        <div className="bg-white border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm shadow-2xs">
+                        <div className="px-3 py-1.5">
                             <span className="text-[oklch(55%_0.010_28)] text-[10px] block">CATEGORIES</span>
-                            <span className="font-bold text-[oklch(18%_0.012_28)]">{stats.totalCategories} หมวดหมู่</span>
+                            <span className="font-bold tabular-nums text-[oklch(18%_0.012_28)]">{stats.totalCategories} หมวดหมู่</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Sub-tab Switcher (Dieter Rams Tabular division) */}
-                <div className="flex bg-[oklch(94%_0.010_28)] p-1 rounded-sm border border-[oklch(85%_0.012_28)] font-mono text-xs overflow-x-auto no-scrollbar gap-1 items-center">
+                {/* Sub-tab Switcher (Dieter Rams Tabular Cellular Division) */}
+                <div className="flex border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs overflow-x-auto no-scrollbar">
                     {tabs.map(tab => {
                         const Icon = tab.icon
                         const isActive = activeTab === tab.id
@@ -136,17 +136,17 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                                 key={tab.id}
                                 type="button"
                                 onClick={() => handleTabChange(tab.id)}
-                                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                                className={`flex items-center gap-2 px-4 py-2.5 font-bold uppercase tracking-wider transition-colors duration-150 whitespace-nowrap cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)] focus-visible:outline-offset-[-2px] ${
                                     isActive
-                                        ? 'bg-[oklch(18%_0.012_28)] text-white shadow-sm'
-                                        : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(92%_0.010_28)]'
                                 }`}
                             >
                                 <Icon size={14} />
                                 <span>{tab.label}</span>
                                 {tab.count !== undefined && tab.count > 0 && (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-xs font-mono ${
-                                        isActive ? 'bg-white/20 text-white' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-xs font-mono tabular-nums ${
+                                        isActive ? 'bg-[oklch(28%_0.015_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                                     }`}>
                                         {tab.count}
                                     </span>
@@ -155,14 +155,14 @@ export default function AdminMenuPage({ defaultTab = 'items' }) {
                         )
                     })}
 
-                    <a
-                        href="/admin/hausmade?tab=catalog"
-                        className="flex items-center gap-1.5 px-3 py-2 rounded-sm font-bold uppercase tracking-wider transition-all whitespace-nowrap text-[oklch(52%_0.16_28)] hover:text-white hover:bg-[oklch(52%_0.16_28)] border border-[oklch(52%_0.16_28)]/40 ml-auto bg-white/60 cursor-pointer"
+                    <Link
+                        to="/admin/hausmade?tab=catalog"
+                        className="flex items-center gap-1.5 px-4 py-2.5 font-bold uppercase tracking-wider transition-colors duration-150 whitespace-nowrap text-[oklch(52%_0.16_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-[oklch(97%_0.008_28)] ml-auto cursor-pointer focus-visible:outline-2 focus-visible:outline-[oklch(60%_0.15_28)]"
                         title="ไปที่ระบบจัดการสินค้าและ Pre-Order ของ HAUSMADE"
                     >
                         <ShoppingBag size={14} />
-                        <span>🛍️ HAUSMADE CATALOG ↗</span>
-                    </a>
+                        <span>HAUSMADE CATALOG ↗</span>
+                    </Link>
                 </div>
             </div>
 
