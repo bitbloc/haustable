@@ -2,6 +2,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { X, Download, Copy, Printer, Check, AlertCircle } from 'lucide-react'
 import { toPng } from 'html-to-image'
+import html2canvas from 'html2canvas'
 import { toast } from 'sonner'
 import { supabase } from '../../../lib/supabaseClient'
 import { getThaiDate } from '../../../utils/timeUtils'
@@ -232,56 +233,43 @@ export default function DailySummarySlipModal({
 
     /**
      * Bulletproof Full-Slip Image Exporter
-     * Creates an isolated off-screen clone with natural height (no parent scroll clipping)
+     * Directly captures live DOM element with html2canvas fallback to guarantee non-blank PNG
      */
     const exportFullSlipImage = async () => {
         if (!slipRef.current) return null
-        const source = slipRef.current
-
-        // Create an isolated clone attached to document.body
-        const clone = source.cloneNode(true)
-        clone.style.position = 'fixed'
-        clone.style.left = '-9999px'
-        clone.style.top = '0'
-        clone.style.width = '360px'
-        clone.style.maxWidth = '360px'
-        clone.style.height = 'auto'
-        clone.style.maxHeight = 'none'
-        clone.style.overflow = 'visible'
-        clone.style.margin = '0'
-        clone.style.padding = '20px'
-        clone.style.backgroundColor = '#ffffff'
-        clone.style.zIndex = '-9999'
-        clone.style.boxShadow = 'none'
-        document.body.appendChild(clone)
+        const element = slipRef.current
 
         try {
-            // Wait 80ms for layout & webfonts to stabilize
-            await new Promise(r => setTimeout(r, 80))
-
-            const fullHeight = clone.scrollHeight || clone.offsetHeight
-            const fullWidth = clone.scrollWidth || 360
-
-            const dataUrl = await toPng(clone, {
+            // 1. Primary: Direct html-to-image toPng on the live DOM element
+            const dataUrl = await toPng(element, {
                 pixelRatio: 3,
                 quality: 1.0,
                 cacheBust: true,
                 backgroundColor: '#ffffff',
-                width: fullWidth,
-                height: fullHeight,
                 style: {
                     transform: 'none',
                     margin: '0',
                     maxHeight: 'none',
                     height: 'auto',
-                    overflow: 'visible'
+                    boxShadow: 'none'
                 }
             })
-            return dataUrl
-        } finally {
-            if (clone && clone.parentNode) {
-                clone.parentNode.removeChild(clone)
+
+            // Sanity check: valid PNG dataUrl should be > 2000 bytes
+            if (dataUrl && dataUrl.length > 2000) {
+                return dataUrl
             }
+            throw new Error('toPng output payload too small')
+        } catch (err) {
+            console.warn('toPng failed or returned empty, falling back to html2canvas:', err)
+            // 2. Resilient fallback: html2canvas
+            const canvas = await html2canvas(element, {
+                scale: 3,
+                backgroundColor: '#ffffff',
+                useCORS: true,
+                logging: false
+            })
+            return canvas.toDataURL('image/png', 1.0)
         }
     }
 
@@ -327,7 +315,88 @@ export default function DailySummarySlipModal({
         }
     }
 
-    // Direct Thermal Receipt Printing (Sunmi Built-In or Window Print fallback)
+    // Isolated Thermal Receipt Browser Printing (1 single clean page, no 4-page dashboard spillover)
+    const printSlipToBrowser = () => {
+        if (!slipRef.current) return
+
+        const iframe = document.createElement('iframe')
+        iframe.style.position = 'fixed'
+        iframe.style.right = '0'
+        iframe.style.bottom = '0'
+        iframe.style.width = '0'
+        iframe.style.height = '0'
+        iframe.style.border = '0'
+        iframe.style.visibility = 'hidden'
+        document.body.appendChild(iframe)
+
+        const doc = iframe.contentWindow.document
+        doc.open()
+
+        // Include current stylesheets so Tailwind styling and typography are preserved
+        let stylesHtml = ''
+        document.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
+            stylesHtml += node.outerHTML
+        })
+
+        doc.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <title>สลิปสรุปยอดปิดวัน // ${selectedDate}</title>
+                ${stylesHtml}
+                <style>
+                    @page {
+                        size: 80mm auto;
+                        margin: 2mm;
+                    }
+                    @media print {
+                        html, body {
+                            width: 100% !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            background: #ffffff !important;
+                        }
+                    }
+                    * {
+                        box-sizing: border-box !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    body {
+                        background: #ffffff !important;
+                        margin: 0 auto !important;
+                        padding: 4px !important;
+                        width: 76mm !important;
+                        max-width: 76mm !important;
+                        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
+                    }
+                </style>
+            </head>
+            <body>
+                <div style="width: 74mm; margin: 0 auto; background: #ffffff;">
+                    ${slipRef.current.innerHTML}
+                </div>
+            </body>
+            </html>
+        `)
+        doc.close()
+
+        setTimeout(() => {
+            try {
+                iframe.contentWindow.focus()
+                iframe.contentWindow.print()
+            } catch (e) {
+                console.error('Print iframe error:', e)
+            } finally {
+                setTimeout(() => {
+                    if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
+                }, 2000)
+            }
+        }, 250)
+    }
+
+    // Direct Thermal Receipt Printing (Sunmi Built-In or isolated iframe print fallback)
     const handlePrint = async () => {
         if (printing) return
         setPrinting(true)
@@ -361,11 +430,11 @@ export default function DailySummarySlipModal({
             if (printed) {
                 toast.success('สั่งพิมพ์สลิปสรุปยอดออกเครื่องพิมพ์ Thermal สำเร็จ')
             } else {
-                window.print()
+                printSlipToBrowser()
             }
         } catch (err) {
-            console.error('Print failed:', err)
-            window.print()
+            console.error('Print failed, using browser printer:', err)
+            printSlipToBrowser()
         } finally {
             setPrinting(false)
         }
