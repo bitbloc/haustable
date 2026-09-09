@@ -266,6 +266,7 @@ export default function DailySummarySlipModal({
                 pixelRatio: 3,
                 quality: 1.0,
                 cacheBust: true,
+                backgroundColor: '#ffffff',
                 width: fullWidth,
                 height: fullHeight,
                 style: {
@@ -372,7 +373,7 @@ export default function DailySummarySlipModal({
 
     return (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
-            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-lg w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+            <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
                 
                 {/* Modal Header */}
                 <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono shrink-0">
@@ -393,11 +394,11 @@ export default function DailySummarySlipModal({
                     </button>
                 </div>
 
-                {/* Slip Preview Area with generous bottom padding so footer never clips content */}
-                <div className="flex-1 overflow-y-auto p-3 sm:p-5 md:p-6 pb-28 sm:pb-32 bg-[oklch(95%_0.008_28)] flex justify-center">
+                {/* Slip Preview Area: Full white background on both desktop and mobile */}
+                <div className="flex-1 overflow-y-auto p-3 sm:p-5 pb-8 bg-white flex justify-center">
                     <div 
                         ref={slipRef}
-                        className="w-full max-w-[360px] bg-white p-5 rounded-xs border border-[oklch(85%_0.012_28)] shadow-md font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3 select-none"
+                        className="w-full max-w-md bg-white p-2 sm:p-3 font-mono text-xs text-[oklch(18%_0.012_28)] space-y-3 select-none"
                     >
                         {/* 1. Shop Header & Metadata */}
                         <div className="text-center space-y-1 pb-2.5 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">

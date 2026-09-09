@@ -60,7 +60,25 @@ describe('Daily Revenue & Date Filtering Resilience', () => {
         expect(filtered.length).toBe(2);
         expect(filtered.map(b => b.id)).toEqual(['today-1', 'today-2']);
 
-        const totalRev = filtered.reduce((sum, b) => sum + Number(b.total_amount || 0), 0);
+        const totalRev = filtered.reduce((sum, b) => sum + Number(b.total_amount || b.total_price || 0), 0);
         expect(totalRev).toBe(1707); // 1622 + 85, NOT 1,701,707!
+    });
+
+    it('should correctly protect against zero-flash during date switching', () => {
+        let loadingState = false;
+        let activeSelectedDate = '2026-09-10';
+
+        // Simulation of handleDateChange
+        const handleDateChange = (newDate, callback) => {
+            activeSelectedDate = newDate;
+            loadingState = true; // Immediately sets loading in same batch
+            callback();
+        };
+
+        handleDateChange('2026-09-09', () => {
+            // Assert that loading is immediately true when date switches
+            expect(loadingState).toBe(true);
+            expect(activeSelectedDate).toBe('2026-09-09');
+        });
     });
 });

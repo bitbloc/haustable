@@ -42,32 +42,114 @@ export default function AdminDashboard() {
     })
     const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
     const [showDailySummaryModal, setShowDailySummaryModal] = useState(false)
+    const selectedDateRef = useRef(selectedDate)
+    const activeRequestIdRef = useRef(0)
 
     useEffect(() => {
-        // Load company tax settings
-        supabase
-            .from('app_settings')
-            .select('key, value')
-            .or('key.like.tax_%,key.eq.receipt_shop_logo_url,key.eq.shop_logo_url')
-            .not('key', 'eq', 'tax_signature_image')
-            .then(({ data }) => {
-                if (data && data.length > 0) {
-                    const map = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
-                    setCompanySettings(map);
-                    localStorage.setItem('onhaus_tax_settings', JSON.stringify(map));
-                }
-            })
-            .catch(() => {});
-    }, []);
+        selectedDateRef.current = selectedDate
+    }, [selectedDate])
+
+    const fetchData = async (isSilent = false, overrideDate = null) => {
+        const queryDate = overrideDate || selectedDateRef.current
+        const requestId = ++activeRequestIdRef.current
+        if (!isSilent) setLoading(true)
+        try {
+            // 1. Fetch ALL Pending (Inbox) across all dates
+            const pendingReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_items ( name, price, category_id )
+                    ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
+                    tables_layout ( table_name )
+                `)
+                .eq('status', 'pending')
+                .order('booking_time', { ascending: true })
+
+            // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
+            // Strict matching across booking_time or created_at (NEVER match on updated_at to prevent historical backfills from polluting daily revenue)
+            const dateReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_items ( name, price, category_id )
+                    ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
+                    tables_layout ( table_name )
+                `)
+                .or(`and(booking_time.gte.${queryDate}T00:00:00+07:00,booking_time.lte.${queryDate}T23:59:59+07:00),and(created_at.gte.${queryDate}T00:00:00+07:00,created_at.lte.${queryDate}T23:59:59+07:00)`)
+                .order('created_at', { ascending: false })
+
+            // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
+            const seatedReq = supabase
+                .from('bookings')
+                .select(`
+                    *,
+                    order_items (
+                        quantity,
+                        price_at_time,
+                        selected_options,
+                        menu_items ( name, price, category_id )
+                    ),
+                    profiles ( id, display_name, nickname, phone_number, current_tier ),
+                    tables_layout ( table_name )
+                `)
+                .in('status', ['seated', 'confirmed'])
+                .order('booking_time', { ascending: false })
+
+            const [pendingRes, dateRes, seatedRes] = await Promise.all([pendingReq, dateReq, seatedReq])
+
+            if (pendingRes.error) throw pendingRes.error
+            if (dateRes.error) throw dateRes.error
+
+            // Guard against race conditions if another request was triggered
+            if (requestId !== activeRequestIdRef.current) return
+
+            // Merge and Deduplicate
+            const map = new Map()
+            ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
+            ;(dateRes.data || []).forEach(b => map.set(b.id, b))
+            ;(seatedRes.data || []).forEach(b => map.set(b.id, b))
+
+            setBookings(Array.from(map.values()))
+
+        } catch (error) {
+            if (requestId !== activeRequestIdRef.current) return
+            console.error('Error fetching dashboard data:', error.message)
+            if (!isSilent) toast.error('Failed to load dashboard data')
+        } finally {
+            if (requestId === activeRequestIdRef.current && !isSilent) {
+                setLoading(false)
+            }
+        }
+    }
+
+    const handleDateChange = (newDate) => {
+        if (!newDate || newDate === selectedDate) return
+        selectedDateRef.current = newDate
+        setSelectedDate(newDate)
+        setLoading(true) // Synchronous immediate loading state
+        fetchData(false, newDate)
+    }
 
     useEffect(() => {
-        fetchData(false)
+        // Initial fetch on mount
+        fetchData(false, selectedDateRef.current)
 
         let debounceTimer = null
         const debouncedFetchData = () => {
             if (debounceTimer) clearTimeout(debounceTimer)
             debounceTimer = setTimeout(() => {
-                fetchData(true)
+                fetchData(true, selectedDateRef.current)
             }, 250)
         }
 
@@ -130,17 +212,17 @@ export default function AdminDashboard() {
             heartbeatCounter++
             // If realtime is healthy, only heartbeat once every 60 seconds (every 4 ticks of 15s)
             if (isRealtimeSubscribed && heartbeatCounter % 4 !== 0) return
-            fetchData(true)
+            fetchData(true, selectedDateRef.current)
         }, 15000)
 
         // 5. Refetch immediately when tab/window regains focus or becomes visible
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {
-                fetchData(true)
+                fetchData(true, selectedDateRef.current)
             }
         }
         document.addEventListener('visibilitychange', handleVisibilityChange)
-        const handleWindowFocus = () => fetchData(true)
+        const handleWindowFocus = () => fetchData(true, selectedDateRef.current)
         window.addEventListener('focus', handleWindowFocus)
 
         return () => {
@@ -154,83 +236,7 @@ export default function AdminDashboard() {
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleWindowFocus)
         }
-    }, [selectedDate])
-
-    const fetchData = async (isSilent = false) => {
-        if (!isSilent) setLoading(true)
-        try {
-            // 1. Fetch ALL Pending (Inbox) across all dates
-            const pendingReq = supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    order_items (
-                        quantity,
-                        price_at_time,
-                        selected_options,
-                        menu_items ( name, price, category_id )
-                    ),
-                    profiles ( id, display_name, nickname, phone_number, current_tier ),
-                    tables_layout ( table_name )
-                `)
-                .eq('status', 'pending')
-                .order('booking_time', { ascending: true })
-
-            // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
-            // Strict matching across booking_time or created_at (NEVER match on updated_at to prevent historical backfills from polluting daily revenue)
-            const dateReq = supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    order_items (
-                        quantity,
-                        price_at_time,
-                        selected_options,
-                        menu_items ( name, price, category_id )
-                    ),
-                    profiles ( id, display_name, nickname, phone_number, current_tier ),
-                    tables_layout ( table_name )
-                `)
-                .or(`and(booking_time.gte.${selectedDate}T00:00:00+07:00,booking_time.lte.${selectedDate}T23:59:59+07:00),and(created_at.gte.${selectedDate}T00:00:00+07:00,created_at.lte.${selectedDate}T23:59:59+07:00)`)
-                .order('created_at', { ascending: false })
-
-            // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
-            const seatedReq = supabase
-                .from('bookings')
-                .select(`
-                    *,
-                    order_items (
-                        quantity,
-                        price_at_time,
-                        selected_options,
-                        menu_items ( name, price, category_id )
-                    ),
-                    profiles ( id, display_name, nickname, phone_number, current_tier ),
-                    tables_layout ( table_name )
-                `)
-                .in('status', ['seated', 'confirmed'])
-                .order('booking_time', { ascending: false })
-
-            const [pendingRes, dateRes, seatedRes] = await Promise.all([pendingReq, dateReq, seatedReq])
-
-            if (pendingRes.error) throw pendingRes.error
-            if (dateRes.error) throw dateRes.error
-
-            // Merge and Deduplicate
-            const map = new Map()
-            ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
-            ;(dateRes.data || []).forEach(b => map.set(b.id, b))
-            ;(seatedRes.data || []).forEach(b => map.set(b.id, b))
-
-            setBookings(Array.from(map.values()))
-
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error.message)
-            if (!isSilent) toast.error('Failed to load dashboard data')
-        } finally {
-            if (!isSilent) setLoading(false)
-        }
-    }
+    }, [])
 
     const updateStatus = async (id, status) => {
         setConfirmModal({
@@ -504,18 +510,18 @@ export default function AdminDashboard() {
                             <input
                                 type="date"
                                 value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
+                                onChange={(e) => handleDateChange(e.target.value)}
                                 className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer"
                             />
                             <button
-                                onClick={() => setSelectedDate(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                                onClick={() => handleDateChange(getThaiDate())}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
                             >
                                 วันนี้
                             </button>
                             <button
-                                onClick={() => setSelectedDate(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                                onClick={() => handleDateChange(getYesterdayDate())}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
                             >
                                 เมื่อวาน
                             </button>
@@ -561,9 +567,9 @@ export default function AdminDashboard() {
                         {/* Refresh */}
                         <button 
                             type="button"
-                            onClick={fetchData} 
+                            onClick={() => fetchData(false, selectedDate)} 
                             disabled={loading}
-                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
+                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                             <span>REFRESH</span>

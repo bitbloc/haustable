@@ -25,22 +25,32 @@ export default function LivePulseMetrics({
                     <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
                         TODAY'S REVENUE
                     </span>
-                    <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                    <span className={`w-2 h-2 rounded-full ${loading ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(45%_0.08_140)]'} animate-pulse`} />
                 </div>
                 
                 <div className="my-2">
-                    <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                        {loading ? '...' : `฿${Number(revenueToday || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-                    </div>
+                    {loading ? (
+                        <div className="h-8 md:h-9 w-36 bg-[oklch(90%_0.012_28)] rounded-xs animate-pulse my-1" />
+                    ) : (
+                        <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                            ฿{Number(revenueToday || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
                     <div className="flex flex-col">
-                        <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{completedOrdersCount} PAID ORDERS</span>
-                        {activeUnpaidCount > 0 && (
-                            <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
-                                +{activeUnpaidCount} รอเช็คบิล (฿{Number(activeUnpaidRevenue).toLocaleString()})
-                            </span>
+                        {loading ? (
+                            <div className="h-3.5 w-24 bg-[oklch(92%_0.010_28)] rounded-xs animate-pulse" />
+                        ) : (
+                            <>
+                                <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)]">{completedOrdersCount} PAID ORDERS</span>
+                                {activeUnpaidCount > 0 && (
+                                    <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                        +{activeUnpaidCount} รอเช็คบิล (฿{Number(activeUnpaidRevenue).toLocaleString()})
+                                    </span>
+                                )}
+                            </>
                         )}
                     </div>
                     <span className="text-[oklch(45%_0.08_140)] font-bold tracking-wider text-[10px]">LIVE SYNC</span>
@@ -59,9 +69,13 @@ export default function LivePulseMetrics({
                 </div>
 
                 <div className="my-2 flex items-baseline gap-2">
-                    <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                        {occupiedTables} <span className="text-sm md:text-base font-normal text-[oklch(55%_0.010_28)]">/ {totalTables} TABLES</span>
-                    </div>
+                    {loading ? (
+                        <div className="h-8 md:h-9 w-32 bg-[oklch(90%_0.012_28)] rounded-xs animate-pulse my-1" />
+                    ) : (
+                        <div className="font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                            {occupiedTables} <span className="text-sm md:text-base font-normal text-[oklch(55%_0.010_28)]">/ {totalTables} TABLES</span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Progress Bar */}
@@ -89,11 +103,19 @@ export default function LivePulseMetrics({
 
                 <div className="my-2 grid grid-cols-2 gap-1.5 text-center font-mono">
                     <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
-                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{dineInCount}</div>
+                        {loading ? (
+                            <div className="h-4 w-8 mx-auto bg-[oklch(88%_0.012_28)] rounded-xs animate-pulse" />
+                        ) : (
+                            <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{dineInCount}</div>
+                        )}
                         <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase tracking-wider">DINE-IN</div>
                     </div>
                     <div className="bg-[oklch(94%_0.010_28)] p-1.5 rounded-sm">
-                        <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{pickupCount}</div>
+                        {loading ? (
+                            <div className="h-4 w-8 mx-auto bg-[oklch(88%_0.012_28)] rounded-xs animate-pulse" />
+                        ) : (
+                            <div className="text-xs md:text-sm font-bold text-[oklch(18%_0.012_28)] tabular-nums">{pickupCount}</div>
+                        )}
                         <div className="text-[9px] text-[oklch(50%_0.010_28)] uppercase tracking-wider">PICKUP</div>
                     </div>
                 </div>
@@ -125,12 +147,18 @@ export default function LivePulseMetrics({
                 </div>
 
                 <div className="my-2 flex items-baseline gap-2">
-                    <div className={`font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight ${
-                        pendingInboxCount > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'
-                    }`}>
-                        {pendingInboxCount}
-                    </div>
-                    <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">SLIPS PENDING</span>
+                    {loading ? (
+                        <div className="h-8 md:h-9 w-16 bg-[oklch(90%_0.012_28)] rounded-xs animate-pulse my-1" />
+                    ) : (
+                        <>
+                            <div className={`font-mono tabular-nums text-xl md:text-2xl lg:text-3xl font-bold tracking-tight ${
+                                pendingInboxCount > 0 ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'
+                            }`}>
+                                {pendingInboxCount}
+                            </div>
+                            <span className="font-mono text-xs text-[oklch(55%_0.010_28)]">SLIPS PENDING</span>
+                        </>
+                    )}
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] border-t border-[oklch(88%_0.008_28)] pt-2 mt-1">
@@ -145,17 +173,24 @@ export default function LivePulseMetrics({
                     <span className="text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider text-[10px]">
                         PAYMENT METHOD BREAKDOWN:
                     </span>
-                    <div className="flex items-center gap-3 flex-wrap text-[11px]">
-                        <span className="text-[oklch(28%_0.10_65)] font-bold bg-[oklch(93%_0.04_65)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_65)] tabular-nums">
-                            เงินสด: ฿{(paymentBreakdown.cash || 0).toLocaleString()}
-                        </span>
-                        <span className="text-[oklch(28%_0.08_140)] font-bold bg-[oklch(93%_0.04_140)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_140)] tabular-nums">
-                            PromptPay QR: ฿{(paymentBreakdown.qr || 0).toLocaleString()}
-                        </span>
-                        <span className="text-[oklch(28%_0.08_250)] font-bold bg-[oklch(93%_0.04_250)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_250)] tabular-nums">
-                            บัตรเครดิต: ฿{(paymentBreakdown.credit || 0).toLocaleString()}
-                        </span>
-                    </div>
+                    {loading ? (
+                        <div className="flex items-center gap-2 text-[11px] text-[oklch(55%_0.010_28)]">
+                            <span className="inline-block w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                            <span>กำลังซิงค์ยอดเงิน...</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 flex-wrap text-[11px]">
+                            <span className="text-[oklch(28%_0.10_65)] font-bold bg-[oklch(93%_0.04_65)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_65)] tabular-nums">
+                                เงินสด: ฿{(paymentBreakdown.cash || 0).toLocaleString()}
+                            </span>
+                            <span className="text-[oklch(28%_0.08_140)] font-bold bg-[oklch(93%_0.04_140)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_140)] tabular-nums">
+                                PromptPay QR: ฿{(paymentBreakdown.qr || 0).toLocaleString()}
+                            </span>
+                            <span className="text-[oklch(28%_0.08_250)] font-bold bg-[oklch(93%_0.04_250)] px-2 py-0.5 rounded-xs border border-[oklch(80%_0.06_250)] tabular-nums">
+                                บัตรเครดิต: ฿{(paymentBreakdown.credit || 0).toLocaleString()}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
