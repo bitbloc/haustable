@@ -1604,6 +1604,15 @@ export default function POSDashboard() {
                             }
                             window.activeBookingSyncDebounceTimer = setTimeout(() => {
                                 refreshActiveBookingItems(bookingId);
+                                const currentTableId = activeBookingRef.current?.table_id;
+                                if (currentTableId) {
+                                    try {
+                                        const stored = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+                                        stored[currentTableId] = Date.now();
+                                        localStorage.setItem('pos_ack_table_times', JSON.stringify(stored));
+                                        window.dispatchEvent(new CustomEvent('pos_table_acknowledged', { detail: { tableId: currentTableId } }));
+                                    } catch (e) {}
+                                }
                             }, 500);
                         }
 
@@ -1912,6 +1921,12 @@ export default function POSDashboard() {
         setAttachedMemberCrm(null); // Clear stale attached member immediately on table change
         if (table?.id) {
             localStorage.setItem('pos_active_table_id', table.id);
+            try {
+                const stored = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+                stored[table.id] = Date.now();
+                localStorage.setItem('pos_ack_table_times', JSON.stringify(stored));
+                window.dispatchEvent(new CustomEvent('pos_table_acknowledged', { detail: { tableId: table.id } }));
+            } catch (e) {}
         }
         
         // 1. Check for active booking

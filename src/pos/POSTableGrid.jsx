@@ -56,6 +56,47 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     const [reassignModalBooking, setReassignModalBooking] = useState(null); // Booking needing table re-assignment
     const [reassigning, setReassigning] = useState(false);
 
+    const ackTableTimesRef = useRef({});
+
+    // Read stored acknowledgment timestamps on mount
+    useEffect(() => {
+        try {
+            ackTableTimesRef.current = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+        } catch (e) {
+            ackTableTimesRef.current = {};
+        }
+    }, []);
+
+    const acknowledgeTable = useCallback((tableId) => {
+        if (!tableId) return;
+        const now = Date.now();
+        ackTableTimesRef.current[tableId] = now;
+        try {
+            localStorage.setItem('pos_ack_table_times', JSON.stringify(ackTableTimesRef.current));
+        } catch (e) {}
+        setTables(prev => prev.map(t => t.id === tableId ? { ...t, hasNewOrder: false } : t));
+    }, []);
+
+    const handleTableSelect = useCallback((table) => {
+        if (table?.id) {
+            acknowledgeTable(table.id);
+        }
+        if (onSelectTable) {
+            onSelectTable(table);
+        }
+    }, [acknowledgeTable, onSelectTable]);
+
+    useEffect(() => {
+        const handleAckEvent = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                acknowledgeTable(tableId);
+            }
+        };
+        window.addEventListener('pos_table_acknowledged', handleAckEvent);
+        return () => window.removeEventListener('pos_table_acknowledged', handleAckEvent);
+    }, [acknowledgeTable]);
+
     useEffect(() => {
         // Immediate in-memory/local cache render for sub-100ms UI responsiveness
         try {
@@ -215,14 +256,24 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         return false;
                     });
 
-                    // Check for unserved/new order items on this table (within last 15 min or unchecked)
+                    // Check for unacknowledged new order items on this table (within last 5 min and after table ack)
                     const items = activeBooking?.order_items || [];
-                    const hasUnservedItems = items.some(i => i.status === 'pending' || i.is_checked === false);
-                    const hasRecentItems = items.some(i => {
+                    const tableAckTime = ackTableTimesRef.current[t.id] || 0;
+
+                    const hasUnviewedRecentItems = items.some(i => {
                         if (!i.created_at) return false;
-                        return (now.getTime() - new Date(i.created_at).getTime()) < 15 * 60 * 1000;
+                        const itemCreatedTime = new Date(i.created_at).getTime();
+                        const isRecent = (now.getTime() - itemCreatedTime) < 5 * 60 * 1000;
+                        const isAfterAck = itemCreatedTime > tableAckTime;
+                        return isRecent && isAfterAck;
                     });
-                    const hasNewOrder = (activeBooking?.status === 'pending') || hasUnservedItems || (hasActiveWalkInOrQR && hasRecentItems);
+
+                    const bookingTimeMs = activeBooking?.booking_time ? new Date(activeBooking.booking_time).getTime() : 0;
+                    const isRecentPendingBooking = activeBooking?.status === 'pending' && 
+                        (now.getTime() - bookingTimeMs < 10 * 60 * 1000) && 
+                        (bookingTimeMs > tableAckTime);
+
+                    const hasNewOrder = isRecentPendingBooking || hasUnviewedRecentItems;
 
                     // 2. Upcoming advance reservation (scheduled for later today or future dates)
                     const upcomingRes = tableBookings.find(b => {
@@ -480,7 +531,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                                 <FloorplanTableButton 
                                                     key={table.id}
                                                     table={table}
-                                                    onSelectTable={onSelectTable}
+                                                    onSelectTable={handleTableSelect}
                                                     onReassign={setReassignModalBooking}
                                                 />
                                             ))}
@@ -504,7 +555,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                     <GridTableButton 
                                         key={table.id}
                                         table={table}
-                                        onSelectTable={onSelectTable}
+                                        onSelectTable={handleTableSelect}
                                     />
                                 ))}
                             </div>
@@ -591,7 +642,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
-    const hasOrder = Boolean(table.hasNewOrder || isPending);
+    const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
@@ -743,7 +794,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
     
-    const hasOrder = Boolean(table.hasNewOrder || isPending);
+    const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
