@@ -18,6 +18,11 @@ function getBroadcastChannel() {
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                     console.warn(`[RealtimeNotifier] Channel status: ${status}, resetting channel.`);
+                    if (posBroadcastChannel) {
+                        try {
+                            supabase.removeChannel(posBroadcastChannel);
+                        } catch (e) {}
+                    }
                     posBroadcastChannel = null;
                     posChannelSubPromise = null;
                     clearTimeout(timer);
@@ -81,9 +86,10 @@ export async function sendPOSBroadcast(event, payload = {}) {
  */
 export async function sendTrackingBroadcast(trackingToken, event = 'order_status_updated', payload = {}) {
     if (!trackingToken) return null;
+    let channel = null;
     try {
         const channelName = `tracking_room_${trackingToken}`;
-        const channel = supabase.channel(channelName, {
+        channel = supabase.channel(channelName, {
             config: { broadcast: { ack: true } }
         });
         const fullPayload = {
@@ -113,6 +119,12 @@ export async function sendTrackingBroadcast(trackingToken, event = 'order_status
     } catch (err) {
         console.warn(`[RealtimeNotifier] Failed to broadcast tracking event "${event}":`, err);
         return null;
+    } finally {
+        if (channel) {
+            try {
+                supabase.removeChannel(channel);
+            } catch (e) {}
+        }
     }
 }
 

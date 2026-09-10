@@ -82,4 +82,34 @@ describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Arch
         expect(releaseStatus(blockBooking)).toBe('cancelled');
         expect(releaseStatus(realOrder)).toBe('completed');
     });
+
+    it('should NOT show payment badge for newly opened or seated (dining) orders, only for completed/paid', () => {
+        const shouldShowPaymentBadge = (booking) => {
+            const s = (booking?.status || '').toLowerCase();
+            return s === 'completed' || s === 'paid' || s === 'success';
+        };
+
+        const newlyOpenedTable = {
+            id: 'b_new',
+            status: 'seated',
+            total_amount: 0,
+            order_items: []
+        };
+        const diningTableWithItems = {
+            id: 'b_dining',
+            status: 'seated',
+            total_amount: 520,
+            order_items: [{ name: 'Khao Soi', quantity: 2, price: 260 }]
+        };
+        const completedBill = {
+            id: 'b_paid',
+            status: 'completed',
+            total_amount: 520,
+            order_items: [{ name: 'Khao Soi', quantity: 2, price: 260 }]
+        };
+
+        expect(shouldShowPaymentBadge(newlyOpenedTable)).toBe(false);
+        expect(shouldShowPaymentBadge(diningTableWithItems)).toBe(false);
+        expect(shouldShowPaymentBadge(completedBill)).toBe(true);
+    });
 });

@@ -147,7 +147,9 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         // 60-second background heartbeat fallback (Realtime master channel handles instant updates)
         const pollInterval = setInterval(() => {
-            fetchTables();
+            if (document.visibilityState === 'visible') {
+                fetchTables();
+            }
         }, 60000);
 
         const handleVisibilityChange = () => {
@@ -162,6 +164,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             supabase.removeChannel(settingsSub);
             supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
+            if (fetchTimeoutRef.current) {
+                clearTimeout(fetchTimeoutRef.current);
+                fetchTimeoutRef.current = null;
+            }
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('online', fetchTables);
         };

@@ -395,31 +395,51 @@ function POSBillDetailsContent({ booking: initialBooking, onClose }) {
                             </span>
                         </div>
 
-                        <div className="flex justify-between items-center mt-2">
-                            <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">Pay Method</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border bg-white text-[#1A1A1A] border-[#D1D1CD]">
-                                {getBookingPaymentMethod(booking)}
-                            </span>
-                        </div>
+                        {(() => {
+                            const bStatus = (booking.status || '').toLowerCase();
+                            const isPaid = bStatus === 'completed' || bStatus === 'paid' || bStatus === 'success';
 
-                        {getBookingPaymentMethod(booking) === 'CASH' && (() => {
-                            const totalAmt = Number(booking.total_amount) || 0;
-                            const cashDetails = extractCashDetails(booking, totalAmt);
-                            if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
+                            if (!isPaid) {
                                 return (
-                                    <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1 font-mono text-xs">
-                                        <div className="flex justify-between text-[#767673]">
-                                            <span>รับเงินสดมา (Cash Received):</span>
-                                            <span className="font-bold text-[#1A1A1A]">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between font-black text-emerald-700 border-t border-dashed border-[#ECECE9] pt-1">
-                                            <span>เงินทอน (Change Due):</span>
-                                            <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
-                                        </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">สถานะชำระเงิน</span>
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border bg-amber-50 text-amber-800 border-amber-200">
+                                            {bStatus === 'seated' ? 'กำลังทาน (ยังไม่ชำระ)' : 'ยังไม่ชำระเงิน'}
+                                        </span>
                                     </div>
                                 );
                             }
-                            return null;
+
+                            return (
+                                <>
+                                    <div className="flex justify-between items-center mt-2">
+                                        <span className="text-[10px] font-mono font-bold text-[#767673] uppercase">Pay Method</span>
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase border bg-white text-[#1A1A1A] border-[#D1D1CD]">
+                                            {getBookingPaymentMethod(booking)}
+                                        </span>
+                                    </div>
+
+                                    {getBookingPaymentMethod(booking) === 'CASH' && (() => {
+                                        const totalAmt = Number(booking.total_amount) || 0;
+                                        const cashDetails = extractCashDetails(booking, totalAmt);
+                                        if (cashDetails && cashDetails.received !== null && cashDetails.received > 0) {
+                                            return (
+                                                <div className="bg-white border border-[#D1D1CD] rounded-lg p-2.5 mt-2 space-y-1 font-mono text-xs">
+                                                    <div className="flex justify-between text-[#767673]">
+                                                        <span>รับเงินสดมา (Cash Received):</span>
+                                                        <span className="font-bold text-[#1A1A1A]">฿{Math.ceil(cashDetails.received).toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="flex justify-between font-black text-emerald-700 border-t border-dashed border-[#ECECE9] pt-1">
+                                                        <span>เงินทอน (Change Due):</span>
+                                                        <span>฿{Math.ceil(cashDetails.change || 0).toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </>
+                            );
                         })()}
                     </div>
                     

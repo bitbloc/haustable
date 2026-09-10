@@ -60,12 +60,15 @@ export default function CustomerOrderStatus() {
     useEffect(() => {
         let channelSub = null;
         let settingsSub = null;
+        let isMounted = true;
 
         const initStatus = async () => {
             if (tableId) {
                 localStorage.setItem('active_customer_table_id', tableId);
             }
             const numericId = await fetchActiveOrder();
+
+            if (!isMounted) return;
 
             if (numericId) {
                 // Setup realtime subscription with resolved numeric ID (listen to all changes)
@@ -76,14 +79,14 @@ export default function CustomerOrderStatus() {
                         table: 'bookings',
                         filter: `table_id=eq.${numericId}` 
                     }, () => {
-                        fetchActiveOrder(true);
+                        if (isMounted) fetchActiveOrder(true);
                     })
                     .on('postgres_changes', {
                         event: '*',
                         schema: 'public',
                         table: 'order_items'
                     }, () => {
-                        fetchActiveOrder(true);
+                        if (isMounted) fetchActiveOrder(true);
                     })
                     .subscribe((status, err) => {
                         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
@@ -98,7 +101,7 @@ export default function CustomerOrderStatus() {
                         schema: 'public',
                         table: 'app_settings'
                     }, () => {
-                        fetchSettings();
+                        if (isMounted) fetchSettings();
                     })
                     .subscribe();
             }
@@ -107,7 +110,7 @@ export default function CustomerOrderStatus() {
         initStatus();
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
+            if (document.visibilityState === 'visible' && isMounted) {
                 fetchActiveOrder(true);
                 fetchSettings();
             }
@@ -116,6 +119,7 @@ export default function CustomerOrderStatus() {
         window.addEventListener('focus', handleVisibilityChange);
 
         return () => {
+            isMounted = false;
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleVisibilityChange);
             if (channelSub) supabase.removeChannel(channelSub);
@@ -526,6 +530,18 @@ export default function CustomerOrderStatus() {
                                 <span className="text-[10px] text-[var(--color-ink)] font-mono font-bold uppercase tracking-wider">ยอดที่ต้องชำระ (Remaining)</span>
                                 <span className="text-xl font-black text-[var(--color-ink)] font-mono">฿{remainingBalance.toLocaleString()}.-</span>
                             </div>
+                        </div>
+
+                        {/* Order More Items CTA - Dieter Rams & Thai Modern stark tabular layout */}
+                        <div className="pt-3.5 border-t border-[var(--color-rule)]">
+                            <button
+                                type="button"
+                                onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
+                                className="w-full bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] py-2.5 px-3 rounded-xs font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                            >
+                                <Plus size={14} className="text-[var(--color-accent)] shrink-0" />
+                                <span>สั่งอาหารหรือเครื่องดื่มเพิ่ม · ORDER MORE</span>
+                            </button>
                         </div>
                     </div>
                 </section>

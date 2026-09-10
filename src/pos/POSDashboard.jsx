@@ -958,8 +958,12 @@ export default function POSDashboard() {
         window.addEventListener('pageshow', handleForegroundWakeup);
         window.addEventListener('online', handleOnlineStatus);
 
-        // Adaptive 60-second backup heartbeat (safety net only)
-        const pollInterval = setInterval(checkPendingOrders, 60000);
+        // Adaptive 60-second backup heartbeat (safety net only, visible tabs only)
+        const pollInterval = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                checkPendingOrders();
+            }
+        }, 60000);
 
         // Realtime sync: Auto-update draft cart item prices when menu items change
         const handlePosMenuUpdated = (e) => {
@@ -1016,6 +1020,14 @@ export default function POSDashboard() {
 
         return () => {
             clearInterval(pollInterval);
+            if (window.autoPrintDebounceTimer) {
+                clearTimeout(window.autoPrintDebounceTimer);
+                window.autoPrintDebounceTimer = null;
+            }
+            if (window.activeBookingSyncDebounceTimer) {
+                clearTimeout(window.activeBookingSyncDebounceTimer);
+                window.activeBookingSyncDebounceTimer = null;
+            }
             document.removeEventListener('visibilitychange', handleForegroundWakeup);
             window.removeEventListener('focus', handleForegroundWakeup);
             window.removeEventListener('pageshow', handleForegroundWakeup);

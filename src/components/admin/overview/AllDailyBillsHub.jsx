@@ -217,6 +217,8 @@ export default function AllDailyBillsHub({
             // 3. Payment Filter
             if (paymentFilter !== 'all') {
                 if (transfer.isMergedSource) return false
+                const isPaid = b.status === 'completed' || b.status === 'paid' || b.status === 'success'
+                if (!isPaid) return false
                 const breakdown = getBookingPaymentBreakdown(b)
                 if (paymentFilter === 'cash' && breakdown.cash <= 0) return false
                 if (paymentFilter === 'qr' && breakdown.qr <= 0) return false
@@ -418,13 +420,20 @@ export default function AllDailyBillsHub({
         const transfer = parseTableTransferInfo(booking, bookings)
         if (transfer.isMergedSource) {
             return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(92%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(85%_0.012_28)]">
                     <Layers size={11} />
                     <span>โอนยอดไป {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}</span>
                 </span>
             )
         }
 
+        const s = (booking?.status || '').toLowerCase()
+        const isPaid = s === 'completed' || s === 'paid' || s === 'success'
+
+        // ออเดอร์ที่เปิดโต๊ะมาใหม่ หรือกำลังทานอยู่ (seated) หรือยังไม่ได้ชำระเงิน จะไม่แสดงวิธีชำระเงิน
+        if (!isPaid) {
+            return null
+        }
 
         const breakdown = getBookingPaymentBreakdown(booking)
         if (breakdown.isSplit) {
