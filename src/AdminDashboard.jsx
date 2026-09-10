@@ -12,6 +12,8 @@ import { playOrderAlert } from './utils/audioHelper'
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
+import DailyShiftsCashFlowWidget from './components/admin/overview/DailyShiftsCashFlowWidget'
+import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
 import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
 import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
@@ -25,8 +27,9 @@ import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
 export default function AdminDashboard() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Selected Date Bookings
+    const [shifts, setShifts] = useState([]) // Stores shifts for Selected Date / Active shift
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('bills') // bills, inbox, schedule, floor, dine_in, pickup
+    const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor, dine_in, pickup
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
@@ -106,7 +109,22 @@ export default function AdminDashboard() {
                 .in('status', ['seated', 'confirmed'])
                 .order('booking_time', { ascending: false })
 
-            const [pendingRes, dateRes, seatedRes] = await Promise.all([pendingReq, dateReq, seatedReq])
+            // 4. Fetch Shifts for queryDate (all shifts opened or closed on this date, plus currently open shift if today)
+            const isToday = queryDate === getThaiDate()
+            let shiftsReq = supabase
+                .from('pos_shifts')
+                .select('*')
+                .order('opened_at', { ascending: true })
+
+            if (isToday) {
+                shiftsReq = shiftsReq.or(`opened_at.gte.${queryDate}T00:00:00+07:00,status.eq.open`)
+            } else {
+                shiftsReq = shiftsReq
+                    .gte('opened_at', `${queryDate}T00:00:00+07:00`)
+                    .lte('opened_at', `${queryDate}T23:59:59+07:00`)
+            }
+
+            const [pendingRes, dateRes, seatedRes, shiftsRes] = await Promise.all([pendingReq, dateReq, seatedReq, shiftsReq])
 
             if (pendingRes.error) throw pendingRes.error
             if (dateRes.error) throw dateRes.error
@@ -121,6 +139,7 @@ export default function AdminDashboard() {
             ;(seatedRes.data || []).forEach(b => map.set(b.id, b))
 
             setBookings(Array.from(map.values()))
+            setShifts(shiftsRes?.data || [])
 
         } catch (error) {
             if (requestId !== activeRequestIdRef.current) return
@@ -174,6 +193,10 @@ export default function AdminDashboard() {
                 console.log('⚡ [Admin Realtime] App settings change detected:', payload?.eventType)
                 debouncedFetchData()
             })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_shifts' }, (payload) => {
+                console.log('⚡ [Admin Realtime] Shift change detected:', payload?.eventType)
+                debouncedFetchData()
+            })
             .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
                     isRealtimeSubscribed = true
@@ -200,6 +223,8 @@ export default function AdminDashboard() {
         }
         const handleCustomSync = () => debouncedFetchData()
         window.addEventListener('pos_sync_event', handleCustomSync)
+        const handleShiftChanged = () => debouncedFetchData()
+        window.addEventListener('pos-shift-changed', handleShiftChanged)
         const handleStorageSync = (e) => {
             if (e.key === 'pos_last_order_sync') debouncedFetchData()
         }
@@ -232,6 +257,7 @@ export default function AdminDashboard() {
             supabase.removeChannel(notifyChannel)
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
+            window.removeEventListener('pos-shift-changed', handleShiftChanged)
             window.removeEventListener('storage', handleStorageSync)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleWindowFocus)
@@ -412,6 +438,17 @@ export default function AdminDashboard() {
             )
         }
 
+        if (activeTab === 'shifts') {
+            return (
+                <AdminShiftsLedgerTab
+                    shifts={shifts}
+                    loading={loading}
+                    selectedDate={selectedDate}
+                    onRefreshShifts={() => fetchData(false, selectedDate)}
+                />
+            )
+        }
+
         if (activeTab === 'inbox') {
             return (
                 <InboxSection 
@@ -515,13 +552,13 @@ export default function AdminDashboard() {
                             />
                             <button
                                 onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
                             >
                                 วันนี้
                             </button>
                             <button
                                 onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-gray-100'}`}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
                             >
                                 เมื่อวาน
                             </button>
@@ -593,6 +630,15 @@ export default function AdminDashboard() {
                     loading={loading}
                 />
 
+                {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
+                <DailyShiftsCashFlowWidget
+                    shifts={shifts}
+                    loading={loading}
+                    selectedDate={selectedDate}
+                    onSelectShiftTab={setActiveTab}
+                    onRefreshShifts={() => fetchData(false, selectedDate)}
+                />
+
                 {/* 2. Owner Direct Broadcast to POS Screen */}
                 <div className="mb-6">
                     <OwnerPosBroadcastBar />
@@ -607,6 +653,7 @@ export default function AdminDashboard() {
                 <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
                     {[
                         { key: 'bills', label: 'ALL BILLS', count: dailyBookings.length, icon: Receipt },
+                        { key: 'shifts', label: 'SHIFTS (กะเงินสด)', count: shifts.length, icon: Layers },
                         { key: 'inbox', label: 'INBOX', count: pendingBookings.length, icon: Inbox },
                         { key: 'schedule', label: 'SCHEDULE', count: scheduleBookings.length, icon: Clock },
                         { key: 'dine_in', label: 'DINE-IN', count: dineInCount, icon: Utensils },
