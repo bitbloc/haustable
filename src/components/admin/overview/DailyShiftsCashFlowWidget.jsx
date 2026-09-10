@@ -90,9 +90,6 @@ export default function DailyShiftsCashFlowWidget({
             const cs = Number(s.cash_sales || 0)
             const tIn = Number(s.total_in || 0)
             const tOut = Number(s.total_out || 0)
-            const exp = Number(s.expected_cash ?? (fl + cs + tIn - tOut))
-            const cl = Number(s.closed_cash || 0)
-            const diff = Number(s.difference ?? (isOpen ? 0 : (cl - exp)))
 
             // In day aggregation, opening float of first shift is the anchor
             if (idx === 0) {
@@ -101,9 +98,6 @@ export default function DailyShiftsCashFlowWidget({
             totalCashSales += cs
             totalCashIn += tIn
             totalCashOut += tOut
-            totalClosedCash += cl
-            totalExpectedCash += exp
-            totalDiff += diff
 
             // Collect itemized adjustments with shift attribution
             const adjs = Array.isArray(s.adjustments) ? s.adjustments : []
@@ -116,6 +110,11 @@ export default function DailyShiftsCashFlowWidget({
                 })
             })
         })
+
+        // In continuous shift handover, day expected cash is calculated from day anchor float + day sales + day net adjustments
+        const totalExpectedCash = totalOpeningFloat + totalCashSales + totalCashIn - totalCashOut
+        const totalClosedCash = sortedShifts.length > 0 ? Number(sortedShifts[sortedShifts.length - 1].closed_cash || 0) : 0
+        const totalDiff = openShiftsCount > 0 ? 0 : (totalClosedCash - totalExpectedCash)
 
         // Sort all adjustments by timestamp descending (most recent first)
         allAdjustments.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
