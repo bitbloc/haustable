@@ -1374,7 +1374,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Overlay Modals (Portaled directly to document.body for true full-screen centering) */}
             {activeModal === 'crm' && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150">
+                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-150">
                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-2xl overflow-hidden max-w-lg w-full shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150">
                         {/* Header */}
                         <div className="p-4 flex justify-between items-center text-[var(--color-ink)] border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
@@ -1908,7 +1908,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                 {/* Quick Register Modal */}
                 {isQuickRegistering && typeof document !== 'undefined' && createPortal(
-                    <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="fixed inset-0 bg-black/60 z-[10000] flex items-center justify-center p-4 font-sans animate-in fade-in duration-150">
                         <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-sm w-full shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
                             <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
                                 <div>
@@ -1968,7 +1968,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
                 {/* Discount Modal */}
                 {activeModal === 'discount' && typeof document !== 'undefined' && createPortal(
-                    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150">
+                    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-150">
                         <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl overflow-hidden max-w-md w-full shadow-2xl flex flex-col animate-in zoom-in-95 duration-150">
                             <div className="p-4 flex justify-between items-center bg-white border-b border-[#D1D1CD]">
                                 <div>
@@ -2067,7 +2067,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 {activeModal === 'checkout' && typeof document !== 'undefined' && createPortal(
                     <div 
                         onClick={() => setActiveModal(null)}
-                        className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150"
+                        className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-150"
                     >
                         <div 
                             onClick={(e) => e.stopPropagation()}
@@ -2433,7 +2433,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Edit Guest Count (Pax) Modal */}
             {showEditPaxModal && typeof document !== 'undefined' && createPortal(
-                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans backdrop-blur-xs animate-in fade-in duration-150">
+                <div className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 font-sans animate-in fade-in duration-150">
                     <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-[#1A1A1A] animate-in zoom-in-95 duration-150">
                         <div className="p-4.5 border-b border-[#D1D1CD] flex items-center justify-between bg-white">
                             <div>
@@ -2449,8 +2449,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                             {/* Stepper Input */}
                             <div className="flex items-center gap-3">
                                 <button 
+                                    type="button"
                                     onClick={() => setEditPaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
                                 >
                                     -
                                 </button>
@@ -2463,8 +2464,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     className="w-24 h-12 bg-white border border-[#D1D1CD] rounded-xl text-center text-2xl font-mono font-bold text-[#1A1A1A] focus:outline-none focus:border-[#52281C]"
                                 />
                                 <button 
+                                    type="button"
                                     onClick={() => setEditPaxInput(prev => String((parseInt(prev) || 1) + 1))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
                                 >
                                     +
                                 </button>
@@ -2475,8 +2477,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                                     <button
                                         key={num}
+                                        type="button"
                                         onClick={() => setEditPaxInput(String(num))}
-                                        className={`py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer ${parseInt(editPaxInput) === num ? 'bg-[#3C3D40] text-white shadow-sm' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                        className={`min-h-[44px] py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer touch-manipulation ${parseInt(editPaxInput) === num ? 'bg-[#3C3D40] text-white shadow-sm' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
                                     >
                                         {num}
                                     </button>

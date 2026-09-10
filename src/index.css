@@ -81,7 +81,7 @@ button, a, select, input, textarea, [role="button"] {
 }
 
 /* GPU Hardware Layer Promotion for APK Performance */
-.gpu-accelerated, .fixed, .drawer-slide {
+.gpu-accelerated, .drawer-slide {
   transform: translateZ(0);
   will-change: transform, opacity;
 }

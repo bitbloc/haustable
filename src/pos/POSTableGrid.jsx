@@ -713,7 +713,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
             key={table.id}
             type="button"
             onClick={() => onSelectTable(table)}
-            className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100`}
+            className={`absolute select-none flex flex-col items-center justify-center p-1 cursor-pointer overflow-hidden border ${isCircle ? 'rounded-full' : 'rounded-lg'} ${tableBgClass} hover:scale-[1.03] hover:z-[30] active:scale-[0.98] transition-transform duration-100 touch-manipulation`}
             style={{
                 left: `${table.pos_x}%`,
                 top: `${table.pos_y}%`,
@@ -881,7 +881,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             key={table.id}
             type="button"
             onClick={() => onSelectTable(table)}
-            className={`min-h-[135px] rounded-md p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.01] active:scale-[0.98] ${cellBgClass}`}
+            className={`min-h-[135px] rounded-md p-3.5 flex flex-col items-stretch justify-between border cursor-pointer relative overflow-hidden transition-all duration-100 hover:scale-[1.01] active:scale-[0.98] touch-manipulation ${cellBgClass}`}
         >
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">

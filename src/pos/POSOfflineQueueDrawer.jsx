@@ -64,7 +64,7 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex justify-end font-sans select-none animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 flex justify-end font-sans select-none animate-in fade-in duration-200">
             <div className="w-full max-w-md bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] flex flex-col h-full shadow-2xl text-[oklch(18%_0.012_28)]">
                 
                 {/* Drawer Header */}

@@ -330,6 +330,8 @@ const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
                     <img 
                         src={imgSrc} 
                         alt={item.name} 
+                        loading="lazy"
+                        decoding="async"
                         onError={handleImageError}
                         className="w-full h-full object-cover block" 
                     />

@@ -3622,8 +3622,9 @@ export default function POSDashboard() {
                             {/* Large Stepper Control */}
                             <div className="flex items-center gap-4 my-2">
                                 <button 
+                                    type="button"
                                     onClick={() => setOpenTablePaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
                                 >
                                     -
                                 </button>
@@ -3637,8 +3638,9 @@ export default function POSDashboard() {
                                     autoFocus
                                 />
                                 <button 
+                                    type="button"
                                     onClick={() => setOpenTablePaxInput(prev => String((parseInt(prev) || 1) + 1))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none"
+                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
                                 >
                                     +
                                 </button>
@@ -3649,8 +3651,9 @@ export default function POSDashboard() {
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
                                     <button
                                         key={num}
+                                        type="button"
                                         onClick={() => setOpenTablePaxInput(String(num))}
-                                        className={`py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer ${parseInt(openTablePaxInput) === num ? 'bg-[#3C3D40] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                        className={`min-h-[44px] py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer touch-manipulation ${parseInt(openTablePaxInput) === num ? 'bg-[#3C3D40] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
                                     >
                                         {num}
                                     </button>
@@ -3660,18 +3663,20 @@ export default function POSDashboard() {
 
                         <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-3">
                             <button
+                                type="button"
                                 onClick={() => {
                                     setOpenTableModalData(null);
                                 }}
-                                className="flex-1 bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                className="flex-1 min-h-[44px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98 touch-manipulation"
                             >
                                 ยกเลิก (Cancel)
                             </button>
                             <button
+                                type="button"
                                 onClick={handleConfirmOpenTable}
-                                className="flex-1 bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                                className="flex-1 min-h-[44px] bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
                             >
-                                <Check size={16} /> เปิดโต๊ะ (Open Table) *
+                                <Check size={16} /> เปิดโต๊ะ (Open Table)
                             </button>
                         </div>
                     </div>
