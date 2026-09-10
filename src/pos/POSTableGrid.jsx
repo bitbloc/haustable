@@ -137,6 +137,9 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         // Realtime Table & Order Items Sync (< 150ms instant floorplan updates)
         const tablesSyncSub = supabase.channel('pos-table-grid-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => {
+                fetchTables();
+            })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
                 fetchTables();
             })

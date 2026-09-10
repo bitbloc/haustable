@@ -88,6 +88,22 @@ export default function CustomerOrderStatus() {
                     }, () => {
                         if (isMounted) fetchActiveOrder(true);
                     })
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'tables_layout',
+                        filter: `id=eq.${numericId}`
+                    }, (payload) => {
+                        if (isMounted) {
+                            if (payload.eventType === 'DELETE') {
+                                setResolvedTableInfo(null);
+                                setBooking(null);
+                            } else if (payload.new) {
+                                setResolvedTableInfo(payload.new);
+                                localStorage.setItem('active_customer_table_name', payload.new.table_name || `Table ${payload.new.id}`);
+                            }
+                        }
+                    })
                     .subscribe((status, err) => {
                         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
                             console.warn(`[Realtime Status] Channel status: ${status}`, err || '');

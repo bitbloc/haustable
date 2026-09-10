@@ -324,6 +324,26 @@ export default function CustomerOrderLanding() {
             }, () => {
                 refreshActiveBooking(table.id);
             })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'tables_layout',
+                filter: `id=eq.${table.id}`
+            }, (payload) => {
+                if (payload.new) {
+                    setTable(prev => ({ ...prev, ...payload.new }));
+                    localStorage.setItem('active_customer_table_name', payload.new.table_name || `Table ${payload.new.id}`);
+                }
+            })
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'tables_layout',
+                filter: `id=eq.${table.id}`
+            }, () => {
+                toast.error('โต๊ะนี้ถูกยกเลิกในระบบหลังบ้านแล้ว กรุณาติดต่อพนักงาน');
+                setTable(null);
+            })
             .subscribe((status, err) => {
                 if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
                     console.warn(`[Realtime Landing Table] Channel: ${status}`, err || '');

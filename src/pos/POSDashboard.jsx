@@ -1341,6 +1341,7 @@ export default function POSDashboard() {
                     schema: 'public', 
                     table: 'tables_layout' 
                 }, () => {
+                    loadTablesMap();
                     triggerDebouncedRefresh();
                 })
                 .on('postgres_changes', { 
