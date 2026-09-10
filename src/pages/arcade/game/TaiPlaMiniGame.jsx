@@ -1059,8 +1059,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             const isThunder = monsterType === 'naga_thunder';
 
             const monY = isFlying ? g.groundY - 130 : (isSkyFalling ? -40 : g.groundY);
-            const monW = isSkyFalling ? 52 : (isThunder ? 24 : (monsterType === 'hawk' ? 36 : (monsterType === 'hot_runner' ? 36 : (monsterType === 'coconut' ? 28 : 32))));
-            const monH = isSkyFalling ? 52 : (isThunder ? g.groundY : (monsterType === 'hawk' ? 30 : (monsterType === 'hot_runner' ? 40 : (monsterType === 'coconut' ? 28 : 32))));
+            const monW = isSkyFalling ? 52 : (isThunder ? 24 : (monsterType === 'hawk' ? 38 : (monsterType === 'hot_runner' ? 36 : (monsterType === 'coconut' ? 28 : 36))));
+            const monH = isSkyFalling ? 52 : (isThunder ? g.groundY : (monsterType === 'hawk' ? 34 : (monsterType === 'hot_runner' ? 40 : (monsterType === 'coconut' ? 28 : 36))));
             const speedMul = monsterType === 'hot_runner' ? 1.45 : (monsterType === 'coconut' ? 1.35 : (monsterType === 'hawk' ? 1.2 : 1.0));
 
             g.monsters.push({
@@ -1083,8 +1083,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                 y: g.groundY - 130,
                 vy: 0,
                 type: 'hawk',
-                width: 36,
-                height: 30,
+                width: 38,
+                height: 34,
                 speedMultiplier: 1.2,
                 animPhase: Math.random() * Math.PI * 2,
                 timer: 0,
@@ -1445,6 +1445,21 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           });
         }
 
+        // Spicy chili fire embers trailing behind Ground & Aerial Chili Devils
+        if ((mon.type === 'hop_chili' || mon.type === 'hawk') && Math.random() > 0.48) {
+          const tailX = mon.x + (mon.type === 'hawk' ? 6 : 8);
+          const tailY = monY - (mon.type === 'hawk' ? 14 : 10);
+          g.particles.push({
+            x: tailX + (Math.random() - 0.5) * 4,
+            y: tailY + (Math.random() - 0.5) * 4,
+            vx: Math.random() * 1.5 + 0.8,
+            vy: -Math.random() * 1.2 - 0.3,
+            size: Math.random() * 2.5 + 1.5,
+            color: Math.random() > 0.4 ? '#ef4444' : (Math.random() > 0.5 ? '#f97316' : '#facc15'),
+            life: 0.55
+          });
+        }
+
         // Collision Check
         const catBox = { left: g.catX + 8, right: g.catX + 24, top: g.catY - 22, bottom: g.catY - 2 };
         let monBox = { 
@@ -1482,14 +1497,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               life: 1.4
             });
 
-            for (let p = 0; p < (isGiant ? 20 : 12); p++) {
+            const isChili = mon.type === 'hop_chili' || mon.type === 'hawk';
+            for (let p = 0; p < (isGiant ? 20 : 14); p++) {
               g.particles.push({
                 x: mon.x + mon.width / 2,
                 y: monY - mon.height / 2,
                 vx: (Math.random() - 0.5) * 7,
                 vy: (Math.random() - 0.5) * 7,
-                size: Math.random() * 5 + 2,
-                color: isGiant ? '#64748b' : '#facc15',
+                size: Math.random() * 4 + 2,
+                color: isChili 
+                  ? (p % 3 === 0 ? '#16a34a' : (p % 2 === 0 ? '#ef4444' : '#facc15'))
+                  : (isGiant ? '#64748b' : '#facc15'),
                 life: 0.8
               });
             }

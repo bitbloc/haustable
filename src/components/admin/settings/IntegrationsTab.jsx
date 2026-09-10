@@ -334,7 +334,7 @@ export default function IntegrationsTab({
                                             value={settings.qr_latitude || ''}
                                             onChange={(e) => handleSave('qr_latitude', e.target.value)}
                                             className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
-                                            placeholder="เช่น 17.40722"
+                                            placeholder="เช่น 17.390086"
                                         />
                                     </div>
                                     <div>
@@ -346,20 +346,56 @@ export default function IntegrationsTab({
                                             value={settings.qr_longitude || ''}
                                             onChange={(e) => handleSave('qr_longitude', e.target.value)}
                                             className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
-                                            placeholder="เช่น 104.78028"
+                                            placeholder="เช่น 104.792934"
                                         />
                                     </div>
                                 </div>
+
+                                <div className="flex items-center justify-between gap-2 pt-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (!navigator.geolocation) {
+                                                toast.error('อุปกรณ์นี้ไม่รองรับการระบุพิกัด GPS');
+                                                return;
+                                            }
+                                            toast.info('กำลังค้นหาพิกัดปัจจุบัน...');
+                                            navigator.geolocation.getCurrentPosition(
+                                                (pos) => {
+                                                    const lat = pos.coords.latitude.toFixed(6);
+                                                    const lon = pos.coords.longitude.toFixed(6);
+                                                    handleSave('qr_latitude', lat);
+                                                    handleSave('qr_longitude', lon);
+                                                    toast.success(`อัปเดตพิกัดเป็น ${lat}, ${lon} สำเร็จ`);
+                                                },
+                                                (err) => {
+                                                    toast.error('ไม่สามารถดึงพิกัดได้: ' + err.message);
+                                                },
+                                                { enableHighAccuracy: true, timeout: 10000 }
+                                            );
+                                        }}
+                                        className="px-3 py-1.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-[11px] font-mono font-bold text-[var(--color-ink)] flex items-center gap-1.5 cursor-pointer transition-colors"
+                                    >
+                                        <MapPin size={13} />
+                                        <span>ดึงพิกัดปัจจุบันจากเครื่องนี้</span>
+                                    </button>
+                                </div>
+
                                 <div>
-                                    <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)] mb-1">
-                                        Allowed Radius (รัศมีเป็นเมตร)
-                                    </label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="block text-[10px] font-mono font-bold uppercase text-[var(--color-ink)]">
+                                            Allowed Radius (รัศมีเป็นเมตร)
+                                        </label>
+                                        <span className="text-[9px] font-mono text-[var(--color-neutral)]">
+                                            แนะนำ 150 - 250 เมตร สำหรับในอาคาร
+                                        </span>
+                                    </div>
                                     <input
                                         type="number"
                                         value={settings.qr_radius || ''}
                                         onChange={(e) => handleSave('qr_radius', e.target.value)}
                                         className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-2 rounded-lg text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
-                                        placeholder="เช่น 50"
+                                        placeholder="เช่น 250"
                                     />
                                 </div>
                             </div>

@@ -92,9 +92,12 @@ export default function SongRequestPage() {
     fetchPlaylistTracks()
 
     const subscription = supabase
-      .channel('public:song_requests')
+      .channel('public:song_requests_and_settings')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'song_requests' }, () => {
         fetchQueue(true)
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
+        fetchSettings()
       })
       .subscribe()
 

@@ -927,39 +927,8 @@ export class TaiPla128Renderer {
   // 3. CRISP HIGH-CONTRAST HAZARDS (7 TYPES)
   // =========================================================================
   bakeEnemies() {
-    // 1. hop_chili (พริกขี้หนูกระโดด)
-    const hopChili = createOffscreen(32 * 2, 32);
-    const hctx = hopChili.ctx;
-    for (let f = 0; f < 2; f++) {
-      hctx.save();
-      hctx.translate(f * 32, 0);
-      hctx.fillStyle = '#15803d';
-      hctx.fillRect(12, 3, 8, 6);
-      hctx.fillRect(10, 7, 12, 4);
-      hctx.fillStyle = '#181615';
-      hctx.fillRect(7, 9, 18, 18);
-      hctx.fillRect(10, 24, 12, 6);
-      hctx.fillRect(12, 28, 8, 3);
-      hctx.fillStyle = '#dc2626';
-      hctx.fillRect(8, 10, 16, 16);
-      hctx.fillRect(11, 24, 10, 5);
-      hctx.fillStyle = '#ef4444';
-      hctx.fillRect(9, 11, 5, 11);
-      hctx.fillStyle = '#ffffff';
-      hctx.fillRect(9, 14, 5, 5);
-      hctx.fillRect(17, 14, 5, 5);
-      hctx.fillStyle = '#181615';
-      hctx.fillRect(11, 15, 3, 4);
-      hctx.fillRect(19, 15, 3, 4);
-      hctx.fillStyle = '#facc15';
-      hctx.fillRect(7, 12, 18, 2);
-      const footSpread = f === 0 ? 0 : 3;
-      hctx.fillStyle = '#181615';
-      hctx.fillRect(8 - footSpread, 28, 5, 4);
-      hctx.fillRect(18 + footSpread, 28, 5, 4);
-      hctx.restore();
-    }
-    this.sprites.hop_chili = hopChili.canvas;
+    // 1. hop_chili (ปีศาจพริกแดงกระโดด - Ground Chili Devil)
+    this.sprites.hop_chili = this.bakeGroundChiliDevil();
 
     // 2. coconut (ลูกมะพร้าวกลิ้ง)
     const coconut = createOffscreen(28, 28);
@@ -978,32 +947,8 @@ export class TaiPla128Renderer {
     cctx.fillRect(12, 16, 4, 3);
     this.sprites.coconut = coconut.canvas;
 
-    // 3. hawk (เหยี่ยวแม่น้ำโขง)
-    const hawk = createOffscreen(36 * 2, 30);
-    const hwctx = hawk.ctx;
-    for (let f = 0; f < 2; f++) {
-      hwctx.save();
-      hwctx.translate(f * 36, 0);
-      const wingY = f === 0 ? 3 : 13;
-      hwctx.fillStyle = '#181615';
-      hwctx.fillRect(9, wingY, 20, 9);
-      hwctx.fillStyle = '#78350f';
-      hwctx.fillRect(10, wingY + 1, 18, 7);
-      hwctx.fillStyle = '#181615';
-      hwctx.fillRect(7, 11, 22, 14);
-      hwctx.fillStyle = '#451a03';
-      hwctx.fillRect(8, 12, 20, 12);
-      hwctx.fillStyle = '#ffffff';
-      hwctx.fillRect(3, 10, 9, 9);
-      hwctx.fillStyle = '#facc15';
-      hwctx.fillRect(0, 13, 6, 5);
-      hwctx.fillStyle = '#dc2626';
-      hwctx.fillRect(5, 12, 4, 4);
-      hwctx.fillStyle = '#ffffff';
-      hwctx.fillRect(6, 13, 2, 2);
-      hwctx.restore();
-    }
-    this.sprites.hawk = hawk.canvas;
+    // 3. hawk / fly_chili (ปีศาจพริกแดงเวหา - Aerial Chili Devil)
+    this.sprites.hawk = this.bakeFlyingChiliDevil();
 
     // 4. pot_ghost (ผีหม้อดิน)
     const potGhost = createOffscreen(32 * 2, 34);
@@ -1090,6 +1035,277 @@ export class TaiPla128Renderer {
     gmctx.fillStyle = '#78350f';
     gmctx.fillRect(23, 3, 6, 20);
     this.sprites.giant_mortar = giantMortar.canvas;
+  }
+
+  /**
+   * 🌶️ ปีศาจพริกแดงกระโดด (Ground Chili Devil)
+   * Handcrafted 4-frame 128-bit Neo-Retro animated spritesheet with squash & stretch,
+   * curved organic chili body, curled devil tail, twin green calyx horns, amber devil eyes, and ivory fangs.
+   */
+  bakeGroundChiliDevil() {
+    const frameW = 36, frameH = 38;
+    const { canvas, ctx } = createOffscreen(frameW * 4, frameH);
+
+    for (let f = 0; f < 4; f++) {
+      ctx.save();
+      ctx.translate(f * frameW, 0);
+
+      // Animation parameters:
+      // f0: Neutral stride / coiled ready
+      // f1: Ground compress (squash 2px down)
+      // f2: Leap apex / stretch (extend 2px up, whip tail)
+      // f3: Descent / settle
+      const sqY = f === 1 ? 2 : (f === 2 ? -2 : 0);
+      const sqH = f === 1 ? -2 : (f === 2 ? 2 : 0);
+      const sqW = f === 1 ? 2 : (f === 2 ? -1 : 0);
+      const tailWhip = f === 2 ? -3 : (f === 1 ? 2 : (f === 3 ? -1 : 0));
+
+      // 1. Green Devil Horns (Chili Calyx/Stem)
+      // Left horn
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(8 - sqW, 4 + sqY, 5, 8);
+      ctx.fillRect(10 - sqW, 2 + sqY, 4, 4);
+      ctx.fillRect(12 - sqW, 7 + sqY, 5, 6);
+      // Right horn
+      ctx.fillRect(23 + sqW, 4 + sqY, 5, 8);
+      ctx.fillRect(22 + sqW, 2 + sqY, 4, 4);
+      ctx.fillRect(19 + sqW, 7 + sqY, 5, 6);
+      // Horn connector calyx base
+      ctx.fillRect(11, 9 + sqY, 14, 4);
+
+      // Horn Green Fill & Shading
+      ctx.fillStyle = '#15803d'; // Forest green shadow
+      ctx.fillRect(9 - sqW, 5 + sqY, 3, 6);
+      ctx.fillRect(24 + sqW, 5 + sqY, 3, 6);
+      ctx.fillStyle = '#16a34a'; // Vibrant leaf green
+      ctx.fillRect(10 - sqW, 3 + sqY, 3, 4);
+      ctx.fillRect(23 + sqW, 3 + sqY, 3, 4);
+      ctx.fillRect(12, 10 + sqY, 12, 2);
+      ctx.fillStyle = '#4ade80'; // Specular tip highlights
+      ctx.fillRect(11 - sqW, 3 + sqY, 1, 2);
+      ctx.fillRect(23 + sqW, 3 + sqY, 1, 2);
+
+      // 2. Chili Body Outer Dark Outline (#181615)
+      // Rounded head / torso bulb
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(10 - sqW, 11 + sqY, 16 + sqW * 2, 15 + sqH);
+      ctx.fillRect(8 - sqW, 13 + sqY, 20 + sqW * 2, 11 + sqH);
+      ctx.fillRect(12 - sqW, 9 + sqY, 12 + sqW * 2, 18 + sqH);
+
+      // Curving lower body tapering towards tail
+      ctx.fillRect(14, 24 + sqY, 10, 6 + sqH);
+      ctx.fillRect(11, 27 + sqY, 10, 6);
+
+      // Curled devil tail curving back and UPWARDS
+      ctx.fillRect(6 + tailWhip, 29 + sqY, 8, 5);
+      ctx.fillRect(3 + tailWhip, 26 + sqY, 6, 6);
+      ctx.fillRect(2 + tailWhip, 21 + sqY, 4, 7);
+      ctx.fillRect(4 + tailWhip, 19 + sqY, 3, 4);
+
+      // 3. Chili Body Red Fill & Multi-tier Shading
+      // Base vibrant chili red (#dc2626)
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(11 - sqW, 12 + sqY, 14 + sqW * 2, 13 + sqH);
+      ctx.fillRect(9 - sqW, 14 + sqY, 18 + sqW * 2, 9 + sqH);
+      ctx.fillRect(15, 25 + sqY, 8, 4 + sqH);
+      ctx.fillRect(12, 28 + sqY, 8, 4);
+      ctx.fillRect(7 + tailWhip, 30 + sqY, 6, 3);
+      ctx.fillRect(4 + tailWhip, 27 + sqY, 4, 4);
+      ctx.fillRect(3 + tailWhip, 22 + sqY, 2, 5);
+
+      // Shadow Crimson (#991b1b) along bottom-right underbelly
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(22 + sqW, 15 + sqY, 4, 8 + sqH);
+      ctx.fillRect(19, 25 + sqY, 4, 4);
+      ctx.fillRect(16, 29 + sqY, 4, 2);
+      ctx.fillRect(8 + tailWhip, 32 + sqY, 4, 1);
+
+      // Highlights (#ef4444 & #f87171) on forehead & upper curved ridge
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(11 - sqW, 12 + sqY, 4, 4);
+      ctx.fillRect(9 - sqW, 14 + sqY, 3, 5);
+      ctx.fillStyle = '#f87171'; // Catchlight
+      ctx.fillRect(10 - sqW, 13 + sqY, 2, 2);
+      if (f === 2) {
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(4 + tailWhip, 18 + sqY, 2, 2);
+      }
+
+      // 4. Evil Menacing Face
+      // Left eye socket
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(11 - sqW, 14 + sqY, 6, 5);
+      // Right eye socket
+      ctx.fillRect(19 + sqW, 14 + sqY, 6, 5);
+
+      // Glowing Amber Sclera (#fef08a)
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(12 - sqW, 15 + sqY, 4, 3);
+      ctx.fillRect(20 + sqW, 15 + sqY, 4, 3);
+
+      // Piercing Pupils (#0f172a with red core)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(14 - sqW, 15 + sqY, 2, 3);
+      ctx.fillRect(20 + sqW, 15 + sqY, 2, 3);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(14 - sqW, 16 + sqY, 1, 1);
+      ctx.fillRect(20 + sqW, 16 + sqY, 1, 1);
+
+      // 5. Sinister Devil Grin & Ivory Fangs
+      const mouthY = 19 + sqY + (f === 1 ? 1 : 0);
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(13 - sqW, mouthY, 11 + sqW * 2, 5);
+      ctx.fillStyle = '#450a0a'; // Deep maroon mouth
+      ctx.fillRect(14 - sqW, mouthY + 1, 9 + sqW * 2, 3);
+
+      // Sharp Ivory Fangs (#ffffff)
+      ctx.fillStyle = '#ffffff';
+      // Upper fangs pointing DOWN
+      ctx.fillRect(14 - sqW, mouthY, 2, 2);
+      ctx.fillRect(18, mouthY, 2, 2);
+      ctx.fillRect(21 + sqW, mouthY, 2, 2);
+      // Lower fangs pointing UP
+      ctx.fillRect(16 - sqW, mouthY + 3, 2, 2);
+      ctx.fillRect(20 + sqW, mouthY + 3, 2, 2);
+
+      ctx.restore();
+    }
+    return canvas;
+  }
+
+  /**
+   * 🌶️ ปีศาจพริกแดงเวหา (Aerial / Flying Chili Devil)
+   * Flying Chili Devil with fiery wings, hovering sine undulation, curved devil tail,
+   * evil eyes, and trailing spicy fire sparks.
+   */
+  bakeFlyingChiliDevil() {
+    const frameW = 38, frameH = 38;
+    const { canvas, ctx } = createOffscreen(frameW * 4, frameH);
+
+    for (let f = 0; f < 4; f++) {
+      ctx.save();
+      ctx.translate(f * frameW, 0);
+
+      const hoverY = f === 0 ? 0 : (f === 1 ? 1 : (f === 2 ? -1 : 0));
+      const wingPos = f === 0 ? -2 : (f === 1 ? 1 : (f === 2 ? 3 : 0));
+      const tailWhip = f === 2 ? -3 : (f === 1 ? 2 : 0);
+
+      // 1. Fiery Devil Wings (Flapping rhythmically)
+      // Left Wing
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(1, 10 + hoverY + wingPos, 10, 8);
+      ctx.fillRect(4, 7 + hoverY + wingPos, 7, 5);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(2, 11 + hoverY + wingPos, 8, 6);
+      ctx.fillRect(5, 8 + hoverY + wingPos, 5, 4);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(4, 12 + hoverY + wingPos, 5, 4);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(2, 11 + hoverY + wingPos, 2, 2);
+
+      // Right Wing
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(27, 10 + hoverY + wingPos, 10, 8);
+      ctx.fillRect(27, 7 + hoverY + wingPos, 7, 5);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(28, 11 + hoverY + wingPos, 8, 6);
+      ctx.fillRect(28, 8 + hoverY + wingPos, 5, 4);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(29, 12 + hoverY + wingPos, 5, 4);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(34, 11 + hoverY + wingPos, 2, 2);
+
+      // 2. Horns (Twin Green Calyx Horns)
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(9, 3 + hoverY, 5, 8);
+      ctx.fillRect(11, 1 + hoverY, 4, 4);
+      ctx.fillRect(24, 3 + hoverY, 5, 8);
+      ctx.fillRect(23, 1 + hoverY, 4, 4);
+      ctx.fillRect(12, 8 + hoverY, 14, 4);
+
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(10, 4 + hoverY, 3, 6);
+      ctx.fillRect(25, 4 + hoverY, 3, 6);
+      ctx.fillStyle = '#16a34a';
+      ctx.fillRect(11, 2 + hoverY, 3, 4);
+      ctx.fillRect(24, 2 + hoverY, 3, 4);
+      ctx.fillRect(13, 9 + hoverY, 12, 2);
+      ctx.fillStyle = '#4ade80';
+      ctx.fillRect(12, 2 + hoverY, 1, 2);
+      ctx.fillRect(24, 2 + hoverY, 1, 2);
+
+      // 3. Chili Body Outer Dark Outline
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(11, 10 + hoverY, 16, 15);
+      ctx.fillRect(9, 12 + hoverY, 20, 11);
+      ctx.fillRect(13, 8 + hoverY, 12, 18);
+      ctx.fillRect(15, 23 + hoverY, 10, 6);
+      ctx.fillRect(12, 26 + hoverY, 10, 6);
+
+      // Curled devil tail hooking UPWARDS
+      ctx.fillRect(7 + tailWhip, 28 + hoverY, 8, 5);
+      ctx.fillRect(4 + tailWhip, 25 + hoverY, 6, 6);
+      ctx.fillRect(3 + tailWhip, 20 + hoverY, 4, 7);
+      ctx.fillRect(5 + tailWhip, 18 + hoverY, 3, 4);
+
+      // 4. Chili Body Red Fill & Shading
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(12, 11 + hoverY, 14, 13);
+      ctx.fillRect(10, 13 + hoverY, 18, 9);
+      ctx.fillRect(16, 24 + hoverY, 8, 4);
+      ctx.fillRect(13, 27 + hoverY, 8, 4);
+      ctx.fillRect(8 + tailWhip, 29 + hoverY, 6, 3);
+      ctx.fillRect(5 + tailWhip, 26 + hoverY, 4, 4);
+      ctx.fillRect(4 + tailWhip, 21 + hoverY, 2, 5);
+
+      // Shadow Crimson
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(23, 14 + hoverY, 4, 8);
+      ctx.fillRect(20, 24 + hoverY, 4, 4);
+      ctx.fillRect(17, 28 + hoverY, 4, 2);
+
+      // Highlights
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(12, 11 + hoverY, 4, 4);
+      ctx.fillRect(10, 13 + hoverY, 3, 5);
+      ctx.fillStyle = '#f87171';
+      ctx.fillRect(11, 12 + hoverY, 2, 2);
+
+      // Trailing Fire Spark on tail tip
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(5 + tailWhip, 17 + hoverY, 2, 2);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(4 + tailWhip, 15 + hoverY, 2, 2);
+
+      // 5. Menacing Eyes
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(12, 13 + hoverY, 6, 5);
+      ctx.fillRect(20, 13 + hoverY, 6, 5);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(13, 14 + hoverY, 4, 3);
+      ctx.fillRect(21, 14 + hoverY, 4, 3);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(15, 14 + hoverY, 2, 3);
+      ctx.fillRect(21, 14 + hoverY, 2, 3);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(15, 15 + hoverY, 1, 1);
+      ctx.fillRect(21, 15 + hoverY, 1, 1);
+
+      // 6. Devil Grin & Fangs
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(14, 18 + hoverY, 11, 5);
+      ctx.fillStyle = '#450a0a';
+      ctx.fillRect(15, 19 + hoverY, 9, 3);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(15, 18 + hoverY, 2, 2);
+      ctx.fillRect(19, 18 + hoverY, 2, 2);
+      ctx.fillRect(22, 18 + hoverY, 2, 2);
+      ctx.fillRect(17, 21 + hoverY, 2, 2);
+      ctx.fillRect(21, 21 + hoverY, 2, 2);
+
+      ctx.restore();
+    }
+    return canvas;
   }
 
   // =========================================================================
@@ -1768,19 +1984,21 @@ export class TaiPla128Renderer {
     if (mon.type === 'hop_chili') {
       my = mon.y - Math.abs(Math.sin(frame * 0.12 + (mon.animPhase || 0))) * 24;
     } else if (mon.type === 'hawk') {
-      my = mon.y + Math.sin(frame * 0.09 + (mon.animPhase || 0)) * 10;
+      my = mon.y + Math.sin(frame * 0.09 + (mon.animPhase || 0)) * 12;
     }
 
     if (mon.type !== 'hawk' && mon.type !== 'naga_thunder') {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      const hopH = Math.max(0, groundY - my);
+      const shadowScale = Math.max(0.35, 1.0 - (hopH / 32));
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.20 * shadowScale})`;
       ctx.beginPath();
-      ctx.ellipse(mx + (mon.width / 2), groundY + 2, mon.width * 0.45, 3.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(mx + (mon.width / 2), groundY + 2, (mon.width * 0.42) * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
     if (mon.type === 'hop_chili' && this.sprites.hop_chili) {
-      const f = Math.floor((frame / 6) % 2);
-      ctx.drawImage(this.sprites.hop_chili, f * 32, 0, 32, 32, mx, my - 28, 32, 32);
+      const f = Math.floor((frame / 5) % 4);
+      ctx.drawImage(this.sprites.hop_chili, f * 36, 0, 36, 38, mx, my - 34, 36, 38);
     } else if (mon.type === 'coconut' && this.sprites.coconut) {
       const rot = frame * 0.25;
       ctx.save();
@@ -1789,8 +2007,8 @@ export class TaiPla128Renderer {
       ctx.drawImage(this.sprites.coconut, -14, -14, 28, 28);
       ctx.restore();
     } else if (mon.type === 'hawk' && this.sprites.hawk) {
-      const f = Math.floor((frame / 5) % 2);
-      ctx.drawImage(this.sprites.hawk, f * 36, 0, 36, 30, mx, my - 22, 36, 30);
+      const f = Math.floor((frame / 4) % 4);
+      ctx.drawImage(this.sprites.hawk, f * 38, 0, 38, 38, mx, my - 24, 38, 38);
     } else if (mon.type === 'pot_ghost' && this.sprites.pot_ghost) {
       const f = Math.floor((frame / 8) % 2);
       ctx.drawImage(this.sprites.pot_ghost, f * 32, 0, 32, 34, mx, my - 30, 32, 34);

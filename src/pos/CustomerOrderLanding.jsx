@@ -94,12 +94,14 @@ export default function CustomerOrderLanding() {
     const [gpsError, setGpsError] = useState(null);
     const [gpsStatus, setGpsStatus] = useState('pending'); // 'pending', 'verified', 'failed'
     const [gpsDistance, setGpsDistance] = useState(0);
+    const [showStaffActivationModal, setShowStaffActivationModal] = useState(false);
+    const [isCallingStaffOpen, setIsCallingStaffOpen] = useState(false);
     const [settings, setSettings] = useState({
         qr_ordering_enabled: 'true',
         qr_gps_enabled: 'true',
-        qr_latitude: '17.40722',
-        qr_longitude: '104.78028',
-        qr_radius: '100',
+        qr_latitude: '17.390086',
+        qr_longitude: '104.792934',
+        qr_radius: '250',
         qr_kitchen_open_time: '10:00',
         qr_kitchen_close_time: '22:00',
         qr_kitchen_cutoff_enabled: 'true',
@@ -248,6 +250,14 @@ export default function CustomerOrderLanding() {
             if (settingsData) {
                 const map = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                 setSettings(prev => ({ ...prev, ...map }));
+
+                // If admin disabled GPS in settings, immediately verify and dismiss waiting modal
+                if (map.qr_gps_enabled === 'false') {
+                    setGpsStatus('verified');
+                    setGpsChecking(false);
+                    setGpsError(null);
+                    setShowStaffActivationModal(false);
+                }
             }
         } catch (err) {
             console.warn('Failed to fetch settings:', err);
@@ -272,6 +282,14 @@ export default function CustomerOrderLanding() {
                 setActiveBooking(bookingData);
                 if (bookingData.pax) {
                     setPaxCount(bookingData.pax);
+                }
+                // If table is active in POS (seated/confirmed/ready), instantly verify customer
+                if (['confirmed', 'seated', 'ready'].includes(bookingData.status)) {
+                    setGpsStatus('verified');
+                    setGpsChecking(false);
+                    setGpsError(null);
+                    setShowStaffActivationModal(false);
+                    setIsCallingStaffOpen(false);
                 }
             } else {
                 // Table session is free or was closed/completed in POS -> Clean stale tokens
@@ -468,6 +486,16 @@ export default function CustomerOrderLanding() {
             if (bookingData && isBookingActiveAndFresh(bookingData)) {
                 setActiveBooking(bookingData);
                 if (bookingData.pax) setPaxCount(bookingData.pax);
+                // Table is already seated/opened in POS -> Instant bypass GPS
+                if (['confirmed', 'seated', 'ready'].includes(bookingData.status)) {
+                    setGpsStatus('verified');
+                    setGpsChecking(false);
+                } else if (loadedSettings.qr_gps_enabled === 'true') {
+                    performGeofenceCheck(loadedSettings);
+                } else {
+                    setGpsStatus('verified');
+                    setGpsChecking(false);
+                }
             } else {
                 // Table is free or booking is stale -> Clear stale tracking token
                 setActiveBooking(null);
@@ -475,14 +503,14 @@ export default function CustomerOrderLanding() {
                 if (tableData.id) localStorage.removeItem(`table_${tableData.id}_token`);
                 if (tableData?.capacity) setPaxCount(tableData.capacity);
                 setShowPaxModal(true);
-            }
 
-            // 4. Geofencing check
-            if (loadedSettings.qr_gps_enabled === 'true') {
-                performGeofenceCheck(loadedSettings);
-            } else {
-                setGpsStatus('verified');
-                setGpsChecking(false);
+                // 4. Geofencing check for new table
+                if (loadedSettings.qr_gps_enabled === 'true') {
+                    performGeofenceCheck(loadedSettings);
+                } else {
+                    setGpsStatus('verified');
+                    setGpsChecking(false);
+                }
             }
 
             // 5. Fetch Menu Catalog
@@ -627,61 +655,106 @@ export default function CustomerOrderLanding() {
         toast.info('ยกเลิกการเชื่อมต่อสมาชิกเรียบร้อยแล้ว');
     };
 
-    const performGeofenceCheck = (loadedSettings) => {
+    const performGeofenceCheck = (loadedSettings, isRetry = false) => {
         setGpsChecking(true);
-        if (!navigator.geolocation) {
-            setGpsStatus('failed');
-            setGpsError('Your device does not support GPS Geolocation.');
+        setGpsError(null);
+
+        // Instant bypass if table is already active in POS
+        if (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) {
+            setGpsStatus('verified');
             setGpsChecking(false);
             return;
         }
 
+        if (!navigator.geolocation) {
+            setGpsStatus('failed');
+            setGpsError('อุปกรณ์ของคุณไม่รองรับการระบุพิกัด GPS สามารถเรียกพนักงานเปิดโต๊ะได้ครับ');
+            setGpsChecking(false);
+            return;
+        }
+
+        const rawLat = loadedSettings?.qr_latitude;
+        const rawLon = loadedSettings?.qr_longitude;
+        const rawRadius = loadedSettings?.qr_radius;
+
+        const shopLat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 17.390086;
+        const shopLon = !isNaN(parseFloat(rawLon)) ? parseFloat(rawLon) : 104.792934;
+        const allowedRadius = !isNaN(parseFloat(rawRadius)) ? parseFloat(rawRadius) : 250;
+
+        const handlePositionSuccess = (position) => {
+            const userLat = position.coords.latitude;
+            const userLon = position.coords.longitude;
+            const accuracy = position.coords?.accuracy || 0;
+
+            const distance = getDistance(userLat, userLon, shopLat, shopLon);
+            setGpsDistance(distance);
+
+            // Deduct accuracy margin (capped at 150m) to accommodate indoor cellular/Wi-Fi drift
+            const effectiveDistance = Math.max(0, distance - Math.min(accuracy, 150));
+
+            if (effectiveDistance <= allowedRadius) {
+                setGpsStatus('verified');
+                setGpsError(null);
+                setShowStaffActivationModal(false);
+            } else {
+                setGpsStatus('failed');
+                setGpsError(`พิกัดอยู่นอกพื้นที่ร้าน (${Math.round(distance)}ม. คลาดเคลื่อน ±${Math.round(accuracy)}ม.)`);
+            }
+            setGpsChecking(false);
+        };
+
+        const handlePositionError = (error) => {
+            // If high accuracy times out, try fast low-accuracy fallback (cellular / Wi-Fi)
+            if (error?.code === error?.TIMEOUT && !isRetry) {
+                navigator.geolocation.getCurrentPosition(
+                    handlePositionSuccess,
+                    (fallbackErr) => {
+                        console.warn('GPS low-accuracy fallback error:', fallbackErr);
+                        setGpsStatus('failed');
+                        setGpsError('ค้นหาพิกัด GPS ล้มเหลว สามารถเรียกพนักงานเปิดโต๊ะได้ครับ');
+                        setGpsChecking(false);
+                    },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
+                );
+                return;
+            }
+
+            console.warn('GPS error:', error);
+            setGpsStatus('failed');
+            let errMsg = 'กรุณาเปิดพิกัด GPS หรือเรียกพนักงานเปิดโต๊ะ';
+            if (error?.code === error?.PERMISSION_DENIED) {
+                errMsg = 'เบราว์เซอร์ถูกปฏิเสธการเข้าถึงตำแหน่งพิกัด สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+            } else if (error?.code === error?.POSITION_UNAVAILABLE) {
+                errMsg = 'ไม่สามารถระบุตำแหน่งพิกัดในอาคารได้ สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+            } else if (error?.code === error?.TIMEOUT) {
+                errMsg = 'ค้นหาพิกัด GPS ล้มเหลว (หมดเวลา) สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+            }
+            setGpsError(errMsg);
+            setGpsChecking(false);
+        };
+
         const options = {
             enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+            timeout: 12000,
+            maximumAge: 60000
         };
 
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLat = position.coords.latitude;
-                const userLon = position.coords.longitude;
-                
-                const rawLat = loadedSettings?.qr_latitude;
-                const rawLon = loadedSettings?.qr_longitude;
-                const rawRadius = loadedSettings?.qr_radius;
-
-                const shopLat = !isNaN(parseFloat(rawLat)) ? parseFloat(rawLat) : 17.40722;
-                const shopLon = !isNaN(parseFloat(rawLon)) ? parseFloat(rawLon) : 104.78028;
-                const allowedRadius = !isNaN(parseFloat(rawRadius)) ? parseFloat(rawRadius) : 100;
-
-                const distance = getDistance(userLat, userLon, shopLat, shopLon);
-                setGpsDistance(distance);
-
-                if (distance <= allowedRadius) {
-                    setGpsStatus('verified');
-                } else {
-                    setGpsStatus('failed');
-                    setGpsError(`คุณอยู่นอกพื้นที่ร้านอาหาร (ห่างออกไป ${Math.round(distance)} เมตร) อนุญาตให้สั่งจากภายในร้านเท่านั้น (รัศมี ${allowedRadius} เมตร)`);
-                }
-                setGpsChecking(false);
-            },
-            (error) => {
-                console.error('GPS error:', error);
-                setGpsStatus('failed');
-                let errMsg = 'กรุณาอนุญาตการเข้าถึงตำแหน่ง GPS เพื่อสั่งอาหารจากโต๊ะของคุณ';
-                if (error.code === error.PERMISSION_DENIED) {
-                    errMsg = 'การเข้าถึงตำแหน่งถูกปฏิเสธ กรุณาเปิดใช้งานสิทธิ์พิกัด (GPS Location) ในการตั้งค่าเบราว์เซอร์เพื่อสั่งอาหาร';
-                } else if (error.code === error.POSITION_UNAVAILABLE) {
-                    errMsg = 'ไม่สามารถระบุตำแหน่งพิกัดของอุปกรณ์ได้ กรุณาลองใหม่อีกครั้ง';
-                } else if (error.code === error.TIMEOUT) {
-                    errMsg = 'ค้นหาพิกัด GPS ล้มเหลว (การเชื่อมต่อหมดเวลา)';
-                }
-                setGpsError(errMsg);
-                setGpsChecking(false);
-            },
+            handlePositionSuccess,
+            handlePositionError,
             options
         );
+    };
+
+    const handleCallStaffToOpenTable = async () => {
+        setIsCallingStaffOpen(true);
+        try {
+            await handleCallStaff();
+            toast.success('ส่งสัญญาณเรียกพนักงานเรียบร้อยแล้ว กรุณารอพนักงานเปิดโต๊ะสักครู่ครับ');
+        } catch (e) {
+            console.error('Call staff error:', e);
+            toast.error('ไม่สามารถเรียกพนักงานได้');
+        }
     };
 
     // Quick Staff Service Handlers
@@ -974,6 +1047,16 @@ export default function CustomerOrderLanding() {
 
     const handleCheckout = async () => {
         if (cart.length === 0 || submittingRef.current || submitting) return;
+
+        // Check if table is activated in POS or verified via GPS
+        const isTableSeatedInPOS = activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status);
+        const isGeofenceVerified = settings.qr_gps_enabled === 'false' || gpsStatus === 'verified' || isTableSeatedInPOS;
+
+        if (!isGeofenceVerified) {
+            setShowStaffActivationModal(true);
+            return;
+        }
+
         submittingRef.current = true;
         setSubmitting(true);
 
@@ -1210,45 +1293,23 @@ export default function CustomerOrderLanding() {
         );
     }
 
-    if (gpsChecking) {
+    // If QR ordering is globally disabled by restaurant
+    if (settings.qr_ordering_enabled === 'false') {
         return (
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)] p-6 text-center">
-                <MapPin size={40} className="text-[var(--color-accent)] animate-bounce mb-4" />
-                <h3 className="font-mono font-bold text-xs tracking-wider uppercase mb-2">VERIFYING TABLE LOCATION</h3>
-                <p className="text-[var(--color-neutral)] text-xs max-w-xs leading-relaxed">
-                    กำลังยืนยันตำแหน่งของคุณภายในร้านเพื่อเปิดระบบสั่งอาหารที่โต๊ะ กรุณาอนุญาตการเข้าถึง GPS
-                </p>
-            </div>
-        );
-    }
-
-    if (gpsStatus === 'failed') {
-        let errorTitle = 'Geofencing Locked';
-        if (gpsError) {
-            if (gpsError.toLowerCase().includes('not active') || gpsError.toLowerCase().includes('เปิดบริการ')) {
-                errorTitle = 'Table Inactive / โต๊ะยังไม่เปิดบริการ';
-            } else if (gpsError.toLowerCase().includes('closed') || gpsError.toLowerCase().includes('ปิดอยู่')) {
-                errorTitle = 'Ordering Closed / ระบบสั่งอาหารปิด';
-            } else {
-                errorTitle = 'Location Locked / พิกัดนอกร้าน';
-            }
-        }
-
-        return (
-            <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)] p-6 text-center">
-                <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 rounded-full flex items-center justify-center text-[var(--color-accent)] mb-4 animate-pulse">
+                <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 rounded-full flex items-center justify-center text-[var(--color-accent)] mb-4">
                     <AlertTriangle size={30} />
                 </div>
-                <h3 className="font-mono font-bold text-xs tracking-wider uppercase mb-2 text-[var(--color-accent)]">{errorTitle}</h3>
+                <h3 className="font-mono font-bold text-xs tracking-wider uppercase mb-2 text-[var(--color-accent)]">Ordering Closed / ระบบสั่งอาหารปิด</h3>
                 <p className="text-[var(--color-neutral)] text-xs max-w-sm leading-relaxed mb-6">
-                    {gpsError || 'คุณต้องอยู่ภายในพื้นที่ร้านอาหารเพื่อสั่งอาหารผ่าน QR Code'}
+                    ขณะนี้ร้านยังไม่เปิดรับออเดอร์ผ่าน QR Code ชั่วคราว กรุณาติดต่อพนักงานประจำร้านครับ
                 </p>
                 <button 
                     onClick={() => window.location.reload()} 
                     className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] px-6 py-2.5 rounded-sm text-xs font-mono font-bold uppercase tracking-wider active:scale-95 transition-all text-[var(--color-ink)] flex items-center gap-2 cursor-pointer shadow-sm"
                 >
                     <RefreshCw size={12} />
-                    <span>ตรวจสอบพิกัดใหม่อีกครั้ง</span>
+                    <span>รีเฟรชหน้าเว็บ</span>
                 </button>
             </div>
         );
@@ -1273,10 +1334,27 @@ export default function CustomerOrderLanding() {
                                 {table?.table_name || 'TABLE'}
                             </span>
                         </div>
-                        <div className="flex items-center gap-1 text-[var(--color-accent-2)] font-mono text-[9px] font-bold uppercase">
-                            <ShieldCheck size={12} />
-                            <span>GPS OK</span>
-                        </div>
+                        {gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) ? (
+                            <div className="flex items-center gap-1 text-[var(--color-accent-2)] font-mono text-[9px] font-bold uppercase">
+                                <ShieldCheck size={12} />
+                                <span>{activeBooking ? 'TABLE ACTIVE' : settings.qr_gps_enabled === 'false' ? 'GPS BYPASS' : 'IN-STORE OK'}</span>
+                            </div>
+                        ) : gpsChecking ? (
+                            <div className="flex items-center gap-1 text-[var(--color-neutral)] font-mono text-[9px] font-bold uppercase animate-pulse">
+                                <MapPin size={12} />
+                                <span>LOCATING...</span>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => setShowStaffActivationModal(true)}
+                                className="flex items-center gap-1 text-[var(--color-accent)] font-mono text-[9px] font-bold uppercase border border-[var(--color-accent)]/40 px-1.5 py-0.5 rounded-sm bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 cursor-pointer"
+                                title="แตะเพื่อดูสถานะเปิดโต๊ะ"
+                            >
+                                <AlertTriangle size={11} />
+                                <span>WAITING STAFF</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* Quick Nav Links (Member) */}
@@ -2185,6 +2263,85 @@ export default function CustomerOrderLanding() {
                                     </button>
                                 </form>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Staff Table Activation Modal (Dieter Rams + Thai Modern OKLCH) */}
+            {showStaffActivationModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
+                        <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
+                                    TABLE VERIFICATION · โต๊ะ {table?.table_name}
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setShowStaffActivationModal(false)} 
+                                className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)] cursor-pointer"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <div className="flex flex-col items-center text-center space-y-2">
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${
+                                    isCallingStaffOpen
+                                        ? 'bg-[var(--color-accent-2)]/10 border-[var(--color-accent-2)]/30 text-[var(--color-accent-2)]'
+                                        : 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]'
+                                }`}>
+                                    {isCallingStaffOpen ? (
+                                        <Bell size={22} className="animate-bounce" />
+                                    ) : (
+                                        <MapPin size={22} />
+                                    )}
+                                </div>
+                                <h4 className="font-mono font-bold text-sm tracking-wider uppercase text-[var(--color-ink)]">
+                                    {isCallingStaffOpen ? 'แจ้งพนักงานเรียบร้อย' : 'ยืนยันการนั่งที่โต๊ะ'}
+                                </h4>
+                                <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
+                                    {isCallingStaffOpen
+                                        ? 'ส่งสัญญาณแจ้งหน้าจอ POS เรียบร้อยแล้ว เมื่อพนักงานเปิดโต๊ะ ระบบจะปลดล็อกให้สั่งอาหารอัตโนมัติครับ'
+                                        : gpsError 
+                                            ? gpsError 
+                                            : 'เพื่อความถูกต้องของออเดอร์ กรุณาแตะเรียกพนักงานเพื่อเปิดโต๊ะ หรือลองตรวจสอบพิกัด GPS อีกครั้ง'}
+                                </p>
+                            </div>
+
+                            <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
+                                <button
+                                    type="button"
+                                    onClick={handleCallStaffToOpenTable}
+                                    disabled={callingStaff}
+                                    className={`w-full py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                                        isCallingStaffOpen
+                                            ? 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
+                                            : 'bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 border-[var(--color-ink)] text-[var(--color-paper)] shadow-sm'
+                                    }`}
+                                >
+                                    <Bell size={14} className={callingStaff ? 'animate-spin' : ''} />
+                                    <span>
+                                        {callingStaff 
+                                            ? 'กำลังส่งสัญญาณ...' 
+                                            : isCallingStaffOpen 
+                                                ? 'ส่งสัญญาณเรียกซ้ำ (Call Staff Again)' 
+                                                : 'เรียกพนักงานเปิดโต๊ะ (Call Staff)'}
+                                    </span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => performGeofenceCheck(settings, true)}
+                                    disabled={gpsChecking}
+                                    className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-2 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                    <RefreshCw size={12} className={gpsChecking ? 'animate-spin' : ''} />
+                                    <span>{gpsChecking ? 'กำลังค้นหาพิกัด...' : 'ลองตรวจสอบพิกัด GPS อีกครั้ง'}</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
