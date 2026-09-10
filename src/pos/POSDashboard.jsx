@@ -34,8 +34,7 @@ import {
     checkEventDeduplication,
     playSystemAlertSound as playSystemAlertSoundUtil 
 } from '../utils/audioHelper';
-import { useWakeLock } from '../hooks/useWakeLock';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 
 const DEFAULT_BAR_CATS = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
@@ -1924,6 +1923,7 @@ export default function POSDashboard() {
 
     const [openTableModalData, setOpenTableModalData] = useState(null);
     const [openTablePaxInput, setOpenTablePaxInput] = useState('2');
+    const [onlineReservationModalData, setOnlineReservationModalData] = useState(null);
 
     // Walk-in Pickup Modal State
     const [showPickupModal, setShowPickupModal] = useState(false);
@@ -1957,6 +1957,36 @@ export default function POSDashboard() {
             // Keep on 'tables' view so the floorplan remains visible
             setView('tables');
         } else {
+            // Check if this table has an upcoming / today's online reservation
+            let upcomingRes = table.upcomingReservation || null;
+            if (!upcomingRes && isOnline() && table.id) {
+                try {
+                    const today = new Date();
+                    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+                    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+                    const { data: resData } = await supabase
+                        .from('bookings')
+                        .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, price, category_id))')
+                        .eq('table_id', table.id)
+                        .in('status', ['confirmed', 'pending', 'ready'])
+                        .gte('booking_time', startOfToday)
+                        .lte('booking_time', endOfToday)
+                        .order('booking_time', { ascending: true })
+                        .limit(1);
+                    if (resData && resData.length > 0) {
+                        upcomingRes = resData[0];
+                    }
+                } catch (e) {
+                    console.warn('Failed to fetch upcoming reservation for table:', e);
+                }
+            }
+
+            if (upcomingRes) {
+                // Table has an online reservation! Open the dedicated Online Reservation Check-in Card
+                setOnlineReservationModalData({ table, reservation: upcomingRes });
+                return;
+            }
+
             // Table is empty -> Show Open Table Modal to mandate entering guest count!
             setActiveBooking(null);
             setCurrentOrder({
@@ -1968,6 +1998,62 @@ export default function POSDashboard() {
             setOpenTableModalData({ table });
         }
     }, [getActiveBooking]);
+
+    const handleSeatOnlineReservation = useCallback(async (table, reservation) => {
+        if (!reservation?.id) return;
+        const toastId = toast.loading(`กำลังเช็คอินลูกค้าโต๊ะ ${table.table_name}...`);
+        try {
+            let updatedBooking = reservation;
+            if (isOnline() && typeof reservation.id === 'string' && !reservation.id.startsWith('local_')) {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .update({ status: 'seated' })
+                    .eq('id', reservation.id)
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, price, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                    .single();
+                if (error) throw error;
+                if (data) updatedBooking = data;
+            } else {
+                const bookings = posCache.getBookings();
+                const updated = bookings.map(b => b.id === reservation.id ? { ...b, status: 'seated' } : b);
+                posCache.setBookings(updated);
+                updatedBooking = { ...reservation, status: 'seated' };
+            }
+
+            setActiveBooking(updatedBooking);
+            setSelectedTable(table);
+            if (table?.id) {
+                localStorage.setItem('pos_active_table_id', table.id);
+            }
+
+            if (updatedBooking.profiles) {
+                setAttachedMemberCrm(updatedBooking.profiles);
+            } else {
+                setAttachedMemberCrm(null);
+            }
+
+            const existingItems = (updatedBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+            const custName = updatedBooking.profiles?.display_name 
+                || updatedBooking.pickup_contact_name 
+                || updatedBooking.customer_name 
+                || `Table ${table.table_name}`;
+
+            setCurrentOrder({
+                items: existingItems,
+                customer: custName,
+                table: table
+            });
+
+            setOnlineReservationModalData(null);
+            setView('tables');
+            triggerDebouncedRefresh();
+
+            toast.success(`เช็คอินคุณ ${custName} โต๊ะ ${table.table_name} สำเร็จ!`, { id: toastId });
+        } catch (err) {
+            console.error('Failed to seat online reservation:', err);
+            toast.error('เกิดข้อผิดพลาดในการเช็คอิน: ' + (err.message || err), { id: toastId });
+        }
+    }, [triggerDebouncedRefresh]);
 
     const handleConfirmOpenTable = useCallback(async () => {
         if (!openTableModalData?.table) return;
@@ -3512,6 +3598,21 @@ export default function POSDashboard() {
                         </div>
                         
                         <div className="p-6 flex flex-col items-center gap-4">
+                            {openTableModalData.upcomingReservation && (
+                                <div className="w-full bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex flex-col gap-1">
+                                    <div className="flex items-center gap-1.5 font-bold font-mono uppercase text-[11px]">
+                                        <AlertCircle size={14} className="text-amber-600 shrink-0" />
+                                        <span>แจ้งเตือน: โต๊ะนี้มีคิวจองล่วงหน้าวันนี้</span>
+                                    </div>
+                                    <p className="text-[11px] leading-relaxed">
+                                        มีคิวจองเวลา <strong>{new Date(openTableModalData.upcomingReservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</strong> (คุณ{openTableModalData.upcomingReservation.pickup_contact_name || openTableModalData.upcomingReservation.customer_name || 'ลูกค้าออนไลน์'}, {openTableModalData.upcomingReservation.pax || 2} คน)
+                                    </p>
+                                    <p className="text-[10px] text-amber-700 font-mono">
+                                        * กรุณาแจ้งลูกค้า Walk-in ให้คืนโต๊ะก่อนเวลานัดหมาย หรือเลือกเปิดโต๊ะอื่น
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
                                 <Users size={16} className="text-[#3C3D40]" />
                                 <span>ระบุจำนวนลูกค้า (คน) *</span>
@@ -3571,6 +3672,141 @@ export default function POSDashboard() {
                             >
                                 <Check size={16} /> เปิดโต๊ะ (Open Table) *
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Online Reservation Check-in Modal · Hallmark & Dieter Rams Compliant */}
+            {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-thai-modern */}
+            {onlineReservationModalData && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 select-none font-sans animate-in fade-in zoom-in-95 duration-150">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                        {/* Header */}
+                        <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-amber-500/10">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500 text-black flex items-center justify-center font-mono font-black text-base shadow-xs">
+                                    {onlineReservationModalData.table.table_name}
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-amber-950">
+                                            คิวจองโต๊ะออนไลน์ (ONLINE RESERVATION)
+                                        </h3>
+                                        <span className="bg-amber-500 text-black text-[9px] font-mono font-bold px-1.5 py-0.5 rounded leading-none uppercase">
+                                            RESERVED
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-[oklch(55%_0.010_28)] font-mono mt-0.5">
+                                        ความจุโต๊ะ: {onlineReservationModalData.table.capacity || 2} ที่นั่ง
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setOnlineReservationModalData(null)} 
+                                className="p-1.5 hover:bg-[oklch(94%_0.010_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Reservation Details */}
+                        <div className="p-5 flex flex-col gap-3">
+                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 flex flex-col gap-2 shadow-xs">
+                                <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
+                                    <span className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">เวลานัดหมาย (TIME)</span>
+                                    <span className="text-sm font-mono font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
+                                        ⏰ {new Date(onlineReservationModalData.reservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-[oklch(55%_0.010_28)]">ชื่อผู้จอง:</span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                        {onlineReservationModalData.reservation.pickup_contact_name || onlineReservationModalData.reservation.customer_name || onlineReservationModalData.reservation.profiles?.display_name || 'ลูกค้าออนไลน์'}
+                                    </span>
+                                </div>
+                                {(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number) && (
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-[oklch(55%_0.010_28)]">เบอร์โทร:</span>
+                                        <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                            {onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-[oklch(55%_0.010_28)]">จำนวนแขก:</span>
+                                    <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                        👥 {onlineReservationModalData.reservation.pax || onlineReservationModalData.table.capacity || 2} คน
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center text-xs">
+                                    <span className="text-[oklch(55%_0.010_28)]">สถานะมัดจำ:</span>
+                                    {onlineReservationModalData.reservation.payment_slip_url ? (
+                                        <span className="text-emerald-700 font-bold flex items-center gap-1">
+                                            ✅ มัดจำแล้ว ฿{(onlineReservationModalData.reservation.total_amount || 0).toLocaleString()}
+                                        </span>
+                                    ) : (
+                                        <span className="text-amber-800 font-mono font-bold">
+                                            รอชำระหน้าร้าน
+                                        </span>
+                                    )}
+                                </div>
+                                {onlineReservationModalData.reservation.customer_note && (
+                                    <div className="mt-1 pt-1.5 border-t border-[oklch(85%_0.012_28)] text-xs text-[oklch(52%_0.16_28)] italic">
+                                        "{onlineReservationModalData.reservation.customer_note}"
+                                    </div>
+                                )}
+                                {onlineReservationModalData.reservation.order_items && onlineReservationModalData.reservation.order_items.length > 0 && (
+                                    <div className="mt-1 pt-2 border-t border-[oklch(85%_0.012_28)] text-xs">
+                                        <span className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                            สั่งอาหารล่วงหน้า ({onlineReservationModalData.reservation.order_items.length} รายการ):
+                                        </span>
+                                        <p className="font-sans text-[11px] text-[oklch(18%_0.012_28)] mt-0.5 truncate">
+                                            {onlineReservationModalData.reservation.order_items.map(i => `${i.quantity || 1}x ${i.menu_items?.name || i.name || 'อาหาร'}`).join(', ')}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+
+                            <p className="text-[11px] text-[oklch(55%_0.010_28)] text-center font-mono">
+                                ลูกค้ามาถึงร้านแล้ว หรือต้องการเปิดให้ Walk-in นั่งชั่วคราว?
+                            </p>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2">
+                            {/* Primary Action: Seat Guest Now */}
+                            <button
+                                type="button"
+                                onClick={() => handleSeatOnlineReservation(onlineReservationModalData.table, onlineReservationModalData.reservation)}
+                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                            >
+                                <Check size={16} /> เช็คอินลูกค้านั่งโต๊ะ (SEAT GUEST NOW)
+                            </button>
+
+                            {/* Secondary Action: Walk-in with Notice */}
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const res = onlineReservationModalData.reservation;
+                                        const tbl = onlineReservationModalData.table;
+                                        setOnlineReservationModalData(null);
+                                        setOpenTablePaxInput(String(tbl.capacity || 2));
+                                        setOpenTableModalData({ table: tbl, upcomingReservation: res });
+                                    }}
+                                    className="flex-1 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] py-2.5 rounded-xl font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
+                                >
+                                    🚶‍♂️ เปิด Walk-in ชั่วคราว
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setOnlineReservationModalData(null)}
+                                    className="px-4 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-xl font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
+                                >
+                                    ปิด
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

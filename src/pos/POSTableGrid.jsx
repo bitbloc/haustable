@@ -228,7 +228,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 // Fetch active pending, seated, confirmed, ready bookings with items from yesterday to upcoming slots
                 const { data: activeBookings } = await supabase
                     .from('bookings')
-                    .select('id, table_id, status, booking_time, booking_type, staff_remark, pickup_contact_name, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
+                    .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, payment_slip_url, tracking_token, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
                     .in('status', ['pending', 'seated', 'confirmed', 'ready'])
                     .gte('booking_time', startOfYesterday)
                     .lte('booking_time', endOfTomorrow);
@@ -287,6 +287,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     // 2. Upcoming advance reservation (scheduled for later today or future dates)
                     const upcomingRes = tableBookings.find(b => {
                         if (b.id === activeBooking?.id) return false;
+                        if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
                         const bTime = new Date(b.booking_time);
                         return bTime.getTime() > now.getTime() - 15 * 60000;
                     });
@@ -294,6 +295,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     let status = 'free';
                     if (activeBooking) {
                         status = activeBooking.status === 'pending' ? 'pending' : 'occupied';
+                    } else if (upcomingRes && (upcomingRes.booking_time >= startOfToday && upcomingRes.booking_time <= endOfToday)) {
+                        status = 'reserved';
                     }
 
                     return {
@@ -317,18 +320,29 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                     
                     const merged = cachedTables.map(t => {
-                        const booking = cachedBookings.find(b => {
-                            if (b.table_id !== t.id) return false;
-                            if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+                        const tableBookings = cachedBookings.filter(b => b.table_id === t.id && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
+                        const booking = tableBookings.find(b => {
                             if (b.status === 'seated') return true;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
                             const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
                             return isToday && isWalkInOrQR;
                         });
+                        const upcomingRes = tableBookings.find(b => {
+                            if (b.id === booking?.id) return false;
+                            const bTime = new Date(b.booking_time);
+                            return bTime.getTime() > now.getTime() - 15 * 60000;
+                        });
+                        let status = 'free';
+                        if (booking) {
+                            status = booking.status === 'pending' ? 'pending' : 'occupied';
+                        } else if (upcomingRes && (upcomingRes.booking_time >= startOfToday && upcomingRes.booking_time <= endOfToday)) {
+                            status = 'reserved';
+                        }
                         return {
                             ...t,
-                            status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                            booking: booking || null
+                            status,
+                            booking: booking || null,
+                            upcomingReservation: upcomingRes || null
                         };
                     });
                     setTables(merged);
@@ -417,6 +431,14 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         </button>
                         <button 
                             type="button"
+                            onClick={() => setStatusFilter('reserved')}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'reserved' ? 'bg-amber-500 text-amber-950 font-black shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                        >
+                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                            จองแล้ว
+                        </button>
+                        <button 
+                            type="button"
                             onClick={() => setStatusFilter('occupied')}
                             className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'occupied' ? 'bg-[var(--color-accent)] text-white shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
@@ -485,6 +507,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span>
                                 <span>ว่าง (VACANT)</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-black/10"></span>
+                                <span>จองแล้ว (RESERVED)</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[#FF3300] border border-black/10"></span>
@@ -651,6 +677,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
+    const isReserved = table.status === 'reserved';
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
@@ -660,7 +687,10 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
     let ledColor = 'bg-[#00CC44]';
     
-    if (isOccupied || isPending) {
+    if (isReserved) {
+        tableBgClass = 'bg-amber-50 border-2 border-amber-500 text-amber-950 shadow-xs';
+        ledColor = 'bg-amber-500';
+    } else if (isOccupied || isPending) {
         tableBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
         ledColor = 'bg-white';
         
@@ -707,6 +737,11 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         >
                             ⚠️ ชนคิว!
                         </button>
+                    )}
+                    {isReserved && (
+                        <span className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none shadow-xs">
+                            จอง
+                        </span>
                     )}
                     {transfer.isMergedTarget && (
                         <span className="bg-[oklch(45%_0.08_140)] text-white text-[7px] font-mono font-black px-1 py-0.5 rounded leading-none shadow-xs">
@@ -756,11 +791,18 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                     {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
                 </span>
 
-                {/* Upcoming Advance Reservation on Free Table */}
+                {/* Upcoming Advance Reservation on Free or Reserved Table */}
                 {table.upcomingReservation && !isOccupied && !isPending && (
-                    <span className="mt-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight">
-                        🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
-                    </span>
+                    <div className="flex flex-col items-center mt-0.5 max-w-[95%]">
+                        <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight truncate max-w-full">
+                            🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                        </span>
+                        {(table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name) && (
+                            <span className="text-[7px] font-mono font-bold text-amber-900 truncate max-w-full mt-0.5">
+                                {table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name}
+                            </span>
+                        )}
+                    </div>
                 )}
                 
                 {/* Booking / Seated time & Dwell Counter */}
@@ -802,6 +844,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
 const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) {
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
+    const isReserved = table.status === 'reserved';
     
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
@@ -812,7 +855,10 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     let cellBgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-accent)] shadow-xs';
     let ledColor = 'bg-emerald-500';
     
-    if (isOccupied || isPending) {
+    if (isReserved) {
+        cellBgClass = 'bg-amber-50/90 border-2 border-amber-500 text-amber-950 shadow-xs hover:border-amber-600';
+        ledColor = 'bg-amber-500';
+    } else if (isOccupied || isPending) {
         cellBgClass = 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-xs';
         ledColor = 'bg-white';
         
@@ -840,6 +886,11 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">
                 <div className="flex gap-1 items-center flex-wrap">
+                     {isReserved && (
+                         <span className="bg-amber-500 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
+                             จองแล้ว · RESERVED
+                         </span>
+                     )}
                      {transfer.isMergedTarget && (
                          <span className="bg-[oklch(45%_0.08_140)] text-white text-[8px] font-mono font-black px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
                              +{transfer.mergedFromTables.join(',')}
@@ -877,8 +928,10 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Center row: Table Info */}
             <div className="flex flex-col items-center gap-0.5 my-2.5 select-none">
                  <span className="font-mono font-bold text-2xl tracking-tight">{table.table_name}</span>
-                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : 'text-[var(--color-neutral)]'}`}>
-                     {table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT'}
+                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : isReserved ? 'text-amber-800' : 'text-[var(--color-neutral)]'}`}>
+                     {isReserved && table.upcomingReservation 
+                         ? (table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name || 'ONLINE RESERVED')
+                         : (table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT')}
                  </span>
             </div>
             

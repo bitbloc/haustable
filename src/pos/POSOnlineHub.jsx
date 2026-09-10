@@ -728,6 +728,24 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
+                    {/* Standard Dine-in confirmed -> 1-Tap SEAT GUEST NOW */}
+                    {!isLineman && order.booking_type === 'dine_in' && order.status === 'confirmed' && (
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                await updateBookingStatus(order.id, 'seated');
+                                if (onSelectOrder) {
+                                    onSelectOrder({ ...order, status: 'seated' });
+                                }
+                                toast.success(`เช็คอินลูกค้าโต๊ะ ${order.tables_layout?.table_name || ''} เรียบร้อย`);
+                            }}
+                            className="flex-1 py-2 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer shadow-xs"
+                        >
+                            <CheckCircle2 size={12} />
+                            <span>SEAT GUEST (เช็คอิน)</span>
+                        </button>
+                    )}
+
                     {/* Standard Pickup pending */}
                     {!isLineman && order.booking_type === 'pickup' && order.status === 'pending' && !order.payment_slip_url && (
                         <button
