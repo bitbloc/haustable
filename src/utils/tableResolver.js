@@ -74,8 +74,18 @@ export async function resolveTableIdentifier(tableParam, supabase) {
                 return byNormalized;
             }
 
-            // Priority 3: If input contains digits, match against existing tables with matching digits
-            // E.g. "9" matches existing table "H9" or "VIP9"
+            // Priority 3: Scanned legacy/physical QR codes with primary key ID (e.g. /table/6 -> Table H9 whose id is 6)
+            if (isDigitsOnly) {
+                const numId = parseInt(cleanParam, 10);
+                if (!isNaN(numId)) {
+                    const byId = allTables.find(t => t.id === numId);
+                    if (byId) {
+                        return byId;
+                    }
+                }
+            }
+
+            // Priority 4: Dynamic digits fallback (if input is not a direct table.id)
             if (digitsOnly) {
                 const matchingTables = allTables.filter(t => {
                     const tDigits = String(t.table_name || '').replace(/\D/g, '');
@@ -97,17 +107,6 @@ export async function resolveTableIdentifier(tableParam, supabase) {
                     };
                     matchingTables.sort((a, b) => getPrefixScore(a.table_name) - getPrefixScore(b.table_name));
                     return matchingTables[0];
-                }
-            }
-
-            // Priority 4: Fallback to primary key ID (only if purely numeric and exists in active tables)
-            if (isDigitsOnly) {
-                const numId = parseInt(cleanParam, 10);
-                if (!isNaN(numId)) {
-                    const byId = allTables.find(t => t.id === numId);
-                    if (byId) {
-                        return byId;
-                    }
                 }
             }
         } else {

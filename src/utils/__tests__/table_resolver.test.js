@@ -88,39 +88,48 @@ describe('resolveTableIdentifier - Dynamic Backend Table Sync', () => {
         expect((await resolveTableIdentifier('bar2', mockSupabase))?.id).toBe(21);
         expect((await resolveTableIdentifier('โต๊ะ b5', mockSupabase))?.id).toBe(23);
 
-        // Dynamic digit matching for new table
-        expect((await resolveTableIdentifier('10', mockSupabase))?.table_name).toBe('T10');
+        // Primary key ID resolution
+        expect((await resolveTableIdentifier('22', mockSupabase))?.table_name).toBe('T10');
+        expect((await resolveTableIdentifier('t10', mockSupabase))?.table_name).toBe('T10');
     });
 
-    it('resolves bare digits to existing backend tables without ID collision', async () => {
+    it('resolves legacy QR codes by numeric primary key ID (e.g. /table/6 -> Table H9 with id: 6)', async () => {
         const mockSupabase = createMockSupabase();
 
-        // "9" should resolve to table "H9" (id 6), NOT table "H5" (id 9)
-        const table9 = await resolveTableIdentifier('9', mockSupabase);
+        // Table 9 was printed with /table/6 (id: 6) -> must resolve to Table H9
+        const table9 = await resolveTableIdentifier('6', mockSupabase);
         expect(table9).toEqual({ id: 6, table_name: 'H9' });
 
-        // "2" should resolve to table "H2" (id 8), NOT table "H4" (id 2)
-        const table2 = await resolveTableIdentifier('2', mockSupabase);
-        expect(table2).toEqual({ id: 8, table_name: 'H2' });
+        // Table 6 was printed with /table/3 (id: 3) -> must resolve to Table H6
+        const table6 = await resolveTableIdentifier('3', mockSupabase);
+        expect(table6).toEqual({ id: 3, table_name: 'H6' });
 
-        // "4" should resolve to table "H4" (id 2), NOT table "H7" (id 4)
-        const table4 = await resolveTableIdentifier('4', mockSupabase);
+        // Table 3 was printed with /table/12 (id: 12) -> must resolve to Table H3
+        const table3 = await resolveTableIdentifier('12', mockSupabase);
+        expect(table3).toEqual({ id: 12, table_name: 'H3' });
+
+        // Table 5 was printed with /table/9 (id: 9) -> must resolve to Table H5
+        const table5 = await resolveTableIdentifier('9', mockSupabase);
+        expect(table5).toEqual({ id: 9, table_name: 'H5' });
+
+        // Table 4 was printed with /table/2 (id: 2) -> must resolve to Table H4
+        const table4 = await resolveTableIdentifier('2', mockSupabase);
         expect(table4).toEqual({ id: 2, table_name: 'H4' });
 
-        // "5" should resolve to table "H5" (id 9), NOT table "H8" (id 5)
-        const table5 = await resolveTableIdentifier('5', mockSupabase);
-        expect(table5).toEqual({ id: 9, table_name: 'H5' });
+        // Table 2 was printed with /table/8 (id: 8) -> must resolve to Table H2
+        const table2 = await resolveTableIdentifier('8', mockSupabase);
+        expect(table2).toEqual({ id: 8, table_name: 'H2' });
     });
 
-    it('handles Thai and English table prefixes: "table 9", "table-9", "โต๊ะ 9"', async () => {
+    it('handles Thai and English table prefixes: "table H9", "table-H9", "โต๊ะ H9"', async () => {
         const mockSupabase = createMockSupabase();
-        const res1 = await resolveTableIdentifier('table 9', mockSupabase);
+        const res1 = await resolveTableIdentifier('table H9', mockSupabase);
         expect(res1?.table_name).toBe('H9');
 
-        const res2 = await resolveTableIdentifier('table-9', mockSupabase);
+        const res2 = await resolveTableIdentifier('table-H9', mockSupabase);
         expect(res2?.table_name).toBe('H9');
 
-        const res3 = await resolveTableIdentifier('โต๊ะ 9', mockSupabase);
+        const res3 = await resolveTableIdentifier('โต๊ะ H9', mockSupabase);
         expect(res3?.table_name).toBe('H9');
     });
 
@@ -141,8 +150,8 @@ describe('resolveTableIdentifier - Dynamic Backend Table Sync', () => {
 
         expect((await resolveTableIdentifier('BAR-9', mockSupabase))?.table_name).toBe('BAR-9');
         expect((await resolveTableIdentifier('bar9', mockSupabase))?.table_name).toBe('BAR-9');
-        // Resolving digit 9 now resolves to the renamed table BAR-9
-        expect((await resolveTableIdentifier('9', mockSupabase))?.table_name).toBe('BAR-9');
+        // Resolving by primary key ID (6) now resolves to the renamed table BAR-9
+        expect((await resolveTableIdentifier('6', mockSupabase))?.table_name).toBe('BAR-9');
     });
 
     it('falls back to DB primary key ID if no name match and table ID exists', async () => {
