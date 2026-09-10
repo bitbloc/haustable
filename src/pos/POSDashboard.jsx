@@ -34,6 +34,7 @@ import {
     checkEventDeduplication,
     playSystemAlertSound as playSystemAlertSoundUtil 
 } from '../utils/audioHelper';
+import { useWakeLock } from '../hooks/useWakeLock';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 
 const DEFAULT_BAR_CATS = [
