@@ -74,9 +74,6 @@ export default function DailyShiftsCashFlowWidget({
         let totalCashSales = 0
         let totalCashIn = 0
         let totalCashOut = 0
-        let totalClosedCash = 0
-        let totalExpectedCash = 0
-        let totalDiff = 0
         let openShiftsCount = 0
         let closedShiftsCount = 0
         const allAdjustments = []
