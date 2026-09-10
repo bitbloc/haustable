@@ -16,6 +16,7 @@ import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { isValidUuid } from '../utils/urlHelper';
+import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
@@ -144,48 +145,21 @@ export default function CustomerOrderStatus() {
     const fetchActiveOrder = async (silent = false) => {
         if (!silent) setLoading(true);
         try {
-            // Resolve table layout to get true numeric ID and table name
-            let resolvedTable = null;
+            // Resolve table layout using smart table resolver
             const cleanParam = (tableId || '').trim();
-            const isDigits = /^\d+$/.test(cleanParam);
-
-            if (isDigits) {
-                const { data: byName } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .ilike('table_name', cleanParam)
-                    .maybeSingle();
-
-                if (byName) {
-                    resolvedTable = byName;
-                } else {
-                    const { data: byId } = await supabase
-                        .from('tables_layout')
-                        .select('*')
-                        .eq('id', parseInt(cleanParam))
-                        .maybeSingle();
-                    resolvedTable = byId;
-                }
-            } else {
-                const { data: byName } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .ilike('table_name', cleanParam)
-                    .maybeSingle();
-                resolvedTable = byName;
-            }
+            const resolvedTable = await resolveTableIdentifier(tableId, supabase);
 
             if (resolvedTable) {
                 setResolvedTableInfo(resolvedTable);
                 localStorage.setItem('active_customer_table_id', resolvedTable.id.toString());
                 localStorage.setItem('active_customer_table_name', resolvedTable.table_name || `Table ${resolvedTable.id}`);
 
-                if (isDigits && resolvedTable.table_name && resolvedTable.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
+                if (resolvedTable.table_name && resolvedTable.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
                     navigate(`/table/${encodeURIComponent(resolvedTable.table_name)}/status`, { replace: true });
                 }
             }
 
-            const numericTableId = resolvedTable?.id || (isDigits ? parseInt(cleanParam) : null);
+            const numericTableId = resolvedTable?.id || (/^\d+$/.test(cleanParam) ? parseInt(cleanParam) : null);
             if (!numericTableId) {
                 setBooking(null);
                 setLoading(false);

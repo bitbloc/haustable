@@ -94,6 +94,16 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
+        // Realtime Table & Order Items Sync (< 150ms instant floorplan updates)
+        const tablesSyncSub = supabase.channel('pos-table-grid-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+                fetchTables();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
+                fetchTables();
+            })
+            .subscribe();
+
         // 60-second background heartbeat fallback (Realtime master channel handles instant updates)
         const pollInterval = setInterval(() => {
             fetchTables();
@@ -109,6 +119,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         return () => {
             supabase.removeChannel(settingsSub);
+            supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('online', fetchTables);
@@ -164,10 +175,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                 const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
                 
-                // Fetch active pending, seated, confirmed, ready bookings from yesterday to upcoming slots
+                // Fetch active pending, seated, confirmed, ready bookings with items from yesterday to upcoming slots
                 const { data: activeBookings } = await supabase
                     .from('bookings')
-                    .select('id, table_id, status, booking_time, booking_type, staff_remark, pickup_contact_name, total_amount, profiles(display_name, nickname, phone_number)')
+                    .select('id, table_id, status, booking_time, booking_type, staff_remark, pickup_contact_name, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
                     .in('status', ['pending', 'seated', 'confirmed', 'ready'])
                     .gte('booking_time', startOfYesterday)
                     .lte('booking_time', endOfTomorrow);
@@ -185,11 +196,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const tableBookings = currentBookings.filter(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
 
                     // 1. Actively occupying in-store dining booking
+                    let hasActiveWalkInOrQR = false;
                     const activeBooking = tableBookings.find(b => {
                         if (b.status === 'seated') return true;
                         const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
                         const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                        if (isWalkInOrQR && isToday) return true;
+                        if (isWalkInOrQR && isToday) {
+                            hasActiveWalkInOrQR = true;
+                            return true;
+                        }
                         if (isToday && ['seated', 'ready'].includes(b.status)) return true;
                         if (isToday && b.status === 'confirmed') {
                             const bTime = new Date(b.booking_time);
@@ -199,6 +214,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
                         return false;
                     });
+
+                    // Check for unserved/new order items on this table (within last 15 min or unchecked)
+                    const items = activeBooking?.order_items || [];
+                    const hasUnservedItems = items.some(i => i.status === 'pending' || i.is_checked === false);
+                    const hasRecentItems = items.some(i => {
+                        if (!i.created_at) return false;
+                        return (now.getTime() - new Date(i.created_at).getTime()) < 15 * 60 * 1000;
+                    });
+                    const hasNewOrder = (activeBooking?.status === 'pending') || hasUnservedItems || (hasActiveWalkInOrQR && hasRecentItems);
 
                     // 2. Upcoming advance reservation (scheduled for later today or future dates)
                     const upcomingRes = tableBookings.find(b => {
@@ -215,6 +239,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     return {
                         ...t,
                         status: status,
+                        hasNewOrder: Boolean(hasNewOrder),
                         booking: activeBooking || null,
                         upcomingReservation: upcomingRes || null,
                         upcomingConflict: (activeBooking && upcomingRes) ? upcomingRes : null
@@ -566,7 +591,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
-    const hasOrder = isPending;
+    const hasOrder = Boolean(table.hasNewOrder || isPending);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
@@ -718,7 +743,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
     
-    const hasOrder = isPending;
+    const hasOrder = Boolean(table.hasNewOrder || isPending);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;

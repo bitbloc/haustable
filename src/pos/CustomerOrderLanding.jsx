@@ -19,6 +19,7 @@ import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { isValidUuid, safeUuid } from '../utils/urlHelper';
+import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
 
 // Haversine Distance Formula
@@ -367,38 +368,8 @@ export default function CustomerOrderLanding() {
     const initPage = async () => {
         setLoading(true);
         try {
-            // 1. Fetch Table Layout (Prioritizes table_name like 'O1', fallback to numeric ID)
-            let tableData = null;
-            const cleanParam = (tableId || '').trim();
-            const isDigits = /^\d+$/.test(cleanParam);
-
-            if (isDigits) {
-                // Priority 1: Match table_name exactly (e.g. table actually named "11")
-                const { data: byName } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .ilike('table_name', cleanParam)
-                    .maybeSingle();
-
-                if (byName) {
-                    tableData = byName;
-                } else {
-                    // Priority 2: Fallback to primary key id (e.g. scanned legacy flyer with numeric id)
-                    const { data: byId } = await supabase
-                        .from('tables_layout')
-                        .select('*')
-                        .eq('id', parseInt(cleanParam))
-                        .maybeSingle();
-                    tableData = byId;
-                }
-            } else {
-                const { data: byName } = await supabase
-                    .from('tables_layout')
-                    .select('*')
-                    .ilike('table_name', cleanParam)
-                    .maybeSingle();
-                tableData = byName;
-            }
+            // 1. Fetch Table Layout using smart table resolver (handles "H9", "9", "table 9", etc.)
+            const tableData = await resolveTableIdentifier(tableId, supabase);
 
             if (!tableData) {
                 toast.error(`ไม่พบข้อมูลโต๊ะ ${tableId}`);
@@ -411,8 +382,9 @@ export default function CustomerOrderLanding() {
             localStorage.setItem('active_customer_table_id', tableData.id.toString());
             localStorage.setItem('active_customer_table_name', tableData.table_name || `Table ${tableData.id}`);
 
-            // If accessed via numeric ID (e.g. /table/11) but table's true name is different (e.g. "O1"), normalize URL
-            if (isDigits && tableData.table_name && tableData.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
+            // If accessed via numeric ID (e.g. /table/9) but table's canonical name is different (e.g. "H9"), normalize URL
+            const cleanParam = (tableId || '').trim();
+            if (tableData.table_name && tableData.table_name.toLowerCase() !== cleanParam.toLowerCase()) {
                 navigate(`/table/${encodeURIComponent(tableData.table_name)}`, { replace: true });
             }
 
@@ -1241,16 +1213,23 @@ export default function CustomerOrderLanding() {
                 finalTotalAmount = recalculatedTotal;
             }
 
-            // 3. Instant Realtime WebSocket Broadcast to POS (< 50ms)
+            // 3. Instant Realtime WebSocket Broadcast to POS with timeout protection before navigation
             const displayTableName = table?.table_name || `โต๊ะ #${effectiveNumericTableId}`;
-            sendPOSBroadcast('qr_order_created', {
-                booking_id: finalBookingId,
-                table_id: effectiveNumericTableId,
-                table_name: displayTableName,
-                items_count: cartCount,
-                total_amount: finalTotalAmount,
-                source: 'qr'
-            });
+            try {
+                await Promise.race([
+                    sendPOSBroadcast('qr_order_created', {
+                        booking_id: finalBookingId,
+                        table_id: effectiveNumericTableId,
+                        table_name: displayTableName,
+                        items_count: cartCount,
+                        total_amount: finalTotalAmount,
+                        source: 'qr'
+                    }),
+                    new Promise((resolve) => setTimeout(resolve, 800))
+                ]);
+            } catch (broadcastErr) {
+                console.warn('[Checkout] Broadcast delivery non-fatal warning:', broadcastErr);
+            }
 
             toast.success('ออเดอร์ถูกส่งไปยังห้องครัวแล้ว!');
             setCart([]);

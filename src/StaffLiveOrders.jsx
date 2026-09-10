@@ -82,7 +82,12 @@ function StaffLiveOrdersContent() {
 
     const todayOrders = orders.filter(o => isToday(o.booking_time))
     const todaySchedule = scheduleOrders.filter(o => isToday(o.booking_time))
-    const visibleKdsOrders = todaySchedule.filter(o => !hiddenKdsOrders.includes(o.id))
+    const visibleKdsOrders = todaySchedule.filter(o => {
+        // If an order has any unchecked items, ensure it stays visible on KDS even if previously hidden
+        const hasUncheckedItems = (o.order_items || []).some(item => !item.is_checked);
+        if (hasUncheckedItems) return true;
+        return !hiddenKdsOrders.includes(o.id);
+    })
 
     // --- Tab Logic ---
     useEffect(() => {
@@ -126,6 +131,18 @@ function StaffLiveOrdersContent() {
             price: newOrder?.total_amount,
             orderId: newOrder?.id
         })
+
+        // If this order was previously hidden via "QC Done", auto-unhide it so kitchen immediately sees the new items
+        if (newOrder?.id) {
+            setHiddenKdsOrders(prev => {
+                if (prev.includes(newOrder.id)) {
+                    const updated = prev.filter(id => id !== newOrder.id);
+                    localStorage.setItem('kds_hidden_orders', JSON.stringify(updated));
+                    return updated;
+                }
+                return prev;
+            });
+        }
     }, [play, triggerNotification])
 
     // --- System Init on Mount ---

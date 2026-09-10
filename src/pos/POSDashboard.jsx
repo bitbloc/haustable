@@ -1345,9 +1345,10 @@ export default function POSDashboard() {
                     const tableId = newRow?.table_id || oldRow?.table_id || null;
                     const sourceLower = (newRow?.source || oldRow?.source || '').toLowerCase();
                     const remarkLower = (newRow?.staff_remark || oldRow?.staff_remark || '').toLowerCase();
+                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr walk-in') || remarkLower.includes('qr order') || remarkLower.includes('[qr]');
                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
-                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!newRow?.payment_slip_url || (newRow?.order_type || '').startsWith('hausmade');
-                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || newRow?.booking_type === 'walk_in');
+                    const hasOnlineMarker = isQr || sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!newRow?.payment_slip_url || (newRow?.order_type || '').startsWith('hausmade');
+                    const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || newRow?.booking_type === 'walk_in');
                     
                     const isWalkInPickup = newRow?.booking_type === 'pickup' && isExplicitInHouse;
                     const isOnlinePickup = (newRow?.booking_type === 'pickup' || (!tableId && (sourceLower === 'online' || remarkLower.includes('[online_pickup]')))) && !isExplicitInHouse;
@@ -1543,13 +1544,14 @@ export default function POSDashboard() {
                                     
                                     const sourceLower = (bData.source || '').toLowerCase();
                                     const remarkLower = (bData.staff_remark || '').toLowerCase();
+                                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr walk-in') || remarkLower.includes('qr order') || remarkLower.includes('[qr]');
                                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
-                                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url;
-                                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
+                                    const hasOnlineMarker = isQr || sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url;
+                                    const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
                                     const isWalkInPickup = bData.booking_type === 'pickup' && isExplicitInHouse;
 
-                                    // Strictly suppress notifications and audio for in-store cashier actions or inactive states
-                                    if (isExplicitInHouse || isWalkInPickup || isCurrentPosBooking || bData.status === 'completed' || bData.status === 'cancelled') {
+                                    // Strictly suppress notifications and audio for cashier-entered in-store actions or inactive states
+                                    if (isExplicitInHouse || isWalkInPickup || (!isQr && isCurrentPosBooking) || bData.status === 'completed' || bData.status === 'cancelled') {
                                         return;
                                     }
 

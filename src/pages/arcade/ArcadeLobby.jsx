@@ -7,6 +7,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { getAppOrigin } from '../../utils/urlHelper';
+import { resolveTableIdentifier } from '../../utils/tableResolver';
 import FlappyCatGame from './FlappyCatGame';
 import TaiPlaMiniGame from './game/TaiPlaMiniGame';
 import confetti from 'canvas-confetti';
@@ -284,35 +285,9 @@ export default function ArcadeLobby() {
     
     if (effectiveParam) {
       const cleanParam = effectiveParam.trim();
-      const isDigits = /^\d+$/.test(cleanParam);
       
       const resolveTable = async () => {
-        let tableData = null;
-        if (isDigits) {
-          const { data: byName } = await supabase
-            .from('tables_layout')
-            .select('id, table_name')
-            .ilike('table_name', cleanParam)
-            .maybeSingle();
-
-          if (byName) {
-            tableData = byName;
-          } else {
-            const { data: byId } = await supabase
-              .from('tables_layout')
-              .select('id, table_name')
-              .eq('id', parseInt(cleanParam))
-              .maybeSingle();
-            tableData = byId;
-          }
-        } else {
-          const { data: byName } = await supabase
-            .from('tables_layout')
-            .select('id, table_name')
-            .ilike('table_name', cleanParam)
-            .maybeSingle();
-          tableData = byName;
-        }
+        const tableData = await resolveTableIdentifier(cleanParam, supabase);
 
         if (tableData) {
           const display = tableData.table_name || `Table ${tableData.id}`;
