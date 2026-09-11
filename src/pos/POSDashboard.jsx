@@ -3131,13 +3131,6 @@ export default function POSDashboard() {
 
                 if (completeErr) throw completeErr;
 
-                if (selectedTable?.id) {
-                    await supabase
-                        .from('tables_layout')
-                        .update({ status: 'available' })
-                        .eq('id', selectedTable.id);
-                }
-
                 toast.success(`🎉 ชำระครบถ้วน ปิดบิลเรียบร้อยแล้ว! (ก้อนที่ ${roundNum} ฿${splitTotal.toLocaleString()})`, { id: toastId });
                 setShowSplitModal(false);
                 openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: cleanedParentRemark, status: 'completed' }, 'receipt');

@@ -451,13 +451,6 @@ export async function syncOfflineQueue(isManual = false) {
                             staff_remark: updatedRemark
                         })
                         .eq('id', bookingId);
-
-                    if (bookingMetadata?.table_id) {
-                        await supabase
-                            .from('tables_layout')
-                            .update({ status: 'available' })
-                            .eq('id', bookingMetadata.table_id);
-                    }
                 } else {
                     await supabase
                         .from('bookings')

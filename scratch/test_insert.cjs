@@ -10,8 +10,14 @@ const env = fs.readFileSync('.env', 'utf8').split('\n').reduce((acc, line) => {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_KEY);
 
-async function testRPC() {
-    const { data, error } = await supabase.rpc('get_system_record_counts');
-    console.log('get_system_record_counts:', { data, error });
+async function testGuestInsert() {
+    const { data, error } = await supabase
+        .from('leaderboard')
+        .insert({
+            display_name: 'TEST GUEST',
+            score: 10
+        })
+        .select();
+    console.log('Guest insert result:', { data, error });
 }
-testRPC();
+testGuestInsert();

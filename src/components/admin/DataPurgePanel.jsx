@@ -236,7 +236,6 @@ export default function DataPurgePanel() {
             await supabase.from('withholding_tax_records').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             await supabase.from('payment_slips_registry').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             await supabase.from('bookings').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-            await supabase.from('tables_layout').update({ status: 'available' }).neq('id', '00000000-0000-0000-0000-000000000000');
         }
         if (categoryId === 'shifts' || categoryId === 'all_operational') {
             await supabase.from('pos_audit_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
