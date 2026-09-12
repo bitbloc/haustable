@@ -310,40 +310,63 @@ export default function DailySummarySlipModal({
 
     /**
      * Bulletproof Full-Slip Image Exporter
-     * Captures the complete, uncut slip from top to bottom on both desktop and mobile devices.
-     * Prevents viewport clipping and Android/iOS GPU canvas dimension truncation.
+     * Renders an unconstrained, detached DOM clone on document.body.
+     * Completely eliminates all modal clipping (max-h, overflow-hidden, overflow-y-auto).
      */
     const exportFullSlipImage = async () => {
         if (!slipRef.current) return null
         const element = slipRef.current
 
-        // 1. Temporarily scroll the modal container to top (0) so the entire element is at the origin
-        const scrollContainer = element.closest('.overflow-y-auto') || element.parentElement
-        const originalScrollTop = scrollContainer ? scrollContainer.scrollTop : 0
-        if (scrollContainer) {
-            scrollContainer.scrollTop = 0
-        }
+        // 1. Create a detached rendering container on document.body without any modal height or scroll constraints
+        const container = document.createElement('div')
+        container.style.position = 'fixed'
+        container.style.left = '-9999px'
+        container.style.top = '0'
+        container.style.width = '420px'
+        container.style.height = 'auto'
+        container.style.minHeight = 'auto'
+        container.style.maxHeight = 'none'
+        container.style.overflow = 'visible'
+        container.style.zIndex = '-9999'
+        container.style.backgroundColor = '#ffffff'
+        container.style.padding = '0'
+        container.style.margin = '0'
 
-        // Allow browser layout engine to paint at top
-        await new Promise(resolve => setTimeout(resolve, 80))
+        // 2. Clone the slip DOM node
+        const clone = element.cloneNode(true)
+        clone.style.width = '420px'
+        clone.style.maxWidth = '420px'
+        clone.style.height = 'auto'
+        clone.style.minHeight = 'auto'
+        clone.style.maxHeight = 'none'
+        clone.style.overflow = 'visible'
+        clone.style.transform = 'none'
+        clone.style.margin = '0'
+        clone.style.boxShadow = 'none'
+
+        container.appendChild(clone)
+        document.body.appendChild(container)
+
+        // Allow browser layout engine to paint full natural height
+        await new Promise(resolve => setTimeout(resolve, 120))
 
         try {
-            const fullWidth = Math.max(element.scrollWidth, element.offsetWidth, 360)
-            const fullHeight = Math.max(element.scrollHeight, element.offsetHeight)
+            const fullWidth = 420
+            const fullHeight = Math.max(clone.scrollHeight, clone.offsetHeight, clone.clientHeight)
 
-            // Safe dynamic pixelRatio: mobile GPU hardware limit for canvas height is 4096px
+            // Safe resolution scale: avoid exceeding 4096px canvas texture limit on mobile/Android/iOS
             let scale = 2
             if (fullHeight * scale > 4000) {
                 scale = Math.max(1, +(4000 / fullHeight).toFixed(2))
             }
 
-            // 1. Primary: html-to-image toPng with skipFonts & explicit full dimensions
+            // 1. Primary: html-to-image toPng on the unconstrained clone
             try {
-                const dataUrl = await toPng(element, {
+                const dataUrl = await toPng(clone, {
                     pixelRatio: scale,
                     quality: 0.98,
                     cacheBust: true,
-                    skipFonts: true, // Prevents CORS font download failure in WebView / local
+                    skipFonts: true, // Prevents CORS external font download failure
                     backgroundColor: '#ffffff',
                     width: fullWidth,
                     height: fullHeight,
@@ -362,11 +385,11 @@ export default function DailySummarySlipModal({
                     return dataUrl
                 }
             } catch (toPngErr) {
-                console.warn('toPng failed, trying html2canvas fallback:', toPngErr)
+                console.warn('toPng on clone failed, trying html2canvas fallback:', toPngErr)
             }
 
-            // 2. Resilient fallback: html2canvas with full dimensions & zeroed scroll offsets
-            const canvas = await html2canvas(element, {
+            // 2. Resilient fallback: html2canvas on the unconstrained clone
+            const canvas = await html2canvas(clone, {
                 scale: scale,
                 backgroundColor: '#ffffff',
                 useCORS: true,
@@ -378,20 +401,12 @@ export default function DailySummarySlipModal({
                 width: fullWidth,
                 height: fullHeight,
                 windowWidth: fullWidth + 100,
-                windowHeight: fullHeight + 100,
-                onclone: (clonedDoc, clonedElement) => {
-                    clonedElement.style.height = `${fullHeight}px`
-                    clonedElement.style.maxHeight = 'none'
-                    clonedElement.style.overflow = 'visible'
-                    clonedElement.style.position = 'static'
-                    clonedElement.style.transform = 'none'
-                }
+                windowHeight: fullHeight + 100
             })
             return canvas.toDataURL('image/png', 0.98)
         } finally {
-            // Restore user's scroll position
-            if (scrollContainer) {
-                scrollContainer.scrollTop = originalScrollTop
+            if (container.parentNode) {
+                container.parentNode.removeChild(container)
             }
         }
     }
