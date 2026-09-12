@@ -10,6 +10,7 @@ import {
     User,
     Phone
 } from 'lucide-react';
+import { getThaiDate } from '../utils/timeUtils';
 
 export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refreshKey }) {
     const [orders, setOrders] = useState([]);
@@ -19,6 +20,24 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
 
     useEffect(() => {
         fetchOrders();
+
+        const channel = supabase.channel('pos-pickup-grid-sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+                const b = payload.new || payload.old;
+                if (b?.booking_type === 'pickup' || b?.order_type === 'hausmade_pickup') {
+                    fetchOrders();
+                }
+            })
+            .on('broadcast', { event: 'online_order_created' }, (payload) => {
+                if (payload.payload?.booking_type === 'pickup') {
+                    fetchOrders();
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     useEffect(() => {
@@ -29,7 +48,7 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
 
     const fetchOrders = async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getThaiDate();
             const { data: pickupBookings, error } = await supabase
                 .from('bookings')
                 .select('*')

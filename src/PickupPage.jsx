@@ -19,6 +19,7 @@ import { normalizePromptPayId } from './utils/printerHelper'
 import generatePayload from 'promptpay-qr'
 import { QRCodeSVG } from 'qrcode.react'
 import { Tag, AlertCircle, Crown, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon, X as CloseIcon } from 'lucide-react'
+import { toast } from 'sonner'
 
 // --- Main Page ---
 export default function PickupPage() {
@@ -307,14 +308,14 @@ export default function PickupPage() {
         const trimmedPhone = (contactPhone || '').trim()
         const cleanPhone = trimmedPhone.replace(/\D/g, '')
 
-        if (!trimmedName) return alert(t('fillContact') || 'กรุณากรอกชื่อผู้รับสินค้า (Name is required)')
-        if (!trimmedPhone || cleanPhone.length < 9) return alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
-        if (!isAgreed) return alert(t('agreeTerms'))
-        if (!slipFile) return alert(t('uploadSlipDesc'))
-        if (!pickupTime) return alert(t('selectPickupTime'))
+        if (!trimmedName) return toast.error(t('fillContact') || 'กรุณากรอกชื่อผู้รับสินค้า (Name is required)')
+        if (!trimmedPhone || cleanPhone.length < 9) return toast.error('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
+        if (!isAgreed) return toast.error(t('agreeTerms'))
+        if (finalTotal > 0 && !slipFile) return toast.error(t('uploadSlipDesc'))
+        if (!pickupTime) return toast.error(t('selectPickupTime'))
 
-        if (easySlipEnabled && !slipVerifyResult?.verified && !allowManualFallback) {
-            return alert('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
+        if (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback) {
+            return toast.error('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
         }
 
         setSubmitting(true)
@@ -374,14 +375,14 @@ export default function PickupPage() {
             })
 
             if (result.success) {
-                alert(t('confirmOrder') + ' Success!' + (isAutoVerified ? ' (สลิปผ่านการตรวจอัตโนมัติ ✓)' : ''))
+                toast.success(t('confirmOrder') + ' สำเร็จ!' + (isAutoVerified ? ' (สลิปผ่านการตรวจอัตโนมัติ ✓)' : ''))
                 if (result.trackingToken) {
                     window.location.replace(`/tracking/${result.trackingToken}`)
                 } else {
                     navigate('/', { replace: true })
                 }
             } else {
-                alert('Error: ' + result.error)
+                toast.error('Error: ' + result.error)
             }
         } finally {
             setSubmitting(false)
@@ -552,7 +553,7 @@ export default function PickupPage() {
                                             onChange={(e) => setPickupTime(e.target.value)} 
                                             className="w-full bg-canvas border border-[var(--color-rule)] text-ink font-mono font-bold p-3 pl-10 rounded-rams outline-none focus:border-ink appearance-none transition-colors"
                                         >
-                                            <option value="" disabled selected>{t('selectPickupTime')}</option>
+                                            <option value="" disabled>{t('selectPickupTime')}</option>
                                             {availableTimeSlots().length === 0 ? (
                                                 <option disabled>{t('noValidTimes')}</option>
                                             ) : (
@@ -861,7 +862,7 @@ export default function PickupPage() {
 
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={submitting || !isContactValid || !isAgreed || !pickupTime || !slipFile || isVerifyingSlip || (easySlipEnabled && !slipVerifyResult?.verified && !allowManualFallback)}
+                                    disabled={submitting || !isContactValid || !isAgreed || !pickupTime || (finalTotal > 0 && !slipFile) || isVerifyingSlip || (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback)}
                                     className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2"
                                 >
                                     {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}
