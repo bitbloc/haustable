@@ -1,17 +1,10 @@
 import { X, Image as ImageIcon, ExternalLink } from 'lucide-react'
+import { getSlipPublicUrl } from '../../utils/urlHelper'
 
 export default function ViewSlipModal({ url, onClose }) {
     if (!url) return null
 
-    const getFullSlipUrl = (srcUrl) => {
-        if (!srcUrl) return '';
-        if (srcUrl.startsWith('http://') || srcUrl.startsWith('https://') || srcUrl.startsWith('blob:') || srcUrl.startsWith('data:')) {
-            return srcUrl;
-        }
-        return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${srcUrl}`;
-    };
-
-    const fullUrl = getFullSlipUrl(url);
+    const fullUrl = getSlipPublicUrl(url);
 
     return (
         <div 

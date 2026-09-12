@@ -94,7 +94,11 @@ export default function BookingCheckout() {
     // Calculate Final Total & Deposit
     const discountAmount = appliedPromo?.discountAmount || 0
     const finalTotal = Math.max(0, cartTotal - discountAmount)
-    const depositAmount = Math.ceil(finalTotal * 0.5)
+    const halfDeposit = Math.ceil(finalTotal * 0.5)
+
+    // Payment Option: 50% Deposit vs 100% Full Payment
+    const [paymentPlan, setPaymentPlan] = useState('deposit') // 'deposit' | 'full'
+    const depositAmount = paymentPlan === 'full' ? finalTotal : halfDeposit
 
     const [selectedModalImage, setSelectedModalImage] = useState(null)
 
@@ -150,17 +154,27 @@ export default function BookingCheckout() {
             try {
                 const res = await verifyPaymentSlip({
                     file,
-                    matchAmount: depositAmount,
+                    matchAmount: halfDeposit, // Match against minimum deposit
                     provider: paymentMethod,
                     remark: `Table Booking Deposit ฿${depositAmount}`
                 })
 
-                if (res.verified) {
-                    setSlipVerifyResult(res)
+                const slipAmount = Number(res.amountInSlip || 0)
+                const isSufficient = slipAmount >= halfDeposit
+
+                if (res.verified || (res.success && isSufficient)) {
+                    // Passed verification (exact match or paid >= required minimum deposit)
+                    const isFullPaid = slipAmount >= finalTotal
+                    setSlipVerifyResult({
+                        ...res,
+                        verified: true,
+                        isAmountMatched: true,
+                        isFullPaid
+                    })
                     setSlipVerifyError(null)
-                } else if (res.success && !res.isAmountMatched) {
+                } else if (res.success && !isSufficient) {
                     setSlipVerifyResult(res)
-                    setSlipVerifyError(`ยอดเงินในสลิป (฿${res.amountInSlip}) ไม่ตรงกับยอดมัดจำ (฿${depositAmount})`)
+                    setSlipVerifyError(`ยอดเงินในสลิป (฿${res.amountInSlip}) น้อยกว่ายอดมัดจำขั้นต่ำ 50% (฿${halfDeposit})`)
                 } else if (res.isDuplicate) {
                     setSlipVerifyResult(res)
                     setSlipVerifyError('สลิปนี้ถูกบันทึกในระบบไปแล้ว ไม่สามารถใช้ซ้ำได้')
@@ -203,12 +217,19 @@ export default function BookingCheckout() {
             updateForm('contactName', trimmedName)
             updateForm('contactPhone', trimmedPhone)
 
+            const actualDepositPaid = slipVerifyResult?.amountInSlip 
+                ? Number(slipVerifyResult.amountInSlip) 
+                : depositAmount
+            const isFullPayment = actualDepositPaid >= finalTotal
+
             const result = await submitBooking(appliedPromo, depositAmount, {
                 contactName: trimmedName,
                 contactPhone: trimmedPhone,
                 slipFile: slipFile,
                 slipVerifyResult: slipVerifyResult,
-                paymentMethod: paymentMethod
+                paymentMethod: paymentMethod,
+                actualDepositPaid,
+                isFullPaid: isFullPayment
             }) 
 
             if (result.success) {
@@ -405,12 +426,42 @@ export default function BookingCheckout() {
                          <span className="text-xl font-bold font-mono tracking-tight text-ink">{finalTotal}.-</span>
                     </div>
                     
-                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-2 mt-2 bg-canvas p-2 rounded-rams border border-ink">
+                    <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-2 mt-2 bg-canvas p-2.5 rounded-rams border border-ink">
                          <div>
-                             <span className="text-ink text-xs font-mono font-bold block uppercase">Deposit Required (50%)</span>
-                             <span className="text-[10px] text-subInk font-mono block">ยอดมัดจำ 50% ที่ต้องชำระตอนนี้</span>
+                             <span className="text-ink text-xs font-mono font-bold block uppercase">
+                                 {paymentPlan === 'full' ? 'Full Payment (100%)' : 'Deposit Required (50%)'}
+                             </span>
+                             <span className="text-[10px] text-subInk font-mono block">
+                                 {paymentPlan === 'full' ? 'ยอดชำระเต็มจำนวน' : 'ยอดมัดจำ 50% ที่ต้องชำระตอนนี้'}
+                             </span>
                          </div>
                          <span className="text-3xl font-bold font-mono tracking-tight text-ink">{depositAmount}.-</span>
+                    </div>
+
+                    {/* Payment Plan Selector (Dieter Rams Tabular Control) */}
+                    <div className="pt-2">
+                        <div className="text-[11px] font-mono font-bold text-subInk uppercase mb-1.5 flex justify-between items-center">
+                            <span>ตัวเลือกการชำระเงิน</span>
+                            <span className="text-[10px] text-ink font-mono">{paymentPlan === 'full' ? 'ชำระเต็มจำนวน' : 'มัดจำ 50%'}</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 border border-[var(--color-rule)] p-1 rounded-rams bg-canvas">
+                            <button
+                                type="button"
+                                onClick={() => setPaymentPlan('deposit')}
+                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-xs cursor-pointer ${paymentPlan === 'deposit' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
+                            >
+                                <span className="block text-[10px] uppercase opacity-80">มัดจำ 50%</span>
+                                <span className="text-sm font-bold">฿{halfDeposit}.-</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentPlan('full')}
+                                className={`py-2 px-3 text-center rounded-rams transition-all font-mono text-xs cursor-pointer ${paymentPlan === 'full' ? 'bg-ink text-paper font-bold shadow-xs' : 'text-subInk hover:text-ink'}`}
+                            >
+                                <span className="block text-[10px] uppercase opacity-80">จ่ายเต็มจำนวน 100%</span>
+                                <span className="text-sm font-bold">฿{finalTotal}.-</span>
+                            </button>
+                        </div>
                     </div>
 
                     <p className="text-[10px] text-subInk font-mono text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
@@ -588,11 +639,15 @@ export default function BookingCheckout() {
                             <div className="bg-emerald-500/10 border border-emerald-500/30 p-3 rounded-rams space-y-1 text-xs font-mono">
                                 <div className="flex items-center gap-1.5 text-emerald-800 font-bold">
                                     <CheckCircle2 size={16} className="text-emerald-700 shrink-0" />
-                                    <span>สลิปมัดจำผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓</span>
+                                    <span>
+                                        {slipVerifyResult.isFullPaid 
+                                            ? 'สลิปชำระครบเต็มจำนวนผ่านการตรวจอัตโนมัติเรียบร้อย ✓' 
+                                            : 'สลิปมัดจำผ่านการตรวจสอบอัตโนมัติเรียบร้อย ✓'}
+                                    </span>
                                 </div>
                                 <div className="text-[11px] text-emerald-900/90 pl-5 space-y-0.5">
                                     <p>ผู้โอน: <strong>{typeof slipVerifyResult.senderName === 'object' ? (slipVerifyResult.senderName?.th || slipVerifyResult.senderName?.en || 'ไม่ระบุ') : (slipVerifyResult.senderName || 'ไม่ระบุ')}</strong></p>
-                                    <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')})</p>
+                                    <p>ยอดโอน: <strong>฿{typeof slipVerifyResult.amountInSlip === 'number' ? slipVerifyResult.amountInSlip : Number(slipVerifyResult.amountInSlip || 0)}.-</strong> ({typeof slipVerifyResult.bankName === 'object' ? (slipVerifyResult.bankName?.th || slipVerifyResult.bankName?.en || 'ธนาคาร') : (slipVerifyResult.bankName || 'ธนาคาร')}) {slipVerifyResult.isFullPaid && <span className="text-emerald-700 font-bold ml-1">[ชำระครบ 100%]</span>}</p>
                                     {slipVerifyResult.transRef && <p className="text-[9px] text-emerald-800/80">Ref: {slipVerifyResult.transRef}</p>}
                                 </div>
                             </div>

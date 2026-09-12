@@ -160,7 +160,18 @@ export function useBooking() {
             const discountAmount = promotionData?.discountAmount || 0
             const finalTotal = Math.max(0, cartTotal - discountAmount)
 
-            const isAutoVerified = Boolean(overrides.slipVerifyResult?.verified)
+            const actualDepositPaid = overrides.actualDepositPaid !== undefined 
+                ? Number(overrides.actualDepositPaid) 
+                : Number(depositAmount || 0)
+            const isFullPaid = overrides.isFullPaid || (actualDepositPaid >= finalTotal && finalTotal > 0)
+            const bankLabel = typeof overrides.slipVerifyResult?.bankName === 'object' 
+                ? (overrides.slipVerifyResult?.bankName?.th || overrides.slipVerifyResult?.bankName?.en || '') 
+                : (overrides.slipVerifyResult?.bankName || '')
+
+            const staffRemarkContent = isAutoVerified
+                ? `[ONLINE] จองโต๊ะล่วงหน้า (${isFullPaid ? `ชำระเต็มจำนวน ฿${actualDepositPaid}` : `ตรวจมัดจำ Auto EasySlip ✓ ฿${actualDepositPaid}`}${bankLabel ? ' ' + bankLabel : ''})`
+                : (isFullPaid ? `[ONLINE] จองโต๊ะล่วงหน้า (โอนเต็มจำนวน ฿${actualDepositPaid})` : '[ONLINE] จองโต๊ะล่วงหน้า')
+
             const bookingPayload = {
                 source: 'online',
                 booking_type: 'dine_in',
@@ -172,13 +183,11 @@ export function useBooking() {
                 pickup_contact_name: finalContactName,
                 pickup_contact_phone: finalContactPhone,
                 customer_note: customerNoteContent,
-                staff_remark: isAutoVerified
-                    ? `[ONLINE] จองโต๊ะล่วงหน้า (ตรวจมัดจำ Auto EasySlip ✓ ${typeof overrides.slipVerifyResult?.bankName === 'object' ? (overrides.slipVerifyResult?.bankName?.th || overrides.slipVerifyResult?.bankName?.en || '') : (overrides.slipVerifyResult?.bankName || '')})`
-                    : '[ONLINE] จองโต๊ะล่วงหน้า',
+                staff_remark: staffRemarkContent,
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
                 discount_amount: promotionData?.discountAmount || 0,
-                deposit_amount: depositAmount,
+                deposit_amount: actualDepositPaid,
                 tracking_token: crypto.randomUUID(),
                 slip_verified: isAutoVerified,
                 slip_provider: overrides.slipVerifyResult?.provider || overrides.paymentMethod || 'bank',

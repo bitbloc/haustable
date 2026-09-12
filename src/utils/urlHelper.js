@@ -82,3 +82,19 @@ export function safeUuid(val) {
   return isValidUuid(val) ? val.trim() : null;
 }
 
+/**
+ * Resolves a storage file path to its full public URL, supporting both 'slips' and 'receipts' buckets.
+ */
+export function getSlipPublicUrl(slipUrl) {
+  if (!slipUrl || typeof slipUrl !== 'string') return '';
+  const trimmed = slipUrl.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('receipts/')) {
+    const cleanName = trimmed.replace(/^receipts\//, '');
+    return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/receipts/${cleanName}`;
+  }
+  return `https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/slips/${trimmed}`;
+}
+
