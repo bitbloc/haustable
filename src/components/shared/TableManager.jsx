@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { safeTimestampUrl, safeCssUrl } from '../../utils/urlHelper';
 import { getThaiDate } from '../../utils/timeUtils';
+import ManualBookingModal from '../admin/ManualBookingModal';
 
 export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable }) {
     const [tables, setTables] = useState([]);
@@ -20,6 +21,8 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
     const [inspectedTable, setInspectedTable] = useState(null); // Table + Booking Inspection Modal
     const [seatingModalTable, setSeatingModalTable] = useState(null); // Vacant Table Seating Modal
     const [transferModalData, setTransferModalData] = useState(null); // Table Transfer Modal { fromTable, booking }
+    const [isManualBookingOpen, setIsManualBookingOpen] = useState(false);
+    const [manualBookingTableId, setManualBookingTableId] = useState('');
     
     // Seating Form State
     const [seatingForm, setSeatingForm] = useState({
@@ -511,6 +514,17 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                     >
                         SYNC
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setManualBookingTableId('');
+                            setIsManualBookingOpen(true);
+                        }}
+                        className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:opacity-90 border border-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-bold uppercase rounded-sm cursor-pointer"
+                    >
+                        + MANUAL BOOKING
+                    </button>
                 </div>
             </div>
 
@@ -932,6 +946,19 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
                                 <button
                                     type="button"
+                                    onClick={() => {
+                                        const selectedTblId = seatingModalTable.id;
+                                        setSeatingModalTable(null);
+                                        setManualBookingTableId(selectedTblId);
+                                        setIsManualBookingOpen(true);
+                                    }}
+                                    className="w-full py-2.5 bg-[oklch(18%_0.012_28)] hover:opacity-90 text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-sm font-bold transition-opacity cursor-pointer flex items-center justify-center gap-1"
+                                >
+                                    <span>+ MANUAL ADVANCE BOOKING (จองล่วงหน้า)</span>
+                                </button>
+
+                                <button
+                                    type="button"
                                     disabled={actionLoading}
                                     onClick={() => {
                                         setSeatingForm(prev => ({ ...prev, isMaintenanceBlock: true, guestName: 'MAINTENANCE' }));
@@ -1196,6 +1223,23 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Manual Advance Booking Modal */}
+            {isManualBookingOpen && (
+                <ManualBookingModal
+                    isOpen={isManualBookingOpen}
+                    onClose={() => {
+                        setIsManualBookingOpen(false);
+                        setManualBookingTableId('');
+                    }}
+                    initialTableId={manualBookingTableId}
+                    tablesList={tables}
+                    existingBookings={bookings}
+                    onSuccess={() => {
+                        fetchData();
+                    }}
+                />
+            )}
         </div>
     );
 }

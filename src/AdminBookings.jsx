@@ -4,6 +4,7 @@ import { supabase } from './lib/supabaseClient'
 import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
+import ManualBookingModal from './components/admin/ManualBookingModal'
 import { formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime, getThaiDate } from './utils/timeUtils'
 import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
@@ -119,6 +120,7 @@ export default function AdminBookings() {
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [editingBooking, setEditingBooking] = useState(null) // Booking object being edited
+    const [isManualBookingOpen, setIsManualBookingOpen] = useState(false) // Manual Backoffice Booking Modal
 
     // Concurrency & Lifecycle Guards to prevent memory leaks and request storms
     const isMountedRef = useRef(true)
@@ -665,9 +667,16 @@ export default function AdminBookings() {
                     <div className="flex items-center gap-2">
                         <button 
                             type="button"
+                            onClick={() => setIsManualBookingOpen(true)}
+                            className="px-4 py-2 bg-[var(--color-accent)] hover:opacity-90 text-white font-bold uppercase transition-opacity flex items-center gap-1.5 border border-[var(--color-accent)] cursor-pointer"
+                        >
+                            <span>+ MANUAL BOOKING</span>
+                        </button>
+                        <button 
+                            type="button"
                             onClick={() => fetchBookings(true)} 
                             disabled={loading}
-                            className="px-4 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold uppercase transition-opacity flex items-center gap-2 border border-[var(--color-ink)]"
+                            className="px-4 py-2 bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] font-bold uppercase transition-opacity flex items-center gap-2 border border-[var(--color-ink)] cursor-pointer"
                         >
                             <span>{loading ? 'SYNCING…' : 'REFRESH'}</span>
                         </button>
@@ -1376,6 +1385,18 @@ export default function AdminBookings() {
                 <ViewSlipModal 
                     url={viewSlipUrl.startsWith('http') ? viewSlipUrl : supabase.storage.from('slips').getPublicUrl(viewSlipUrl).data.publicUrl} 
                     onClose={() => setViewSlipUrl(null)} 
+                />
+            )}
+            {/* Manual Booking Modal */}
+            {isManualBookingOpen && (
+                <ManualBookingModal
+                    isOpen={isManualBookingOpen}
+                    onClose={() => setIsManualBookingOpen(false)}
+                    tablesList={tablesList}
+                    existingBookings={bookings}
+                    onSuccess={() => {
+                        fetchBookings(false)
+                    }}
                 />
             )}
         </div>
