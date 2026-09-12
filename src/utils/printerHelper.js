@@ -2066,7 +2066,8 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
         averageSalesPerBill: avgSalesPerBill,
         averageSalesPerGuest: avgSalesPerGuest,
         paymentReconciliationDifference: netSales - (cashAmount + qrAmount + creditAmount + otherAmount),
-        adjustments
+        adjustments,
+        shifts: Array.isArray(shift.shifts) ? shift.shifts : []
     };
 }
 
@@ -2247,6 +2248,25 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
             const itemLabel = formatReportItemName(rankLabel, 20);
             encoder.line(formatThreeCols(itemLabel, item.quantity, formatReceiptMoney(item.amount), maxCols, 5, 9, truncateColOpts));
         });
+    }
+
+    // Section: สรุปยอดขายแยกตามกะ (Shifts Breakdown)
+    if (reportData.shifts && reportData.shifts.length > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line(`สรุปยอดขายแยกตามกะ (${reportData.shifts.length} กะ)`).bold(false);
+        encoder.line(formatThreeCols('กะ / พนักงาน', 'บิล', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        reportData.shifts.forEach((s) => {
+            const sName = formatReportItemName(`กะ ${s.index || 1}: ${s.staffName || s.staff_name || 'พนักงาน'}`, 20);
+            const sTotal = Number(s.totalSales ?? s.total_sales ?? 0);
+            const sCount = s.txCount ? `${s.txCount}` : '-';
+            encoder.line(formatThreeCols(sName, sCount, formatReceiptMoney(sTotal), maxCols, 5, 9, truncateColOpts));
+            const sCash = Number(s.cashSales ?? s.cash_sales ?? 0);
+            const sQr = Number(s.qrSales ?? s.qr_sales ?? 0);
+            encoder.line(formatTwoCols(`  เงินสด: ${formatReceiptMoney(sCash)}`, `QR: ${formatReceiptMoney(sQr)}`, maxCols, null, colOpts));
+        });
+        const totalAllShifts = reportData.shifts.reduce((sum, s) => sum + Number(s.totalSales ?? s.total_sales ?? 0), 0);
+        encoder.line(divider);
+        encoder.bold(true).line(formatTwoCols('รวมยอดทุกกะ', formatReceiptMoney(totalAllShifts), maxCols, null, colOpts)).bold(false);
     }
 
     // Section 2: ยอดขายตามการชำระเงิน

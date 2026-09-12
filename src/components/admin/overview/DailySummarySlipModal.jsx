@@ -265,45 +265,134 @@ export default function DailySummarySlipModal({
         }
     }, [shifts, reportData.cashTotal])
 
+    // Shifts breakdown summary for each individual shift on selectedDate
+    const shiftsSummary = useMemo(() => {
+        if (!shifts || shifts.length === 0) return []
+
+        const sorted = [...shifts].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
+
+        return sorted.map((s, idx) => {
+            const staffName = s.staff_name || 'ไม่ระบุพนักงาน'
+            const openedAt = s.opened_at ? new Date(s.opened_at) : null
+            const closedAt = s.closed_at ? new Date(s.closed_at) : null
+            const isOpen = s.status === 'open'
+            
+            const timeStr = openedAt 
+                ? `${openedAt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} - ${isOpen ? 'เปิดอยู่' : (closedAt ? closedAt.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : 'ปิดแล้ว')}`
+                : 'ไม่ระบุเวลา'
+
+            const openingFloat = Number(s.opening_float || 0)
+            const cashSales = Number(s.cash_sales || 0)
+            const qrSales = Number(s.qr_sales || 0)
+            const creditSales = Number(s.credit_sales || 0)
+            const totalSales = Number(s.total_sales || (cashSales + qrSales + creditSales))
+            const closedCash = s.closed_cash !== null && s.closed_cash !== undefined ? Number(s.closed_cash) : null
+            const difference = Number(s.difference || 0)
+            const txCount = Array.isArray(s.transactions) ? s.transactions.length : 0
+
+            return {
+                index: idx + 1,
+                id: s.id || `shift_${idx}`,
+                staffName,
+                timeStr,
+                isOpen,
+                openingFloat,
+                cashSales,
+                qrSales,
+                creditSales,
+                totalSales,
+                closedCash,
+                difference,
+                txCount
+            }
+        })
+    }, [shifts])
+
     /**
      * Bulletproof Full-Slip Image Exporter
-     * Directly captures live DOM element with html2canvas fallback to guarantee non-blank PNG
+     * Captures the complete, uncut slip from top to bottom on both desktop and mobile devices.
+     * Prevents viewport clipping and Android/iOS GPU canvas dimension truncation.
      */
     const exportFullSlipImage = async () => {
         if (!slipRef.current) return null
         const element = slipRef.current
 
-        try {
-            // 1. Primary: Direct html-to-image toPng on the live DOM element
-            const dataUrl = await toPng(element, {
-                pixelRatio: 3,
-                quality: 1.0,
-                cacheBust: true,
-                backgroundColor: '#ffffff',
-                style: {
-                    transform: 'none',
-                    margin: '0',
-                    maxHeight: 'none',
-                    height: 'auto',
-                    boxShadow: 'none'
-                }
-            })
+        // 1. Temporarily scroll the modal container to top (0) so the entire element is at the origin
+        const scrollContainer = element.closest('.overflow-y-auto') || element.parentElement
+        const originalScrollTop = scrollContainer ? scrollContainer.scrollTop : 0
+        if (scrollContainer) {
+            scrollContainer.scrollTop = 0
+        }
 
-            // Sanity check: valid PNG dataUrl should be > 2000 bytes
-            if (dataUrl && dataUrl.length > 2000) {
-                return dataUrl
+        // Allow browser layout engine to paint at top
+        await new Promise(resolve => setTimeout(resolve, 80))
+
+        try {
+            const fullWidth = Math.max(element.scrollWidth, element.offsetWidth, 360)
+            const fullHeight = Math.max(element.scrollHeight, element.offsetHeight)
+
+            // Safe dynamic pixelRatio: mobile GPU hardware limit for canvas height is 4096px
+            let scale = 2
+            if (fullHeight * scale > 4000) {
+                scale = Math.max(1, +(4000 / fullHeight).toFixed(2))
             }
-            throw new Error('toPng output payload too small')
-        } catch (err) {
-            console.warn('toPng failed or returned empty, falling back to html2canvas:', err)
-            // 2. Resilient fallback: html2canvas
+
+            // 1. Primary: html-to-image toPng with skipFonts & explicit full dimensions
+            try {
+                const dataUrl = await toPng(element, {
+                    pixelRatio: scale,
+                    quality: 0.98,
+                    cacheBust: true,
+                    skipFonts: true, // Prevents CORS font download failure in WebView / local
+                    backgroundColor: '#ffffff',
+                    width: fullWidth,
+                    height: fullHeight,
+                    style: {
+                        transform: 'none',
+                        margin: '0',
+                        maxHeight: 'none',
+                        height: `${fullHeight}px`,
+                        width: `${fullWidth}px`,
+                        boxShadow: 'none',
+                        overflow: 'visible'
+                    }
+                })
+
+                if (dataUrl && dataUrl.length > 5000) {
+                    return dataUrl
+                }
+            } catch (toPngErr) {
+                console.warn('toPng failed, trying html2canvas fallback:', toPngErr)
+            }
+
+            // 2. Resilient fallback: html2canvas with full dimensions & zeroed scroll offsets
             const canvas = await html2canvas(element, {
-                scale: 3,
+                scale: scale,
                 backgroundColor: '#ffffff',
                 useCORS: true,
-                logging: false
+                logging: false,
+                scrollX: 0,
+                scrollY: 0,
+                x: 0,
+                y: 0,
+                width: fullWidth,
+                height: fullHeight,
+                windowWidth: fullWidth + 100,
+                windowHeight: fullHeight + 100,
+                onclone: (clonedDoc, clonedElement) => {
+                    clonedElement.style.height = `${fullHeight}px`
+                    clonedElement.style.maxHeight = 'none'
+                    clonedElement.style.overflow = 'visible'
+                    clonedElement.style.position = 'static'
+                    clonedElement.style.transform = 'none'
+                }
             })
-            return canvas.toDataURL('image/png', 1.0)
+            return canvas.toDataURL('image/png', 0.98)
+        } finally {
+            // Restore user's scroll position
+            if (scrollContainer) {
+                scrollContainer.scrollTop = originalScrollTop
+            }
         }
     }
 
@@ -318,7 +407,11 @@ export default function DailySummarySlipModal({
             const link = document.createElement('a')
             link.download = `Z_REPORT_${selectedDate}.png`
             link.href = dataUrl
+            document.body.appendChild(link)
             link.click()
+            setTimeout(() => {
+                if (link.parentNode) link.parentNode.removeChild(link)
+            }, 100)
 
             toast.success('บันทึกรูปภาพสลิปสรุปยอดปิดวันครบถ้วนเรียบร้อยแล้ว (PNG)')
         } catch (err) {
@@ -455,7 +548,8 @@ export default function DailySummarySlipModal({
                 totalSales: reportData.settledNetRevenue,
                 totalIn: drawerData?.totalIn ?? 0,
                 totalOut: drawerData?.totalOut ?? 0,
-                adjustments: drawerData?.allAdjustments ?? []
+                adjustments: drawerData?.allAdjustments ?? [],
+                shifts: shiftsSummary
             }
 
             const compiledReport = compileShiftReportData(dayShift, bookings, categories)
@@ -551,6 +645,56 @@ export default function DailySummarySlipModal({
                                 </div>
                             )}
                         </div>
+
+                        {/* 2.5 Individual Shifts Breakdown (ยอดขายแยกตามกะ) */}
+                        {shiftsSummary.length > 0 && (
+                            <div className="space-y-1.5 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)]">
+                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                                    <span>SHIFTS SUMMARY (ยอดขายแยกตามกะ)</span>
+                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">{shiftsSummary.length} กะ</span>
+                                </div>
+                                <div className="space-y-1.5">
+                                    {shiftsSummary.map((s) => (
+                                        <div key={s.id} className="bg-[oklch(98%_0.006_28)] border border-[oklch(90%_0.008_28)] p-2 rounded-xs space-y-1">
+                                            <div className="flex items-center justify-between text-[11px]">
+                                                <div className="font-bold flex items-center gap-1.5">
+                                                    <span className="text-[9px] px-1 py-0.2 bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs uppercase text-[oklch(42%_0.010_28)]">
+                                                        กะ {s.index}
+                                                    </span>
+                                                    <span className="text-[oklch(18%_0.012_28)] font-black truncate max-w-[150px]">
+                                                        {s.staffName}
+                                                    </span>
+                                                </div>
+                                                <span className="font-black text-xs text-[oklch(18%_0.012_28)]">
+                                                    ฿{s.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-[9px] text-[oklch(55%_0.010_28)]">
+                                                <span>เวลา: {s.timeStr}</span>
+                                                {s.txCount > 0 && <span>{s.txCount} บิล</span>}
+                                            </div>
+                                            <div className="pt-1 border-t border-[oklch(92%_0.008_28)] flex items-center justify-between text-[10px]">
+                                                <span className="text-[oklch(42%_0.010_28)]">
+                                                    เงินสด: <strong>฿{s.cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                </span>
+                                                <span className="text-emerald-900">
+                                                    QR: <strong>฿{s.qrSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                </span>
+                                                {s.creditSales > 0 && (
+                                                    <span className="text-[oklch(42%_0.010_28)]">
+                                                        บัตร: <strong>฿{s.creditSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</strong>
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex justify-between font-bold pt-1 border-t border-[oklch(90%_0.008_28)] text-[11px]">
+                                    <span>รวมยอดทุกกะ ({shiftsSummary.reduce((acc, s) => acc + s.txCount, 0)} บิล):</span>
+                                    <span>฿{shiftsSummary.reduce((acc, s) => acc + s.totalSales, 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                            </div>
+                        )}
 
                         {/* 3. Warning Alert for Active Unpaid Tables (If any tables still open) */}
                         {reportData.activeCount > 0 && (
