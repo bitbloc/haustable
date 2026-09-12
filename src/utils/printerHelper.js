@@ -1812,9 +1812,9 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
 
     const isSaleItem = (item) => item && item.status !== 'void' && item.status !== 'cancelled';
 
-    const completedBookings = bookingsData.filter(b => b && b.status === 'completed');
-    const voidBookings = bookingsData.filter(b => b && b.status === 'void');
-    const cancelledBookings = bookingsData.filter(b => b && b.status === 'cancelled');
+    const completedBookings = bookingsData.filter(b => b && (b.status === 'completed' || b.status === 'paid' || b.status === 'success'));
+    const voidBookings = bookingsData.filter(b => b && (b.status === 'void'));
+    const cancelledBookings = bookingsData.filter(b => b && (b.status === 'cancelled'));
 
     // 1. Category & Top Items Sales
     const categorySalesMap = {};

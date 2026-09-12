@@ -11,6 +11,7 @@ import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportDa
 
 export default function DailySummarySlipModal({
     bookings = [],
+    shifts = [],
     selectedDate = getThaiDate(),
     companySettings = {},
     onClose,
@@ -231,6 +232,39 @@ export default function DailySummarySlipModal({
         }
     }, [bookings, categoryMap])
 
+    // Drawer reconciliation metrics aggregated across all shifts on selectedDate
+    const drawerData = useMemo(() => {
+        if (!shifts || shifts.length === 0) return null
+
+        const sorted = [...shifts].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
+        const openingFloat = Number(sorted[0]?.opening_float || 0)
+        const totalIn = sorted.reduce((sum, s) => sum + Number(s.total_in || 0), 0)
+        const totalOut = sorted.reduce((sum, s) => sum + Number(s.total_out || 0), 0)
+        const allAdjustments = []
+        sorted.forEach(s => {
+            (Array.isArray(s.adjustments) ? s.adjustments : []).forEach(a => {
+                allAdjustments.push({ ...a, staffName: s.staff_name })
+            })
+        })
+        const cashSales = reportData.cashTotal
+        const expectedCash = openingFloat + cashSales + totalIn - totalOut
+        const closedCash = Number(sorted[sorted.length - 1]?.closed_cash ?? expectedCash)
+        const difference = closedCash - expectedCash
+
+        return {
+            openingFloat,
+            cashSales,
+            totalIn,
+            totalOut,
+            expectedCash,
+            closedCash,
+            difference,
+            allAdjustments,
+            shiftsCount: sorted.length,
+            staffNames: Array.from(new Set(sorted.map(s => s.staff_name).filter(Boolean))).join(', ')
+        }
+    }, [shifts, reportData.cashTotal])
+
     /**
      * Bulletproof Full-Slip Image Exporter
      * Directly captures live DOM element with html2canvas fallback to guarantee non-blank PNG
@@ -408,19 +442,20 @@ export default function DailySummarySlipModal({
             }
 
             const dayShift = {
-                staffName: 'ADMIN / CASHIER',
+                staffName: drawerData?.staffNames || 'ADMIN / CASHIER',
                 openedAt: bookings.length > 0 ? bookings[bookings.length - 1].booking_time : new Date().toISOString(),
                 closedAt: new Date().toISOString(),
-                openingFloat: 0,
-                expectedCash: reportData.cashTotal,
-                closedCash: reportData.cashTotal,
-                difference: 0,
+                openingFloat: drawerData?.openingFloat ?? 0,
+                expectedCash: drawerData?.expectedCash ?? reportData.cashTotal,
+                closedCash: drawerData?.closedCash ?? reportData.cashTotal,
+                difference: drawerData?.difference ?? 0,
                 cashSales: reportData.cashTotal,
                 qrSales: reportData.qrTotal,
                 creditSales: reportData.creditTotal,
                 totalSales: reportData.settledNetRevenue,
-                totalIn: 0,
-                totalOut: 0
+                totalIn: drawerData?.totalIn ?? 0,
+                totalOut: drawerData?.totalOut ?? 0,
+                adjustments: drawerData?.allAdjustments ?? []
             }
 
             const compiledReport = compileShiftReportData(dayShift, bookings, categories)
@@ -568,6 +603,52 @@ export default function DailySummarySlipModal({
                                 </div>
                             </div>
                         </div>
+
+                        {/* 4.5 Cash Drawer & Reconciliation (รอบลิ้นชักและเงินสด) */}
+                        {drawerData && (
+                            <div className="space-y-1 pt-1 border-t border-dashed border-[oklch(85%_0.012_28)] text-xs">
+                                <div className="text-[10px] font-black text-[oklch(42%_0.010_28)] uppercase tracking-wider border-b border-[oklch(88%_0.010_28)] pb-1 flex justify-between">
+                                    <span>CASH DRAWER ({drawerData.shiftsCount} กะ · {drawerData.staffNames})</span>
+                                    <span className="text-[9px] font-normal text-[oklch(55%_0.010_28)]">ยอดเงิน</span>
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[oklch(42%_0.010_28)]">เงินทอนตั้งต้น:</span>
+                                        <span className="font-bold">฿{drawerData.openingFloat.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[oklch(42%_0.010_28)]">+ ขายเงินสด:</span>
+                                        <span className="font-bold text-emerald-900">+฿{drawerData.cashSales.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    {drawerData.totalIn > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[oklch(42%_0.010_28)]">+ เงินนำเข้าลิ้นชัก:</span>
+                                            <span className="font-bold text-emerald-900">+฿{drawerData.totalIn.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    {drawerData.totalOut > 0 && (
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[oklch(42%_0.010_28)]">- เงินนำออกลิ้นชัก:</span>
+                                            <span className="font-bold text-[oklch(52%_0.16_28)]">-฿{drawerData.totalOut.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex justify-between items-center pt-0.5 border-t border-[oklch(90%_0.008_28)] font-bold">
+                                        <span>= เงินที่ควรมีในลิ้นชัก:</span>
+                                        <span>฿{drawerData.expectedCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span>เงินสดนับจริง:</span>
+                                        <span className="font-black">฿{drawerData.closedCash.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[11px]">
+                                        <span className="text-[oklch(55%_0.010_28)]">ส่วนต่าง:</span>
+                                        <span className={`font-bold ${Math.abs(drawerData.difference) < 0.01 ? 'text-[oklch(35%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                            {Math.abs(drawerData.difference) < 0.01 ? '0.00 (ยอดตรงพอดี ✓)' : (drawerData.difference > 0 ? `+฿${drawerData.difference.toFixed(2)}` : `-฿${Math.abs(drawerData.difference).toFixed(2)}`)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* 5. Sales by Category (ยอดขายแยกตามหมวดหมู่) */}
                         {reportData.categorySales.length > 0 && (

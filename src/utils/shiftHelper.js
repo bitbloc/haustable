@@ -116,7 +116,7 @@ export function calculateShiftMetrics(shift, bookingsData = []) {
         };
     }
 
-    const completed = (bookingsData || []).filter(b => b && b.status === 'completed');
+    const completed = (bookingsData || []).filter(b => b && (b.status === 'completed' || b.status === 'paid' || b.status === 'success'));
     let cashSales = 0;
     let qrSales = 0;
     let creditSales = 0;

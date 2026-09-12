@@ -693,6 +693,7 @@ export default function AdminDashboard() {
             {showDailySummaryModal && (
                 <DailySummarySlipModal
                     bookings={dailyBookings}
+                    shifts={shifts}
                     selectedDate={selectedDate}
                     companySettings={companySettings}
                     onClose={() => setShowDailySummaryModal(false)}

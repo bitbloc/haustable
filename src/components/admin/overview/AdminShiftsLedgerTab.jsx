@@ -88,6 +88,36 @@ export default function AdminShiftsLedgerTab({
 
     const handlePrintHistoricalShift = async (shift) => {
         try {
+            const toastId = toast.loading(`กำลังดึงข้อมูลและเตรียมพิมพ์รายงานกะของ ${shift.staff_name || 'Staff'}...`)
+
+            // 1. Fetch full bookings for this shift
+            const bookingsData = await fetchShiftBookings(
+                supabase,
+                shift,
+                `
+                    *,
+                    tables_layout (table_name),
+                    order_items (
+                        id,
+                        quantity,
+                        price_at_time,
+                        menu_item_id,
+                        status,
+                        destination,
+                        custom_name,
+                        menu_items (
+                            name,
+                            category_id
+                        )
+                    )
+                `
+            )
+
+            // 2. Fetch menu categories
+            const { data: categoriesData } = await supabase
+                .from('menu_categories')
+                .select('id, name')
+
             const shiftPayload = {
                 id: shift.id,
                 staffName: shift.staff_name || 'Staff',
@@ -106,9 +136,10 @@ export default function AdminShiftsLedgerTab({
                 adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : []
             }
 
-            const compiled = compileShiftReportData(shiftPayload, [], companySettings)
+            const compiled = compileShiftReportData(shiftPayload, bookingsData || [], categoriesData || [])
             const encoded = encodeShiftClosureReportData(compiled)
             const success = await printToSunmiBuiltIn(encoded)
+            toast.dismiss(toastId)
             if (success) {
                 toast.success(`พิมพ์รายงานสรุปกะของ ${shift.staff_name} สำเร็จ`)
             } else {
