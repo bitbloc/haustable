@@ -37,7 +37,7 @@ import {
     compileShiftReportData, 
     getShortBookingId 
 } from '../utils/printerHelper';
-import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction, getBookingPaymentBreakdown, calculateShiftMetrics } from '../utils/shiftHelper';
+import { getCurrentShift, getShiftHistory, syncShiftHistoryFromCloud, voidShiftTransaction, getBookingPaymentBreakdown, calculateShiftMetrics, fetchShiftBookings } from '../utils/shiftHelper';
 import { isOnline } from '../utils/offlineHelper';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 
@@ -118,10 +118,11 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         }
 
         try {
-            // Fetch bookings completed during the active shift (using booking_time OR updated_at)
-            const { data, error } = await supabase
-                .from('bookings')
-                .select(`
+            // Fetch bookings completed during the active shift (using recorded transactions + updated_at)
+            const data = await fetchShiftBookings(
+                supabase,
+                current,
+                `
                     id, 
                     status, 
                     total_amount, 
@@ -138,11 +139,10 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             name
                         )
                     )
-                `)
-                .eq('status', 'completed')
-                .gte('booking_time', current.openedAt);
+                `
+            );
 
-            if (!error && data) {
+            if (data) {
                 const metrics = calculateShiftMetrics(current, data);
                 setActiveShiftSummary(metrics);
 
@@ -199,12 +199,10 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                 const shift = shiftHistory.find(x => x.id === expandedShiftId);
                 if (!shift) throw new Error("Shift not found");
 
-                const openedAt = shift.openedAt;
-                const closedAt = shift.closedAt || new Date().toISOString();
-
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .select(`
+                const data = await fetchShiftBookings(
+                    supabase,
+                    shift,
+                    `
                         id,
                         status,
                         order_items (
@@ -214,12 +212,8 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                                 name
                             )
                         )
-                    `)
-                    .eq('status', 'completed')
-                    .gte('booking_time', openedAt)
-                    .lte('booking_time', closedAt);
-
-                if (error) throw error;
+                    `
+                );
 
                 const itemCounts = {};
                 (data || []).forEach(b => {
@@ -651,9 +645,10 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
         try {
             let bookingsData = [];
             if (isOnline()) {
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .select(`
+                bookingsData = await fetchShiftBookings(
+                    supabase,
+                    shift,
+                    `
                         *,
                         tables_layout (table_name),
                         order_items (
@@ -662,18 +657,15 @@ export default function POSReportsPanel({ isActive = true, refreshKey = 0 }) {
                             price_at_time,
                             menu_item_id,
                             status,
+                            destination,
+                            custom_name,
                             menu_items (
                                 name,
                                 category_id
                             )
                         )
-                    `)
-                    .eq('status', 'completed')
-                    .gte('booking_time', shift.openedAt)
-                    .lte('booking_time', shift.closedAt || new Date().toISOString());
-                if (!error && data) {
-                    bookingsData = data;
-                }
+                    `
+                );
             }
             
             const { data: categoriesData } = await supabase

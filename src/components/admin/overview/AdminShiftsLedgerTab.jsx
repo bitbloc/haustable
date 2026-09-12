@@ -4,6 +4,7 @@ import { ChevronDown, ChevronUp, ArrowDownLeft, ArrowUpRight, Lock, CheckCircle2
 import { supabase } from '../../../lib/supabaseClient'
 import { classifyAdjustmentNote } from './DailyShiftsCashFlowWidget'
 import { printToSunmiBuiltIn, compileShiftReportData, encodeShiftClosureReportData } from '../../../utils/printerHelper'
+import { fetchShiftBookings } from '../../../utils/shiftHelper'
 import { toast } from 'sonner'
 
 export default function AdminShiftsLedgerTab({
@@ -40,12 +41,10 @@ export default function AdminShiftsLedgerTab({
         const fetchSellers = async () => {
             setSellersLoading(prev => ({ ...prev, [expandedShiftId]: true }))
             try {
-                const openedAt = targetShift.opened_at
-                const closedAt = targetShift.closed_at || new Date().toISOString()
-
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .select(`
+                const data = await fetchShiftBookings(
+                    supabase,
+                    targetShift,
+                    `
                         id,
                         status,
                         total_amount,
@@ -55,12 +54,8 @@ export default function AdminShiftsLedgerTab({
                             custom_name,
                             menu_items ( name, price )
                         )
-                    `)
-                    .in('status', ['completed', 'paid', 'success'])
-                    .gte('booking_time', openedAt)
-                    .lte('booking_time', closedAt)
-
-                if (error) throw error
+                    `
+                )
 
                 const itemCounts = {}
                 ;(data || []).forEach(b => {

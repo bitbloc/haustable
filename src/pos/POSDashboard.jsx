@@ -14,7 +14,7 @@ import POSSplitPaymentModal from './POSSplitPaymentModal';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import POSOnlineHub from './POSOnlineHub';
-import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown, recordShiftTransaction } from '../utils/shiftHelper';
+import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown, recordShiftTransaction, fetchShiftBookings } from '../utils/shiftHelper';
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
@@ -481,14 +481,11 @@ export default function POSDashboard() {
             return;
         }
         try {
-            const openedAt = currentShift.openedAt;
-            const { data, error } = await supabase
-                .from('bookings')
-                .select('id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at')
-                .eq('status', 'completed')
-                .gte('booking_time', openedAt);
-
-            if (error) throw error;
+            const data = await fetchShiftBookings(
+                supabase,
+                currentShift,
+                'id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at'
+            );
 
             const metrics = calculateShiftMetrics(currentShift, data || []);
             setRealtimeShiftSummary(metrics);
@@ -611,14 +608,14 @@ export default function POSDashboard() {
         const toastId = toast.loading('กำลังปิดกะและพิมพ์รายงาน...');
         
         try {
-            // 1. Fetch bookings in this shift (matching booking_time OR updated_at completed in this shift)
+            // 1. Fetch bookings in this shift (both recorded transactions and completed/updated within this shift)
             let bookingsData = [];
             
             if (isOnline()) {
-                const nowIso = new Date().toISOString();
-                const { data } = await supabase
-                    .from('bookings')
-                    .select(`
+                bookingsData = await fetchShiftBookings(
+                    supabase,
+                    currentShift,
+                    `
                         *,
                         tables_layout (table_name),
                         order_items (
@@ -634,11 +631,8 @@ export default function POSDashboard() {
                                 category_id
                             )
                         )
-                    `)
-                    .eq('status', 'completed')
-                    .gte('booking_time', currentShift.openedAt)
-                    .lte('booking_time', nowIso);
-                bookingsData = data || [];
+                    `
+                );
             }
             
             // 2. Fetch categories

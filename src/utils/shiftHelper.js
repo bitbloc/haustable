@@ -708,3 +708,64 @@ export function getShiftHistory() {
         return [];
     }
 }
+
+// 7. Fetch all bookings attributed to a shift (by recorded transactions OR completed/updated during shift timeframe)
+export async function fetchShiftBookings(supabaseClient, shift, selectClause = '*') {
+    if (!supabaseClient || !shift) return [];
+    const openedAt = shift.opened_at || shift.openedAt;
+    if (!openedAt) return [];
+    const closedAt = shift.closed_at || shift.closedAt || new Date().toISOString();
+    const txIds = (shift.transactions || []).map(t => t.bookingId).filter(Boolean);
+
+    const bookingsMap = new Map();
+
+    // 1. Fetch by explicitly recorded transaction IDs in this shift (guarantees cross-shift tables are never dropped)
+    if (txIds.length > 0) {
+        try {
+            const { data: byTx, error: txErr } = await supabaseClient
+                .from('bookings')
+                .select(selectClause)
+                .in('id', txIds)
+                .in('status', ['completed', 'paid', 'success']);
+            if (!txErr && byTx) {
+                byTx.forEach(b => bookingsMap.set(b.id, b));
+            }
+        } catch (e) {
+            console.warn('[fetchShiftBookings] Failed to fetch by txIds:', e);
+        }
+    }
+
+    // 2. Fetch bookings completed during this shift (updated_at between openedAt and closedAt)
+    try {
+        const { data: byUpdated, error: upErr } = await supabaseClient
+            .from('bookings')
+            .select(selectClause)
+            .in('status', ['completed', 'paid', 'success'])
+            .gte('updated_at', openedAt)
+            .lte('updated_at', closedAt);
+        if (!upErr && byUpdated) {
+            byUpdated.forEach(b => bookingsMap.set(b.id, b));
+        }
+    } catch (e) {
+        console.warn('[fetchShiftBookings] Failed to fetch by updated_at:', e);
+    }
+
+    // 3. Fallback: bookings opened and completed during this shift (booking_time in window and not completed in a later shift)
+    try {
+        const { data: byBookingTime, error: btErr } = await supabaseClient
+            .from('bookings')
+            .select(selectClause)
+            .in('status', ['completed', 'paid', 'success'])
+            .gte('booking_time', openedAt)
+            .lte('booking_time', closedAt)
+            .lte('updated_at', closedAt);
+        if (!btErr && byBookingTime) {
+            byBookingTime.forEach(b => bookingsMap.set(b.id, b));
+        }
+    } catch (e) {
+        console.warn('[fetchShiftBookings] Failed to fetch by booking_time fallback:', e);
+    }
+
+    return Array.from(bookingsMap.values());
+}
+
