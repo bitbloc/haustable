@@ -46,3 +46,12 @@ All user interfaces in this project must be designed following a clean, minimali
 - **Cellular Division**: Treat header sections (Logo, Nav Links, CTAs, Status Indicators) as distinct CSS flex/grid cells with explicit vertical/horizontal borders separating them. 
 - **High Contrast Accent Banners**: Use a bright, high-contrast banner (e.g., Neon Yellow `#E9F344` or Thai Modern Accent) with uppercase monospace text to denote important states or decorative marquees.
 - **Stark CTAs**: Use stark background color contrast for Primary CTAs (e.g., solid `var(--color-ink)` with paper-colored text) that fill their entire grid cell.
+
+### 7. Back-Office Audit & Reporting Policy (Mobile & Desktop)
+- **Digital Sharing & Export Priority (Export PNG / PDF)**: In all back-office management interfaces (`/admin`, `AdminDashboard`, `AdminShiftsLedgerTab`, `DailySummarySlipModal`), operators and business owners access reports from personal smartphones and desktop laptops/PCs where physical thermal receipt printers (Sunmi, ESC/POS) are NOT attached.
+- **Zero Thermal Print Action in Back-Office**: Do NOT place physical ESC/POS thermal printer buttons (`พิมพ์สลิป` / `PrinterIcon`) in the back-office views. Physical thermal printing is strictly reserved for front-desk point-of-sale terminals (`/pos`).
+- **Standard Back-Office Actions**: Always provide digital export and sharing actions instead:
+  - **Save PNG Slip**: Download full-height unconstrained PNG image via detached offscreen clone (`exportFullSlipImage`).
+  - **Copy Image (LINE / Chat)**: Copy PNG image directly to clipboard for instant forwarding into LINE / messaging apps.
+  - **PDF Export**: Clean vector document format or print preview for accounting and bookkeeping archives.
+

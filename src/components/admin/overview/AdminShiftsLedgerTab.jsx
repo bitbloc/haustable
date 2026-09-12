@@ -1,10 +1,10 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, ChevronUp, ArrowDownLeft, ArrowUpRight, Lock, CheckCircle2, AlertTriangle, Clock, Printer, ShoppingBag } from 'lucide-react'
+import { ChevronDown, ChevronUp, ArrowDownLeft, ArrowUpRight, Lock, CheckCircle2, AlertTriangle, Clock, FileText, ShoppingBag } from 'lucide-react'
 import { supabase } from '../../../lib/supabaseClient'
 import { classifyAdjustmentNote } from './DailyShiftsCashFlowWidget'
-import { printToSunmiBuiltIn, compileShiftReportData, encodeShiftClosureReportData } from '../../../utils/printerHelper'
 import { fetchShiftBookings } from '../../../utils/shiftHelper'
+import DailySummarySlipModal from './DailySummarySlipModal'
 import { toast } from 'sonner'
 
 export default function AdminShiftsLedgerTab({
@@ -14,6 +14,8 @@ export default function AdminShiftsLedgerTab({
     onRefreshShifts = null
 }) {
     const [expandedShiftId, setExpandedShiftId] = useState(null)
+    const [selectedShiftSlip, setSelectedShiftSlip] = useState(null)
+    const [loadingShiftId, setLoadingShiftId] = useState(null)
     const [shiftTopSellers, setShiftTopSellers] = useState({})
     const [sellersLoading, setSellersLoading] = useState({})
     const [companySettings, setCompanySettings] = useState(() => {
@@ -86,11 +88,12 @@ export default function AdminShiftsLedgerTab({
         fetchSellers()
     }, [expandedShiftId, sortedShifts, shiftTopSellers])
 
-    const handlePrintHistoricalShift = async (shift) => {
+    const handleOpenShiftSlip = async (shift, idx) => {
         try {
-            const toastId = toast.loading(`กำลังดึงข้อมูลและเตรียมพิมพ์รายงานกะของ ${shift.staff_name || 'Staff'}...`)
+            setLoadingShiftId(shift.id)
+            const toastId = toast.loading(`กำลังโหลดข้อมูลสลิปของ ${shift.staff_name || 'Staff'}...`)
 
-            // 1. Fetch full bookings for this shift
+            // Fetch full bookings for this shift
             const bookingsData = await fetchShiftBookings(
                 supabase,
                 shift,
@@ -107,47 +110,22 @@ export default function AdminShiftsLedgerTab({
                         custom_name,
                         menu_items (
                             name,
-                            category_id
+                            category_id,
+                            price
                         )
                     )
                 `
             )
-
-            // 2. Fetch menu categories
-            const { data: categoriesData } = await supabase
-                .from('menu_categories')
-                .select('id, name')
-
-            const shiftPayload = {
-                id: shift.id,
-                staffName: shift.staff_name || 'Staff',
-                openedAt: shift.opened_at,
-                closedAt: shift.closed_at || new Date().toISOString(),
-                openingFloat: Number(shift.opening_float || 0),
-                cashSales: Number(shift.cash_sales || 0),
-                qrSales: Number(shift.qr_sales || 0),
-                creditSales: Number(shift.credit_sales || 0),
-                totalSales: Number(shift.total_sales || 0),
-                totalIn: Number(shift.total_in || 0),
-                totalOut: Number(shift.total_out || 0),
-                expectedCash: Number(shift.expected_cash || 0),
-                closedCash: shift.closed_cash !== null ? Number(shift.closed_cash) : null,
-                difference: Number(shift.difference || 0),
-                adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : []
-            }
-
-            const compiled = compileShiftReportData(shiftPayload, bookingsData || [], categoriesData || [])
-            const encoded = encodeShiftClosureReportData(compiled)
-            const success = await printToSunmiBuiltIn(encoded)
             toast.dismiss(toastId)
-            if (success) {
-                toast.success(`พิมพ์รายงานสรุปกะของ ${shift.staff_name} สำเร็จ`)
-            } else {
-                toast.error('ไม่พบเครื่องพิมพ์ Sunmi หรือระบบสั่งพิมพ์ไม่ตอบสนอง')
-            }
+            setSelectedShiftSlip({
+                shift: { ...shift, index: idx + 1 },
+                bookings: bookingsData || []
+            })
         } catch (err) {
-            console.error('Print error:', err)
-            toast.error('เกิดข้อผิดพลาดในการสั่งพิมพ์รายงานกะ')
+            console.error('Fetch shift slip error:', err)
+            toast.error('เกิดข้อผิดพลาดในการโหลดข้อมูลสลิปปิดกะ')
+        } finally {
+            setLoadingShiftId(null)
         }
     }
 
@@ -218,7 +196,7 @@ export default function AdminShiftsLedgerTab({
                                     <th className="py-3 px-3 text-right">เงินที่ควรมี</th>
                                     <th className="py-3 px-3 text-right">นับจริง</th>
                                     <th className="py-3 px-3 text-right">ส่วนต่าง</th>
-                                    <th className="py-3 px-3 text-center w-24">จัดการ</th>
+                                    <th className="py-3 px-3 text-center w-28">สลิป / PNG</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[oklch(90%_0.010_28)]">
@@ -250,32 +228,28 @@ export default function AdminShiftsLedgerTab({
                                                 </td>
 
                                                 {/* Staff / Shift */}
-                                                <td className="py-3 px-3 font-bold text-[oklch(18%_0.012_28)]">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span>กะ {idx + 1}: {s.staff_name || 'Staff'}</span>
+                                                <td className="py-3 px-3">
+                                                    <div className="font-bold text-[oklch(18%_0.012_28)] flex items-center gap-1.5">
+                                                        <span>กะ {idx + 1}: {s.staff_name || 'ไม่ระบุชื่อ'}</span>
                                                         {isOpen && (
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                                                            <span className="text-[9px] px-1.5 py-0.2 rounded-xs bg-emerald-100 text-emerald-800 font-bold">
+                                                                เปิดอยู่
+                                                            </span>
                                                         )}
                                                     </div>
-                                                    <div className="text-[9px] text-[oklch(55%_0.010_28)] font-normal">
-                                                        ID: {String(s.id).replace('shift_', '')}
+                                                    <div className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        ID: {s.id?.slice(0, 14)}
                                                     </div>
                                                 </td>
 
                                                 {/* Open Time */}
-                                                <td className="py-3 px-3 text-[oklch(50%_0.010_28)] tabular-nums">
+                                                <td className="py-3 px-3 tabular-nums text-[oklch(42%_0.010_28)]">
                                                     {openTime}
                                                 </td>
 
                                                 {/* Close Time */}
-                                                <td className="py-3 px-3 tabular-nums">
-                                                    {isOpen ? (
-                                                        <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
-                                                            กำลังเปิด 🟢
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[oklch(50%_0.010_28)]">{closeTime}</span>
-                                                    )}
+                                                <td className="py-3 px-3 tabular-nums text-[oklch(42%_0.010_28)]">
+                                                    {closeTime}
                                                 </td>
 
                                                 {/* Float */}
@@ -321,16 +295,17 @@ export default function AdminShiftsLedgerTab({
                                                     )}
                                                 </td>
 
-                                                {/* Actions */}
+                                                {/* Actions - Digital PNG Export */}
                                                 <td className="py-3 px-3 text-center" onClick={(e) => e.stopPropagation()}>
                                                     <button
                                                         type="button"
-                                                        onClick={() => handlePrintHistoricalShift(s)}
-                                                        className="px-2 py-1 bg-white hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[10px] font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer inline-flex items-center gap-1"
-                                                        title="พิมพ์ใบสรุปปิดกะ (Shift Slip)"
+                                                        disabled={loadingShiftId === s.id}
+                                                        onClick={() => handleOpenShiftSlip(s, idx)}
+                                                        className="px-2.5 py-1 bg-white hover:bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[10px] font-bold text-[oklch(18%_0.012_28)] hover:border-[oklch(60%_0.012_28)] transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-2xs"
+                                                        title="เปิดดูสลิปสรุปปิดกะ / บันทึก PNG หรือแชร์เข้า LINE"
                                                     >
-                                                        <Printer size={11} />
-                                                        <span>พิมพ์สลิป</span>
+                                                        <FileText size={11} className="text-[oklch(52%_0.16_28)]" />
+                                                        <span>{loadingShiftId === s.id ? 'กำลังเปิด...' : 'สลิป PNG'}</span>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -474,6 +449,18 @@ export default function AdminShiftsLedgerTab({
                         </table>
                     </div>
                 </div>
+            )}
+
+            {/* Shift Slip Modal (Digital PNG Export & LINE Copy) */}
+            {selectedShiftSlip && (
+                <DailySummarySlipModal
+                    targetShift={selectedShiftSlip.shift}
+                    bookings={selectedShiftSlip.bookings}
+                    shifts={sortedShifts}
+                    selectedDate={selectedDate}
+                    companySettings={companySettings}
+                    onClose={() => setSelectedShiftSlip(null)}
+                />
             )}
         </div>
     )

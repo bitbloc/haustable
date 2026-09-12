@@ -1,26 +1,24 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useRef, useState, useMemo, useEffect } from 'react'
-import { X, Download, Copy, Printer, Check, AlertCircle } from 'lucide-react'
+import { X, Download, Copy, Check, AlertCircle } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import html2canvas from 'html2canvas'
 import { toast } from 'sonner'
 import { supabase } from '../../../lib/supabaseClient'
 import { getThaiDate } from '../../../utils/timeUtils'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
-import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData } from '../../../utils/printerHelper'
 
 export default function DailySummarySlipModal({
     bookings = [],
     shifts = [],
+    targetShift = null,
     selectedDate = getThaiDate(),
     companySettings = {},
-    onClose,
-    onPrintSlip
+    onClose
 }) {
     const slipRef = useRef(null)
     const [saving, setSaving] = useState(false)
     const [copied, setCopied] = useState(false)
-    const [printing, setPrinting] = useState(false)
     const [categories, setCategories] = useState([])
 
     // Load category mapping (from cache and cloud)
@@ -232,8 +230,33 @@ export default function DailySummarySlipModal({
         }
     }, [bookings, categoryMap])
 
-    // Drawer reconciliation metrics aggregated across all shifts on selectedDate
+    // Drawer reconciliation metrics: either for targetShift (single shift) or aggregated across all shifts
     const drawerData = useMemo(() => {
+        if (targetShift) {
+            const staffName = targetShift.staff_name || targetShift.staffName || 'Staff'
+            const openingFloat = Number(targetShift.opening_float || 0)
+            const totalIn = Number(targetShift.total_in || 0)
+            const totalOut = Number(targetShift.total_out || 0)
+            const cashSales = Number(targetShift.cash_sales ?? reportData.cashTotal)
+            const expectedCash = Number(targetShift.expected_cash ?? (openingFloat + cashSales + totalIn - totalOut))
+            const closedCash = targetShift.closed_cash !== null && targetShift.closed_cash !== undefined ? Number(targetShift.closed_cash) : expectedCash
+            const difference = Number(targetShift.difference ?? (closedCash - expectedCash))
+            const allAdjustments = (Array.isArray(targetShift.adjustments) ? targetShift.adjustments : []).map(a => ({ ...a, staffName }))
+
+            return {
+                openingFloat,
+                cashSales,
+                totalIn,
+                totalOut,
+                expectedCash,
+                closedCash,
+                difference,
+                allAdjustments,
+                shiftsCount: 1,
+                staffNames: staffName
+            }
+        }
+
         if (!shifts || shifts.length === 0) return null
 
         const sorted = [...shifts].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
@@ -263,10 +286,11 @@ export default function DailySummarySlipModal({
             shiftsCount: sorted.length,
             staffNames: Array.from(new Set(sorted.map(s => s.staff_name).filter(Boolean))).join(', ')
         }
-    }, [shifts, reportData.cashTotal])
+    }, [targetShift, shifts, reportData.cashTotal])
 
-    // Shifts breakdown summary for each individual shift on selectedDate
+    // Shifts breakdown summary for each individual shift on selectedDate (only when viewing all-day summary)
     const shiftsSummary = useMemo(() => {
+        if (targetShift) return [] // Hide shifts breakdown when already viewing a single shift
         if (!shifts || shifts.length === 0) return []
 
         const sorted = [...shifts].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
@@ -306,7 +330,7 @@ export default function DailySummarySlipModal({
                 txCount
             }
         })
-    }, [shifts])
+    }, [targetShift, shifts])
 
     /**
      * Bulletproof Full-Slip Image Exporter
@@ -419,8 +443,12 @@ export default function DailySummarySlipModal({
             const dataUrl = await exportFullSlipImage()
             if (!dataUrl) throw new Error('ไม่พบข้อมูลสลิป')
 
+            const filename = targetShift
+                ? `SHIFT_${(targetShift.staff_name || targetShift.staffName || 'Staff').replace(/\s+/g, '_')}_${selectedDate}.png`
+                : `Z_REPORT_${selectedDate}.png`
+
             const link = document.createElement('a')
-            link.download = `Z_REPORT_${selectedDate}.png`
+            link.download = filename
             link.href = dataUrl
             document.body.appendChild(link)
             link.click()
@@ -428,7 +456,7 @@ export default function DailySummarySlipModal({
                 if (link.parentNode) link.parentNode.removeChild(link)
             }, 100)
 
-            toast.success('บันทึกรูปภาพสลิปสรุปยอดปิดวันครบถ้วนเรียบร้อยแล้ว (PNG)')
+            toast.success('บันทึกรูปภาพสลิปครบถ้วนเรียบร้อยแล้ว (PNG)')
         } catch (err) {
             console.error('Failed to export PNG slip:', err)
             toast.error('ไม่สามารถบันทึกรูปภาพได้: ' + err.message)
@@ -457,133 +485,6 @@ export default function DailySummarySlipModal({
         }
     }
 
-    // Isolated Thermal Receipt Browser Printing (1 single clean page, no 4-page dashboard spillover)
-    const printSlipToBrowser = () => {
-        if (!slipRef.current) return
-
-        const iframe = document.createElement('iframe')
-        iframe.style.position = 'fixed'
-        iframe.style.right = '0'
-        iframe.style.bottom = '0'
-        iframe.style.width = '0'
-        iframe.style.height = '0'
-        iframe.style.border = '0'
-        iframe.style.visibility = 'hidden'
-        document.body.appendChild(iframe)
-
-        const doc = iframe.contentWindow.document
-        doc.open()
-
-        // Include current stylesheets so Tailwind styling and typography are preserved
-        let stylesHtml = ''
-        document.querySelectorAll('link[rel="stylesheet"], style').forEach(node => {
-            stylesHtml += node.outerHTML
-        })
-
-        doc.write(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="utf-8">
-                <title>สลิปสรุปยอดปิดวัน // ${selectedDate}</title>
-                ${stylesHtml}
-                <style>
-                    @page {
-                        size: 80mm auto;
-                        margin: 2mm;
-                    }
-                    @media print {
-                        html, body {
-                            width: 100% !important;
-                            margin: 0 !important;
-                            padding: 0 !important;
-                            background: #ffffff !important;
-                        }
-                    }
-                    * {
-                        box-sizing: border-box !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    body {
-                        background: #ffffff !important;
-                        margin: 0 auto !important;
-                        padding: 4px !important;
-                        width: 76mm !important;
-                        max-width: 76mm !important;
-                        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace !important;
-                    }
-                </style>
-            </head>
-            <body>
-                <div style="width: 74mm; margin: 0 auto; background: #ffffff;">
-                    ${slipRef.current.innerHTML}
-                </div>
-            </body>
-            </html>
-        `)
-        doc.close()
-
-        setTimeout(() => {
-            try {
-                iframe.contentWindow.focus()
-                iframe.contentWindow.print()
-            } catch (e) {
-                console.error('Print iframe error:', e)
-            } finally {
-                setTimeout(() => {
-                    if (iframe.parentNode) iframe.parentNode.removeChild(iframe)
-                }, 2000)
-            }
-        }, 250)
-    }
-
-    // Direct Thermal Receipt Printing (Sunmi Built-In or isolated iframe print fallback)
-    const handlePrint = async () => {
-        if (printing) return
-        setPrinting(true)
-        try {
-            if (typeof onPrintSlip === 'function') {
-                await onPrintSlip()
-                setPrinting(false)
-                return
-            }
-
-            const dayShift = {
-                staffName: drawerData?.staffNames || 'ADMIN / CASHIER',
-                openedAt: bookings.length > 0 ? bookings[bookings.length - 1].booking_time : new Date().toISOString(),
-                closedAt: new Date().toISOString(),
-                openingFloat: drawerData?.openingFloat ?? 0,
-                expectedCash: drawerData?.expectedCash ?? reportData.cashTotal,
-                closedCash: drawerData?.closedCash ?? reportData.cashTotal,
-                difference: drawerData?.difference ?? 0,
-                cashSales: reportData.cashTotal,
-                qrSales: reportData.qrTotal,
-                creditSales: reportData.creditTotal,
-                totalSales: reportData.settledNetRevenue,
-                totalIn: drawerData?.totalIn ?? 0,
-                totalOut: drawerData?.totalOut ?? 0,
-                adjustments: drawerData?.allAdjustments ?? [],
-                shifts: shiftsSummary
-            }
-
-            const compiledReport = compileShiftReportData(dayShift, bookings, categories)
-            const rawBytes = encodeShiftClosureReportData(compiledReport, '80mm', 'sunmi')
-            const printed = await printToSunmiBuiltIn(rawBytes)
-
-            if (printed) {
-                toast.success('สั่งพิมพ์สลิปสรุปยอดออกเครื่องพิมพ์ Thermal สำเร็จ')
-            } else {
-                printSlipToBrowser()
-            }
-        } catch (err) {
-            console.error('Print failed, using browser printer:', err)
-            printSlipToBrowser()
-        } finally {
-            setPrinting(false)
-        }
-    }
-
     return (
         <div className="fixed inset-0 z-50 bg-black/65 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-y-auto animate-in fade-in duration-150">
             <div className="bg-white border-2 border-[oklch(85%_0.012_28)] rounded-xl max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
@@ -592,10 +493,13 @@ export default function DailySummarySlipModal({
                 <div className="p-3 sm:p-4 bg-[oklch(98%_0.006_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono shrink-0">
                     <div>
                         <span className="text-[10px] uppercase font-bold text-[oklch(55%_0.010_28)]">
-                            DAILY SALES Z-REPORT AUDIT
+                            {targetShift ? 'SHIFT CLOSURE AUDIT REPORT' : 'DAILY SALES Z-REPORT AUDIT'}
                         </span>
                         <h3 className="text-sm md:text-base font-black text-[oklch(18%_0.012_28)] uppercase tracking-tight">
-                            สลิปสรุปยอดปิดวัน // {selectedDate}
+                            {targetShift 
+                                ? `สลิปสรุปปิดกะ // กะที่ ${targetShift.index || targetShift.shift_number || ''} · ${targetShift.staff_name || targetShift.staffName || 'Staff'}` 
+                                : `สลิปสรุปยอดปิดวัน // ${selectedDate}`
+                            }
                         </h3>
                     </div>
                     <button 
@@ -617,19 +521,36 @@ export default function DailySummarySlipModal({
                         <div className="text-center space-y-1 pb-2.5 border-b-2 border-dashed border-[oklch(80%_0.012_28)]">
                             <h2 className="text-base font-black tracking-widest uppercase">{shopName}</h2>
                             <p className="text-[10px] text-[oklch(42%_0.010_28)] font-bold uppercase tracking-wider">
-                                DAILY SALES Z-REPORT (สลิปปิดวัน)
+                                {targetShift 
+                                    ? `SHIFT CLOSURE REPORT (สลิปสรุปปิดกะ)` 
+                                    : `DAILY SALES Z-REPORT (สลิปปิดวัน)`
+                                }
                             </p>
                             {shopPhone && (
                                 <p className="text-[9px] text-[oklch(55%_0.010_28)]">TEL: {shopPhone}</p>
                             )}
                             <div className="text-[10px] text-[oklch(42%_0.010_28)] pt-1 space-y-0.5">
                                 <div>วันที่: <strong>{selectedDate}</strong></div>
-                                <div className="text-[9px] text-[oklch(55%_0.010_28)]">
-                                    เวลาพิมพ์: {new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
-                                </div>
-                                <div className="text-[9px] text-[oklch(55%_0.010_28)] uppercase">
-                                    ผู้ตรวจสอบ: ADMIN / CASHIER
-                                </div>
+                                {targetShift ? (
+                                    <>
+                                        <div className="font-bold text-[oklch(18%_0.012_28)]">
+                                            กะที่: {targetShift.index || targetShift.shift_number || '1'} · พนักงาน: {targetShift.staff_name || targetShift.staffName || 'Staff'}
+                                        </div>
+                                        <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                            เวลาเปิด: {targetShift.opened_at ? new Date(targetShift.opened_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : '-'} · 
+                                            เวลาปิด: {targetShift.closed_at ? new Date(targetShift.closed_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : (targetShift.status === 'open' ? 'กำลังเปิดใช้งาน' : '-')}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-[9px] text-[oklch(55%_0.010_28)]">
+                                            เวลาออกรายงาน: {new Date().toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' })}
+                                        </div>
+                                        <div className="text-[9px] text-[oklch(55%_0.010_28)] uppercase">
+                                            ผู้ตรวจสอบ: ADMIN / CASHIER
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -937,11 +858,11 @@ export default function DailySummarySlipModal({
                         {/* 10. Audit Verification & Sign-off Footer */}
                         <div className="pt-2 border-t-2 border-dashed border-[oklch(80%_0.012_28)] text-center text-[10px] text-[oklch(55%_0.010_28)] space-y-1.5">
                             <div className="pt-0.5 text-[9px] uppercase tracking-widest font-bold text-[oklch(35%_0.010_28)]">
-                                DAILY Z-REPORT AUDITED & VERIFIED
+                                {targetShift ? 'SHIFT REPORT AUDITED & VERIFIED' : 'DAILY Z-REPORT AUDITED & VERIFIED'}
                             </div>
                             <div className="pt-1.5 border-t border-[oklch(90%_0.008_28)] flex justify-between items-end text-[9px] text-[oklch(50%_0.010_28)]">
                                 <div>
-                                    <span>เวลาปิดรายงาน: {new Date().toLocaleTimeString('th-TH')}</span>
+                                    <span>เวลาออกรายงาน: {new Date().toLocaleTimeString('th-TH')}</span>
                                 </div>
                                 <div className="text-right">
                                     <span>ผู้ตรวจสอบ: ______________</span>
@@ -951,7 +872,7 @@ export default function DailySummarySlipModal({
                     </div>
                 </div>
 
-                {/* Modal Footer Controls */}
+                {/* Modal Footer Controls - Digital First (No Hardware Printing) */}
                 <div className="p-3 sm:p-4 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs shrink-0 shadow-lg">
                     <button
                         onClick={onClose}
@@ -961,21 +882,10 @@ export default function DailySummarySlipModal({
                     </button>
 
                     <div className="flex items-center gap-2">
-                        {/* Thermal Print Button */}
-                        <button
-                            onClick={handlePrint}
-                            disabled={printing}
-                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                            title="พิมพ์ออกเครื่องพิมพ์ความร้อน (Thermal 80mm)"
-                        >
-                            <Printer size={14} />
-                            <span>{printing ? 'กำลังพิมพ์...' : 'พิมพ์สลิป'}</span>
-                        </button>
-
                         {/* Copy Image Button */}
                         <button
                             onClick={handleCopyImage}
-                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-3.5 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                             title="คัดลอกรูปภาพลง Clipboard สำหรับส่งเข้า LINE"
                         >
                             {copied ? <Check size={14} className="text-emerald-700" /> : <Copy size={14} />}
