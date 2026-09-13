@@ -1157,8 +1157,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 const rawName = item.custom_name || item.menu_items?.name || item.name || 'Item';
                 const cleanName = cleanKitchenItemName(rawName).toUpperCase();
                 
-                // Allow full maxCols so dish items fit cleanly on 1 line in size(0, 1) (Double Height, Normal Width)
-                const nameColWidth = Math.max(1, maxCols - qtyColWidth);
+                // Kitchen & Bar Item: BIG Double-Width & Double-Height (size(1, 1)) for maximum readability
+                const maxDoubleCols = is80mm ? 21 : Math.max(12, Math.floor(maxCols / 2));
+                const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
                 const nameLines = wrapTextByWords(cleanName, nameColWidth, false);
                 if (nameLines.length === 0) nameLines.push('');
                 
@@ -1167,23 +1168,20 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     kitchenItemLines.push(`${' '.repeat(qtyColWidth)}${nameLines[i]}`);
                 }
                 
-                // Dish Item Name: Double-Height, Bold (GS ! 0x01) for clear kitchen readability without horizontal squashing
-                encoder.bold(true).size(0, 1);
+                encoder.bold(true).size(1, 1);
                 kitchenItemLines.forEach(l => encoder.line(l));
                 
-                // CRITICAL: Switch back to normal size(0, 0) for options to prevent bulky multi-line text-wrapping
-                encoder.size(0, 0).bold(false);
-
                 if (item.selected_options || item.item_note) {
                     const optionsList = extractCleanKitchenOptions(item, optionMap);
 
                     optionsList.forEach(opt => {
-                        const optLine = `   - ${opt}`;
-                        wrapTextByWords(optLine, maxCols - 4, false).forEach(l => {
+                        const optLine = `  - ${opt}`;
+                        wrapTextByWords(optLine, maxDoubleCols, false).forEach(l => {
                             encoder.line(l);
                         });
                     });
                 }
+                encoder.size(0, 0).bold(false);
                 encoder.line(divider);
             });
         };
