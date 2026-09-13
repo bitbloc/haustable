@@ -385,20 +385,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         <div className="h-full flex flex-col bg-[var(--color-paper)] overflow-hidden select-none font-sans text-[var(--color-ink)]">
             <style>{`
                 @keyframes pos-blink-red {
-                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
-                    50% { border-color: var(--color-accent); box-shadow: 0 0 16px rgba(190,40,20,0.4); }
+                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
+                    50% { border-color: var(--color-accent); background-color: var(--color-accent); color: var(--color-paper); }
                 }
                 @keyframes pos-blink-orange {
-                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
-                    50% { border-color: #FFAA00; box-shadow: 0 0 16px rgba(255,170,0,0.6); }
+                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
+                    50% { border-color: #FFAA00; background-color: #FFF8E7; color: #7A4100; }
                 }
                 @keyframes pos-blink-blue {
-                    0%, 100% { border-color: var(--color-rule); box-shadow: 0 0 2px rgba(0,0,0,0.1); }
-                    50% { border-color: #0099FF; box-shadow: 0 0 16px rgba(0,153,255,0.6); }
+                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
+                    50% { border-color: #0099FF; background-color: #EDF7FF; color: #004C80; }
                 }
-                .animate-pos-blink-red { animation: pos-blink-red 1.0s infinite ease-in-out !important; }
-                .animate-pos-blink-orange { animation: pos-blink-orange 1.0s infinite ease-in-out !important; }
-                .animate-pos-blink-blue { animation: pos-blink-blue 1.0s infinite ease-in-out !important; }
+                .animate-pos-blink-red { animation: pos-blink-red 1.2s infinite ease-in-out !important; }
+                .animate-pos-blink-orange { animation: pos-blink-orange 1.2s infinite ease-in-out !important; }
+                .animate-pos-blink-blue { animation: pos-blink-blue 1.2s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
             <div className="p-4 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex flex-col md:flex-row gap-3 items-center justify-between z-10 shrink-0 shadow-xs">
@@ -703,15 +703,15 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
-            tableBgClass = 'animate-pos-blink-blue border-2 shadow-md';
+            tableBgClass = 'animate-pos-blink-blue border-2';
             ledColor = 'bg-[#0099FF] animate-ping';
         }
         if (hasCallBill) {
-            tableBgClass = 'animate-pos-blink-orange border-2 shadow-md';
+            tableBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-ping';
         }
         if (hasOrder) {
-            tableBgClass = 'animate-pos-blink-red border-2 shadow-md';
+            tableBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-ping';
         }
     }
@@ -877,15 +877,15 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
-            cellBgClass = 'animate-pos-blink-blue border-2 shadow-sm';
+            cellBgClass = 'animate-pos-blink-blue border-2';
             ledColor = 'bg-[#0099FF] animate-ping';
         }
         if (hasCallBill) {
-            cellBgClass = 'animate-pos-blink-orange border-2 shadow-sm';
+            cellBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-ping';
         }
         if (hasOrder) {
-            cellBgClass = 'animate-pos-blink-red border-2 shadow-sm';
+            cellBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-ping';
         }
     }

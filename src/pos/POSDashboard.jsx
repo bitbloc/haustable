@@ -1135,7 +1135,7 @@ export default function POSDashboard() {
 
         return (
             <div 
-                className={`w-full max-w-[340px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xl flex flex-col gap-2 font-sans select-none transition-all duration-150 cursor-pointer active:scale-[0.98] ${hoverBorder}`}
+                className={`w-full max-w-[340px] bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 shadow-xs flex flex-col gap-2 font-sans select-none transition-all duration-150 cursor-pointer active:scale-[0.98] ${hoverBorder}`}
                 onClick={() => {
                     toast.dismiss(t);
                     if (onClick) onClick();
@@ -3983,7 +3983,7 @@ export default function POSDashboard() {
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-zero-icons */}
             {showPendingModal && pendingBookingsList.length > 0 && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4 font-sans select-none animate-in fade-in zoom-in-95 duration-150">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-lg shadow-sm overflow-hidden flex flex-col max-h-[85vh] text-[oklch(18%_0.012_28)]">
                         {/* Rams Matte Dark Ink Header (No Icons) */}
                         <div className="bg-[oklch(18%_0.012_28)] px-5 py-4 text-[oklch(97%_0.008_28)] flex justify-between items-center shrink-0 border-b border-[oklch(85%_0.012_28)]">
                             <div>

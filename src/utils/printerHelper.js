@@ -1474,7 +1474,7 @@ function isThaiCombiningCode(code) {
 }
 
 // Split a string into printer grapheme clusters so combining Thai vowels/tones stay with base character
-function splitPrinterGraphemes(str) {
+export function splitPrinterGraphemes(str) {
     const clusters = [];
     for (const char of Array.from(String(str ?? ''))) {
         const code = char.codePointAt(0);
@@ -1884,9 +1884,9 @@ export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null
     // If options.visualGraphemes is true or truncate is true, calculate width by physical printhead cells (graphemes)
     const useByteLength = options.visualGraphemes === true || options.truncate === true ? false : true;
 
-    // Standardized fixed column widths (Qty: 5, Amount: 9 for 36 cols, or 10 for 38+ cols)
+    // Standardized fixed column widths (Qty: 5, Amount: 10 for 36+ cols, or 8 for <=28 cols)
     const defaultMidWidth = customMidWidth ?? (isSmall ? 4 : 5);
-    const defaultRightWidth = customRightWidth ?? (isSmall ? 8 : (totalWidth <= 36 ? 9 : 10));
+    const defaultRightWidth = customRightWidth ?? (isSmall ? 8 : 10);
 
     const midWidth = Math.max(getPrinterCellWidth(midStr, useByteLength), defaultMidWidth);
     const rightWidth = Math.max(getPrinterCellWidth(rightStr, useByteLength), defaultRightWidth);
@@ -1900,12 +1900,25 @@ export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null
 
     const leftWidth = totalWidth - midWidth - rightWidth - 2;
 
+    // Format mid column:
+    // When midStr is numeric (quantity 13, 4, etc.) or dash (-), center it under 'จำนวน'
+    // by right-aligning within (midWidth - 1) and adding 1 trailing space so it aligns beautifully
+    let formattedMid = '';
+    const trimmedMid = midStr.trim();
+    if ((/^\d+$/.test(trimmedMid) || trimmedMid === '-') && midWidth >= 5) {
+        formattedMid = padStartPrinter(trimmedMid, midWidth - 1, ' ', useByteLength) + ' ';
+    } else {
+        formattedMid = padStartPrinter(midStr, midWidth, ' ', useByteLength);
+    }
+
+    const formattedRight = padStartPrinter(rightStr, rightWidth, ' ', useByteLength);
+
     // If single line is enforced (options.truncate), slice cleanly without line breaks
     if (options.truncate && getPrinterCellWidth(leftStr, false) > leftWidth) {
         const truncatedLeft = sliceThai(leftStr, leftWidth);
         return padEndPrinter(truncatedLeft, leftWidth, ' ', useByteLength) +
-            ' ' + padStartPrinter(midStr, midWidth, ' ', useByteLength) +
-            ' ' + padStartPrinter(rightStr, rightWidth, ' ', useByteLength);
+            ' ' + formattedMid +
+            ' ' + formattedRight;
     }
 
     const leftLines = wrapTextByWords(leftStr, leftWidth, useByteLength);
@@ -1913,8 +1926,8 @@ export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null
 
     if (leftLines.length === 1) {
         return padEndPrinter(leftLines[0], leftWidth, ' ', useByteLength) +
-            ' ' + padStartPrinter(midStr, midWidth, ' ', useByteLength) +
-            ' ' + padStartPrinter(rightStr, rightWidth, ' ', useByteLength);
+            ' ' + formattedMid +
+            ' ' + formattedRight;
     }
 
     // Multi-line: Print preceding name lines first, and attach quantity & price strictly to the last line
@@ -1925,8 +1938,8 @@ export function formatThreeCols(left, mid, right, maxCols, customMidWidth = null
     const lastLine = leftLines[leftLines.length - 1];
     output.push(
         padEndPrinter(lastLine, leftWidth, ' ', useByteLength) +
-        ' ' + padStartPrinter(midStr, midWidth, ' ', useByteLength) +
-        ' ' + padStartPrinter(rightStr, rightWidth, ' ', useByteLength)
+        ' ' + formattedMid +
+        ' ' + formattedRight
     );
     return output.join('\n');
 }
@@ -2361,20 +2374,20 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
 
     if (reportData.categorySales && reportData.categorySales.length > 0) {
         encoder.bold(true).line('ยอดขายตามหมวดหมู่').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         let totalQty = 0;
         let totalAmt = 0;
         reportData.categorySales.forEach(cat => {
             if (cat.quantity > 0 || cat.amount > 0) {
                 totalQty += cat.quantity || 0;
                 totalAmt += cat.amount || 0;
-                const catName = formatReportItemName(cat.name, 20);
-                encoder.line(formatThreeCols(catName, cat.quantity, formatReceiptMoney(cat.amount), maxCols, 5, 9, truncateColOpts));
+                const catName = formatReportItemName(cat.name, 19);
+                encoder.line(formatThreeCols(catName, cat.quantity, formatReceiptMoney(cat.amount), maxCols, 5, 10, truncateColOpts));
             }
         });
         
         encoder.line(divider);
-        encoder.bold(true).line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols, 5, 9, colOpts)).bold(false);
+        encoder.bold(true).line(formatThreeCols('รวม', totalQty, formatReceiptMoney(totalAmt), maxCols, 5, 10, colOpts)).bold(false);
         
         const vatVal = Number(reportData.totalVat || 0);
         const preVatVal = netSales - vatVal;
@@ -2406,11 +2419,11 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (reportData.topSellingItems && reportData.topSellingItems.length > 0) {
         encoder.line(divider);
         encoder.bold(true).line('TOP 3 SELLING ITEMS / เมนูขายดี 3 อันดับ').bold(false);
-        encoder.line(formatThreeCols('เมนู', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('เมนู', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         reportData.topSellingItems.forEach((item, index) => {
             const rankLabel = `${index + 1}. ${item.name}`;
-            const itemLabel = formatReportItemName(rankLabel, 20);
-            encoder.line(formatThreeCols(itemLabel, item.quantity, formatReceiptMoney(item.amount), maxCols, 5, 9, truncateColOpts));
+            const itemLabel = formatReportItemName(rankLabel, 19);
+            encoder.line(formatThreeCols(itemLabel, item.quantity, formatReceiptMoney(item.amount), maxCols, 5, 10, truncateColOpts));
         });
     }
 
@@ -2418,12 +2431,12 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (reportData.shifts && reportData.shifts.length > 0) {
         encoder.line(divider);
         encoder.bold(true).line(`สรุปยอดขายแยกตามกะ (${reportData.shifts.length} กะ)`).bold(false);
-        encoder.line(formatThreeCols('กะ / พนักงาน', 'บิล', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('กะ / พนักงาน', 'บิล', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         reportData.shifts.forEach((s) => {
-            const sName = formatReportItemName(`กะ ${s.index || 1}: ${s.staffName || s.staff_name || 'พนักงาน'}`, 20);
+            const sName = formatReportItemName(`กะ ${s.index || 1}: ${s.staffName || s.staff_name || 'พนักงาน'}`, 19);
             const sTotal = Number(s.totalSales ?? s.total_sales ?? 0);
             const sCount = s.txCount ? `${s.txCount}` : '-';
-            encoder.line(formatThreeCols(sName, sCount, formatReceiptMoney(sTotal), maxCols, 5, 9, truncateColOpts));
+            encoder.line(formatThreeCols(sName, sCount, formatReceiptMoney(sTotal), maxCols, 5, 10, truncateColOpts));
             const sCash = Number(s.cashSales ?? s.cash_sales ?? 0);
             const sQr = Number(s.qrSales ?? s.qr_sales ?? 0);
             encoder.line(formatTwoCols(`  เงินสด: ${formatReceiptMoney(sCash)}`, `QR: ${formatReceiptMoney(sQr)}`, maxCols, null, colOpts));
@@ -2437,7 +2450,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (reportData.paymentSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามการชำระเงิน').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         
         const cash = reportData.paymentSales.cash || { count: 0, amount: 0 };
         const credit = reportData.paymentSales.creditCard || { count: 0, amount: 0 };
@@ -2445,21 +2458,21 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         const other = reportData.paymentSales.other || { count: 0, amount: 0, subItems: [] };
         
         if (cash.count > 0 || cash.amount > 0) {
-            encoder.line(formatThreeCols('เงินสด', cash.count, formatReceiptMoney(cash.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('เงินสด', cash.count, formatReceiptMoney(cash.amount), maxCols, 5, 10, colOpts));
         }
         if (qr.count > 0 || qr.amount > 0) {
-            encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('QR PromptPay', qr.count, formatReceiptMoney(qr.amount), maxCols, 5, 10, colOpts));
         }
         if (credit.count > 0 || credit.amount > 0) {
-            encoder.line(formatThreeCols('บัตรเครดิต', credit.count, formatReceiptMoney(credit.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('บัตรเครดิต', credit.count, formatReceiptMoney(credit.amount), maxCols, 5, 10, colOpts));
         }
 
         if (other.count > 0 || other.amount > 0) {
-            encoder.line(formatThreeCols('การชำระเงินอื่นๆ', other.count, formatReceiptMoney(other.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('การชำระเงินอื่นๆ', other.count, formatReceiptMoney(other.amount), maxCols, 5, 10, colOpts));
             if (other.subItems && other.subItems.length > 0) {
                 other.subItems.forEach(sub => {
-                    const subName = formatReportItemName(`  - ${sub.name}`, 20);
-                    encoder.line(formatThreeCols(subName, sub.count, formatReceiptMoney(sub.amount), maxCols, 5, 9, truncateColOpts));
+                    const subName = formatReportItemName(`  - ${sub.name}`, 19);
+                    encoder.line(formatThreeCols(subName, sub.count, formatReceiptMoney(sub.amount), maxCols, 5, 10, truncateColOpts));
                 });
             }
         }
@@ -2477,16 +2490,16 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (reportData.orderTypeSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามประเภทออเดอร์').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         
         const dineIn = reportData.orderTypeSales.dineIn || { count: 0, amount: 0 };
         const pickup = reportData.orderTypeSales.pickup || { count: 0, amount: 0 };
         
         if (dineIn.count > 0 || pickup.count === 0) {
-            encoder.line(formatThreeCols('กินที่ร้าน', dineIn.count, formatReceiptMoney(dineIn.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('กินที่ร้าน', dineIn.count, formatReceiptMoney(dineIn.amount), maxCols, 5, 10, colOpts));
         }
         if (pickup.count > 0) {
-            encoder.line(formatThreeCols('กลับบ้าน / รับเอง', pickup.count, formatReceiptMoney(pickup.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('กลับบ้าน / รับเอง', pickup.count, formatReceiptMoney(pickup.amount), maxCols, 5, 10, colOpts));
         }
     }
 
@@ -2494,16 +2507,16 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (reportData.channelSales) {
         encoder.line(divider);
         encoder.bold(true).line('ยอดขายตามช่องทางการขาย').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         
         const linemanDelivery = reportData.channelSales.linemanDelivery || { count: 0, amount: 0 };
         const walkin = reportData.channelSales.walkin || { count: 0, amount: 0 };
         
         if (linemanDelivery.count > 0) {
-            encoder.line(formatThreeCols('LINE MAN Delivery', linemanDelivery.count, formatReceiptMoney(linemanDelivery.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('LINE MAN Delivery', linemanDelivery.count, formatReceiptMoney(linemanDelivery.amount), maxCols, 5, 10, colOpts));
         }
         if (walkin.count > 0 || linemanDelivery.count === 0) {
-            encoder.line(formatThreeCols('หน้าร้าน / Direct', walkin.count, formatReceiptMoney(walkin.amount), maxCols, 5, 9, colOpts));
+            encoder.line(formatThreeCols('หน้าร้าน / Direct', walkin.count, formatReceiptMoney(walkin.amount), maxCols, 5, 10, colOpts));
         }
     }
 
@@ -2547,7 +2560,7 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         reportData.adjustments.forEach(adj => {
             const prefix = adj.type === 'in' ? 'นำเข้า' : 'นำออก';
             const sign = adj.type === 'in' ? '+' : '-';
-            const label = `  [${prefix}] ${adj.note || ''}`;
+            const label = `[${prefix}] ${adj.note || ''}`;
             const amountStr = `${sign}${formatReceiptMoney(adj.amount)}`;
             encoder.line(formatTwoCols(label, amountStr, maxCols, null, colOpts));
         });
@@ -2558,9 +2571,9 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (voidData.wholeBill.count > 0 || voidData.itemLevel.count > 0 || voidData.paidBillVoidCount > 0) {
         encoder.line(divider);
         encoder.bold(true).line('ทำลายบิล (Void)').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
-        if (voidData.wholeBill.count > 0) encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, formatReceiptMoney(voidData.wholeBill.amount), maxCols, 5, 9, colOpts));
-        if (voidData.itemLevel.count > 0) encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, formatReceiptMoney(voidData.itemLevel.amount), maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
+        if (voidData.wholeBill.count > 0) encoder.line(formatThreeCols('ทำลายทั้งบิล', voidData.wholeBill.count, formatReceiptMoney(voidData.wholeBill.amount), maxCols, 5, 10, colOpts));
+        if (voidData.itemLevel.count > 0) encoder.line(formatThreeCols('ทำลายรายเมนู', voidData.itemLevel.count, formatReceiptMoney(voidData.itemLevel.amount), maxCols, 5, 10, colOpts));
         if (voidData.paidBillVoidCount > 0) encoder.line(formatTwoCols('ทำลายบิลที่ชำระเงินแล้ว', (voidData.paidBillVoidCount || 0).toString(), maxCols, null, colOpts));
     }
 
@@ -2569,9 +2582,9 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
     if (cancelData.wholeBill.count > 0 || cancelData.itemLevel.count > 0) {
         encoder.line(divider);
         encoder.bold(true).line('ยกเลิกเมนู (Cancel)').bold(false);
-        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 9, colOpts));
-        if (cancelData.wholeBill.count > 0) encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols, 5, 9, colOpts));
-        if (cancelData.itemLevel.count > 0) encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols, 5, 9, colOpts));
+        encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
+        if (cancelData.wholeBill.count > 0) encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols, 5, 10, colOpts));
+        if (cancelData.itemLevel.count > 0) encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols, 5, 10, colOpts));
     }
 
     // Section 8: Prominent Grand Total Net Revenue Figure at Bottom

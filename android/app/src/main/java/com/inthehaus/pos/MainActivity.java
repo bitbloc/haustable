@@ -140,6 +140,10 @@ public class MainActivity extends BridgeActivity {
         try {
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getWindow().setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+            );
             hideSystemBars();
         } catch (Exception e) {
             e.printStackTrace();
@@ -148,7 +152,10 @@ public class MainActivity extends BridgeActivity {
         try {
             WebView webView = getBridge().getWebView();
             if (webView != null) {
-                webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+                // Opaque background (#F8F7F4) eliminates costly multi-pass full-screen alpha compositing on Mali GPU
+                webView.setBackgroundColor(android.graphics.Color.parseColor("#F8F7F4"));
+                webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+
                 WebSettings settings = webView.getSettings();
                 settings.setMediaPlaybackRequiresUserGesture(false);
                 settings.setJavaScriptEnabled(true);
@@ -157,6 +164,13 @@ public class MainActivity extends BridgeActivity {
                 settings.setAllowFileAccess(true);
                 settings.setAllowContentAccess(true);
                 settings.setEnableSmoothTransition(true);
+
+                // Sunmi D2s Plus Ultra Performance settings
+                settings.setOffscreenPreRaster(true); // Pre-rasterizes offscreen viewport tiles to eliminate scroll stutter
+                settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+                settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
+                settings.setLoadsImagesAutomatically(true);
                 
                 // Expose Native CFD and POS bridge to WebView JavaScript
                 AndroidCfdBridge bridge = new AndroidCfdBridge();
@@ -430,6 +444,10 @@ public class MainActivity extends BridgeActivity {
             if (getWindow() != null) {
                 getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                getWindow().setFlags(
+                    android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                    android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+                );
 
                 View decorView = getWindow().getDecorView();
                 if (decorView != null) {
@@ -445,7 +463,8 @@ public class MainActivity extends BridgeActivity {
             }
             
             webView = new WebView(getContext());
-            webView.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            webView.setBackgroundColor(android.graphics.Color.parseColor("#F8F7F4"));
+            webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
             WebSettings settings = webView.getSettings();
             settings.setJavaScriptEnabled(true);
             settings.setDomStorageEnabled(true);
@@ -455,6 +474,10 @@ public class MainActivity extends BridgeActivity {
             settings.setEnableSmoothTransition(true);
             settings.setMediaPlaybackRequiresUserGesture(false);
             settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+            settings.setRenderPriority(WebSettings.RenderPriority.HIGH);
+            settings.setOffscreenPreRaster(true);
+            settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NORMAL);
+            settings.setLoadsImagesAutomatically(true);
             settings.setUseWideViewPort(true);
             settings.setLoadWithOverviewMode(true);
             settings.setTextZoom(100); // Strict 100% zoom prevents layout breaking on Sunmi OS font scales

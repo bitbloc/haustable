@@ -303,32 +303,23 @@ export default POSMenuGrid;
 
 const MenuItemCard = memo(function MenuItemCard({ item, cachedImg, onClick }) {
     const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
-    const [imgSrc, setImgSrc] = useState(cachedImg || item.image_url);
     const [imgError, setImgError] = useState(false);
-
-    useEffect(() => {
-        setImgSrc(cachedImg || item.image_url);
-        setImgError(false);
-    }, [cachedImg, item.image_url]);
+    const targetImg = cachedImg || item.image_url;
 
     const handleImageError = () => {
-        if (imgSrc && imgSrc !== item.image_url && item.image_url) {
-            setImgSrc(item.image_url);
-        } else {
-            setImgError(true);
-        }
+        setImgError(true);
     };
     
     return (
         <button
             type="button"
             onClick={() => onClick(item)}
-            className="bg-[var(--color-paper)] rounded-md border border-[var(--color-rule)] p-3 flex flex-col gap-2.5 text-left group hover:border-[var(--color-accent)] active:scale-[0.98] transition-all duration-75 cursor-pointer shadow-xs relative select-none touch-manipulation min-h-[140px]"
+            className="bg-[var(--color-paper)] rounded-md border border-[var(--color-rule)] p-3 flex flex-col gap-2.5 text-left group hover:border-[var(--color-accent)] active:scale-[0.98] transition-transform duration-75 cursor-pointer shadow-xs relative select-none touch-manipulation min-h-[140px]"
         >
             <div className="aspect-square rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] shrink-0">
-                {imgSrc && !imgError ? (
+                {targetImg && !imgError ? (
                     <img 
-                        src={imgSrc} 
+                        src={targetImg} 
                         alt={item.name} 
                         loading="lazy"
                         decoding="async"

@@ -53,6 +53,15 @@ export default defineConfig({
             if (id.includes('date-fns')) {
               return 'vendor-date';
             }
+            if (id.includes('three')) {
+              return 'vendor-three';
+            }
+            if (id.includes('exceljs')) {
+              return 'vendor-excel';
+            }
+            if (id.includes('jspdf')) {
+              return 'vendor-pdf';
+            }
             if (id.includes('supabase')) {
               return 'vendor-supabase';
             }

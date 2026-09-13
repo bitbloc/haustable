@@ -100,6 +100,15 @@ button, a, select, input, textarea, [role="button"] {
   backface-visibility: hidden;
 }
 
+/* POS Ultra-Performance Optimizations for Low-Power ARM POS (Sunmi D2s Plus) */
+.pos-menu-grid-scroll, .pos-table-grid-scroll {
+  contain: content;
+  transform: translateZ(0);
+  will-change: scroll-position;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
 /* POS Theme Surface & Border Helper Utilities (Thai Modern OKLCH) */
 .pos-bg-paper { background-color: var(--color-paper); }
 .pos-bg-paper-2 { background-color: var(--color-paper-2); }

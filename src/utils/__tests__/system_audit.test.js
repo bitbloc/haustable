@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData, encodeSplitQrSlipData, cleanKitchenItemName, formatKitchenOptionText, extractCleanKitchenOptions } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData, encodeSplitQrSlipData, cleanKitchenItemName, formatKitchenOptionText, extractCleanKitchenOptions, splitPrinterGraphemes } from '../printerHelper';
 import { decodeTis620, stripEscPosCommands } from '../wmaParser';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
@@ -976,6 +976,33 @@ describe('System Audit - Phase 6: Sunmi D2s Plus Hardware Thermal Slip & Grid Pr
         expect(text).toContain('- รับซอสพริก');
         expect(text).not.toContain('( Add Chili Sauce )');
         expect(text).not.toContain('chili sauce:');
+    });
+
+    it('should test formatThreeCols alignment in sales report', () => {
+        const maxCols = 36;
+        const colOpts = { visualGraphemes: true };
+        const truncateColOpts = { visualGraphemes: true, truncate: true };
+
+        const items = [
+            ['รายการ', 'จำนวน', 'ยอดเงิน', colOpts],
+            ['กับข้าวถึงเครื่อง', 13, '2,277.00', truncateColOpts],
+            ['Set จับคู่จานเดียว', 4, '1,386.00', truncateColOpts],
+            ['Coffee', 9, '830.00', truncateColOpts],
+            ['Soft Drink', 7, '500.00', truncateColOpts],
+            ['Bottled Beverages', 11, '250.00', truncateColOpts],
+            ['เพิ่มเติม', 12, '215.00', truncateColOpts],
+            ['Alcahol', 2, '200.00', truncateColOpts],
+            ['รวม', 58, '5,748.00', colOpts]
+        ];
+
+        items.forEach(([left, mid, right, opts]) => {
+            const cleanName = formatReportItemName(left, 19);
+            const line = formatThreeCols(cleanName, mid, right, maxCols, 5, 10, opts);
+            const clusters = splitPrinterGraphemes(line);
+            expect(clusters.length).toBe(maxCols);
+            // Amount must end on the last column (index 35)
+            expect(line.endsWith(right)).toBe(true);
+        });
     });
 });
 

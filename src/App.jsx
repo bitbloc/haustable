@@ -129,7 +129,7 @@ function App() {
         visibleToasts={3} 
         closeButton 
         toastOptions={{
-          className: 'font-sans border border-[oklch(85%_0.012_28)] shadow-lg rounded-xl text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]',
+          className: 'font-sans border border-[oklch(85%_0.012_28)] shadow-xs rounded-xl text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]',
           style: {
             fontFamily: 'Switzer, Geist, sans-serif',
             background: 'oklch(97% 0.008 28)',
@@ -141,7 +141,7 @@ function App() {
             fontWeight: 500,
           },
           classNames: {
-            toast: 'bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-md',
+            toast: 'bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] shadow-xs',
             title: 'font-bold text-sm text-[oklch(18%_0.012_28)]',
             description: 'text-xs text-[oklch(42%_0.010_28)]',
             actionButton: 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs px-3 py-1 rounded-lg',

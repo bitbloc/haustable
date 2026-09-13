@@ -44,18 +44,9 @@ export default function POSCustomerDisplay() {
     const [storePromptpayId, setStorePromptpayId] = useState('0614232455');
     const [storePromptpayName, setStorePromptpayName] = useState('ธัญญธร ศรีวิเศษ');
     const [paymentQrUrl, setPaymentQrUrl] = useState(null);
-    const [currentTime, setCurrentTime] = useState(new Date());
 
     const autoResetTimerRef = useRef(null);
     const expireAtRef = useRef(null);
-
-    // Live Clock for Standby Terminal
-    useEffect(() => {
-        const clockTimer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-        return () => clearInterval(clockTimer);
-    }, []);
 
     // Fetch shop logo & PromptPay settings from app_settings
     useEffect(() => {
@@ -551,8 +542,6 @@ export default function POSCustomerDisplay() {
     // RENDER 1: IDLE STANDBY (Neo-Brutalist Architectural Grid · Dieter Rams + Thai Modern)
     // -------------------------------------------------------------
     const renderIdleMode = () => {
-        const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const dateStr = currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
         const activeSlide = slideshowImages[currentSlideIndex];
 
         return (
@@ -590,14 +579,7 @@ export default function POSCustomerDisplay() {
                             </span>
                         </div>
                         <div className="h-5 w-px bg-[oklch(85%_0.012_28)]/20" />
-                        <div className="flex flex-col text-right font-mono">
-                            <span className="text-xs font-black tracking-widest text-[oklch(97%_0.008_28)]">
-                                {timeStr}
-                            </span>
-                            <span className="text-[8px] text-[oklch(55%_0.010_28)] tracking-wider">
-                                {dateStr}
-                            </span>
-                        </div>
+                        <StandbyClock />
                     </div>
                 </header>
 
@@ -1539,3 +1521,29 @@ export default function POSCustomerDisplay() {
         </div>
     );
 }
+
+const StandbyClock = React.memo(function StandbyClock() {
+    const [currentTime, setCurrentTime] = useState(() => new Date());
+
+    useEffect(() => {
+        const clockTimer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000);
+        return () => clearInterval(clockTimer);
+    }, []);
+
+    const timeStr = currentTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateStr = currentTime.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+
+    return (
+        <div className="flex flex-col text-right font-mono">
+            <span className="text-xs font-black tracking-widest text-[oklch(97%_0.008_28)]">
+                {timeStr}
+            </span>
+            <span className="text-[8px] text-[oklch(55%_0.010_28)] tracking-wider">
+                {dateStr}
+            </span>
+        </div>
+    );
+});
+
