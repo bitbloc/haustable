@@ -886,7 +886,9 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             if (currentSizeW >= 1) {
                 const scale = currentSizeW + 1;
                 const targetCols = Math.floor(maxCols / scale);
-                const halfOffset = Math.floor(offset / scale);
+                // For kitchen and bar order slips in size(1, 1), remove excessive left padding
+                // so full 20-21 character item names and modifiers never clip or hardware-wrap on the right edge
+                const halfOffset = isKitchenTab ? 0 : Math.floor(offset / scale);
                 const margin = ' '.repeat(halfOffset);
                 if (currentAlign === 'center' && width < targetCols) {
                     const padding = Math.floor((targetCols - width) / 2);
@@ -905,7 +907,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                return globalLeftMargin + processedLine;
+                const effectiveGlobalLeftMargin = isKitchenTab ? '  ' : globalLeftMargin;
+                return effectiveGlobalLeftMargin + processedLine;
             }
         });
 
@@ -1175,7 +1178,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const optionsList = extractCleanKitchenOptions(item, optionMap);
 
                     optionsList.forEach(opt => {
-                        const optLine = `  - ${opt}`;
+                        const optLine = `- ${opt}`;
                         wrapTextByWords(optLine, maxDoubleCols, false).forEach(l => {
                             encoder.line(l);
                         });
@@ -1721,6 +1724,22 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
         const words = [];
         for (let i = 0; i < rawTokens.length; i++) {
             let t = rawTokens[i];
+            
+            // 0. Consolidate price tags like (+฿25) or (+15) or (฿15) into an indivisible atomic token
+            if (t === '(' && i + 1 < rawTokens.length && (rawTokens[i+1] === '+' || rawTokens[i+1] === '฿')) {
+                let priceTag = '(';
+                while (i + 1 < rawTokens.length && rawTokens[i+1] !== ')') {
+                    i++;
+                    priceTag += rawTokens[i];
+                }
+                if (i + 1 < rawTokens.length && rawTokens[i+1] === ')') {
+                    i++;
+                    priceTag += ')';
+                }
+                words.push(priceTag);
+                continue;
+            }
+
             if (t === '(' && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
                 words.push('(' + rawTokens[i+1]);
                 i++;
@@ -1738,9 +1757,16 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
                 // Glue 'ซู' + 'วี' -> 'ซูวี'
                 words.push('ซูวี');
                 i++;
-            } else if ((t === 'หมู' || t === 'เนื้อ' || t === 'ไก่') && i + 1 < rawTokens.length && (rawTokens[i+1] === 'ซู' || rawTokens[i+1] === 'ซูวี')) {
-                const nextTok = rawTokens[i+1] === 'ซู' && i + 2 < rawTokens.length && rawTokens[i+2] === 'วี' ? (i += 2, 'ซูวี') : (i++, rawTokens[i]);
-                words.push(t + nextTok);
+            } else if ((t === 'หมู' || t === 'เนื้อ' || t === 'ไก่')) {
+                let j = i + 1;
+                while (j < rawTokens.length && rawTokens[j].trim() === '') j++;
+                if (j < rawTokens.length && (rawTokens[j] === 'ซู' || rawTokens[j] === 'ซูวี')) {
+                    const nextTok = rawTokens[j] === 'ซู' && j + 1 < rawTokens.length && rawTokens[j+1] === 'วี' ? (j++, 'ซูวี') : rawTokens[j];
+                    words.push(t + nextTok);
+                    i = j;
+                } else {
+                    words.push(t);
+                }
             } else {
                 words.push(t);
             }
@@ -1755,6 +1781,12 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
                 if (!chunk) break;
                 output.push(chunk);
                 remaining = remaining.slice(chunk.length);
+                // If remaining is just closing punctuation or single character, glue to last chunk instead of orphaned line
+                if (remaining.length > 0 && remaining.trim().length <= 2 && output.length > 0) {
+                    output[output.length - 1] += remaining;
+                    remaining = '';
+                    break;
+                }
             }
         };
 
