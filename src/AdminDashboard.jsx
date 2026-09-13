@@ -235,10 +235,10 @@ export default function AdminDashboard() {
         const autoPollTimer = setInterval(() => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
             heartbeatCounter++
-            // If realtime is healthy, only heartbeat once every 60 seconds (every 4 ticks of 15s)
-            if (isRealtimeSubscribed && heartbeatCounter % 4 !== 0) return
+            // If realtime is healthy, only heartbeat once every 90 seconds (every 3 ticks of 30s)
+            if (isRealtimeSubscribed && heartbeatCounter % 3 !== 0) return
             fetchData(true, selectedDateRef.current)
-        }, 15000)
+        }, 30000)
 
         // 5. Refetch immediately when tab/window regains focus or becomes visible
         const handleVisibilityChange = () => {

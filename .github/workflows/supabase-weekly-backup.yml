@@ -2,8 +2,8 @@ name: Supabase Weekly Database Backup
 
 on:
   schedule:
-    # Run every Sunday at 03:00 AM UTC (10:00 AM Thailand Time GMT+7)
-    - cron: '0 3 * * 0'
+    # Run every Monday at 03:30 AM Thailand Time GMT+7 (Sunday 20:30 UTC) - outside business hours
+    - cron: '30 20 * * 0'
   workflow_dispatch: # Allows manual trigger from GitHub Actions tab
 
 jobs:
