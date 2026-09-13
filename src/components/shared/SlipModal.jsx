@@ -3,8 +3,7 @@ import { X, Printer as PrinterIcon, Download, Check, Copy } from 'lucide-react'
 import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabaseClient'
-import { Capacitor } from '@capacitor/core'
-import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod } from '../../utils/printerHelper'
+import { printToBluetoothDirect, encodeReceiptData, printToRawBTWebSocket, printToSunmiBuiltIn, getCleanStaffRemark, getCleanCustomerNote, generateDivider, resolveStaffDisplayName, selectItemsForTab, getShortBookingId, resolveBillingQrCode, extractCashDetails, getBookingPaymentMethod, cleanKitchenItemName, extractCleanKitchenOptions } from '../../utils/printerHelper'
 import { formatOrderItemOptions } from '../../utils/menuHelper'
 import { parseTableTransferInfo } from '../../utils/tableTransferHelper'
 
@@ -459,41 +458,46 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
         // Items HTML
         const itemsHtml = filteredItems.map(item => {
-            const name = item.custom_name || item.name || item.menu_items?.name || 'Item'
+            const rawName = item.custom_name || item.name || item.menu_items?.name || 'Item'
+            const name = isKitchen ? cleanKitchenItemName(rawName) : rawName
             let optsHtml = ''
             
             if (item.selected_options || item.item_note) {
                 let optionsList = []
-                if (Array.isArray(item.selected_options)) {
-                     optionsList = item.selected_options.map(opt => {
-                         if (typeof opt === 'object' && opt !== null) {
-                             if (opt.group_name && opt.name) {
-                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                 return `${opt.group_name}: ${opt.name}${priceStr}`;
+                if (isKitchen) {
+                    optionsList = extractCleanKitchenOptions(item, optionMap);
+                } else {
+                    if (Array.isArray(item.selected_options)) {
+                         optionsList = item.selected_options.map(opt => {
+                             if (typeof opt === 'object' && opt !== null) {
+                                 if (opt.group_name && opt.name) {
+                                     const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                     return `${opt.group_name}: ${opt.name}${priceStr}`;
+                                 }
+                                 if (opt.name) {
+                                     const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
+                                     return `${opt.name}${priceStr}`;
+                                 }
+                                 return JSON.stringify(opt);
                              }
-                             if (opt.name) {
-                                 const priceStr = (opt.price && Number(opt.price) > 0) ? ` (+฿${opt.price})` : '';
-                                 return `${opt.name}${priceStr}`;
-                             }
-                             return JSON.stringify(opt);
-                         }
-                         return getOptionName(opt);
-                     });
-                } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
-                    optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
-                        if (Array.isArray(val)) {
-                            return val.map(id => getOptionName(id));
-                        }
-                        return [`${key}: ${val}`];
-                    });
-                }
+                             return getOptionName(opt);
+                         });
+                    } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
+                        optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
+                            if (Array.isArray(val)) {
+                                return val.map(id => getOptionName(id));
+                            }
+                            return [`${key}: ${val}`];
+                        });
+                    }
 
-                if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
-                    optionsList.push(`หมายเหตุ: ${item.item_note}`);
+                    if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
+                        optionsList.push(`หมายเหตุ: ${item.item_note}`);
+                    }
                 }
 
                 if (optionsList.length > 0) {
-                    optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; ${isKitchen ? 'font-size: 15px; margin-top: 3px;' : 'font-size: 10px;'} padding-left: 12px;">▶ ${opt}</div>`).join('')
+                    optsHtml = optionsList.map(opt => `<div class="opt" style="font-weight: bold; ${isKitchen ? 'font-size: 15px; margin-top: 3px;' : 'font-size: 10px;'} padding-left: 12px;">${isKitchen ? '- ' : '▶ '}${opt}</div>`).join('')
                 }
             }
 
@@ -1499,9 +1503,13 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
                             <div className="space-y-2">
                                 {selectItemsForTab(effectiveOrderItems, activeTab, printerConfig).map((item, idx) => {
-                                    const optList = formatOrderItemOptions(item.selected_options, item.item_note || item.notes || item.special_instructions || item.remark)
+                                    const optList = isKitchenTab
+                                        ? extractCleanKitchenOptions(item, optionMap)
+                                        : formatOrderItemOptions(item.selected_options, item.item_note || item.notes || item.special_instructions || item.remark)
                                     const unitPrice = Number(item.price_at_time || 0)
                                     const lineTotal = unitPrice * (item.quantity || 1)
+                                    const rawName = item.custom_name || item.name || item.menu_items?.name || 'รายการสินค้า'
+                                    const displayName = isKitchenTab ? cleanKitchenItemName(rawName) : rawName
 
                                     return (
                                         <div key={idx} className="text-xs space-y-0.5 border-b border-[oklch(93%_0.008_28)] last:border-0 pb-1.5 last:pb-0">
@@ -1511,7 +1519,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                                         {item.quantity}x
                                                     </span>
                                                     <span className="font-bold text-[oklch(18%_0.012_28)] leading-snug">
-                                                        {item.custom_name || item.name || item.menu_items?.name || 'รายการสินค้า'}
+                                                        {displayName}
                                                     </span>
                                                 </div>
                                                 {!isKitchenTab && (
@@ -1525,7 +1533,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                                 <div className="pl-5 space-y-0.5">
                                                     {optList.map((opt, oIdx) => (
                                                         <div key={oIdx} className="text-[10px] text-[oklch(45%_0.010_28)] font-sans leading-tight">
-                                                            • {opt}
+                                                            {isKitchenTab ? '- ' : '• '}{opt}
                                                         </div>
                                                     ))}
                                                 </div>

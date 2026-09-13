@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { thaiBahtText, validateThaiTaxId, calculateDocumentTotals } from '../thaiTaxHelper';
-import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData, encodeSplitQrSlipData } from '../printerHelper';
+import { getPrinterCellWidth, padEndPrinter, wrapTextByWords, formatThreeCols, formatTwoCols, formatReportItemName, compileShiftReportData, getBookingPaymentMethod, encodeReceiptData, encodeSplitQrSlipData, cleanKitchenItemName, formatKitchenOptionText, extractCleanKitchenOptions } from '../printerHelper';
 import { decodeTis620, stripEscPosCommands } from '../wmaParser';
 import { calculateMemberTier, parseTiersConfig, DEFAULT_CRM_TIERS, calculateMemberCrmScore, resolveDominantCrmMember } from '../crmHelper';
 import { checkDuplicateExpense } from '../duplicateDetector';
@@ -836,6 +836,91 @@ describe('System Audit - Phase 6: Sunmi D2s Plus Hardware Thermal Slip & Grid Pr
         const text = decodeTis620(encoded);
         expect(text).toContain('รวมเข้า T2');
         expect(text).not.toContain('(   T2)');
+    });
+
+    it('should clean variant hints from kitchen item names (cleanKitchenItemName)', () => {
+        expect(cleanKitchenItemName('ลาเต้ (เย็น,ร้อน)')).toBe('ลาเต้');
+        expect(cleanKitchenItemName('ลาเต้ (ร้อน,เย็น)')).toBe('ลาเต้');
+        expect(cleanKitchenItemName('ชาไทย (เย็น/ร้อน)')).toBe('ชาไทย');
+        expect(cleanKitchenItemName('Matcha Latte (Hot/Cold)')).toBe('Matcha Latte');
+        expect(cleanKitchenItemName('เพียวมัทฉะ')).toBe('เพียวมัทฉะ');
+        expect(cleanKitchenItemName('ข้าวผัดกะเพรา (Main Dishes)')).toBe('ข้าวผัดกะเพรา');
+    });
+
+    it('should strip redundant group labels and English parentheses from kitchen options (formatKitchenOptionText)', () => {
+        expect(formatKitchenOptionText('HOT / COLD: เย็น ( COLD )')).toBe('เย็น');
+        expect(formatKitchenOptionText('HOT / COLD: ร้อน ( HOT )')).toBe('ร้อน');
+        expect(formatKitchenOptionText('ระดับความหวาน: ไม่หวาน')).toBe('ไม่หวาน');
+        expect(formatKitchenOptionText('ระดับความหวาน: หวานน้อย (50%)')).toBe('หวานน้อย (50%)');
+        expect(formatKitchenOptionText('ความหวาน: หวาน 25%')).toBe('หวาน 25%');
+        expect(formatKitchenOptionText('ระดับความเผ็ด: เผ็ดน้อย')).toBe('เผ็ดน้อย');
+        expect(formatKitchenOptionText('เย็น ( COLD )')).toBe('เย็น');
+    });
+
+    it('should extract, deduplicate, and prioritize kitchen options cleanly (extractCleanKitchenOptions)', () => {
+        const item = {
+            selected_options: [
+                { group_name: 'ระดับความหวาน', name: 'ไม่หวาน' },
+                { group_name: 'HOT / COLD', name: 'เย็น ( COLD )' }
+            ],
+            item_note: 'แยกน้ำแข็ง'
+        };
+
+        const opts = extractCleanKitchenOptions(item);
+        // Temperature (เย็น) should come first, sweetness (ไม่หวาน) second, note last
+        expect(opts).toEqual(['เย็น', 'ไม่หวาน', 'หมายเหตุ: แยกน้ำแข็ง']);
+    });
+
+    it('should protect Thai negative prefix "ไม่" from splitting mid-word in wrapTextByWords', () => {
+        // Test wrapTextByWords with narrow width (e.g. 10 cols)
+        const wrapped = wrapTextByWords('  - ไม่หวาน', 18, false);
+        expect(wrapped).toHaveLength(1);
+        expect(wrapped[0]).toBe('  - ไม่หวาน');
+
+        // Test that 'ไม่' is glued to 'หวาน' so 'ไม่' is not orphaned on a separate line
+        const wrappedNarrow = wrapTextByWords('ระดับความหวาน: ไม่หวาน', 16, false);
+        expect(wrappedNarrow.some(l => l.endsWith('ไม่') && !l.endsWith('ไม่หวาน'))).toBe(false);
+    });
+
+    it('should render clean bar/kitchen slips with direct bullet options and no word splitting (encodeReceiptData)', () => {
+        const barBooking = {
+            id: 'bk-bar-clean-1',
+            tables_layout: { table_name: '01' },
+            order_items: [
+                {
+                    name: 'ลาเต้ (เย็น,ร้อน)',
+                    quantity: 1,
+                    destination: 'bar',
+                    selected_options: [
+                        { group_name: 'HOT / COLD', name: 'เย็น ( COLD )' },
+                        { group_name: 'ระดับความหวาน', name: 'ไม่หวาน' }
+                    ]
+                },
+                {
+                    name: 'เพียวมัทฉะ',
+                    quantity: 1,
+                    destination: 'bar',
+                    selected_options: [
+                        { group_name: 'ระดับความหวาน', name: 'ไม่หวาน' },
+                        { group_name: 'HOT / COLD', name: 'เย็น ( COLD )' }
+                    ]
+                }
+            ]
+        };
+
+        const encoded = encodeReceiptData(barBooking, 'bar', 'cash', {}, '80mm', {}, 'sunmi');
+        const text = decodeTis620(encoded);
+
+        // Name must be cleaned of redundant (เย็น,ร้อน)
+        expect(text).toContain('1x ลาเต้');
+        expect(text).not.toContain('ลาเต้ (เย็น,ร้อน)');
+
+        // Options must be cleanly bulleted without redundant group labels
+        expect(text).toContain('- เย็น');
+        expect(text).toContain('- ไม่หวาน');
+        expect(text).not.toContain('HOT / COLD');
+        expect(text).not.toContain('( COLD )');
+        expect(text).not.toContain('ระดับความหวาน');
     });
 });
 

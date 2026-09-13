@@ -1154,12 +1154,13 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             groupItems.forEach((item) => {
                 const qtyColWidth = 3;
                 const qtyStr = padEndPrinter(`${item.quantity}x`, qtyColWidth);
-                const name = (item.custom_name || item.menu_items?.name || item.name || 'Item').toUpperCase();
+                const rawName = item.custom_name || item.menu_items?.name || item.name || 'Item';
+                const cleanName = cleanKitchenItemName(rawName).toUpperCase();
                 
                 const maxDoubleCols = Math.max(12, Math.floor(maxCols / 2));
                 const nameColWidth = Math.max(1, maxDoubleCols - qtyColWidth);
                 
-                const nameLines = wrapTextByWords(name, nameColWidth, false);
+                const nameLines = wrapTextByWords(cleanName, nameColWidth, false);
                 if (nameLines.length === 0) nameLines.push('');
                 
                 const kitchenItemLines = [`${qtyStr}${nameLines[0]}`];
@@ -1171,35 +1172,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                 kitchenItemLines.forEach(l => encoder.line(l));
                 
                 if (item.selected_options || item.item_note) {
-                    let optionsList = [];
-                    if (Array.isArray(item.selected_options)) {
-                        optionsList = item.selected_options.map(opt => {
-                            if (typeof opt === 'object' && opt !== null) {
-                                if (opt.group_name && opt.name) {
-                                    return `${opt.group_name}: ${opt.name}`;
-                                }
-                                if (opt.name) {
-                                    return `${opt.name}`;
-                                }
-                                return JSON.stringify(opt);
-                            }
-                            return optionMap[opt] || String(opt);
-                        });
-                    } else if (typeof item.selected_options === 'object' && item.selected_options !== null) {
-                        optionsList = Object.entries(item.selected_options).flatMap(([key, val]) => {
-                            if (Array.isArray(val)) {
-                                return val.map(id => optionMap[id] || (typeof id === 'object' ? id.name : id));
-                            }
-                            return [`${key}: ${val}`];
-                        });
-                    }
-
-                    if (item.item_note && !optionsList.some(o => String(o).includes(item.item_note))) {
-                        optionsList.push(`หมายเหตุ: ${item.item_note}`);
-                    }
+                    const optionsList = extractCleanKitchenOptions(item, optionMap);
 
                     optionsList.forEach(opt => {
-                        const optLine = `> ${String(opt).toUpperCase()}`;
+                        const optLine = `  - ${opt}`;
                         wrapTextByWords(optLine, maxDoubleCols, false).forEach(l => {
                             encoder.line(l);
                         });
@@ -1572,6 +1548,129 @@ export function formatReportItemName(name, maxColWidth = 20) {
     return clean;
 }
 
+// Clean item names specifically for kitchen / bar slips (strip variant indicators like (เย็น,ร้อน) and English categories)
+export function cleanKitchenItemName(rawName) {
+    if (!rawName) return '';
+    let name = String(rawName).trim();
+    // 1. Remove parenthesized hot/cold/frappe options in item title:
+    // (เย็น,ร้อน), (ร้อน,เย็น), (ร้อน/เย็น), (เย็น/ร้อน), (Hot/Cold), (Cold/Hot), (Hot/Iced), (Iced/Hot), etc.
+    name = name.replace(/\s*\(\s*(?:เย็น\s*[,/]\s*ร้อน|ร้อน\s*[,/]\s*เย็น|ร้อน\s*[,/]\s*เย็น|hot\s*[,/]\s*(?:cold|iced)|(?:cold|iced)\s*[,/]\s*hot)\s*\)/gi, '');
+    
+    // 2. Remove redundant secondary English categories in parentheses if at end of name
+    // e.g. " (Main Dishes)", " (Rice Bowl)", " (Appetizer&Snacks)", " (in the haus co.)"
+    name = name.replace(/\s*\(\s*(?:Main Dishes|Rice Bowl|Appetizer\s*&\s*Snacks|Drinks|Beverages)\s*\)/gi, '');
+
+    // 3. Clean multiple spaces
+    name = name.replace(/\s+/g, ' ').trim();
+    return name;
+}
+
+// Clean and strip redundant headers or bilingual English duplicates for kitchen/bar options
+export function formatKitchenOptionText(rawText) {
+    if (!rawText) return '';
+    let text = String(rawText).trim();
+
+    // 1. Strip leading redundant group prefixes like:
+    // "HOT / COLD: ", "HOT/COLD: ", "ระดับความหวาน: ", "ความหวาน: ", "ประเภท: ", "อุณหภูมิ: ", "ระดับความเผ็ด: ", "ความเผ็ด: ", "ระดับ: "
+    text = text.replace(/^(?:HOT\s*[/]\s*COLD|ระดับความหวาน|ความหวาน|ระดับความเผ็ด|ความเผ็ด|อุณหภูมิ|ประเภท|ความสุก|ระดับ)\s*[:=]\s*/i, '');
+
+    // 2. Strip redundant English parenthesized labels for hot/cold/frappe:
+    // "เย็น ( COLD )" -> "เย็น", "ร้อน ( HOT )" -> "ร้อน", "ปั่น ( FRAPPE )" -> "ปั่น"
+    text = text.replace(/\s*\(\s*(?:COLD|HOT|ICED|FRAPPE|BLENDED)\s*\)/gi, '');
+
+    // 3. Normalize multiple spaces
+    text = text.replace(/\s+/g, ' ').trim();
+
+    return text;
+}
+
+// Helper to determine sorting priority for kitchen/bar options
+function getKitchenOptionPriority(opt) {
+    const s = String(opt || '').toLowerCase();
+    // Priority 1: Temperature (เย็น, ร้อน, ปั่น, iced, hot, frappe)
+    if (s.includes('เย็น') || s.includes('ร้อน') || s.includes('ปั่น') || s.includes('iced') || s.includes('hot') || s.includes('frappe')) {
+        return 1;
+    }
+    // Priority 2: Sweetness (หวาน, หวานน้อย, ไม่หวาน, sweet)
+    if (s.includes('หวาน') || s.includes('sweet')) {
+        return 2;
+    }
+    // Priority 3: Spicy / Cook level (เผ็ด, สุก, spicy)
+    if (s.includes('เผ็ด') || s.includes('สุก') || s.includes('spicy')) {
+        return 3;
+    }
+    // Priority 9: Notes / Remarks (หมายเหตุ, note)
+    if (s.includes('หมายเหตุ') || s.includes('note')) {
+        return 9;
+    }
+    // Priority 5: Add-ons / other choices
+    return 5;
+}
+
+// Extract clean, prioritized option list for kitchen and bar tickets
+export function extractCleanKitchenOptions(item, optionMap = {}) {
+    let optionsList = [];
+
+    if (item.selected_options) {
+        let rawOpts = item.selected_options;
+        if (typeof rawOpts === 'string') {
+            try {
+                rawOpts = JSON.parse(rawOpts);
+            } catch (e) {
+                rawOpts = [rawOpts];
+            }
+        }
+
+        if (Array.isArray(rawOpts)) {
+            rawOpts.forEach(opt => {
+                if (typeof opt === 'object' && opt !== null) {
+                    const group = opt.group_name || opt.group || '';
+                    const optName = opt.name || opt.choice_name || opt.label || '';
+                    const price = Number(opt.price || opt.extra_price || 0);
+                    const priceStr = price > 0 ? ` (+฿${price})` : '';
+                    
+                    if (group && optName) {
+                        optionsList.push(formatKitchenOptionText(`${group}: ${optName}${priceStr}`));
+                    } else if (optName) {
+                        optionsList.push(formatKitchenOptionText(`${optName}${priceStr}`));
+                    } else {
+                        const jsonStr = JSON.stringify(opt);
+                        if (jsonStr !== '{}') optionsList.push(jsonStr);
+                    }
+                } else {
+                    const resolved = optionMap[opt] || String(opt);
+                    optionsList.push(formatKitchenOptionText(resolved));
+                }
+            });
+        } else if (typeof rawOpts === 'object' && rawOpts !== null) {
+            Object.entries(rawOpts).forEach(([key, val]) => {
+                if (Array.isArray(val)) {
+                    val.forEach(id => {
+                        const resolved = optionMap[id] || (typeof id === 'object' ? (id.name || '') : id);
+                        if (resolved) optionsList.push(formatKitchenOptionText(resolved));
+                    });
+                } else if (typeof val === 'object' && val !== null) {
+                    const resolved = val.name || optionMap[val.id] || '';
+                    if (resolved) optionsList.push(formatKitchenOptionText(resolved));
+                } else {
+                    optionsList.push(formatKitchenOptionText(`${key}: ${val}`));
+                }
+            });
+        }
+    }
+
+    if (item.item_note) {
+        const noteStr = String(item.item_note).trim();
+        if (noteStr && !optionsList.some(o => o.includes(noteStr))) {
+            optionsList.push(`หมายเหตุ: ${noteStr}`);
+        }
+    }
+
+    // Filter empty, deduplicate, and sort by operational priority (Temp -> Sweetness -> Specifics -> Notes)
+    const uniqueList = Array.from(new Set(optionsList.filter(Boolean)));
+    return uniqueList.sort((a, b) => getKitchenOptionPriority(a) - getKitchenOptionPriority(b));
+}
+
 // Word/phrase-aware text wrapping using actual visual character cell width
 export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
     if (!str) return [];
@@ -1600,7 +1699,7 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
             rawTokens = paragraph.split(/(\s+)/).filter(Boolean);
         }
 
-        // Glue punctuation like '(' to next word and ')' to previous word to prevent orphaned parentheses
+        // Glue punctuation like '(' to next word, ')' to previous word, and Thai negative prefixes like 'ไม่'
         const words = [];
         for (let i = 0; i < rawTokens.length; i++) {
             let t = rawTokens[i];
@@ -1609,6 +1708,10 @@ export function wrapTextByWords(str, maxColWidth, useByteLength = true) {
                 i++;
             } else if (t === ')' && words.length > 0 && !words[words.length - 1].endsWith(')')) {
                 words[words.length - 1] += ')';
+            } else if (t === 'ไม่' && i + 1 < rawTokens.length && rawTokens[i+1].trim() !== '') {
+                // Glue Thai negative prefix 'ไม่' to the next word (e.g. 'ไม่หวาน', 'ไม่เผ็ด') to prevent awkward mid-word breaks
+                words.push('ไม่' + rawTokens[i+1]);
+                i++;
             } else {
                 words.push(t);
             }

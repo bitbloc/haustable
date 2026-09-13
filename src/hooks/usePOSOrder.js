@@ -799,7 +799,7 @@ export function usePOSOrder() {
             const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
             posCache.setBookings(updated);
             setLoading(false);
-            toast.success('Order accepted (Offline Mode)');
+            toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว (ออฟไลน์)');
             return true;
         }
 
@@ -811,7 +811,7 @@ export function usePOSOrder() {
             setLoading(false);
             if (error) throw error;
             
-            toast.success('Order accepted');
+            toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว');
             return true;
         } catch (err) {
             console.error('Failed to accept order online:', err);
@@ -819,7 +819,7 @@ export function usePOSOrder() {
             const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
             posCache.setBookings(updated);
             setLoading(false);
-            toast.success('Order accepted (Fallback offline)');
+            toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว (ออฟไลน์สำรอง)');
             return true;
         }
     };

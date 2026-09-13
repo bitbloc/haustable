@@ -762,6 +762,13 @@ export default function POSDashboard() {
             const isQrOrder = remarkStr.includes('qr walk-in') || remarkStr.includes('qr') || fullBooking.source === 'online' || fullBooking.source === 'qr';
             if (!isQrOrder) return;
 
+            // If this is an unverified GPS order that is still pending approval, do NOT auto-seat or auto-print
+            const isWaitingGpsApproval = fullBooking.status === 'pending' && (fullBooking.staff_remark || '').includes('GPS_UNVERIFIED');
+            if (isWaitingGpsApproval) {
+                console.log(`[POS AutoPrint] Booking ${bookingId} requires staff approval (GPS unverified) - skipping auto-print until approved.`);
+                return;
+            }
+
             // Auto-accept if status was pending (change to seated so staff doesn't have to press accept)
             if (fullBooking.status === 'pending') {
                 await supabase.from('bookings').update({ status: 'seated' }).eq('id', bookingId);
@@ -790,17 +797,17 @@ export default function POSDashboard() {
                 };
 
                 const displayTable = fullBooking.tables_layout?.table_name || tableNameHint;
-                toast.success(`🛎️ ออเดอร์ QR โต๊ะ ${displayTable} - เพิ่ม ${unprintedItems.length} รายการ (พิมพ์ใบครัวอัตโนมัติแล้ว)`, {
-                    duration: 10000,
-                    action: {
-                        label: 'ดูรายการ',
-                        onClick: () => {
-                            supabase.from('tables_layout').select('*').eq('id', fullBooking.table_id).single().then(({ data }) => {
-                                if (data) handleSelectTable(data);
-                            });
-                        }
+                toast.custom((t) => renderPosToast(t, {
+                    badge: 'KITCHEN PRINT · พิมพ์ใบครัวแล้ว',
+                    title: `โต๊ะ ${displayTable} - พิมพ์ใบครัว ${unprintedItems.length} รายการ`,
+                    subtitle: 'แตะเพื่อดูรายการอาหารของโต๊ะนี้',
+                    dot: 'emerald',
+                    onClick: () => {
+                        supabase.from('tables_layout').select('*').eq('id', fullBooking.table_id).single().then(({ data }) => {
+                            if (data) handleSelectTable(data);
+                        });
                     }
-                });
+                }), { duration: 8000 });
                 playQRAlertSound();
 
                 await autoPrintQROrder(partialBooking);
@@ -1120,7 +1127,7 @@ export default function POSDashboard() {
             ? 'bg-[oklch(52%_0.16_28)]'
             : dot === 'neutral'
                 ? 'bg-[oklch(42%_0.010_28)]'
-                : 'bg-emerald-500';
+                : 'bg-[oklch(45%_0.08_140)]';
 
         const hoverBorder = dot === 'terracotta'
             ? 'hover:border-[oklch(52%_0.16_28)]'
@@ -1185,31 +1192,52 @@ export default function POSDashboard() {
                     const bId = payload?.booking_id;
                     const tId = payload?.table_id;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                    const isGpsVerified = payload?.gps_verified !== false && !payload?.needs_approval;
                     const qrItemAlertKey = `order_items_${bId || tId}`;
 
                     if (checkEventDeduplication(qrItemAlertKey, 4500)) {
-                        console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}`);
+                        console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}, isGpsVerified: ${isGpsVerified}`);
                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
-                        toast.custom((t) => renderPosToast(t, {
-                            badge: 'QR ORDER · ออเดอร์เข้าใหม่',
-                            title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
-                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
-                            dot: 'emerald',
-                            onClick: () => {
-                                if (tId) {
-                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
+
+                        if (!isGpsVerified) {
+                            // GPS UNVERIFIED -> Requires staff approval before kitchen ticket is printed!
+                            toast.custom((t) => renderPosToast(t, {
+                                badge: 'GPS UNVERIFIED · รอพนักงานอนุมัติ',
+                                title: `โต๊ะ ${tName} ส่งออเดอร์ (GPS ไม่ผ่าน - รออนุมัติ)`,
+                                subtitle: `มี ${payload?.items_count || 1} รายการ · แตะเพื่อเปิดดูโต๊ะและอนุมัติ`,
+                                dot: 'terracotta',
+                                onClick: () => {
+                                    if (tId) {
+                                        supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
                                 }
-                            }
-                        }), { id: qrItemAlertKey, duration: 10000 });
-                        pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                            }), { id: qrItemAlertKey, duration: 15000 });
+                            pushNotifHistory('ORDER', 'QR Order (Needs Approval)', `โต๊ะ ${tName} สั่งอาหาร (GPS ไม่ผ่าน - รออนุมัติ)`, tId);
+                        } else {
+                            toast.custom((t) => renderPosToast(t, {
+                                badge: 'QR ORDER · ออเดอร์เข้าใหม่',
+                                title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
+                                subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                dot: 'emerald',
+                                onClick: () => {
+                                    if (tId) {
+                                        supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
+                                }
+                            }), { id: qrItemAlertKey, duration: 10000 });
+                            pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                        }
                     } else {
                         // Still trigger single chime for simultaneous burst if cooldown hasn't sounded
                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
                     }
 
-                    if (bId) {
+                    // Auto-print ONLY for verified GPS orders; unverified orders wait for staff approval!
+                    if (bId && isGpsVerified) {
                         if (window.autoPrintDebounceTimer) {
                             clearTimeout(window.autoPrintDebounceTimer);
                         }

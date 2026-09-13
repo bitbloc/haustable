@@ -319,20 +319,24 @@ export default function CustomerOrderStatus() {
         );
     }
 
-    const steps = [
-        { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'ห้องครัวได้รับรายการแล้ว', time: booking.booking_time },
-        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามลำดับคิว', time: booking.status !== 'pending' ? booking.booking_time : null },
+    const isWaitingStaffApproval = booking.status === 'pending' || (booking.staff_remark || '').includes('WAITING_APPROVAL');
+
+    const steps = isWaitingStaffApproval ? [
+        { key: 'sent', label: 'ส่งออเดอร์แล้ว', desc: 'รายการอาหารถูกส่งเข้าสู่ระบบ POS หน้าร้านแล้ว', time: booking.booking_time },
+        { key: 'waiting_approval', label: 'รอพนักงานอนุมัติ', desc: 'พนักงานกำลังตรวจสอบและเปิดโต๊ะเพื่อเริ่มปรุงอาหาร', time: null },
+        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามลำดับคิว', time: null },
+    ] : [
+        { key: 'sent', label: 'ส่งออเดอร์แล้ว', desc: 'ห้องครัวได้รับรายการเรียบร้อยแล้ว', time: booking.booking_time },
+        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามลำดับคิว', time: booking.booking_time },
     ];
 
-    const activeStep = booking.status === 'pending' ? 0 : 1;
+    const activeStep = isWaitingStaffApproval ? 1 : (booking.status === 'pending' ? 0 : 1);
     const dynamicTotal = orderItems.reduce((sum, item) => sum + (Number(item.price_at_time) * Number(item.quantity)), 0);
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
     const remainingBalance = Math.max(0, dynamicTotal - depositPaid);
 
     return (
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-12 select-none">
-            <Toaster position="top-center" richColors />
-
             {/* Brutalist Header */}
             <header className="sticky top-0 bg-[var(--color-paper)]/95 backdrop-blur-md border-b border-[var(--color-rule)] z-40">
                 <div className="max-w-2xl mx-auto flex items-center justify-between p-3.5">
@@ -357,7 +361,7 @@ export default function CustomerOrderStatus() {
                                 })()}
                             </h1>
                             <p className="text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold mt-0.5">
-                                Queue #{getShortBookingId(booking)} · Status: {booking.status.toUpperCase()}
+                                Queue #{getShortBookingId(booking)} · Status: {isWaitingStaffApproval ? 'WAITING APPROVAL' : booking.status.toUpperCase()}
                             </p>
                         </div>
                     </div>
@@ -376,21 +380,25 @@ export default function CustomerOrderStatus() {
             </header>
 
             <div className="max-w-2xl mx-auto w-full p-4 space-y-4">
-                {/* Post-Order Success Celebration Banner */}
+                {/* Post-Order Success Banner (Dieter Rams + Thai Modern OKLCH) */}
                 {showOrderSuccessBanner && (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-sm p-3.5 flex items-center justify-between gap-3 shadow-xs">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] rounded-sm p-3.5 flex items-center justify-between gap-3 shadow-xs">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-7 h-7 rounded-sm bg-emerald-600 text-white flex items-center justify-center font-mono font-bold text-xs shrink-0">
+                            <div className="w-7 h-7 rounded-sm bg-[var(--color-accent-2)] text-[var(--color-paper)] flex items-center justify-center font-mono font-bold text-xs shrink-0">
                                 ✓
                             </div>
                             <div>
-                                <h4 className="font-bold text-xs">ส่งรายการสั่งอาหารสู่ห้องครัวเรียบร้อยแล้ว</h4>
-                                <p className="text-[10px] text-emerald-700 font-mono mt-0.5">ห้องครัวและบาร์กำลังเริ่มจัดเตรียมรายการตามคิว</p>
+                                <h4 className="font-bold text-xs">
+                                    {isWaitingStaffApproval ? 'ส่งรายการอาหารเข้า POS เรียบร้อยแล้ว' : 'ส่งรายการสั่งอาหารสู่ห้องครัวเรียบร้อยแล้ว'}
+                                </h4>
+                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">
+                                    {isWaitingStaffApproval ? 'กรุณารอพนักงานตรวจสอบและเปิดโต๊ะสักครู่ครับ' : 'ห้องครัวและบาร์กำลังเริ่มจัดเตรียมรายการตามคิว'}
+                                </p>
                             </div>
                         </div>
                         <button 
                             onClick={() => setShowOrderSuccessBanner(false)}
-                            className="text-emerald-700 hover:text-emerald-900 p-1 cursor-pointer"
+                            className="text-[var(--color-neutral)] hover:text-[var(--color-ink)] p-1 cursor-pointer"
                         >
                             <X size={14} />
                         </button>
@@ -421,7 +429,7 @@ export default function CustomerOrderStatus() {
                                         {isCurrent ? (
                                             <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
                                         ) : isDone ? (
-                                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                            <span className="w-2 h-2 rounded-full bg-[var(--color-accent-2)]" />
                                         ) : (
                                             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-rule)]" />
                                         )}

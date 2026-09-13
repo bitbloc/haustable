@@ -1037,14 +1037,14 @@ export default function CustomerOrderLanding() {
         }).filter(item => item.qty > 0));
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async ({ isAutoSubmit = false } = {}) => {
         if (cart.length === 0 || submittingRef.current || submitting) return;
 
         // Check if table is activated in POS or verified via GPS
         const isTableSeatedInPOS = activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status);
         const isGeofenceVerified = settings.qr_gps_enabled === 'false' || gpsStatus === 'verified' || isTableSeatedInPOS;
 
-        if (!isGeofenceVerified) {
+        if (!isGeofenceVerified && !isAutoSubmit) {
             setShowStaffActivationModal(true);
             return;
         }
@@ -1133,6 +1133,17 @@ export default function CustomerOrderLanding() {
                     finalTrackingToken = rpcResult.tracking_token;
                     finalTotalAmount = rpcResult.total_amount;
                     rpcSucceeded = true;
+
+                    // If GPS is unverified, explicitly enforce pending status and audit remark
+                    if (!isGeofenceVerified && finalBookingId) {
+                        const unverifiedRemark = tableRemarkInput.trim() 
+                            ? `[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL] [NOTE: ${tableRemarkInput.trim()}]`
+                            : `[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL]`;
+                        await supabase.from('bookings').update({
+                            status: 'pending',
+                            staff_remark: unverifiedRemark
+                        }).eq('id', finalBookingId);
+                    }
                 } else if (rpcError && rpcError.code !== 'PGRST202') {
                     console.warn('[Checkout] RPC execution warning:', rpcError);
                 }
@@ -1160,15 +1171,17 @@ export default function CustomerOrderLanding() {
                     remarkStr += ` [NOTE: ${tableRemarkInput.trim()}]`;
                 }
 
+                const targetStatus = isGeofenceVerified ? 'seated' : 'pending';
+
                 if (!currentBooking) {
                     const trackingToken = crypto.randomUUID();
                     const newBookingPayload = {
                         table_id: effectiveNumericTableId,
-                        status: 'seated',
+                        status: targetStatus,
                         booking_type: 'walk_in',
                         booking_time: new Date().toISOString(),
                         pax: paxCount || table?.capacity || 2,
-                        staff_remark: remarkStr,
+                        staff_remark: !isGeofenceVerified ? `[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL] ${remarkStr}` : remarkStr,
                         tracking_token: trackingToken,
                         total_amount: 0,
                         user_id: memberProfile?.id || null
@@ -1196,7 +1209,11 @@ export default function CustomerOrderLanding() {
                 if (itemsError) throw itemsError;
 
                 let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
-                if (!updatedRemark.toLowerCase().includes('qr')) {
+                if (!isGeofenceVerified) {
+                    if (!updatedRemark.includes('GPS_UNVERIFIED')) {
+                        updatedRemark = `[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL] ${updatedRemark}`;
+                    }
+                } else if (!updatedRemark.toLowerCase().includes('qr')) {
                     updatedRemark = `[QR] ${updatedRemark}`;
                 }
                 if (tableRemarkInput.trim() && !updatedRemark.includes(tableRemarkInput.trim())) {
@@ -1213,7 +1230,7 @@ export default function CustomerOrderLanding() {
                     : cartSubtotal;
 
                 const updateData = {
-                    status: 'seated',
+                    status: targetStatus,
                     total_amount: recalculatedTotal,
                     staff_remark: updatedRemark
                 };
@@ -1243,7 +1260,10 @@ export default function CustomerOrderLanding() {
                         table_name: displayTableName,
                         items_count: cartCount,
                         total_amount: finalTotalAmount,
-                        source: 'qr'
+                        source: 'qr',
+                        gps_verified: Boolean(isGeofenceVerified),
+                        needs_approval: !isGeofenceVerified,
+                        is_auto_submit: !isGeofenceVerified
                     }),
                     new Promise((resolve) => setTimeout(resolve, 800))
                 ]);
@@ -1251,7 +1271,7 @@ export default function CustomerOrderLanding() {
                 console.warn('[Checkout] Broadcast delivery non-fatal warning:', broadcastErr);
             }
 
-            toast.success('ออเดอร์ถูกส่งไปยังห้องครัวแล้ว!');
+            toast.success(isGeofenceVerified ? 'ออเดอร์ถูกส่งไปยังห้องครัวแล้ว!' : 'ส่งออเดอร์เข้าสู่ POS เรียบร้อยแล้ว (รอพนักงานอนุมัติ)');
             setCart([]);
             setCartOpen(false);
             setTableRemarkInput('');
@@ -1318,8 +1338,6 @@ export default function CustomerOrderLanding() {
 
     return (
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
-            <Toaster position="top-center" richColors />
-
             {/* Top Brutalist Structural Header (Tabular Layout) */}
             <header className="sticky top-0 bg-[var(--color-paper)]/95 backdrop-blur-md border-b border-[var(--color-rule)] z-40">
                 <div className="max-w-2xl mx-auto flex items-stretch divide-x divide-[var(--color-rule)]">
@@ -1341,7 +1359,7 @@ export default function CustomerOrderLanding() {
                         ) : gpsChecking ? (
                             <div className="flex items-center gap-1 text-[var(--color-neutral)] font-mono text-[9px] font-bold uppercase animate-pulse">
                                 <MapPin size={12} />
-                                <span>LOCATING...</span>
+                                <span>LOCATING…</span>
                             </div>
                         ) : (
                             <button
@@ -1368,6 +1386,25 @@ export default function CustomerOrderLanding() {
                     </div>
                 </div>
             </header>
+
+            {/* GPS Unverified Notice Banner (Dieter Rams + Thai Modern OKLCH) */}
+            {settings.qr_gps_enabled === 'true' && gpsStatus === 'failed' && !(activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) && (
+                <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-[var(--color-neutral)]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse shrink-0" />
+                        <span className="text-[11px] leading-tight">
+                            ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของคุณจะถูกส่งเข้า POS เพื่อรอพนักงานอนุมัติ
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setShowStaffActivationModal(true)}
+                        className="text-[10px] font-mono font-bold uppercase text-[var(--color-accent)] underline cursor-pointer shrink-0 ml-2"
+                    >
+                        ดูสถานะ
+                    </button>
+                </div>
+            )}
 
             <div className="max-w-2xl mx-auto w-full flex flex-col">
                 {/* Table Overview & Party Size Bar */}
@@ -2293,7 +2330,7 @@ export default function CustomerOrderLanding() {
                                         : 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)]'
                                 }`}>
                                     {isCallingStaffOpen ? (
-                                        <Bell size={22} className="animate-bounce" />
+                                        <Bell size={22} className="animate-pulse" />
                                     ) : (
                                         <MapPin size={22} />
                                     )}
@@ -2311,20 +2348,34 @@ export default function CustomerOrderLanding() {
                             </div>
 
                             <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
+                                {cart.length > 0 && (
+                                    <button
+                                        type="button"
+                                        disabled={submitting}
+                                        onClick={() => {
+                                            setShowStaffActivationModal(false);
+                                            handleCheckout({ isAutoSubmit: true });
+                                        }}
+                                        className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border border-[var(--color-ink)] shadow-sm active:scale-98"
+                                    >
+                                        <span>{submitting ? 'กำลังส่งออเดอร์…' : 'ส่งออเดอร์เข้า POS (รอพนักงานอนุมัติ)'}</span>
+                                    </button>
+                                )}
+
                                 <button
                                     type="button"
                                     onClick={handleCallStaffToOpenTable}
                                     disabled={callingStaff}
-                                    className={`w-full py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border ${
+                                    className={`w-full py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border ${
                                         isCallingStaffOpen
                                             ? 'bg-[var(--color-paper-2)] border-[var(--color-rule)] text-[var(--color-ink)]'
-                                            : 'bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 border-[var(--color-ink)] text-[var(--color-paper)] shadow-sm'
+                                            : 'bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]'
                                     }`}
                                 >
                                     <Bell size={14} className={callingStaff ? 'animate-spin' : ''} />
                                     <span>
                                         {callingStaff 
-                                            ? 'กำลังส่งสัญญาณ...' 
+                                            ? 'กำลังส่งสัญญาณ…' 
                                             : isCallingStaffOpen 
                                                 ? 'ส่งสัญญาณเรียกซ้ำ (Call Staff Again)' 
                                                 : 'เรียกพนักงานเปิดโต๊ะ (Call Staff)'}
@@ -2338,7 +2389,7 @@ export default function CustomerOrderLanding() {
                                     className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-2 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                                 >
                                     <RefreshCw size={12} className={gpsChecking ? 'animate-spin' : ''} />
-                                    <span>{gpsChecking ? 'กำลังค้นหาพิกัด...' : 'ลองตรวจสอบพิกัด GPS อีกครั้ง'}</span>
+                                    <span>{gpsChecking ? 'กำลังค้นหาพิกัด…' : 'ลองตรวจสอบพิกัด GPS อีกครั้ง'}</span>
                                 </button>
                             </div>
                         </div>

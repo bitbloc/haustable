@@ -941,21 +941,28 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 </div>
             </div>
 
-            {/* Pending Order Alert */}
+            {/* Pending Order Alert (Dieter Rams + Thai Modern OKLCH) */}
             {booking && booking.status === 'pending' && (
-                <div className="mx-3 mt-3 p-3 bg-[#FFF9E6] border border-[#E5A900] rounded-xl flex flex-col gap-2 shrink-0">
-                    <div className="flex items-center gap-1.5 text-amber-700 font-mono text-[9px] font-bold uppercase tracking-wider">
-                        <AlertCircle size={12} className="text-[#FFAA00] animate-pulse" />
-                        <span>Pending Approval</span>
+                <div className="mx-3 mt-3 p-3 bg-[var(--color-paper-2)] border border-[var(--color-accent)]/50 rounded-sm flex flex-col gap-2.5 shrink-0 shadow-xs">
+                    <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-[var(--color-accent)] font-mono text-[9px] font-bold uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                            <span>{(booking.staff_remark || '').includes('GPS_UNVERIFIED') ? 'รอพนักงานอนุมัติ · GPS ไม่ผ่าน' : 'รอพนักงานอนุมัติ · PENDING'}</span>
+                        </span>
+                        <span className="text-[8px] font-mono font-bold uppercase tracking-wider border border-[var(--color-accent)]/30 px-1 py-0.2 rounded-xs text-[var(--color-accent)]">
+                            QR ORDER
+                        </span>
                     </div>
-                    <p className="text-[9px] text-amber-800/80 font-medium">Order submitted by customer. Awaiting confirmation.</p>
+                    <p className="text-[10px] text-[var(--color-neutral)] leading-relaxed">
+                        ลูกค้าส่งรายการสั่งอาหารจากโต๊ะเข้ามา ตรวจสอบรายการและกดอนุมัติเพื่อเปิดโต๊ะและส่งพิมพ์ใบครัวอัตโนมัติ
+                    </p>
                     <button 
                         disabled={isSubmitting}
                         onClick={onAcceptOrder}
-                        className="w-full bg-[#FFAA00] hover:bg-[#E5A900] disabled:opacity-50 disabled:cursor-not-allowed text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                        className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-paper)] py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-98"
                     >
-                        {isSubmitting ? <RefreshCw size={10} className="animate-spin" /> : <Check size={10} />} 
-                        {isSubmitting ? 'Processing...' : 'Accept & Print Slip'}
+                        {isSubmitting ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />} 
+                        <span>{isSubmitting ? 'กำลังอนุมัติ…' : 'อนุมัติออเดอร์และพิมพ์ใบครัว (Approve & Print)'}</span>
                     </button>
                 </div>
             )}

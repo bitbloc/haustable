@@ -600,27 +600,32 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     </div>
                 )}
             </div>
-            {/* 🔄 Smart Re-assignment Modal (แก้ปัญหาคิวจองชนลูกค้านั่งแช่) */}
+            {/* Smart Re-assignment Modal (Dieter Rams + Thai Modern OKLCH) */}
             {reassignModalBooking && (
-                <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border-2 border-amber-500 animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
-                            <div className="p-3 bg-amber-100 text-amber-700 rounded-xl">
-                                <AlertCircle size={24} />
-                            </div>
+                <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-paper)] rounded-sm max-w-md w-full p-5 shadow-2xl border border-[var(--color-rule)] font-sans text-[var(--color-ink)] animate-in fade-in duration-150">
+                        <div className="flex items-center gap-3 mb-4 pb-3 border-b border-[var(--color-rule)]">
                             <div>
-                                <h3 className="font-bold text-gray-900 text-base">ย้ายคิวจองไปโต๊ะอื่น (Re-assign Table)</h3>
-                                <p className="text-xs text-gray-500">โต๊ะเดิมมีลูกค้านั่งอยู่ ย้ายคิวไปโต๊ะว่างอื่นได้ทันที</p>
+                                <h3 className="font-mono font-bold text-sm uppercase tracking-wider text-[var(--color-ink)]">
+                                    ย้ายคิวจองไปโต๊ะอื่น (Re-assign Table)
+                                </h3>
+                                <p className="text-xs text-[var(--color-neutral)] mt-0.5">
+                                    โต๊ะเดิมมีลูกค้านั่งอยู่ สามารถย้ายคิวไปโต๊ะว่างอื่นได้ทันที
+                                </p>
                             </div>
                         </div>
 
-                        <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 mb-4 text-xs text-amber-900 space-y-1">
-                            <p className="font-bold">👤 ลูกค้าจอง: {reassignModalBooking.pickup_contact_name || reassignModalBooking.customer_name || 'ลูกค้าออนไลน์'}</p>
-                            <p>⏰ เวลาจอง: {new Date(reassignModalBooking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</p>
+                        <div className="bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-rule)] mb-4 text-xs font-mono space-y-1">
+                            <p className="font-bold text-[var(--color-ink)]">
+                                [GUEST] {reassignModalBooking.pickup_contact_name || reassignModalBooking.customer_name || 'ลูกค้าออนไลน์'}
+                            </p>
+                            <p className="text-[var(--color-neutral)]">
+                                [TIME] {new Date(reassignModalBooking.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                            </p>
                         </div>
 
-                        <p className="text-xs font-bold text-gray-700 uppercase mb-2">เลือกโต๊ะว่างที่จะย้ายไป:</p>
-                        <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-6">
+                        <p className="text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-2">เลือกโต๊ะว่างที่จะย้ายไป:</p>
+                        <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-5">
                             {tables.filter(t => t.status === 'free').map(freeT => (
                                 <button
                                     key={freeT.id}
@@ -636,7 +641,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                                             if (error) throw error;
 
-                                            toast.success(`ย้ายคิวจองไป ${freeT.table_name} สำเร็จ! (หน้า Tracking ลูกค้าอัปเดตแล้ว)`);
+                                            toast.success(`ย้ายคิวจองไป ${freeT.table_name} สำเร็จ!`);
                                             setReassignModalBooking(null);
                                             fetchTables();
                                         } catch (err) {
@@ -646,21 +651,21 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                             setReassigning(false);
                                         }
                                     }}
-                                    className="p-3 rounded-xl border border-gray-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer active:scale-95"
+                                    className="p-3 rounded-sm border border-[var(--color-rule)] hover:border-[var(--color-ink)] bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] text-[var(--color-ink)] font-mono font-bold text-xs flex flex-col items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 shadow-xs"
                                 >
                                     <span className="text-sm font-black">{freeT.table_name}</span>
-                                    <span className="text-[9px] opacity-75 font-normal">ว่าง (Free)</span>
+                                    <span className="text-[9px] text-[var(--color-neutral)] font-normal">ว่าง (Free)</span>
                                 </button>
                             ))}
                             {tables.filter(t => t.status === 'free').length === 0 && (
-                                <div className="col-span-3 text-center text-gray-400 text-xs py-6">ไม่มีโต๊ะว่างในขณะนี้</div>
+                                <div className="col-span-3 text-center text-[var(--color-neutral)] font-mono text-xs py-6">ไม่มีโต๊ะว่างในขณะนี้</div>
                             )}
                         </div>
 
                         <button
                             type="button"
                             onClick={() => setReassignModalBooking(null)}
-                            className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                            className="w-full py-2.5 bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] text-[var(--color-ink)] font-mono font-bold text-xs uppercase tracking-wider rounded-sm transition-colors cursor-pointer"
                         >
                             ยกเลิก
                         </button>
@@ -680,20 +685,21 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
     const isReserved = table.status === 'reserved';
+    const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
     const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
     const hasSlip = !!table.booking?.payment_slip_url;
     const transfer = parseTableTransferInfo(table.booking);
 
-    let tableBgClass = 'bg-white border-[#D1D1CD] text-[#1A1A1A]';
-    let ledColor = 'bg-[#00CC44]';
+    let tableBgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)]';
+    let ledColor = 'bg-[oklch(45%_0.08_140)]';
     
     if (isReserved) {
         tableBgClass = 'bg-amber-50 border-2 border-amber-500 text-amber-950 shadow-xs';
         ledColor = 'bg-amber-500';
     } else if (isOccupied || isPending) {
-        tableBgClass = 'bg-[#FF3300] border-[#CC2900] text-white shadow-sm';
+        tableBgClass = 'bg-[var(--color-accent)] border-[var(--color-accent)] text-white shadow-sm';
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
@@ -706,7 +712,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         }
         if (hasOrder) {
             tableBgClass = 'animate-pos-blink-red border-2 shadow-md';
-            ledColor = 'bg-[#ff0000] animate-ping';
+            ledColor = 'bg-red-500 animate-ping';
         }
     }
 
@@ -731,13 +737,18 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
             >
                 {/* LED indicator light in top-right */}
                 <div className="absolute top-1 right-1 flex items-center justify-center gap-1 flex-wrap max-w-[85%] justify-end">
+                    {isWaitingApproval && (
+                        <span className="bg-amber-400 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                            รออนุมัติ
+                        </span>
+                    )}
                     {table.upcomingConflict && (
                         <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); onReassign(table.booking); }}
-                            className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-bounce shadow cursor-pointer pointer-events-auto"
+                            className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse shadow cursor-pointer pointer-events-auto"
                         >
-                            ⚠️ ชนคิว!
+                            [CONFLICT] ชนคิว
                         </button>
                     )}
                     {isReserved && (
@@ -761,7 +772,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         </span>
                     )}
                     {hasOrder && (
-                        <span className="bg-[#ff0000] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
+                        <span className="bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
                             ORDER
                         </span>
                     )}
@@ -776,7 +787,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         </span>
                     )}
                     {hasSlip && (
-                        <span className="bg-[#00CC44] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                        <span className="bg-[oklch(45%_0.08_140)] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
                             SLIP
                         </span>
                     )}
@@ -790,14 +801,14 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                 
                 {/* Capacity / Guest count */}
                 <span className="text-[8px] font-mono font-bold tracking-tight opacity-60 mt-0.5 uppercase">
-                    {(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax}คน` : `${table.capacity}p`}
+                    {(isOccupied || isPending) && table.booking?.pax ? `PAX: ${table.booking.pax}` : `${table.capacity}p`}
                 </span>
 
                 {/* Upcoming Advance Reservation on Free or Reserved Table */}
                 {table.upcomingReservation && !isOccupied && !isPending && (
                     <div className="flex flex-col items-center mt-0.5 max-w-[95%]">
                         <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight truncate max-w-full">
-                            🕒 {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                            RES: {formatUpcomingResTime(table.upcomingReservation.booking_time)}
                         </span>
                         {(table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name) && (
                             <span className="text-[7px] font-mono font-bold text-amber-900 truncate max-w-full mt-0.5">
@@ -820,7 +831,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                             </div>
                             {isStale ? (
                                 <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                                    ⚠️ บิลค้าง &gt;2วัน
+                                    STALE &gt;48H
                                 </span>
                             ) : isPending && startMins >= 10 ? (
                                 <span className="mt-0.5 bg-red-600 text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
@@ -828,11 +839,11 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                                 </span>
                             ) : isLongDwell ? (
                                 <span className="mt-0.5 bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
-                                    🔥 นั่งแช่ {Math.floor(startMins / 60)}h{startMins % 60}m
+                                    DWELL {Math.floor(startMins / 60)}h{startMins % 60}m
                                 </span>
                             ) : (
                                 <span className="mt-0.5 text-[7px] font-mono opacity-70">
-                                    ⏱️ {startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`}
+                                    {startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`}
                                 </span>
                             )}
                         </div>
@@ -847,6 +858,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
     const isReserved = table.status === 'reserved';
+    const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
     
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
@@ -855,7 +867,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const transfer = parseTableTransferInfo(table.booking);
 
     let cellBgClass = 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-ink)] hover:border-[var(--color-accent)] shadow-xs';
-    let ledColor = 'bg-emerald-500';
+    let ledColor = 'bg-[oklch(45%_0.08_140)]';
     
     if (isReserved) {
         cellBgClass = 'bg-amber-50/90 border-2 border-amber-500 text-amber-950 shadow-xs hover:border-amber-600';
@@ -888,6 +900,11 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Top row: Status LEDs */}
             <div className="flex justify-between items-center w-full">
                 <div className="flex gap-1 items-center flex-wrap">
+                     {isWaitingApproval && (
+                         <span className="bg-amber-400 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">
+                             รออนุมัติ GPS
+                         </span>
+                     )}
                      {isReserved && (
                          <span className="bg-amber-500 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
                              จองแล้ว · RESERVED
@@ -939,7 +956,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             
             {/* Bottom row: Capacity / Timing */}
             <div className="flex justify-between items-center w-full border-t border-black/10 pt-2 text-[9px] font-mono font-bold uppercase tracking-wider select-none opacity-80">
-                 <span>{(isOccupied || isPending) && table.booking?.pax ? `👥 ${table.booking.pax} คน` : `CAP: ${table.capacity}P`}</span>
+                 <span>{(isOccupied || isPending) && table.booking?.pax ? `PAX: ${table.booking.pax}` : `CAP: ${table.capacity}P`}</span>
                 {(isOccupied || isPending) ? (
                     <div className="flex items-center gap-1">
                         <Clock size={10} />
