@@ -922,6 +922,61 @@ describe('System Audit - Phase 6: Sunmi D2s Plus Hardware Thermal Slip & Grid Pr
         expect(text).not.toContain('( COLD )');
         expect(text).not.toContain('ระดับความหวาน');
     });
+
+    it('should reproduce and test the user kitchen slip layout', () => {
+        const kitchenBooking = {
+            id: 'bk-user-test',
+            tables_layout: { table_name: 'H4' },
+            booking_type: 'dine_in',
+            pax: 4,
+            order_items: [
+                {
+                    name: 'ข้าวซอสญี่ปุ่น - หมูซูวี',
+                    quantity: 2,
+                    destination: 'kitchen',
+                    selected_options: [
+                        { group_name: 'Add-on', name: 'ไข่ออนเซ็นซูวี ( Onsen Egg )', price: 25 }
+                    ]
+                },
+                {
+                    name: 'ข้าวหมูย่างในบ้าน',
+                    quantity: 1,
+                    destination: 'kitchen',
+                    selected_options: [
+                        { group_name: 'Add-on', name: 'ไข่ดาว ( Fried Egg )', price: 15 }
+                    ]
+                },
+                {
+                    name: 'ไข่เจียว\n(ไข่ 2 ฟอง)',
+                    quantity: 1,
+                    destination: 'kitchen',
+                    selected_options: [
+                        { group_name: 'ซอส chili sauce', name: 'รับซอสพริก ( Add Chili Sauce )' }
+                    ]
+                }
+            ]
+        };
+
+        const encoded = encodeReceiptData(kitchenBooking, 'kitchen', 'cash', {}, '80mm', {}, 'sunmi');
+        const text = decodeTis620(encoded);
+
+        // 1. Food item names must be unified on a single line without broken word splitting
+        expect(text).toContain('2x ข้าวซอสญี่ปุ่น - หมูซูวี');
+        expect(text).toContain('1x ข้าวหมูย่างในบ้าน');
+        expect(text).toContain('1x ไข่เจียว (ไข่ 2 ฟอง)');
+
+        // 2. Redundant English subtitles and generic group names must be stripped
+        expect(text).toContain('- ไข่ออนเซ็นซูวี (+฿25)');
+        expect(text).not.toContain('( Onsen Egg )');
+        expect(text).not.toContain('Add-on:');
+
+        expect(text).toContain('- ไข่ดาว (+฿15)');
+        expect(text).not.toContain('( Fried Egg )');
+
+        expect(text).toContain('- รับซอสพริก');
+        expect(text).not.toContain('( Add Chili Sauce )');
+        expect(text).not.toContain('chili sauce:');
+    });
 });
 
 
