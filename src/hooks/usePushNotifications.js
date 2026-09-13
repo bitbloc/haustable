@@ -113,26 +113,37 @@ export default function usePushNotifications() {
 
   // Listen for foreground messages
   useEffect(() => {
+    let unsubscribe = null;
+    let isMounted = true;
+
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      import("firebase/messaging").then(({ getMessaging, onMessage }) => {
-          import("../utils/firebase").then(({ default: app }) => {
-             const msg = getMessaging(app);
-             const unsubscribe = onMessage(msg, (payload) => {
-                console.log('Message received. ', payload);
-                // In foreground, we might want to show a toast OR a system notification
-                // For "Desktop Version" feel, let's do BOTH or just System if supported
-                if(payload.notification) {
-                     triggerNotification(payload.notification.title, {
-                         body: payload.notification.body,
-                         data: payload.data, // pass data for click handling
-                     });
-                }
-             });
-             return () => unsubscribe();
-          });
+      Promise.all([
+        import("firebase/messaging"),
+        import("../utils/firebase")
+      ]).then(([{ getMessaging, onMessage }, { default: app }]) => {
+        if (!isMounted) return;
+        const msg = getMessaging(app);
+        unsubscribe = onMessage(msg, (payload) => {
+          console.log('Message received. ', payload);
+          if (payload.notification) {
+            triggerNotification(payload.notification.title, {
+              body: payload.notification.body,
+              data: payload.data, // pass data for click handling
+            });
+          }
+        });
+      }).catch(err => {
+        console.warn('[usePushNotifications] Failed to init messaging listener:', err);
       });
     }
-  }, []);
+
+    return () => {
+      isMounted = false;
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [triggerNotification]);
 
   return { 
       permission, 

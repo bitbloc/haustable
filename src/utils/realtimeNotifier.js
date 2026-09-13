@@ -17,12 +17,10 @@ function getBroadcastChannel() {
                     clearTimeout(timer);
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    console.warn(`[RealtimeNotifier] Channel status: ${status}, resetting channel.`);
-                    if (posBroadcastChannel) {
-                        try {
-                            supabase.removeChannel(posBroadcastChannel);
-                        } catch (e) {}
-                    }
+                    console.warn(`[RealtimeNotifier] Channel status: ${status}, resetting broadcaster reference.`);
+                    // Do NOT call supabase.removeChannel(posBroadcastChannel) here because
+                    // 'pos-realtime-notifications' is shared with POSDashboard.jsx and LiveFloorQuickStatus.jsx listeners.
+                    // Removing it from Supabase registry would unilaterally tear down active POS listeners.
                     posBroadcastChannel = null;
                     posChannelSubPromise = null;
                     clearTimeout(timer);

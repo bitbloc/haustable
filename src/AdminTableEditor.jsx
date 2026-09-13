@@ -127,6 +127,11 @@ export default function AdminTableEditor() {
         useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
     );
 
+    const editingStateRef = useRef({ saving, qrModalOpen, batchQrModalOpen });
+    useEffect(() => {
+        editingStateRef.current = { saving, qrModalOpen, batchQrModalOpen };
+    }, [saving, qrModalOpen, batchQrModalOpen]);
+
     useEffect(() => {
         fetchData(true);
 
@@ -135,7 +140,8 @@ export default function AdminTableEditor() {
             if (debounceTimer) clearTimeout(debounceTimer);
             debounceTimer = setTimeout(() => {
                 // Don't disturb active saving or modal editing
-                if (!saving && !qrModalOpen && !batchQrModalOpen) {
+                const { saving: s, qrModalOpen: q, batchQrModalOpen: b } = editingStateRef.current;
+                if (!s && !q && !b) {
                     fetchData(false);
                 }
             }, 400);
@@ -151,7 +157,7 @@ export default function AdminTableEditor() {
             if (debounceTimer) clearTimeout(debounceTimer);
             supabase.removeChannel(channel);
         };
-    }, [saving, qrModalOpen, batchQrModalOpen]);
+    }, []);
 
     const fetchData = async (showLoadingState = false) => {
         if (showLoadingState) setLoading(true);

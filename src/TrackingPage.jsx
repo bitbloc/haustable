@@ -3,7 +3,7 @@
  * contrast: pass (APCA / WCAG AAA compliant)
  * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from './lib/supabaseClient'
 import { MapPin, Phone, Copy, Share2, Calendar as CalendarIcon, AlertCircle, XCircle, CheckCircle, Ticket, ArrowLeft } from 'lucide-react'
@@ -34,6 +34,7 @@ export default function TrackingPage() {
   // State for Slip Modal & Options
   const [showSlipModal, setShowSlipModal] = useState(false)
   const [optionMap, setOptionMap] = useState({})
+  const celebrationTimerRef = useRef(null)
 
   // Fetch Options Map
   useEffect(() => {
@@ -59,17 +60,37 @@ export default function TrackingPage() {
     fetchSettings()
   }, [])
 
+  // Cleanup celebration timer on unmount
+  useEffect(() => {
+    return () => {
+      if (celebrationTimerRef.current) {
+        clearInterval(celebrationTimerRef.current)
+        celebrationTimerRef.current = null
+      }
+    }
+  }, [])
+
   // --- HELPERS ---
   const triggerCelebration = () => {
+      if (celebrationTimerRef.current) {
+        clearInterval(celebrationTimerRef.current)
+        celebrationTimerRef.current = null
+      }
       const duration = 2.5 * 1000
       const animationEnd = Date.now() + duration
       const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 50 }
 
       const randomInRange = (min, max) => Math.random() * (max - min) + min
 
-      const interval = setInterval(function() {
+      celebrationTimerRef.current = setInterval(function() {
         const timeLeftNow = animationEnd - Date.now()
-        if (timeLeftNow <= 0) return clearInterval(interval)
+        if (timeLeftNow <= 0) {
+          if (celebrationTimerRef.current) {
+            clearInterval(celebrationTimerRef.current)
+            celebrationTimerRef.current = null
+          }
+          return
+        }
 
         const particleCount = 40 * (timeLeftNow / duration)
         confetti({

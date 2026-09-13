@@ -46,6 +46,11 @@ export const useHausHome = (session) => {
         }
     }, [userRole])
 
+    const settingsRef = useRef(settings)
+    useEffect(() => {
+        settingsRef.current = settings
+    }, [settings])
+
     // Effect: Initial Load & Settings
     useEffect(() => {
         // 1. Safety Timeout
@@ -64,6 +69,7 @@ export const useHausHome = (session) => {
                 if (data) {
                     const map = data.reduce((acc, i) => ({ ...acc, [i.key]: i.value }), {})
                     setSettings(map)
+                    settingsRef.current = map
                     setStatus(checkServiceStatus(map, 'shop_mode_table'))
                 }
             } catch (err) {
@@ -74,7 +80,8 @@ export const useHausHome = (session) => {
         fetchSettings()
 
         const interval = setInterval(() => { 
-            if (settings) setStatus(checkServiceStatus(settings, 'shop_mode_table')) 
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+            if (settingsRef.current) setStatus(checkServiceStatus(settingsRef.current, 'shop_mode_table')) 
         }, 60000)
 
         return () => {

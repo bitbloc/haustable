@@ -81,6 +81,7 @@ function orderReducer(state, action) {
 
 export function OrderProvider({ children }) {
     const [state, dispatch] = useReducer(orderReducer, initialState)
+    const isUnmountedRef = useRef(false)
     const fetchDebounceRef = useRef({})
     const stateRef = useRef(state)
     const channelRef = useRef(null)
@@ -207,6 +208,8 @@ export function OrderProvider({ children }) {
                 })
             }
 
+            if (isUnmountedRef.current) return
+
             if (isNew) {
                 // Synchronously add to known IDs to prevent polling race condition
                 knownOrderIdsRef.current.add(fullOrder.id)
@@ -227,11 +230,22 @@ export function OrderProvider({ children }) {
         }
     }, [])
 
+    const clearAllDebounceTimeouts = useCallback(() => {
+        if (fetchDebounceRef.current) {
+            Object.values(fetchDebounceRef.current).forEach(item => {
+                if (item?.timeout) clearTimeout(item.timeout)
+            })
+            fetchDebounceRef.current = {}
+        }
+    }, [])
+
     const startPolling = useCallback(() => {
         stopPolling()
-        // Run silent fallback polling every 30 seconds (only active when realtime is disconnected)
+        // Run silent fallback polling every 30 seconds (only active when realtime is disconnected and tab is visible)
         pollingTimerRef.current = setInterval(async () => {
             if (!isOnline()) return
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+            if (isUnmountedRef.current) return
             try {
                 const [liveData, scheduleData] = await Promise.all([
                     fetchLiveOrders(true),
@@ -239,7 +253,7 @@ export function OrderProvider({ children }) {
                 ])
 
                 // Check for new orders during polling
-                if (liveData && alertCallbackRef.current) {
+                if (liveData && alertCallbackRef.current && !isUnmountedRef.current) {
                     const newOrders = liveData.filter(o => !knownOrderIdsRef.current.has(o.id))
                     if (newOrders.length > 0) {
                         newOrders.forEach(o => {
@@ -397,15 +411,17 @@ export function OrderProvider({ children }) {
         window.addEventListener('focus', handleVisibilityChange)
 
         return () => {
+            isUnmountedRef.current = true
             window.removeEventListener('online', handleOnline)
             window.removeEventListener('offline', handleOffline)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('focus', handleVisibilityChange)
             stopPolling()
             cleanupChannel()
+            clearAllDebounceTimeouts()
             if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
         }
-    }, [cleanupChannel, fetchLiveOrders, fetchScheduleOrders, setupRealtimeChannel, stopPolling])
+    }, [cleanupChannel, clearAllDebounceTimeouts, fetchLiveOrders, fetchScheduleOrders, setupRealtimeChannel, stopPolling])
 
     // --- Optimistic Actions (Offline-First) ---
     const performUpdateStatus = async (id, newStatus, staffRemark) => {
@@ -457,8 +473,9 @@ export function OrderProvider({ children }) {
         return () => {
             cleanupChannel()
             stopPolling()
+            clearAllDebounceTimeouts()
         }
-    }, [cleanupChannel, setupRealtimeChannel, stopPolling])
+    }, [cleanupChannel, clearAllDebounceTimeouts, setupRealtimeChannel, stopPolling])
 
     return (
         <OrderContext.Provider value={{

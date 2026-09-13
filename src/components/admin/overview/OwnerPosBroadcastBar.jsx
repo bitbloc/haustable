@@ -71,14 +71,26 @@ export default function OwnerPosBroadcastBar() {
                 id: crypto.randomUUID()
             }
 
-            // 1. Broadcast via Realtime Channel
-            const channel = supabase.channel('pos-broadcast-live')
-            await channel.send({
-                type: 'broadcast',
-                event: 'owner-announcement',
-                payload
-            })
-            supabase.removeChannel(channel)
+            // 1. Broadcast via Realtime Channel with connection handshake
+            const channel = supabase.channel('pos-broadcast-live', { config: { broadcast: { ack: true } } })
+            try {
+                await new Promise((resolve) => {
+                    const timer = setTimeout(resolve, 1500)
+                    channel.subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            clearTimeout(timer)
+                            resolve()
+                        }
+                    })
+                })
+                await channel.send({
+                    type: 'broadcast',
+                    event: 'owner-announcement',
+                    payload
+                })
+            } finally {
+                supabase.removeChannel(channel)
+            }
 
             // 2. Persist in app_settings
             const { error } = await supabase
@@ -109,14 +121,26 @@ export default function OwnerPosBroadcastBar() {
                 .delete()
                 .eq('key', 'pos_owner_broadcast')
 
-            // Broadcast clear event
-            const channel = supabase.channel('pos-broadcast-live')
-            await channel.send({
-                type: 'broadcast',
-                event: 'owner-announcement-clear',
-                payload: {}
-            })
-            supabase.removeChannel(channel)
+            // Broadcast clear event with connection handshake
+            const channel = supabase.channel('pos-broadcast-live', { config: { broadcast: { ack: true } } })
+            try {
+                await new Promise((resolve) => {
+                    const timer = setTimeout(resolve, 1500)
+                    channel.subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            clearTimeout(timer)
+                            resolve()
+                        }
+                    })
+                })
+                await channel.send({
+                    type: 'broadcast',
+                    event: 'owner-announcement-clear',
+                    payload: {}
+                })
+            } finally {
+                supabase.removeChannel(channel)
+            }
 
             setActiveBroadcast(null)
             toast.success('ลบประกาศออกจากหน้าจอ POS แล้ว')

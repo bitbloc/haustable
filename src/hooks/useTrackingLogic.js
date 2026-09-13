@@ -133,6 +133,11 @@ export function useTrackingLogic(token) {
     }
   }, [token])
 
+  const currentStatusRef = useRef(data?.status)
+  useEffect(() => {
+    currentStatusRef.current = data?.status
+  }, [data?.status])
+
   // Realtime Broadcast Room + Postgres Changes Subscription + Polling Fallback
   useEffect(() => {
     fetchTrackingInfo()
@@ -197,7 +202,8 @@ export function useTrackingLogic(token) {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       
       // Stop polling completely if order reached terminal state
-      if (data?.status && ['completed', 'cancelled', 'void'].includes(data.status.toLowerCase())) {
+      const currentStatus = currentStatusRef.current
+      if (currentStatus && ['completed', 'cancelled', 'void'].includes(currentStatus.toLowerCase())) {
         clearInterval(interval)
         return
       }
@@ -215,7 +221,7 @@ export function useTrackingLogic(token) {
       supabase.removeChannel(channel)
       clearInterval(interval)
     }
-  }, [token, fetchTrackingInfo, data?.status])
+  }, [token, fetchTrackingInfo])
 
   // Countdown Logic for Arrival / Ready time
   useEffect(() => {

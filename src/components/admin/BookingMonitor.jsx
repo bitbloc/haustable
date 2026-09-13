@@ -87,8 +87,8 @@ export default function BookingMonitor() {
         window.addEventListener('online', handleOnline)
         window.addEventListener('offline', handleOffline)
 
-        return async () => {
-            await supabase.removeChannel(channel)
+        return () => {
+            supabase.removeChannel(channel)
             window.removeEventListener('online', handleOnline)
             window.removeEventListener('offline', handleOffline)
             stopAlarm()
