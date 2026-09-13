@@ -17,7 +17,7 @@ export function usePOSOrder() {
             console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
             const bookings = posCache.getBookings();
             const booking = bookings.find(b => {
-                if (b.table_id !== tableId) return false;
+                if (String(b.table_id) !== String(tableId)) return false;
                 if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
                 if (b.status === 'seated') return true;
                 const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
@@ -35,8 +35,11 @@ export function usePOSOrder() {
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .order('booking_time', { ascending: false });
 
-            if (error && error.code !== 'PGRST116') {
-                console.error('Error fetching active booking:', error);
+            if (error) {
+                if (error.code !== 'PGRST116') {
+                    console.error('[getActiveBooking] Query error, falling back to cache:', error);
+                    throw error;
+                }
             }
 
             // Find the booking actively occupying this table in-store
@@ -56,19 +59,19 @@ export function usePOSOrder() {
 
             if (data) {
                 // Update local bookings cache
-                const currentBookings = posCache.getBookings().filter(b => b.table_id !== tableId);
+                const currentBookings = posCache.getBookings().filter(b => String(b.table_id) !== String(tableId));
                 currentBookings.push(data);
                 posCache.setBookings(currentBookings);
             } else {
                 // Table is free / booking closed or voided -> remove from posCache
-                const currentBookings = posCache.getBookings().filter(b => b.table_id !== tableId);
+                const currentBookings = posCache.getBookings().filter(b => String(b.table_id) !== String(tableId));
                 posCache.setBookings(currentBookings);
             }
             return data;
         } catch (err) {
             console.error('Network error fetching booking, fallback to cache:', err);
             const bookings = posCache.getBookings();
-            return bookings.find(b => b.table_id === tableId && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show') || null;
+            return bookings.find(b => String(b.table_id) === String(tableId) && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show') || null;
         }
     }, []);
 
@@ -92,7 +95,7 @@ export function usePOSOrder() {
             };
 
             // Save to active bookings cache
-            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
+            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
             bookings.push(mockBooking);
             posCache.setBookings(bookings);
 
@@ -129,7 +132,7 @@ export function usePOSOrder() {
             if (error) throw error;
             
             // Cache locally
-            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
+            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
             bookings.push(data);
             posCache.setBookings(bookings);
 
@@ -148,7 +151,7 @@ export function usePOSOrder() {
                 tables_layout: table || null
             };
 
-            const bookings = posCache.getBookings().filter(b => tableId ? b.table_id !== tableId : true);
+            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
             bookings.push(mockBooking);
             posCache.setBookings(bookings);
 

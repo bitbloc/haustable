@@ -7,11 +7,32 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+// In-memory cache to prevent Supabase PostgREST connection pool spikes and 504 Gateway Timeouts
+let cachedSettings = null;
+let cacheExpiry = 0;
+const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+
 export default async function handler(req, res) {
     try {
-        // 1. Fetch settings from Supabase
-        const { data: dbSettings } = await supabase.from('app_settings').select('key, value').like('key', 'link_%')
-        const settings = dbSettings ? dbSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {}) : {}
+        // 1. Fetch settings from Supabase (with in-memory cache to eliminate 504 Gateway Timeouts)
+        let settings = {};
+        const now = Date.now();
+        if (cachedSettings && now < cacheExpiry) {
+            settings = cachedSettings;
+        } else {
+            try {
+                const { data: dbSettings, error: dbErr } = await supabase.from('app_settings').select('key, value').like('key', 'link_%');
+                if (!dbErr && dbSettings) {
+                    settings = dbSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    cachedSettings = settings;
+                    cacheExpiry = now + CACHE_TTL_MS;
+                } else if (cachedSettings) {
+                    settings = cachedSettings;
+                }
+            } catch (err) {
+                if (cachedSettings) settings = cachedSettings;
+            }
+        }
 
         // 2. Content derived from Google Ad (with dynamic description override support)
         const title = "ร้านในบ้าน นครพนม | อาหารใต้รสชัด ริมโขง | จริตจัด รสชัดเจน"

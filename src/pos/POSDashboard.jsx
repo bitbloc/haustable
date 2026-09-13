@@ -1944,10 +1944,14 @@ export default function POSDashboard() {
             setActiveBooking(booking);
             // Load existing items with unique cart-level IDs
             const existingItems = (booking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
-            setCurrentOrder({
-                items: existingItems,
-                customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'Customer',
-                table: table
+            setCurrentOrder(prev => {
+                const isSameTable = prev?.table && String(prev.table.id) === String(table.id);
+                const localDrafts = isSameTable ? (prev.items || []).filter(i => !i.db_id) : [];
+                return {
+                    items: [...existingItems, ...localDrafts],
+                    customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'Customer',
+                    table: table
+                };
             });
             // Keep on 'tables' view so the floorplan remains visible
             setView('tables');
@@ -2016,6 +2020,7 @@ export default function POSDashboard() {
             }
 
             setActiveBooking(updatedBooking);
+            if (activeBookingRef) activeBookingRef.current = updatedBooking;
             setSelectedTable(table);
             if (table?.id) {
                 localStorage.setItem('pos_active_table_id', table.id);
@@ -2052,21 +2057,34 @@ export default function POSDashboard() {
 
     const handleConfirmOpenTable = useCallback(async () => {
         if (!openTableModalData?.table) return;
+        const targetTable = openTableModalData.table;
         const paxNum = parseInt(openTablePaxInput);
         if (!paxNum || paxNum <= 0) {
             toast.error('กรุณาระบุจำนวนลูกค้าให้ถูกต้อง');
             return;
         }
 
-        const toastId = toast.loading(`กำลังเปิดโต๊ะ ${openTableModalData.table.table_name}...`);
+        const toastId = toast.loading(`กำลังเปิดโต๊ะ ${targetTable.table_name}...`);
         try {
-            const newBooking = await createWalkIn(openTableModalData.table, paxNum);
+            const newBooking = await createWalkIn(targetTable, paxNum);
             if (newBooking) {
                 setActiveBooking(newBooking);
-                toast.success(`เปิดโต๊ะ ${openTableModalData.table.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
+                if (activeBookingRef) activeBookingRef.current = newBooking;
+                setSelectedTable(targetTable);
+                if (targetTable?.id) {
+                    localStorage.setItem('pos_active_table_id', targetTable.id);
+                }
+                setCurrentOrder({
+                    items: [],
+                    customer: 'Walk-in Guest',
+                    table: targetTable
+                });
                 setOpenTableModalData(null);
                 // Keep on 'tables' view so staff sees the open table on the floorplan
                 setView('tables');
+                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
+                toast.success(`เปิดโต๊ะ ${targetTable.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
             } else {
                 toast.error('ไม่สามารถเปิดโต๊ะได้', { id: toastId });
             }
@@ -2074,7 +2092,7 @@ export default function POSDashboard() {
             console.error('Failed to open table:', err);
             toast.error('เกิดข้อผิดพลาดในการเปิดโต๊ะ', { id: toastId });
         }
-    }, [createWalkIn, openTableModalData, openTablePaxInput]);
+    }, [createWalkIn, openTableModalData, openTablePaxInput, triggerDebouncedRefresh]);
 
     const handleSelectPickupOrder = useCallback(async (booking) => {
         setAttachedMemberCrm(null); // Clear stale member profile immediately
@@ -2375,9 +2393,11 @@ export default function POSDashboard() {
                     localStorage.removeItem('pos_active_table_id');
                     setCurrentOrder({ items: [], customer: null, table: null });
                     setActiveBooking(null);
+                    if (activeBookingRef) activeBookingRef.current = null;
                     setSelectedTable(null);
                     setAttachedMemberCrm(null);
                     setRefreshKey(prev => prev + 1);
+                    triggerDebouncedRefresh();
                     setView('tables');
                     const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
                     window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
@@ -2394,7 +2414,10 @@ export default function POSDashboard() {
             setCurrentOrder({ items: [], customer: null, table: null });
             setSelectedTable(null);
             setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
             setAttachedMemberCrm(null);
+            setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
             setView('tables');
             const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
             window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: cfdIdleDetail }));
@@ -2724,11 +2747,21 @@ export default function POSDashboard() {
 
             openSlipOrSilentPrint(printBookingData, 'receipt');
 
+            // Remove booking from local active bookings cache immediately
+            try {
+                const cached = (posCache.getBookings() || []).filter(b => b.id !== bookingId);
+                posCache.setBookings(cached);
+            } catch (e) {}
+
             // Clear the cart state after successful checkout
+            localStorage.removeItem('pos_active_table_id');
             setCurrentOrder({ items: [], customer: null, table: null });
             setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
             setSelectedTable(null);
             setAttachedMemberCrm(null);
+            setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
             setView('tables');
         }
         } finally {
@@ -2748,8 +2781,8 @@ export default function POSDashboard() {
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
                 .gte('booking_time', `${today}T00:00:00+07:00`);
 
-            const occupiedTableIds = (activeBookings || []).map(b => b.table_id);
-            const free = (allTables || []).filter(t => !occupiedTableIds.includes(t.id));
+            const occupiedTableIds = (activeBookings || []).map(b => String(b.table_id));
+            const free = (allTables || []).filter(t => !occupiedTableIds.includes(String(t.id)));
             setAvailableTables(free);
             setShowMoveModal(true);
         } catch (err) {
@@ -2757,8 +2790,10 @@ export default function POSDashboard() {
             try {
                 const cachedTables = posCache.getTables() || [];
                 const cachedBookings = posCache.getBookings() || [];
-                const occupiedIds = cachedBookings.map(b => b.table_id);
-                const free = cachedTables.filter(t => !occupiedIds.includes(t.id));
+                const occupiedIds = cachedBookings
+                    .filter(b => !['completed', 'void', 'cancelled', 'no_show'].includes(b.status))
+                    .map(b => String(b.table_id));
+                const free = cachedTables.filter(t => !occupiedIds.includes(String(t.id)));
                 setAvailableTables(free);
                 setShowMoveModal(true);
             } catch (e) {
@@ -2772,40 +2807,77 @@ export default function POSDashboard() {
         const toastId = toast.loading(`กำลังย้ายจากโต๊ะ ${selectedTable.table_name} ไปโต๊ะ ${targetTable.table_name}...`);
         const updatedRemark = formatMoveRemark(activeBooking.staff_remark, selectedTable.table_name, targetTable.table_name);
         
+        // Optimistic updated booking object
+        const updatedBooking = {
+            ...activeBooking,
+            table_id: targetTable.id,
+            tables_layout: targetTable,
+            staff_remark: updatedRemark
+        };
+
+        // 1. Instantly update React state & active refs
+        setActiveBooking(updatedBooking);
+        if (activeBookingRef) activeBookingRef.current = updatedBooking;
+        setSelectedTable(targetTable);
+        setCurrentOrder(prev => ({
+            ...prev,
+            table: targetTable
+        }));
+
+        if (targetTable?.id) {
+            localStorage.setItem('pos_active_table_id', targetTable.id);
+            try {
+                const stored = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+                stored[targetTable.id] = Date.now();
+                localStorage.setItem('pos_ack_table_times', JSON.stringify(stored));
+                window.dispatchEvent(new CustomEvent('pos_table_acknowledged', { detail: { tableId: targetTable.id } }));
+            } catch (e) {}
+        }
+
+        // 2. Instantly update in-memory & persistent posCache (BOTH ONLINE & OFFLINE)
+        const cachedBookings = posCache.getBookings() || [];
+        const updatedCacheList = cachedBookings.map(b => {
+            if (b.id === activeBooking.id) {
+                return { ...b, table_id: targetTable.id, tables_layout: targetTable, staff_remark: updatedRemark };
+            }
+            return b;
+        });
+        posCache.setBookings(updatedCacheList);
+
         if (!isOnline()) {
-            const cachedBookings = posCache.getBookings() || [];
-            const updated = cachedBookings.map(b => {
-                if (b.id === activeBooking.id) {
-                    return { ...b, table_id: targetTable.id, staff_remark: updatedRemark };
-                }
-                return b;
-            });
-            posCache.setBookings(updated);
-            
             addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id, staff_remark: updatedRemark });
-            
-            toast.success(`⚠️ ออฟไลน์: ย้ายโต๊ะสำเร็จ!`, { id: toastId });
+            toast.success(`⚠️ ออฟไลน์: ย้ายโต๊ะสำเร็จ! ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
             setShowMoveModal(false);
-            setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
             return;
         }
 
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('bookings')
                 .update({ 
                     table_id: targetTable.id,
                     staff_remark: updatedRemark
                 })
-                .eq('id', activeBooking.id);
+                .eq('id', activeBooking.id)
+                .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                .maybeSingle();
                 
             if (error) throw error;
+
+            if (data) {
+                setActiveBooking(data);
+                if (activeBookingRef) activeBookingRef.current = data;
+                // Re-sync freshest DB row into posCache
+                const freshList = (posCache.getBookings() || []).map(b => b.id === data.id ? data : b);
+                posCache.setBookings(freshList);
+            }
             
             toast.success(`ย้ายโต๊ะสำเร็จ ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
             setShowMoveModal(false);
-            setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
         } catch (err) {
             console.error("Move table failed:", err);
             toast.error("ย้ายโต๊ะไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
@@ -2825,17 +2897,17 @@ export default function POSDashboard() {
 
             const activeBookingMap = {};
             (activeBookings || []).forEach(b => {
-                activeBookingMap[b.table_id] = b;
+                activeBookingMap[String(b.table_id)] = b;
             });
 
-            const occupied = (allTables || [])
-                .filter(t => t.id !== selectedTable.id && activeBookingMap[t.id])
+            const mergeable = (allTables || [])
+                .filter(t => String(t.id) !== String(selectedTable.id) && activeBookingMap[String(t.id)])
                 .map(t => ({
                     ...t,
-                    booking: activeBookingMap[t.id]
+                    booking: activeBookingMap[String(t.id)]
                 }));
 
-            setAvailableTables(occupied);
+            setAvailableMergeTables(mergeable);
             setShowMergeModal(true);
         } catch (err) {
             console.error("Failed to load tables for merge, fallback to cache:", err);
@@ -2843,14 +2915,18 @@ export default function POSDashboard() {
                 const cachedTables = posCache.getTables() || [];
                 const cachedBookings = posCache.getBookings() || [];
                 const activeMap = {};
-                cachedBookings.forEach(b => { activeMap[b.table_id] = b; });
-                const occupied = cachedTables
-                    .filter(t => t.id !== selectedTable.id && activeMap[t.id])
+                cachedBookings.forEach(b => {
+                    if (['pending', 'confirmed', 'seated', 'ready'].includes(b.status)) {
+                        activeMap[String(b.table_id)] = b;
+                    }
+                });
+                const mergeable = cachedTables
+                    .filter(t => String(t.id) !== String(selectedTable.id) && activeMap[String(t.id)])
                     .map(t => ({
                         ...t,
-                        booking: activeMap[t.id]
+                        booking: activeMap[String(t.id)]
                     }));
-                setAvailableTables(occupied);
+                setAvailableMergeTables(mergeable);
                 setShowMergeModal(true);
             } catch (e) {
                 toast.error("ไม่สามารถดึงข้อมูลโต๊ะได้ในขณะนี้");
@@ -2878,6 +2954,7 @@ export default function POSDashboard() {
 
         if (!isOnline()) {
             const cachedBookings = posCache.getBookings() || [];
+            let updatedTargetInCache = null;
             const updatedBookings = cachedBookings.map(b => {
                 if (b.id === targetBooking.id) {
                     const sourceItems = activeBooking.order_items || [];
@@ -2918,13 +2995,27 @@ export default function POSDashboard() {
                 dominantMember: dominantCrm.wasSourceChosen ? dominantCrm.dominantMember : null
             });
             
+            const targetInCache = updatedBookings.find(b => b.id === targetBooking.id);
+            if (targetInCache) {
+                setActiveBooking(targetInCache);
+                if (activeBookingRef) activeBookingRef.current = targetInCache;
+                const mergedItems = (targetInCache.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+                setCurrentOrder({
+                    items: mergedItems,
+                    customer: targetInCache.profiles?.display_name || targetInCache.pickup_contact_name || targetInCache.customer_name || `Table ${targetTable.table_name}`,
+                    table: targetTable
+                });
+            }
+            setSelectedTable(targetTable);
+            if (targetTable?.id) localStorage.setItem('pos_active_table_id', targetTable.id);
+
             const offlineSuccessMsg = dominantCrm.wasSourceChosen && dominantCrm.dominantMember
                 ? `⚠️ ออฟไลน์: รวมบิลสำเร็จ! (เลือกสมาชิก ${dominantCrm.dominantMember.display_name || 'บิลต้นทาง'} ที่มีคะแนนเยอะกว่า)`
                 : `⚠️ ออฟไลน์: รวมบิลสำเร็จ!`;
             toast.success(offlineSuccessMsg, { id: toastId });
             setShowMergeModal(false);
-            setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
             return;
         }
 
@@ -2975,6 +3066,53 @@ export default function POSDashboard() {
             if (targetErr) {
                 console.warn("Could not update target booking remark, continuing:", targetErr);
             }
+
+            // 4. Fetch full updated target booking from Supabase
+            let finalTargetBooking = null;
+            try {
+                const { data: freshTarget } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                    .eq('id', targetBooking.id)
+                    .maybeSingle();
+                if (freshTarget) finalTargetBooking = freshTarget;
+            } catch (fetchErr) {
+                console.warn("Could not re-fetch fresh target booking:", fetchErr);
+            }
+
+            if (!finalTargetBooking) {
+                finalTargetBooking = {
+                    ...targetBooking,
+                    staff_remark: targetUpdatedRemark,
+                    total_amount: newTargetTotal
+                };
+            }
+
+            // 5. Update posCache (both voided source and updated target)
+            const cachedBookings = posCache.getBookings() || [];
+            const syncedCache = cachedBookings.map(b => {
+                if (b.id === activeBooking.id) {
+                    return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
+                }
+                if (b.id === targetBooking.id) {
+                    return finalTargetBooking;
+                }
+                return b;
+            });
+            posCache.setBookings(syncedCache);
+
+            // 6. Seamlessly switch POS active view to target table
+            setActiveBooking(finalTargetBooking);
+            if (activeBookingRef) activeBookingRef.current = finalTargetBooking;
+            setSelectedTable(targetTable);
+            if (targetTable?.id) localStorage.setItem('pos_active_table_id', targetTable.id);
+
+            const mergedCartItems = (finalTargetBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+            setCurrentOrder({
+                items: mergedCartItems,
+                customer: finalTargetBooking.profiles?.display_name || finalTargetBooking.pickup_contact_name || finalTargetBooking.customer_name || `Table ${targetTable.table_name}`,
+                table: targetTable
+            });
             
             const successMsg = dominantCrm.wasSourceChosen && dominantCrm.dominantMember
                 ? `รวมบิลสำเร็จ! ระบบเลือกสมาชิก ${dominantCrm.dominantMember.display_name || 'บิลต้นทาง'} (คะแนนสะสมเยอะกว่า) เป็นสมาชิกหลักของโต๊ะ ${targetTable.table_name}`
@@ -2982,8 +3120,8 @@ export default function POSDashboard() {
 
             toast.success(successMsg, { id: toastId, duration: 4500 });
             setShowMergeModal(false);
-            setSelectedTable(targetTable);
             setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
         } catch (err) {
             console.error("Merge bills failed:", err);
             toast.error("รวมบิลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
@@ -3129,6 +3267,12 @@ export default function POSDashboard() {
                 setShowSplitModal(false);
                 openSlipOrSilentPrint({ ...activeBooking, payment_method: resolvedPaymentMethod, staff_remark: cleanedParentRemark, status: 'completed' }, 'receipt');
                 
+                // Update local posCache
+                try {
+                    const cached = (posCache.getBookings() || []).filter(b => b.id !== activeBooking.id);
+                    posCache.setBookings(cached);
+                } catch (e) {}
+
                 // Full cleanup of Order Details and Table state
                 setCurrentOrder({ items: [], customer: null, table: null });
                 setActiveBooking(null);
@@ -3136,6 +3280,8 @@ export default function POSDashboard() {
                 setSelectedTable(null);
                 setAttachedMemberCrm(null);
                 localStorage.removeItem('pos_active_table_id');
+                setRefreshKey(prev => prev + 1);
+                triggerDebouncedRefresh();
                 setView('tables');
 
                 // Reset CFD to IDLE

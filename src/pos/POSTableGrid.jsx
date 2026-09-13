@@ -108,7 +108,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             }
             if (cachedTables.length > 0) {
                 const merged = cachedTables.map(t => {
-                    const booking = cachedBookings.find(b => b.table_id === t.id && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
+                    const booking = cachedBookings.find(b => String(b.table_id) === String(t.id) && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
                     return {
                         ...t,
                         status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
@@ -223,15 +223,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                 const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 23, 59, 59, 999).toISOString();
 
-                const { data: tablesData } = await supabase.from('tables_layout').select('*').order('table_name');
+                const { data: tablesData, error: tablesErr } = await supabase.from('tables_layout').select('*').order('table_name');
+                if (tablesErr) throw tablesErr;
                 
                 // Fetch active pending, seated, confirmed, ready bookings with items from yesterday to upcoming slots
-                const { data: activeBookings } = await supabase
+                const { data: activeBookings, error: bookingsErr } = await supabase
                     .from('bookings')
                     .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, payment_slip_url, tracking_token, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
                     .in('status', ['pending', 'seated', 'confirmed', 'ready'])
                     .gte('booking_time', startOfYesterday)
                     .lte('booking_time', endOfTomorrow);
+                if (bookingsErr) throw bookingsErr;
 
                 const currentTables = tablesData || [];
                 const currentBookings = activeBookings || [];
@@ -243,7 +245,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const now = new Date();
 
                 const merged = currentTables.map(t => {
-                    const tableBookings = currentBookings.filter(b => b.table_id === t.id && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
+                    const tableBookings = currentBookings.filter(b => String(b.table_id) === String(t.id) && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
 
                     // 1. Actively occupying in-store dining booking
                     let hasActiveWalkInOrQR = false;
@@ -267,7 +269,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                     // Check for unacknowledged new order items on this table (within last 5 min and after table ack)
                     const items = activeBooking?.order_items || [];
-                    const tableAckTime = ackTableTimesRef.current[t.id] || 0;
+                    const tableAckTime = ackTableTimesRef.current[t.id] || ackTableTimesRef.current[String(t.id)] || 0;
 
                     const hasUnviewedRecentItems = items.some(i => {
                         if (!i.created_at) return false;
@@ -320,7 +322,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                     
                     const merged = cachedTables.map(t => {
-                        const tableBookings = cachedBookings.filter(b => b.table_id === t.id && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
+                        const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
                         const booking = tableBookings.find(b => {
                             if (b.status === 'seated') return true;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
