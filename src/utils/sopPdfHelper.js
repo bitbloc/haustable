@@ -67,6 +67,13 @@ export async function generateSOPPdfDocument(element, options = {}) {
 
         const target = targets[i];
 
+        // Measure content height and scale proportionally if content slightly exceeds A4 (1123px)
+        // This guarantees that 100% of tables and footer fit cleanly without clipping
+        const scrollH = target.scrollHeight || standardHeight;
+        const needsScale = scrollH > standardHeight;
+        const scaleFactor = needsScale ? Math.max(0.75, (standardHeight - 4) / scrollH) : 1;
+        const targetTransform = needsScale ? `scale(${scaleFactor})` : 'none';
+
         let imgData = null;
         try {
             imgData = await toPng(target, {
@@ -86,7 +93,8 @@ export async function generateSOPPdfDocument(element, options = {}) {
                     minHeight: `${standardHeight}px`,
                     maxHeight: `${standardHeight}px`,
                     margin: '0',
-                    transform: 'none',
+                    transform: targetTransform,
+                    transformOrigin: 'top center',
                     boxSizing: 'border-box'
                 },
                 filter: (node) => {
@@ -110,7 +118,8 @@ export async function generateSOPPdfDocument(element, options = {}) {
                     maxWidth: `${standardWidth}px`,
                     height: `${standardHeight}px`,
                     margin: '0',
-                    transform: 'none',
+                    transform: targetTransform,
+                    transformOrigin: 'top center',
                     boxSizing: 'border-box'
                 },
                 filter: (node) => !(node.classList && (node.classList.contains('print:hidden') || node.classList.contains('no-print')))

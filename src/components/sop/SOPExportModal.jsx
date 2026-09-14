@@ -25,7 +25,7 @@ export default function SOPExportModal({
     const [selectedIds, setSelectedIds] = useState(
         initialSelectedRecipeId ? [initialSelectedRecipeId] : recipes.map(r => r.id)
     );
-    const [includeCover, setIncludeCover] = useState(true);
+    const [includeCover, setIncludeCover] = useState(!initialSelectedRecipeId);
     const [isGenerating, setIsGenerating] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0 });
 
@@ -45,7 +45,10 @@ export default function SOPExportModal({
         return recipes;
     }, [scope, selectedCatId, selectedIds, recipes, initialSelectedRecipeId]);
 
-    const totalPages = (scope !== 'single' && includeCover ? 1 : 0) + targetRecipes.length;
+    // Single recipe never needs a cover page; multi-recipe honors includeCover toggle
+    const isSingleRecipe = targetRecipes.length <= 1;
+    const effectiveIncludeCover = !isSingleRecipe && scope !== 'single' && includeCover;
+    const totalPages = (effectiveIncludeCover ? 1 : 0) + targetRecipes.length;
 
     // Toggle recipe selection
     const toggleRecipe = (id) => {
@@ -235,7 +238,7 @@ export default function SOPExportModal({
                     )}
 
                     {/* Book Options */}
-                    {scope !== 'single' && (
+                    {!isSingleRecipe && scope !== 'single' ? (
                         <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(97%_0.008_28)] space-y-2">
                             <span className="font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase block">
                                 ตัวเลือกโครงสร้างเล่ม (BOOK STRUCTURE)
@@ -252,13 +255,18 @@ export default function SOPExportModal({
                                 </span>
                             </label>
                         </div>
+                    ) : (
+                        <div className="border border-[oklch(85%_0.012_28)] p-2.5 bg-[oklch(94%_0.010_28)] font-mono text-xs text-[oklch(42%_0.010_28)] flex items-center justify-between">
+                            <span>รูปแบบการพิมพ์:</span>
+                            <span className="font-bold text-[oklch(18%_0.012_28)]">[สูตรเดี่ยว 1 หน้าจบพอดี ไม่มีใบปะหน้า]</span>
+                        </div>
                     )}
 
                     {/* Summary Box */}
                     <div className="border border-[oklch(85%_0.012_28)] p-3 bg-[oklch(94%_0.010_28)] font-mono text-xs flex justify-between items-center">
                         <span className="text-[oklch(55%_0.010_28)]">ขนาดเอกสารประเมิน:</span>
                         <span className="font-bold text-[oklch(18%_0.012_28)]">
-                            {targetRecipes.length} สูตร ({totalPages} หน้า A4)
+                            {targetRecipes.length} สูตร ({totalPages} หน้า A4 {isSingleRecipe ? '• 1 หน้าจบ' : ''})
                         </span>
                     </div>
 
@@ -309,8 +317,8 @@ export default function SOPExportModal({
                     opacity: 1
                 }}
             >
-                {/* 1. Cover Sheet if requested */}
-                {scope !== 'single' && includeCover && (
+                {/* 1. Cover Sheet only if multi-recipe and requested */}
+                {effectiveIncludeCover && (
                     <ManualCoverSheet 
                         recipes={targetRecipes} 
                         department={department} 
@@ -320,7 +328,7 @@ export default function SOPExportModal({
 
                 {/* 2. Individual Recipe Sheets */}
                 {targetRecipes.map((recipe, idx) => {
-                    const pageNum = (scope !== 'single' && includeCover ? 1 : 0) + idx + 1;
+                    const pageNum = (effectiveIncludeCover ? 1 : 0) + idx + 1;
                     return (
                         <SingleRecipeSheet 
                             key={recipe.id || idx} 
