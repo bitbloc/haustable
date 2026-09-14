@@ -650,11 +650,11 @@ export default function MenuCostPage({ isEmbedded = false }) {
                         {/* Tabular Grid */}
                         {(viewLayout === 'table' || viewLayout === 'auto') && (
                             <div className={`${viewLayout === 'auto' ? 'hidden md:block' : 'block'} border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-x-auto shadow-xs`}>
-                                <table className="w-full min-w-[880px] text-left border-collapse">
+                                <table className="w-full min-w-[760px] text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] font-mono text-xs uppercase text-[oklch(42%_0.010_28)] select-none">
                                             <th
-                                                className="p-3.5 cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap min-w-[260px] sticky left-0 bg-[oklch(92%_0.010_28)] z-20 shadow-[1px_0_0_oklch(85%_0.012_28)]"
+                                                className="p-3.5 cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[34%] min-w-[220px]"
                                                 onClick={() => handleSort('name')}
                                             >
                                                 <div className="flex items-center justify-between gap-2">
@@ -665,7 +665,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </div>
                                             </th>
                                             <th
-                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-28 min-w-[96px]"
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[12%] min-w-[90px]"
                                                 onClick={() => handleSort('price')}
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
@@ -676,7 +676,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </div>
                                             </th>
                                             <th
-                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-36 min-w-[124px]"
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[15%] min-w-[110px]"
                                                 onClick={() => handleSort('cost')}
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
@@ -687,7 +687,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </div>
                                             </th>
                                             <th
-                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-32 min-w-[104px]"
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[13%] min-w-[95px]"
                                                 onClick={() => handleSort('profit')}
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
@@ -698,7 +698,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </div>
                                             </th>
                                             <th
-                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-36 min-w-[120px]"
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-[13%] min-w-[105px]"
                                                 onClick={() => handleSort('costPercent')}
                                             >
                                                 <div className="flex items-center justify-end gap-1.5">
@@ -708,7 +708,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                     </span>
                                                 </div>
                                             </th>
-                                            <th className="p-3.5 text-center whitespace-nowrap w-36 min-w-[110px]">
+                                            <th className="p-3.5 text-center whitespace-nowrap w-[13%] min-w-[110px]">
                                                 <span>จัดการสูตร</span>
                                             </th>
                                         </tr>
@@ -717,10 +717,10 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                         {processedItems.map(item => (
                                             <tr
                                                 key={item.id}
-                                                className="group hover:bg-[oklch(95%_0.010_28)] transition-colors"
+                                                className="hover:bg-[oklch(95%_0.010_28)] transition-colors"
                                             >
-                                                {/* Name & Category (Sticky Left) */}
-                                                <td className="p-3 border-r border-[oklch(88%_0.012_28)] whitespace-nowrap min-w-[260px] sticky left-0 bg-[oklch(97%_0.008_28)] group-hover:bg-[oklch(95%_0.010_28)] z-10 shadow-[1px_0_0_oklch(88%_0.012_28)] transition-colors">
+                                                {/* Name & Category */}
+                                                <td className="p-3 border-r border-[oklch(88%_0.012_28)] w-[34%] min-w-[220px]">
                                                     <div className="flex items-center gap-3">
                                                         {item.image_url ? (
                                                             <img
@@ -752,12 +752,12 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </td>
 
                                                 {/* Price */}
-                                                <td className="p-3 text-right font-medium tabular-nums border-r border-[oklch(88%_0.012_28)] text-sm whitespace-nowrap w-28 min-w-[96px]">
+                                                <td className="p-3 text-right font-medium tabular-nums border-r border-[oklch(88%_0.012_28)] text-sm whitespace-nowrap w-[12%] min-w-[90px]">
                                                     ฿{item.price.toLocaleString('th-TH', { minimumFractionDigits: 0 })}
                                                 </td>
 
                                                 {/* Cost */}
-                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-36 min-w-[124px]">
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-[15%] min-w-[110px]">
                                                     {item.hasRecipe ? (
                                                         <div>
                                                             <span className="font-bold text-[oklch(18%_0.012_28)]">
@@ -772,7 +772,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </td>
 
                                                 {/* Profit */}
-                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-32 min-w-[104px]">
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-[13%] min-w-[95px]">
                                                     {item.hasRecipe ? (
                                                         <span className={`font-bold ${
                                                             item.profit > 0 ? 'text-[oklch(38%_0.08_140)]' : 'text-[oklch(45%_0.14_28)]'
@@ -785,7 +785,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </td>
 
                                                 {/* Cost % & Margin Badge */}
-                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-36 min-w-[120px]">
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-[13%] min-w-[105px]">
                                                     {item.hasRecipe ? (
                                                         <div className="flex flex-col items-end gap-0.5">
                                                             <span className={`px-1.5 py-0.5 rounded-xs text-[11px] font-bold border ${
@@ -807,7 +807,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                                 </td>
 
                                                 {/* Action Button */}
-                                                <td className="p-3 text-center whitespace-nowrap w-36 min-w-[110px]">
+                                                <td className="p-3 text-center whitespace-nowrap w-[13%] min-w-[110px]">
                                                     <button
                                                         onClick={() => handleOpenRecipe(item)}
                                                         className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
