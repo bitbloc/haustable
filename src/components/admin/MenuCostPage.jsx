@@ -21,6 +21,7 @@ export default function MenuCostPage({ isEmbedded = false }) {
     const [filterMode, setFilterMode] = useState('all'); // 'all', 'has_recipe', 'missing_recipe', 'high_cost', 'low_margin'
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [searchTerm, setSearchTerm] = useState('');
+    const [viewLayout, setViewLayout] = useState('auto'); // 'auto', 'table', 'cards'
 
     const loadData = async (showLoading = true) => {
         if (showLoading) setLoading(true);
@@ -334,6 +335,32 @@ export default function MenuCostPage({ isEmbedded = false }) {
                     </div>
 
                     <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {/* View Mode Segmented Controls */}
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs font-mono text-xs">
+                            <button
+                                onClick={() => setViewLayout('table')}
+                                className={`px-2 py-1 transition-colors ${
+                                    viewLayout === 'table'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(88%_0.012_28)]'
+                                }`}
+                                title="แสดงแบบตารางละเอียด"
+                            >
+                                [ตาราง]
+                            </button>
+                            <button
+                                onClick={() => setViewLayout('cards')}
+                                className={`px-2 py-1 transition-colors ${
+                                    viewLayout === 'cards'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(42%_0.010_28)] hover:bg-[oklch(88%_0.012_28)]'
+                                }`}
+                                title="แสดงแบบการ์ดขนาดกะทัดรัด"
+                            >
+                                [การ์ด]
+                            </button>
+                        </div>
+
                         <button
                             onClick={handleExportCSV}
                             disabled={menuItems.length === 0}
@@ -620,185 +647,188 @@ export default function MenuCostPage({ isEmbedded = false }) {
                     </div>
                 ) : (
                     <>
-                        {/* Desktop Tabular Grid */}
-                        <div className="hidden md:block border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-hidden">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] font-mono text-xs uppercase text-[oklch(42%_0.010_28)] select-none">
-                                        <th
-                                            className="p-3 cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)]"
-                                            onClick={() => handleSort('name')}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <span>รายการเมนู</span>
-                                                <span className="text-[10px]">
-                                                    {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th
-                                            className="p-3 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] w-28"
-                                            onClick={() => handleSort('price')}
-                                        >
-                                            <div className="flex items-center justify-end gap-1">
-                                                <span>ราคาขาย</span>
-                                                <span className="text-[10px]">
-                                                    {sortConfig.key === 'price' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th
-                                            className="p-3 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] w-32"
-                                            onClick={() => handleSort('cost')}
-                                        >
-                                            <div className="flex items-center justify-end gap-1">
-                                                <span>ต้นทุนวัตถุดิบ</span>
-                                                <span className="text-[10px]">
-                                                    {sortConfig.key === 'cost' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th
-                                            className="p-3 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] w-28"
-                                            onClick={() => handleSort('profit')}
-                                        >
-                                            <div className="flex items-center justify-end gap-1">
-                                                <span>กำไรต่อแก้ว</span>
-                                                <span className="text-[10px]">
-                                                    {sortConfig.key === 'profit' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th
-                                            className="p-3 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] w-32"
-                                            onClick={() => handleSort('costPercent')}
-                                        >
-                                            <div className="flex items-center justify-end gap-1">
-                                                <span>ต้นทุน %</span>
-                                                <span className="text-[10px]">
-                                                    {sortConfig.key === 'costPercent' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
-                                                </span>
-                                            </div>
-                                        </th>
-                                        <th className="p-3 text-center w-32">
-                                            <span>จัดการสูตร</span>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[oklch(88%_0.012_28)] font-mono text-xs">
-                                    {processedItems.map(item => (
-                                        <tr
-                                            key={item.id}
-                                            className="hover:bg-[oklch(95%_0.010_28)] transition-colors"
-                                        >
-                                            {/* Name & Category */}
-                                            <td className="p-3 border-r border-[oklch(88%_0.012_28)]">
-                                                <div className="flex items-center gap-3">
-                                                    {item.image_url ? (
-                                                        <img
-                                                            src={item.image_url}
-                                                            alt={item.name}
-                                                            className="w-9 h-9 object-cover rounded-xs border border-[oklch(85%_0.012_28)] shrink-0"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-9 h-9 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[10px] text-[oklch(55%_0.010_28)] shrink-0 font-mono">
-                                                            N/A
-                                                        </div>
-                                                    )}
-                                                    <div className="min-w-0">
-                                                        <div className="font-bold text-[oklch(18%_0.012_28)] text-sm truncate font-sans">
-                                                            {item.name}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[oklch(55%_0.010_28)]">
-                                                            <span className="px-1.5 py-0.2 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
-                                                                {item.category || 'ไม่ระบุหมวด'}
-                                                            </span>
-                                                            {item.hasRecipe && (
-                                                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                                                    {item.ingredientCount} วัตถุดิบ
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                        {/* Tabular Grid */}
+                        {(viewLayout === 'table' || viewLayout === 'auto') && (
+                            <div className={`${viewLayout === 'auto' ? 'hidden md:block' : 'block'} border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-x-auto shadow-xs`}>
+                                <table className="w-full min-w-[880px] text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-[oklch(85%_0.012_28)] bg-[oklch(92%_0.010_28)] font-mono text-xs uppercase text-[oklch(42%_0.010_28)] select-none">
+                                            <th
+                                                className="p-3.5 cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap min-w-[260px] sticky left-0 bg-[oklch(92%_0.010_28)] z-20 shadow-[1px_0_0_oklch(85%_0.012_28)]"
+                                                onClick={() => handleSort('name')}
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="font-bold">รายการเมนู</span>
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        {sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
                                                 </div>
-                                            </td>
-
-                                            {/* Price */}
-                                            <td className="p-3 text-right font-medium tabular-nums border-r border-[oklch(88%_0.012_28)] text-sm">
-                                                ฿{item.price.toLocaleString('th-TH', { minimumFractionDigits: 0 })}
-                                            </td>
-
-                                            {/* Cost */}
-                                            <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)]">
-                                                {item.hasRecipe ? (
-                                                    <div>
-                                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                                            ฿{item.cost.toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[oklch(55%_0.010_28)] italic text-[11px]">
-                                                        [รอผูกสูตร]
+                                            </th>
+                                            <th
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-28 min-w-[96px]"
+                                                onClick={() => handleSort('price')}
+                                            >
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span>ราคาขาย</span>
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        {sortConfig.key === 'price' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
-                                                )}
-                                            </td>
-
-                                            {/* Profit */}
-                                            <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)]">
-                                                {item.hasRecipe ? (
-                                                    <span className={`font-bold ${
-                                                        item.profit > 0 ? 'text-[oklch(38%_0.08_140)]' : 'text-[oklch(45%_0.14_28)]'
-                                                    }`}>
-                                                        ฿{item.profit.toFixed(0)}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-36 min-w-[124px]"
+                                                onClick={() => handleSort('cost')}
+                                            >
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span>ต้นทุนวัตถุดิบ</span>
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        {sortConfig.key === 'cost' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
                                                     </span>
-                                                ) : (
-                                                    <span className="text-[oklch(60%_0.010_28)]">-</span>
-                                                )}
-                                            </td>
-
-                                            {/* Cost % & Margin Badge */}
-                                            <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)]">
-                                                {item.hasRecipe ? (
-                                                    <div className="flex flex-col items-end gap-0.5">
-                                                        <span className={`px-1.5 py-0.5 rounded-xs text-[11px] font-bold border ${
-                                                            item.costPercent > 35
-                                                                ? 'bg-[oklch(93%_0.05_28)] text-[oklch(45%_0.14_28)] border-[oklch(85%_0.08_28)]'
-                                                                : item.costPercent > targetFoodCostPct
-                                                                ? 'bg-[oklch(93%_0.05_70)] text-[oklch(40%_0.10_70)] border-[oklch(85%_0.07_70)]'
-                                                                : 'bg-[oklch(93%_0.04_140)] text-[oklch(35%_0.08_140)] border-[oklch(85%_0.05_140)]'
-                                                        }`}>
-                                                            {item.costPercent.toFixed(1)}%
-                                                        </span>
-                                                        <span className="text-[10px] text-[oklch(55%_0.010_28)]">
-                                                            มาร์จิ้น {item.margin.toFixed(0)}%
-                                                        </span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-[oklch(60%_0.010_28)]">-</span>
-                                                )}
-                                            </td>
-
-                                            {/* Action Button */}
-                                            <td className="p-3 text-center">
-                                                <button
-                                                    onClick={() => handleOpenRecipe(item)}
-                                                    className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
-                                                        item.hasRecipe
-                                                            ? 'border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)]'
-                                                            : 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
-                                                    }`}
-                                                >
-                                                    {item.hasRecipe ? '[ปรุงสูตร]' : '[+ สร้างสูตร]'}
-                                                </button>
-                                            </td>
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-32 min-w-[104px]"
+                                                onClick={() => handleSort('profit')}
+                                            >
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span>กำไรต่อแก้ว</span>
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        {sortConfig.key === 'profit' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="p-3.5 text-right cursor-pointer hover:text-[oklch(18%_0.012_28)] border-r border-[oklch(85%_0.012_28)] whitespace-nowrap w-36 min-w-[120px]"
+                                                onClick={() => handleSort('costPercent')}
+                                            >
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    <span>ต้นทุน %</span>
+                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                        {sortConfig.key === 'costPercent' ? (sortConfig.direction === 'asc' ? '▲' : '▼') : '↕'}
+                                                    </span>
+                                                </div>
+                                            </th>
+                                            <th className="p-3.5 text-center whitespace-nowrap w-36 min-w-[110px]">
+                                                <span>จัดการสูตร</span>
+                                            </th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-[oklch(88%_0.012_28)] font-mono text-xs">
+                                        {processedItems.map(item => (
+                                            <tr
+                                                key={item.id}
+                                                className="group hover:bg-[oklch(95%_0.010_28)] transition-colors"
+                                            >
+                                                {/* Name & Category (Sticky Left) */}
+                                                <td className="p-3 border-r border-[oklch(88%_0.012_28)] whitespace-nowrap min-w-[260px] sticky left-0 bg-[oklch(97%_0.008_28)] group-hover:bg-[oklch(95%_0.010_28)] z-10 shadow-[1px_0_0_oklch(88%_0.012_28)] transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        {item.image_url ? (
+                                                            <img
+                                                                src={item.image_url}
+                                                                alt={item.name}
+                                                                className="w-9 h-9 object-cover rounded-xs border border-[oklch(85%_0.012_28)] shrink-0"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-9 h-9 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-center text-[10px] text-[oklch(55%_0.010_28)] shrink-0 font-mono">
+                                                                N/A
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <div className="font-bold text-[oklch(18%_0.012_28)] text-sm truncate font-sans">
+                                                                {item.name}
+                                                            </div>
+                                                            <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[oklch(55%_0.010_28)]">
+                                                                <span className="px-1.5 py-0.2 bg-[oklch(92%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
+                                                                    {item.category || 'ไม่ระบุหมวด'}
+                                                                </span>
+                                                                {item.hasRecipe && (
+                                                                    <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                                        {item.ingredientCount} วัตถุดิบ
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Price */}
+                                                <td className="p-3 text-right font-medium tabular-nums border-r border-[oklch(88%_0.012_28)] text-sm whitespace-nowrap w-28 min-w-[96px]">
+                                                    ฿{item.price.toLocaleString('th-TH', { minimumFractionDigits: 0 })}
+                                                </td>
+
+                                                {/* Cost */}
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-36 min-w-[124px]">
+                                                    {item.hasRecipe ? (
+                                                        <div>
+                                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                                ฿{item.cost.toFixed(2)}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[oklch(55%_0.010_28)] italic text-[11px]">
+                                                            [รอผูกสูตร]
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                {/* Profit */}
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-32 min-w-[104px]">
+                                                    {item.hasRecipe ? (
+                                                        <span className={`font-bold ${
+                                                            item.profit > 0 ? 'text-[oklch(38%_0.08_140)]' : 'text-[oklch(45%_0.14_28)]'
+                                                        }`}>
+                                                            ฿{item.profit.toFixed(0)}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[oklch(60%_0.010_28)]">-</span>
+                                                    )}
+                                                </td>
+
+                                                {/* Cost % & Margin Badge */}
+                                                <td className="p-3 text-right tabular-nums border-r border-[oklch(88%_0.012_28)] whitespace-nowrap w-36 min-w-[120px]">
+                                                    {item.hasRecipe ? (
+                                                        <div className="flex flex-col items-end gap-0.5">
+                                                            <span className={`px-1.5 py-0.5 rounded-xs text-[11px] font-bold border ${
+                                                                item.costPercent > 35
+                                                                    ? 'bg-[oklch(93%_0.05_28)] text-[oklch(45%_0.14_28)] border-[oklch(85%_0.08_28)]'
+                                                                    : item.costPercent > targetFoodCostPct
+                                                                    ? 'bg-[oklch(93%_0.05_70)] text-[oklch(40%_0.10_70)] border-[oklch(85%_0.07_70)]'
+                                                                    : 'bg-[oklch(93%_0.04_140)] text-[oklch(35%_0.08_140)] border-[oklch(85%_0.05_140)]'
+                                                            }`}>
+                                                                {item.costPercent.toFixed(1)}%
+                                                            </span>
+                                                            <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                                มาร์จิ้น {item.margin.toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-[oklch(60%_0.010_28)]">-</span>
+                                                    )}
+                                                </td>
+
+                                                {/* Action Button */}
+                                                <td className="p-3 text-center whitespace-nowrap w-36 min-w-[110px]">
+                                                    <button
+                                                        onClick={() => handleOpenRecipe(item)}
+                                                        className={`px-3 py-1.5 font-mono text-xs border transition-colors ${
+                                                            item.hasRecipe
+                                                                ? 'border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                                : 'border-[oklch(18%_0.012_28)] bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                                        }`}
+                                                    >
+                                                        {item.hasRecipe ? '[ปรุงสูตร]' : '[+ สร้างสูตร]'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
 
                         {/* Mobile Compact Financial Cards */}
-                        <div className="block md:hidden space-y-3">
+                        {(viewLayout === 'cards' || viewLayout === 'auto') && (
+                            <div className={`${viewLayout === 'auto' ? 'block md:hidden' : 'block'} space-y-3`}>
                             {processedItems.map(item => (
                                 <div
                                     key={item.id}
@@ -880,7 +910,8 @@ export default function MenuCostPage({ isEmbedded = false }) {
                                     </button>
                                 </div>
                             ))}
-                        </div>
+                            </div>
+                        )}
                     </>
                 )}
             </div>

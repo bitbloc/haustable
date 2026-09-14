@@ -744,10 +744,12 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                     return (
                                         <div 
                                             key={item.id} 
-                                            className="border border-[oklch(85%_0.012_28)] bg-white flex flex-col justify-between rounded-xs overflow-hidden transition-all duration-150 hover:border-black"
+                                            className={`border border-[oklch(85%_0.012_28)] bg-white flex flex-col justify-between rounded-xs transition-all duration-150 hover:border-black ${
+                                                activeDropdownId === item.id ? 'relative z-30 shadow-md' : 'relative z-0'
+                                            }`}
                                         >
                                             {/* Cell 1: Metadata Header */}
-                                            <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] space-y-2.5">
+                                            <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] space-y-2.5 rounded-t-xs">
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
                                                         [BASE FORMULA]
@@ -857,12 +859,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                                                 className="fixed inset-0 z-40" 
                                                                 onClick={() => setActiveDropdownId(null)}
                                                             />
-                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[oklch(85%_0.012_28)] shadow-xl z-50 py-1 font-mono text-xs max-h-48 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)]">
+                                                            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-[oklch(85%_0.012_28)] shadow-2xl z-50 py-1 font-mono text-xs max-h-56 overflow-y-auto animate-in fade-in duration-100 divide-y divide-[oklch(90%_0.008_28)] rounded-xs">
                                                                 <div className="px-2.5 py-1 text-[9px] font-bold uppercase text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)]">
                                                                     ย้ายไปที่โฟลเดอร์
                                                                 </div>
                                                                 <button
-                                                                    onClick={() => handleMoveFolder(item.id, 'uncategorized')}
+                                                                    onClick={() => {
+                                                                        handleMoveFolder(item.id, 'uncategorized');
+                                                                        setActiveDropdownId(null);
+                                                                    }}
                                                                     className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-[11px]"
                                                                 >
                                                                     [ทั่วไป / Uncategorized]
@@ -872,7 +877,10 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                                                     .map(folder => (
                                                                         <button
                                                                             key={folder}
-                                                                            onClick={() => handleMoveFolder(item.id, folder)}
+                                                                            onClick={() => {
+                                                                                handleMoveFolder(item.id, folder);
+                                                                                setActiveDropdownId(null);
+                                                                            }}
                                                                             className="w-full text-left px-2.5 py-1.5 hover:bg-[oklch(94%_0.010_28)] transition-colors font-bold text-[11px] truncate"
                                                                         >
                                                                             [{folder}]
@@ -886,7 +894,7 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                                             </div>
 
                                             {/* Cell 3: Action Buttons */}
-                                            <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-1.5 font-mono text-xs">
+                                            <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex gap-1.5 font-mono text-xs rounded-b-xs">
                                                 <button 
                                                     onClick={() => { setRecipeTarget(item); setIsRecipeOpen(true); }}
                                                     className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold uppercase hover:bg-black transition-colors flex items-center justify-center gap-1 cursor-pointer"
