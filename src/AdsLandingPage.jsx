@@ -194,7 +194,23 @@ export default function AdsLandingPage() {
     };
 
     const fetchData = async (silent = false) => {
-        if (!silent) setLoading(true);
+        // Instant Hydration from localStorage to render immediately in 0ms without waiting for Supabase
+        let hasCachedData = false;
+        try {
+            const cachedSettings = JSON.parse(localStorage.getItem('cache_ads_settings') || 'null');
+            const cachedItems = JSON.parse(localStorage.getItem('cache_ads_items') || 'null');
+            const cachedCats = JSON.parse(localStorage.getItem('cache_ads_cats') || 'null');
+            if (cachedSettings) processSettings(cachedSettings);
+            if (cachedItems) processMenuItems(cachedItems);
+            if (cachedCats) setMenuCategories(cachedCats);
+            if (cachedSettings && cachedItems) {
+                hasCachedData = true;
+                setLoading(false);
+            }
+        } catch (e) {}
+
+        if (!silent && !hasCachedData) setLoading(true);
+
         try {
             const [settingsRes, itemsRes, catsRes, checkinsRes] = await Promise.all([
                 supabase.from('app_settings').select('key, value').like('key', 'link_%'),
@@ -203,14 +219,23 @@ export default function AdsLandingPage() {
                 supabase.from('haus_checkins').select('id, image_url, source, user_name, user_handle, text, likes, is_visible, created_at').eq('is_visible', true).order('created_at', { ascending: false }).limit(8)
             ]);
 
-            if (settingsRes.data) processSettings(settingsRes.data);
-            if (itemsRes.data) processMenuItems(itemsRes.data);
-            if (catsRes.data) setMenuCategories(catsRes.data);
+            if (settingsRes.data) {
+                processSettings(settingsRes.data);
+                try { localStorage.setItem('cache_ads_settings', JSON.stringify(settingsRes.data)); } catch (e) {}
+            }
+            if (itemsRes.data) {
+                processMenuItems(itemsRes.data);
+                try { localStorage.setItem('cache_ads_items', JSON.stringify(itemsRes.data)); } catch (e) {}
+            }
+            if (catsRes.data) {
+                setMenuCategories(catsRes.data);
+                try { localStorage.setItem('cache_ads_cats', JSON.stringify(catsRes.data)); } catch (e) {}
+            }
             if (checkinsRes.data) setCustomerCheckins(checkinsRes.data);
         } catch (err) {
-            console.error('Failed to load link data:', err);
+            console.warn('[AdsLandingPage] Failed to load fresh data, fallback cache preserved:', err);
         } finally {
-            if (!silent) setLoading(false);
+            setLoading(false);
         }
     };
 

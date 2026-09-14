@@ -10,19 +10,30 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // In-memory cache to prevent Supabase PostgREST connection pool spikes and 504 Gateway Timeouts
 let cachedSettings = null;
 let cacheExpiry = 0;
-const CACHE_TTL_MS = 60 * 1000; // 60 seconds
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes in-memory
+
+const DEFAULT_OG_DESCRIPTION = "อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · ร้านเท่สไตล์ Thai Twist · กินอาหารใต้กินได้ทุกที่ · มีที่จอดรถสะดวก...";
+const DEFAULT_OG_IMAGE = "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg";
 
 export default async function handler(req, res) {
     try {
-        // 1. Fetch settings from Supabase (with in-memory cache to eliminate 504 Gateway Timeouts)
+        // 1. Fetch settings from Supabase (with in-memory cache and 2.5s timeout to prevent 504 Gateway Timeouts)
         let settings = {};
         const now = Date.now();
         if (cachedSettings && now < cacheExpiry) {
             settings = cachedSettings;
         } else {
             try {
-                const { data: dbSettings, error: dbErr } = await supabase.from('app_settings').select('key, value').like('key', 'link_%');
-                if (!dbErr && dbSettings) {
+                // Fetch strictly the 2 needed OG keys using exact index match instead of unindexed LIKE wildcard
+                const fetchPromise = supabase
+                    .from('app_settings')
+                    .select('key, value')
+                    .in('key', ['link_og_description', 'link_og_image_url']);
+                
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), 2500));
+                
+                const { data: dbSettings, error: dbErr } = await Promise.race([fetchPromise, timeoutPromise]);
+                if (!dbErr && Array.isArray(dbSettings)) {
                     settings = dbSettings.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
                     cachedSettings = settings;
                     cacheExpiry = now + CACHE_TTL_MS;
@@ -30,24 +41,17 @@ export default async function handler(req, res) {
                     settings = cachedSettings;
                 }
             } catch (err) {
+                // On query timeout or Supabase load spike, gracefully fall back to cache or defaults
                 if (cachedSettings) settings = cachedSettings;
             }
         }
 
         // 2. Content derived from Google Ad (with dynamic description override support)
         const title = "ร้านในบ้าน นครพนม | อาหารใต้รสชัด ริมโขง | จริตจัด รสชัดเจน"
-        const description = settings.link_og_description || "อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · ร้านเท่สไตล์ Thai Twist · กินอาหารใต้กินได้ทุกที่ · มีที่จอดรถสะดวก..."
+        const description = settings.link_og_description || DEFAULT_OG_DESCRIPTION;
         
         // 3. Resolve OG Image URL:
-        // Prioritize settings.link_og_image_url (guaranteed compressed by back-office uploader).
-        // Fallback directly to the optimized local og-food-preview.png (~875KB).
-        // Avoid falling back to uncompressed database settings (like link_hero_url which is 22.6MB)
-        // because Facebook crawlers will time out on large image sizes, showing a blank preview.
-        let imageUrl = settings.link_og_image_url
-        
-        if (!imageUrl) {
-            imageUrl = "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg"
-        }
+        let imageUrl = settings.link_og_image_url || DEFAULT_OG_IMAGE;
 
         // 4. Read the production index.html file
         const indexPath = path.join(process.cwd(), 'dist', 'index.html')
@@ -88,9 +92,11 @@ export default async function handler(req, res) {
             html = html.replace('</head>', `${dynamicMetaTags}\n</head>`)
         }
 
-        // Send response
+        // Send response with Vercel Edge CDN caching:
+        // - Edge CDN caches for 5 mins (s-maxage=300), reducing Supabase traffic by >95%
+        // - stale-while-revalidate serves instantly while revalidating asynchronously
         res.setHeader('Content-Type', 'text/html')
-        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400')
         return res.status(200).send(html)
 
     } catch (err) {
@@ -100,6 +106,7 @@ export default async function handler(req, res) {
             const indexPath = path.join(process.cwd(), 'dist', 'index.html')
             const html = fs.readFileSync(indexPath, 'utf8')
             res.setHeader('Content-Type', 'text/html')
+            res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400')
             return res.status(200).send(html)
         } catch (readErr) {
             return res.status(500).send('Internal Server Error')

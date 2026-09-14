@@ -125,6 +125,7 @@ export default function POSDashboard() {
     const [selectedTable, setSelectedTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
     const activeBookingRef = useRef(activeBooking);
+    const tableSelectRequestIdRef = useRef(0);
     useEffect(() => {
         activeBookingRef.current = activeBooking;
     }, [activeBooking]);
@@ -833,20 +834,35 @@ export default function POSDashboard() {
 
             if (error || !latestBooking) return;
 
-            if (activeBookingRef.current?.id === bookingId) {
-                setActiveBooking(latestBooking);
-
-                const dbItems = (latestBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
-
-                // Preserve local draft items currently being entered by staff
-                setCurrentOrder(prev => {
-                    const localDraftItems = (prev.items || []).filter(i => !i.db_id);
-                    return {
-                        ...prev,
-                        items: [...dbItems, ...localDraftItems]
-                    };
-                });
+            // Strict guards:
+            // 1. activeBookingRef must still match bookingId
+            // 2. if selectedTable is set, latestBooking's table_id must match selectedTable.id
+            if (activeBookingRef.current?.id !== bookingId) return;
+            if (selectedTable?.id && latestBooking.table_id && String(selectedTable.id) !== String(latestBooking.table_id)) {
+                console.warn('[refreshActiveBookingItems] Discarding update: active table changed to', selectedTable.id, 'while update was for table', latestBooking.table_id);
+                return;
             }
+
+            setActiveBooking(latestBooking);
+            if (activeBookingRef) activeBookingRef.current = latestBooking;
+
+            const dbItems = (latestBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+
+            // Preserve local draft items ONLY if they belong to this exact table
+            setCurrentOrder(prev => {
+                const isSameTable = prev?.table && String(prev.table.id) === String(latestBooking.table_id);
+                if (!isSameTable && prev?.table?.id) {
+                    console.warn('[refreshActiveBookingItems] Discarding mismatched update: prev table', prev.table.id, 'vs booking table', latestBooking.table_id);
+                    return prev;
+                }
+                const localDraftItems = isSameTable ? (prev.items || []).filter(i => !i.db_id) : [];
+                return {
+                    ...prev,
+                    table: latestBooking.tables_layout || prev.table,
+                    customer: latestBooking.profiles?.display_name || latestBooking.pickup_contact_name || latestBooking.customer_name || prev.customer,
+                    items: [...dbItems, ...localDraftItems]
+                };
+            });
         } catch (err) {
             console.warn('[refreshActiveBookingItems] Failed to sync latest items:', err);
         }
@@ -1888,6 +1904,14 @@ export default function POSDashboard() {
     const handleSelectOpenBill = useCallback(async (booking) => {
         if (!booking) return;
 
+        // Immediately cancel any pending debounced sync timers to prevent cross-booking pollution
+        if (window.activeBookingSyncDebounceTimer) {
+            clearTimeout(window.activeBookingSyncDebounceTimer);
+            window.activeBookingSyncDebounceTimer = null;
+        }
+
+        const currentReqId = ++tableSelectRequestIdRef.current;
+
         let fullBooking = booking;
         // ALWAYS fetch fresh booking details with complete relations from database if online
         if (isOnline() && typeof booking.id === 'string' && !booking.id.startsWith('local_')) {
@@ -1902,6 +1926,8 @@ export default function POSDashboard() {
                 console.warn('Could not fetch full booking details for open bill:', e);
             }
         }
+
+        if (currentReqId !== tableSelectRequestIdRef.current) return;
 
         const tableObj = fullBooking.tables_layout || null;
         if (tableObj?.id) {
@@ -1919,6 +1945,7 @@ export default function POSDashboard() {
         }
 
         setActiveBooking(fullBooking);
+        if (activeBookingRef) activeBookingRef.current = fullBooking;
 
         const existingItems = (fullBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
 
@@ -1953,8 +1980,29 @@ export default function POSDashboard() {
     const [pickupNoteInput, setPickupNoteInput] = useState('');
 
     const handleSelectTable = useCallback(async (table) => {
+        if (!table) return;
+
+        // 1. Cancel any active debounced sync timer immediately so previous table's orders never bleed in
+        if (window.activeBookingSyncDebounceTimer) {
+            clearTimeout(window.activeBookingSyncDebounceTimer);
+            window.activeBookingSyncDebounceTimer = null;
+        }
+
+        const currentReqId = ++tableSelectRequestIdRef.current;
+
+        // 2. SYNCHRONOUS TABLE ISOLATION:
+        // Immediately purge active booking and clear previous table's order items
+        // so that while awaiting network response, Table 7 items NEVER display under Table 6
         setSelectedTable(table);
-        setAttachedMemberCrm(null); // Clear stale attached member immediately on table change
+        setActiveBooking(null);
+        if (activeBookingRef) activeBookingRef.current = null;
+        setAttachedMemberCrm(null);
+        setCurrentOrder({
+            items: [],
+            customer: `Table ${table.table_name || ''}`,
+            table: table
+        });
+
         if (table?.id) {
             localStorage.setItem('pos_active_table_id', table.id);
             try {
@@ -1965,21 +2013,25 @@ export default function POSDashboard() {
             } catch (e) {}
         }
         
-        // 1. Check for active booking
+        // 3. Fetch active booking for this specific table
         const booking = await getActiveBooking(table.id);
+
+        // Guard against out-of-order race conditions if cashier rapidly tapped different tables
+        if (currentReqId !== tableSelectRequestIdRef.current) return;
         
         if (booking) {
             setActiveBooking(booking);
+            if (activeBookingRef) activeBookingRef.current = booking;
+            if (booking.profiles) {
+                setAttachedMemberCrm(booking.profiles);
+            }
+
             // Load existing items with unique cart-level IDs
             const existingItems = (booking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
-            setCurrentOrder(prev => {
-                const isSameTable = prev?.table && String(prev.table.id) === String(table.id);
-                const localDrafts = isSameTable ? (prev.items || []).filter(i => !i.db_id) : [];
-                return {
-                    items: [...existingItems, ...localDrafts],
-                    customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || 'Customer',
-                    table: table
-                };
+            setCurrentOrder({
+                items: existingItems,
+                customer: booking.profiles?.display_name || booking.pickup_contact_name || booking.customer_name || `Table ${table.table_name}`,
+                table: table
             });
             // Keep on 'tables' view so the floorplan remains visible
             setView('tables');
@@ -2008,6 +2060,8 @@ export default function POSDashboard() {
                 }
             }
 
+            if (currentReqId !== tableSelectRequestIdRef.current) return;
+
             if (upcomingRes) {
                 // Table has an online reservation! Open the dedicated Online Reservation Check-in Card
                 setOnlineReservationModalData({ table, reservation: upcomingRes });
@@ -2016,6 +2070,7 @@ export default function POSDashboard() {
 
             // Table is empty -> Show Open Table Modal to mandate entering guest count!
             setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
             setCurrentOrder({
                 items: [],
                 customer: 'Walk-in Guest',

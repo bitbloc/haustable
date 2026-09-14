@@ -239,8 +239,20 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const currentBookings = activeBookings || [];
 
                 // Cache data into in-memory posCache and localStorage
+                // Preserve full order_items details if already populated in posCache with rich menu_items
+                const existingCachedBookings = posCache.getBookings() || [];
+                const mergedWithRichCache = currentBookings.map(nb => {
+                    const existing = existingCachedBookings.find(eb => eb.id === nb.id);
+                    if (existing?.order_items && existing.order_items.length > 0 && existing.order_items[0].menu_items) {
+                        const richMap = new Map(existing.order_items.map(oi => [oi.id, oi]));
+                        const preservedItems = (nb.order_items || []).map(shallow => richMap.get(shallow.id) || shallow);
+                        return { ...existing, ...nb, order_items: preservedItems };
+                    }
+                    return nb;
+                });
+
                 posCache.setTables(currentTables);
-                posCache.setBookings(currentBookings);
+                posCache.setBookings(mergedWithRichCache);
 
                 const now = new Date();
 
