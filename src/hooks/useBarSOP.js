@@ -360,7 +360,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                         data: populatedData,
                         timestamp: Date.now()
                     }));
-                } catch (e) { /* ignore storage errors */ }
+                } catch { /* ignore storage errors */ }
             }
 
             return populatedData;
@@ -376,7 +376,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                         toast.info('แสดงข้อมูลจาก cache (offline)');
                         return cached.data;
                     }
-                } catch (e) { /* ignore */ }
+                } catch { /* ignore */ }
             }
 
             toast.error('โหลดข้อมูล SOP ไม่สำเร็จ');
@@ -384,11 +384,11 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         } finally {
             setLoading(false);
         }
-    }, [department, staffMode, syncCategoriesAndRecipes]);
+    }, [department, staffMode]);
 
     // ────────────────────────────────
     // Scale Ingredients
-    // ── Helper: Scale Ingredients ──
+    // ── Helper: Scale Ingredients with Sweetness Matrix ──
     const scaleIngredients = useCallback((recipe, targetSizeOrPreset, cups = 1, sweetnessLevel = '100%') => {
         if (!recipe) return [];
         const ingredients = recipe.display_ingredients || recipe.ingredients || [];
@@ -414,29 +414,32 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             }
         }
 
-        // Sweetness Multiplier
-        // Support custom overrides in recipe.advanced_details.sweetness_rules or default values
+        // Sweetness Multiplier & Custom Matrix
+        // Normalize sweetness key
+        let sweetKey = 'normal';
+        if (sweetnessLevel === '0%' || sweetnessLevel === 'none' || sweetnessLevel === 'ไม่หวาน') sweetKey = 'none';
+        else if (sweetnessLevel === '25%' || sweetnessLevel === 'very_less' || sweetnessLevel === 'หวานน้อยมาก') sweetKey = 'very_less';
+        else if (sweetnessLevel === '50%' || sweetnessLevel === 'less' || sweetnessLevel === 'หวานน้อย') sweetKey = 'less';
+        else if (sweetnessLevel === '100%' || sweetnessLevel === 'normal' || sweetnessLevel === 'หวานปกติ') sweetKey = 'normal';
+        else if (sweetnessLevel === '120%' || sweetnessLevel === 'extra' || sweetnessLevel === 'หวานมาก') sweetKey = 'extra';
+
         const customRules = recipe.advanced_details?.sweetness_rules || {};
-        let sweetnessMultiplier = 1.0;
+        const customMatrix = recipe.advanced_details?.sweetness_matrix;
         
-        switch (sweetnessLevel) {
-            case '0%':
+        let sweetnessMultiplier = 1.0;
+        switch (sweetKey) {
             case 'none':
                 sweetnessMultiplier = customRules.none !== undefined ? customRules.none : 0.0;
                 break;
-            case '25%':
             case 'very_less':
                 sweetnessMultiplier = customRules.very_less !== undefined ? customRules.very_less : 0.25;
                 break;
-            case '50%':
             case 'less':
                 sweetnessMultiplier = customRules.less !== undefined ? customRules.less : 0.5;
                 break;
-            case '100%':
             case 'normal':
                 sweetnessMultiplier = customRules.normal !== undefined ? customRules.normal : 1.0;
                 break;
-            case '120%':
             case 'extra':
                 sweetnessMultiplier = customRules.extra !== undefined ? customRules.extra : 1.2;
                 break;
@@ -446,7 +449,6 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 
         return ingredients.map(ing => {
             const unitLower = (ing.unit || '').toLowerCase();
-            // Solid/piece items units that do not scale with glass size, only scale with cups count
             const isPieceItem = ['pcs', 'glass', 'cup', 'pack', 'กล่อง', 'ถุง', 'ขวด', 'แผ่น', 'หลอด', 'ชิ้น', 'อัน', 'ฝา'].includes(unitLower) || 
                                 ing.unit === 'GLASS' || 
                                 ing.unit === 'PCS';
@@ -455,26 +457,34 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             
             // Check if ingredient is a sweetener
             const isSweet = ing.is_sweetener === true;
-            if (isSweet) {
-                finalMultiplier *= sweetnessMultiplier;
-            }
+            let finalCalculatedQty = ing.qty;
 
-            const isScalable = ing.scalable !== false;
+            if (isSweet) {
+                // Check if custom matrix has an exact override for this sweetener at this level
+                if (customMatrix && customMatrix.levels && customMatrix.levels[ing.name] && customMatrix.levels[ing.name][sweetKey] !== undefined) {
+                    const customExactVal = parseFloat(customMatrix.levels[ing.name][sweetKey]);
+                    const baseVal = isNaN(customExactVal) ? (ing.qty * sweetnessMultiplier) : customExactVal;
+                    finalCalculatedQty = Math.round((baseVal * (isCustomMode ? sizeMultiplier : 1) * cups) * 100) / 100;
+                } else {
+                    finalCalculatedQty = Math.round((ing.qty * (finalMultiplier * sweetnessMultiplier)) * 100) / 100;
+                }
+            } else {
+                finalCalculatedQty = ing.scalable !== false
+                    ? Math.round((ing.qty * finalMultiplier) * 100) / 100
+                    : ing.qty;
+            }
 
             let name = ing.name || '';
             if (isPieceItem && name.includes('แก้ว')) {
-                // Dynamically recommend correct cup size in the name
                 name = name.replace(/\d+\s*(ออนซ์|oz)/i, `${targetSizeOrPreset} $1`);
             }
 
             return {
                 ...ing,
                 name,
-                scaledQty: isScalable
-                    ? Math.round((ing.qty * finalMultiplier) * 100) / 100
-                    : ing.qty,
-                isScaled: isScalable && finalMultiplier !== 1,
-                isSweetScaled: isSweet && sweetnessMultiplier !== 1.0
+                scaledQty: finalCalculatedQty,
+                isScaled: (ing.scalable !== false && finalMultiplier !== 1),
+                isSweetScaled: isSweet && (sweetKey !== 'normal' || sweetnessMultiplier !== 1.0)
             };
         });
     }, []);
@@ -710,6 +720,41 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
     }, []);
 
     // ────────────────────────────────
+    // Duplicate SOP Recipe (1-Click Clone)
+    // ────────────────────────────────
+    const duplicateSOPRecipe = useCallback(async (recipeId) => {
+        try {
+            const target = recipes.find(r => r.id === recipeId);
+            if (!target) throw new Error('ไม่พบสูตรที่ต้องการคัดลอก');
+
+            const clonePayload = {
+                ...target,
+                id: undefined,
+                name: `${target.name} (สำเนา)`,
+                name_en: target.name_en ? `${target.name_en} (Copy)` : '',
+                is_published: false,
+                source_stock_item_id: null,
+                source_menu_item_id: null,
+                sort_order: (target.sort_order || 0) + 1,
+                created_at: undefined,
+                updated_at: undefined
+            };
+
+            const newRecipe = await saveSOPRecipe(clonePayload);
+            if (newRecipe) {
+                await fetchRecipes(activeCategory);
+                toast.success(`คัดลอกสูตร "${newRecipe.name}" สำเร็จ`);
+                return newRecipe;
+            }
+            return null;
+        } catch (err) {
+            console.error('Duplicate SOP failed:', err);
+            toast.error('คัดลอกสูตรไม่สำเร็จ: ' + err.message);
+            return null;
+        }
+    }, [recipes, saveSOPRecipe, fetchRecipes, activeCategory]);
+
+    // ────────────────────────────────
     // Save Category
     // ────────────────────────────────
     const saveCategory = useCallback(async (category) => {
@@ -787,7 +832,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             cacheRef.current.glassSizes = null;
             await fetchGlassSizes();
             return data;
-        } catch (err) {
+        } catch {
             toast.error('บันทึกขนาดแก้วไม่สำเร็จ');
             return null;
         }
@@ -842,6 +887,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
         fetchRecipeLabSummary,
         syncSOPWithRecipeLab,
         saveSOPRecipe,
+        duplicateSOPRecipe,
         deleteSOPRecipe,
         saveCategory,
         deleteCategory,

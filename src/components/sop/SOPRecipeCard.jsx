@@ -15,7 +15,9 @@ export default function SOPRecipeCard({
     defaultExpanded = false 
 }) {
     const isCustomMode = recipe?.scaling_rules?._mode === 'custom';
-    const customPresets = isCustomMode ? (recipe?.scaling_rules?.presets || []) : [];
+    const customPresets = useMemo(() => {
+        return isCustomMode ? (recipe?.scaling_rules?.presets || []) : [];
+    }, [isCustomMode, recipe?.scaling_rules?.presets]);
 
     const [expanded, setExpanded] = useState(defaultExpanded);
     const [cups, setCups] = useState(1);
@@ -35,7 +37,7 @@ export default function SOPRecipeCard({
         } else {
             setSelectedSizeOz(recipe?.base_glass_size_oz || 16);
         }
-    }, [recipe?.id, isCustomMode]);
+    }, [recipe?.id, isCustomMode, customPresets, recipe?.base_glass_size_oz]);
 
     // Scale ingredients based on selected glass size, cups and sweetness
     const scaledIngredients = useMemo(() => {
@@ -117,16 +119,16 @@ export default function SOPRecipeCard({
                         <h3 className={`font-bold text-lg leading-tight truncate ${t.textBright}`}>
                             {recipe?.name || 'Untitled'}
                         </h3>
-                        <div className={`flex items-center gap-2 mt-0.5 text-xs ${t.textMuted}`}>
-                            {recipe?.advanced_details?.prep_time && <span className={`px-2 py-0.5 rounded font-mono ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] text-[var(--color-brand)]'}`}>⏱ {recipe.advanced_details.prep_time}</span>}
-                            {recipe?.advanced_details?.ice_level && <span className={`px-2 py-0.5 rounded font-mono ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] text-[var(--color-brand)]'}`}>🧊 {recipe.advanced_details.ice_level}</span>}
-                            {!recipe?.advanced_details?.prep_time && <span>{isCustomMode ? 'Custom Prep' : `${recipe?.base_glass_size_oz || 16}oz`}</span>}
+                        <div className={`flex items-center gap-2 mt-0.5 text-xs font-mono ${t.textMuted}`}>
+                            {recipe?.advanced_details?.prep_time && <span className="px-2 py-0.5 rounded-xs font-mono bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold">[PREP: {recipe.advanced_details.prep_time}]</span>}
+                            {recipe?.advanced_details?.ice_level && <span className="px-2 py-0.5 rounded-xs font-mono bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold">[ICE: {recipe.advanced_details.ice_level}]</span>}
+                            {!recipe?.advanced_details?.prep_time && <span>{isCustomMode ? 'CUSTOM PREP' : `${recipe?.base_glass_size_oz || 16} OZ`}</span>}
                             <span>•</span>
-                            <span>{steps.length} steps</span>
+                            <span>{steps.length} STEPS</span>
                             {recipe?.garnish && (
                                 <>
                                     <span>•</span>
-                                    <span className="truncate">{recipe.garnish}</span>
+                                    <span className="truncate">GARNISH: {recipe.garnish}</span>
                                 </>
                             )}
                         </div>
@@ -223,26 +225,32 @@ export default function SOPRecipeCard({
                         </div>
                     </div>
 
-                    {/* Sweetness Selector */}
+                    {/* Sweetness Selector (Thai Modern 4 Levels) */}
                     <div>
-                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 opacity-50"></span>
-                            ระดับความหวาน / Sweetness Level
+                        <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-2 ${t.sectionLabel}`}>
+                            ระดับความหวาน (SWEETNESS LEVEL)
                         </div>
-                        <div className={`p-1 rounded-lg inline-flex flex-wrap gap-1 ${darkMode ? 'bg-[#0A0A0A] border border-[#222] shadow-inner' : 'bg-[var(--color-hallmark-paper)] border border-[var(--color-hallmark-rule)] shadow-inner'}`}>
-                            {['0%', '25%', '50%', '100%', '120%'].map(level => {
-                                const isActive = sweetness === level;
+                        <div className="p-1 rounded bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] inline-flex flex-wrap gap-1">
+                            {[
+                                { key: '0%', label: 'ไม่หวาน', sub: '0%' },
+                                { key: '50%', label: 'หวานน้อย', sub: '50%' },
+                                { key: '100%', label: 'หวานปกติ', sub: '100%' },
+                                { key: '120%', label: 'หวานมาก', sub: '120%' }
+                            ].map(opt => {
+                                const isActive = sweetness === opt.key;
                                 return (
                                     <button
-                                        key={level}
-                                        onClick={() => setSweetness(level)}
-                                        className={`px-4 py-2 text-sm transition-all duration-300 flex items-center gap-1.5 ${
-                                            isActive ? t.sweetPillActive : t.glassPill
+                                        key={opt.key}
+                                        type="button"
+                                        onClick={() => setSweetness(opt.key)}
+                                        className={`px-3 py-1.5 text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer rounded-xs ${
+                                            isActive 
+                                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-sm' 
+                                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                                         }`}
                                     >
-                                        <span className={isActive ? 'text-lg font-bold' : ''}>
-                                            {level === '100%' ? '100% (ปกติ)' : level}
-                                        </span>
+                                        <span>{opt.label}</span>
+                                        <span className="text-[10px] opacity-70">({opt.sub})</span>
                                     </button>
                                 );
                             })}
@@ -255,12 +263,12 @@ export default function SOPRecipeCard({
                     {/* Equipment */}
                     {recipe?.advanced_details?.equipment?.length > 0 && (
                         <div className="mb-4">
-                            <div className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${t.sectionLabel}`}>
-                                🛠 อุปกรณ์ / EQUIPMENT
+                            <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-2 ${t.sectionLabel}`}>
+                                [EQUIPMENT] อุปกรณ์เฉพาะ
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                {recipe.advanced_details.equipment.map((eq, i) => (
-                                    <span key={i} className={`text-xs px-2.5 py-1 rounded-md ${darkMode ? 'bg-[#1A1A1A] text-gray-300 border border-[#333]' : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] border border-[var(--color-hallmark-rule)]'}`}>
+                            <div className="flex flex-wrap gap-1.5">
+                                {(Array.isArray(recipe.advanced_details.equipment) ? recipe.advanced_details.equipment : [recipe.advanced_details.equipment]).map((eq, i) => (
+                                    <span key={i} className="text-xs px-2.5 py-1 rounded-xs font-mono bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
                                         {eq}
                                     </span>
                                 ))}
@@ -271,18 +279,18 @@ export default function SOPRecipeCard({
                     {/* Ingredients (Menu Style) */}
                     {visibleIngredients.length > 0 && (
                         <div>
-                            <div className={`text-[10px] uppercase tracking-widest font-bold mb-4 flex items-center justify-between ${t.sectionLabel}`}>
-                                <span>📦 ส่วนผสม / INGREDIENTS</span>
+                            <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-4 flex items-center justify-between ${t.sectionLabel}`}>
+                                <span>[INGREDIENTS] รายการส่วนผสม</span>
                                 {(!isBaseSize || cups > 1 || sweetness !== '100%') && (
-                                    <div className="flex flex-wrap gap-1.5">
+                                    <div className="flex flex-wrap gap-1.5 font-mono">
                                         {(!isBaseSize || cups > 1) && (
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${t.accentBg} ${t.accent}`}>
+                                            <span className="text-[10px] px-2 py-0.5 rounded-xs font-bold bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
                                                 SCALED {cups > 1 ? `x${cups} ` : ''}({isCustomMode ? selectedSizeOz : `${selectedSizeOz}oz`})
                                             </span>
                                         )}
                                         {sweetness !== '100%' && (
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${t.sweetAccentBg} ${t.sweetAccent}`}>
-                                                หวาน: {sweetness === '120%' ? 'หวานมาก (120%)' : sweetness === '50%' ? 'หวานน้อย (50%)' : sweetness === '25%' ? 'หวานน้อยมาก (25%)' : sweetness === '0%' ? 'ไม่หวาน (0%)' : sweetness}
+                                            <span className="text-[10px] px-2 py-0.5 rounded-xs font-bold bg-[oklch(95%_0.02_45)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                หวาน: {sweetness === '120%' ? 'หวานมาก (120%)' : sweetness === '50%' ? 'หวานน้อย (50%)' : sweetness === '0%' ? 'ไม่หวาน (0%)' : sweetness}
                                             </span>
                                         )}
                                     </div>
@@ -292,38 +300,79 @@ export default function SOPRecipeCard({
                                 {visibleIngredients.map((ing, i) => (
                                     <div key={i} className="flex flex-col group">
                                         <div className="flex items-end justify-between">
-                                            <span className={`text-[15px] tracking-wide ${t.textBright} flex items-center gap-1.5`}>
-                                                {ing.isSweetScaled && <span className="select-none text-xs">🍬</span>}
+                                            <span className={`text-[14px] font-medium tracking-wide ${t.textBright} flex items-center gap-1.5`}>
                                                 <span>{ing.name}</span>
-                                                {ing.isSweetScaled && (
-                                                    <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-sans ${t.sweetAccentBg} ${t.sweetAccent}`}>
-                                                        {sweetness === '120%' ? 'หวานมาก' : sweetness === '50%' ? 'หวานน้อย' : sweetness === '25%' ? 'หวานน้อยมาก' : sweetness === '0%' ? 'ไม่หวาน' : sweetness}
+                                                {ing.is_sweetener && (
+                                                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-xs bg-[oklch(95%_0.02_45)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                        SWEETENER
                                                     </span>
                                                 )}
                                             </span>
                                             <div className={`flex-1 mx-3 mb-1.5 border-b ${t.ingredientRow} group-hover:border-[#555] transition-colors`} />
-                                            <span className={`text-sm tabular-nums font-mono ${
+                                            <span className={`text-sm tabular-nums font-mono font-bold ${
                                                 ing.isSweetScaled 
-                                                    ? t.sweetScaledHighlight 
+                                                    ? 'text-[oklch(52%_0.16_28)]' 
                                                     : ing.isScaled 
-                                                        ? t.scaledHighlight 
+                                                        ? 'text-[oklch(18%_0.012_28)]' 
                                                         : t.textBright
                                             }`}>
                                                 {ing.scaledQty ?? ing.qty} <span className={`text-[10px] uppercase ml-0.5 ${t.textMuted}`}>{ing.unit}</span>
                                             </span>
                                         </div>
-                                        {ing.remark && <div className={`text-[11px] italic mt-0.5 ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]/70'}`}>{ing.remark}</div>}
+                                        {ing.remark && <div className="text-[11px] italic mt-0.5 text-[oklch(55%_0.010_28)]">{ing.remark}</div>}
                                     </div>
                                 ))}
                             </div>
+
+                            {/* Quick Sweetness Reference Table for Baristas */}
+                            {visibleIngredients.some(i => i.is_sweetener) && (
+                                <div className="mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
+                                    <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] mb-2 flex justify-between items-center">
+                                        <span>ตารางเปรียบเทียบระดับความหวาน (SWEETNESS MATRIX)</span>
+                                        <span className="text-[9px] text-[oklch(52%_0.16_28)] font-bold">ขนาด {selectedSizeOz}{isCustomMode ? '' : 'oz'}</span>
+                                    </div>
+                                    <div className="overflow-x-auto border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)]">
+                                        <table className="w-full text-center font-mono text-[11px] divide-y divide-[oklch(85%_0.012_28)]">
+                                            <thead>
+                                                <tr className="bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] text-[10px]">
+                                                    <th className="p-1.5 text-left pl-2.5">สารหวาน</th>
+                                                    <th className={`p-1.5 ${sweetness === '0%' ? 'bg-[oklch(18%_0.012_28)] text-white' : ''}`}>ไม่หวาน (0%)</th>
+                                                    <th className={`p-1.5 ${sweetness === '50%' ? 'bg-[oklch(18%_0.012_28)] text-white' : ''}`}>หวานน้อย (50%)</th>
+                                                    <th className={`p-1.5 ${sweetness === '100%' ? 'bg-[oklch(18%_0.012_28)] text-white' : ''}`}>หวานปกติ (100%)</th>
+                                                    <th className={`p-1.5 ${sweetness === '120%' ? 'bg-[oklch(18%_0.012_28)] text-white' : ''}`}>หวานมาก (120%)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[oklch(90%_0.008_28)]">
+                                                {visibleIngredients.filter(i => i.is_sweetener).map((sw, idx) => {
+                                                    const custom = recipe?.advanced_details?.sweetness_matrix?.levels?.[sw.name] || {};
+                                                    const noneVal = custom.none !== undefined ? custom.none : 0;
+                                                    const lessVal = custom.less !== undefined ? custom.less : Math.round(sw.qty * 0.5 * 10) / 10;
+                                                    const normVal = custom.normal !== undefined ? custom.normal : sw.qty;
+                                                    const extraVal = custom.extra !== undefined ? custom.extra : Math.round(sw.qty * 1.2 * 10) / 10;
+
+                                                    return (
+                                                        <tr key={idx}>
+                                                            <td className="p-1.5 text-left pl-2.5 font-sans font-bold text-[oklch(18%_0.012_28)] truncate max-w-[120px]">{sw.name}</td>
+                                                            <td className={`p-1.5 tabular-nums ${sweetness === '0%' ? 'font-bold bg-[oklch(90%_0.015_28)]/50' : ''}`}>{noneVal} {sw.unit}</td>
+                                                            <td className={`p-1.5 tabular-nums font-bold text-[oklch(52%_0.16_28)] ${sweetness === '50%' ? 'bg-[oklch(90%_0.015_28)]/50' : ''}`}>{lessVal} {sw.unit}</td>
+                                                            <td className={`p-1.5 tabular-nums font-bold ${sweetness === '100%' ? 'bg-[oklch(90%_0.015_28)]/50' : ''}`}>{normVal} {sw.unit}</td>
+                                                            <td className={`p-1.5 tabular-nums ${sweetness === '120%' ? 'font-bold bg-[oklch(90%_0.015_28)]/50' : ''}`}>{extraVal} {sw.unit}</td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* Steps (Vertical Timeline) */}
                     {steps.length > 0 && (
                         <div className="mt-6">
-                            <div className={`text-[10px] uppercase tracking-widest font-bold mb-6 ${t.sectionLabel}`}>
-                                📋 ขั้นตอน / METHOD
+                            <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-6 ${t.sectionLabel}`}>
+                                [METHOD] ขั้นตอนการปฏิบัติงาน
                             </div>
                             <div className={`relative ml-3 pl-6 border-l-2 space-y-6 pb-2 ${darkMode ? 'border-[#333333]' : 'border-[var(--color-hallmark-rule)]'}`}>
                                 {steps.map((step, i) => {
@@ -342,7 +391,9 @@ export default function SOPRecipeCard({
                                             {/* Content Card */}
                                             <div className={`p-4 rounded-xl ${t.stepBg}`}>
                                                 <div className="flex items-center gap-2 mb-2">
-                                                    <span className="text-xl drop-shadow-md">{action.icon}</span>
+                                                    <span className={`font-mono font-bold text-[11px] px-1.5 py-0.5 rounded-xs bg-[oklch(90%_0.015_28)] text-[oklch(18%_0.012_28)] uppercase tracking-wider`}>
+                                                        {action.labelEn || action.label}
+                                                    </span>
                                                     <span className={`font-bold text-[13px] uppercase tracking-widest ${t.accent}`}>
                                                         {step.title ? step.title : action.label}
                                                     </span>
@@ -378,23 +429,22 @@ export default function SOPRecipeCard({
                                                 )}
                                                 {step.key_points && (
                                                     <div className={`mt-3 border rounded-lg p-2.5 ${darkMode ? 'bg-[#1A1A1A] border-[#DFFF00]/30' : 'bg-amber-500/5 border-amber-500/20'}`}>
-                                                        <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-amber-600'}`}>
-                                                            <span className={`w-1.5 h-1.5 rounded-full ${darkMode ? 'bg-[#DFFF00]' : 'bg-amber-500'}`}></span> จุดสำคัญ
+                                                        <div className={`text-[10px] font-mono font-bold uppercase tracking-widest mb-1 flex items-center gap-1 ${darkMode ? 'text-[#DFFF00]' : 'text-amber-600'}`}>
+                                                            [KEY POINT] จุดสำคัญ
                                                         </div>
                                                         <p className={`text-xs ${darkMode ? 'text-gray-300' : 'text-[var(--color-hallmark-ink)]'}`}>{step.key_points}</p>
                                                     </div>
                                                 )}
                                                 {step.reason && (
-                                                    <div className={`mt-2 text-[11px] italic pl-2 border-l ${darkMode ? 'text-gray-500 border-gray-600' : 'text-[var(--color-hallmark-ink-muted)]/70 border-[var(--color-hallmark-rule)]'}`}>
-                                                        เหตุผล: {step.reason}
+                                                    <div className={`mt-2 text-[11px] font-mono italic pl-2 border-l ${darkMode ? 'text-gray-500 border-gray-600' : 'text-[var(--color-hallmark-ink-muted)]/70 border-[var(--color-hallmark-rule)]'}`}>
+                                                        [REASON] เหตุผล: {step.reason}
                                                     </div>
                                                 )}
                                                 {step.duration_sec && (
                                                     <div className={`mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border ${
                                                         darkMode ? 'bg-black/60 border-[#333333]' : 'bg-[var(--color-hallmark-paper-dark)] border-[var(--color-hallmark-rule)]'
                                                     }`}>
-                                                        <span className="text-[10px]">⏱</span>
-                                                        <span className={`text-xs font-mono font-bold ${t.accent}`}>{step.duration_sec}s</span>
+                                                        <span className={`text-xs font-mono font-bold ${t.accent}`}>[TIME: {step.duration_sec}s]</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -415,11 +465,11 @@ export default function SOPRecipeCard({
                             {/* QC Standards */}
                             {recipe?.advanced_details?.qc_standards?.length > 0 && (
                                 <div>
-                                    <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🎯 มาตรฐานรสชาติ (QC)</div>
+                                    <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-3 ${t.sectionLabel}`}>[QC] มาตรฐานรสชาติและคุณภาพ</div>
                                     <div className={`rounded-xl overflow-hidden border ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
                                         {recipe.advanced_details.qc_standards.map((qc, i) => (
                                             <div key={i} className={`flex border-b last:border-0 text-sm ${darkMode ? 'border-[#222]' : 'border-[var(--color-hallmark-rule)]'}`}>
-                                                <div className={`w-1/3 p-2.5 font-bold ${darkMode ? 'bg-[#1A1A1A] text-[#888]' : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)]'}`}>{qc.topic}</div>
+                                                <div className={`w-1/3 p-2.5 font-bold font-mono text-xs ${darkMode ? 'bg-[#1A1A1A] text-[#888]' : 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)]'}`}>{qc.topic}</div>
                                                 <div className={`flex-1 p-2.5 ${darkMode ? 'text-gray-200' : 'text-[var(--color-hallmark-ink)]'}`}>{qc.standard}</div>
                                             </div>
                                         ))}
@@ -430,14 +480,14 @@ export default function SOPRecipeCard({
                             {/* Troubleshooting */}
                             {recipe?.advanced_details?.troubleshooting?.length > 0 && (
                                 <div>
-                                    <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>🔧 การแก้ปัญหา</div>
+                                    <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-3 ${t.sectionLabel}`}>[TROUBLESHOOTING] การแก้ปัญหาเบื้องต้น</div>
                                     <div className="space-y-2">
                                         {recipe.advanced_details.troubleshooting.map((tb, i) => (
                                             <div key={i} className={`border p-3 rounded-xl text-sm ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-red-500/5 border-red-500/10'}`}>
-                                                <div className={`font-bold mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-red-500'}`}>⚠ {tb.problem}</div>
-                                                <div className={`mb-2 text-xs ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]'}`}>สาเหตุ: {tb.cause}</div>
-                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-emerald-500/10 text-emerald-600 font-bold'}`}>
-                                                    ✓ {tb.solution}
+                                                <div className={`font-bold font-mono text-xs mb-1 flex items-center gap-1 ${darkMode ? 'text-red-400' : 'text-red-600'}`}>[PROBLEM] {tb.problem}</div>
+                                                <div className={`mb-2 text-xs font-mono ${darkMode ? 'text-[#888]' : 'text-[var(--color-hallmark-ink-muted)]'}`}>[CAUSE] สาเหตุ: {tb.cause}</div>
+                                                <div className={`text-xs px-2 py-1.5 rounded flex items-center gap-1 font-mono ${darkMode ? 'bg-[#1A1A1A] text-[#DFFF00]' : 'bg-emerald-500/10 text-emerald-700 font-bold'}`}>
+                                                    [SOLUTION] {tb.solution}
                                                 </div>
                                             </div>
                                         ))}
@@ -449,7 +499,7 @@ export default function SOPRecipeCard({
                                 {/* Shelf Life */}
                                 {recipe?.advanced_details?.shelf_life?.length > 0 && (
                                     <div>
-                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>⏳ การเก็บรักษา</div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-3 ${t.sectionLabel}`}>[SHELF LIFE] การเก็บรักษา</div>
                                         <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                             {recipe.advanced_details.shelf_life.map((sl, i) => (
                                                 <li key={i} className={`flex justify-between items-center border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
@@ -464,11 +514,11 @@ export default function SOPRecipeCard({
                                 {/* Checklist */}
                                 {recipe?.advanced_details?.checklist?.length > 0 && (
                                     <div>
-                                        <div className={`text-[10px] uppercase tracking-widest font-bold mb-3 ${t.sectionLabel}`}>✅ ก่อนเสิร์ฟ</div>
+                                        <div className={`text-[10px] uppercase tracking-widest font-mono font-bold mb-3 ${t.sectionLabel}`}>[CHECKLIST] ก่อนส่งมอบ</div>
                                         <ul className={`space-y-1.5 text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                             {recipe.advanced_details.checklist.map((cl, i) => (
                                                 <li key={i} className={`flex items-start gap-2 border px-2 py-1.5 rounded-lg ${darkMode ? 'bg-[#111] border-[#222]' : 'bg-[var(--color-hallmark-paper)] border-[var(--color-hallmark-rule)]'}`}>
-                                                    <span className={`mt-0.5 ${darkMode ? 'text-[#DFFF00]' : 'text-emerald-500'}`}>☑</span>
+                                                    <span className="font-mono text-xs">[x]</span>
                                                     <span>{cl}</span>
                                                 </li>
                                             ))}
@@ -481,21 +531,17 @@ export default function SOPRecipeCard({
 
                     {/* Garnish */}
                     {recipe?.garnish && (
-                        <div className={`flex items-center gap-2 p-3 rounded-xl ${t.stepBg}`}>
-                            <span className="text-lg select-none">🎀</span>
-                            <div>
-                                <span className={`text-[10px] uppercase tracking-wider font-bold ${t.sectionLabel}`}>
-                                    ตกแต่ง
-                                </span>
-                                <p className={`text-sm ${t.text}`}>{recipe.garnish}</p>
-                            </div>
+                        <div className={`p-3 rounded-xs border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.004_28)] flex items-start gap-2`}>
+                            <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">[GARNISH]</span>
+                            <p className="text-xs text-[oklch(18%_0.012_28)]">{recipe.garnish}</p>
                         </div>
                     )}
 
                     {/* Notes */}
                     {recipe?.notes && (
-                        <div className={`text-xs p-3 rounded-xl ${t.stepBg} ${t.textMuted}`}>
-                            💡 {recipe.notes}
+                        <div className="p-3 rounded-xs border border-dashed border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-start gap-2">
+                            <span className="font-mono text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">[NOTE]</span>
+                            <p className="text-xs text-[oklch(18%_0.012_28)]">{recipe.notes}</p>
                         </div>
                     )}
                 </div>
