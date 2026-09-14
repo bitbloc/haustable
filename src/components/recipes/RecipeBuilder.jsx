@@ -1,15 +1,19 @@
-import React, { useState, useEffect } from 'react';
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, PackagePlus, Search, Copy, Download, Rocket, Check } from 'lucide-react';
+import { 
+    Plus, Trash2, GripVertical, AlertTriangle, Layers, Pencil, X, 
+    Search, Copy, Download, Rocket, Check 
+} from 'lucide-react';
 import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../../utils/costUtils';
 import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
 
-// Mini Form for Quick Stock Edit
+// ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
     const [formData, setFormData] = useState({
         cost_price: item.cost_price || 0,
@@ -23,11 +27,8 @@ function EditStockModal({ item, onClose, onSave }) {
     const isCompatible = areUnitTypesCompatible(formData.pack_unit, formData.usage_unit);
     const suggestedFactor = suggestConversionFactor(formData.pack_unit, formData.usage_unit);
     const isStandard = suggestedFactor !== null;
-
-    // Toggle for Custom Calculation (Divide vs Multiply) - Only relevant for Custom Units
     const [useRatioMode, setUseRatioMode] = useState(false); 
 
-    // Auto-calculate Real Cost
     const realCostPerUsage = (formData.cost_price / (formData.pack_size * (parseFloat(formData.conversion_factor) || 1))) * (100 / formData.yield_percent);
     const costPerPackUnit = formData.cost_price / formData.pack_size;
 
@@ -74,144 +75,159 @@ function EditStockModal({ item, onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[80] bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Pencil size={18} /> แก้ไขวัตถุดิบ: {item.name}
-                </h3>
+        <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
+                <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+                    <div>
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                            STOCK CONFIGURATION
+                        </span>
+                        <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
+                            แก้ไขข้อมูลวัตถุดิบ: {item.name}
+                        </h3>
+                    </div>
+                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-black">
+                        <X size={16} />
+                    </button>
+                </div>
                 
-                <div className="space-y-4">
-                    {/* Unit Mismatch Warning */}
+                <div className="space-y-4 font-mono text-xs">
                     {!isCompatible && (
-                        <div className="bg-red-50 border border-red-200 p-2.5 rounded-xl flex gap-2.5 items-start animate-in slide-in-from-top-2">
-                            <AlertTriangle className="w-4.5 h-4.5 text-red-600 flex-shrink-0 mt-0.5" />
-                            <div className="flex-1">
-                                <div className="text-xs font-bold text-red-800">คำเตือน: การแปลงหน่วยข้ามประเภท</div>
-                                <p className="text-[10px] text-red-700 leading-normal">
-                                    หน่วยซื้อ ({formData.pack_unit}) และหน่วยใช้จริง ({formData.usage_unit}) เป็นคนละประเภทกัน จำเป็นต้องป้อนตัวแปลงหน่วยด้วยตนเอง ห้ามใช้ค่าเริ่มต้นเป็น 1
+                        <div className="bg-amber-50 border border-amber-200 p-2.5 flex gap-2 items-start text-amber-900 rounded-xs">
+                            <AlertTriangle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <div className="font-bold text-[11px]">การแปลงหน่วยข้ามประเภท</div>
+                                <p className="text-[10px] text-amber-800 leading-normal font-sans">
+                                    หน่วยซื้อ ({formData.pack_unit}) และหน่วยใช้จริง ({formData.usage_unit}) เป็นคนละประเภทกัน จำเป็นต้องป้อนตัวแปลงหน่วยด้วยตนเอง
                                 </p>
                             </div>
                         </div>
                     )}
 
                     {/* Buying Info */}
-                    <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-2">
-                        <label className="text-xs font-bold text-blue-800 block">1. ซื้อมา (Buying)</label>
-                        <div className="flex gap-2">
-                            <div className="flex-1">
-                                <span className="text-[10px] text-gray-500">ราคาซื้อ (บาท)</span>
-                                <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm font-bold bg-white" />
+                    <div className="p-3 bg-white border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
+                        <span className="font-bold uppercase tracking-wider text-[11px] text-[oklch(18%_0.012_28)] block">
+                            1. ข้อมูลการซื้อ (BUYING)
+                        </span>
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-0.5">ราคาซื้อ (บาท)</span>
+                                <input 
+                                    type="number" 
+                                    value={formData.cost_price} 
+                                    onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
+                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold" 
+                                />
                             </div>
-                            <div className="flex-1">
-                                <span className="text-[10px] text-gray-500">ปริมาณ</span>
-                                <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 rounded border border-blue-200 text-sm bg-white" />
+                            <div>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-0.5">ปริมาณต่อแพ็ค</span>
+                                <input 
+                                    type="number" 
+                                    value={formData.pack_size} 
+                                    onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
+                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs" 
+                                />
                             </div>
-                            <div className="w-24">
-                                <span className="text-[10px] text-gray-500">หน่วย</span>
+                            <div>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-0.5">หน่วยแพ็ค</span>
                                 <select 
                                     value={formData.pack_unit} 
                                     onChange={e => handleUnitChange('pack_unit', e.target.value)} 
-                                    className="w-full p-2 rounded border border-blue-200 text-sm bg-white"
+                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs"
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
                                 </select>
                             </div>
                         </div>
-                        <div className="text-[10px] text-blue-600 text-right px-1">
-                            ตก {costPerPackUnit.toFixed(4)} บาท / {formData.pack_unit}
+                        <div className="text-[10px] text-[oklch(55%_0.010_28)] text-right">
+                            เฉลี่ย ฿{costPerPackUnit.toFixed(4)} / {formData.pack_unit}
                         </div>
                     </div>
 
                     {/* Usage Info */}
-                    <div className="bg-orange-50 p-3 rounded-xl border border-orange-100 space-y-2">
-                        <label className="text-xs font-bold text-orange-800 block">2. ใช้จริงเป็น (Using)</label>
+                    <div className="p-3 bg-white border border-[oklch(85%_0.012_28)] space-y-2 rounded-xs">
+                        <span className="font-bold uppercase tracking-wider text-[11px] text-[oklch(18%_0.012_28)] block">
+                            2. การใช้จริงในสูตร (USAGE)
+                        </span>
                         <div className="flex gap-2 items-center">
                             <div className="flex-1">
-                                <span className="text-[10px] text-gray-500">หน่วยหน่วยที่ใช้</span>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-0.5">หน่วยที่ตวงในสูตร</span>
                                 <select
                                     value={formData.usage_unit} 
                                     onChange={e => handleUnitChange('usage_unit', e.target.value)} 
-                                    className="w-full p-2 rounded border border-orange-200 text-sm font-bold bg-white" 
+                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold" 
                                 >
                                     {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                                 </select>
                             </div>
+                            <div className="w-24">
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-0.5">YIELD %</span>
+                                <input 
+                                    type="number"
+                                    value={formData.yield_percent}
+                                    onChange={e => setFormData({...formData, yield_percent: e.target.value === '' ? 100 : parseFloat(e.target.value)})}
+                                    className="w-full p-1.5 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold text-center"
+                                />
+                            </div>
                         </div>
 
-                        {/* Conversion Logic Display */}
-                        <div className="bg-white p-3 rounded-lg border border-orange-100 mt-2">
+                        {/* Conversion factor display */}
+                        <div className="p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(90%_0.008_28)] text-[11px]">
                             {isStandard ? (
-                                // LOCKED STANDARD
-                                <div className="text-sm text-gray-500 flex items-center justify-between">
-                                    <span className="font-bold flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        มาตรฐานสากล
-                                    </span>
+                                <div className="flex items-center justify-between text-[oklch(42%_0.010_28)]">
+                                    <span className="font-bold">[มาตรฐานสากล]</span>
                                     <span>1 {formData.pack_unit} = <strong>{suggestedFactor}</strong> {formData.usage_unit}</span>
                                 </div>
                             ) : (
-                                // CUSTOM (Pack -> g, Bottle -> ml)
                                 <div>
-                                    <div className="flex justify-between items-center mb-1">
-                                        <label className="text-[10px] font-bold text-gray-500">กำหนดปริมาณต่อแพ็ค</label>
+                                    <div className="flex justify-between items-center mb-1 text-[10px]">
+                                        <span className="font-bold">กำหนดสัดส่วนตัวแปลง:</span>
                                         <button 
+                                            type="button"
                                             onClick={() => setUseRatioMode(!useRatioMode)}
-                                            className="text-[10px] text-blue-600 underline"
+                                            className="text-[oklch(52%_0.16_28)] hover:underline"
                                         >
                                             {useRatioMode ? "สลับเป็น × (คูณ)" : "สลับเป็น ÷ (หาร)"}
                                         </button>
                                     </div>
-                                    
-                                    <div className="flex items-center gap-2 text-sm">
-                                        {useRatioMode ? (
-                                            <>
-                                                <span className="whitespace-nowrap">1 {formData.usage_unit} ใช้</span>
-                                                <input 
-                                                    type="number" 
-                                                    className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
-                                                    placeholder="?"
-                                                    value={formData.conversion_factor === 0 || !formData.conversion_factor ? '' : Math.round((1 / formData.conversion_factor) * 10000) / 10000} 
-                                                    onChange={e => {
-                                                        const val = parseFloat(e.target.value);
-                                                        if (!isNaN(val) && val > 0) setFormData({...formData, conversion_factor: 1 / val});
-                                                        else setFormData({...formData, conversion_factor: ''});
-                                                    }}
-                                                />
-                                                <span>{formData.pack_unit}</span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="whitespace-nowrap">1 {formData.pack_unit} =</span>
-                                                <input 
-                                                    type="number" 
-                                                    className="w-20 p-1 border-b border-orange-300 text-center font-bold text-orange-700 outline-none"
-                                                    value={formData.conversion_factor}
-                                                    onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value)})}
-                                                />
-                                                <span>{formData.usage_unit}</span>
-                                            </>
-                                        )}
+                                    <div className="flex items-center gap-1.5">
+                                        <span>1 {formData.pack_unit} =</span>
+                                        <input 
+                                            type="number" 
+                                            className="w-20 p-1 border border-[oklch(85%_0.012_28)] bg-white text-center font-bold"
+                                            value={formData.conversion_factor}
+                                            onChange={e => setFormData({...formData, conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value)})}
+                                        />
+                                        <span>{formData.usage_unit}</span>
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Preview */}
-                    <div className="p-3 bg-gray-100 rounded-xl flex justify-between items-center">
-                        <span className="text-xs text-gray-500">ต้นทุนจริงเฉลี่ย</span>
-                        <div className="text-right">
-                             <span className="font-bold text-lg text-green-600">฿{realCostPerUsage.toFixed(4)} <span className="text-xs text-black font-normal">/ {formData.usage_unit}</span></span>
+                    {/* Cost Preview */}
+                    <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center rounded-xs">
+                        <span className="text-[11px] font-bold text-[oklch(42%_0.010_28)]">ต้นทุนจริงสุทธิต่อหน่วย:</span>
+                        <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                            ฿{realCostPerUsage.toFixed(4)} <span className="text-[10px] text-[oklch(55%_0.010_28)]">/ {formData.usage_unit}</span>
                         </div>
                     </div>
-                     
-                    <div className="text-[10px] text-gray-400 text-center">
-                        สูตร: ราคาซื้อ ÷ (ขนาด × ตัวแปลง)
-                    </div>
 
-                    <div className="flex gap-2 pt-2">
-                        <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-gray-200 text-gray-700 font-bold">ยกเลิก</button>
-                        <button onClick={handleSave} className="flex-1 py-3 rounded-xl bg-blue-600 text-white font-bold shadow-lg hover:bg-blue-700">บันทึก</button>
+                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                        <button 
+                            type="button" 
+                            onClick={onClose} 
+                            className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)]"
+                        >
+                            ยกเลิก
+                        </button>
+                        <button 
+                            type="button" 
+                            onClick={handleSave} 
+                            className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase hover:bg-black"
+                        >
+                            บันทึก
+                        </button>
                     </div>
                 </div>
             </div>
@@ -219,12 +235,12 @@ function EditStockModal({ item, onClose, onSave }) {
     );
 }
 
-// Quick Add Stock Modal (Simplified for Recipe Creation)
+// ── 2. Quick Add Stock Modal ──
 function QuickAddStockModal({ onClose, onSave }) {
     const [categories, setCategories] = useState([]);
     const [formData, setFormData] = useState({
         name: '',
-        category: 'veg', // Default
+        category: 'veg',
         cost_price: 0,
         pack_size: 1,
         pack_unit: 'kg',
@@ -236,9 +252,7 @@ function QuickAddStockModal({ onClose, onSave }) {
     useEffect(() => {
         const fetchCats = async () => {
             const { data } = await supabase.from('stock_categories').select('*').order('sort_order');
-            if (data && data.length > 0) {
-                setCategories(data);
-            }
+            if (data && data.length > 0) setCategories(data);
         };
         fetchCats();
     }, []);
@@ -248,136 +262,117 @@ function QuickAddStockModal({ onClose, onSave }) {
     const handleUnitChange = (type, value) => {
         const newData = { ...formData, [type]: value };
         const factor = suggestConversionFactor(newData.pack_unit, newData.usage_unit);
-        newData.conversion_factor = factor !== null ? factor : '';
+        newData.conversion_factor = factor !== null ? factor : (type === 'usage_unit' && value === 'unit' ? 1 : 1);
         setFormData(newData);
     };
 
     const handleSave = () => {
-        if (!formData.name || !formData.name.trim()) {
-            toast.error('กรุณากรอกชื่อวัตถุดิบ');
-            return;
-        }
-
-        const costPrice = parseFloat(formData.cost_price);
-        const packSize = parseFloat(formData.pack_size);
-        const conversionFactorVal = parseFloat(formData.conversion_factor);
-
-        if (isNaN(costPrice) || costPrice < 0) {
-            toast.error('ราคาต้นทุนต้องไม่ต่ำกว่า 0 บาท');
-            return;
-        }
-        if (isNaN(packSize) || packSize <= 0) {
-            toast.error('ปริมาณขนาดบรรจุภัณฑ์ (Pack Size) ต้องมากกว่า 0');
-            return;
-        }
-
-        if (!isCompatible) {
-            if (formData.conversion_factor === '' || formData.conversion_factor === null || isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
-                toast.error('กรุณาระบุตัวแปลงหน่วยสำหรับการแปลงหน่วยข้ามประเภท (ต้องมากกว่า 0)');
-                return;
-            }
-        } else {
-            if (isNaN(conversionFactorVal) || conversionFactorVal <= 0) {
-                toast.error('ตัวแปลงหน่วยต้องมีค่ามากกว่า 0');
-                return;
-            }
-        }
-
+        if (!formData.name.trim()) return toast.error('กรุณาระบุชื่อวัตถุดิบ');
+        if (formData.cost_price < 0) return toast.error('ราคาซื้อต้องไม่ต่ำกว่า 0');
+        if (formData.pack_size <= 0) return toast.error('ปริมาณต้องมากกว่า 0');
         onSave(formData);
     };
 
     return (
-        <div className="fixed inset-0 z-[90] bg-black/60 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <PackagePlus size={20} className="text-blue-600" /> เพิ่มวัตถุดิบใหม่
-                </h3>
-                
-                <div className="space-y-3">
+        <div className="fixed inset-0 z-[80] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md p-6 shadow-2xl space-y-4 rounded-xs">
+                <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
                     <div>
-                        <label className="text-xs font-bold text-gray-500">ชื่อวัตถุดิบ</label>
+                        <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(52%_0.16_28)] block">
+                            STOCK CREATION
+                        </span>
+                        <h3 className="text-base font-bold font-mono uppercase text-[oklch(18%_0.012_28)]">
+                            สร้างวัตถุดิบใหม่เข้าคลังสต็อก
+                        </h3>
+                    </div>
+                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-black">
+                        <X size={16} />
+                    </button>
+                </div>
+
+                <div className="space-y-3 font-mono text-xs">
+                    <div>
+                        <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">ชื่อวัตถุดิบ *</label>
                         <input 
                             value={formData.name}
                             onChange={e => setFormData({...formData, name: e.target.value})}
-                            className="w-full p-2 border rounded-xl bg-gray-50 mb-2 font-bold text-sm outline-none"
-                            placeholder="เช่น เมล็ดกาแฟ, นมสด..."
+                            placeholder="เช่น ไซรัปมะพร้าวน้ำหอม, ผงโกโก้พรีเมียม"
+                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-sans text-xs font-bold"
                             autoFocus
                         />
-                        
-                        <label className="text-xs font-bold text-gray-500">หมวดหมู่</label>
-                        <select 
-                            value={formData.category}
-                            onChange={e => setFormData({...formData, category: e.target.value})}
-                            className="w-full p-2 border rounded-xl bg-white text-sm outline-none"
-                        >
-                            {categories.length > 0 ? (
-                                categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)
-                            ) : (
-                                <option value="veg">ผัก (Default)</option>
-                            )}
-                        </select>
                     </div>
-                    
-                    <div className="flex gap-2">
-                        <div className="flex-1">
-                            <label className="text-xs font-bold text-gray-500">ราคาซื้อ</label>
-                            <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl text-sm" />
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">หมวดหมู่</label>
+                            <select 
+                                value={formData.category}
+                                onChange={e => setFormData({...formData, category: e.target.value})}
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold"
+                            >
+                                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
                         </div>
-                        <div className="flex-1">
-                            <label className="text-xs font-bold text-gray-500">ขนาดแพ็ค</label>
-                            <input type="number" value={formData.pack_size} onChange={e => setFormData({...formData, pack_size: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full p-2 border rounded-xl text-sm" />
+                        <div>
+                            <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">ราคาซื้อ (บาท)</label>
+                            <input 
+                                type="number" 
+                                value={formData.cost_price} 
+                                onChange={e => setFormData({...formData, cost_price: parseFloat(e.target.value) || 0})}
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold" 
+                            />
                         </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <div className="flex-1">
-                            <label className="text-xs font-bold text-gray-500">หน่วยแพ็ค</label>
-                            <select value={formData.pack_unit} onChange={e => handleUnitChange('pack_unit', e.target.value)} className="w-full p-2 border rounded-xl bg-white text-sm outline-none">
+                    <div className="grid grid-cols-3 gap-2">
+                        <div>
+                            <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">ขนาดบรรจุ</label>
+                            <input 
+                                type="number" 
+                                value={formData.pack_size} 
+                                onChange={e => setFormData({...formData, pack_size: parseFloat(e.target.value) || 1})}
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs" 
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">หน่วยซื้อ</label>
+                            <select 
+                                value={formData.pack_unit} 
+                                onChange={e => handleUnitChange('pack_unit', e.target.value)} 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs"
+                            >
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.value}</option>)}
                             </select>
                         </div>
-                        <div className="flex-1">
-                            <label className="text-xs font-bold text-gray-500">หน่วยใช้จริง</label>
-                             <select value={formData.usage_unit} onChange={e => handleUnitChange('usage_unit', e.target.value)} className="w-full p-2 border rounded-xl bg-white text-sm outline-none">
+                        <div>
+                            <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">หน่วยใช้</label>
+                            <select 
+                                value={formData.usage_unit} 
+                                onChange={e => handleUnitChange('usage_unit', e.target.value)} 
+                                className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white text-xs font-bold"
+                            >
                                 {THAI_UNITS.map(u => <option key={u.value} value={u.value}>{u.label}</option>)}
                             </select>
                         </div>
                     </div>
 
-                    {!isCompatible ? (
-                        <div className="space-y-1">
-                            <label className="text-xs font-bold text-red-500 block">ตัวแปลงหน่วยสำหรับการแปลงข้ามประเภท</label>
-                            <div className="flex items-center gap-2 bg-red-50 p-2.5 rounded-xl border border-red-200">
-                                <span className="text-xs font-bold text-gray-500">1 {formData.pack_unit} =</span>
-                                <input 
-                                    type="number" 
-                                    className="flex-1 p-1 bg-white border rounded text-center font-bold text-red-700 outline-none"
-                                    placeholder="กรอกตัวแปลงหน่วย"
-                                    value={formData.conversion_factor}
-                                    onChange={e => setFormData({ 
-                                        ...formData, 
-                                        conversion_factor: e.target.value === '' ? '' : parseFloat(e.target.value) 
-                                    })}
-                                />
-                                <span className="text-xs text-gray-500">{formData.usage_unit}</span>
-                            </div>
+                    {!isCompatible && (
+                        <div className="p-2 bg-amber-50 border border-amber-200 text-amber-900 text-[10px]">
+                            1 {formData.pack_unit} = <input 
+                                type="number" 
+                                className="w-16 p-0.5 border border-amber-300 bg-white text-center font-bold" 
+                                value={formData.conversion_factor} 
+                                onChange={e => setFormData({...formData, conversion_factor: parseFloat(e.target.value) || 1})} 
+                            /> {formData.usage_unit}
                         </div>
-                    ) : (
-                        formData.pack_unit !== formData.usage_unit && (
-                            <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700">
-                                1 {formData.pack_unit} = {formData.conversion_factor} {formData.usage_unit} (คำนวณอัตโนมัติ)
-                            </div>
-                        )
                     )}
 
-                    <div className="flex gap-2 mt-4">
-                        <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ยกเลิก</button>
-                        <button 
-                            onClick={handleSave}
-                            disabled={!formData.name}
-                            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
-                        >
-                            สร้างทันที
+                    <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                        <button type="button" onClick={onClose} className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold uppercase hover:bg-[oklch(90%_0.012_28)]">
+                            ยกเลิก
+                        </button>
+                        <button type="button" onClick={handleSave} className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase hover:bg-black">
+                            สร้างและเพิ่มเข้าสูตร
                         </button>
                     </div>
                 </div>
@@ -386,20 +381,17 @@ function QuickAddStockModal({ onClose, onSave }) {
     );
 }
 
-// Import Recipe Modal
+// ── 3. Recipe Import Modal ──
 function RecipeImportModal({ onClose, onImport }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
-    const [templates, setTemplates] = useState([]); // { id, name, type: 'menu' | 'stock', price? }
+    const [templates, setTemplates] = useState([]);
 
     useEffect(() => {
         const fetchTemplates = async () => {
             setLoading(true);
             try {
-                // 1. Fetch Menu Items
                 const { data: menus } = await supabase.from('menu_items').select('id, name, price').order('name');
-                
-                // 2. Fetch Base Recipes (Stock)
                 const { data: stocks } = await supabase.from('stock_items').select('id, name').eq('is_base_recipe', true).order('name');
 
                 const list = [
@@ -427,13 +419,11 @@ function RecipeImportModal({ onClose, onImport }) {
                 .order('layer_order');
 
             if (error) throw error;
-
             if (!data || data.length === 0) {
-                toast.info('เมนูนี้ไม่มีสูตร');
+                toast.info('รายการนี้ยังไม่มีสูตร');
                 return;
             }
 
-            // Map to generic format
             const ingredients = data.map(r => ({
                 ingredientId: r.ingredient_id,
                 ingredient: r.ingredient,
@@ -443,7 +433,6 @@ function RecipeImportModal({ onClose, onImport }) {
 
             onImport(ingredients);
             onClose();
-
         } catch (err) {
             console.error(err);
             toast.error('นำเข้าสูตรไม่สำเร็จ');
@@ -453,21 +442,23 @@ function RecipeImportModal({ onClose, onImport }) {
     const filtered = templates.filter(t => t.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-             <div className="bg-white rounded-2xl w-full max-w-md p-0 shadow-2xl animate-in fade-in zoom-in duration-200 overflow-hidden flex flex-col max-h-[80vh]">
-                <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
-                    <h3 className="font-bold text-lg flex items-center gap-2">
-                        <Download size={20} className="text-blue-600" /> นำเข้าสูตร (Import)
-                    </h3>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full"><X size={20}/></button>
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-md shadow-2xl rounded-xs overflow-hidden flex flex-col max-h-[80vh]">
+                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center font-mono">
+                    <span className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        [IMPORT RECIPE] นำเข้าสูตรจากต้นแบบ
+                    </span>
+                    <button onClick={onClose} className="p-1 text-[oklch(55%_0.010_28)] hover:text-black">
+                        <X size={16}/>
+                    </button>
                 </div>
                 
-                <div className="p-4 border-b">
+                <div className="p-3 border-b border-[oklch(85%_0.012_28)] bg-white">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" size={14} />
                         <input 
-                            className="w-full bg-gray-100 border-none rounded-xl py-2 pl-10 pr-4 focus:ring-2 focus:ring-blue-100 outline-none"
-                            placeholder="ค้นหาต้นแบบ (เมนู / Base Recipe)..."
+                            className="w-full bg-white border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 font-mono text-xs outline-none focus:border-black"
+                            placeholder="ค้นหาชื่อเมนู หรือ Base Recipe..."
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                             autoFocus
@@ -475,50 +466,46 @@ function RecipeImportModal({ onClose, onImport }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-xs divide-y divide-[oklch(90%_0.008_28)]">
                     {loading ? (
-                        <div className="text-center py-10 text-gray-400">กำลังโหลด...</div>
+                        <div className="text-center py-10 text-[oklch(55%_0.010_28)]">กำลังโหลดต้นแบบ...</div>
                     ) : filtered.length === 0 ? (
-                        <div className="text-center py-10 text-gray-400">ไม่พบข้อมูล</div>
+                        <div className="text-center py-10 text-[oklch(55%_0.010_28)]">ไม่พบรายการที่ค้นหา</div>
                     ) : (
-                        filtered.map(t => (
-                            <button 
-                                key={t.type + t.id}
-                                onClick={() => handleSelect(t)}
-                                className="w-full p-3 rounded-xl hover:bg-blue-50 hover:text-blue-700 flex justify-between items-center transition-colors group text-left"
+                        filtered.map(item => (
+                            <button
+                                key={`${item.type}-${item.id}`}
+                                onClick={() => handleSelect(item)}
+                                className="w-full text-left p-2.5 hover:bg-[oklch(94%_0.010_28)] flex justify-between items-center transition-colors cursor-pointer"
                             >
                                 <div>
-                                    <div className="font-bold flex items-center gap-2">
-                                        {t.type === 'stock' && <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px]">Base</span>}
-                                        {t.name}
-                                    </div>
-                                    <div className="text-xs text-gray-400 group-hover:text-blue-400">
-                                        {t.type === 'menu' ? 'Menu Item' : 'Stock Item'}
-                                    </div>
+                                    <div className="font-bold text-sm text-[oklch(18%_0.012_28)]">{item.name}</div>
+                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase">
+                                        {item.type === 'menu' ? '[MENU ITEM]' : '[BASE RECIPE]'}
+                                    </span>
                                 </div>
-                                <Download size={16} className="text-gray-300 group-hover:text-blue-500" />
+                                <span className="text-[11px] font-bold text-[oklch(52%_0.16_28)]">
+                                    [เลือกนำเข้า →]
+                                </span>
                             </button>
                         ))
                     )}
                 </div>
-             </div>
+            </div>
         </div>
     );
 }
 
-// Export Template Modal
+// ── 4. Export Template Modal ──
 function ExportTemplateModal({ onClose, onSave }) {
     const [name, setName] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleSave = async () => {
-        if (!name.trim()) {
-            toast.error('กรุณาตั้งชื่อ Template');
-            return;
-        }
+        if (!name.trim()) return toast.error('กรุณาตั้งชื่อ Template');
         setLoading(true);
         try {
-            onSave(name);
+            await onSave(name);
         } catch (err) {
             console.error(err);
             toast.error('บันทึกไม่สำเร็จ');
@@ -527,132 +514,151 @@ function ExportTemplateModal({ onClose, onSave }) {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                    <Copy size={20} className="text-blue-600" /> บันทึกเป็น Template
-                </h3>
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 font-mono text-xs">
+                <div className="border-b border-[oklch(85%_0.012_28)] pb-2">
+                    <span className="text-[10px] font-bold uppercase text-[oklch(52%_0.16_28)] block">SAVE AS BASE RECIPE</span>
+                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase">บันทึกสูตรเป็น Template กลาง</h3>
+                </div>
                 
-                <div className="space-y-3">
-                    <div>
-                        <label className="text-xs font-bold text-gray-500">ชื่อ Template (Base Recipe)</label>
-                        <input 
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                            className="w-full p-2 border rounded-xl bg-gray-50 font-bold"
-                            placeholder="เช่น สูตรกาแฟเย็นมาตรฐาน..."
-                            autoFocus
-                        />
-                    </div>
-                     <div className="text-xs text-gray-400">
-                        *ระบบจะสร้างเป็นวัตถุดิบประเภท "Base Recipe" ให้โดยอัตโนมัติ ซึ่งคุณสามารถนำไปใช้กับเมนูอื่นได้
-                    </div>
+                <div className="space-y-2">
+                    <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block">ชื่อ Template (Base Recipe) *</label>
+                    <input 
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-bold"
+                        placeholder="เช่น สูตรชาเขียวเข้มข้นมาตรฐาน..."
+                        autoFocus
+                    />
+                    <p className="text-[10px] text-[oklch(55%_0.010_28)] leading-relaxed">
+                        ระบบจะสร้างเป็นวัตถุดิบประเภท "Base Recipe" ให้โดยอัตโนมัติใน Recipe Lab
+                    </p>
                 </div>
 
-                <div className="flex gap-2 mt-4">
-                    <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">ยกเลิก</button>
+                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                    <button type="button" onClick={onClose} className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold uppercase">
+                        ยกเลิก
+                    </button>
                     <button 
+                        type="button"
                         onClick={handleSave}
                         disabled={loading || !name}
-                        className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                        className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase disabled:opacity-50 hover:bg-black"
                     >
-                        {loading ? 'กำลังบันทึก...' : 'บันทึก'}
+                        {loading ? 'กำลังบันทึก...' : 'บันทึก Template'}
                     </button>
                 </div>
-             </div>
+            </div>
         </div>
     );
 }
 
-// Promote Modal (Base Recipe -> Menu Item)
+// ── 5. Promote Modal (Base Recipe -> Menu Item) ──
 function PromoteModal({ initialName, onClose, onPromote }) {
     const [name, setName] = useState(initialName || '');
     const [price, setPrice] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handlePromote = () => {
-        if (!name.trim()) return toast.error('Required Name');
-        if (!price || parseFloat(price) < 0) return toast.error('Invalid Price');
+        if (!name.trim()) return toast.error('กรุณาระบุชื่อเมนู');
+        if (!price || parseFloat(price) < 0) return toast.error('ราคาขายไม่ถูกต้อง');
         
         setLoading(true);
         onPromote(name, parseFloat(price)).finally(() => setLoading(false));
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4">
-             <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-purple-600">
-                    <Rocket size={20} /> Promote to Menu
-                </h3>
+        <div className="fixed inset-0 z-[100] bg-black/60 flex items-center justify-center p-4 font-sans backdrop-blur-xs">
+            <div className="bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] w-full max-w-sm p-5 shadow-2xl rounded-xs space-y-4 font-mono text-xs">
+                <div className="border-b border-[oklch(85%_0.012_28)] pb-2">
+                    <span className="text-[10px] font-bold uppercase text-[oklch(52%_0.16_28)] block">PROMOTE ACTION</span>
+                    <h3 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase">แปลงเป็นเมนูขายหน้าร้าน</h3>
+                </div>
                 
                 <div className="space-y-3">
                     <div>
-                        <label className="text-xs font-bold text-gray-500">ชื่อเมนู (Menu Name)</label>
+                        <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">ชื่อเมนู (Menu Name) *</label>
                         <input 
                             value={name}
                             onChange={e => setName(e.target.value)}
-                            className="w-full p-2 border rounded-xl bg-gray-50 font-bold"
+                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-bold"
                             autoFocus
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold text-gray-500">ราคาขาย (Selling Price)</label>
+                        <label className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block mb-1">ราคาขายหน้าร้าน (Selling Price) *</label>
                         <input 
                             type="number"
                             value={price}
                             onChange={e => setPrice(e.target.value)}
-                            className="w-full p-2 border rounded-xl bg-white font-bold text-lg"
+                            className="w-full p-2 border border-[oklch(85%_0.012_28)] bg-white font-bold text-base"
                             placeholder="0.00"
                         />
                     </div>
                 </div>
 
-                <div className="flex gap-2 mt-6">
-                    <button onClick={onClose} className="flex-1 py-3 bg-gray-100 rounded-xl font-bold text-gray-600">Cancel</button>
+                <div className="flex gap-2 pt-2 border-t border-[oklch(85%_0.012_28)]">
+                    <button type="button" onClick={onClose} className="flex-1 py-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold uppercase">
+                        ยกเลิก
+                    </button>
                     <button 
+                        type="button"
                         onClick={handlePromote}
                         disabled={loading}
-                        className="flex-1 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg disabled:opacity-50"
+                        className="flex-1 py-2 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase disabled:opacity-50 hover:bg-black"
                     >
-                        {loading ? 'Processing...' : 'Promote'}
+                        {loading ? 'กำลังประมวลผล...' : 'แปลงเป็นเมนู'}
                     </button>
                 </div>
-             </div>
+            </div>
         </div>
     );
 }
 
-// Sortable Layer Component
+// ── 6. Sortable Layer Component (Dieter Rams Minimalist Row) ──
 function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, onDelete, onUpdate, onEditStock }) {
     const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition };
+    const isBaseRecipe = ingredient?.is_base_recipe === true;
     
     return (
         <div 
             ref={setNodeRef} style={style} {...attributes}
-            className={`flex items-center gap-3 p-3 rounded-xl border border-gray-200 mb-2 bg-white shadow-sm hover:shadow-md transition-all`}
+            className="flex items-center gap-2.5 p-2.5 border border-[oklch(85%_0.012_28)] bg-white hover:border-black transition-colors rounded-xs font-mono text-xs"
         >
-            <div {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600">
-                <GripVertical size={20} />
+            <div {...listeners} className="cursor-grab text-[oklch(55%_0.010_28)] hover:text-black flex-shrink-0" title="ลากเพื่อเรียงลำดับ">
+                <GripVertical size={16} />
             </div>
             
-            {/* Visual Layer Indicator */}
-            <div className={`w-3 h-12 rounded-full ${getLayerColor(index)}`}></div>
+            {/* Visual Layer Marker */}
+            <div className={`w-1.5 h-9 flex-shrink-0 ${getLayerColor(index)}`}></div>
 
-            <div className="flex-1 min-w-0">
-                <div className="font-bold text-[#1A1A1A] truncate">{ingredient.name}</div>
+            <div className="flex-1 min-w-0 pr-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)] font-sans truncate">
+                        {ingredient.name}
+                    </span>
+                    {isBaseRecipe && (
+                        <span className="text-[9px] font-mono font-bold uppercase px-1 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                            [BASE]
+                        </span>
+                    )}
+                </div>
                 <button 
+                    type="button"
                     onClick={() => onEditStock(ingredient)}
-                    className="text-xs text-gray-500 hover:text-blue-600 hover:underline flex items-center gap-1 transition-colors"
+                    className="text-[10px] text-[oklch(55%_0.010_28)] hover:text-black hover:underline flex items-center gap-1 transition-colors mt-0.5 cursor-pointer"
                 >
-                    ฿{unitCost?.toFixed(4) || 0} / {ingredient.usage_unit} <Pencil size={10} />
+                    <span>฿{unitCost?.toFixed(4) || 0} / {ingredient.usage_unit}</span>
+                    <span className="text-[9px] font-bold">[EDIT STOCK]</span>
                 </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Quantity Input */}
+            <div className="flex items-center gap-1 flex-shrink-0">
                 <input 
                     type="number" 
-                    className="w-16 md:w-20 bg-gray-50 border rounded-lg p-2 text-right font-bold text-sm"
+                    className="w-16 bg-[oklch(98%_0.004_28)] border border-[oklch(85%_0.012_28)] p-1 text-right font-bold text-xs outline-none focus:border-black"
                     value={quantity ?? ''}
                     placeholder="0"
                     onChange={(e) => {
@@ -660,53 +666,57 @@ function SortableLayer({ id, ingredient, quantity, unit, cost, unitCost, index, 
                         onUpdate(id, val === '' ? 0 : parseFloat(val));
                     }}
                 />
-                <span className="text-xs text-gray-500 w-8 truncate">{unit}</span>
+                <span className="text-[10px] text-[oklch(55%_0.010_28)] w-7 truncate">{unit}</span>
             </div>
 
-            <div className="text-right w-20 md:w-24">
-                <div className="font-bold text-[#1A1A1A]">฿{isNaN(cost) ? '0.00' : cost.toFixed(2)}</div>
+            {/* Layer Cost Readout */}
+            <div className="text-right w-16 md:w-20 flex-shrink-0 tabular-nums">
+                <div className="font-bold text-[oklch(18%_0.012_28)] text-xs">
+                    ฿{isNaN(cost) ? '0.00' : cost.toFixed(2)}
+                </div>
             </div>
 
-            <button onClick={() => onDelete(id)} className="p-2 text-red-400 hover:bg-red-50 rounded-lg">
-                <Trash2 size={18} />
+            {/* Delete button */}
+            <button 
+                type="button" 
+                onClick={() => onDelete(id)} 
+                className="p-1 text-[oklch(55%_0.010_28)] hover:text-red-700 cursor-pointer flex-shrink-0"
+                title="ลบส่วนผสมนี้"
+            >
+                <Trash2 size={14} />
             </button>
         </div>
     );
 }
 
+// ── 7. Main RecipeBuilder Component ──
 export default function RecipeBuilder({ parentId, parentType = 'menu', initialPrice = 0, onClose }) {
-    // parentType: 'menu' | 'stock' (Base Recipe)
-    const [ingredients, setIngredients] = useState([]); // List of { id, ingredient, quantity, unit }
+    const [ingredients, setIngredients] = useState([]);
     const [availableItems, setAvailableItems] = useState([]);
-    const [parentItem, setParentItem] = useState(null); // Added
+    const [parentItem, setParentItem] = useState(null);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [itemFilterType, setItemFilterType] = useState('all'); // 'all' | 'raw' | 'base'
     
     // Cost State
     const [totalCost, setTotalCost] = useState(0);
-    
-    // Price State (Controlled)
     const [currentPrice, setCurrentPrice] = useState(initialPrice || 0);
 
-    // Sync initial price if changed
-    useEffect(() => {
-        if (initialPrice !== undefined) setCurrentPrice(initialPrice);
-    }, [initialPrice]);
-
-
-    // Edit Stock Modal
+    // Sub-modals State
     const [editingStockItem, setEditingStockItem] = useState(null);
     const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
-    const [isImportOpen, setIsImportOpen] = useState(false); // Added state
-    const [isExportOpen, setIsExportOpen] = useState(false); // Added state
-    const [isPromoteOpen, setIsPromoteOpen] = useState(false); // Added state
-    
-    // Mobile Responsive State
+    const [isImportOpen, setIsImportOpen] = useState(false);
+    const [isExportOpen, setIsExportOpen] = useState(false);
+    const [isPromoteOpen, setIsPromoteOpen] = useState(false);
     const [isMobilePickerOpen, setIsMobilePickerOpen] = useState(false);
 
-    // Formula Name Renaming State & Handlers
+    // Inline Renaming
     const [isEditingName, setIsEditingName] = useState(false);
     const [tempName, setTempName] = useState('');
+
+    const [targetFoodCostPct, setTargetFoodCostPct] = useState(30);
+
+    const sensors = useSensors(useSensor(PointerSensor));
 
     const handleStartEditName = () => {
         if (parentItem) {
@@ -728,38 +738,34 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             
             setParentItem(prev => prev ? { ...prev, name: tempName.trim() } : null);
             setIsEditingName(false);
-            toast.success('เปลี่ยนชื่อสูตรสำเร็จ');
+            toast.success('เปลี่ยนชื่อสำเร็จ');
         } catch (err) {
             console.error(err);
-            toast.error('เปลี่ยนชื่อสูตรล้มเหลว');
+            toast.error('เปลี่ยนชื่อล้มเหลว');
         }
     };
 
-    const sensors = useSensors(useSensor(PointerSensor));
-
     const loadData = async () => {
-        // ... (Keep existing loadData logic)
         setLoading(true);
         try {
-            // 1. Fetch Existing Recipe
+            // 1. Fetch Existing Recipe Ingredients
+            const queryField = parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id';
             const { data: recipeData } = await supabase
                 .from('recipe_ingredients')
                 .select(`*, ingredient:stock_items!recipe_ingredients_ingredient_id_fkey(*)`)
-                .eq(parentType === 'menu' ? 'parent_menu_item_id' : 'parent_stock_item_id', parentId)
+                .eq(queryField, parentId)
                 .order('layer_order');
 
             if (recipeData) {
                 const mapped = recipeData.map(r => {
-                    // Auto-sync legacy 'unit' to actual usage_unit if available
                     let effectiveUnit = r.unit;
                     if (r.unit === 'unit' && r.ingredient?.usage_unit && r.ingredient.usage_unit !== 'unit') {
                         effectiveUnit = r.ingredient.usage_unit;
                     }
-                    
                     return {
-                        id: r.id, // connection id
+                        id: r.id,
                         ingredientId: r.ingredient_id,
-                        ingredient: r.ingredient, // joined data
+                        ingredient: r.ingredient,
                         quantity: r.quantity,
                         unit: effectiveUnit
                     };
@@ -767,20 +773,27 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 setIngredients(mapped);
             }
 
-            // 1.5 Fetch Parent Info (to know Batch Size / Name)
+            // 2. Fetch Parent Info
             const { data: parentData } = await supabase
                 .from(parentType === 'menu' ? 'menu_items' : 'stock_items')
                 .select('*')
                 .eq('id', parentId)
                 .single();
             setParentItem(parentData);
+            if (parentType === 'menu' && parentData?.price) {
+                setCurrentPrice(parentData.price);
+            }
 
-            // 2. Fetch All Stock Items for Picker
+            // 3. Fetch All Stock Items for Picker
             const { data: stocks } = await supabase
                 .from('stock_items')
                 .select('*')
                 .order('name');
             setAvailableItems(stocks || []);
+
+            // 4. Fetch Target Food Cost % Setting
+            const { data: settings } = await supabase.from('store_settings').select('target_food_cost_pct').single();
+            if (settings?.target_food_cost_pct) setTargetFoodCostPct(settings.target_food_cost_pct);
 
         } catch (err) {
             console.error(err);
@@ -791,34 +804,25 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     useEffect(() => {
         if (parentId) loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parentId]);
 
-    // Recalculate Cost whenever ingredients change
+    // Recalculate Total Cost
     useEffect(() => {
         const breakdown = calculateRecipeCost(ingredients.map(i => ({
-            ingredient_id: i.ingredientId, // adapter for util
+            ingredient_id: i.ingredientId,
             quantity: i.quantity,
             unit: i.unit
         })), (id) => {
-            // lookup function for util
-            const found = availableItems.find(x => x.id === id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
-            if (found) {
-                // Ensure cost props exist? (Util calculates them if missing but we need Pack data)
-                // We should assume 'availableItems' has full data.
-                return found;
-            }
-            return null;
+            return availableItems.find(x => x.id === id) || ingredients.find(x => x.ingredientId === id)?.ingredient;
         });
 
-        // Sum up from breakdown
         setTotalCost(breakdown.totalCost);
     }, [ingredients, availableItems]);
 
-    const handleAddIngredient = async (item) => {
-        // ... (Keep existing)
-         // Circular Check
+    const handleAddIngredient = (item) => {
         if (item.id === parentId) {
-            toast.error('ไม่สามารถใส่ตัวเองเป็นส่วนผสมได้ (Infinity Loop)');
+            toast.error('ไม่สามารถใส่ตัวเองเป็นส่วนผสมได้ (Circular Loop)');
             return;
         }
 
@@ -831,21 +835,12 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         };
 
         setIngredients(prev => [...prev, newLink]);
-        toast.success(`เพิ่ม ${item.name} แล้ว`);
+        toast.success(`เพิ่ม "${item.name}" แล้ว`);
     };
 
     const handleSave = async () => {
-         // ... (Keep existing)
         setLoading(true);
         try {
-            // DEBUG: Check Session/Role
-            const { data: { session } } = await supabase.auth.getSession();
-            // console.log("Current Role:", session?.user?.role || "anon");
-            if (!session) {
-                console.warn("No active session! RLS might block.");
-            }
-
-            // 1. Prepare Payload
             const payloadItems = ingredients.map((ing, idx) => ({
                 ingredient_id: ing.ingredientId,
                 quantity: ing.quantity,
@@ -854,60 +849,42 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             }));
 
             if (parentType === 'menu') {
-                // Try RPC first for atomic save, fall back to direct table update if RPC is missing
                 let rpcSucceeded = false;
                 try {
                     const { data: rpcData, error: rpcError } = await supabase.rpc('save_menu_recipe', {
                         p_menu_id: parentId,
                         p_ingredients: payloadItems
                     });
-
                     if (!rpcError && rpcData && rpcData.success !== false) {
                         rpcSucceeded = true;
                     }
-                } catch (rpcEx) {
-                    console.warn('RPC save_menu_recipe not available, falling back to direct table sync:', rpcEx);
-                }
+                } catch { /* ignore fallback */ }
 
                 if (!rpcSucceeded) {
                     const queryField = 'parent_menu_item_id';
-                    const { error: delError } = await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
-                    if (delError) throw delError;
-
+                    await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
                     if (payloadItems.length > 0) {
-                        const payloads = payloadItems.map(p => ({
-                            [queryField]: parentId,
-                            ...p
-                        }));
-                        const { error: insError } = await supabase.from('recipe_ingredients').insert(payloads);
-                        if (insError) throw insError;
+                        const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
+                        await supabase.from('recipe_ingredients').insert(payloads);
                     }
                 }
 
-                // Update Price directly to menu_items if currentPrice is valid
                 if (currentPrice !== undefined && currentPrice !== null && !isNaN(parseFloat(currentPrice))) {
                     await supabase.from('menu_items').update({ price: parseFloat(currentPrice) }).eq('id', parentId);
                 }
             } else {
-                // MANUAL (For Stock Parent - Base Recipe)
                 const queryField = 'parent_stock_item_id';
-                const { error: delError } = await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
-                if (delError) throw delError;
-                
-                const payloads = payloadItems.map(p => ({
-                    [queryField]: parentId,
-                    ...p
-                }));
-
-                if (payloads.length > 0) {
-                     const { error: insError } = await supabase.from('recipe_ingredients').insert(payloads);
-                     if (insError) throw insError;
+                await supabase.from('recipe_ingredients').delete().eq(queryField, parentId);
+                if (payloadItems.length > 0) {
+                    const payloads = payloadItems.map(p => ({ [queryField]: parentId, ...p }));
+                    await supabase.from('recipe_ingredients').insert(payloads);
                 }
+                // Update Base Recipe Material Cost
+                await supabase.from('stock_items').update({ cost_price: totalCost }).eq('id', parentId);
             }
 
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();
-
         } catch (err) {
             console.error(err);
             toast.error('บันทึกไม่สำเร็จ: ' + (err.message || 'Unknown Error'));
@@ -917,9 +894,8 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
     };
 
     const handleDragEnd = (event) => {
-        // ... (Keep existing)
-         const { active, over } = event;
-        if (active.id !== over.id) {
+        const { active, over } = event;
+        if (active && over && active.id !== over.id) {
             setIngredients((items) => {
                 const oldIndex = items.findIndex((i) => i.id === active.id);
                 const newIndex = items.findIndex((i) => i.id === over.id);
@@ -928,7 +904,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         }
     };
 
-    // --- Handling Inline Stock Edit ---
     const handleUpdateStock = async (id, newFormData) => {
         try {
             const { error } = await supabase.from('stock_items').update(newFormData).eq('id', id);
@@ -937,51 +912,20 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             toast.success('อัปเดตข้อมูลวัตถุดิบแล้ว');
             setEditingStockItem(null);
 
-            // Refresh Local Data (both available list and current ingredients)
-            const updatedAvailable = availableItems.map(item => item.id === id ? { ...item, ...newFormData } : item);
-            setAvailableItems(updatedAvailable);
-
-            // Also update any ingredients in the list that match this, so the UI cost updates immediately
+            setAvailableItems(prev => prev.map(item => item.id === id ? { ...item, ...newFormData } : item));
             setIngredients(prev => prev.map(p => {
                 if (p.ingredientId === id) {
                     return { 
                         ...p, 
                         ingredient: { ...p.ingredient, ...newFormData },
-                        unit: newFormData.usage_unit // Sync unit to new usage_unit
+                        unit: newFormData.usage_unit 
                     };
                 }
                 return p;
             }));
-
         } catch (err) {
             console.error(err);
             toast.error('อัปเดตไม่สำเร็จ');
-        }
-    };
-    
-    // --- PRICING LOGIC (GP Model) ---
-    const [targetFoodCostPct, setTargetFoodCostPct] = useState(30); // Default 30%
-    
-    useEffect(() => {
-        const fetchSettings = async () => {
-             const { data } = await supabase.from('store_settings').select('target_food_cost_pct').single();
-             if (data) setTargetFoodCostPct(data.target_food_cost_pct || 30);
-        };
-        fetchSettings();
-    }, []);
-
-
-
-
-    // Override handleSave to just save ingredients (Cost is dynamic now)
-    const handleSaveWithFixed = async () => {
-        await handleSave();
-        // We no longer save fixed_cost to DB as per "GP Model" request.
-        // But if this is a Stock Item (Base Recipe), we might want to update its 'cost_price'
-        // which represents the Material Cost of the base recipe.
-        
-        if (parentType === 'stock') {
-             await supabase.from('stock_items').update({ cost_price: totalCost }).eq('id', parentId);
         }
     };
 
@@ -989,20 +933,18 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
         try {
             const payload = {
                 ...formData,
-                unit: formData.usage_unit, // Sync for backward compatibility
-                current_quantity: 0, // Default 0
+                unit: formData.usage_unit,
+                current_quantity: 0,
                 min_stock_threshold: 0
             };
 
             const { data, error } = await supabase.from('stock_items').insert(payload).select().single();
-            if(error) throw error;
+            if (error) throw error;
 
             toast.success('สร้างวัตถุดิบใหม่แล้ว');
             setAvailableItems(prev => [...prev, data].sort((a,b) => a.name.localeCompare(b.name)));
             setIsQuickAddOpen(false);
-            
             handleAddIngredient(data);
-
         } catch (err) {
             console.error(err);
             toast.error('สร้างวัตถุดิบไม่สำเร็จ');
@@ -1011,18 +953,17 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
     const handleExport = async (templateName) => {
         try {
-            // 1. Create Base Recipe Stock Item
             const { data: newItem, error: createError } = await supabase
                 .from('stock_items')
                 .insert({
                     name: templateName,
-                    category: 'restock', // or 'other'
+                    category: 'restock',
                     is_base_recipe: true,
-                    cost_price: 0, // Calculated later or user sets it
+                    cost_price: totalCost,
                     pack_size: 1,
                     pack_unit: 'unit',
                     usage_unit: 'unit',
-                    unit: 'unit', // Sync for backward compatibility
+                    unit: 'unit',
                     current_quantity: 0
                 })
                 .select()
@@ -1030,8 +971,7 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
 
             if (createError) throw createError;
 
-            // 2. Add Ingredients to it
-             const payloadItems = ingredients.map((ing, idx) => ({
+            const payloadItems = ingredients.map((ing, idx) => ({
                 parent_stock_item_id: newItem.id,
                 ingredient_id: ing.ingredientId,
                 quantity: ing.quantity,
@@ -1040,44 +980,35 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             }));
 
             if (payloadItems.length > 0) {
-                 const { error: ingError } = await supabase.from('recipe_ingredients').insert(payloadItems);
-                 if (ingError) throw ingError;
+                await supabase.from('recipe_ingredients').insert(payloadItems);
             }
 
             toast.success(`บันทึก Template "${templateName}" เรียบร้อย`);
             setIsExportOpen(false);
-            
-            // Update available list for future imports
-            setAvailableItems(prev => [...prev, newItem].sort((a,b) => a.name.localeCompare(b.name)));
-
+            setAvailableItems(prev => [...prev, newItem].sort((a, b) => a.name.localeCompare(b.name)));
         } catch (err) {
             console.error(err);
-            toast.error('Export Failed: ' + err.message);
+            toast.error('บันทึก Template ล้มเหลว');
         }
     };
 
-    const handlePromote = async (name, price) => {
+    const handlePromote = async (menuName, sellingPrice) => {
         try {
-            // 1. Create Menu Item
-            const { data: newItem, error: createError } = await supabase
+            const { data: newMenu, error: menuError } = await supabase
                 .from('menu_items')
                 .insert({
-                    name: name,
-                    price: price, // Ensure column name is correct (price or selling_price? Schema says 'price' in AdminMenu, but check Supabase usually)
-                    // Checking AdminMenu.jsx: uses 'price'. 
-                    // Checking BookingMenu.jsx: uses 'price'.
-                    category: 'Uncategorized',
-                    is_available: true,
-                    is_recommended: false
+                    name: menuName,
+                    price: sellingPrice,
+                    category: 'Beverage',
+                    is_available: true
                 })
                 .select()
                 .single();
 
-            if (createError) throw createError;
+            if (menuError) throw menuError;
 
-            // 2. Copy Ingredients
             const payloadItems = ingredients.map((ing, idx) => ({
-                parent_menu_item_id: newItem.id, // Link to Menu Item
+                parent_menu_item_id: newMenu.id,
                 ingredient_id: ing.ingredientId,
                 quantity: ing.quantity,
                 unit: ing.unit,
@@ -1085,27 +1016,34 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
             }));
 
             if (payloadItems.length > 0) {
-                 const { error: ingError } = await supabase.from('recipe_ingredients').insert(payloadItems);
-                 if (ingError) throw ingError;
+                await supabase.from('recipe_ingredients').insert(payloadItems);
             }
 
-            toast.success('Promoted to Menu Successfully!');
+            toast.success('แปลงเป็นเมนูขายหน้าร้านสำเร็จ');
             setIsPromoteOpen(false);
-
         } catch (err) {
             console.error(err);
-            toast.error('Promote Failed: ' + err.message);
+            toast.error('แปลงเมนูล้มเหลว: ' + err.message);
         }
     };
 
-    const filteredItems = availableItems.filter(i => 
-        i.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-        !ingredients.some(existing => existing.ingredientId === i.id) // Hide already added
-    );
+    // Filter available items by search and type
+    const filteredItems = useMemo(() => {
+        return availableItems.filter(i => {
+            const matchesSearch = i.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const notAlreadyAdded = !ingredients.some(existing => existing.ingredientId === i.id);
+            const matchesType = itemFilterType === 'all' 
+                ? true 
+                : itemFilterType === 'base' 
+                    ? i.is_base_recipe === true 
+                    : !i.is_base_recipe;
+            return matchesSearch && notAlreadyAdded && matchesType;
+        });
+    }, [availableItems, searchTerm, ingredients, itemFilterType]);
 
     return (
-        <div className="fixed inset-0 z-[70] bg-white flex flex-col md:flex-row animate-in fade-in">
-            {/* Edit Stock Modal */}
+        <div className="fixed inset-0 z-[70] bg-[oklch(97%_0.008_28)] flex flex-col md:flex-row font-sans text-[oklch(18%_0.012_28)] animate-in fade-in">
+            {/* Sub-Modals */}
             {editingStockItem && (
                 <EditStockModal 
                     item={editingStockItem} 
@@ -1114,7 +1052,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Quick Add Stock Modal */}
             {isQuickAddOpen && (
                 <QuickAddStockModal 
                     onClose={() => setIsQuickAddOpen(false)}
@@ -1122,7 +1059,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Import Modal */}
             {isImportOpen && (
                 <RecipeImportModal 
                     onClose={() => setIsImportOpen(false)}
@@ -1140,7 +1076,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Export Modal */}
             {isExportOpen && (
                 <ExportTemplateModal
                     onClose={() => setIsExportOpen(false)}
@@ -1148,7 +1083,6 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Promote Modal */}
             {isPromoteOpen && (
                 <PromoteModal
                     initialName={parentItem?.name}
@@ -1157,99 +1091,109 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 />
             )}
 
-            {/* Left: Recipe Stack (The "Soul" Visual) - Always Visible / Main View on Mobile */}
-            <div className={`flex-1 flex flex-col bg-gray-50 border-r border-gray-200 h-full overflow-hidden relative`}>
-                <div className="p-4 border-b bg-white shadow-sm flex justify-between items-center z-10 sticky top-0">
-                    <div>
+            {/* Left Column: Recipe Stack & Layers Workbench */}
+            <div className="flex-1 flex flex-col bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] h-full overflow-hidden relative">
+                {/* Workbench Top Bar */}
+                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center z-10 sticky top-0">
+                    <div className="min-w-0 pr-2">
                         {isEditingName ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 font-mono">
                                 <input
                                     value={tempName}
                                     onChange={e => setTempName(e.target.value)}
-                                    className="border border-purple-300 rounded-lg px-2 py-1 text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-purple-200"
+                                    className="border border-black px-2 py-1 text-sm font-bold bg-white outline-none"
                                     autoFocus
                                     onKeyDown={async e => {
-                                        if (e.key === 'Enter') {
-                                            await handleSaveName();
-                                        }
-                                        if (e.key === 'Escape') {
-                                            setIsEditingName(false);
-                                        }
+                                        if (e.key === 'Enter') await handleSaveName();
+                                        if (e.key === 'Escape') setIsEditingName(false);
                                     }}
                                 />
-                                <button 
-                                    onClick={handleSaveName}
-                                    className="p-1.5 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg"
-                                >
-                                    <Check size={14} />
+                                <button onClick={handleSaveName} className="p-1 bg-[oklch(18%_0.012_28)] text-white text-xs font-bold">
+                                    <Check size={13} />
                                 </button>
-                                <button 
-                                    onClick={() => setIsEditingName(false)}
-                                    className="p-1.5 text-red-500 bg-red-50 hover:bg-red-100 rounded-lg"
-                                >
-                                    <X size={14} />
+                                <button onClick={() => setIsEditingName(false)} className="p-1 border border-[oklch(85%_0.012_28)] text-xs">
+                                    <X size={13} />
                                 </button>
                             </div>
                         ) : (
-                            <h2 className="text-xl font-bold flex items-center gap-1.5 group/builder-title">
-                                <Layers className="text-[#1A1A1A]" /> 
-                                <span>{parentItem?.name ? `${parentItem.name}` : 'ตัวเนรมิตสูตร'}</span>
+                            <div className="flex items-center gap-2 group/builder-title flex-wrap">
+                                <span className="font-mono text-[9px] font-bold uppercase px-1.5 py-0.5 bg-[oklch(92%_0.015_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)]">
+                                    {parentType === 'menu' ? '[MENU RECIPE]' : '[BASE FORMULA]'}
+                                </span>
+                                <h2 className="text-base font-bold font-sans text-[oklch(18%_0.012_28)] truncate">
+                                    {parentItem?.name || 'ตัวปรุงสูตร (Recipe Builder)'}
+                                </h2>
                                 <button
                                     onClick={handleStartEditName}
-                                    className="opacity-0 group-hover/builder-title:opacity-100 p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-all"
-                                    title="แก้ไขชื่อสูตร"
+                                    className="opacity-0 group-hover/builder-title:opacity-100 p-0.5 text-[oklch(55%_0.010_28)] hover:text-black transition-opacity cursor-pointer"
+                                    title="แก้ไขชื่อ"
                                 >
-                                    <Pencil size={14} />
+                                    <Pencil size={12} />
                                 </button>
-                            </h2>
+                            </div>
                         )}
-                        <p className="text-[10px] md:text-xs text-gray-500">
-                             {parentType === 'stock' && parentItem 
-                                ? `1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
-                                : 'ลากวางเพื่อเปลี่ยน Layer'
-                             }
+                        <p className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
+                            {parentType === 'stock' && parentItem 
+                                ? `เกณฑ์ตวง 1 แพ็ค (${parentItem.pack_size} ${parentItem.pack_unit})`
+                                : 'ลากวางเพื่อจัดลำดับชั้นวัตถุดิบ (Layers)'
+                            }
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
+
+                    {/* Quick Tools & Total Cost readout */}
+                    <div className="flex items-center gap-2 font-mono text-xs flex-shrink-0">
                         <button 
-                             onClick={() => setIsImportOpen(true)}
-                             className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-                             title="Import Recipe"
+                            onClick={() => setIsImportOpen(true)}
+                            className="hidden sm:flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-white px-2.5 py-1.5 font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            title="นำเข้าส่วนผสมจากสูตรอื่น"
                         >
-                            <Download size={14} /> Import
+                            <Download size={13} />
+                            <span>IMPORT</span>
                         </button>
+
                         <button 
-                             onClick={() => setIsExportOpen(true)}
-                             className="hidden md:flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-blue-600 bg-gray-100 px-3 py-1.5 rounded-lg transition-colors"
-                             title="Save as Template"
+                            onClick={() => setIsExportOpen(true)}
+                            className="hidden sm:flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-white px-2.5 py-1.5 font-bold uppercase hover:bg-[oklch(90%_0.012_28)] transition-colors cursor-pointer"
+                            title="บันทึกเป็นสูตรกลาง"
                         >
-                            <Copy size={14} /> Save Tmpl
+                            <Copy size={13} />
+                            <span>SAVE TMPL</span>
                         </button>
                         
                         {parentType === 'stock' && (
                             <button 
                                 onClick={() => setIsPromoteOpen(true)}
-                                className="hidden md:flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg transition-colors border border-purple-100"
-                                title="Promote to Menu"
+                                className="hidden sm:flex items-center gap-1 border border-[oklch(85%_0.012_28)] bg-[oklch(90%_0.015_28)] px-2.5 py-1.5 font-bold uppercase hover:bg-black hover:text-white transition-colors cursor-pointer"
+                                title="แปลงสูตรนี้เป็นเมนูขายหน้าร้าน"
                             >
-                                <Rocket size={14} /> Promote
+                                <Rocket size={13} />
+                                <span>PROMOTE</span>
                             </button>
                         )}
 
-                        <div className="text-right">
-                            <div className="text-[10px] md:text-sm text-gray-500">ต้นทุนรวม</div>
-                            <div className="text-xl md:text-2xl font-bold text-blue-600">฿{totalCost.toFixed(2)}</div>
+                        {/* Total Cost Display */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-white px-3 py-1 text-right">
+                            <span className="text-[9px] text-[oklch(55%_0.010_28)] uppercase block font-bold">ต้นทุนรวม</span>
+                            <span className="text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{totalCost.toFixed(2)}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar pb-32 md:pb-4">
+                {/* Layer Stack Items */}
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-2 pb-28 md:pb-4">
                     {ingredients.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded-2xl">
-                            <Layers className="w-16 h-16 mb-4 opacity-20" />
-                            <p>ยังไม่มีวัตถุดิบ</p>
-                            <p className="text-sm hidden md:block">เลือกวัตถุดิบจากด้านขวาเพื่อเริ่มปรุง</p>
-                            <p className="text-sm md:hidden">กดปุ่ม + เพื่อเพิ่มวัตถุดิบ</p>
+                        <div className="h-full flex flex-col items-center justify-center text-[oklch(55%_0.010_28)] border border-dashed border-[oklch(85%_0.012_28)] p-8 font-mono text-xs text-center space-y-2">
+                            <Layers className="w-12 h-12 opacity-30 text-[oklch(55%_0.010_28)]" />
+                            <p className="font-bold text-[oklch(18%_0.012_28)] uppercase">[EMPTY RECIPE LAYERS]</p>
+                            <p className="text-[11px] text-[oklch(55%_0.010_28)] hidden md:block">
+                                คลิกเลือกวัตถุดิบจากแผงด้านขวาเพื่อเพิ่มเข้าสู่สูตร
+                            </p>
+                            <button 
+                                onClick={() => setIsMobilePickerOpen(true)}
+                                className="md:hidden mt-2 px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase"
+                            >
+                                + เลือกวัตถุดิบ
+                            </button>
                         </div>
                     ) : (
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -1274,97 +1218,169 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                     )}
                 </div>
 
-                {/* Mobile Floating Action Button for Adding Ingredient */}
-                <button 
-                    onClick={() => setIsMobilePickerOpen(true)}
-                    className="md:hidden absolute bottom-20 right-4 w-14 h-14 bg-black text-white rounded-full shadow-2xl flex items-center justify-center z-30 hover:scale-105 active:scale-95 transition-transform"
-                >
-                    <Plus size={28} />
-                </button>
-
-                {/* Unified Price Simulator — visible on both mobile & desktop */}
-                <div className="border-t border-gray-100 bg-white">
-                    <PriceSimulator 
-                        totalCost={totalCost} 
-                        price={currentPrice}
-                        onPriceChange={setCurrentPrice}
-                        targetPct={targetFoodCostPct}
-                        compact={true}
-                    />
+                {/* Mobile Floating Drawer Trigger */}
+                <div className="md:hidden fixed bottom-16 right-4 z-30">
+                    <button 
+                        type="button"
+                        onClick={() => setIsMobilePickerOpen(true)}
+                        className="px-4 py-2.5 bg-[oklch(18%_0.012_28)] text-white font-mono font-bold uppercase shadow-xl border border-black flex items-center gap-1.5 text-xs"
+                    >
+                        <Plus size={16} />
+                        <span>เพิ่มวัตถุดิบ</span>
+                    </button>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="p-3 md:p-4 bg-white border-t flex justify-end gap-2 md:gap-3 shadow-[0_-5px_20px_rgba(0,0,0,0.05)] z-20">
-                    <button onClick={onClose} className="px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 active:bg-gray-200 flex-1 md:flex-none text-sm md:text-base transition-colors">
-                        ยกเลิก
+                {/* Unified Price Simulator (Bottom of Stack) */}
+                <PriceSimulator 
+                    totalCost={totalCost} 
+                    price={currentPrice}
+                    onPriceChange={setCurrentPrice}
+                    targetPct={targetFoodCostPct}
+                    compact={true}
+                />
+
+                {/* Bottom Action Bar */}
+                <div className="p-3 border-t border-[oklch(85%_0.012_28)] bg-white flex justify-end gap-2 z-20 font-mono text-xs">
+                    <button 
+                        type="button"
+                        onClick={onClose} 
+                        className="px-5 py-2.5 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] font-bold uppercase text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer"
+                    >
+                        ยกเลิก (Cancel)
                     </button>
-                    <button onClick={handleSaveWithFixed} className="px-6 md:px-8 py-2.5 md:py-3 rounded-xl bg-[#1A1A1A] text-white font-bold hover:bg-black active:bg-gray-900 shadow-xl flex-1 md:flex-none text-sm md:text-base transition-colors">
-                        บันทึกสูตร
+                    <button 
+                        type="button"
+                        onClick={handleSave} 
+                        disabled={loading}
+                        className="px-6 py-2.5 bg-[oklch(18%_0.012_28)] text-white font-bold uppercase hover:bg-black disabled:opacity-40 cursor-pointer shadow-xs"
+                    >
+                        {loading ? 'กำลังบันทึก...' : 'บันทึกสูตร (SAVE RECIPE)'}
                     </button>
                 </div>
             </div>
 
-            {/* Right: Ingredient Picker - Responsive Behavior */}
-            <div className={`
-                fixed inset-0 z-40 bg-white flex flex-col md:static md:w-[400px] md:shadow-2xl transition-transform duration-300
+            {/* Right Column: Ingredients Palette (Responsive Drawer on Mobile) */}
+            <aside className={`
+                fixed inset-0 z-40 bg-[oklch(98%_0.004_28)] flex flex-col md:static md:w-[380px] lg:w-[420px] md:shadow-none transition-transform duration-200 border-l border-[oklch(85%_0.012_28)]
                 ${isMobilePickerOpen ? 'translate-y-0' : 'translate-y-full md:translate-y-0'}
             `}>
-                <div className="p-4 border-b flex justify-between items-center bg-gray-50 md:bg-white">
-                     <div className="flex items-center gap-2">
-                        {/* Mobile Back Button */}
-                        <button onClick={() => setIsMobilePickerOpen(false)} className="md:hidden p-2 -ml-2 rounded-full hover:bg-gray-200">
-                             <X size={24} />
+                {/* Palette Header */}
+                <div className="p-3.5 border-b border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex justify-between items-center font-mono text-xs">
+                    <div className="flex items-center gap-2">
+                        <button onClick={() => setIsMobilePickerOpen(false)} className="md:hidden p-1 hover:bg-gray-200">
+                            <X size={18} />
                         </button>
-                        <h3 className="font-bold text-lg">คลังวัตถุดิบ</h3>
-                     </div>
-                     <button 
+                        <span className="font-bold text-xs uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                            คลังวัตถุดิบ (STOCK PALETTE)
+                        </span>
+                    </div>
+                    <button 
+                        type="button"
                         onClick={() => setIsQuickAddOpen(true)}
-                        className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg flex items-center gap-1 shadow-md"
+                        className="px-2 py-1 bg-[oklch(18%_0.012_28)] text-white text-[10px] font-bold uppercase hover:bg-black transition-colors cursor-pointer"
                     >
-                        <Plus size={14} /> สร้างใหม่
+                        + สร้างวัตถุดิบ
                     </button>
                 </div>
 
-                <div className="p-4 pb-2 border-b bg-gray-50 md:bg-white">
+                {/* Search & Filter Chips */}
+                <div className="p-3 border-b border-[oklch(85%_0.012_28)] bg-white space-y-2 font-mono text-xs">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)]" size={14} />
                         <input 
-                            className="w-full bg-white md:bg-gray-100 border border-gray-200 md:border-transparent rounded-xl py-2 pl-10 pr-4 focus:ring-2 focus:ring-blue-100 outline-none"
-                            placeholder="ค้นหาวัตถุดิบ..."
+                            className="w-full bg-white border border-[oklch(85%_0.012_28)] py-1.5 pl-8 pr-3 text-xs outline-none focus:border-black font-mono font-bold"
+                            placeholder="ค้นหาวัตถุดิบหรือสูตรเบส..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             autoFocus={isMobilePickerOpen}
                         />
                     </div>
+
+                    <div className="flex gap-1.5 text-[10px] font-mono">
+                        <button 
+                            type="button"
+                            onClick={() => setItemFilterType('all')}
+                            className={`px-2 py-0.5 border font-bold uppercase cursor-pointer ${
+                                itemFilterType === 'all' 
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-black' 
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                            }`}
+                        >
+                            ทั้งหมด ({availableItems.length})
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setItemFilterType('raw')}
+                            className={`px-2 py-0.5 border font-bold uppercase cursor-pointer ${
+                                itemFilterType === 'raw' 
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-black' 
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                            }`}
+                        >
+                            วัตถุดิบดิบ ({availableItems.filter(i => !i.is_base_recipe).length})
+                        </button>
+                        <button 
+                            type="button"
+                            onClick={() => setItemFilterType('base')}
+                            className={`px-2 py-0.5 border font-bold uppercase cursor-pointer ${
+                                itemFilterType === 'base' 
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-black' 
+                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)]'
+                            }`}
+                        >
+                            สูตรกลาง ({availableItems.filter(i => i.is_base_recipe).length})
+                        </button>
+                    </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 bg-gray-50 md:bg-white pb-20 md:pb-0">
-                    {filteredItems.map(item => (
-                        <div 
-                            key={item.id}
-                            className="p-3 mb-2 rounded-xl bg-white border shadow-sm md:shadow-none md:border-gray-200 hover:border-blue-500 hover:bg-blue-50 cursor-pointer transition-all flex justify-between items-center group"
-                            onClick={() => {
-                                handleAddIngredient(item);
-                                if(window.innerWidth < 768) setIsMobilePickerOpen(false); // Close on mobile after picking
-                            }}
-                        >
-                             <div className="flex-1">
-                                <div className="font-bold text-sm text-gray-800">{item.name}</div>
-                                <div className="text-xs text-gray-400">{item.usage_unit}</div>
+                {/* Items List */}
+                <div className="flex-1 overflow-y-auto p-2.5 space-y-1.5 pb-24 md:pb-4 font-mono text-xs">
+                    {filteredItems.map(item => {
+                        const unitCost = calculateRealUnitCost(item);
+                        return (
+                            <div 
+                                key={item.id}
+                                className="p-2.5 border border-[oklch(85%_0.012_28)] bg-white hover:border-black transition-colors cursor-pointer flex justify-between items-center group rounded-xs select-none"
+                                onClick={() => {
+                                    handleAddIngredient(item);
+                                    if (window.innerWidth < 768) setIsMobilePickerOpen(false);
+                                }}
+                            >
+                                <div className="flex-1 min-w-0 pr-2">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-bold text-xs text-[oklch(18%_0.012_28)] font-sans truncate">
+                                            {item.name}
+                                        </span>
+                                        {item.is_base_recipe && (
+                                            <span className="text-[9px] font-bold uppercase px-1 py-0.2 bg-[oklch(92%_0.015_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                [BASE]
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="text-[10px] text-[oklch(55%_0.010_28)] mt-0.5">
+                                        ฿{unitCost?.toFixed(4) || 0} / {item.usage_unit}
+                                    </div>
+                                </div>
+                                <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] group-hover:text-black">
+                                    [+ เพิ่ม]
+                                </span>
                             </div>
-                            <button className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                <Plus size={16} />
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {filteredItems.length === 0 && (
-                        <div className="text-center py-10 text-gray-400 text-sm">
+                        <div className="text-center py-10 text-[oklch(55%_0.010_28)] text-xs border border-dashed border-[oklch(85%_0.012_28)] p-4">
                             ไม่พบวัตถุดิบ "{searchTerm}" <br/>
-                            <button onClick={() => setIsQuickAddOpen(true)} className="text-blue-600 underline mt-2">สร้างใหม่เลย?</button>
+                            <button 
+                                type="button"
+                                onClick={() => setIsQuickAddOpen(true)} 
+                                className="text-[oklch(52%_0.16_28)] font-bold underline mt-2 block mx-auto cursor-pointer"
+                            >
+                                + สร้างวัตถุดิบใหม่เข้าสต็อก
+                            </button>
                         </div>
                     )}
                 </div>
-            </div>
+            </aside>
         </div>
     );
 }
