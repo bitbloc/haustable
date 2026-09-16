@@ -839,6 +839,7 @@ export default function AdsLandingPage() {
                                 title={settings?.link_title_1 || "LINE OA // แชทสอบถามหรือสั่งอาหาร"} 
                                 bg="bg-[#06C755] text-white hover:bg-[#05b34c]" 
                                 wide 
+                                onClick={handleLineClick}
                             />
                             
                             <LinkCard 
@@ -846,6 +847,7 @@ export default function AdsLandingPage() {
                                 title="098-528-4217 // โทรติดต่อร้าน" 
                                 bg="bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-paper-dark)]" 
                                 wide 
+                                onClick={handleCallClick}
                             />
                         </div>
 
@@ -926,7 +928,7 @@ export default function AdsLandingPage() {
                             <div className="p-4 bg-[var(--color-hallmark-paper)] font-mono text-xs text-[var(--color-hallmark-ink)] space-y-2">
                                 <p className="font-[var(--font-body)] font-bold text-sm leading-relaxed">{locationText}</p>
                                 <div className="pt-2 flex flex-col gap-1 text-[11px] text-[var(--color-hallmark-ink-muted)] font-bold">
-                                    <p>TEL: <a href="tel:0985284217" className="underline hover:opacity-80">098-528-4217</a></p>
+                                    <p>TEL: <a href="tel:0985284217" onClick={handleCallClick} className="underline hover:opacity-80">098-528-4217</a></p>
                                     <p>OPEN: {hours}</p>
                                 </div>
                             </div>
@@ -935,6 +937,7 @@ export default function AdsLandingPage() {
                                 href={mapUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                onClick={handleDirectionsClick}
                                 className="w-full py-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] font-mono text-xs font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2 cursor-pointer text-center"
                             >
                                 <Navigation size={14} /> LAUNCH MAP // นำทางมาร้าน
