@@ -273,6 +273,7 @@ export default function POSDashboard() {
     const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
     const submittingOrderRef = useRef(false);
     const processingQrPrintRef = useRef(new Set());
+    const autoPrintDebounceTimersRef = useRef(new Map());
 
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
@@ -787,10 +788,6 @@ export default function POSDashboard() {
             const unprintedItems = fullBooking.order_items.filter(item => item.id && !printedItems.includes(item.id));
 
             if (unprintedItems.length > 0) {
-                // Update tracker immediately to prevent duplicate fires
-                const newPrintedItems = Array.from(new Set([...printedItems, ...unprintedItems.map(i => i.id).filter(Boolean)]));
-                localStorage.setItem(storageKey, JSON.stringify(newPrintedItems));
-                
                 // Construct a temporary booking object that ONLY contains the unprinted items for the printer
                 const partialBooking = {
                     ...fullBooking,
@@ -811,7 +808,14 @@ export default function POSDashboard() {
                 }), { duration: 8000 });
                 playQRAlertSound();
 
-                await autoPrintQROrder(partialBooking);
+                const printSuccess = await autoPrintQROrder(partialBooking);
+                if (printSuccess) {
+                    // Update tracker ONLY after printing succeeded
+                    const newPrintedItems = Array.from(new Set([...printedItems, ...unprintedItems.map(i => i.id).filter(Boolean)]));
+                    localStorage.setItem(storageKey, JSON.stringify(newPrintedItems));
+                } else {
+                    console.warn(`[AutoPrint] Printing returned false for booking ${bookingId}. Retaining unprinted items for safety heartbeat retry.`);
+                }
             }
         } catch (err) {
             console.error("Auto print QR order error:", err);
@@ -821,6 +825,18 @@ export default function POSDashboard() {
             }, 1500);
         }
     };
+
+    const scheduleAutoPrint = useCallback((bookingId, tableNameHint = 'TABLE', delay = 500) => {
+        if (!bookingId) return;
+        if (autoPrintDebounceTimersRef.current.has(bookingId)) {
+            clearTimeout(autoPrintDebounceTimersRef.current.get(bookingId));
+        }
+        const timer = setTimeout(() => {
+            autoPrintDebounceTimersRef.current.delete(bookingId);
+            handleAutoPrintQROrder(bookingId, tableNameHint);
+        }, delay);
+        autoPrintDebounceTimersRef.current.set(bookingId, timer);
+    }, []);
 
     const refreshActiveBookingItems = async (bookingId) => {
         if (!bookingId) return;
@@ -943,6 +959,63 @@ export default function POSDashboard() {
         }
     };
 
+    const isCheckingUnprintedRef = useRef(false);
+
+    const checkUnprintedQrOrders = useCallback(async () => {
+        if (isCheckingUnprintedRef.current) return;
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+        isCheckingUnprintedRef.current = true;
+        try {
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+
+            // Lightweight targeted query: only active bookings created today with status seated/pending
+            const { data: activeQrBookings, error } = await supabase
+                .from('bookings')
+                .select(`
+                    id, table_id, status, source, staff_remark,
+                    tables_layout (table_name),
+                    order_items (id, destination)
+                `)
+                .in('status', ['seated', 'pending'])
+                .or(`booking_time.gte.${startOfToday},created_at.gte.${startOfToday}`)
+                .order('created_at', { ascending: true });
+
+            if (error || !activeQrBookings || activeQrBookings.length === 0) return;
+
+            for (const b of activeQrBookings) {
+                const remarkLower = (b.staff_remark || '').toLowerCase();
+                const sourceLower = (b.source || '').toLowerCase();
+                const isQr = sourceLower === 'qr' || sourceLower === 'online' || remarkLower.includes('qr');
+                if (!isQr) continue;
+
+                // Check unprinted items for this booking
+                const storageKey = `qr_printed_items_${b.id}`;
+                let printedItems = [];
+                try {
+                    printedItems = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                } catch (e) {}
+
+                const items = b.order_items || [];
+                const unprinted = items.filter(item => item.id && !printedItems.includes(item.id));
+
+                if (unprinted.length > 0) {
+                    const isWaitingGpsApproval = b.status === 'pending' && remarkLower.includes('gps_unverified');
+                    if (!isWaitingGpsApproval) {
+                        console.log(`⚡ [Safety Heartbeat] Recovered unprinted QR order items for booking ${b.id} (${unprinted.length} items) - triggering auto-print.`);
+                        const tableName = b.tables_layout?.table_name || `โต๊ะ #${b.table_id || ''}`;
+                        await handleAutoPrintQROrder(b.id, tableName);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[Safety Heartbeat] Error checking unprinted QR orders:', err);
+        } finally {
+            isCheckingUnprintedRef.current = false;
+        }
+    }, []);
+
     useEffect(() => {
         // Request Screen Wake Lock for POS Android APK / Tablet
         requestWakeLock().catch(() => {});
@@ -950,15 +1023,50 @@ export default function POSDashboard() {
         // Init online printer & slip config sync (pulls online master config & listens for realtime updates)
         const cleanupPrinterSync = initPrinterConfigSync();
 
-        // 1. Initial pending orders check
-        checkPendingOrders();
+        // 1. Initial pending & unprinted orders safety heartbeat
+        const isHeartbeatRunningRef = { current: false };
+
+        const runSafetyHeartbeat = async () => {
+            if (isHeartbeatRunningRef.current) return;
+            if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+            isHeartbeatRunningRef.current = true;
+            try {
+                await Promise.allSettled([
+                    checkPendingOrders(),
+                    checkUnprintedQrOrders()
+                ]);
+            } catch (e) {
+                console.warn('[Safety Heartbeat] Execution error:', e);
+            } finally {
+                isHeartbeatRunningRef.current = false;
+            }
+        };
+
+        runSafetyHeartbeat();
+
+        let heartbeatInterval = null;
+
+        const startHeartbeat = (intervalMs) => {
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
+        };
+
+        // Foreground active: every 15s. Background / folded screen: every 30s (guarantees auto-print continues!)
+        const updateHeartbeatMode = () => {
+            const isVisible = document.visibilityState === 'visible';
+            startHeartbeat(isVisible ? 15000 : 30000);
+        };
+
+        updateHeartbeatMode();
 
         // Android Foreground Wakeup / Network Reconnect Listener
         const handleForegroundWakeup = () => {
+            updateHeartbeatMode();
             if (document.visibilityState === 'visible') {
                 console.log('⚡ [POS Lifecycle] App foregrounded. Synchronizing data & audio...');
                 unlockAudioEngine();
-                checkPendingOrders();
+                runSafetyHeartbeat();
                 triggerDebouncedRefresh();
             }
         };
@@ -966,7 +1074,7 @@ export default function POSDashboard() {
         const handleOnlineStatus = () => {
             console.log('⚡ [POS Network] Network restored online. Synchronizing...');
             unlockAudioEngine();
-            checkPendingOrders();
+            runSafetyHeartbeat();
             triggerDebouncedRefresh();
         };
 
@@ -974,13 +1082,6 @@ export default function POSDashboard() {
         window.addEventListener('focus', handleForegroundWakeup);
         window.addEventListener('pageshow', handleForegroundWakeup);
         window.addEventListener('online', handleOnlineStatus);
-
-        // Adaptive 60-second backup heartbeat (safety net only, visible tabs only)
-        const pollInterval = setInterval(() => {
-            if (document.visibilityState === 'visible') {
-                checkPendingOrders();
-            }
-        }, 60000);
 
         // Realtime sync: Auto-update draft cart item prices when menu items change
         const handlePosMenuUpdated = (e) => {
@@ -1036,10 +1137,10 @@ export default function POSDashboard() {
         window.addEventListener('wma_order_received', handleWmaOrderGlobal);
 
         return () => {
-            clearInterval(pollInterval);
-            if (window.autoPrintDebounceTimer) {
-                clearTimeout(window.autoPrintDebounceTimer);
-                window.autoPrintDebounceTimer = null;
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (autoPrintDebounceTimersRef.current) {
+                autoPrintDebounceTimersRef.current.forEach(timer => clearTimeout(timer));
+                autoPrintDebounceTimersRef.current.clear();
             }
             if (window.activeBookingSyncDebounceTimer) {
                 clearTimeout(window.activeBookingSyncDebounceTimer);
@@ -1254,12 +1355,7 @@ export default function POSDashboard() {
 
                     // Auto-print ONLY for verified GPS orders; unverified orders wait for staff approval!
                     if (bId && isGpsVerified) {
-                        if (window.autoPrintDebounceTimer) {
-                            clearTimeout(window.autoPrintDebounceTimer);
-                        }
-                        window.autoPrintDebounceTimer = setTimeout(() => {
-                            handleAutoPrintQROrder(bId, tName);
-                        }, 400);
+                        scheduleAutoPrint(bId, tName, 400);
                     }
 
                     // If currently viewing this table, sync order items immediately
@@ -1418,7 +1514,7 @@ export default function POSDashboard() {
                         }
 
                         if (tableId && (remarkLower.includes('qr walk-in') || remarkLower.includes('qr') || sourceLower === 'online' || sourceLower === 'qr')) {
-                            handleAutoPrintQROrder(bookingId, tableName);
+                            scheduleAutoPrint(bookingId, tableName, 400);
                         }
 
                         if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isOnlinePickup || isOnlineBooking || isLineman) {
@@ -1640,12 +1736,7 @@ export default function POSDashboard() {
                                     }
                                 });
 
-                            if (window.autoPrintDebounceTimer) {
-                                clearTimeout(window.autoPrintDebounceTimer);
-                            }
-                            window.autoPrintDebounceTimer = setTimeout(() => {
-                                handleAutoPrintQROrder(bookingId);
-                            }, 800); // Debounce bulk inserts
+                            scheduleAutoPrint(bookingId, 'TABLE', 600);
                         }
 
                         // If staff currently has this booking open on screen, auto-refresh the order items in real-time
@@ -3525,7 +3616,7 @@ export default function POSDashboard() {
                                         
                                         const finalBooking = updatedBooking || activeBooking;
                                         
-                                        // Try silent print first for Kitchen (ONLY for items not already auto-printed)
+                                        // Auto-print both Kitchen and Bar slips for unprinted items
                                         const storageKey = `qr_printed_items_${activeBooking.id}`;
                                         let printed = [];
                                         try {
@@ -3536,9 +3627,13 @@ export default function POSDashboard() {
                                         const unprinted = allItems.filter(i => i.id && !printed.includes(i.id));
                                         
                                         if (unprinted.length > 0) {
-                                            const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
-                                            localStorage.setItem(storageKey, JSON.stringify(newPrinted));
-                                            openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
+                                            const printSuccess = await autoPrintQROrder({ ...finalBooking, order_items: unprinted });
+                                            if (printSuccess) {
+                                                const newPrinted = Array.from(new Set([...printed, ...unprinted.map(i => i.id).filter(Boolean)]));
+                                                localStorage.setItem(storageKey, JSON.stringify(newPrinted));
+                                            } else {
+                                                openSlipOrSilentPrint({ ...finalBooking, order_items: unprinted }, 'kitchen');
+                                            }
                                         }
                                         
                                         // Broadcast ORDER_CONFIRMED to CFD so customer sees confirmation and screen auto-resets to IDLE

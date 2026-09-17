@@ -2785,7 +2785,7 @@ function stripTrailingEscPosCut(bytes) {
 export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null) {
     logger.logNativeStart('print_sunmi_built_in', { bytesLength: rawData ? rawData.length : 0, hasLogo: !!logoUrl, hasQr: !!qrUrl });
     return new Promise((resolve, reject) => {
-        sunmiPrintQueue = sunmiPrintQueue.then(async () => {
+        sunmiPrintQueue = sunmiPrintQueue.catch(() => {}).then(async () => {
             try {
                 logger.info("SUNMI: loading @kduma-autoid/capacitor-sunmi-printer");
                 const { SunmiPrinter } = await import('@kduma-autoid/capacitor-sunmi-printer');
