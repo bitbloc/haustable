@@ -129,7 +129,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             const seatedReq = supabase
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
-                .eq('status', 'seated')
+                .in('status', ['seated', 'confirmed', 'ready'])
 
             const [todayRes, seatedRes] = await Promise.all([todayReq, seatedReq])
 

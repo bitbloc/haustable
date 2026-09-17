@@ -545,8 +545,15 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
         const subtotal = booking.order_items?.reduce((sum, item) => sum + (item.price_at_time * item.quantity), 0) || 0;
         const netAfterDiscount = Math.max(0, subtotal - discountVal);
 
-        const vatMode = (printerConfig.vat_mode || 'none').toLowerCase();
-        const isVatEnabled = (printerConfig.vat_enabled === true || vatMode === 'inclusive' || vatMode === 'exclusive');
+        let isDefaultVatEnabled = true;
+        try {
+            const cached = localStorage.getItem('pos_default_vat_enabled');
+            if (cached !== null) isDefaultVatEnabled = cached === 'true';
+        } catch (e) {}
+
+        const isTaxExplicitlyDisabled = booking?.include_tax === false;
+        const vatMode = isTaxExplicitlyDisabled ? 'none' : (printerConfig.vat_mode || (isDefaultVatEnabled ? 'inclusive' : 'none')).toLowerCase();
+        const isVatEnabled = !isTaxExplicitlyDisabled && (printerConfig.vat_enabled === true || vatMode === 'inclusive' || vatMode === 'exclusive');
         const vatVal = (isVatEnabled && vatMode === 'inclusive')
             ? (netAfterDiscount * 7 / 107)
             : ((isVatEnabled && vatMode === 'exclusive')

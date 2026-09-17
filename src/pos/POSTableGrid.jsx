@@ -405,7 +405,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             } finally {
                 setLoading(false);
             }
-        }, 60);
+        }, 120);
     }, []);
 
     const filteredTables = useMemo(() => {

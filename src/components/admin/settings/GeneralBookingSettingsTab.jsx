@@ -298,7 +298,18 @@ export default function GeneralBookingSettingsTab({
                                     type="checkbox"
                                     className="hidden"
                                     checked={settings.default_vat_enabled === 'true'}
-                                    onChange={(e) => handleSave('default_vat_enabled', e.target.checked ? 'true' : 'false')}
+                                    onChange={(e) => {
+                                        const val = e.target.checked ? 'true' : 'false';
+                                        try { localStorage.setItem('pos_default_vat_enabled', val); } catch (err) {}
+                                        if (typeof BroadcastChannel !== 'undefined') {
+                                            try {
+                                                const syncChan = new BroadcastChannel('onhaus_pos_sync');
+                                                syncChan.postMessage({ type: 'VAT_SETTING_CHANGED', value: val });
+                                                syncChan.close();
+                                            } catch (err) {}
+                                        }
+                                        handleSave('default_vat_enabled', val);
+                                    }}
                                 />
                             </label>
                         </div>

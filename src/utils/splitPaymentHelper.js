@@ -114,7 +114,7 @@ export function calculateSplitBalance(booking, orderItems = [], includeTax = tru
 
     // Calculate full order total from items
     const subtotal = (orderItems || []).reduce((sum, item) => sum + ((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)), 0);
-    const tax = includeTax ? subtotal * 0.07 : 0;
+    const tax = includeTax ? Math.ceil((subtotal * 7) / 100) : 0;
     const fullOrderTotal = Math.ceil(subtotal + tax);
 
     // If orderItems is empty, fallback to booking.total_amount if available

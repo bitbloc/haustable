@@ -22,12 +22,20 @@ import {
 export default function POSSplitPaymentModal({
     order,
     activeBooking,
-    includeTax = true,
+    includeTax,
     storePromptpayId: propPromptpayId,
     onClose,
     onConfirmSplit,
     onPrintSplitQr
 }) {
+    const effectiveIncludeTax = useMemo(() => {
+        if (typeof includeTax === 'boolean') return includeTax;
+        try {
+            const cached = localStorage.getItem('pos_default_vat_enabled');
+            if (cached !== null) return cached === 'true';
+        } catch (e) {}
+        return true;
+    }, [includeTax]);
     // 3 Split Modes: 'EQUAL' | 'PERCENT' | 'CUSTOM'
     const [splitMode, setSplitMode] = useState('EQUAL');
     
@@ -104,8 +112,8 @@ export default function POSSplitPaymentModal({
 
     // Comprehensive multi-round balance calculation
     const splitBalance = useMemo(() => {
-        return calculateSplitBalance(activeBooking, orderItems, includeTax);
-    }, [activeBooking, orderItems, includeTax]);
+        return calculateSplitBalance(activeBooking, orderItems, effectiveIncludeTax);
+    }, [activeBooking, orderItems, effectiveIncludeTax]);
 
     const { 
         fullOrderTotal, 
@@ -127,7 +135,7 @@ export default function POSSplitPaymentModal({
         return selectedItems.reduce((sum, item) => sum + (item.price * item.selectedQty), 0);
     }, [selectedItems]);
 
-    const itemsTax = includeTax ? itemsSubtotal * 0.07 : 0;
+    const itemsTax = effectiveIncludeTax ? Math.ceil((itemsSubtotal * 7) / 100) : 0;
     const itemsTotal = Math.ceil(itemsSubtotal + itemsTax);
 
     // Mode 2: Equal Split Calculation (Based on remaining balance to guarantee settling)

@@ -186,7 +186,13 @@ export default function POSDashboard() {
     const [showMoveModal, setShowMoveModal] = useState(false);
     const [showMergeModal, setShowMergeModal] = useState(false);
     const [showSplitModal, setShowSplitModal] = useState(false);
-    const [splitIncludeTax, setSplitIncludeTax] = useState(true);
+    const [splitIncludeTax, setSplitIncludeTax] = useState(() => {
+        try {
+            const cached = localStorage.getItem('pos_default_vat_enabled');
+            if (cached !== null) return cached === 'true';
+        } catch (e) {}
+        return true;
+    });
     const [availableTables, setAvailableTables] = useState([]);
 
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
@@ -2552,13 +2558,13 @@ export default function POSDashboard() {
                             .update({ status: 'void' })
                             .eq('id', bookingId);
 
-                        // Also void any lingering orphaned/pending/seated bookings on this table to guarantee table stays free
+                        // Also void any lingering orphaned/pending/seated/ready bookings on this table to guarantee table stays free
                         if (targetTableId) {
                             await supabase
                                 .from('bookings')
                                 .update({ status: 'void' })
                                 .eq('table_id', targetTableId)
-                                .in('status', ['pending', 'seated', 'confirmed']);
+                                .in('status', ['pending', 'seated', 'confirmed', 'ready']);
                         }
                     } else {
                         addToOfflineQueue('void_booking', { bookingId, tableId: targetTableId });
@@ -2621,7 +2627,7 @@ export default function POSDashboard() {
                         .from('bookings')
                         .update({ status: 'void' })
                         .eq('table_id', targetTableId)
-                        .in('status', ['pending', 'seated', 'confirmed'])
+                        .in('status', ['pending', 'seated', 'confirmed', 'ready'])
                         .then(() => {}).catch(() => {});
                 }
                 try {
@@ -2765,8 +2771,13 @@ export default function POSDashboard() {
             }
         }
 
-        const netBeforeTax = subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - freeDrinkDiscVal;
-        const finalTotal = includeTax ? Math.max(0, netBeforeTax * 1.07) : Math.max(0, netBeforeTax);
+        const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - freeDrinkDiscVal));
+        const calculatedTax = includeTax ? Math.ceil((netBeforeTax * 7) / 100) : 0;
+        const fullBillTotal = Math.ceil(Math.max(0, netBeforeTax + calculatedTax));
+        const depositPaid = activeBooking?.deposit_amount ? Math.ceil(parseFloat(activeBooking.deposit_amount)) : 0;
+        const splitPaidAmount = getSplitTotalPaid(activeBooking);
+        const actualRemainingToSettle = Math.ceil(Math.max(0, fullBillTotal - depositPaid - splitPaidAmount));
+        const finalTotal = fullBillTotal;
 
         const fallbackProfileId = attachedMemberCrm?.id || currentBooking?.profiles?.id || currentBooking?.user_id || null;
 
@@ -2775,8 +2786,8 @@ export default function POSDashboard() {
             finalRewardCode = finalRewardCode ? `${finalRewardCode} | 10 Free 1 Drink` : '10 Free 1 Drink';
         }
 
-        const numCashRecv = Number(cashReceived) || finalTotal;
-        const numChangeDue = Number(changeDue) || (paymentMethod === 'cash' ? Math.max(0, numCashRecv - finalTotal) : 0);
+        const numCashRecv = Number(cashReceived) || actualRemainingToSettle;
+        const numChangeDue = Number(changeDue) || (paymentMethod === 'cash' ? Math.max(0, numCashRecv - actualRemainingToSettle) : 0);
 
         if (paymentMethod === 'cash') {
             try {
@@ -2797,7 +2808,8 @@ export default function POSDashboard() {
             rewardId,
             fallbackProfileId,
             numCashRecv,
-            numChangeDue
+            numChangeDue,
+            actualRemainingToSettle
         );
         if (success) {
             // Process Automatic Drink Stamps 10 Free 1 for Attached Member Profile
@@ -3721,8 +3733,17 @@ export default function POSDashboard() {
                                     setIsSubmittingOrder(false);
                                 }
                             }}
-                            onOpenSlip={handleSaveAndOpenSlip}
-                            onOpenSplitPayment={(tax) => { setSplitIncludeTax(tax ?? true); setShowSplitModal(true); }}
+                            onOpenSplitPayment={(tax) => {
+                                const defaultVat = (() => {
+                                    try {
+                                        const cached = localStorage.getItem('pos_default_vat_enabled');
+                                        if (cached !== null) return cached === 'true';
+                                    } catch (e) {}
+                                    return true;
+                                })();
+                                setSplitIncludeTax(typeof tax === 'boolean' ? tax : defaultVat);
+                                setShowSplitModal(true);
+                            }}
                             onMoveTable={handleOpenMoveModal}
                             onMergeBill={handleOpenMergeModal}
                             onAttachCustomer={async (member) => {

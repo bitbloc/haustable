@@ -589,13 +589,17 @@ export function usePOSOrder() {
         rewardId = null,
         profileId = null,
         cashReceived = 0,
-        changeDue = 0
+        changeDue = 0,
+        settledAmount = null
     ) => {
         setLoading(true);
         
         const isCashMethod = String(paymentMethod || '').toLowerCase() === 'cash';
         const numCashRecv = Number(cashReceived) || 0;
-        const numChangeDue = Number(changeDue) || (isCashMethod && numCashRecv > 0 ? Math.max(0, numCashRecv - totalAmount) : 0);
+        const actualShiftAmount = (settledAmount !== null && settledAmount !== undefined && !isNaN(Number(settledAmount)))
+            ? Math.max(0, Number(settledAmount))
+            : (Number(totalAmount) || 0);
+        const numChangeDue = Number(changeDue) || (isCashMethod && numCashRecv > 0 ? Math.max(0, numCashRecv - actualShiftAmount) : 0);
         const cashTag = isCashMethod && numCashRecv > 0 ? ` [CASH: RECV=${numCashRecv}, CHANGE=${numChangeDue}]` : '';
 
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
@@ -642,7 +646,7 @@ export function usePOSOrder() {
                 cashReceived: numCashRecv,
                 changeDue: numChangeDue
             });
-            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+            recordShiftTransaction(bookingId, actualShiftAmount, paymentMethod);
             
             setLoading(false);
             toast.success('✅ เช็คบิลเรียบร้อยแล้ว (บันทึกออฟไลน์ในเครื่อง)');
@@ -766,7 +770,7 @@ export function usePOSOrder() {
             posCache.setBookings(bookings);
 
             // Record in current shift
-            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+            recordShiftTransaction(bookingId, actualShiftAmount, paymentMethod);
 
             toast.success('Order completed successfully');
             return true;
@@ -805,7 +809,7 @@ export function usePOSOrder() {
                 rewardId,
                 profileId
             });
-            recordShiftTransaction(bookingId, totalAmount, paymentMethod);
+            recordShiftTransaction(bookingId, actualShiftAmount, paymentMethod);
 
             setLoading(false);
             toast.success('✅ เช็คบิลเรียบร้อยแล้ว (เข้าคิวรอส่งเซิร์ฟเวอร์)');

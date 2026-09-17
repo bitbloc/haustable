@@ -40,7 +40,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [showEditPaxModal, setShowEditPaxModal] = React.useState(false);
     const [showEmergencyModal, setShowEmergencyModal] = React.useState(false);
     const [editPaxInput, setEditPaxInput] = React.useState('1');
-    const [includeTax, setIncludeTax] = React.useState(true);
+    const [defaultVatEnabled, setDefaultVatEnabled] = React.useState(() => {
+        try {
+            const cached = localStorage.getItem('pos_default_vat_enabled');
+            if (cached !== null) return cached === 'true';
+        } catch (e) {}
+        return true;
+    });
+    const [includeTax, setIncludeTax] = React.useState(() => {
+        try {
+            const cached = localStorage.getItem('pos_default_vat_enabled');
+            if (cached !== null) return cached === 'true';
+        } catch (e) {}
+        return true;
+    });
+    const tableVatOverridesRef = React.useRef(new Map());
     const [paymentMethod, setPaymentMethod] = React.useState('cash'); // 'cash' | 'qr'
     const [cashStep, setCashStep] = React.useState('input'); // 'input' | 'change'
     const [cashReceivedInput, setCashReceivedInput] = React.useState('');
@@ -292,6 +306,16 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     });
 
 
+    // Synchronize includeTax whenever cashier switches tables
+    React.useEffect(() => {
+        const tableKey = booking?.id || booking?.table_id || 'counter';
+        if (tableVatOverridesRef.current.has(tableKey)) {
+            setIncludeTax(tableVatOverridesRef.current.get(tableKey));
+        } else {
+            setIncludeTax(defaultVatEnabled);
+        }
+    }, [booking?.id, booking?.table_id, defaultVatEnabled]);
+
     React.useEffect(() => {
         const loadDefaultVat = async () => {
             try {
@@ -300,13 +324,73 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     .select('value')
                     .eq('key', 'default_vat_enabled')
                     .maybeSingle();
-                if (data && data.value) {
-                    setIncludeTax(data.value === 'true');
+                if (data && typeof data.value !== 'undefined' && data.value !== null) {
+                    const isVatOn = data.value === 'true';
+                    try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (e) {}
+                    setDefaultVatEnabled(isVatOn);
+                    const tableKey = booking?.id || booking?.table_id || 'counter';
+                    if (!tableVatOverridesRef.current.has(tableKey)) {
+                        setIncludeTax(isVatOn);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading default VAT:", err);
             }
         };
+        loadDefaultVat();
+
+        // Realtime sync from Admin Settings
+        const vatChannel = supabase
+            .channel(`pos-vat-sync-${Date.now()}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
+                if (payload.new && payload.new.key === 'default_vat_enabled') {
+                    const isVatOn = payload.new.value === 'true';
+                    try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (e) {}
+                    setDefaultVatEnabled(isVatOn);
+                    const tableKey = booking?.id || booking?.table_id || 'counter';
+                    if (!tableVatOverridesRef.current.has(tableKey)) {
+                        setIncludeTax(isVatOn);
+                    }
+                }
+            })
+            .subscribe();
+
+        // Local BroadcastChannel sync across tabs (< 5ms)
+        const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null;
+        if (posSyncChannel) {
+            posSyncChannel.onmessage = (e) => {
+                if (e.data?.type === 'VAT_SETTING_CHANGED') {
+                    const isVatOn = e.data.value === 'true' || e.data.enabled === true;
+                    try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (err) {}
+                    setDefaultVatEnabled(isVatOn);
+                    const tableKey = booking?.id || booking?.table_id || 'counter';
+                    if (!tableVatOverridesRef.current.has(tableKey)) {
+                        setIncludeTax(isVatOn);
+                    }
+                }
+            };
+        }
+
+        const handleStorage = (e) => {
+            if (e.key === 'pos_default_vat_enabled') {
+                const isVatOn = e.newValue === 'true';
+                setDefaultVatEnabled(isVatOn);
+                const tableKey = booking?.id || booking?.table_id || 'counter';
+                if (!tableVatOverridesRef.current.has(tableKey)) {
+                    setIncludeTax(isVatOn);
+                }
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+
+        return () => {
+            supabase.removeChannel(vatChannel);
+            if (posSyncChannel) posSyncChannel.close();
+            window.removeEventListener('storage', handleStorage);
+        };
+    }, [booking?.id, booking?.table_id]);
+
+    React.useEffect(() => {
         const loadCrmSettings = async () => {
             try {
                 const { data } = await supabase
@@ -370,7 +454,6 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 console.error("Error loading active promotions:", err);
             }
         };
-        loadDefaultVat();
         loadCrmSettings();
         fetchActivePromotions();
     }, []);
@@ -562,7 +645,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     }, [useFreeDrinkQuota, order.items, isItemDrinkStampEligible]);
 
     const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount - freeDrinkDiscount));
-    const tax = includeTax ? Math.ceil(netBeforeTax * 0.07) : 0;
+    const tax = includeTax ? Math.ceil((netBeforeTax * 7) / 100) : 0;
     
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
     const splitPaidAmount = getSplitTotalPaid(booking);
@@ -1261,14 +1344,21 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         <div className="flex items-center gap-2">
                             <span>VAT (7%)</span>
                             <button 
-                                onClick={() => setIncludeTax(!includeTax)}
+                                onClick={() => {
+                                    setIncludeTax(prev => {
+                                        const next = !prev;
+                                        const tableKey = booking?.id || booking?.table_id || 'counter';
+                                        tableVatOverridesRef.current.set(tableKey, next);
+                                        return next;
+                                    });
+                                }}
                                 className={`w-8 h-4 rounded-full transition-colors relative flex items-center cursor-pointer touch-manipulation ${includeTax ? 'bg-[oklch(52%_0.16_28)]' : 'bg-black/20'}`}
                             >
                                 <div className={`absolute w-3 h-3 bg-white rounded-full transition-transform ${includeTax ? 'translate-x-4' : 'translate-x-0.5'}`} />
                             </button>
                         </div>
                         <span className={`font-bold ${includeTax ? 'text-[#1A1A1A]' : 'text-gray-400 line-through'}`}>
-                            ฿{Math.ceil(netBeforeTax * 0.07).toLocaleString()}
+                            {includeTax ? `฿${Math.ceil((netBeforeTax * 7) / 100).toLocaleString()}` : '฿0'}
                         </span>
                     </div>
 

@@ -717,7 +717,16 @@ export function resolveReceiptTotals(booking, receiptConfig = {}, itemsToRender 
         cfg = getPrinterConfig() || {};
     } catch (e) {}
 
-    const vatMode = (receiptConfig.vat_mode || cfg.vat_mode || 'none').toLowerCase(); // 'none' | 'inclusive' | 'exclusive'
+    let isDefaultVatEnabled = true;
+    try {
+        const cached = localStorage.getItem('pos_default_vat_enabled');
+        if (cached !== null) isDefaultVatEnabled = cached === 'true';
+    } catch (e) {}
+
+    const isTaxExplicitlyDisabled = booking?.include_tax === false;
+    const fallbackVatMode = isDefaultVatEnabled ? 'inclusive' : 'none';
+    const rawVatMode = (receiptConfig.vat_mode || cfg.vat_mode || fallbackVatMode).toLowerCase();
+    const vatMode = isTaxExplicitlyDisabled ? 'none' : rawVatMode;
     let vatCents = 0;
     let totalCents = netAfterDiscountCents;
 

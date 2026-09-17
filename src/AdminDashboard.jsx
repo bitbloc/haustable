@@ -52,6 +52,25 @@ export default function AdminDashboard() {
         selectedDateRef.current = selectedDate
     }, [selectedDate])
 
+    useEffect(() => {
+        const loadTaxSettings = async () => {
+            try {
+                const { data } = await supabase.from('app_settings').select('key, value');
+                if (data && data.length > 0) {
+                    const settingsMap = data.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+                    setCompanySettings(settingsMap);
+                    try {
+                        localStorage.setItem('onhaus_tax_settings', JSON.stringify(settingsMap));
+                        if (settingsMap.default_vat_enabled !== undefined) {
+                            localStorage.setItem('pos_default_vat_enabled', String(settingsMap.default_vat_enabled));
+                        }
+                    } catch (e) {}
+                }
+            } catch (err) {}
+        };
+        loadTaxSettings();
+    }, [])
+
     const fetchData = async (isSilent = false, overrideDate = null) => {
         const queryDate = overrideDate || selectedDateRef.current
         const requestId = ++activeRequestIdRef.current
@@ -106,7 +125,7 @@ export default function AdminDashboard() {
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
-                .in('status', ['seated', 'confirmed'])
+                .in('status', ['seated', 'confirmed', 'ready'])
                 .order('booking_time', { ascending: false })
 
             // 4. Fetch Shifts for queryDate (all shifts opened or closed on this date, plus currently open shift if today)
@@ -303,13 +322,13 @@ export default function AdminDashboard() {
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
             // When viewing today, include currently seated active tables even if opened before midnight
-            const isCurrentSeated = isToday && b.status === 'seated'
+            const isCurrentSeated = isToday && (b.status === 'seated' || (b.status === 'ready' && b.booking_type !== 'pickup'))
             return isDateMatch || isCurrentSeated
         }).sort((a, b) => {
             const getPriority = (st) => {
                 if (st === 'seated') return 1
                 if (st === 'pending') return 2
-                if (st === 'confirmed') return 3
+                if (st === 'confirmed' || st === 'ready') return 3
                 if (st === 'completed' || st === 'paid' || st === 'success') return 4
                 return 5
             }
@@ -350,7 +369,7 @@ export default function AdminDashboard() {
         dailyBookings.forEach(b => {
             const amount = Number(b.total_amount || b.total_price || 0)
             const isCompleted = b.status === 'completed' || b.status === 'paid' || b.status === 'success'
-            const isActiveUnpaid = b.status === 'seated' || b.status === 'confirmed'
+            const isActiveUnpaid = b.status === 'seated' || b.status === 'confirmed' || b.status === 'ready'
 
             if (isCompleted) {
                 rev += amount

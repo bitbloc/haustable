@@ -264,6 +264,11 @@ export default function AdminSettings() {
             if (map.crm_tiers_config) {
                 setEditableTiers(parseTiersConfig(map.crm_tiers_config));
             }
+            if (map.default_vat_enabled !== undefined) {
+                try {
+                    localStorage.setItem('pos_default_vat_enabled', String(map.default_vat_enabled));
+                } catch (e) {}
+            }
         }
 
         const { data: bd } = await supabase.from('blocked_dates').select('*').order('blocked_date', { ascending: true });
@@ -272,6 +277,18 @@ export default function AdminSettings() {
 
     const handleSave = async (key, value) => {
         setSettings(prev => ({ ...prev, [key]: value }));
+        if (key === 'default_vat_enabled') {
+            try {
+                localStorage.setItem('pos_default_vat_enabled', String(value));
+            } catch (e) {}
+            if (typeof BroadcastChannel !== 'undefined') {
+                try {
+                    const syncChan = new BroadcastChannel('onhaus_pos_sync');
+                    syncChan.postMessage({ type: 'VAT_SETTING_CHANGED', value: String(value) });
+                    syncChan.close();
+                } catch (e) {}
+            }
+        }
         try {
             const { error } = await supabase.from('app_settings').upsert({ key, value: String(value) });
             if (error) throw error;
