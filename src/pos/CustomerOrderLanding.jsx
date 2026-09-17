@@ -216,16 +216,22 @@ export default function CustomerOrderLanding() {
 
     // Live Fetch Menu Items & Categories
     const fetchMenuData = useCallback(async () => {
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Fetch menu timeout (12s)')), 12000)
+        );
+
         try {
-            const [catRes, itemRes] = await Promise.all([
+            const queryPromise = Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
                 supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
             ]);
+
+            const [catRes, itemRes] = await Promise.race([queryPromise, timeoutPromise]);
             
-            if (catRes.data) {
+            if (catRes?.data && Array.isArray(catRes.data) && catRes.data.length > 0) {
                 setCategories(catRes.data);
             }
-            if (itemRes.data) {
+            if (itemRes?.data && Array.isArray(itemRes.data) && itemRes.data.length > 0) {
                 const sortedItems = (itemRes.data || []).sort((a, b) => {
                     const recA = a.is_recommended === true;
                     const recB = b.is_recommended === true;

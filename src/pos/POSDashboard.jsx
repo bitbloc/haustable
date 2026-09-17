@@ -179,7 +179,7 @@ export default function POSDashboard() {
         if (refreshDebounceRef.current) clearTimeout(refreshDebounceRef.current);
         refreshDebounceRef.current = setTimeout(() => {
             setRefreshKey(prev => prev + 1);
-        }, 350);
+        }, 100);
     }, []);
 
     // Move / Merge / Split States
@@ -264,6 +264,7 @@ export default function POSDashboard() {
     const [onlinePendingCount, setOnlinePendingCount] = useState(0);
     const [showPendingModal, setShowPendingModal] = useState(false);
     const prevPendingCountRef = useRef(0);
+    const prevPendingSignatureRef = useRef('');
 
     // CRM Profile Attach States
     const [showAttachCRMModal, setShowAttachCRMModal] = useState(false);
@@ -926,32 +927,37 @@ export default function POSDashboard() {
                     return false;
                 });
 
-                setPendingBookingsList(pendingOnly);
-                const count = pendingOnly.length;
-                const hasPending = count > 0;
-                setHasPendingOrders(hasPending);
+                // Only trigger state updates if pending bookings signature actually changed (avoids 15-second re-render storms)
+                const newIdsSignature = pendingOnly.map(b => `${b.id}:${b.status}:${b.payment_slip_url ? 1 : 0}`).join('|');
+                if (newIdsSignature !== prevPendingSignatureRef.current) {
+                    prevPendingSignatureRef.current = newIdsSignature;
+                    setPendingBookingsList(pendingOnly);
+                    const count = pendingOnly.length;
+                    const hasPending = count > 0;
+                    setHasPendingOrders(hasPending);
 
-                // Calculate online/pickup/slip pending count for sidebar badge
-                const onlineCount = pendingOnly.filter(b => {
-                    const sourceLower = (b.source || '').toLowerCase();
-                    const remarkLower = (b.staff_remark || '').toLowerCase();
-                    const nameLower = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
-                    const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
-                    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || (b.order_type || '').startsWith('hausmade');
-                    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
-                    if (isExplicitInHouse) return false;
-                    const isOnline = isLineman || hasOnlineMarker || ((b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse);
-                    return isOnline;
-                }).length;
-                setOnlinePendingCount(onlineCount);
+                    // Calculate online/pickup/slip pending count for sidebar badge
+                    const onlineCount = pendingOnly.filter(b => {
+                        const sourceLower = (b.source || '').toLowerCase();
+                        const remarkLower = (b.staff_remark || '').toLowerCase();
+                        const nameLower = (b.profiles?.display_name || b.pickup_contact_name || b.customer_name || '').toLowerCase();
+                        const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || nameLower.includes('line man') || nameLower.startsWith('lm-');
+                        const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || (b.order_type || '').startsWith('hausmade');
+                        const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
+                        if (isExplicitInHouse) return false;
+                        const isOnline = isLineman || hasOnlineMarker || ((b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse);
+                        return isOnline;
+                    }).length;
+                    setOnlinePendingCount(onlineCount);
 
-                // Auto trigger pop-up overlay if new pending bookings arrive
-                if (count !== prevPendingCountRef.current) {
-                    if (count > prevPendingCountRef.current) {
-                        setShowPendingModal(true);
+                    // Auto trigger pop-up overlay if new pending bookings arrive
+                    if (count !== prevPendingCountRef.current) {
+                        if (count > prevPendingCountRef.current) {
+                            setShowPendingModal(true);
+                        }
+                        prevPendingCountRef.current = count;
+                        setRefreshKey(prev => prev + 1);
                     }
-                    prevPendingCountRef.current = count;
-                    setRefreshKey(prev => prev + 1);
                 }
             }
         } catch (err) {
@@ -2525,36 +2531,59 @@ export default function POSDashboard() {
     }, []);
 
     const handleClearOrderOrTable = async () => {
+        const targetTableId = activeBooking?.table_id || selectedTable?.id;
         if (activeBooking) {
             const isConfirmed = window.confirm(`⚠️ คุณต้องการยกเลิกบิล / เคลียร์โต๊ะนี้ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นยกเลิก (Void) และคืนค่าโต๊ะเป็นว่างทันที`);
             if (isConfirmed) {
+                // 0ms Optimistic UI update: Turn table free in POSTableGrid immediately
+                if (targetTableId) {
+                    window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
+                }
+
                 const toastId = toast.loading('กำลังยกเลิกบิลและเคลียร์โต๊ะ...');
                 try {
                     const bookingId = activeBooking.id;
                     const isLocal = typeof bookingId === 'string' && bookingId.startsWith('local_');
 
                     if (!isLocal && isOnline()) {
-                        const { error } = await supabase
+                        // Void the active booking
+                        await supabase
                             .from('bookings')
                             .update({ status: 'void' })
                             .eq('id', bookingId);
-                        if (error) console.warn("Supabase void error:", error);
+
+                        // Also void any lingering orphaned/pending/seated bookings on this table to guarantee table stays free
+                        if (targetTableId) {
+                            await supabase
+                                .from('bookings')
+                                .update({ status: 'void' })
+                                .eq('table_id', targetTableId)
+                                .in('status', ['pending', 'seated', 'confirmed']);
+                        }
                     } else {
-                        addToOfflineQueue('void_booking', { bookingId });
+                        addToOfflineQueue('void_booking', { bookingId, tableId: targetTableId });
                     }
                     
                     // Void in active shift transactions if present
                     voidShiftTransaction(bookingId);
 
-                    // Update posCache active bookings
+                    // Update posCache: thoroughly purge all bookings matching targetTableId
                     try {
-                        const cached = posCache.getBookings().filter(b => b.id !== bookingId);
+                        const cached = (posCache.getBookings() || []).filter(b => {
+                            if (b.id === bookingId) return false;
+                            if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                            return true;
+                        });
                         posCache.setBookings(cached);
                     } catch (e) {}
 
                     // Update localStorage pos_cache_active_bookings
                     try {
-                        const cached = JSON.parse(localStorage.getItem('pos_cache_active_bookings') || '[]').filter(b => b.id !== bookingId);
+                        const cached = JSON.parse(localStorage.getItem('pos_cache_active_bookings') || '[]').filter(b => {
+                            if (b.id === bookingId) return false;
+                            if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                            return true;
+                        });
                         localStorage.setItem('pos_cache_active_bookings', JSON.stringify(cached));
                     } catch (e) {}
                     
@@ -2583,7 +2612,23 @@ export default function POSDashboard() {
                 }
             }
         } else {
-            // Cart has unsaved items only, no active booking in DB -> completely reset table state
+            // Cart has unsaved items only or table session was still loading -> completely reset table state
+            if (targetTableId) {
+                window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
+                if (isOnline()) {
+                    // Safety clean any unclosed bookings for this table in DB
+                    supabase
+                        .from('bookings')
+                        .update({ status: 'void' })
+                        .eq('table_id', targetTableId)
+                        .in('status', ['pending', 'seated', 'confirmed'])
+                        .then(() => {}).catch(() => {});
+                }
+                try {
+                    const cached = (posCache.getBookings() || []).filter(b => String(b.table_id) !== String(targetTableId));
+                    posCache.setBookings(cached);
+                } catch (e) {}
+            }
             localStorage.removeItem('pos_active_table_id');
             setCurrentOrder({ items: [], customer: null, table: null });
             setSelectedTable(null);
@@ -2921,9 +2966,19 @@ export default function POSDashboard() {
 
             openSlipOrSilentPrint(printBookingData, 'receipt');
 
-            // Remove booking from local active bookings cache immediately
+            // 0ms Optimistic clearance broadcast for instant table color change
+            const targetTableId = selectedTable?.id || currentBooking?.table_id || completedBooking?.table_id;
+            if (targetTableId) {
+                window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
+            }
+
+            // Remove booking and any lingering bookings on that table from local active bookings cache immediately
             try {
-                const cached = (posCache.getBookings() || []).filter(b => b.id !== bookingId);
+                const cached = (posCache.getBookings() || []).filter(b => {
+                    if (b.id === bookingId) return false;
+                    if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                    return true;
+                });
                 posCache.setBookings(cached);
             } catch (e) {}
 
@@ -3539,7 +3594,11 @@ export default function POSDashboard() {
                             />
                         </div>
                         <div className={view === 'menu' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
-                            <POSMenuGrid onAddItem={handleAddToOrder} />
+                            <POSMenuGrid 
+                                isActive={view === 'menu'} 
+                                refreshKey={refreshKey} 
+                                onAddItem={handleAddToOrder} 
+                            />
                         </div>
 
                         {/* Extended panels with layer isolation */}

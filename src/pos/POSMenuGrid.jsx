@@ -7,9 +7,9 @@ import POSEmergencyItemModal from './POSEmergencyItemModal';
 import { getAllCachedImages, syncAllMenuImages } from '../utils/imageStore';
 import { posCache } from '../utils/offlineHelper';
 
-const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
+const POSMenuGrid = memo(function POSMenuGrid({ onAddItem, isActive = true, refreshKey = 0 }) {
     const [categories, setCategories] = useState([]);
-    const [activeCategory, setActiveCategory] = useState(null);
+    const [activeCategory, setActiveCategory] = useState('all');
     const [menuItems, setMenuItems] = useState([]);
     const [searchInput, setSearchInput] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -39,10 +39,9 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         try {
             const cachedCats = posCache.getCategories() || [];
             const cachedItems = posCache.getMenuItems() || [];
-            if (cachedItems.length > 0 && Array.isArray(cachedItems[0]?.menu_item_options)) {
+            if (cachedItems.length > 0) {
                 setCategories(cachedCats);
                 setMenuItems(cachedItems);
-                setActiveCategory(cachedCats[0]?.id || 'all');
                 setLoading(false);
             }
         } catch (e) {
@@ -70,42 +69,104 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
                 }
             });
 
+        const handleOnline = () => {
+            console.log('⚡ [POS Menu] Network restored online. Re-fetching menu catalog...');
+            fetchData(false);
+        };
+
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                fetchData(false);
+            }
+        };
+
+        window.addEventListener('online', handleOnline);
+        document.addEventListener('visibilitychange', handleVisibility);
+
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer);
             supabase.removeChannel(menuChangesSub);
+            window.removeEventListener('online', handleOnline);
+            document.removeEventListener('visibilitychange', handleVisibility);
         };
     }, []);
 
+    // Re-fetch when panel becomes active if items are missing
+    useEffect(() => {
+        if (isActive && menuItems.length === 0) {
+            fetchData(true);
+        }
+    }, [isActive]);
+
+    // Re-fetch on global POS refreshKey trigger
+    useEffect(() => {
+        if (refreshKey > 0) {
+            fetchData(false);
+        }
+    }, [refreshKey]);
+
     const fetchData = async (showLoading = true) => {
         if (showLoading && menuItems.length === 0) setLoading(true);
+        
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Fetch timeout (12s)')), 12000)
+        );
+
         try {
-            const [catRes, itemRes] = await Promise.all([
+            const queryPromise = Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
                 supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
             ]);
 
-            const cats = catRes.data || [];
-            const items = itemRes.data || [];
+            const [catRes, itemRes] = await Promise.race([queryPromise, timeoutPromise]);
 
-            setCategories(cats);
-            setMenuItems(items);
+            if (catRes?.error) {
+                console.warn('[POS Menu] Category fetch error:', catRes.error);
+            }
+            if (itemRes?.error) {
+                console.warn('[POS Menu] Item fetch error:', itemRes.error);
+            }
 
-            posCache.setCategories(cats);
-            posCache.setMenuItems(items);
+            const cats = catRes?.data;
+            const items = itemRes?.data;
 
-            // Broadcast menu update event so POS active carts can auto-sync prices immediately
-            window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));
+            // Strict safety: DO NOT wipe local cache if query returns null/error!
+            if (Array.isArray(cats) && cats.length > 0) {
+                setCategories(cats);
+                posCache.setCategories(cats);
+            } else if (categories.length === 0) {
+                const cachedC = posCache.getCategories() || [];
+                if (cachedC.length > 0) setCategories(cachedC);
+            }
 
-            setActiveCategory(prev => prev || cats[0]?.id || 'all');
+            if (Array.isArray(items) && items.length > 0) {
+                setMenuItems(items);
+                posCache.setMenuItems(items);
 
-            // Background sync images to IndexedDB on initial online fetch (non-blocking)
-            syncAllMenuImages(items).then(result => {
-                if (result.map && Object.keys(result.map).length > 0) {
-                    setLocalImageMap(prev => ({ ...prev, ...result.map }));
-                }
-            }).catch(() => {});
+                // Broadcast menu update event so POS active carts can auto-sync prices immediately
+                window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats || categories } }));
+
+                // Instant non-blocking image load from IndexedDB using single cursor (<20ms)
+                getAllCachedImages().then(map => {
+                    if (map && Object.keys(map).length > 0) {
+                        setLocalImageMap(prev => ({ ...prev, ...map }));
+                    }
+                }).catch(() => {});
+            } else if (menuItems.length === 0) {
+                const cachedI = posCache.getMenuItems() || [];
+                if (cachedI.length > 0) setMenuItems(cachedI);
+            }
         } catch (err) {
             console.warn('[Offline Mode] Failed to fetch menu items online, keeping existing cache state:', err);
+            // Fallback to local cache if state is currently empty
+            if (menuItems.length === 0) {
+                const cachedItems = posCache.getMenuItems() || [];
+                if (cachedItems.length > 0) setMenuItems(cachedItems);
+            }
+            if (categories.length === 0) {
+                const cachedCats = posCache.getCategories() || [];
+                if (cachedCats.length > 0) setCategories(cachedCats);
+            }
         } finally {
             setLoading(false);
         }
@@ -117,45 +178,52 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         setIsSyncing(true);
         setSyncProgress({ completed: 0, total: 0 });
 
-        if (!navigator.onLine) {
-            toast.error('⚠️ ไม่มีสัญญาณอินเทอร์เน็ต ใช้ข้อมูลและรูปภาพที่บันทึกไว้ล่าสุด');
-            setIsSyncing(false);
-            return;
-        }
+        const toastId = toast.loading('กำลังดึงข้อมูลเมนูล่าสุดจากระบบ...');
 
         try {
-            const [catRes, itemRes] = await Promise.all([
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout (12s)')), 12000)
+            );
+            const queryPromise = Promise.all([
                 supabase.from('menu_categories').select('*').order('display_order'),
                 supabase.from('menu_items').select('*, menu_item_options(*, option_groups(*, option_choices(*)))').eq('is_available', true).order('name')
             ]);
 
-            if (catRes.error) throw catRes.error;
-            if (itemRes.error) throw itemRes.error;
+            const [catRes, itemRes] = await Promise.race([queryPromise, timeoutPromise]);
 
-            const cats = catRes.data || [];
-            const items = itemRes.data || [];
+            if (catRes?.error) throw catRes.error;
+            if (itemRes?.error) throw itemRes.error;
 
-            setCategories(cats);
-            setMenuItems(items);
-            localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
-            localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+            const cats = catRes?.data || [];
+            const items = itemRes?.data || [];
 
-            // Broadcast menu update event to POSDashboard
-            window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));
-
-            // Sync images locally into IndexedDB with progress callback
-            const { map } = await syncAllMenuImages(items, (completed, total) => {
-                setSyncProgress({ completed, total });
-            });
-
-            if (map && Object.keys(map).length > 0) {
-                setLocalImageMap(prev => ({ ...prev, ...map }));
+            if (cats.length > 0) {
+                setCategories(cats);
+                posCache.setCategories(cats);
+                localStorage.setItem('pos_cache_menu_categories', JSON.stringify(cats));
             }
+            if (items.length > 0) {
+                setMenuItems(items);
+                posCache.setMenuItems(items);
+                localStorage.setItem('pos_cache_menu_items', JSON.stringify(items));
+                window.dispatchEvent(new CustomEvent('pos-menu-updated', { detail: { items, categories: cats } }));
 
-            toast.success(`✅ อัพเดทข้อมูลและบันทึกรูปภาพเมนูเรียบร้อยแล้ว (${items.length} รายการ)`);
+                // Sync images locally into IndexedDB with progress callback
+                const { map } = await syncAllMenuImages(items, (completed, total) => {
+                    setSyncProgress({ completed, total });
+                });
+
+                if (map && Object.keys(map).length > 0) {
+                    setLocalImageMap(prev => ({ ...prev, ...map }));
+                }
+
+                toast.success(`อัพเดทข้อมูลเมนูเรียบร้อยแล้ว (${items.length} รายการ)`, { id: toastId });
+            } else {
+                toast.info('ไม่พบรายการเมนูเพิ่มเติมในระบบ', { id: toastId });
+            }
         } catch (err) {
             console.error('Failed manual sync:', err);
-            toast.error('❌ ไม่สามารถเชื่อมต่อฐานข้อมูลได้ ใช้ข้อมูลเมนูในเครื่องล่าสุด');
+            toast.error('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ ใช้ข้อมูลเมนูในเครื่องล่าสุด', { id: toastId });
         } finally {
             setIsSyncing(false);
         }
@@ -186,13 +254,16 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
         return map;
     }, [menuItems]);
 
-    // O(1) Filtered items lookup
+    // O(1) Filtered items lookup: Global search across all items when user types
     const filteredItems = useMemo(() => {
-        const catItems = itemsByCategoryMap.get(activeCategory) || itemsByCategoryMap.get('all') || [];
         const query = debouncedSearch.trim().toLowerCase();
-        if (!query) return catItems;
-        return catItems.filter(item => item.name.toLowerCase().includes(query));
-    }, [itemsByCategoryMap, activeCategory, debouncedSearch]);
+        if (query) {
+            const allItems = itemsByCategoryMap.get('all') || menuItems;
+            return allItems.filter(item => (item.name || '').toLowerCase().includes(query));
+        }
+        const catItems = itemsByCategoryMap.get(activeCategory) || itemsByCategoryMap.get('all') || [];
+        return catItems;
+    }, [itemsByCategoryMap, activeCategory, debouncedSearch, menuItems]);
 
     if (loading) return (
         <div className="flex h-full items-center justify-center bg-[var(--color-paper)]">
@@ -245,33 +316,84 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem }) {
 
                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <CategoryButton 
-                        label="ALL ITEMS" 
+                        label={`ALL ITEMS (${menuItems.length})`} 
                         active={activeCategory === 'all'} 
                         onClick={() => setActiveCategory('all')} 
                     />
-                    {categories.map(cat => (
-                        <CategoryButton 
-                            key={cat.id} 
-                            label={cat.name} 
-                            active={activeCategory === cat.id} 
-                            onClick={() => setActiveCategory(cat.id)} 
-                        />
-                    ))}
+                    {categories.map(cat => {
+                        const count = (itemsByCategoryMap.get(cat.id) || []).length;
+                        return (
+                            <CategoryButton 
+                                key={cat.id} 
+                                label={`${cat.name} (${count})`} 
+                                active={activeCategory === cat.id} 
+                                onClick={() => setActiveCategory(cat.id)} 
+                            />
+                        );
+                    })}
                 </div>
             </div>
 
             {/* Menu Items Grid */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-none pos-menu-grid-scroll">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
-                    {filteredItems.map(item => (
-                        <MenuItemCard 
-                            key={item.id}
-                            item={item}
-                            cachedImg={(item.image_url && localImageMap[item.image_url]) || item.image_url}
-                            onClick={handleItemClick}
-                        />
-                    ))}
-                </div>
+                {filteredItems.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+                        {filteredItems.map(item => (
+                            <MenuItemCard 
+                                key={item.id}
+                                item={item}
+                                cachedImg={(item.image_url && localImageMap[item.image_url]) || item.image_url}
+                                onClick={handleItemClick}
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center p-8">
+                        {debouncedSearch.trim() ? (
+                            <div className="space-y-3">
+                                <p className="text-sm font-bold text-[var(--color-ink)]">
+                                    ไม่พบเมนูที่ค้นหา "{debouncedSearch}"
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchInput('')}
+                                    className="px-4 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md text-xs font-mono font-bold text-[var(--color-ink)] hover:bg-[var(--color-rule)] transition-colors cursor-pointer"
+                                >
+                                    ล้างคำค้นหา
+                                </button>
+                            </div>
+                        ) : menuItems.length === 0 ? (
+                            <div className="space-y-3 max-w-xs">
+                                <p className="text-sm font-bold text-[var(--color-ink)]">
+                                    ยังไม่พบข้อมูลเมนูอาหารในเครื่อง
+                                </p>
+                                <p className="text-xs text-[var(--color-muted)] font-mono">
+                                    แตะปุ่มด้านล่างเพื่อดึงข้อมูลเมนูล่าสุดจากระบบ
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => fetchData(true)}
+                                    className="px-5 py-2.5 bg-[var(--color-ink)] text-[var(--color-paper)] rounded-md text-xs font-mono font-bold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer shadow-xs active:scale-95"
+                                >
+                                    🔄 ดึงข้อมูลเมนูใหม่ (REFETCH)
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <p className="text-sm font-bold text-[var(--color-ink)]">
+                                    ไม่มีรายการเมนูในหมวดหมู่นี้
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveCategory('all')}
+                                    className="px-4 py-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md text-xs font-mono font-bold text-[var(--color-ink)] hover:bg-[var(--color-rule)] transition-colors cursor-pointer"
+                                >
+                                    ดูเมนูทั้งหมด (ALL ITEMS)
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Modal for selecting option groups */}

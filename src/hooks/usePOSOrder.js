@@ -4,6 +4,37 @@ import { toast } from 'sonner';
 import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue } from '../utils/offlineHelper';
 import { recordShiftTransaction } from '../utils/shiftHelper';
 
+/**
+ * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
+ */
+function isBookingSessionActive(b, startOfToday, endOfToday, now) {
+    if (!b) return false;
+    if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+
+    // Safety age limit: session cannot exceed 16 hours
+    if (b.booking_time) {
+        const bTime = new Date(b.booking_time);
+        const ageMs = now.getTime() - bTime.getTime();
+        if (ageMs > 16 * 60 * 60 * 1000) return false;
+    }
+
+    const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+    const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+
+    if (b.status === 'seated') {
+        // Seated booking must be today or at most 12 hours old
+        return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
+    }
+    if (isToday && b.status === 'ready') return true;
+    if (isToday && b.status === 'confirmed') {
+        const bTime = new Date(b.booking_time);
+        const diffMins = (bTime.getTime() - now.getTime()) / 60000;
+        if (diffMins <= 30 && diffMins >= -120) return true;
+    }
+    if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
+    return false;
+}
+
 export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
 
@@ -18,11 +49,7 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const booking = bookings.find(b => {
                 if (String(b.table_id) !== String(tableId)) return false;
-                if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
-                if (b.status === 'seated') return true;
-                const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                return isToday && isWalkInOrQR;
+                return isBookingSessionActive(b, startOfToday, endOfToday, now);
             });
             return booking || null;
         }
@@ -42,20 +69,8 @@ export function usePOSOrder() {
                 }
             }
 
-            // Find the booking actively occupying this table in-store
-            const data = (candidates || []).find(b => {
-                if (b.status === 'seated') return true;
-                const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                if (isWalkInOrQR && isToday) return true;
-                if (isToday && ['seated', 'ready'].includes(b.status)) return true;
-                if (isToday && b.status === 'confirmed') {
-                    const bTime = new Date(b.booking_time);
-                    const diffMins = (bTime.getTime() - now.getTime()) / 60000;
-                    if (diffMins <= 30 && diffMins >= -120) return true;
-                }
-                return false;
-            }) || null;
+            // Find the booking actively occupying this table in-store (strictly fresh)
+            const data = (candidates || []).find(b => isBookingSessionActive(b, startOfToday, endOfToday, now)) || null;
 
             if (data) {
                 // Update local bookings cache
@@ -71,7 +86,7 @@ export function usePOSOrder() {
         } catch (err) {
             console.error('Network error fetching booking, fallback to cache:', err);
             const bookings = posCache.getBookings();
-            return bookings.find(b => String(b.table_id) === String(tableId) && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show') || null;
+            return bookings.find(b => String(b.table_id) === String(tableId) && isBookingSessionActive(b, startOfToday, endOfToday, now)) || null;
         }
     }, []);
 
@@ -739,8 +754,15 @@ export function usePOSOrder() {
 
             setLoading(false);
             
-            // Remove from local active bookings cache
-            const bookings = posCache.getBookings().filter(b => b.id !== bookingId);
+            // Remove from local active bookings cache (including any stale bookings on that table)
+            const currentCached = posCache.getBookings() || [];
+            const targetB = currentCached.find(b => b.id === bookingId);
+            const targetTableId = targetB?.table_id;
+            const bookings = currentCached.filter(b => {
+                if (b.id === bookingId) return false;
+                if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                return true;
+            });
             posCache.setBookings(bookings);
 
             // Record in current shift

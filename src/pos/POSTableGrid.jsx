@@ -46,6 +46,37 @@ const formatUpcomingResTime = (timeStr) => {
     }
 };
 
+/**
+ * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
+ */
+function isTableSessionActive(b, startOfToday, endOfToday, now) {
+    if (!b) return false;
+    if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+
+    // Safety age limit: session cannot exceed 16 hours
+    if (b.booking_time) {
+        const bTime = new Date(b.booking_time);
+        const ageMs = now.getTime() - bTime.getTime();
+        if (ageMs > 16 * 60 * 60 * 1000) return false;
+    }
+
+    const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+    const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+
+    if (b.status === 'seated') {
+        // Seated booking must be today or at most 12 hours old
+        return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
+    }
+    if (isToday && b.status === 'ready') return true;
+    if (isToday && b.status === 'confirmed') {
+        const bTime = new Date(b.booking_time);
+        const diffMins = (bTime.getTime() - now.getTime()) / 60000;
+        if (diffMins <= 30 && diffMins >= -120) return true;
+    }
+    if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
+    return false;
+}
+
 const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -107,12 +138,18 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 setFloorplanUrl(safeTimestampUrl(cachedFloorplan));
             }
             if (cachedTables.length > 0) {
+                const now = new Date();
+                const today = new Date();
+                const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+                const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
                 const merged = cachedTables.map(t => {
-                    const booking = cachedBookings.find(b => String(b.table_id) === String(t.id) && b.status !== 'completed' && b.status !== 'void' && b.status !== 'cancelled' && b.status !== 'no_show');
+                    const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
+                    const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
                     return {
                         ...t,
                         status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                        booking: booking
+                        booking: booking || null
                     };
                 });
                 setTables(merged);
@@ -124,6 +161,21 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         fetchTables();
         fetchFloorplan();
+
+        // 0ms Optimistic clearance listener (dispatched on checkout or table void)
+        const handleTableCleared = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? {
+                    ...t,
+                    status: 'free',
+                    booking: null,
+                    hasNewOrder: false,
+                    upcomingConflict: null
+                } : t));
+            }
+        };
+        window.addEventListener('pos_table_cleared', handleTableCleared);
 
         const settingsSub = supabase.channel('pos-app-settings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
@@ -164,6 +216,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         window.addEventListener('online', fetchTables);
 
         return () => {
+            window.removeEventListener('pos_table_cleared', handleTableCleared);
             supabase.removeChannel(settingsSub);
             supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
@@ -223,16 +276,23 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                 const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 23, 59, 59, 999).toISOString();
 
-                const { data: tablesData, error: tablesErr } = await supabase.from('tables_layout').select('*').order('table_name');
+                // 10s Timeout Guard to protect against slow/hanging network connections
+                const queryPromise = Promise.all([
+                    supabase.from('tables_layout').select('*').order('table_name'),
+                    supabase.from('bookings')
+                        .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, payment_slip_url, tracking_token, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
+                        .in('status', ['pending', 'seated', 'confirmed', 'ready'])
+                        .gte('booking_time', startOfYesterday)
+                        .lte('booking_time', endOfTomorrow)
+                        .order('booking_time', { ascending: false })
+                ]);
+
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Fetch tables timeout (10s)')), 10000)
+                );
+
+                const [{ data: tablesData, error: tablesErr }, { data: activeBookings, error: bookingsErr }] = await Promise.race([queryPromise, timeoutPromise]);
                 if (tablesErr) throw tablesErr;
-                
-                // Fetch active pending, seated, confirmed, ready bookings with items from yesterday to upcoming slots
-                const { data: activeBookings, error: bookingsErr } = await supabase
-                    .from('bookings')
-                    .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, payment_slip_url, tracking_token, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
-                    .in('status', ['pending', 'seated', 'confirmed', 'ready'])
-                    .gte('booking_time', startOfYesterday)
-                    .lte('booking_time', endOfTomorrow);
                 if (bookingsErr) throw bookingsErr;
 
                 const currentTables = tablesData || [];
@@ -259,25 +319,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const merged = currentTables.map(t => {
                     const tableBookings = currentBookings.filter(b => String(b.table_id) === String(t.id) && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
 
-                    // 1. Actively occupying in-store dining booking
-                    let hasActiveWalkInOrQR = false;
-                    const activeBooking = tableBookings.find(b => {
-                        if (b.status === 'seated') return true;
-                        const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                        if (isWalkInOrQR && isToday) {
-                            hasActiveWalkInOrQR = true;
-                            return true;
-                        }
-                        if (isToday && ['seated', 'ready'].includes(b.status)) return true;
-                        if (isToday && b.status === 'confirmed') {
-                            const bTime = new Date(b.booking_time);
-                            const diffMins = (bTime.getTime() - now.getTime()) / 60000;
-                            if (diffMins <= 30 && diffMins >= -120) return true;
-                        }
-                        if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
-                        return false;
-                    });
+                    // 1. Actively occupying in-store dining booking (strictly validated against stale/past-day sessions)
+                    const activeBooking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
 
                     // Check for unacknowledged new order items on this table (within last 5 min and after table ack)
                     const items = activeBooking?.order_items || [];
@@ -330,17 +373,13 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const cachedTables = posCache.getTables() || [];
                     const cachedBookings = posCache.getBookings() || [];
                     const today = new Date();
+                    const now = new Date();
                     const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
                     const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
                     
                     const merged = cachedTables.map(t => {
                         const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
-                        const booking = tableBookings.find(b => {
-                            if (b.status === 'seated') return true;
-                            const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                            const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                            return isToday && isWalkInOrQR;
-                        });
+                        const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
                         const upcomingRes = tableBookings.find(b => {
                             if (b.id === booking?.id) return false;
                             const bTime = new Date(b.booking_time);
@@ -366,7 +405,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             } finally {
                 setLoading(false);
             }
-        }, 150);
+        }, 60);
     }, []);
 
     const filteredTables = useMemo(() => {
@@ -716,15 +755,15 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         
         if (hasCallStaff) {
             tableBgClass = 'animate-pos-blink-blue border-2';
-            ledColor = 'bg-[#0099FF] animate-ping';
+            ledColor = 'bg-[#0099FF] animate-pulse';
         }
         if (hasCallBill) {
             tableBgClass = 'animate-pos-blink-orange border-2';
-            ledColor = 'bg-[#FFAA00] animate-ping';
+            ledColor = 'bg-[#FFAA00] animate-pulse';
         }
         if (hasOrder) {
             tableBgClass = 'animate-pos-blink-red border-2';
-            ledColor = 'bg-red-500 animate-ping';
+            ledColor = 'bg-red-500 animate-pulse';
         }
     }
 
@@ -890,15 +929,15 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         
         if (hasCallStaff) {
             cellBgClass = 'animate-pos-blink-blue border-2';
-            ledColor = 'bg-[#0099FF] animate-ping';
+            ledColor = 'bg-[#0099FF] animate-pulse';
         }
         if (hasCallBill) {
             cellBgClass = 'animate-pos-blink-orange border-2';
-            ledColor = 'bg-[#FFAA00] animate-ping';
+            ledColor = 'bg-[#FFAA00] animate-pulse';
         }
         if (hasOrder) {
             cellBgClass = 'animate-pos-blink-red border-2';
-            ledColor = 'bg-red-500 animate-ping';
+            ledColor = 'bg-red-500 animate-pulse';
         }
     }
 
