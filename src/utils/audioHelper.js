@@ -905,55 +905,6 @@ export function playStaffCallAlert(eventKey = null) {
     return playBillSoundAlert(eventKey ? `call_staff_${eventKey}` : null, 1000, 3.4);
 }
 
-// ── Staff Call Sound Loop (Singleton) ──────────────────────────────────
-// Plays notibill.mp3 in a repeating loop every 4s until stopStaffCallLoop() is called.
-// Singleton pattern: only ONE loop can be active at a time.
-// If startStaffCallLoop() is called while already looping → no-op (idempotent).
-let _staffCallLoopIntervalId = null;
-let _staffCallLoopActive = false;
-
-/**
- * Start looping the staff call alert sound every 4 seconds.
- * Idempotent: calling while already looping is a safe no-op.
- */
-export function startStaffCallLoop() {
-    if (_staffCallLoopActive) return; // Already looping — singleton guard
-    _staffCallLoopActive = true;
-
-    // Play immediately on first trigger
-    playBillSoundAlert('staff_call_loop_tick', 200, 3.4);
-
-    // Then repeat every 4 seconds
-    _staffCallLoopIntervalId = setInterval(() => {
-        if (!_staffCallLoopActive) {
-            clearInterval(_staffCallLoopIntervalId);
-            _staffCallLoopIntervalId = null;
-            return;
-        }
-        // Reset the global throttle timestamp so repeated loop ticks are never suppressed
-        lastAlertPlayedTime = 0;
-        playBillSoundAlert('staff_call_loop_tick', 200, 3.4);
-    }, 4000);
-}
-
-/**
- * Stop the staff call sound loop immediately.
- */
-export function stopStaffCallLoop() {
-    _staffCallLoopActive = false;
-    if (_staffCallLoopIntervalId) {
-        clearInterval(_staffCallLoopIntervalId);
-        _staffCallLoopIntervalId = null;
-    }
-}
-
-/**
- * Check whether the staff call sound loop is currently active.
- */
-export function isStaffCallLooping() {
-    return _staffCallLoopActive;
-}
-
 /**
  * Bill Call Alert (Call Bill / Check Out) - Uses notibill.mp3
  */

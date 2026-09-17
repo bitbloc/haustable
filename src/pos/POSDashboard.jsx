@@ -25,8 +25,6 @@ import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifi
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
-    startStaffCallLoop,
-    stopStaffCallLoop,
     playBillAlert, 
     playSlipAlert, 
     playDoorbellAlert, 
@@ -1377,12 +1375,6 @@ export default function POSDashboard() {
                         refreshActiveBookingItems(bId);
                     }
 
-                    // 0ms Optimistic table color update
-                    if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId: tId } }));
-                        window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId } }));
-                    }
-
                     checkPendingOrders();
                     triggerDebouncedRefresh();
                 })
@@ -1408,11 +1400,7 @@ export default function POSDashboard() {
                             }
                         }), { id: callStaffKey, duration: 10000 });
                         pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
-                        startStaffCallLoop();
-                    }
-                    // 0ms Optimistic table color update
-                    if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId: tId } }));
+                        playStaffCallAlert(callStaffKey);
                     }
                     checkPendingOrders();
                     triggerDebouncedRefresh();
@@ -1440,10 +1428,6 @@ export default function POSDashboard() {
                         }), { id: callBillKey, duration: 10000 });
                         pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
                         playBillAlert(callBillKey);
-                    }
-                    // 0ms Optimistic table color update
-                    if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_call_bill', { detail: { tableId: tId } }));
                     }
                     checkPendingOrders();
                     triggerDebouncedRefresh();
@@ -1543,11 +1527,6 @@ export default function POSDashboard() {
 
                         if (tableId && (remarkLower.includes('qr walk-in') || remarkLower.includes('qr') || sourceLower === 'online' || sourceLower === 'qr')) {
                             scheduleAutoPrint(bookingId, tableName, 400);
-                        }
-
-                        // 0ms Optimistic table color update for INSERT
-                        if (tableId) {
-                            window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId } }));
                         }
 
                         if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isOnlinePickup || isOnlineBooking || isLineman) {
@@ -1675,11 +1654,7 @@ export default function POSDashboard() {
                                     }
                                 }), { id: callStaffKey, duration: 10000 });
                                 pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
-                                startStaffCallLoop();
-                            }
-                            // 0ms Optimistic table color update
-                            if (tableId) {
-                                window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId } }));
+                                playStaffCallAlert(callStaffKey);
                             }
                         }
 

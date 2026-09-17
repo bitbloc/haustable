@@ -177,64 +177,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         };
         window.addEventListener('pos_table_cleared', handleTableCleared);
 
-        // 0ms Optimistic table color change listeners (dispatched by POSDashboard broadcast handlers)
-        const handleTableOccupied = (e) => {
-            const tableId = e.detail?.tableId;
-            if (tableId) {
-                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? {
-                    ...t,
-                    status: t.status === 'free' || t.status === 'reserved' ? 'occupied' : t.status
-                } : t));
-            }
-        };
-        const handleTablePending = (e) => {
-            const tableId = e.detail?.tableId;
-            if (tableId) {
-                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? {
-                    ...t,
-                    status: 'pending',
-                    hasNewOrder: true
-                } : t));
-            }
-        };
-        const handleTableCallStaff = (e) => {
-            const tableId = e.detail?.tableId;
-            if (tableId) {
-                setTables(prev => prev.map(t => {
-                    if (String(t.id) !== String(tableId)) return t;
-                    const remark = t.booking?.staff_remark || '';
-                    return {
-                        ...t,
-                        booking: t.booking ? { ...t.booking, staff_remark: remark.includes('[CALL_STAFF]') ? remark : `[CALL_STAFF] ${remark}`.trim() } : t.booking
-                    };
-                }));
-            }
-        };
-        const handleTableCallBill = (e) => {
-            const tableId = e.detail?.tableId;
-            if (tableId) {
-                setTables(prev => prev.map(t => {
-                    if (String(t.id) !== String(tableId)) return t;
-                    const remark = t.booking?.staff_remark || '';
-                    return {
-                        ...t,
-                        booking: t.booking ? { ...t.booking, staff_remark: remark.includes('[CALL_BILL]') ? remark : `[CALL_BILL] ${remark}`.trim() } : t.booking
-                    };
-                }));
-            }
-        };
-        const handleTableNewOrder = (e) => {
-            const tableId = e.detail?.tableId;
-            if (tableId) {
-                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasNewOrder: true } : t));
-            }
-        };
-        window.addEventListener('pos_table_occupied', handleTableOccupied);
-        window.addEventListener('pos_table_pending', handleTablePending);
-        window.addEventListener('pos_table_call_staff', handleTableCallStaff);
-        window.addEventListener('pos_table_call_bill', handleTableCallBill);
-        window.addEventListener('pos_table_new_order', handleTableNewOrder);
-
         const settingsSub = supabase.channel('pos-app-settings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
                 fetchFloorplan();
@@ -275,11 +217,6 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         return () => {
             window.removeEventListener('pos_table_cleared', handleTableCleared);
-            window.removeEventListener('pos_table_occupied', handleTableOccupied);
-            window.removeEventListener('pos_table_pending', handleTablePending);
-            window.removeEventListener('pos_table_call_staff', handleTableCallStaff);
-            window.removeEventListener('pos_table_call_bill', handleTableCallBill);
-            window.removeEventListener('pos_table_new_order', handleTableNewOrder);
             supabase.removeChannel(settingsSub);
             supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
