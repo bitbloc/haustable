@@ -25,6 +25,8 @@ import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifi
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
+    startStaffCallLoop,
+    stopStaffCallLoop,
     playBillAlert, 
     playSlipAlert, 
     playDoorbellAlert, 
@@ -933,6 +935,12 @@ export default function POSDashboard() {
                     return false;
                 });
 
+                // Sync staff call loop: if no active booking in store has [CALL_STAFF], ensure loop is stopped
+                const hasAnyActiveCallStaff = (pendingData || []).some(b => (b.staff_remark || '').includes('[CALL_STAFF]'));
+                if (!hasAnyActiveCallStaff) {
+                    stopStaffCallLoop(null, true);
+                }
+
                 // Only trigger state updates if pending bookings signature actually changed (avoids 15-second re-render storms)
                 const newIdsSignature = pendingOnly.map(b => `${b.id}:${b.status}:${b.payment_slip_url ? 1 : 0}`).join('|');
                 if (newIdsSignature !== prevPendingSignatureRef.current) {
@@ -1375,6 +1383,12 @@ export default function POSDashboard() {
                         refreshActiveBookingItems(bId);
                     }
 
+                    // 0ms Optimistic table update
+                    if (tId) {
+                        window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId: tId } }));
+                        window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId } }));
+                    }
+
                     checkPendingOrders();
                     triggerDebouncedRefresh();
                 })
@@ -1400,7 +1414,10 @@ export default function POSDashboard() {
                             }
                         }), { id: callStaffKey, duration: 10000 });
                         pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
-                        playStaffCallAlert(callStaffKey);
+                        startStaffCallLoop(tId || bId);
+                    }
+                    if (tId) {
+                        window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId: tId } }));
                     }
                     checkPendingOrders();
                     triggerDebouncedRefresh();
@@ -1428,6 +1445,9 @@ export default function POSDashboard() {
                         }), { id: callBillKey, duration: 10000 });
                         pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
                         playBillAlert(callBillKey);
+                    }
+                    if (tId) {
+                        window.dispatchEvent(new CustomEvent('pos_table_call_bill', { detail: { tableId: tId } }));
                     }
                     checkPendingOrders();
                     triggerDebouncedRefresh();
@@ -1568,6 +1588,9 @@ export default function POSDashboard() {
 
                         // 1. Pending Order Alert (New / Additional)
                         if (newRow?.status === 'pending') {
+                            if (tableId) {
+                                window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId } }));
+                            }
                             if (checkEventDeduplication(pendingOrderKey, 4500)) {
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: 'ADD ORDER · สั่งเพิ่ม',
@@ -1585,10 +1608,17 @@ export default function POSDashboard() {
                                 pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
                             }
+                        } else if (newRow?.status === 'seated' || newRow?.status === 'confirmed') {
+                            if (tableId) {
+                                window.dispatchEvent(new CustomEvent('pos_table_occupied', { detail: { tableId } }));
+                            }
                         }
 
                         // 2. Call Bill Alert (Strict diffing: only fire if newly added)
                         if (newRemark.includes('[CALL_BILL]') && !oldRemark.includes('[CALL_BILL]')) {
+                            if (tableId) {
+                                window.dispatchEvent(new CustomEvent('pos_table_call_bill', { detail: { tableId } }));
+                            }
                             if (checkEventDeduplication(callBillKey, 5000)) {
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: 'CALL BILL · เรียกเช็คบิล',
@@ -1611,12 +1641,23 @@ export default function POSDashboard() {
                         // 3. Cancellation Alert
                         const cancelKey = `${bookingId}_CANCELLED`;
                         if (newRow?.status === 'cancelled' && oldRow?.status !== 'cancelled') {
+                            if (tableId) {
+                                stopStaffCallLoop(tableId || bookingId);
+                                window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId } }));
+                            }
                             if (checkEventDeduplication(cancelKey, 8000)) {
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: 'CANCELLED · ยกเลิกการจอง',
                                     title: `ลูกค้ายกเลิกการจอง: โต๊ะ ${tableName}`,
                                     subtitle: 'แตะเพื่อปิดการแจ้งเตือน',
                                     dot: 'neutral',
+                                    onClick: () => {
+                                        if (tableId) {
+                                            supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                if (data) handleSelectTable(data);
+                                            });
+                                        }
+                                    }
                                 }), { id: cancelKey, duration: 15000 });
                                 playDoorbellAlert(cancelKey);
                             }
@@ -1654,7 +1695,15 @@ export default function POSDashboard() {
                                     }
                                 }), { id: callStaffKey, duration: 10000 });
                                 pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tableName} เรียกพนักงาน`, tableId);
-                                playStaffCallAlert(callStaffKey);
+                                startStaffCallLoop(tableId || bookingId);
+                            }
+                            if (tableId) {
+                                window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId } }));
+                            }
+                        } else if (oldRemark.includes('[CALL_STAFF]') && !newRemark.includes('[CALL_STAFF]')) {
+                            stopStaffCallLoop(tableId || bookingId);
+                            if (tableId) {
+                                window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId } }));
                             }
                         }
 
@@ -1971,6 +2020,14 @@ export default function POSDashboard() {
                     toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
                 }
                 
+                // 0ms Optimistic table update: table turns red immediately
+                const targetTableId = targetBooking?.table_id || selectedTable?.id;
+                if (targetTableId) {
+                    window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                        detail: { tableId: targetTableId, booking: targetBooking } 
+                    }));
+                }
+
                 // For kitchen slips, ONLY print the newly inserted items if they exist
                 let printBooking = targetBooking;
                 if (type === 'kitchen' && newlyInsertedRows.length > 0) {
@@ -2254,6 +2311,10 @@ export default function POSDashboard() {
         try {
             const newBooking = await createWalkIn(targetTable, paxNum);
             if (newBooking) {
+                // 0ms Optimistic table update: table turns red immediately
+                window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                    detail: { tableId: targetTable.id, booking: newBooking } 
+                }));
                 setActiveBooking(newBooking);
                 if (activeBookingRef) activeBookingRef.current = newBooking;
                 setSelectedTable(targetTable);
@@ -3832,6 +3893,7 @@ export default function POSDashboard() {
                                     }
                                 }
                             }}
+                            onOpenSlip={handleSaveAndOpenSlip}
                         />
                     </div>
                 </div>

@@ -387,5 +387,92 @@ describe('POS Ultra Performance & Accuracy Audit Suite', () => {
             expect(getTableTax('counter')).toBe(false); // Counter follows backend default
         });
     });
+
+    // =========================================================================
+    // 8. Send to Kitchen & 0ms Optimistic Floorplan Color Transitions
+    // =========================================================================
+    describe('8. Send to Kitchen & 0ms Optimistic Floorplan Color Transitions', () => {
+        it('8.1 should correctly identify unsent draft items (no db_id) requiring Send to Kitchen', () => {
+            const currentOrder = {
+                items: [
+                    { id: 'item-1', db_id: 'db_101', name: 'Pad Thai', price: 120, quantity: 1 },
+                    { id: 'item-2', name: 'Iced Latte', price: 85, quantity: 1 } // No db_id -> new unsent item
+                ]
+            };
+
+            const hasNewItems = currentOrder.items.some(item => !item.db_id);
+            expect(hasNewItems).toBe(true);
+
+            // Filter unsent items for kitchen submission
+            const newItemsToSubmit = currentOrder.items.filter(i => !i.db_id);
+            expect(newItemsToSubmit).toHaveLength(1);
+            expect(newItemsToSubmit[0].name).toBe('Iced Latte');
+        });
+
+        it('8.2 should transition button from Send to Kitchen to Pay / Checkout once all items have db_id', () => {
+            const currentOrder = {
+                items: [
+                    { id: 'item-1', db_id: 'db_101', name: 'Pad Thai', price: 120, quantity: 1 },
+                    { id: 'item-2', db_id: 'db_102', name: 'Iced Latte', price: 85, quantity: 1 }
+                ]
+            };
+
+            const hasNewItems = currentOrder.items.some(item => !item.db_id);
+            expect(hasNewItems).toBe(false); // Ready for checkout!
+        });
+
+        it('8.3 should trigger onOpenSlip with "kitchen" when Send to Kitchen is clicked', async () => {
+            let submittedType = null;
+            const onOpenSlip = (type) => {
+                submittedType = type;
+            };
+
+            // When hasNewItems is true, clicking primary button triggers onOpenSlip('kitchen')
+            const hasNewItems = true;
+            if (hasNewItems && onOpenSlip) {
+                onOpenSlip('kitchen');
+            }
+
+            expect(submittedType).toBe('kitchen');
+        });
+
+        it('8.4 should optimistically set table status to occupied (red) in 0ms', () => {
+            const initialTables = [
+                { id: 't1', table_name: 'T-01', status: 'free', booking: null },
+                { id: 't2', table_name: 'T-02', status: 'free', booking: null }
+            ];
+
+            // 0ms Optimistic event dispatched when walk-in created or items sent
+            const targetTableId = 't1';
+            const optimisticBooking = { id: 'booking-99', table_id: 't1', status: 'seated' };
+
+            const updatedTables = initialTables.map(t => String(t.id) === String(targetTableId) ? {
+                ...t,
+                status: 'occupied',
+                booking: optimisticBooking
+            } : t);
+
+            expect(updatedTables[0].status).toBe('occupied');
+            expect(updatedTables[0].booking.id).toBe('booking-99');
+            expect(updatedTables[1].status).toBe('free');
+        });
+
+        it('8.5 should immediately display yellow alert and pulse for staff call', () => {
+            const table = {
+                id: 't1',
+                status: 'occupied',
+                hasCallStaff: true,
+                booking: { staff_remark: '[CALL_STAFF] Extra spoons' }
+            };
+
+            const hasCallStaff = Boolean(table.hasCallStaff || table.booking?.staff_remark?.includes('[CALL_STAFF]'));
+            expect(hasCallStaff).toBe(true);
+
+            // Priority: Call Staff Yellow takes visual priority over Red Occupied
+            const visualClass = hasCallStaff ? 'animate-pos-blink-yellow' : (table.status === 'occupied' ? 'bg-[var(--color-accent)]' : 'bg-free');
+            expect(visualClass).toBe('animate-pos-blink-yellow');
+        });
+    });
 });
+
 

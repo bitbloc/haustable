@@ -171,11 +171,98 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     status: 'free',
                     booking: null,
                     hasNewOrder: false,
+                    hasCallStaff: false,
+                    hasCallBill: false,
                     upcomingConflict: null
                 } : t));
             }
         };
         window.addEventListener('pos_table_cleared', handleTableCleared);
+
+        // 0ms Optimistic table listeners (dispatched by POS actions and realtime handlers)
+        const handleTableOccupied = (e) => {
+            const tableId = e.detail?.tableId;
+            const booking = e.detail?.booking;
+            if (tableId) {
+                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? {
+                    ...t,
+                    status: 'occupied',
+                    booking: booking || t.booking || { id: `optimistic_${tableId}`, table_id: tableId, status: 'seated' }
+                } : t));
+            }
+        };
+        const handleTablePending = (e) => {
+            const tableId = e.detail?.tableId;
+            const booking = e.detail?.booking;
+            if (tableId) {
+                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? {
+                    ...t,
+                    status: 'pending',
+                    hasNewOrder: true,
+                    booking: booking || t.booking || { id: `optimistic_${tableId}`, table_id: tableId, status: 'pending' }
+                } : t));
+            }
+        };
+        const handleTableCallStaff = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                setTables(prev => prev.map(t => {
+                    if (String(t.id) !== String(tableId)) return t;
+                    const remark = t.booking?.staff_remark || '';
+                    const updatedRemark = remark.includes('[CALL_STAFF]') ? remark : `[CALL_STAFF] ${remark}`.trim();
+                    return {
+                        ...t,
+                        hasCallStaff: true,
+                        booking: t.booking 
+                            ? { ...t.booking, staff_remark: updatedRemark }
+                            : { id: `call_${tableId}`, table_id: tableId, staff_remark: updatedRemark, status: t.status === 'free' ? 'occupied' : t.status }
+                    };
+                }));
+            }
+        };
+        const handleStaffCallCleared = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                setTables(prev => prev.map(t => {
+                    if (String(t.id) !== String(tableId)) return t;
+                    const remark = (t.booking?.staff_remark || '').replace('[CALL_STAFF]', '').trim();
+                    return {
+                        ...t,
+                        hasCallStaff: false,
+                        booking: t.booking ? { ...t.booking, staff_remark: remark } : t.booking
+                    };
+                }));
+            }
+        };
+        const handleTableCallBill = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                setTables(prev => prev.map(t => {
+                    if (String(t.id) !== String(tableId)) return t;
+                    const remark = t.booking?.staff_remark || '';
+                    const updatedRemark = remark.includes('[CALL_BILL]') ? remark : `[CALL_BILL] ${remark}`.trim();
+                    return {
+                        ...t,
+                        hasCallBill: true,
+                        booking: t.booking 
+                            ? { ...t.booking, staff_remark: updatedRemark }
+                            : { id: `bill_${tableId}`, table_id: tableId, staff_remark: updatedRemark, status: t.status === 'free' ? 'occupied' : t.status }
+                    };
+                }));
+            }
+        };
+        const handleTableNewOrder = (e) => {
+            const tableId = e.detail?.tableId;
+            if (tableId) {
+                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasNewOrder: true } : t));
+            }
+        };
+        window.addEventListener('pos_table_occupied', handleTableOccupied);
+        window.addEventListener('pos_table_pending', handleTablePending);
+        window.addEventListener('pos_table_call_staff', handleTableCallStaff);
+        window.addEventListener('pos_staff_call_cleared', handleStaffCallCleared);
+        window.addEventListener('pos_table_call_bill', handleTableCallBill);
+        window.addEventListener('pos_table_new_order', handleTableNewOrder);
 
         const settingsSub = supabase.channel('pos-app-settings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
@@ -192,7 +279,30 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => {
                 fetchTables();
             })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
+                const b = payload?.new;
+                const tableId = b?.table_id;
+                if (tableId) {
+                    const status = b.status;
+                    const isClosed = ['completed', 'cancelled', 'void', 'no_show'].includes(status);
+                    const hasCallStaff = (b.staff_remark || '').includes('[CALL_STAFF]');
+                    const hasCallBill = (b.staff_remark || '').includes('[CALL_BILL]');
+                    setTables(prev => prev.map(t => {
+                        if (String(t.id) !== String(tableId)) return t;
+                        if (isClosed) {
+                            return { ...t, status: 'free', booking: null, hasNewOrder: false, hasCallStaff: false, hasCallBill: false };
+                        }
+                        const newStatus = status === 'pending' ? 'pending' : (['seated', 'ready', 'confirmed'].includes(status) ? 'occupied' : t.status);
+                        return {
+                            ...t,
+                            status: newStatus,
+                            hasCallStaff,
+                            hasCallBill,
+                            hasNewOrder: status === 'pending' || t.hasNewOrder,
+                            booking: t.booking ? { ...t.booking, ...b } : b
+                        };
+                    }));
+                }
                 fetchTables();
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, () => {
@@ -217,6 +327,12 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
         return () => {
             window.removeEventListener('pos_table_cleared', handleTableCleared);
+            window.removeEventListener('pos_table_occupied', handleTableOccupied);
+            window.removeEventListener('pos_table_pending', handleTablePending);
+            window.removeEventListener('pos_table_call_staff', handleTableCallStaff);
+            window.removeEventListener('pos_staff_call_cleared', handleStaffCallCleared);
+            window.removeEventListener('pos_table_call_bill', handleTableCallBill);
+            window.removeEventListener('pos_table_new_order', handleTableNewOrder);
             supabase.removeChannel(settingsSub);
             supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
@@ -443,12 +559,17 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
                     50% { border-color: #FFAA00; background-color: #FFF8E7; color: #7A4100; }
                 }
+                @keyframes pos-blink-yellow {
+                    0%, 100% { border-color: #EAB308; background-color: #FEFCE8; color: #713F12; }
+                    50% { border-color: #CA8A04; background-color: #FACC15; color: #000000; }
+                }
                 @keyframes pos-blink-blue {
                     0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
                     50% { border-color: #0099FF; background-color: #EDF7FF; color: #004C80; }
                 }
                 .animate-pos-blink-red { animation: pos-blink-red 1.2s infinite ease-in-out !important; }
                 .animate-pos-blink-orange { animation: pos-blink-orange 1.2s infinite ease-in-out !important; }
+                .animate-pos-blink-yellow { animation: pos-blink-yellow 1.0s infinite ease-in-out !important; }
                 .animate-pos-blink-blue { animation: pos-blink-blue 1.2s infinite ease-in-out !important; }
             `}</style>
             {/* Top Toolbar */}
@@ -738,8 +859,8 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     const isReserved = table.status === 'reserved';
     const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
     const hasOrder = Boolean(table.hasNewOrder);
-    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
-    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+    const hasCallStaff = Boolean(table.hasCallStaff || table.booking?.staff_remark?.includes('[CALL_STAFF]'));
+    const hasCallBill = Boolean(table.hasCallBill || table.booking?.staff_remark?.includes('[CALL_BILL]'));
     const hasSlip = !!table.booking?.payment_slip_url;
     const transfer = parseTableTransferInfo(table.booking);
 
@@ -754,8 +875,8 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
-            tableBgClass = 'animate-pos-blink-blue border-2';
-            ledColor = 'bg-[#0099FF] animate-pulse';
+            tableBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
+            ledColor = 'bg-yellow-400 animate-ping';
         }
         if (hasCallBill) {
             tableBgClass = 'animate-pos-blink-orange border-2';
@@ -765,6 +886,9 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
             tableBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-pulse';
         }
+    } else if (hasCallStaff) {
+        tableBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
+        ledColor = 'bg-yellow-400 animate-ping';
     }
 
     return (
@@ -828,8 +952,8 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         </span>
                     )}
                     {hasCallStaff && (
-                        <span className="bg-[#0099FF] text-white text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                            CALL
+                        <span className="bg-yellow-400 text-black text-[7px] font-mono font-black px-1.5 py-0.5 rounded leading-none animate-pulse shadow-xs border border-yellow-600">
+                            ⚡ เรียกพนักงาน
                         </span>
                     )}
                     {hasCallBill && (
@@ -912,8 +1036,8 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
     
     const hasOrder = Boolean(table.hasNewOrder);
-    const hasCallStaff = table.booking?.staff_remark?.includes('[CALL_STAFF]');
-    const hasCallBill = table.booking?.staff_remark?.includes('[CALL_BILL]');
+    const hasCallStaff = Boolean(table.hasCallStaff || table.booking?.staff_remark?.includes('[CALL_STAFF]'));
+    const hasCallBill = Boolean(table.hasCallBill || table.booking?.staff_remark?.includes('[CALL_BILL]'));
     const hasSlip = !!table.booking?.payment_slip_url;
     const transfer = parseTableTransferInfo(table.booking);
 
@@ -928,8 +1052,8 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         ledColor = 'bg-white';
         
         if (hasCallStaff) {
-            cellBgClass = 'animate-pos-blink-blue border-2';
-            ledColor = 'bg-[#0099FF] animate-pulse';
+            cellBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
+            ledColor = 'bg-yellow-400 animate-ping';
         }
         if (hasCallBill) {
             cellBgClass = 'animate-pos-blink-orange border-2';
@@ -939,6 +1063,9 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             cellBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-pulse';
         }
+    } else if (hasCallStaff) {
+        cellBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
+        ledColor = 'bg-yellow-400 animate-ping';
     }
 
     return (
@@ -983,7 +1110,9 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                          <span className="bg-red-800 text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">OVERDUE</span>
                      )}
                      {hasCallStaff && (
-                         <span className="bg-[#0099FF] text-white text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">CALL</span>
+                         <span className="bg-yellow-400 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse shadow-xs border border-yellow-600">
+                             ⚡ เรียกพนักงาน
+                         </span>
                      )}
                      {hasCallBill && (
                          <span className="bg-[#FFAA00] text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">BILL</span>

@@ -11,6 +11,7 @@ import { getShortBookingId, normalizePromptPayId, getStorePromptpayId, getStoreP
 import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
 import { getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
+import { stopStaffCallLoop } from '../utils/audioHelper';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -1052,16 +1053,29 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
             {/* Call Staff Alert */}
             {booking && booking.staff_remark?.includes('[CALL_STAFF]') && (
-                <div className="mx-3 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex flex-col gap-2 shrink-0 animate-pulse">
-                    <div className="flex items-center gap-1.5 text-red-700 font-mono text-[9px] font-bold uppercase tracking-wider">
-                        <Bell size={12} className="text-red-500" />
+                <div className="mx-3 mt-3 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-xl flex flex-col gap-2 shrink-0 animate-pulse shadow-sm">
+                    <div className="flex items-center gap-1.5 text-yellow-900 font-mono text-[9px] font-bold uppercase tracking-wider">
+                        <Bell size={12} className="text-yellow-600" />
                         <span>เรียกพนักงาน / Help Called</span>
                     </div>
-                    <p className="text-[9px] text-red-800/80 font-medium">ลูกค้ากำลังเรียกขอความช่วยเหลือที่โต๊ะนี้</p>
+                    <p className="text-[9px] text-yellow-950 font-medium">ลูกค้ากำลังเรียกขอความช่วยเหลือที่โต๊ะนี้</p>
                     <button 
                         onClick={async () => {
+                            // 1. Immediately stop loop sound for this table
+                            stopStaffCallLoop(booking.table_id || booking.id);
+
+                            // 2. Dispatch 0ms cleared event so floorplan table stops blinking yellow instantly
+                            if (booking.table_id) {
+                                window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { 
+                                    detail: { tableId: booking.table_id, bookingId: booking.id } 
+                                }));
+                            }
+
+                            // 3. Optimistically update local booking remark so UI updates in 0ms
+                            const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
+                            booking.staff_remark = newRemark;
+
                             try {
-                                const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
                                 const { error } = await supabase
                                     .from('bookings')
                                     .update({ staff_remark: newRemark })
@@ -1074,9 +1088,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
                             }
                         }}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm"
+                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm active:scale-98"
                     >
-                        <Check size={10} /> Clear Assistance Alert
+                        <Check size={10} /> เคลียร์แจ้งเตือน / Clear Alert
                     </button>
                 </div>
             )}

@@ -905,6 +905,71 @@ export function playStaffCallAlert(eventKey = null) {
     return playBillSoundAlert(eventKey ? `call_staff_${eventKey}` : null, 1000, 3.4);
 }
 
+// ── Staff Call Sound Loop (Singleton) ──────────────────────────────────
+// Plays notibill.mp3 in a repeating loop every 3.5s until clear is clicked.
+// Singleton pattern: only ONE loop can be active at a time.
+// If another table calls while already looping -> no-op / registers table ID (idempotent, no audio overlap).
+let _staffCallLoopIntervalId = null;
+let _staffCallLoopActive = false;
+const _callingTableIds = new Set();
+
+/**
+ * Start looping the staff call alert sound every 3.5 seconds.
+ * Idempotent: calling while already looping safely registers table without starting duplicate timers or audio overlap.
+ * @param {string|number|null} tableId - ID of table calling staff
+ */
+export function startStaffCallLoop(tableId = null) {
+    if (tableId) {
+        _callingTableIds.add(String(tableId));
+    }
+    if (_staffCallLoopActive) return; // Already looping — singleton guard
+    _staffCallLoopActive = true;
+
+    // Play immediately on first trigger
+    lastAlertPlayedTime = 0;
+    playBillSoundAlert('staff_call_loop_tick', 100, 3.4);
+
+    // Then repeat every 3.5 seconds
+    _staffCallLoopIntervalId = setInterval(() => {
+        if (!_staffCallLoopActive) {
+            clearInterval(_staffCallLoopIntervalId);
+            _staffCallLoopIntervalId = null;
+            return;
+        }
+        // Reset throttle timestamp so repeated loop ticks are never suppressed
+        lastAlertPlayedTime = 0;
+        playBillSoundAlert('staff_call_loop_tick', 100, 3.4);
+    }, 3500);
+}
+
+/**
+ * Stop the staff call sound loop.
+ * If a tableId is passed, removes that table from calling set.
+ * If other tables are still calling, loop continues unless force=true.
+ * @param {string|number|null} tableId - ID of table to clear
+ * @param {boolean} force - Force stop all calling tables
+ */
+export function stopStaffCallLoop(tableId = null, force = false) {
+    if (tableId) {
+        _callingTableIds.delete(String(tableId));
+    }
+    if (force || _callingTableIds.size === 0 || !tableId) {
+        _staffCallLoopActive = false;
+        _callingTableIds.clear();
+        if (_staffCallLoopIntervalId) {
+            clearInterval(_staffCallLoopIntervalId);
+            _staffCallLoopIntervalId = null;
+        }
+    }
+}
+
+/**
+ * Check whether the staff call sound loop is currently active.
+ */
+export function isStaffCallLooping() {
+    return _staffCallLoopActive;
+}
+
 /**
  * Bill Call Alert (Call Bill / Check Out) - Uses notibill.mp3
  */

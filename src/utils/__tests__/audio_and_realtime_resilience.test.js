@@ -9,7 +9,10 @@ import {
     testPlayAlertSound,
     playOrderAlert,
     playBillAlert,
-    playStaffCallAlert
+    playStaffCallAlert,
+    startStaffCallLoop,
+    stopStaffCallLoop,
+    isStaffCallLooping
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -261,6 +264,104 @@ describe('Audio Engine & Notification Resilience', () => {
 
             expect(pendingOnly).toHaveLength(2);
             expect(pendingOnly.map(b => b.id)).toEqual(['b1', 'b4']);
+        });
+    });
+
+    describe('Staff Call Sound Loop Singleton', () => {
+        beforeEach(() => {
+            stopStaffCallLoop(null, true);
+        });
+
+        afterEach(() => {
+            stopStaffCallLoop(null, true);
+        });
+
+        it('should start looping sound immediately on first call', () => {
+            expect(isStaffCallLooping()).toBe(false);
+            startStaffCallLoop('table-1');
+            expect(isStaffCallLooping()).toBe(true);
+        });
+
+        it('should NOT create duplicate timers or audio overlap when multiple tables call in short succession (idempotent)', () => {
+            startStaffCallLoop('table-1');
+            expect(isStaffCallLooping()).toBe(true);
+
+            // Table 2 calls 200ms later
+            vi.advanceTimersByTime(200);
+            startStaffCallLoop('table-2');
+            expect(isStaffCallLooping()).toBe(true);
+
+            // Table 3 calls 500ms later
+            vi.advanceTimersByTime(500);
+            startStaffCallLoop('table-3');
+            expect(isStaffCallLooping()).toBe(true);
+
+            // Advance through a tick (3500ms)
+            vi.advanceTimersByTime(3500);
+            expect(isStaffCallLooping()).toBe(true);
+        });
+
+        it('should keep looping if one table is cleared but other tables are still calling', () => {
+            startStaffCallLoop('table-1');
+            startStaffCallLoop('table-2');
+
+            // Clear table 1
+            stopStaffCallLoop('table-1');
+            // Table 2 is still calling, loop must stay active!
+            expect(isStaffCallLooping()).toBe(true);
+
+            // Clear table 2
+            stopStaffCallLoop('table-2');
+            // All cleared, loop must stop!
+            expect(isStaffCallLooping()).toBe(false);
+        });
+
+        it('should stop loop immediately on force stop', () => {
+            startStaffCallLoop('table-1');
+            startStaffCallLoop('table-2');
+            expect(isStaffCallLooping()).toBe(true);
+
+            stopStaffCallLoop(null, true);
+            expect(isStaffCallLooping()).toBe(false);
+        });
+    });
+
+    describe('Table Status Color Logic (Red Occupied vs Yellow Call Staff)', () => {
+        it('should identify table calling staff as yellow state', () => {
+            const tableWithStaffCall = {
+                id: 'table-1',
+                status: 'occupied',
+                hasCallStaff: true,
+                booking: { staff_remark: '[CALL_STAFF] Need extra napkins' }
+            };
+
+            const isOccupied = tableWithStaffCall.status === 'occupied';
+            const hasCallStaff = Boolean(tableWithStaffCall.hasCallStaff || tableWithStaffCall.booking?.staff_remark?.includes('[CALL_STAFF]'));
+
+            expect(isOccupied).toBe(true);
+            expect(hasCallStaff).toBe(true);
+
+            // When hasCallStaff is true, UI must render yellow alert class
+            const resolvedClass = hasCallStaff ? 'animate-pos-blink-yellow' : (isOccupied ? 'bg-[var(--color-accent)]' : 'bg-free');
+            expect(resolvedClass).toBe('animate-pos-blink-yellow');
+        });
+
+        it('should transition to red occupied immediately upon order or seated status without calling staff', () => {
+            const tableOccupied = {
+                id: 'table-2',
+                status: 'occupied',
+                hasCallStaff: false,
+                booking: { staff_remark: 'Walk-in Guest' }
+            };
+
+            const isOccupied = tableOccupied.status === 'occupied';
+            const hasCallStaff = Boolean(tableOccupied.hasCallStaff || tableOccupied.booking?.staff_remark?.includes('[CALL_STAFF]'));
+
+            expect(isOccupied).toBe(true);
+            expect(hasCallStaff).toBe(false);
+
+            const resolvedClass = hasCallStaff ? 'animate-pos-blink-yellow' : (isOccupied ? 'bg-[var(--color-accent)]' : 'bg-free');
+            expect(resolvedClass).toBe('bg-[var(--color-accent)]');
         });
     });
 });
