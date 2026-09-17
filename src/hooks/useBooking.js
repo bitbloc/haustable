@@ -164,6 +164,7 @@ export function useBooking() {
                 ? Number(overrides.actualDepositPaid) 
                 : Number(depositAmount || 0)
             const isFullPaid = overrides.isFullPaid || (actualDepositPaid >= finalTotal && finalTotal > 0)
+            const isAutoVerified = Boolean(overrides.isAutoVerified ?? overrides.slipVerifyResult?.verified)
             const bankLabel = typeof overrides.slipVerifyResult?.bankName === 'object' 
                 ? (overrides.slipVerifyResult?.bankName?.th || overrides.slipVerifyResult?.bankName?.en || '') 
                 : (overrides.slipVerifyResult?.bankName || '')
