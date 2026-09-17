@@ -11,6 +11,7 @@ import { getShortBookingId, normalizePromptPayId, getStorePromptpayId, getStoreP
 import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
 import { getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
+import { stopStaffCallLoop, startStaffCallLoop } from '../utils/audioHelper';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -1060,6 +1061,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     <p className="text-[9px] text-red-800/80 font-medium">ลูกค้ากำลังเรียกขอความช่วยเหลือที่โต๊ะนี้</p>
                     <button 
                         onClick={async () => {
+                            // Stop loop sound immediately on click
+                            stopStaffCallLoop();
                             try {
                                 const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
                                 const { error } = await supabase
@@ -1069,6 +1072,23 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     
                                 if (error) throw error;
                                 toast.success("เคลียร์แจ้งเตือนเรียบร้อยแล้ว");
+
+                                // Check if other tables still have [CALL_STAFF] active
+                                try {
+                                    const { data: remainingCalls } = await supabase
+                                        .from('bookings')
+                                        .select('id')
+                                        .in('status', ['pending', 'seated', 'confirmed', 'ready'])
+                                        .like('staff_remark', '%[CALL_STAFF]%')
+                                        .neq('id', booking.id)
+                                        .limit(1);
+                                    if (remainingCalls && remainingCalls.length > 0) {
+                                        // Other tables still calling — restart loop
+                                        startStaffCallLoop();
+                                    }
+                                } catch (checkErr) {
+                                    // Silent — loop stays stopped
+                                }
                             } catch (err) {
                                 console.error("Failed to clear staff call:", err);
                                 toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
