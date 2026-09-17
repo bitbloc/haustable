@@ -21,6 +21,7 @@ import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
+import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { 
     playOrderAlert, 
@@ -873,14 +874,18 @@ export default function POSDashboard() {
 
             const dbItems = (latestBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
 
-            // Preserve local draft items ONLY if they belong to this exact table
+            // Preserve local draft items if they belong to this active session/table
             setCurrentOrder(prev => {
-                const isSameTable = prev?.table && String(prev.table.id) === String(latestBooking.table_id);
-                if (!isSameTable && prev?.table?.id) {
+                const isSameBooking = activeBooking?.id && latestBooking?.id && String(activeBooking.id) === String(latestBooking.id);
+                const isSameTable = (prev?.table?.id && latestBooking.table_id && String(prev.table.id) === String(latestBooking.table_id));
+                const isBothPickup = (!prev?.table?.id && !latestBooking.table_id);
+                const isSameSession = isSameBooking || isSameTable || isBothPickup;
+
+                if (!isSameSession && prev?.table?.id) {
                     console.warn('[refreshActiveBookingItems] Discarding mismatched update: prev table', prev.table.id, 'vs booking table', latestBooking.table_id);
                     return prev;
                 }
-                const localDraftItems = isSameTable ? (prev.items || []).filter(i => !i.db_id) : [];
+                const localDraftItems = isSameSession ? (prev?.items || []).filter(i => !i.db_id) : [];
                 return {
                     ...prev,
                     table: latestBooking.tables_layout || prev.table,
@@ -1956,7 +1961,7 @@ export default function POSDashboard() {
                 return {
                     id: ci.db_id || ci.id || `cart_item_${idx}`,
                     booking_id: bookingId,
-                    menu_item_id: ci.id || ci.menu_item_id,
+                    menu_item_id: resolveMenuItemId(ci),
                     quantity: Number(ci.quantity) || 1,
                     price_at_time: Number(ci.price) || 0,
                     price: Number(ci.price) || 0,
@@ -2034,6 +2039,25 @@ export default function POSDashboard() {
                     printBooking = { ...targetBooking, order_items: newlyInsertedRows };
                 }
                 openSlipOrSilentPrint(printBooking, type);
+            }
+        } catch (err) {
+            console.error("Failed to send order to kitchen or print slip:", err);
+            toast.error(`เกิดข้อผิดพลาด: ${err.message || 'ไม่สามารถส่งเข้าครัวได้'}`);
+            if (activeBooking || currentOrder?.items?.length > 0) {
+                const fallbackBooking = activeBooking || {
+                    id: lockedBookingId || `local_${Date.now()}`,
+                    tables_layout: selectedTable,
+                    order_items: (currentOrder?.items || []).map((ci, idx) => ({
+                        id: ci.id || `item_${idx}`,
+                        name: ci.name || ci.custom_name || 'Item',
+                        price: ci.price || 0,
+                        price_at_time: ci.price || 0,
+                        quantity: ci.quantity || 1,
+                        selected_options: ci.selected_options || [],
+                        destination: ci.destination || 'kitchen'
+                    }))
+                };
+                openSlipOrSilentPrint(fallbackBooking, type);
             }
         } finally {
             submittingOrderRef.current = false;
@@ -2327,8 +2351,8 @@ export default function POSDashboard() {
                     table: targetTable
                 });
                 setOpenTableModalData(null);
-                // Keep on 'tables' view so staff sees the open table on the floorplan
-                setView('tables');
+                // Switch immediately to menu view so staff can key in items right away
+                setView('menu');
                 setRefreshKey(prev => prev + 1);
                 triggerDebouncedRefresh();
                 toast.success(`เปิดโต๊ะ ${targetTable.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
@@ -2435,21 +2459,22 @@ export default function POSDashboard() {
 
     const handleAddToOrder = useCallback((item) => {
         setCurrentOrder(prev => {
+            const currentItems = (prev && Array.isArray(prev.items)) ? prev.items : [];
             const addQty = item.quantity || item.qty || 1;
             const itemOpts = item.selected_options || item.optionsSummary || [];
             const itemNote = item.item_note || item.itemNote || '';
             const optsStr = JSON.stringify(itemOpts);
             const isCustom = Boolean(item.is_custom === true || item.is_emergency === true || String(item.id).startsWith('custom_'));
-            const targetMenuItemId = isCustom ? null : (item.menu_item_id || item.id);
+            const targetMenuItemId = isCustom ? null : resolveMenuItemId(item);
             const itemName = item.name || item.custom_name || (isCustom ? 'เมนูเพิ่มเติม' : 'Item');
 
             // Match only against NEW draft items (no db_id) so we never mutate items already stored in DB!
-            const existingIndex = prev.items.findIndex(i => {
+            const existingIndex = currentItems.findIndex(i => {
                 if (i.db_id) return false;
                 if (isCustom || i.is_custom) {
                     return (i.is_custom || !i.menu_item_id) && i.name === itemName && Number(i.price) === Number(item.price);
                 }
-                const iTargetId = i.menu_item_id || i.id;
+                const iTargetId = i.menu_item_id || resolveMenuItemId(i);
                 if (iTargetId !== targetMenuItemId) return false;
                 const existingOptsStr = JSON.stringify(i.selected_options || i.optionsSummary || []);
                 const existingNote = i.item_note || i.itemNote || '';
@@ -2474,14 +2499,15 @@ export default function POSDashboard() {
             } else if (item.destination === 'other') {
                 resolvedDest = 'other';
             } else if (itemOpts.some(o => {
+                if (!o) return false;
                 const oStr = typeof o === 'object' ? (o.name || o.destination || '') : String(o);
-                return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || o.destination === 'bar';
+                return oStr.includes('(บาร์)') || oStr.includes('เครื่องดื่ม') || (typeof o === 'object' && o.destination === 'bar');
             })) {
                 resolvedDest = 'bar';
             }
 
             if (existingIndex !== -1) {
-                const updatedItems = [...prev.items];
+                const updatedItems = [...currentItems];
                 updatedItems[existingIndex] = {
                     ...updatedItems[existingIndex],
                     quantity: updatedItems[existingIndex].quantity + addQty,
@@ -2498,7 +2524,7 @@ export default function POSDashboard() {
             return {
                 ...prev,
                 items: [
-                    ...prev.items,
+                    ...currentItems,
                     {
                         id: uniqueDraftId,
                         menu_item_id: targetMenuItemId,
@@ -3636,12 +3662,14 @@ export default function POSDashboard() {
                     if (v === 'tables') {
                         handleBackToTables();
                     } else if (v === 'menu' && view === 'tables') {
-                        // Clicking Menu directly from Tables sidebar starts a clean Direct/Pickup order
-                        setSelectedTable(null);
-                        setActiveBooking(null);
-                        setCurrentOrder({ items: [], customer: 'Walk-in Pick-up', table: null });
-                        setAttachedMemberCrm(null);
-                        localStorage.removeItem('pos_active_table_id');
+                        // Only start a clean Direct/Pickup order if no table/booking is currently active
+                        if (!selectedTable && !activeBooking) {
+                            setSelectedTable(null);
+                            setActiveBooking(null);
+                            setCurrentOrder({ items: [], customer: 'Walk-in Pick-up', table: null });
+                            setAttachedMemberCrm(null);
+                            localStorage.removeItem('pos_active_table_id');
+                        }
                         setView('menu');
                     } else {
                         setView(v);

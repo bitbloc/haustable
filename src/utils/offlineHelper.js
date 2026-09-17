@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { resolveMenuItemId } from './menuHelper';
 
 const OFFLINE_QUEUE_KEY = 'pos_offline_queue';
 const CACHE_MENU_ITEMS = 'pos_cache_menu_items';
@@ -281,14 +282,6 @@ export async function syncOfflineQueue(isManual = false) {
                 if (typeof bookingId === 'string' && bookingId.startsWith('local_')) {
                     throw new Error(`Cannot find database ID mapping for local booking: ${bookingId}`);
                 }
-
-                const resolveMenuItemId = (item) => {
-                    if (item.menu_item_id && typeof item.menu_item_id !== 'string') return item.menu_item_id;
-                    if (item.menu_item_id && typeof item.menu_item_id === 'string' && !item.menu_item_id.startsWith('reward-') && !item.menu_item_id.startsWith('local_')) return item.menu_item_id;
-                    if (item.id && typeof item.id !== 'string') return item.id;
-                    if (item.id && typeof item.id === 'string' && !item.id.startsWith('reward-') && !item.id.startsWith('local_')) return item.id;
-                    return null;
-                };
 
                 const itemsToInsert = items.map(item => {
                     const finalOpts = [...(item.selected_options || [])];

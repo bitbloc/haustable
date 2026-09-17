@@ -188,3 +188,35 @@ export const formatOrderItemOptions = (options, itemNote = null) => {
 
     return list
 }
+
+export const resolveMenuItemId = (item) => {
+    if (!item) return null;
+    if (item.is_custom === true || item.is_emergency === true) return null;
+
+    const candidate = item.menu_item_id !== undefined && item.menu_item_id !== null 
+        ? item.menu_item_id 
+        : item.id;
+
+    if (candidate === undefined || candidate === null) return null;
+
+    if (typeof candidate === 'number') {
+        return Number.isInteger(candidate) && candidate > 0 ? candidate : null;
+    }
+
+    if (typeof candidate === 'string') {
+        const trimmed = candidate.trim();
+        if (!trimmed) return null;
+        if (/^(draft_|temp_|local_|custom_|reward-|cart_|item_)/.test(trimmed)) {
+            return null;
+        }
+        if (/^\d+$/.test(trimmed)) {
+            const parsed = parseInt(trimmed, 10);
+            return parsed > 0 ? parsed : null;
+        }
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+            return trimmed;
+        }
+    }
+
+    return null;
+};

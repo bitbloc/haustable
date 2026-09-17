@@ -10,9 +10,13 @@ const env = fs.readFileSync('.env', 'utf8').split('\n').reduce((acc, line) => {
 const { createClient } = require('@supabase/supabase-js');
 const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_KEY);
 
-async function checkRLS() {
-    // Check if RLS is enabled or if anon role can insert into order_items
-    const { data: policies, error: polErr } = await supabase.rpc('get_policies_for_table', { table_name: 'order_items' });
-    console.log('Policies RPC:', { policies, polErr });
+async function testSchema() {
+    // Check columns of order_items
+    const { data, error } = await supabase.from('order_items').select('*').limit(1);
+    if (error) {
+        console.error('Error selecting order_items:', error);
+    } else {
+        console.log('Columns of order_items:', Object.keys(data[0] || {}));
+    }
 }
-checkRLS();
+testSchema();

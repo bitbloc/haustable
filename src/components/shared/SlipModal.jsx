@@ -40,26 +40,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const [activeTab, setActiveTab] = useState(getInitialTab)
     const isKitchenTab = !isAdmin && (activeTab === 'kitchen' || activeTab === 'bar' || activeTab === 'other' || activeTab === 'kitchen_all');
 
-    const getIsAutoPrintingInitial = () => {
-        if (isAdmin) return false;
-        try {
-            const stored = localStorage.getItem('onhaus_printer_config');
-            let config = {};
-            if (stored) {
-                config = JSON.parse(stored);
-            }
-            const currentTab = getInitialTab();
-            const printerType = currentTab === 'kitchen' 
-                ? (config.kitchen_printer_type || 'sunmi')
-                : (config.cashier_printer_type || 'sunmi');
-            return printerType === 'sunmi';
-        } catch (err) {
-            console.error("Failed to read printer config initially:", err);
-            return true; // Default to true on error to remain silent
-        }
-    };
-
-    const [isAutoPrinting, setIsAutoPrinting] = useState(getIsAutoPrintingInitial)
+    const [isAutoPrinting, setIsAutoPrinting] = useState(false);
     const [printerConfig, setPrinterConfig] = useState(() => {
         try {
             const stored = localStorage.getItem('onhaus_printer_config');
@@ -286,7 +267,10 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
 
             // 4. Auto Print (Guard with hasAutoPrintedRef to prevent duplicate triggers)
             if (printerType === 'sunmi') {
-                if (hasAutoPrintedRef.current) return;
+                if (hasAutoPrintedRef.current) {
+                    setIsAutoPrinting(false);
+                    return;
+                }
                 hasAutoPrintedRef.current = true;
 
                 setIsAutoPrinting(true);
@@ -325,11 +309,15 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     onClose();
                 } catch (err) {
                     console.error("SUNMI Auto print failed:", err);
-                    alert(`พิมพ์อัตโนมัติผ่าน SUNMI ล้มเหลว: ${err.message || err}\nระบบจะสลับมาแสดงหน้าตัวอย่างเพื่อให้กดยืนยันด้วยตนเอง`);
+                    toast.error(`พิมพ์ผ่าน SUNMI ไม่สำเร็จ: ${err.message || err}`);
+                } finally {
                     setIsAutoPrinting(false);
                 }
             } else if (printerType === 'rawbt') {
-                if (hasAutoPrintedRef.current) return;
+                if (hasAutoPrintedRef.current) {
+                    setIsAutoPrinting(false);
+                    return;
+                }
                 hasAutoPrintedRef.current = true;
                 setIsAutoPrinting(true);
                 try {
@@ -361,10 +349,15 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     onClose();
                 } catch (err) {
                     console.error("RawBT Auto print failed:", err);
+                    toast.error(`พิมพ์ผ่าน RawBT ไม่สำเร็จ: ${err.message || err}`);
+                } finally {
                     setIsAutoPrinting(false);
                 }
             } else if (printerType === 'bluetooth') {
-                if (hasAutoPrintedRef.current) return;
+                if (hasAutoPrintedRef.current) {
+                    setIsAutoPrinting(false);
+                    return;
+                }
                 hasAutoPrintedRef.current = true;
                 setIsAutoPrinting(true);
                 try {
@@ -397,6 +390,8 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                     onClose();
                 } catch (err) {
                     console.error("Bluetooth Auto print failed:", err);
+                    toast.error(`พิมพ์ผ่าน Bluetooth ไม่สำเร็จ: ${err.message || err}`);
+                } finally {
                     setIsAutoPrinting(false);
                 }
             }
@@ -1064,7 +1059,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("SUNMI print failed, falling back to standard dialog:", err);
-                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน SUNMI: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+                toast.error(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน SUNMI: ${err.message || err}`);
             }
         } else if (printerType === 'rawbt') {
             try {
@@ -1101,7 +1096,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                 return; // successfully printed directly, exit
             } catch (err) {
                 console.error("RawBT print failed, falling back to standard dialog:", err);
-                alert(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน RawBT: ${err.message || err}\nระบบจะสลับไปใช้หน้าต่างพิมพ์ของเครื่องแทน`);
+                toast.error(`เกิดข้อผิดพลาดในการพิมพ์ผ่าน RawBT: ${err.message || err}`);
             }
         } else if (printerType === 'bluetooth') {
             try {
@@ -1761,10 +1756,10 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             <button 
                                 type="button"
                                 onClick={handlePrint} 
-                                disabled={isPrinting || isAutoPrinting} 
-                                className={`flex-1 ${isPrinting || isAutoPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white cursor-pointer'} py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
+                                disabled={isPrinting} 
+                                className={`flex-1 ${isPrinting ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white cursor-pointer'} py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm`}
                             >
-                                <PrinterIcon size={14} /> {isPrinting || isAutoPrinting ? 'Printing...' : 'Print Ticket'}
+                                <PrinterIcon size={14} /> {isPrinting ? 'Printing...' : 'Print Ticket'}
                             </button>
                             <button 
                                 type="button"

@@ -11,6 +11,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
 
     // Preselect single-choice options on load (only available choices)
     useEffect(() => {
+        confirmingRef.current = false;
         if (!item || !item.menu_item_options) return;
         const defaults = {};
         item.menu_item_options.forEach(rel => {
@@ -110,52 +111,58 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
         if (confirmingRef.current) return;
         if (validateSelections()) {
             confirmingRef.current = true;
-            // Prepare options summary for cart and slips
-            const optionsSummary = []
-            if (item.menu_item_options) {
-                item.menu_item_options.forEach(rel => {
-                    const group = rel?.option_groups
-                    if (!group) return
-                    const selections = selectedOptions[group.id] || []
-                    group.option_choices?.forEach(choice => {
-                        if (selections.includes(choice.id)) {
-                            optionsSummary.push({
-                                group_id: group.id,
-                                group_name: group.name,
-                                choice_id: choice.id,
-                                name: choice.name,
-                                price: Number(choice.price_modifier || 0)
-                            })
-                        }
+            try {
+                // Prepare options summary for cart and slips
+                const optionsSummary = []
+                if (item.menu_item_options) {
+                    item.menu_item_options.forEach(rel => {
+                        const group = rel?.option_groups
+                        if (!group) return
+                        const selections = selectedOptions[group.id] || []
+                        group.option_choices?.forEach(choice => {
+                            if (selections.includes(choice.id)) {
+                                optionsSummary.push({
+                                    group_id: group.id,
+                                    group_name: group.name,
+                                    choice_id: choice.id,
+                                    name: choice.name,
+                                    price: Number(choice.price_modifier || 0)
+                                })
+                            }
+                        })
                     })
-                })
+                }
+
+                if (itemNote.trim()) {
+                    optionsSummary.push({
+                        group_name: 'หมายเหตุ',
+                        name: itemNote.trim(),
+                        price: 0
+                    })
+                }
+
+                const unitPrice = calculateTotal() / quantity;
+
+                onConfirm({
+                    ...item,
+                    quantity: quantity,
+                    qty: quantity,
+                    price: unitPrice,
+                    selected_options: optionsSummary,
+                    selectedOptions: selectedOptions, // Raw IDs for logic
+                    optionsSummary: optionsSummary, // readable text for UI
+                    item_note: itemNote.trim(),
+                    itemNote: itemNote.trim(),
+                    totalPricePerUnit: unitPrice
+                });
+            } catch (err) {
+                console.error("Option modal confirm error:", err);
+                toast.error("เกิดข้อผิดพลาดในการเลือกตัวเลือก");
+            } finally {
+                setTimeout(() => {
+                    confirmingRef.current = false;
+                }, 200);
             }
-
-            if (itemNote.trim()) {
-                optionsSummary.push({
-                    group_name: 'หมายเหตุ',
-                    name: itemNote.trim(),
-                    price: 0
-                })
-            }
-
-            const unitPrice = calculateTotal() / quantity;
-
-            onConfirm({
-                ...item,
-                quantity: quantity,
-                qty: quantity,
-                price: unitPrice,
-                selected_options: optionsSummary,
-                selectedOptions: selectedOptions, // Raw IDs for logic
-                optionsSummary: optionsSummary, // readable text for UI
-                item_note: itemNote.trim(),
-                itemNote: itemNote.trim(),
-                totalPricePerUnit: unitPrice
-            });
-            setTimeout(() => {
-                confirmingRef.current = false;
-            }, 300);
         }
     }
 

@@ -530,7 +530,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                onOpenSlip && onOpenSlip(order, 'kitchen');
+                                                const slipType = (order.status === 'completed' || order.status === 'paid' || order.status === 'success') ? 'receipt' : 'kitchen';
+                                                onOpenSlip && onOpenSlip(order, slipType);
                                             }}
                                             className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
                                         >
