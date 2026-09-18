@@ -1,13 +1,43 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo } from 'react'
 
+// Helper: Extract Asia/Bangkok hour (0 - 23) reliably across all browser environments
+const getBangkokHour = (timeInput) => {
+    if (!timeInput) return -1
+    try {
+        const d = new Date(timeInput)
+        const str = d.toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour12: false, hour: '2-digit' })
+        return parseInt(str, 10)
+    } catch {
+        return new Date(timeInput).getHours()
+    }
+}
+
 export default function IntradayVelocityChart({ bookings = [], selectedDate, loading = false }) {
     const [hoveredHour, setHoveredHour] = useState(null)
 
-    // Operating hours 11:00 to 23:00 (13 slots)
+    // Restaurant operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
 
-    // Process actual bookings into hourly buckets
+    // Determine whether currently viewing today
+    const isViewingToday = useMemo(() => {
+        const todayBangkok = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+        return !selectedDate || selectedDate === todayBangkok
+    }, [selectedDate])
+
+    // Current hour in Bangkok time
+    const currentBangkokHour = useMemo(() => {
+        try {
+            return parseInt(
+                new Date().toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour12: false, hour: 'numeric' }),
+                10
+            )
+        } catch {
+            return new Date().getHours()
+        }
+    }, [])
+
+    // Process bookings into hourly buckets
     const chartData = useMemo(() => {
         const hourlySales = {}
         const hourlyCounts = {}
@@ -16,17 +46,29 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             hourlyCounts[h] = 0
         })
 
-        const paidBookings = (bookings || []).filter(b => 
-            b.status === 'completed' || b.status === 'seated' || b.status === 'confirmed' || b.status === 'ready'
-        )
+        // Valid sales statuses (including completed, paid, success, seated, confirmed, ready)
+        const validStatuses = ['completed', 'paid', 'success', 'seated', 'confirmed', 'ready']
+        const validBookings = (bookings || []).filter(b => {
+            const status = (b.status || '').toLowerCase()
+            return validStatuses.includes(status) && status !== 'cancelled' && status !== 'void'
+        })
 
-        paidBookings.forEach(b => {
+        validBookings.forEach(b => {
             const timeStr = b.booking_time || b.created_at
             if (!timeStr) return
-            const d = new Date(timeStr)
-            const h = d.getHours()
-            if (hourlySales[h] !== undefined) {
-                const billAmt = Number(b.total_price || b.deposit_amount || 0)
+            const h = getBangkokHour(timeStr)
+
+            // Calculate bill amount from total_amount (primary in DB), fallback to total_price, deposit, or order_items sum
+            let billAmt = Number(b.total_amount ?? b.total_price ?? b.deposit_amount ?? 0)
+            if (!billAmt && Array.isArray(b.order_items) && b.order_items.length > 0) {
+                billAmt = b.order_items.reduce((sum, it) => {
+                    const price = Number(it.price_at_time ?? it.menu_items?.price ?? 0)
+                    const qty = Number(it.quantity || 1)
+                    return sum + (price * qty)
+                }, 0)
+            }
+
+            if (billAmt > 0 && hourlySales[h] !== undefined) {
                 hourlySales[h] += billAmt
                 hourlyCounts[h] += 1
             }
@@ -46,16 +88,15 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             }
         })
 
-        // Synthesize a realistic benchmark / baseline for comparison (7-day average pacing curve)
-        const maxCumulative = Math.max(runningTotal, 10000)
-        const benchmarkPoints = hours.map((h, idx) => {
-            // Typical restaurant progression curve (slow 11-12, rush 12-14, quiet 14-17, big rush 18-21, taper 22-23)
-            const curveWeights = [0.03, 0.12, 0.22, 0.28, 0.32, 0.36, 0.45, 0.65, 0.82, 0.92, 0.97, 0.99, 1.0]
-            return {
-                hour: h,
-                expectedCumulative: Math.round(maxCumulative * (curveWeights[idx] || 1))
-            }
-        })
+        // Benchmark curve: Typical casual dining pacing progression (11:00 to 23:00)
+        // If today has sales, estimate target full-day or use realistic baseline
+        const maxCumulative = Math.max(runningTotal * 1.25, 12000)
+        const curveWeights = [0.03, 0.12, 0.24, 0.30, 0.35, 0.40, 0.50, 0.68, 0.84, 0.93, 0.97, 0.99, 1.0]
+
+        const benchmarkPoints = hours.map((h, idx) => ({
+            hour: h,
+            expectedCumulative: Math.round(maxCumulative * (curveWeights[idx] || 1))
+        }))
 
         return { points, benchmarkPoints, totalRevenue: runningTotal }
     }, [bookings, hours])
@@ -65,7 +106,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
     // SVG Coordinate Calculations
     const svgWidth = 800
     const svgHeight = 220
-    const padX = 45
+    const padX = 50
     const padYTop = 25
     const padYBottom = 35
     const plotWidth = svgWidth - padX * 2
@@ -81,21 +122,42 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
     const getX = (idx) => padX + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxVal) * plotHeight
 
+    // Active points for today: only draw actual sales line up to the current hour (do not extrapolate 0 into future hours)
+    const activePoints = useMemo(() => {
+        if (!isViewingToday) return points
+        // When viewing today, line extends up to current hour (or at least index 0 if before 11:00)
+        const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
+        return points.filter(p => p.hour <= cappedHour)
+    }, [points, isViewingToday, currentBangkokHour])
+
     // Generate SVG path strings
     const { pathActual, pathArea, pathBenchmark } = useMemo(() => {
         if (points.length === 0) return { pathActual: '', pathArea: '', pathBenchmark: '' }
 
-        const actualCoords = points.map((pt, i) => `${getX(i).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
-        const pathAct = `M ${actualCoords.join(' L ')}`
-        const pathAr = `${pathAct} L ${getX(points.length - 1).toFixed(1)},${(svgHeight - padYBottom).toFixed(1)} L ${padX},${(svgHeight - padYBottom).toFixed(1)} Z`
+        // Actual Line (drawn up to activePoints)
+        const coords = activePoints.map((pt) => {
+            const idx = hours.indexOf(pt.hour)
+            return `${getX(idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`
+        })
 
+        const pathAct = coords.length > 0 ? `M ${coords.join(' L ')}` : ''
+
+        // Actual Area
+        let pathAr = ''
+        if (coords.length > 1) {
+            const lastIdx = hours.indexOf(activePoints[activePoints.length - 1].hour)
+            const firstIdx = hours.indexOf(activePoints[0].hour)
+            pathAr = `${pathAct} L ${getX(lastIdx).toFixed(1)},${(svgHeight - padYBottom).toFixed(1)} L ${getX(firstIdx).toFixed(1)},${(svgHeight - padYBottom).toFixed(1)} Z`
+        }
+
+        // Benchmark Path
         const benchCoords = benchmarkPoints.map((pt, i) => `${getX(i).toFixed(1)},${getY(pt.expectedCumulative).toFixed(1)}`)
         const pathBench = `M ${benchCoords.join(' L ')}`
 
         return { pathActual: pathAct, pathArea: pathAr, pathBenchmark: pathBench }
-    }, [points, benchmarkPoints, maxVal])
+    }, [points, activePoints, benchmarkPoints, hours, maxVal])
 
-    // Find peak velocity hour
+    // Peak rush hour
     const peakHour = useMemo(() => {
         let maxS = 0
         let bestH = null
@@ -107,6 +169,9 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         })
         return bestH
     }, [points])
+
+    // Latest active cumulative value
+    const latestActive = activePoints.length > 0 ? activePoints[activePoints.length - 1] : null
 
     return (
         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] mb-6 overflow-hidden">
@@ -130,14 +195,14 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 <div className="flex items-center gap-4 font-mono text-xs">
                     <div>
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] block">CUMULATIVE TODAY</span>
-                        <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                        <span className="font-bold text-base sm:text-lg text-[oklch(18%_0.012_28)] tabular-nums">
                             ฿{totalRevenue.toLocaleString()}
                         </span>
                     </div>
                     {peakHour && peakHour.sale > 0 && (
                         <div className="border-l border-[oklch(85%_0.012_28)] pl-4">
                             <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PEAK RUSH</span>
-                            <span className="font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
+                            <span className="font-bold text-sm text-[oklch(52%_0.20_28)] tabular-nums">
                                 {peakHour.label} (฿{peakHour.sale.toLocaleString()})
                             </span>
                         </div>
@@ -150,11 +215,11 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 {/* Visual Legend */}
                 <div className="flex items-center justify-end gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)]">
                     <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-1 bg-[oklch(52%_0.16_28)] inline-block" />
-                        <span>ยอดขายจริงวันนี้</span>
+                        <span className="w-3.5 h-1.5 bg-[oklch(52%_0.20_28)] rounded-xs inline-block" />
+                        <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดขายจริงวันนี้</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-1 border-t border-dashed border-[oklch(65%_0.015_28)] inline-block" />
+                        <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
                         <span>Benchmark คาดการณ์</span>
                     </div>
                 </div>
@@ -163,13 +228,13 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 <div className="w-full overflow-x-auto no-scrollbar">
                     <svg
                         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                        className="w-full h-44 sm:h-52 select-none"
+                        className="w-full h-44 sm:h-56 select-none"
                     >
                         <defs>
-                            {/* Gradient Area Fill */}
+                            {/* Gradient Area Fill for Red Actual Line */}
                             <linearGradient id="velocityFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="oklch(52% 0.16 28)" stopOpacity="0.25" />
-                                <stop offset="100%" stopColor="oklch(52% 0.16 28)" stopOpacity="0.02" />
+                                <stop offset="0%" stopColor="oklch(52% 0.20 28)" stopOpacity="0.30" />
+                                <stop offset="100%" stopColor="oklch(52% 0.20 28)" stopOpacity="0.02" />
                             </linearGradient>
                         </defs>
 
@@ -181,7 +246,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             width={getX(3) - getX(1)}
                             height={plotHeight}
                             fill="oklch(94% 0.010 28)"
-                            opacity="0.8"
+                            opacity="0.85"
                         />
                         <text
                             x={(getX(1) + getX(3)) / 2}
@@ -199,7 +264,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             width={getX(10) - getX(7)}
                             height={plotHeight}
                             fill="oklch(94% 0.010 28)"
-                            opacity="0.8"
+                            opacity="0.85"
                         />
                         <text
                             x={(getX(7) + getX(10)) / 2}
@@ -210,7 +275,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             PRIME DINNER
                         </text>
 
-                        {/* Horizontal Gridlines */}
+                        {/* Horizontal Gridlines & Y-Axis Labels */}
                         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                             const y = svgHeight - padYBottom - ratio * plotHeight
                             const labelVal = Math.round(ratio * maxVal)
@@ -242,13 +307,13 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             <path
                                 d={pathBenchmark}
                                 fill="none"
-                                stroke="oklch(68% 0.015 28)"
+                                stroke="oklch(60% 0.015 28)"
                                 strokeWidth="2"
                                 strokeDasharray="4 4"
                             />
                         )}
 
-                        {/* Actual Cumulative Gradient Area */}
+                        {/* Actual Cumulative Gradient Area (Red) */}
                         {pathArea && (
                             <path
                                 d={pathArea}
@@ -256,16 +321,38 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             />
                         )}
 
-                        {/* Actual Cumulative Main Line */}
+                        {/* Actual Cumulative Main Line (Vibrant Clay Terracotta / Red) */}
                         {pathActual && (
                             <path
                                 d={pathActual}
                                 fill="none"
-                                stroke="oklch(52% 0.16 28)"
-                                strokeWidth="2.5"
+                                stroke="oklch(52% 0.20 28)"
+                                strokeWidth="3"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             />
+                        )}
+
+                        {/* Live Now Pulsating Marker on the latest hour point */}
+                        {latestActive && (
+                            <g>
+                                <circle
+                                    cx={getX(hours.indexOf(latestActive.hour))}
+                                    cy={getY(latestActive.cumulative)}
+                                    r="8"
+                                    fill="oklch(52% 0.20 28)"
+                                    opacity="0.3"
+                                    className="animate-ping"
+                                />
+                                <circle
+                                    cx={getX(hours.indexOf(latestActive.hour))}
+                                    cy={getY(latestActive.cumulative)}
+                                    r="4.5"
+                                    fill="oklch(52% 0.20 28)"
+                                    stroke="white"
+                                    strokeWidth="2"
+                                />
+                            </g>
                         )}
 
                         {/* Interactive Data Points */}
@@ -273,23 +360,39 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             const cx = getX(i)
                             const cy = getY(pt.cumulative)
                             const isHovered = hoveredHour === pt.hour
+                            const isPointActive = !isViewingToday || pt.hour <= (currentBangkokHour || 23)
+
                             return (
-                                <g key={pt.hour} className="cursor-pointer" onMouseEnter={() => setHoveredHour(pt.hour)} onMouseLeave={() => setHoveredHour(null)}>
-                                    <circle
-                                        cx={cx}
-                                        cy={cy}
-                                        r={isHovered ? 6 : 3.5}
-                                        fill={isHovered ? 'oklch(18% 0.012 28)' : 'oklch(52% 0.16 28)'}
-                                        stroke="oklch(97% 0.008 28)"
-                                        strokeWidth="2"
-                                        className="transition-all duration-200"
-                                    />
-                                    {/* X-axis Label */}
+                                <g
+                                    key={pt.hour}
+                                    className="cursor-pointer"
+                                    onMouseEnter={() => setHoveredHour(pt.hour)}
+                                    onMouseLeave={() => setHoveredHour(null)}
+                                >
+                                    {isPointActive && (
+                                        <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={isHovered ? 6.5 : 4}
+                                            fill={isHovered ? 'oklch(18% 0.012 28)' : 'oklch(52% 0.20 28)'}
+                                            stroke="white"
+                                            strokeWidth="2"
+                                            className="transition-all duration-150"
+                                        />
+                                    )}
+
+                                    {/* X-axis Hour Label */}
                                     <text
                                         x={cx}
                                         y={svgHeight - padYBottom + 16}
                                         textAnchor="middle"
-                                        className={`font-mono text-[10px] ${isHovered ? 'fill-[oklch(18%_0.012_28)] font-bold' : 'fill-[oklch(55%_0.010_28)]'}`}
+                                        className={`font-mono text-[10px] ${
+                                            isHovered
+                                                ? 'fill-[oklch(18%_0.012_28)] font-bold'
+                                                : isPointActive
+                                                ? 'fill-[oklch(18%_0.012_28)] font-semibold'
+                                                : 'fill-[oklch(65%_0.010_28)]'
+                                        }`}
                                     >
                                         {pt.hour}h
                                     </text>
@@ -304,19 +407,19 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                     const pt = points.find(p => p.hour === hoveredHour)
                     if (!pt) return null
                     return (
-                        <div className="absolute top-4 right-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-2.5 rounded-sm font-mono text-xs shadow-md border border-[oklch(35%_0.012_28)] pointer-events-none">
-                            <div className="text-[10px] text-[oklch(75%_0.010_28)] font-bold mb-1">
-                                TIME // {pt.label} - {pt.hour + 1}:00
+                        <div className="absolute top-4 right-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-3 rounded-sm font-mono text-xs shadow-lg border border-[oklch(35%_0.012_28)] pointer-events-none z-10">
+                            <div className="text-[10px] text-[oklch(75%_0.010_28)] font-bold mb-1 border-b border-[oklch(35%_0.012_28)] pb-1">
+                                TIME // {pt.label} - {pt.hour + 1}:00 น.
                             </div>
-                            <div className="flex justify-between gap-4">
+                            <div className="flex justify-between gap-6 py-0.5">
                                 <span>ยอดในชั่วโมงนี้:</span>
-                                <span className="font-bold text-[oklch(52%_0.16_28)]">฿{pt.sale.toLocaleString()}</span>
+                                <span className="font-bold text-[oklch(52%_0.20_28)]">฿{pt.sale.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between gap-4">
+                            <div className="flex justify-between gap-6 py-0.5">
                                 <span>ยอดสะสมถึงชั่วโมงนี้:</span>
-                                <span className="font-bold">฿{pt.cumulative.toLocaleString()}</span>
+                                <span className="font-bold text-white">฿{pt.cumulative.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between gap-4 text-[10px] text-[oklch(65%_0.010_28)]">
+                            <div className="flex justify-between gap-6 text-[10px] text-[oklch(65%_0.010_28)] pt-1">
                                 <span>จำนวนบิล:</span>
                                 <span>{pt.count} บิล</span>
                             </div>
