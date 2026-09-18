@@ -11,7 +11,8 @@ import {
     trackLineClick,
     trackBookletClick,
     trackBookingClick,
-    trackPickupClick
+    trackPickupClick,
+    logAdEvent
 } from './utils/analyticsHelper';
 
 
@@ -241,6 +242,7 @@ export default function AdsLandingPage() {
 
     useEffect(() => {
         fetchData();
+        logAdEvent('page_view');
 
         // ─── REALTIME CHANNEL FOR ADS LANDING PAGE ───
         let debounceTimer = null;

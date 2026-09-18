@@ -214,6 +214,8 @@ function App() {
                   <Route path="lab" element={<AdminMenu defaultTab="lab" />} />
                   <Route path="sop" element={<AdminMenu defaultTab="sop" />} />
                   <Route path="marketing" element={<AdminMarketingPage defaultTab="members" />} />
+                  <Route path="ads" element={<AdminMarketingPage defaultTab="ads_landing" />} />
+                  <Route path="link-analytics" element={<AdminMarketingPage defaultTab="ads_landing" />} />
                   <Route path="members" element={<AdminMarketingPage defaultTab="members" />} />
                   <Route path="promotions" element={<AdminMarketingPage defaultTab="promotions" />} />
                   <Route path="rewards" element={<AdminMarketingPage defaultTab="rewards" />} />

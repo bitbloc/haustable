@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Users, Tag, Gift, Trophy, Music, Award, RefreshCw } from 'lucide-react'
+import { Users, Tag, Gift, Trophy, Music, Award, RefreshCw, MousePointerClick } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '../../lib/supabaseClient'
 
@@ -11,6 +11,7 @@ import RewardsManager from '../../components/admin/marketing/RewardsManager'
 import DrinkStampManager from '../../components/admin/marketing/DrinkStampManager'
 import AdminArcade from '../../components/admin/AdminArcade'
 import AdminSongRequests from '../AdminSongRequests'
+import AdLandingAnalyticsTab from '../../components/admin/marketing/AdLandingAnalyticsTab'
 
 export default function AdminMarketingPage({ defaultTab = 'members' }) {
     const [searchParams, setSearchParams] = useSearchParams()
@@ -99,6 +100,7 @@ export default function AdminMarketingPage({ defaultTab = 'members' }) {
 
     const tabs = [
         { id: 'members', label: 'Members & CRM', icon: Users, count: stats.totalMembers },
+        { id: 'ads_landing', label: 'Ad Analytics (/link)', icon: MousePointerClick },
         { id: 'promotions', label: 'Promo Vouchers', icon: Tag, count: stats.activeVouchers },
         { id: 'rewards', label: 'xhaus Rewards', icon: Gift, count: stats.activeRewards },
         { id: 'stamps', label: 'Drink Stamps (10+1)', icon: Award, count: stats.stampsEligible },
@@ -186,6 +188,7 @@ export default function AdminMarketingPage({ defaultTab = 'members' }) {
                         transition={{ duration: 0.12 }}
                     >
                         {activeTab === 'members' && <AdminMembers />}
+                        {activeTab === 'ads_landing' && <AdLandingAnalyticsTab />}
                         {activeTab === 'promotions' && <PromoVoucherManager />}
                         {activeTab === 'rewards' && <RewardsManager />}
                         {activeTab === 'stamps' && <DrinkStampManager />}

@@ -13,6 +13,8 @@ import TopMenuInfographic from './financial/TopMenuInfographic'
 import CRMFinancialSummary from './financial/CRMFinancialSummary'
 import CasualDiningInsights from './financial/CasualDiningInsights'
 import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
+import ProfitWaterfallChart from './financial/ProfitWaterfallChart'
+import InteractiveBcgScatter from './financial/InteractiveBcgScatter'
 import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '../../utils/categoryClassifier'
 
 export default function AdminFinancialDashboard() {
@@ -1027,6 +1029,11 @@ export default function AdminFinancialDashboard() {
                 {/* Master Tab: Compact High-Level Summary + Visual Ledger */}
                 {activeTab === 'master' && (
                     <div className="space-y-6">
+                        <ProfitWaterfallChart 
+                            liveMetrics={liveMetrics} 
+                            timeRangeLabel={getTimeRangeLabel()} 
+                        />
+
                         <DetailedSalesSummary 
                             data={{
                                 paymentMethods: paymentMethodsData,
@@ -1089,6 +1096,10 @@ export default function AdminFinancialDashboard() {
                 {activeTab === 'casual' && (
                     <div className="space-y-6">
                         <CasualDiningInsights data={casualData} />
+                        <InteractiveBcgScatter 
+                            topMenuData={topMenuData} 
+                            menuMatrix={unmetNeedData?.menuMatrix} 
+                        />
                         <UnmetNeedAnalytics data={unmetNeedData} />
                     </div>
                 )}

@@ -4,6 +4,8 @@
  * Optimized for clean single-dispatch, beacon transport, and debounce protection.
  */
 
+import { supabase } from '../lib/supabaseClient';
+
 export const GA_MEASUREMENT_ID = 'G-D1M18Z54LM';
 export const GOOGLE_ADS_ID = 'AW-11227095880';
 
@@ -26,6 +28,84 @@ const isDebounced = (key, cooldownMs = 2000) => {
 };
 
 /**
+ * Extract and persist UTM Attribution parameters across entire customer journey
+ */
+export const getStoredUtmParams = () => {
+    try {
+        if (typeof window === 'undefined') return {};
+        const urlParams = new URLSearchParams(window.location.search);
+        const utm_source = urlParams.get('utm_source') || localStorage.getItem('onhaus_utm_source') || '';
+        const utm_medium = urlParams.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '';
+        const utm_campaign = urlParams.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '';
+        const utm_content = urlParams.get('utm_content') || localStorage.getItem('onhaus_utm_content') || '';
+
+        // Persist if found in URL for closed-loop attribution
+        if (urlParams.get('utm_source')) localStorage.setItem('onhaus_utm_source', urlParams.get('utm_source'));
+        if (urlParams.get('utm_medium')) localStorage.setItem('onhaus_utm_medium', urlParams.get('utm_medium'));
+        if (urlParams.get('utm_campaign')) localStorage.setItem('onhaus_utm_campaign', urlParams.get('utm_campaign'));
+        if (urlParams.get('utm_content')) localStorage.setItem('onhaus_utm_content', urlParams.get('utm_content'));
+
+        return { utm_source, utm_medium, utm_campaign, utm_content };
+    } catch {
+        return {};
+    }
+};
+
+const getSessionId = () => {
+    try {
+        let sid = sessionStorage.getItem('onhaus_ad_sid');
+        if (!sid) {
+            sid = 'sid_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+            sessionStorage.setItem('onhaus_ad_sid', sid);
+        }
+        return sid;
+    } catch {
+        return 'sid_anon';
+    }
+};
+
+const getDeviceType = () => {
+    if (typeof window === 'undefined') return 'desktop';
+    const ua = navigator.userAgent || '';
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return 'tablet';
+    if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/i.test(ua)) return 'mobile';
+    return 'desktop';
+};
+
+/**
+ * Log Ad Event to Supabase database for Backoffice Admin Analytics
+ */
+export const logAdEvent = async (eventName, metadata = {}) => {
+    try {
+        if (typeof window === 'undefined') return;
+        const utm = getStoredUtmParams();
+        const payload = {
+            session_id: getSessionId(),
+            event_name: eventName,
+            utm_source: utm.utm_source || null,
+            utm_medium: utm.utm_medium || null,
+            utm_campaign: utm.utm_campaign || null,
+            utm_content: utm.utm_content || null,
+            device_type: getDeviceType(),
+            page_path: window.location.pathname || '/link',
+            metadata: {
+                referrer: document.referrer || null,
+                ...metadata
+            }
+        };
+
+        // Non-blocking fire-and-forget
+        supabase.from('ad_events').insert([payload]).then(({ error }) => {
+            if (error) {
+                console.debug('[AdAnalytics] Supabase notice:', error.message);
+            }
+        }).catch(() => {});
+    } catch (e) {
+        console.debug('[AdAnalytics] logAdEvent err:', e);
+    }
+};
+
+/**
  * Universal single-dispatch event tracker for GA4 & Google Ads
  * Uses beacon transport for reliable background delivery on outbound navigation.
  * @param {string} eventName 
@@ -39,6 +119,9 @@ export const trackEvent = (eventName, params = {}) => {
             transport_type: 'beacon',
             ...params
         };
+
+        // Also record to Supabase Ad Analytics
+        logAdEvent(eventName, params);
 
         // Dispatch cleanly to window.gtag (automatically manages dataLayer without manual duplicate pushes)
         if (typeof window.gtag === 'function') {

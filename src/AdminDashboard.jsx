@@ -11,6 +11,8 @@ import { playOrderAlert } from './utils/audioHelper'
 
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
+import IntradayVelocityChart from './components/admin/overview/IntradayVelocityChart'
+import FloorTurnoverGauge from './components/admin/overview/FloorTurnoverGauge'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
 import DailyShiftsCashFlowWidget from './components/admin/overview/DailyShiftsCashFlowWidget'
 import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerTab'
@@ -649,6 +651,13 @@ export default function AdminDashboard() {
                     loading={loading}
                 />
 
+                {/* 1.2 Handcrafted Data Visual: Intraday Sales Velocity Curve */}
+                <IntradayVelocityChart
+                    bookings={dailyBookings}
+                    selectedDate={selectedDate}
+                    loading={loading}
+                />
+
                 {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
                 <DailyShiftsCashFlowWidget
                     shifts={shifts}
@@ -662,6 +671,13 @@ export default function AdminDashboard() {
                 <div className="mb-6">
                     <OwnerPosBroadcastBar />
                 </div>
+
+                {/* 2.5 Handcrafted Data Visual: Table Turn Dwell Time & Service Mix Flow */}
+                <FloorTurnoverGauge
+                    bookings={dailyBookings}
+                    totalTables={floorOccupancy.totalTables}
+                    occupiedTables={floorOccupancy.occupiedTables}
+                />
 
                 {/* 3. Interactive Live Floor & 1-Tap Table Block (Shown always for quick overview) */}
                 <LiveFloorQuickStatus 

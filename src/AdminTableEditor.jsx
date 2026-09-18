@@ -105,6 +105,7 @@ export default function AdminTableEditor() {
     const [gridStep, setGridStep] = useState(1); // 1% or 5%
     const [bgOpacity, setBgOpacity] = useState(100);
     const [uploadingBg, setUploadingBg] = useState(false);
+    const [uploadingTableImg, setUploadingTableImg] = useState(false);
 
     // Modals
     const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -332,6 +333,7 @@ export default function AdminTableEditor() {
     // Upload Table Real Photo
     const handleUploadTableImage = async (file) => {
         if (!file || !selectedTable) return;
+        setUploadingTableImg(true);
         try {
             const fileExt = file.name.split('.').pop();
             const fileName = `table-images/${selectedTable.id}-${Date.now()}.${fileExt}`;
@@ -346,6 +348,8 @@ export default function AdminTableEditor() {
             toast.success('Table photo uploaded');
         } catch (error) {
             toast.error('Upload Failed: ' + error.message);
+        } finally {
+            setUploadingTableImg(false);
         }
     };
 
@@ -769,6 +773,64 @@ export default function AdminTableEditor() {
                                                 <option value="circle">Circle</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    {/* Table Photo (รูปถ่ายโต๊ะสำหรับแสดงตอนจอง) */}
+                                    <div className="pt-2 border-t border-[oklch(85%_0.012_28)]">
+                                        <div className="flex justify-between items-center mb-1.5">
+                                            <label className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                                TABLE PHOTO (รูปถ่ายโต๊ะ)
+                                            </label>
+                                            {selectedTable.image_url && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleUpdateTable(selectedTable.id, 'image_url', null)}
+                                                    className="text-[9px] font-mono text-red-600 hover:underline cursor-pointer"
+                                                >
+                                                    [ REMOVE ]
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {selectedTable.image_url ? (
+                                            <div className="relative group rounded-sm border border-[oklch(85%_0.012_28)] overflow-hidden bg-[oklch(94%_0.010_28)]">
+                                                <img
+                                                    src={selectedTable.image_url}
+                                                    alt={selectedTable.table_name}
+                                                    className="w-full h-28 object-cover"
+                                                />
+                                                <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer text-white font-mono text-[10px] font-bold">
+                                                    {uploadingTableImg ? '[ UPLOADING... ]' : '[ CHANGE PHOTO ➔ ]'}
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        accept="image/*"
+                                                        disabled={uploadingTableImg}
+                                                        onChange={(e) => {
+                                                            if (e.target.files?.[0]) handleUploadTableImage(e.target.files[0]);
+                                                        }}
+                                                    />
+                                                </label>
+                                            </div>
+                                        ) : (
+                                            <label className="border border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] rounded-sm p-3.5 flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors text-center">
+                                                <span className="font-mono text-[10px] font-bold text-[oklch(18%_0.012_28)]">
+                                                    {uploadingTableImg ? '[ UPLOADING... ]' : '[ + UPLOAD TABLE PHOTO ]'}
+                                                </span>
+                                                <span className="font-mono text-[8px] text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                    PNG, JPG, WEBP (Customer Card Preview)
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept="image/*"
+                                                    disabled={uploadingTableImg}
+                                                    onChange={(e) => {
+                                                        if (e.target.files?.[0]) handleUploadTableImage(e.target.files[0]);
+                                                    }}
+                                                />
+                                            </label>
+                                        )}
                                     </div>
 
                                     {/* Quick Size Presets */}

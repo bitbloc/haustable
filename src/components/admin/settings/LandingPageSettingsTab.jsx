@@ -247,15 +247,23 @@ export default function LandingPageSettingsTab({
                         จัดการรูปภาพ เมนู ข้อมูลติดต่อ และสื่อสำหรับหน้า Landing Page
                     </p>
                 </div>
-                <a
-                    href="/link"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-colors shadow-xs"
-                >
-                    <span>เปิดดูหน้า /link</span>
-                    <ExternalLink size={13} />
-                </a>
+                <div className="flex items-center gap-2">
+                    <a
+                        href="/admin/marketing?tab=ads_landing"
+                        className="inline-flex items-center gap-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] text-[var(--color-ink)] border border-[var(--color-rule)] px-3.5 py-2 rounded-xl text-xs font-mono font-bold transition-colors"
+                    >
+                        <span>ดูสถิติโฆษณา (ANALYTICS)</span>
+                    </a>
+                    <a
+                        href="/link"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] px-4 py-2 rounded-xl text-xs font-mono font-bold transition-colors shadow-xs"
+                    >
+                        <span>เปิดดูหน้า /link</span>
+                        <ExternalLink size={13} />
+                    </a>
+                </div>
             </div>
 
             {/* Logo & Open Graph Share Image */}
