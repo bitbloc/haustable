@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 
 // Helper: Extract Asia/Bangkok hour (0 - 23) reliably across all browser environments
 const getBangkokHour = (timeInput) => {
@@ -15,9 +15,37 @@ const getBangkokHour = (timeInput) => {
 
 export default function IntradayVelocityChart({ bookings = [], selectedDate, loading = false }) {
     const [hoveredHour, setHoveredHour] = useState(null)
+    const containerRef = useRef(null)
+    const [containerWidth, setContainerWidth] = useState(800)
 
     // Restaurant operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
+
+    // Track dynamic container width for 100% full-width responsive scaling (especially on iPhone)
+    useEffect(() => {
+        if (!containerRef.current) return
+        const updateWidth = () => {
+            if (containerRef.current) {
+                const w = containerRef.current.clientWidth || containerRef.current.offsetWidth
+                if (w > 0) setContainerWidth(w)
+            }
+        }
+        updateWidth()
+
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver((entries) => {
+                for (let entry of entries) {
+                    const w = entry.contentRect.width
+                    if (w > 0) setContainerWidth(Math.round(w))
+                }
+            })
+            ro.observe(containerRef.current)
+            return () => ro.disconnect()
+        } else {
+            window.addEventListener('resize', updateWidth)
+            return () => window.removeEventListener('resize', updateWidth)
+        }
+    }, [])
 
     // Determine whether currently viewing today
     const isViewingToday = useMemo(() => {
@@ -81,7 +109,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             runningTotal += sale
             return {
                 hour: h,
-                label: `${h}:00`,
+                label: `${h}.00`,
                 sale,
                 count: hourlyCounts[h],
                 cumulative: runningTotal
@@ -103,14 +131,16 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
 
     const { points, benchmarkPoints, totalRevenue } = chartData
 
-    // SVG Coordinate Calculations
-    const svgWidth = 800
-    const svgHeight = 220
-    const padX = 50
-    const padYTop = 25
-    const padYBottom = 35
-    const plotWidth = svgWidth - padX * 2
-    const plotHeight = svgHeight - padYTop - padYBottom
+    // Dynamic Responsive Dimensions (eliminates iPhone letterboxing and squished ribbons)
+    const isMobile = containerWidth < 540
+    const svgWidth = Math.max(320, containerWidth)
+    const svgHeight = isMobile ? 240 : 270
+    const padLeft = isMobile ? 38 : 48
+    const padRight = isMobile ? 12 : 18
+    const padYTop = isMobile ? 22 : 28
+    const padYBottom = isMobile ? 32 : 36
+    const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
+    const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
 
     const maxVal = useMemo(() => {
         const maxCum = points.length > 0 ? points[points.length - 1].cumulative : 0
@@ -119,7 +149,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         return Math.ceil(ceiling / 5000) * 5000
     }, [points, benchmarkPoints])
 
-    const getX = (idx) => padX + (idx / (hours.length - 1)) * plotWidth
+    const getX = (idx) => padLeft + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxVal) * plotHeight
 
     // Active points for today: only draw actual sales line up to the current hour (do not extrapolate 0 into future hours)
@@ -155,7 +185,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         const pathBench = `M ${benchCoords.join(' L ')}`
 
         return { pathActual: pathAct, pathArea: pathAr, pathBenchmark: pathBench }
-    }, [points, activePoints, benchmarkPoints, hours, maxVal])
+    }, [points, activePoints, benchmarkPoints, hours, maxVal, plotWidth, plotHeight, svgHeight, padLeft, padRight])
 
     // Peak rush hour
     const peakHour = useMemo(() => {
@@ -186,7 +216,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             Intraday Sales Velocity (ความเร็วยอดขายสะสมรายชั่วโมง)
                         </h3>
                         <p className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                            เปรียบเทียบจังหวะยอดขายจริงกับ Benchmark ค่าเฉลี่ยร้าน (11:00 - 23:00 น.)
+                            เปรียบเทียบจังหวะยอดขายจริงกับ Benchmark ค่าเฉลี่ยร้าน (11.00 - 23.00 น.)
                         </p>
                     </div>
                 </div>
@@ -203,7 +233,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                         <div className="border-l border-[oklch(85%_0.012_28)] pl-4">
                             <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PEAK RUSH</span>
                             <span className="font-bold text-sm text-[oklch(52%_0.20_28)] tabular-nums">
-                                {peakHour.label} (฿{peakHour.sale.toLocaleString()})
+                                {peakHour.hour}.00 น. (฿{peakHour.sale.toLocaleString()})
                             </span>
                         </div>
                     )}
@@ -211,9 +241,13 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             </div>
 
             {/* Chart Graphic Area */}
-            <div className="p-4 relative">
+            <div 
+                ref={containerRef} 
+                onClick={() => setHoveredHour(null)}
+                className="p-2 sm:p-4 relative w-full"
+            >
                 {/* Visual Legend */}
-                <div className="flex items-center justify-end gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)]">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)]">
                     <div className="flex items-center gap-1.5">
                         <span className="w-3.5 h-1.5 bg-[oklch(52%_0.20_28)] rounded-xs inline-block" />
                         <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดขายจริงวันนี้</span>
@@ -224,11 +258,12 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                     </div>
                 </div>
 
-                {/* Responsive SVG Chart */}
-                <div className="w-full overflow-x-auto no-scrollbar">
+                {/* Responsive Full-Width SVG Chart */}
+                <div className="w-full select-none">
                     <svg
                         viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                        className="w-full h-44 sm:h-56 select-none"
+                        style={{ width: '100%', height: `${svgHeight}px` }}
+                        className="w-full block select-none"
                     >
                         <defs>
                             {/* Gradient Area Fill for Red Actual Line */}
@@ -250,11 +285,11 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                         />
                         <text
                             x={(getX(1) + getX(3)) / 2}
-                            y={padYTop + 14}
+                            y={padYTop + 13}
                             textAnchor="middle"
-                            className="font-mono text-[9px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
+                            className={`font-mono ${isMobile ? 'text-[8px]' : 'text-[9px]'} font-bold fill-[oklch(55%_0.010_28)] uppercase`}
                         >
-                            LUNCH RUSH
+                            {isMobile ? 'LUNCH' : 'LUNCH RUSH'}
                         </text>
 
                         {/* Dinner: 18:00 - 21:00 (index 7 to 10) */}
@@ -268,11 +303,11 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                         />
                         <text
                             x={(getX(7) + getX(10)) / 2}
-                            y={padYTop + 14}
+                            y={padYTop + 13}
                             textAnchor="middle"
-                            className="font-mono text-[9px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
+                            className={`font-mono ${isMobile ? 'text-[8px]' : 'text-[9px]'} font-bold fill-[oklch(55%_0.010_28)] uppercase`}
                         >
-                            PRIME DINNER
+                            {isMobile ? 'DINNER' : 'PRIME DINNER'}
                         </text>
 
                         {/* Horizontal Gridlines & Y-Axis Labels */}
@@ -282,25 +317,44 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             return (
                                 <g key={ratio}>
                                     <line
-                                        x1={padX}
+                                        x1={padLeft}
                                         y1={y}
-                                        x2={svgWidth - padX}
+                                        x2={svgWidth - padRight}
                                         y2={y}
                                         stroke="oklch(88% 0.012 28)"
                                         strokeDasharray={ratio === 0 ? 'none' : '3 3'}
                                         strokeWidth={ratio === 0 ? '1.5' : '1'}
                                     />
                                     <text
-                                        x={padX - 8}
+                                        x={padLeft - 6}
                                         y={y + 3.5}
                                         textAnchor="end"
-                                        className="font-mono text-[9px] fill-[oklch(55%_0.010_28)]"
+                                        className="font-mono text-[9px] fill-[oklch(55%_0.010_28)] tabular-nums"
                                     >
                                         ฿{labelVal >= 1000 ? `${Math.round(labelVal / 1000)}k` : labelVal}
                                     </text>
                                 </g>
                             )
                         })}
+
+                        {/* Hovered Guide Line Indicator */}
+                        {hoveredHour !== null && (() => {
+                            const hIdx = hours.indexOf(hoveredHour)
+                            if (hIdx === -1) return null
+                            const hx = getX(hIdx)
+                            return (
+                                <line
+                                    x1={hx}
+                                    y1={padYTop}
+                                    x2={hx}
+                                    y2={svgHeight - padYBottom}
+                                    stroke="oklch(52% 0.20 28)"
+                                    strokeWidth="1"
+                                    strokeDasharray="2 2"
+                                    opacity="0.6"
+                                />
+                            )
+                        })()}
 
                         {/* Benchmark Expected Curve */}
                         {pathBenchmark && (
@@ -327,7 +381,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                 d={pathActual}
                                 fill="none"
                                 stroke="oklch(52% 0.20 28)"
-                                strokeWidth="3"
+                                strokeWidth={isMobile ? '2.5' : '3'}
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             />
@@ -339,7 +393,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                 <circle
                                     cx={getX(hours.indexOf(latestActive.hour))}
                                     cy={getY(latestActive.cumulative)}
-                                    r="8"
+                                    r={isMobile ? '6' : '8'}
                                     fill="oklch(52% 0.20 28)"
                                     opacity="0.3"
                                     className="animate-ping"
@@ -347,7 +401,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                 <circle
                                     cx={getX(hours.indexOf(latestActive.hour))}
                                     cy={getY(latestActive.cumulative)}
-                                    r="4.5"
+                                    r={isMobile ? '3.5' : '4.5'}
                                     fill="oklch(52% 0.20 28)"
                                     stroke="white"
                                     strokeWidth="2"
@@ -355,12 +409,15 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             </g>
                         )}
 
-                        {/* Interactive Data Points */}
+                        {/* Interactive Data Points and Invisible Hit Columns for mobile tap */}
                         {points.map((pt, i) => {
                             const cx = getX(i)
                             const cy = getY(pt.cumulative)
                             const isHovered = hoveredHour === pt.hour
                             const isPointActive = !isViewingToday || pt.hour <= (currentBangkokHour || 23)
+                            
+                            // On narrow screens (iPhone), alternate hour labels to prevent collision, but always show hovered
+                            const showLabel = !isMobile || pt.hour % 2 === 1 || isHovered || pt.hour === 23
 
                             return (
                                 <g
@@ -368,60 +425,100 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                     className="cursor-pointer"
                                     onMouseEnter={() => setHoveredHour(pt.hour)}
                                     onMouseLeave={() => setHoveredHour(null)}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setHoveredHour(prev => prev === pt.hour ? null : pt.hour)
+                                    }}
+                                    onTouchStart={(e) => {
+                                        e.stopPropagation()
+                                        setHoveredHour(pt.hour)
+                                    }}
                                 >
+                                    {/* Invisible broad vertical hit target for easy tapping on iPhone/touchscreens */}
+                                    <rect
+                                        x={cx - (plotWidth / (hours.length - 1)) / 2}
+                                        y={padYTop}
+                                        width={plotWidth / (hours.length - 1)}
+                                        height={plotHeight + padYBottom}
+                                        fill="transparent"
+                                    />
+
+                                    {/* Small tick on the baseline for all hours */}
+                                    <line
+                                        x1={cx}
+                                        y1={svgHeight - padYBottom}
+                                        x2={cx}
+                                        y2={svgHeight - padYBottom + 4}
+                                        stroke={isHovered ? 'oklch(18% 0.012 28)' : 'oklch(80% 0.012 28)'}
+                                        strokeWidth={isHovered ? '1.5' : '1'}
+                                    />
+
+                                    {/* Circle point along cumulative curve */}
                                     {isPointActive && (
                                         <circle
                                             cx={cx}
                                             cy={cy}
-                                            r={isHovered ? 6.5 : 4}
+                                            r={isHovered ? (isMobile ? 5.5 : 6.5) : (isMobile ? 3.5 : 4)}
                                             fill={isHovered ? 'oklch(18% 0.012 28)' : 'oklch(52% 0.20 28)'}
                                             stroke="white"
-                                            strokeWidth="2"
+                                            strokeWidth={isMobile ? '1.5' : '2'}
                                             className="transition-all duration-150"
                                         />
                                     )}
 
                                     {/* X-axis Hour Label */}
-                                    <text
-                                        x={cx}
-                                        y={svgHeight - padYBottom + 16}
-                                        textAnchor="middle"
-                                        className={`font-mono text-[10px] ${
-                                            isHovered
-                                                ? 'fill-[oklch(18%_0.012_28)] font-bold'
-                                                : isPointActive
-                                                ? 'fill-[oklch(18%_0.012_28)] font-semibold'
-                                                : 'fill-[oklch(65%_0.010_28)]'
-                                        }`}
-                                    >
-                                        {pt.hour}h
-                                    </text>
+                                    {showLabel && (
+                                        <text
+                                            x={cx}
+                                            y={svgHeight - padYBottom + 16}
+                                            textAnchor="middle"
+                                            className={`font-mono ${isMobile ? 'text-[8.5px]' : 'text-[9.5px]'} tabular-nums ${
+                                                isHovered
+                                                    ? 'fill-[oklch(18%_0.012_28)] font-bold'
+                                                    : isPointActive
+                                                    ? 'fill-[oklch(18%_0.012_28)] font-semibold'
+                                                    : 'fill-[oklch(65%_0.010_28)]'
+                                            }`}
+                                        >
+                                            {pt.hour}.00
+                                        </text>
+                                    )}
                                 </g>
                             )
                         })}
                     </svg>
                 </div>
 
-                {/* Hover Popover Card */}
+                {/* Hover/Tap Popover Card */}
                 {hoveredHour !== null && (() => {
                     const pt = points.find(p => p.hour === hoveredHour)
                     if (!pt) return null
                     return (
-                        <div className="absolute top-4 right-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-3 rounded-sm font-mono text-xs shadow-lg border border-[oklch(35%_0.012_28)] pointer-events-none z-10">
-                            <div className="text-[10px] text-[oklch(75%_0.010_28)] font-bold mb-1 border-b border-[oklch(35%_0.012_28)] pb-1">
-                                TIME // {pt.label} - {pt.hour + 1}:00 น.
+                        <div 
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] p-2.5 sm:p-3 rounded-sm font-mono text-xs shadow-xl border border-[oklch(35%_0.012_28)] z-20 max-w-[220px] sm:max-w-xs pointer-events-auto"
+                        >
+                            <div className="text-[10px] text-[oklch(75%_0.010_28)] font-bold mb-1 border-b border-[oklch(35%_0.012_28)] pb-1 flex justify-between items-center">
+                                <span>TIME // {pt.hour}.00 - {pt.hour + 1}.00 น.</span>
+                                <button 
+                                    type="button" 
+                                    onClick={() => setHoveredHour(null)} 
+                                    className="sm:hidden text-white/60 hover:text-white ml-2 text-xs cursor-pointer"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <div className="flex justify-between gap-6 py-0.5">
-                                <span>ยอดในชั่วโมงนี้:</span>
-                                <span className="font-bold text-[oklch(52%_0.20_28)]">฿{pt.sale.toLocaleString()}</span>
+                            <div className="flex justify-between gap-3 sm:gap-6 py-0.5">
+                                <span className="text-[oklch(75%_0.010_28)]">ยอดชั่วโมงนี้:</span>
+                                <span className="font-bold text-[oklch(52%_0.20_28)] tabular-nums">฿{pt.sale.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between gap-6 py-0.5">
-                                <span>ยอดสะสมถึงชั่วโมงนี้:</span>
-                                <span className="font-bold text-white">฿{pt.cumulative.toLocaleString()}</span>
+                            <div className="flex justify-between gap-3 sm:gap-6 py-0.5">
+                                <span className="text-[oklch(75%_0.010_28)]">ยอดสะสม:</span>
+                                <span className="font-bold text-white tabular-nums">฿{pt.cumulative.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between gap-6 text-[10px] text-[oklch(65%_0.010_28)] pt-1">
+                            <div className="flex justify-between gap-3 sm:gap-6 text-[10px] text-[oklch(65%_0.010_28)] pt-1 border-t border-[oklch(30%_0.012_28)] mt-1">
                                 <span>จำนวนบิล:</span>
-                                <span>{pt.count} บิล</span>
+                                <span className="tabular-nums">{pt.count} บิล</span>
                             </div>
                         </div>
                     )
