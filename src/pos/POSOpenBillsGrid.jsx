@@ -23,11 +23,37 @@ import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 
+export function getOrderCategoryType(order) {
+    if (!order) return 'direct';
+    const sourceLower = (order.source || '').toLowerCase();
+    const remarkLower = (order.staff_remark || '').toLowerCase();
+    const isLineman = remarkLower.includes('lineman') || sourceLower === 'lineman';
+    const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online') || remarkLower.includes('easyslip') || !!order.payment_slip_url;
+    const isExplicitInHouse = !isLineman && !hasOnlineMarker && (
+        sourceLower === 'pos' || 
+        sourceLower === 'walk_in' || 
+        remarkLower.includes('walk-in') || 
+        remarkLower.includes('walk in') || 
+        remarkLower.includes('ออเดอร์กลับบ้าน') || 
+        (order.pickup_contact_name || '').includes('ออเดอร์กลับบ้าน') ||
+        (order.customer_note || '').includes('ออเดอร์กลับบ้าน') ||
+        order.booking_type === 'walk_in'
+    );
+
+    if (isLineman) return 'lineman';
+    if (order.table_id) return 'dine_in';
+    if (order.booking_type === 'pickup' || order.order_type === 'hausmade_pickup') {
+        if (isExplicitInHouse) return 'takeaway';
+        return 'online_pickup';
+    }
+    return isExplicitInHouse ? 'takeaway' : 'direct';
+}
+
 export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey, isActive = true }) {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [channelFilter, setChannelFilter] = useState('all'); // 'all', 'table', 'pickup', 'walk_in'
+    const [channelFilter, setChannelFilter] = useState('all'); // 'all', 'table', 'takeaway', 'online'
     const [statusMode, setStatusMode] = useState('active'); // 'active', 'stale', 'void', 'all'
     const [unsentOnly, setUnsentOnly] = useState(false);
     const [viewSlipUrl, setViewSlipUrl] = useState(null);
@@ -156,10 +182,14 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         if (statusMode === 'merged' && !transfer.isMergedSource) return false;
         if (statusMode === 'stale' && (!isStale || isVoid)) return false;
 
+        const catType = getOrderCategoryType(order);
+
         // Channel filter
-        if (channelFilter === 'table' && !order.table_id) return false;
-        if (channelFilter === 'pickup' && order.booking_type !== 'pickup') return false;
-        if (channelFilter === 'walk_in' && (order.table_id || order.booking_type === 'pickup')) return false;
+        if (channelFilter === 'table' && catType !== 'dine_in') return false;
+        if (channelFilter === 'takeaway' && catType !== 'takeaway' && catType !== 'direct') return false;
+        if (channelFilter === 'online' && catType !== 'online_pickup' && catType !== 'lineman') return false;
+        if (channelFilter === 'pickup' && catType !== 'takeaway' && catType !== 'online_pickup') return false;
+        if (channelFilter === 'walk_in' && catType !== 'takeaway' && catType !== 'direct') return false;
 
         // Unsent filter
         if (unsentOnly) {
@@ -243,11 +273,11 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                 <div className="flex flex-col md:flex-row gap-3 items-center justify-between pt-1">
                     {/* Search Input */}
                     <div className="relative w-full md:w-60">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#767673]" size={15} />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={15} />
                         <input 
                             type="search" 
                             placeholder="ค้นหาเลขโต๊ะ, ชื่อลูกค้า, บิล..." 
-                            className="w-full bg-white border border-[#D1D1CD] rounded-lg py-2 pl-9 pr-4 text-xs text-[#1A1A1A] placeholder-[#767673] focus:outline-none focus:border-black font-medium transition-colors"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg py-2 pl-9 pr-4 text-xs text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] font-medium transition-colors"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -256,92 +286,92 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                     {/* Status & Channel Filters */}
                     <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto font-mono text-[10px] font-bold uppercase tracking-wider scrollbar-none">
                         {/* Status Toggle (ACTIVE / STALE / MERGED / VOID / ALL) */}
-                        <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD]">
+                        <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-lg border border-[var(--color-rule)]">
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('active')}
-                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${statusMode === 'active' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${statusMode === 'active' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
                                 ACTIVE ({activeOrders.length})
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('stale')}
-                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'stale' ? 'bg-amber-600 text-white shadow-xs font-extrabold' : 'text-amber-800 hover:text-amber-950 font-bold'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1 ${statusMode === 'stale' ? 'bg-amber-600 text-white shadow-xs font-extrabold' : 'text-amber-800 hover:text-amber-950 font-bold'}`}
                             >
-                                ⚠️ ค้าง (&gt;2วัน) ({staleOrders.length})
+                                [!] ค้าง (&gt;2วัน) ({staleOrders.length})
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('merged')}
-                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'merged' ? 'bg-[oklch(52%_0.16_28)] text-white shadow-xs font-black' : 'text-[oklch(52%_0.16_28)] hover:text-black font-bold'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1 ${statusMode === 'merged' ? 'bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] shadow-xs font-black' : 'text-[oklch(52%_0.16_28)] hover:text-[var(--color-ink)] font-bold'}`}
                             >
-                                <Layers size={10} /> MERGED ({mergedOrders.length})
+                                MERGED ({mergedOrders.length})
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('void')}
-                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1 ${statusMode === 'void' ? 'bg-red-600 text-white shadow-xs' : 'text-red-700 hover:text-red-900'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1 ${statusMode === 'void' ? 'bg-red-600 text-white shadow-xs font-bold' : 'text-red-700 hover:text-red-900'}`}
                             >
-                                <Ban size={10} /> VOID ({pureVoidOrders.length})
+                                VOID ({pureVoidOrders.length})
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setStatusMode('all')}
-                                className={`px-2.5 py-1.5 rounded-md transition-all cursor-pointer ${statusMode === 'all' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${statusMode === 'all' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
                                 ALL ({orders.length})
                             </button>
                         </div>
 
                         {/* Channel Selector */}
-                        <div className="flex bg-[#E0E0DC] p-0.5 rounded-lg border border-[#D1D1CD]">
+                        <div className="flex bg-[var(--color-paper-2)] p-0.5 rounded-lg border border-[var(--color-rule)]">
                             <button 
                                 type="button"
                                 onClick={() => setChannelFilter('all')}
-                                className={`px-2 py-1.5 rounded-md transition-all cursor-pointer ${channelFilter === 'all' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${channelFilter === 'all' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
-                                ALL CHANNELS
+                                ทั้งหมด
                             </button>
                             <button 
                                 type="button"
                                 onClick={() => setChannelFilter('table')}
-                                className={`px-2 py-1.5 rounded-md transition-all cursor-pointer ${channelFilter === 'table' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${channelFilter === 'table' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
-                                DINE-IN
+                                ทานที่ร้าน
                             </button>
                             <button 
                                 type="button"
-                                onClick={() => setChannelFilter('pickup')}
-                                className={`px-2 py-1.5 rounded-md transition-all cursor-pointer ${channelFilter === 'pickup' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                onClick={() => setChannelFilter('takeaway')}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${channelFilter === 'takeaway' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
-                                PICK-UP
+                                ออเดอร์กลับบ้าน
                             </button>
                             <button 
                                 type="button"
-                                onClick={() => setChannelFilter('walk_in')}
-                                className={`px-2 py-1.5 rounded-md transition-all cursor-pointer ${channelFilter === 'walk_in' ? 'bg-white text-[#1A1A1A] shadow-xs' : 'text-[#767673] hover:text-[#1A1A1A]'}`}
+                                onClick={() => setChannelFilter('online')}
+                                className={`px-2.5 py-1.5 rounded-md transition-[background-color,color] duration-150 cursor-pointer ${channelFilter === 'online' ? 'bg-[var(--color-paper)] text-[var(--color-ink)] shadow-xs font-bold' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                             >
-                                DIRECT
+                                ออนไลน์
                             </button>
                         </div>
 
                         <button
                             type="button"
                             onClick={() => setUnsentOnly(prev => !prev)}
-                            className={`px-3 py-1.5 rounded-lg border transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-lg border transition-[background-color,color] duration-150 cursor-pointer flex items-center gap-1.5 ${
                                 unsentOnly 
                                 ? 'bg-amber-500 border-amber-600 text-white font-bold shadow-xs' 
-                                : 'bg-white border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A]'
+                                : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                             }`}
                         >
-                            <Send size={11} /> UNSENT ONLY
+                            UNSENT ONLY
                         </button>
 
                         <button
                             type="button"
                             onClick={fetchOpenBills}
-                            className="p-1.5 bg-white border border-[#D1D1CD] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                            className="p-1.5 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                             title="Refresh Open & Voided Bills"
                         >
                             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
@@ -368,8 +398,8 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             const transfer = parseTableTransferInfo(order, orders);
                             const isVoid = (order.status === 'void' || order.status === 'cancelled') && !transfer.isMergedSource;
                             const isMerged = transfer.isMergedSource;
-                            const isTable = !!order.table_id;
-                            const isPickup = order.booking_type === 'pickup';
+                            const catType = getOrderCategoryType(order);
+                            const isTable = catType === 'dine_in';
                             const tableName = order.tables_layout?.table_name || 'WALK-IN';
                             const items = order.order_items || [];
                             const itemCount = items.reduce((sum, i) => sum + (i.quantity || 1), 0);
@@ -380,39 +410,43 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                 (!i.db_id && typeof i.id === 'string' && i.id.startsWith('local_'))
                             );
 
-                            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer'];
+                            const defaultWalkIns = ['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in', 'walk-in customer (offline)', 'walk-in pick-up (offline)', 'anonymous user', 'walk-in-customer', 'ออเดอร์กลับบ้าน'];
                             const customerName = order.profiles?.display_name 
                                  || (order.customer_name && !defaultWalkIns.includes(order.customer_name.toLowerCase().trim()) ? order.customer_name : null)
                                  || (order.pickup_contact_name && !defaultWalkIns.includes(order.pickup_contact_name.toLowerCase().trim()) ? order.pickup_contact_name : null)
-                                 || 'Guest';
+                                 || (catType === 'takeaway' ? 'ลูกค้าสั่งกลับบ้าน' : (catType === 'dine_in' ? `ลูกค้าโต๊ะ ${tableName}` : 'ลูกค้าทั่วไป'));
 
                             return (
                                 <motion.div
                                     key={order.id}
                                     whileHover={{ scale: 1.01 }}
                                     onClick={() => onSelectOrder && onSelectOrder(order)}
-                                    className={`border rounded-2xl p-4 transition-all shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer ${
+                                    className={`border rounded-2xl p-4 transition-[border-color,box-shadow] duration-150 shadow-xs flex flex-col justify-between gap-3 group relative overflow-hidden cursor-pointer ${
                                         isMerged
                                         ? 'bg-[oklch(99%_0.008_28)] border-[oklch(52%_0.16_28)]/50 hover:border-[oklch(52%_0.16_28)]'
                                         : isVoid 
                                             ? 'bg-red-50/50 border-red-200 hover:border-red-400 opacity-90' 
-                                            : 'bg-white border-[#D1D1CD] hover:border-[#1A1A1A]'
+                                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:border-[var(--color-ink)]'
                                     }`}
                                 >
                                     {/* Card Header: Channel Badge, Status & Time */}
-                                    <div className="flex items-center justify-between pb-2 border-b border-[#ECECE9]">
+                                    <div className="flex items-center justify-between pb-2 border-b border-[var(--color-rule)]">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {isMerged ? (
-                                                <span className="bg-[oklch(52%_0.16_28)] text-white font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    <Layers size={10} /> MERGED ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                <span className="bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    รวมโต๊ะ ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
                                                 </span>
                                             ) : isVoid ? (
-                                                <span className="bg-red-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    <Ban size={10} /> VOID / ยกเลิก
+                                                <span className="bg-red-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    VOID / ยกเลิก
+                                                </span>
+                                            ) : catType === 'lineman' ? (
+                                                <span className="bg-[#00B14F] text-white font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    LINE MAN
                                                 </span>
                                             ) : isTable ? (
-                                                <span className="bg-[#1A1A1A] text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    <Utensils size={10} /> โต๊ะ {tableName}
+                                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
+                                                    ทานที่ร้าน : โต๊ะ {tableName}
                                                     {transfer.isMergedTarget && (
                                                         <span className="ml-0.5 bg-[oklch(45%_0.08_140)] text-white text-[8px] px-1 py-0.2 rounded">
                                                             +{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(',')}
@@ -424,13 +458,17 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                         </span>
                                                     )}
                                                 </span>
-                                            ) : isPickup ? (
-                                                <span className="bg-amber-600 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    <ShoppingBag size={10} /> PICK-UP
+                                            ) : catType === 'takeaway' ? (
+                                                <span className="bg-[oklch(52%_0.16_28)] text-[var(--color-paper)] font-mono text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    ออเดอร์กลับบ้าน
+                                                </span>
+                                            ) : catType === 'online_pickup' ? (
+                                                <span className="bg-sky-700 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    รับกลับออนไลน์
                                                 </span>
                                             ) : (
-                                                <span className="bg-slate-700 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1">
-                                                    DIRECT BILL
+                                                <span className="bg-slate-700 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
+                                                    บิลหน้าร้าน
                                                 </span>
                                             )}
 
@@ -533,7 +571,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 const slipType = (order.status === 'completed' || order.status === 'paid' || order.status === 'success') ? 'receipt' : 'kitchen';
                                                 onOpenSlip && onOpenSlip(order, slipType);
                                             }}
-                                            className="w-full bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
+                                            className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-1.5 rounded-lg transition-[background-color,transform] duration-150 flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
                                         >
                                             <ReceiptText size={10} /> SLIP
                                         </button>
@@ -545,7 +583,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                     e.stopPropagation();
                                                     setViewSlipUrl(order.payment_slip_url);
                                                 }}
-                                                className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
+                                                className="w-full bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 py-1.5 rounded-lg transition-[background-color,transform] duration-150 flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"
                                                 title="ดูสลิปหลักฐานโอนเงิน"
                                             >
                                                 <ImageIcon size={10} /> PROOF
@@ -558,12 +596,12 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                                 e.stopPropagation();
                                                 onSelectOrder && onSelectOrder(order);
                                             }}
-                                            className={`w-full py-1.5 rounded-lg transition-all flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate ${
+                                            className={`w-full py-1.5 rounded-lg transition-[background-color,transform] duration-150 flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate ${
                                                 isMerged
                                                 ? 'bg-[oklch(92%_0.02_28)] hover:bg-[oklch(88%_0.03_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-bold'
                                                 : isVoid 
                                                     ? 'bg-red-100 hover:bg-red-200 border border-red-300 text-red-800' 
-                                                    : 'bg-[#1A1A1A] hover:bg-black text-white'
+                                                    : 'bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)]'
                                             }`}
                                         >
                                             <span>{isMerged ? 'MERGED' : isVoid ? 'INSPECT' : 'MANAGE'}</span>

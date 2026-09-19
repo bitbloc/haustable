@@ -630,8 +630,18 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     </div>
                 </div>
 
-                {/* Layout Mode Toggle */}
-                <div className="flex bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] shrink-0 font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
+                {/* Layout Mode Toggle & Walk-in Pickup Action */}
+                <div className="flex items-center gap-2 shrink-0">
+                    {onNewWalkInPickup && (
+                        <button 
+                            type="button"
+                            onClick={onNewWalkInPickup} 
+                            className="min-h-[38px] flex items-center gap-1.5 px-3.5 py-1.5 rounded-md transition-[background-color,transform] duration-150 cursor-pointer touch-manipulation bg-[var(--color-ink)] hover:bg-[var(--color-accent)] text-[var(--color-paper)] font-mono text-xs font-bold uppercase tracking-wider shadow-xs active:scale-95"
+                        >
+                            + ออเดอร์กลับบ้าน
+                        </button>
+                    )}
+                    <div className="flex bg-[var(--color-paper)] p-1 rounded-md border border-[var(--color-rule)] shrink-0 font-mono text-xs font-bold uppercase tracking-wider touch-manipulation">
                     <button 
                         type="button"
                         onClick={() => setViewMode('floorplan')} 
@@ -668,6 +678,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             )}
                         </button>
                     )}
+                    </div>
                 </div>
             </div>
 

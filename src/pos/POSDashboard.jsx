@@ -2013,32 +2013,50 @@ export default function POSDashboard() {
             };
 
             if (targetBooking) {
-                setActiveBooking(targetBooking);
-                // Update currentOrder item db_ids with guaranteed unique IDs
-                const updatedItems = (targetBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
-                setCurrentOrder(prev => ({
-                    ...prev,
-                    items: updatedItems
-                }));
-                
-                if (newItems.length > 0) {
-                    toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
-                }
-                
-                // 0ms Optimistic table update: table turns red immediately
-                const targetTableId = targetBooking?.table_id || selectedTable?.id;
-                if (targetTableId) {
-                    window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
-                        detail: { tableId: targetTableId, booking: targetBooking } 
-                    }));
-                }
-
                 // For kitchen slips, ONLY print the newly inserted items if they exist
                 let printBooking = targetBooking;
                 if (type === 'kitchen' && newlyInsertedRows.length > 0) {
                     printBooking = { ...targetBooking, order_items: newlyInsertedRows };
                 }
                 openSlipOrSilentPrint(printBooking, type);
+
+                const targetTableId = targetBooking?.table_id || selectedTable?.id;
+                if (targetTableId) {
+                    // DINE-IN (with table): keep table active on screen
+                    setActiveBooking(targetBooking);
+                    const updatedItems = (targetBooking.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+                    setCurrentOrder(prev => ({
+                        ...prev,
+                        items: updatedItems
+                    }));
+                    
+                    if (newItems.length > 0) {
+                        toast.success("บันทึกและส่งออเดอร์เข้าครัวสำเร็จ! (กำลังพิมพ์บิล)");
+                    }
+                    
+                    // 0ms Optimistic table update: table turns red immediately
+                    window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                        detail: { tableId: targetTableId, booking: targetBooking } 
+                    }));
+                } else {
+                    // TAKEAWAY / ออเดอร์กลับบ้าน (No table):
+                    // Clear order panel immediately so staff can take next customer,
+                    // and store cleanly in Open Bills where staff can view/adjust/checkout anytime!
+                    localStorage.removeItem('pos_active_table_id');
+                    setActiveBooking(null);
+                    if (activeBookingRef) activeBookingRef.current = null;
+                    setSelectedTable(null);
+                    setAttachedMemberCrm(null);
+                    setCurrentOrder({ items: [], customer: null, table: null });
+                    setRefreshKey(prev => prev + 1);
+                    triggerDebouncedRefresh();
+                    setView('tables');
+
+                    // Reset CFD to idle screen
+                    window.dispatchEvent(new CustomEvent('pos-cfd-broadcast', { detail: { type: 'IDLE', timestamp: Date.now() } }));
+
+                    toast.success("ส่งเข้าครัวสำเร็จ! ออเดอร์กลับบ้านถูกบันทึกลง 'Open Bills' เรียบร้อย");
+                }
             }
         } catch (err) {
             console.error("Failed to send order to kitchen or print slip:", err);
@@ -2405,13 +2423,29 @@ export default function POSDashboard() {
         setView('menu');
     }, []);
 
-    const handleNewWalkInPickup = useCallback(() => {
-        setPickupNoteInput('');
-        setShowPickupModal(true);
-    }, []);
+    const handleNewWalkInPickup = useCallback(async () => {
+        // Direct 1-click takeaway order: no redundant pop-up modal
+        setSelectedTable(null);
+        localStorage.removeItem('pos_active_table_id');
+        setAttachedMemberCrm(null);
+
+        const toastId = toast.loading('กำลังเปิดออเดอร์กลับบ้าน...');
+        try {
+            const newBooking = await createWalkInPickup('ออเดอร์กลับบ้าน');
+            if (newBooking) {
+                handleSelectPickupOrder(newBooking);
+                toast.success('เปิดออเดอร์กลับบ้านเรียบร้อย', { id: toastId });
+            } else {
+                toast.error('ไม่สามารถเปิดออเดอร์กลับบ้านได้', { id: toastId });
+            }
+        } catch (err) {
+            console.error('Failed to create takeaway order:', err);
+            toast.error('เกิดข้อผิดพลาดในการเปิดออเดอร์กลับบ้าน', { id: toastId });
+        }
+    }, [createWalkInPickup, handleSelectPickupOrder]);
 
     const confirmNewWalkInPickup = useCallback(async () => {
-        const note = pickupNoteInput.trim() || 'Walk-in Pick-up';
+        const note = pickupNoteInput.trim() || 'ออเดอร์กลับบ้าน';
         setShowPickupModal(false);
         setPickupNoteInput('');
         const newBooking = await createWalkInPickup(note);
@@ -3685,6 +3719,7 @@ export default function POSDashboard() {
                         <div className={view === 'tables' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
                             <POSTableGrid 
                                 onSelectTable={handleSelectTable} 
+                                onNewWalkInPickup={handleNewWalkInPickup}
                                 hasPendingOrders={hasPendingOrders} 
                                 refreshKey={refreshKey}
                                 onOpenNotifDrawer={() => {

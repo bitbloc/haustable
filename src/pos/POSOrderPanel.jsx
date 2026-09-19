@@ -960,20 +960,20 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] text-[#767673] font-bold font-mono uppercase tracking-tight">
-                            {order.table ? `TABLE: ${order.table.table_name}` : (booking?.booking_type === 'pickup' ? 'PICK-UP ORDER' : 'WALK-IN ORDER')}
+                        <p className="text-[10px] text-[var(--color-neutral)] font-bold font-mono uppercase tracking-tight">
+                            {order.table ? `TABLE: ${order.table.table_name}` : 'ออเดอร์กลับบ้าน (TAKEAWAY)'}
                         </p>
-                        {booking && (
+                        {booking && order.table && (
                             <button
                                 onClick={() => {
                                     setEditPaxInput(String(booking.pax || 1));
                                     setShowEditPaxModal(true);
                                 }}
-                                className="text-[9px] font-bold bg-[#EAEAE6] hover:bg-[#D1D1CD] text-[#1A1A1A] border border-[#D1D1CD] px-1.5 py-0.5 rounded cursor-pointer flex items-center gap-1 transition-all active:scale-95"
+                                className="text-[9px] font-mono font-bold bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] text-[var(--color-ink)] border border-[var(--color-rule)] px-1.5 py-0.5 rounded cursor-pointer flex items-center gap-1 transition-[background-color,transform] duration-150 active:scale-95"
                                 title="คลิกเพื่อแก้ไขจำนวนคน"
                             >
-                                👥 {booking.pax || 1} คน
-                                <Edit size={9} className="text-[#767673]" />
+                                <span>PAX: {booking.pax || 1}</span>
+                                <Edit size={9} className="text-[var(--color-neutral)]" />
                             </button>
                         )}
                     </div>
