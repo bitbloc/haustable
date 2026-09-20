@@ -26,8 +26,7 @@ export default function SimplifiedLiveOverview({
     const [liveBookings, setLiveBookings] = useState([])
     const [loadingTables, setLoadingTables] = useState(true)
     const [selectedFilter, setSelectedFilter] = useState('occupied') // 'occupied' by default as requested: เน้นโต๊ะที่เปิดอยู่ เป็น default *
-    const [zoomMode, setZoomMode] = useState('list') // 'list' (List สรุป - default for Backoffice), 'compact', 'standard', 'focus'
-    const [focusedTableIndex, setFocusedTableIndex] = useState(0)
+    const [zoomMode, setZoomMode] = useState('card') // 'card' (ผังการ์ดอาหารครบ - ค่าเริ่มต้น), 'list' (List สรุป)
     const [inspectingTable, setInspectingTable] = useState(null) // Table selected for full food checklist modal
     const [currentTime, setCurrentTime] = useState(Date.now())
     const [isFullscreen, setIsFullscreen] = useState(false)
@@ -361,8 +360,20 @@ export default function SimplifiedLiveOverview({
 
                 {/* Right: View Density & Fullscreen Trigger */}
                 <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
-                    {/* View Density: List สรุป (Default) vs ผังการ์ด (Grid) */}
+                    {/* View Density: ผังการ์ดอาหารครบ (Default) vs List สรุป */}
                     <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-sm font-mono text-[11px]">
+                        <button
+                            type="button"
+                            onClick={() => setZoomMode('card')}
+                            className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer ${
+                                zoomMode !== 'list'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                            title="ผังการ์ดแสดงรายการเมนูอาหารครบถ้วน (ค่าเริ่มต้น)"
+                        >
+                            ผังการ์ด (อาหารครบ)
+                        </button>
                         <button
                             type="button"
                             onClick={() => setZoomMode('list')}
@@ -371,21 +382,9 @@ export default function SimplifiedLiveOverview({
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                     : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
-                            title="List สรุปโต๊ะเปิดอยู่ (มุมมองรายการกระชับ)"
+                            title="List สรุปโต๊ะเปิดอยู่ (มุมมองตารางกระชับ)"
                         >
                             List สรุป
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setZoomMode('standard')}
-                            className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer ${
-                                zoomMode === 'standard' || zoomMode === 'compact'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                            }`}
-                            title="ผังการ์ด (มุมมองกล่องโต๊ะ)"
-                        >
-                            ผังการ์ด
                         </button>
                     </div>
 
@@ -602,168 +601,18 @@ export default function SimplifiedLiveOverview({
                         </table>
                     </div>
                 </div>
-            ) : zoomMode === 'focus' ? (
-                /* -------------------------------------------------------------
-                   ZOOM LEVEL 3: SINGLE TABLE FOCUS (โต๊ะเดียว)
-                ------------------------------------------------------------- */
-                (() => {
-                    const activeList = filteredFloor
-                    const item = activeList[focusedTableIndex] || activeList[0]
-                    if (!item) return null
-
-                    const isOccupied = item.state.status === 'occupied'
-                    const orderItems = item.orderItems
-
-                    return (
-                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-4 sm:p-6 rounded-sm space-y-6">
-                            {/* Navigation Header */}
-                            <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-4">
-                                <div className="flex items-center gap-3">
-                                    <span className="font-mono text-3xl font-bold text-[oklch(18%_0.012_28)]">
-                                        {item.table.table_name}
-                                    </span>
-                                    <span className="font-mono text-xs px-2 py-0.5 bg-[oklch(90%_0.010_28)] rounded-xs font-bold text-[oklch(18%_0.012_28)]">
-                                        {item.table.capacity} ที่นั่ง
-                                    </span>
-                                    {isOccupied && (
-                                        <span className={`font-mono text-xs font-bold px-2 py-0.5 rounded-xs ${
-                                            item.elapsedMins >= 75
-                                                ? 'bg-[oklch(52%_0.16_28)] text-white'
-                                                : item.elapsedMins >= 45
-                                                ? 'bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)]'
-                                                : 'bg-[oklch(45%_0.08_140)] text-white'
-                                        }`}>
-                                            ใช้บริการ {formatThaiDuration(item.elapsedMins)}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="flex items-center gap-2 font-mono text-xs">
-                                    <button
-                                        type="button"
-                                        disabled={focusedTableIndex <= 0}
-                                        onClick={() => setFocusedTableIndex(i => Math.max(0, i - 1))}
-                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] disabled:opacity-30 border border-[oklch(85%_0.012_28)] rounded-xs font-bold cursor-pointer"
-                                    >
-                                        ← โต๊ะก่อนหน้า
-                                    </button>
-                                    <span className="tabular-nums font-bold">
-                                        {focusedTableIndex + 1} / {activeList.length}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        disabled={focusedTableIndex >= activeList.length - 1}
-                                        onClick={() => setFocusedTableIndex(i => Math.min(activeList.length - 1, i + 1))}
-                                        className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] disabled:opacity-30 border border-[oklch(85%_0.012_28)] rounded-xs font-bold cursor-pointer"
-                                    >
-                                        โต๊ะถัดไป →
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Alert Ribbon if calling */}
-                            {(item.hasCallBill || item.hasCallStaff) && (
-                                <div className="p-3 bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold flex items-center justify-between rounded-xs animate-pulse">
-                                    <span>🔔 โต๊ะนี้กำลังเรียก: {item.hasCallBill ? 'CHECKOUT // ขอเช็คบิล' : 'CALL STAFF // เรียกพนักงาน'}</span>
-                                    <button
-                                        type="button"
-                                        onClick={(e) => handleDismissAlert(item.booking?.id, e)}
-                                        className="px-2 py-1 bg-[oklch(18%_0.012_28)] text-white rounded-xs cursor-pointer text-[10px]"
-                                    >
-                                        รับทราบแล้ว (เคลียร์การแจ้งเตือน)
-                                    </button>
-                                </div>
-                            )}
-
-                            {/* Detailed Order Breakdown Checklist */}
-                            <div>
-                                <div className="flex items-center justify-between font-mono text-xs font-bold pb-2 border-b border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]">
-                                    <span>รายการอาหารและเครื่องดื่มที่สั่ง ({orderItems.length} รายการ)</span>
-                                    <span className="text-[oklch(18%_0.012_28)] text-sm">
-                                        ยอดรวม: ฿{item.billTotal.toLocaleString()}
-                                    </span>
-                                </div>
-
-                                {orderItems.length === 0 ? (
-                                    <div className="py-8 text-center font-mono text-xs text-[oklch(55%_0.010_28)]">
-                                        ยังไม่มีรายการอาหารที่บันทึกในบิลนี้
-                                    </div>
-                                ) : (
-                                    <div className="divide-y divide-[oklch(88%_0.012_28)] font-mono text-xs">
-                                        {orderItems.map((order, idx) => {
-                                            const itemName = order.menu_items?.name || 'รายการอาหาร'
-                                            const price = Number(order.price_at_time || order.menu_items?.price || 0)
-                                            const lineTotal = price * Number(order.quantity || 1)
-                                            const options = order.selected_options
-
-                                            return (
-                                                <div key={order.id || idx} className="py-2.5 flex items-start justify-between gap-4">
-                                                    <div className="flex items-start gap-2.5">
-                                                        <span className="w-5 h-5 flex items-center justify-center bg-[oklch(90%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs text-[11px] tabular-nums">
-                                                            {order.quantity}x
-                                                        </span>
-                                                        <div>
-                                                            <span className="font-bold text-[oklch(18%_0.012_28)] text-sm">
-                                                                {itemName}
-                                                            </span>
-                                                            {options && (
-                                                                <p className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5">
-                                                                    {typeof options === 'object' ? JSON.stringify(options).replace(/["{}]/g, ' ') : String(options)}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                                            ฿{lineTotal.toLocaleString()}
-                                                        </span>
-                                                        {order.quantity > 1 && (
-                                                            <span className="block text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
-                                                                (@ ฿{price.toLocaleString()})
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Actions / View Details */}
-                            <div className="flex items-center justify-between pt-4 border-t border-[oklch(85%_0.012_28)]">
-                                <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
-                                    ⓘ การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
-                                </span>
-                                {item.booking && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setInspectingTable(item)}
-                                        className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
-                                    >
-                                        ดูรายการอาหารครบ ➔
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    )
-                })()
             ) : (
                 /* -------------------------------------------------------------
-                   ZOOM LEVEL 1 & 2: COMPACT (หลายโต๊ะ) OR STANDARD (มาตรฐาน)
+                   DEFAULT VIEW: COMPLETE MENU CARDS (การ์ดแสดงรายการอาหารครบถ้วน)
                 ------------------------------------------------------------- */
-                <div className={`grid gap-2.5 sm:gap-3.5 transition-all duration-300 ${
-                    zoomMode === 'compact'
-                        ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8'
-                        : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                }`}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 transition-all duration-300">
                     {filteredFloor.map(item => {
                         const isOccupied = item.state.status === 'occupied'
                         const isUpcoming = item.state.status === 'upcoming'
                         const isBlocked = item.state.status === 'blocked'
                         const orderItems = item.orderItems
 
-                        // Progressive stay color
+                        // Progressive stay color tokens
                         let borderStyle = 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
                         let bgStyle = 'bg-[oklch(97%_0.008_28)]'
                         let pillStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
@@ -783,7 +632,7 @@ export default function SimplifiedLiveOverview({
                                 bgStyle = 'bg-[oklch(95%_0.015_28)]'
                                 pillStyle = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                             }
-                            statusText = formatShortDuration(item.elapsedMins)
+                            statusText = `${item.elapsedMins} นาที`
                         } else if (isUpcoming) {
                             borderStyle = 'border-[oklch(60%_0.15_60)]'
                             bgStyle = 'bg-[oklch(96%_0.02_60)]'
@@ -796,114 +645,118 @@ export default function SimplifiedLiveOverview({
                             statusText = 'BLOCKED'
                         }
 
-                        // Compact view (หลายโต๊ะ)
-                        if (zoomMode === 'compact') {
-                            return (
-                                <button
-                                    key={item.table.id}
-                                    type="button"
-                                    onClick={() => setInspectingTable(item)}
-                                    className={`relative p-2.5 rounded-sm border text-left flex flex-col justify-between min-h-[90px] transition-all cursor-pointer select-none active:scale-97 ${bgStyle} ${borderStyle} ${
-                                        item.hasCallBill || item.hasCallStaff ? 'ring-2 ring-[oklch(75%_0.18_65)] animate-pulse' : ''
-                                    }`}
-                                >
-                                    <div className="flex items-center justify-between w-full">
-                                        <span className="font-mono text-sm font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                            {item.table.table_name}
-                                        </span>
-                                        <span className="font-mono text-[9px] opacity-70">
-                                            {item.table.capacity}P
-                                        </span>
-                                    </div>
-
-                                    {item.hasCallBill || item.hasCallStaff ? (
-                                        <span className="font-mono text-[8.5px] font-bold px-1 py-0.5 rounded-xs bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] truncate block text-center mt-1">
-                                            {item.hasCallBill ? 'CALL BILL' : 'CALL STAFF'}
-                                        </span>
-                                    ) : isOccupied ? (
-                                        <div className="mt-1">
-                                            <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] block tabular-nums truncate">
-                                                ฿{item.billTotal.toLocaleString()}
-                                            </span>
-                                            <span className={`font-mono text-[8px] font-bold px-1 py-0.2 rounded-xs inline-block mt-0.5 ${pillStyle}`}>
-                                                {statusText}
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <span className={`font-mono text-[8px] font-bold px-1 py-0.5 rounded-xs block text-center mt-1 ${pillStyle}`}>
-                                            {statusText}
-                                        </span>
-                                    )}
-                                </button>
-                            )
-                        }
-
-                        // Standard view (สมดุล - พร้อมพรีวิวอาหาร)
                         return (
                             <div
                                 key={item.table.id}
                                 onClick={() => setInspectingTable(item)}
-                                className={`p-3.5 rounded-sm border transition-all cursor-pointer flex flex-col justify-between min-h-[140px] shadow-2xs hover:shadow-sm ${bgStyle} ${borderStyle} ${
+                                className={`p-3.5 sm:p-4 rounded-sm border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-sm ${bgStyle} ${borderStyle} ${
                                     item.hasCallBill || item.hasCallStaff ? 'ring-2 ring-[oklch(75%_0.18_65)]' : ''
                                 }`}
                             >
-                                {/* Header */}
+                                {/* 1. Card Top: Header & Metadata */}
                                 <div>
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between pb-2 border-b border-[oklch(85%_0.012_28)]">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)]">
                                                 {item.table.table_name}
                                             </span>
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
-                                                ({item.table.capacity} Pax)
+                                            <span className="font-mono text-[10px] px-1.5 py-0.2 bg-[oklch(90%_0.010_28)] rounded-xs text-[oklch(42%_0.010_28)] font-bold">
+                                                {item.table.capacity} Pax
                                             </span>
                                         </div>
 
                                         <span className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider ${pillStyle}`}>
-                                            {isOccupied ? `${item.elapsedMins} นาที` : statusText}
+                                            {statusText}
                                         </span>
                                     </div>
 
-                                    {/* Call Alert Badge */}
+                                    {/* Sitting Start Time & Duration */}
+                                    {isOccupied && (
+                                        <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(55%_0.010_28)] pt-1.5">
+                                            <span>เริ่มเปิด: {formatThaiTimeOnly(item.booking?.booking_time)}</span>
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">{formatThaiDuration(item.elapsedMins)}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Call Staff / Bill Alert Badge */}
                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                        <div className="mt-2 px-2 py-1 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[10px] font-bold rounded-xs flex items-center justify-between animate-pulse">
+                                        <div className="mt-2 px-2.5 py-1 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] font-mono text-[11px] font-bold rounded-xs flex items-center justify-between animate-pulse">
                                             <span>🔔 {item.hasCallBill ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</span>
                                             <button
                                                 type="button"
                                                 onClick={(e) => handleDismissAlert(item.booking?.id, e)}
-                                                className="underline ml-1 cursor-pointer text-[9px]"
+                                                className="underline ml-1 cursor-pointer text-[10px]"
                                             >
                                                 ปิดแจ้งเตือน
                                             </button>
                                         </div>
                                     )}
 
-                                    {/* Food Items Preview (Standard View requirement: แสดงอาหารเบื้องต้น) */}
-                                    {isOccupied && (
-                                        <div className="mt-2.5 space-y-1 font-mono text-[11px] text-[oklch(42%_0.010_28)]">
+                                    {/* Customer Note / Remark */}
+                                    {item.booking?.customer_note && (
+                                        <div className="mt-2 px-2 py-1 bg-[oklch(92%_0.010_28)] border border-[oklch(88%_0.012_28)] rounded-xs font-mono text-[10px] text-[oklch(42%_0.010_28)] truncate">
+                                            โน้ต: "{item.booking.customer_note}"
+                                        </div>
+                                    )}
+
+                                    {/* 2. Complete Menu Items Checklist on Card */}
+                                    {isOccupied ? (
+                                        <div className="mt-2.5 pt-2 border-t border-[oklch(88%_0.012_28)]">
+                                            <div className="flex items-center justify-between pb-1.5 font-mono text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                                <span>รายการอาหารที่สั่ง ({orderItems.length})</span>
+                                                <span>ยอดเงิน</span>
+                                            </div>
+
                                             {orderItems.length === 0 ? (
-                                                <span className="text-[10px] text-[oklch(60%_0.010_28)] italic block">
+                                                <span className="text-[11px] text-[oklch(60%_0.010_28)] italic block py-4 text-center font-mono">
                                                     ยังไม่มีรายการสั่งอาหาร
                                                 </span>
                                             ) : (
-                                                <>
-                                                    {orderItems.slice(0, 2).map((it, idx) => (
-                                                        <div key={idx} className="flex justify-between items-center truncate">
-                                                            <span className="truncate">
-                                                                {it.quantity}x {it.menu_items?.name || 'อาหาร'}
-                                                            </span>
-                                                            <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)] ml-1">
-                                                                ฿{(Number(it.price_at_time || it.menu_items?.price || 0) * Number(it.quantity || 1)).toLocaleString()}
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                    {orderItems.length > 2 && (
-                                                        <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold block pt-0.5">
-                                                            + อีก {orderItems.length - 2} รายการ (แตะเพื่อดูครบ)
-                                                        </span>
-                                                    )}
-                                                </>
+                                                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1 divide-y divide-[oklch(90%_0.010_28)] font-mono text-xs">
+                                                    {orderItems.map((it, idx) => {
+                                                        const itemName = it.menu_items?.name || 'อาหาร'
+                                                        const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                                        const lineTotal = price * Number(it.quantity || 1)
+                                                        const options = it.selected_options
+
+                                                        return (
+                                                            <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
+                                                                <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                                                                    <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums shrink-0 text-[11px]">
+                                                                        {it.quantity}x
+                                                                    </span>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <span className="font-bold text-[oklch(18%_0.012_28)] text-[11px] leading-tight block truncate">
+                                                                            {itemName}
+                                                                        </span>
+                                                                        {options && (
+                                                                            <span className="text-[10px] text-[oklch(52%_0.16_28)] block truncate">
+                                                                                {typeof options === 'object' ? JSON.stringify(options).replace(/["{}]/g, ' ') : String(options)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <span className="tabular-nums font-bold text-[oklch(18%_0.012_28)] shrink-0 text-[11px]">
+                                                                    ฿{lineTotal.toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
                                             )}
+                                        </div>
+                                    ) : isUpcoming ? (
+                                        <div className="mt-4 py-3 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center font-mono">
+                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)] block">
+                                                จองไว้ {formatThaiTimeOnly(item.booking?.booking_time)}
+                                            </span>
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block mt-0.5">
+                                                {item.booking?.customer_name || 'ลูกค้า'} ({item.booking?.guest_count || item.table.capacity} ท่าน)
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="mt-4 py-3 text-center font-mono text-[11px] text-[oklch(60%_0.010_28)]">
+                                            โต๊ะว่าง พร้อมเปิดโต๊ะให้บริการ
                                         </div>
                                     )}
                                 </div>
