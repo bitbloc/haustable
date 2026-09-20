@@ -142,6 +142,14 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
     const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
     const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
 
+    // Active points for today: only draw actual sales line up to the current hour (do not extrapolate 0 into future hours)
+    const activePoints = useMemo(() => {
+        if (!isViewingToday) return points
+        // When viewing today, line extends up to current hour (or at least index 0 if before 11:00)
+        const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
+        return points.filter(p => p.hour <= cappedHour)
+    }, [points, isViewingToday, currentBangkokHour])
+
     // 1. Calculate Predictive Forecast Trajectory (from latest active hour point forward to 23:00)
     const { projectedTotal, forecastPoints } = useMemo(() => {
         if (!isViewingToday || activePoints.length === 0) {
@@ -190,14 +198,6 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
 
     const getX = (idx) => padLeft + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxVal) * plotHeight
-
-    // Active points for today: only draw actual sales line up to the current hour (do not extrapolate 0 into future hours)
-    const activePoints = useMemo(() => {
-        if (!isViewingToday) return points
-        // When viewing today, line extends up to current hour (or at least index 0 if before 11:00)
-        const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
-        return points.filter(p => p.hour <= cappedHour)
-    }, [points, isViewingToday, currentBangkokHour])
 
     // Generate SVG path strings
     const { pathActual, pathArea, pathBenchmark } = useMemo(() => {
