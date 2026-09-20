@@ -28,10 +28,9 @@ export default function IntradayTrafficPredictor({
     totalSeats = 45 
 }) {
     const [hoveredHour, setHoveredHour] = useState(null)
-    const [activeSubTab, setActiveSubTab] = useState('overview') // 'overview' | 'ad_breakdown' | 'ai_deepdive'
+    const [activeSubTab, setActiveSubTab] = useState('overview') // 'overview' | 'dayparts' | 'ai_deepdive' | 'ad_breakdown'
     const [historicalAverages, setHistoricalAverages] = useState(null)
     const [adEvents, setAdEvents] = useState([])
-    const [adEventsLoading, setAdEventsLoading] = useState(false)
     const [aiBriefing, setAiBriefing] = useState(null)
     const [aiLoading, setAiLoading] = useState(false)
     const containerRef = useRef(null)
@@ -40,7 +39,7 @@ export default function IntradayTrafficPredictor({
     // Restaurant operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
 
-    // Responsive width observer
+    // Dynamic width observer for responsive SVG scaling
     useEffect(() => {
         if (!containerRef.current) return
         const updateWidth = () => {
@@ -104,7 +103,6 @@ export default function IntradayTrafficPredictor({
         let isMounted = true
         async function fetchHistoricalBaseline() {
             try {
-                // Calculate previous 4 dates with same day-of-week
                 const pastDates = []
                 for (let i = 1; i <= 4; i++) {
                     const d = new Date(targetDateObj.getTime() - i * 7 * 24 * 3600 * 1000)
@@ -123,7 +121,6 @@ export default function IntradayTrafficPredictor({
 
                 if (error) throw error
 
-                // Group by hour only for matching exact dates
                 const hourlyTotals = {}
                 hours.forEach(h => { hourlyTotals[h] = 0 })
                 let daysWithData = new Set()
@@ -148,15 +145,12 @@ export default function IntradayTrafficPredictor({
                     averages[h] = Math.round(hourlyTotals[h] / divisor)
                 })
 
-                if (isMounted) {
-                    setHistoricalAverages(averages)
-                }
+                if (isMounted) setHistoricalAverages(averages)
             } catch (err) {
                 console.warn('[TrafficPredictor] Historical baseline fallback:', err?.message)
-                // Intelligent fallback distribution if DB history is sparse
                 const fallbackDistribution = {
-                    11: 4, 12: 12, 13: 16, 14: 9, 15: 5, 16: 6,
-                    17: 11, 18: 24, 19: 28, 20: 20, 21: 12, 22: 6, 23: 2
+                    11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
+                    17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
                 }
                 if (isMounted) setHistoricalAverages(fallbackDistribution)
             }
@@ -170,7 +164,6 @@ export default function IntradayTrafficPredictor({
     useEffect(() => {
         let isMounted = true
         async function fetchAdLandingEvents() {
-            setAdEventsLoading(true)
             try {
                 const queryDay = selectedDate || formatDateStr(new Date())
                 const { data, error } = await supabase
@@ -182,15 +175,10 @@ export default function IntradayTrafficPredictor({
                     .limit(1000)
 
                 if (error) throw error
-
-                if (isMounted) {
-                    setAdEvents(data || [])
-                }
+                if (isMounted) setAdEvents(data || [])
             } catch (err) {
                 console.warn('[TrafficPredictor] Ad events fallback:', err?.message)
                 if (isMounted) setAdEvents([])
-            } finally {
-                if (isMounted) setAdEventsLoading(false)
             }
         }
 
@@ -198,7 +186,7 @@ export default function IntradayTrafficPredictor({
         return () => { isMounted = false }
     }, [selectedDate])
 
-    // 3. Process Live Actual Guests & Ad Leads into Hourly Buckets
+    // 3. Process Live Data, Pacing, Dynamic Forecast & Dayparts
     const trafficStats = useMemo(() => {
         const hourlyActualPax = {}
         const hourlyActualBills = {}
@@ -216,7 +204,6 @@ export default function IntradayTrafficPredictor({
             hourlyAdPhoneClicks[h] = 0
         })
 
-        // Valid sales statuses
         const validStatuses = ['completed', 'paid', 'success', 'seated', 'confirmed', 'ready']
         const validBookings = (bookings || []).filter(b => {
             const status = (b.status || '').toLowerCase()
@@ -238,17 +225,13 @@ export default function IntradayTrafficPredictor({
             }
         })
 
-        // Process Ad Events
         let totalAdPageviews = 0
         let totalAdDirections = 0
         let totalAdLine = 0
         let totalAdPhone = 0
-        let totalAdConversions = 0
         const adSourcesMap = {}
 
-        const activeAdEvents = adEvents.length > 0 ? adEvents : []
-
-        activeAdEvents.forEach(e => {
+        adEvents.forEach(e => {
             const h = getBangkokHour(e.created_at)
             const source = e.utm_source || 'direct_organic'
             const ev = e.event_name || ''
@@ -263,31 +246,24 @@ export default function IntradayTrafficPredictor({
                 if (hourlyAdPageviews[h] !== undefined) hourlyAdPageviews[h]++
             } else if (ev === 'click_directions' || ev === 'find_location') {
                 totalAdDirections++
-                totalAdConversions++
                 adSourcesMap[source].directions++
                 if (hourlyAdDirections[h] !== undefined) hourlyAdDirections[h]++
             } else if (ev === 'click_line' || ev === 'generate_lead') {
                 totalAdLine++
-                totalAdConversions++
                 adSourcesMap[source].contacts++
                 if (hourlyAdLineClicks[h] !== undefined) hourlyAdLineClicks[h]++
             } else if (ev === 'click_phone' || ev === 'contact') {
                 totalAdPhone++
-                totalAdConversions++
                 adSourcesMap[source].contacts++
                 if (hourlyAdPhoneClicks[h] !== undefined) hourlyAdPhoneClicks[h]++
-            } else if (ev === 'click_booking_link' || ev === 'click_pickup_link') {
-                totalAdConversions++
             }
         })
 
-        // Baseline comparison calculation
         const baseline = historicalAverages || {
-            11: 4, 12: 12, 13: 16, 14: 9, 15: 5, 16: 6,
-            17: 11, 18: 24, 19: 28, 20: 20, 21: 12, 22: 6, 23: 2
+            11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
+            17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
         }
 
-        // Active capped hour
         const cappedHour = isViewingToday 
             ? Math.min(23, Math.max(11, currentBangkokHour))
             : 23
@@ -303,21 +279,18 @@ export default function IntradayTrafficPredictor({
         })
 
         const rawPace = baselineSoFar > 0 ? (actualSoFar / baselineSoFar) : 1.0
-        // Dampen pace with Bayesian shrinkage to avoid wild over-prediction
-        const paceMultiplier = Math.max(0.6, Math.min(1.8, rawPace * 0.75 + 0.25))
+        const paceMultiplier = Math.max(0.65, Math.min(1.75, rawPace * 0.75 + 0.25))
 
-        // Ad Intent Lead Factor (high-intent directions/calls in last 2 hours boost near-future forecast)
+        // Ad Intent Lead Lift
         const recentHighIntent = hours.reduce((acc, h) => {
             if (h >= cappedHour - 1 && h <= cappedHour) {
-                return acc + (hourlyAdDirections[h] || 0) * 2 + (hourlyAdLineClicks[h] || 0) + (hourlyAdPhoneClicks[h] || 0)
+                return acc + (hourlyAdDirections[h] || 0) * 2 + (hourlyAdLineClicks[h] || 0)
             }
             return acc
         }, 0)
+        const adLiftPct = Math.min(0.30, recentHighIntent * 0.05)
 
-        // Ad Lift percentage (e.g. +10% if strong ad leads)
-        const adLiftPct = Math.min(0.35, recentHighIntent * 0.04)
-
-        // Generate points and forecast (Base, High, Low)
+        // Generate hourly points
         let forecastedClosingPax = totalActualPax
         let forecastedClosingPaxHigh = totalActualPax
         let forecastedClosingPaxLow = totalActualPax
@@ -326,14 +299,14 @@ export default function IntradayTrafficPredictor({
             const actual = hourlyActualPax[h]
             const base = baseline[h] || 0
             const adViews = hourlyAdPageviews[h]
-            const adIntent = (hourlyAdDirections[h] * 2) + hourlyAdLineClicks[h] + hourlyAdPhoneClicks[h]
+            const adDirs = hourlyAdDirections[h]
+            const isFuture = isViewingToday && h > cappedHour
 
             let forecast = null
             let forecastHigh = null
             let forecastLow = null
 
-            if (isViewingToday && h > cappedHour) {
-                // Future forecast: baseline * pace * adLift
+            if (isFuture) {
                 const nearTermLift = (h <= cappedHour + 2) ? (1 + adLiftPct) : 1.0
                 forecast = Math.round(base * paceMultiplier * nearTermLift)
                 forecastHigh = Math.round(base * paceMultiplier * (nearTermLift + 0.25))
@@ -358,9 +331,8 @@ export default function IntradayTrafficPredictor({
                 forecastHigh,
                 forecastLow,
                 adViews,
-                adIntent,
-                adDirections: hourlyAdDirections[h],
-                isFuture: isViewingToday && h > cappedHour
+                adDirections: adDirs,
+                isFuture
             }
         })
 
@@ -375,8 +347,91 @@ export default function IntradayTrafficPredictor({
             }
         })
 
-        // Calculate seating capacity load
         const peakCapacityLoad = Math.min(100, Math.round((maxPax / totalSeats) * 100))
+
+        // 4. DAYPART BREAKDOWN SUMMARY (สรุปตาม 4 ช่วงเวลาของวัน)
+        const daypartDefinitions = [
+            {
+                key: 'lunch',
+                title: 'LUNCH RUSH',
+                hours: [11, 12, 13],
+                timeLabel: '11.00 - 14.00 น.',
+                note: 'รอบโต๊ะสั้น ~45 นาที อาหารจานเดียวและเซตมื้อเที่ยง'
+            },
+            {
+                key: 'afternoon',
+                title: 'AFTERNOON CAFE',
+                hours: [14, 15, 16],
+                timeLabel: '14.00 - 17.00 น.',
+                note: 'ลูกค้านั่งทำงาน กาแฟ เบเกอรี และเครื่องดื่ม Specialty'
+            },
+            {
+                key: 'dinner',
+                title: 'PRIME DINNER',
+                hours: [17, 18, 19, 20],
+                timeLabel: '17.00 - 21.00 น.',
+                note: 'ช่วงทำรายได้หลัก โต๊ะเต็มหนาแน่น แนะนำสำรองวัตถุดิบและจัดคิวโต๊ะ'
+            },
+            {
+                key: 'late',
+                title: 'LATE NIGHT / BAR',
+                hours: [21, 22, 23],
+                timeLabel: '21.00 - 23.30 น.',
+                note: 'เครื่องดื่มบาร์ ค็อกเทล เบียร์สด และของทานเล่น'
+            }
+        ]
+
+        const dayparts = daypartDefinitions.map(dp => {
+            let actualCount = 0
+            let forecastCount = 0
+            let forecastHighCount = 0
+            let forecastLowCount = 0
+            let baselineCount = 0
+            let adDirCount = 0
+            let adViewCount = 0
+
+            let allPassed = true
+            let allFuture = true
+
+            dp.hours.forEach(h => {
+                const pt = points.find(p => p.hour === h)
+                if (pt) {
+                    if (!pt.isFuture) {
+                        actualCount += pt.actual
+                        allFuture = false
+                    } else {
+                        allPassed = false
+                    }
+                    forecastCount += pt.isFuture ? (pt.forecast || 0) : pt.actual
+                    forecastHighCount += pt.isFuture ? (pt.forecastHigh || pt.forecast || 0) : pt.actual
+                    forecastLowCount += pt.isFuture ? (pt.forecastLow || pt.forecast || 0) : pt.actual
+                    baselineCount += pt.baseline
+                    adDirCount += pt.adDirections
+                    adViewCount += pt.adViews
+                }
+            })
+
+            let status = 'upcoming'
+            if (allPassed) status = 'passed'
+            else if (!allFuture) status = 'active'
+
+            const targetPax = (status === 'passed') ? actualCount : forecastCount
+            const diffPct = baselineCount > 0 ? Math.round(((targetPax - baselineCount) / baselineCount) * 100) : 0
+
+            return {
+                ...dp,
+                status, // 'passed' | 'active' | 'upcoming'
+                actualCount,
+                forecastCount,
+                forecastHighCount,
+                forecastLowCount,
+                baselineCount,
+                targetPax,
+                diffPct,
+                adDirCount,
+                adViewCount
+            }
+        })
 
         return {
             points,
@@ -388,12 +443,12 @@ export default function IntradayTrafficPredictor({
             peakHour: peakH,
             peakCapacityLoad,
             paceMultiplier,
+            dayparts,
             adStats: {
                 totalAdPageviews,
                 totalAdDirections,
                 totalAdLine,
                 totalAdPhone,
-                totalAdConversions,
                 adSources: Object.values(adSourcesMap).sort((a, b) => b.visits - a.visits),
                 adLiftPct: Math.round(adLiftPct * 100)
             }
@@ -410,31 +465,59 @@ export default function IntradayTrafficPredictor({
         peakHour, 
         peakCapacityLoad, 
         paceMultiplier, 
+        dayparts,
         adStats 
     } = trafficStats
 
-    // Sizing and SVG dimensions
+    // Dynamic Sizing with ample padding to eliminate collision
     const isMobile = containerWidth < 540
     const svgWidth = Math.max(320, containerWidth)
-    const svgHeight = isMobile ? 250 : 280
-    const padLeft = isMobile ? 36 : 46
-    const padRight = isMobile ? 14 : 20
-    const padYTop = isMobile ? 24 : 28
-    const padYBottom = isMobile ? 42 : 46 // Extra bottom space for Ad Intent indicators
+    const svgHeight = isMobile ? 240 : 260
+    const padLeft = isMobile ? 32 : 44
+    const padRight = isMobile ? 32 : 48 // Ample right margin for end tags
+    const padYTop = isMobile ? 22 : 26
+    const padYBottom = 38 // Clean separation from X-axis text
     const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
     const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
 
+    // Dynamic Y scale based on hourly numbers (prevents flattened squashing)
     const maxPaxScale = useMemo(() => {
         const highestVal = Math.max(
-            ...points.map(p => Math.max(p.actual, p.baseline, p.forecast || 0)),
-            totalSeats * 0.75,
-            25
+            ...points.map(p => Math.max(p.actual, p.baseline, p.forecastHigh || p.forecast || 0)),
+            8
         )
-        return Math.ceil(highestVal / 10) * 10
-    }, [points, totalSeats])
+        const targetCeil = Math.ceil((highestVal * 1.35) / 5) * 5
+        return Math.max(12, targetCeil)
+    }, [points])
 
     const getX = (idx) => padLeft + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxPaxScale) * plotHeight
+
+    // Active Points for Actual Pax (Smooth Line + Gradient Area)
+    const activePoints = useMemo(() => {
+        const capped = isViewingToday ? Math.min(23, Math.max(11, currentBangkokHour)) : 23
+        return points.filter(p => p.hour <= capped)
+    }, [points, isViewingToday, currentBangkokHour])
+
+    // SVG Path for Actual Flow
+    const { pathActual, pathAreaActual } = useMemo(() => {
+        if (activePoints.length === 0) return { pathActual: '', pathAreaActual: '' }
+
+        const coords = activePoints.map(pt => {
+            const idx = hours.indexOf(pt.hour)
+            return `${getX(idx).toFixed(1)},${getY(pt.actual).toFixed(1)}`
+        })
+        const line = `M ${coords.join(' L ')}`
+
+        let area = ''
+        if (coords.length > 1) {
+            const firstIdx = hours.indexOf(activePoints[0].hour)
+            const lastIdx = hours.indexOf(activePoints[activePoints.length - 1].hour)
+            area = `${line} L ${getX(lastIdx).toFixed(1)},${(svgHeight - padYBottom).toFixed(1)} L ${getX(firstIdx).toFixed(1)},${(svgHeight - padYBottom).toFixed(1)} Z`
+        }
+
+        return { pathActual: line, pathAreaActual: area }
+    }, [activePoints, hours, maxPaxScale, plotWidth, plotHeight, svgHeight, padLeft, padYBottom])
 
     // Path for Baseline Curve
     const pathBaseline = useMemo(() => {
@@ -442,26 +525,31 @@ export default function IntradayTrafficPredictor({
         return `M ${coords.join(' L ')}`
     }, [points, maxPaxScale, plotWidth, plotHeight, svgHeight, padLeft, padYBottom])
 
-    // Path for Forecast Curve (Base, High, Low, Fan)
-    const { pathForecast, pathForecastHigh, pathForecastLow, pathForecastFan } = useMemo(() => {
-        const forecastSub = points.filter(p => p.hour >= Math.max(11, currentBangkokHour))
-        if (!isViewingToday || forecastSub.length < 2) {
-            return { pathForecast: '', pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
+    // Path for Forecast Envelope (Base, High, Low, Fan)
+    const { pathForecastBase, pathForecastHigh, pathForecastLow, pathForecastFan } = useMemo(() => {
+        if (!isViewingToday || activePoints.length === 0) {
+            return { pathForecastBase: '', pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
         }
 
-        const coordsBase = forecastSub.map(pt => {
+        const lastActive = activePoints[activePoints.length - 1]
+        const futurePoints = points.filter(p => p.hour >= lastActive.hour)
+        if (futurePoints.length < 2) {
+            return { pathForecastBase: '', pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
+        }
+
+        const coordsBase = futurePoints.map(pt => {
             const idx = hours.indexOf(pt.hour)
             const val = pt.isFuture ? pt.forecast : pt.actual
             return `${getX(idx).toFixed(1)},${getY(val).toFixed(1)}`
         })
 
-        const coordsHigh = forecastSub.map(pt => {
+        const coordsHigh = futurePoints.map(pt => {
             const idx = hours.indexOf(pt.hour)
             const val = pt.isFuture ? (pt.forecastHigh || pt.forecast) : pt.actual
             return `${getX(idx).toFixed(1)},${getY(val).toFixed(1)}`
         })
 
-        const coordsLow = forecastSub.map(pt => {
+        const coordsLow = futurePoints.map(pt => {
             const idx = hours.indexOf(pt.hour)
             const val = pt.isFuture ? (pt.forecastLow || pt.forecast) : pt.actual
             return `${getX(idx).toFixed(1)},${getY(val).toFixed(1)}`
@@ -471,17 +559,17 @@ export default function IntradayTrafficPredictor({
         const pHigh = `M ${coordsHigh.join(' L ')}`
         const pLow = `M ${coordsLow.join(' L ')}`
 
-        const reversedLow = [...forecastSub].reverse().map(pt => {
+        const reversedLow = [...futurePoints].reverse().map(pt => {
             const idx = hours.indexOf(pt.hour)
             const val = pt.isFuture ? (pt.forecastLow || pt.forecast) : pt.actual
             return `${getX(idx).toFixed(1)},${getY(val).toFixed(1)}`
         })
         const pFan = `M ${coordsHigh.join(' L ')} L ${reversedLow.join(' L ')} Z`
 
-        return { pathForecast: pBase, pathForecastHigh: pHigh, pathForecastLow: pLow, pathForecastFan: pFan }
-    }, [points, hours, isViewingToday, currentBangkokHour, maxPaxScale, plotWidth, plotHeight, svgHeight, padLeft, padYBottom])
+        return { pathForecastBase: pBase, pathForecastHigh: pHigh, pathForecastLow: pLow, pathForecastFan: pFan }
+    }, [activePoints, points, hours, isViewingToday, maxPaxScale, plotWidth, plotHeight, svgHeight, padLeft, padYBottom])
 
-    // 4. Generate AI Operational Briefing
+    // Generate AI Operational Briefing
     const runAiSynthesis = async () => {
         setAiLoading(true)
         try {
@@ -494,34 +582,33 @@ export default function IntradayTrafficPredictor({
                 totalActualPax,
                 totalActualBills,
                 forecastedClosingPax,
+                forecastRange: `ต่ำ ${forecastedClosingPaxLow} - สูง ${forecastedClosingPaxHigh} ท่าน`,
                 pacingPercent: Math.round((paceMultiplier - 1) * 100),
                 peakHour: peakHour ? `${peakHour.hour}.00 น. (~${peakHour.isFuture ? peakHour.forecast : peakHour.actual} ท่าน)` : 'N/A',
                 peakCapacityLoad: `${peakCapacityLoad}%`,
+                daypartsSummary: dayparts.map(dp => `${dp.title} (${dp.timeLabel}): ${dp.status === 'passed' ? `จริง ${dp.actualCount}` : `คาดการณ์ ~${dp.forecastCount} (กรอบ ${dp.forecastLowCount}-${dp.forecastHighCount})`} ท่าน, เทียบสถิติ ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}, Ads Maps: ${dp.adDirCount}`),
                 adLandingMetrics: {
                     pageviews: adStats.totalAdPageviews,
                     directionsClicks: adStats.totalAdDirections,
                     lineClicks: adStats.totalAdLine,
-                    phoneClicks: adStats.totalAdPhone,
-                    topSources: adStats.adSources.slice(0, 3).map(s => `${s.source} (${s.visits} visits, ${s.directions} maps)`)
+                    phoneClicks: adStats.totalAdPhone
                 }
             }
 
             if (apiKey) {
-                // Call Gemini Flash
                 const promptText = `
 คุณคือผู้ช่วยผู้อำนวยการฝ่ายปฏิบัติการร้านอาหารและคาเฟ่ "IN THE HAUS" 
-จงวิเคราะห์ข้อมูลทราฟฟิกลูกค้าสดและข้อมูลจาก Ad Landing Page ต่อไปนี้ เพื่อสรุปสถานการณ์และคำแนะนำเชิงปฏิบัติการหน้าร้าน:
+จงวิเคราะห์ข้อมูลทราฟฟิกลูกค้าสดและข้อมูลช่วงเวลา Dayparts ต่อไปนี้ เพื่อสรุปสถานการณ์และคำแนะนำเชิงปฏิบัติการหน้าร้าน:
 
 ${JSON.stringify(summaryPayload, null, 2)}
 
 ข้อกำหนด:
-1. ตอบเป็นภาษาไทยอย่างกระชับ สุภาพ คมชัด ตรงไปตรงมา สไตล์ผู้บริหาร
-2. จัดเป็น 3 หัวข้อสั้น ๆ:
-   - [สถานการณ์ปัจจุบัน]: เทียบทราฟฟิกจริงกับสถิติเดิม 4 สัปดาห์ และวิเคราะห์สัญญาณ Ads (โดยเฉพาะการคลิกขอแผนที่ Google Maps / LINE)
-   - [การคาดการณ์ช่วงพีคถัดไป]: ชั่วโมงเร่งด่วนและระดับความจุโต๊ะ
-   - [ข้อเสนอแนะเชิงปฏิบัติการ]: 2-3 ข้อสำหรับทีมครัว บาร์ และหน้าร้าน
-3. ห้ามใช้อีโมจิ (ตามระเบียบ Rams Minimalist)
-4. ความยาวไม่เกิน 150-180 คำ
+1. ตอบเป็นภาษาไทยอย่างกระชับ สุภาพ คมชัด สไตล์ผู้บริหาร
+2. สรุปเป็น 3 มิติ:
+   - [สรุปสถานการณ์และภาพรวมทั้งวัน]: เปรียบเทียบกับสถิติเดิม 4 สัปดาห์ และสัญญาณ Ads
+   - [ไฮไลต์ช่วงเวลา Dayparts]: ระบุช่วงที่ต้องเฝ้าระวังที่สุด (เช่น Dinner Rush) คาดว่าจะมากี่คน
+   - [คำแนะนำการปฏิบัติการ]: 2-3 ข้อสำหรับทีมครัว บาร์ และโต๊ะ
+3. ห้ามใช้อีโมจิ ความยาวไม่เกิน 160 คำ
 `
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${preferredModel || 'gemini-2.5-flash'}:generateContent?key=${apiKey}`
                 const res = await fetch(url, {
@@ -544,27 +631,18 @@ ${JSON.stringify(summaryPayload, null, 2)}
                 }
             }
 
-            // Fallback deterministic AI synthesis engine (No API Key or Offline)
-            const paceTxt = paceMultiplier >= 1.05 
-                ? `สูงกว่าสถิติ 4 สัปดาห์ที่ผ่านมา +${Math.round((paceMultiplier - 1) * 100)}%`
-                : paceMultiplier <= 0.95
-                ? `ช้ากว่าสถิติเดิม -${Math.round((1 - paceMultiplier) * 100)}%`
-                : `ใกล้เคียงกับสถิติเดิมตามปกติ`
+            // Fallback deterministic AI synthesis
+            const dinnerDp = dayparts.find(d => d.key === 'dinner')
+            const fallbackBriefing = `[สรุปสถานการณ์และภาพรวมทั้งวัน]
+วันนี้ (${dayOfWeekThai}) ลูกค้าจริงสะสมแล้ว ${totalActualPax} ท่าน (${totalActualBills} บิล) คาดการณ์ยอดปิดวันรวม ~${forecastedClosingPax} ท่าน (กรอบต่ำ-สูง: ${forecastedClosingPaxLow} - ${forecastedClosingPaxHigh} ท่าน) ภาพรวมความเร็วกว่าสถิติเดิม ${paceMultiplier >= 1.0 ? `+${Math.round((paceMultiplier - 1) * 100)}%` : `-${Math.round((1 - paceMultiplier) * 100)}%`} โดยมีสัญญาณขอเส้นทาง Google Maps จาก Ad Landing ${adStats.totalAdDirections} ครั้ง
 
-            const mapsLeadTxt = adStats.totalAdDirections > 0
-                ? `พบสัญญาณความสนใจสูงจาก Ad Landing Page มีการกดขอเส้นทาง Google Maps ${adStats.totalAdDirections} ครั้ง และติดต่อ LINE/โทร ${adStats.totalAdLine + adStats.totalAdPhone} ครั้ง ซึ่งเป็น Leading Indicator ชี้ชัดว่าจะมีลูกค้า Walk-in ทยอยเดินทางมาถึง`
-                : `สัญญาณจาก Ad Landing มีการเปิดดูข้อมูล ${adStats.totalAdPageviews} ครั้ง แนะนำเร่งผลักดันปุ่มขอเส้นทางเพื่อดึงลูกค้าเข้าสู่ร้าน`
+[ไฮไลต์ช่วงเวลา Dayparts]
+ช่วงเวลาสำคัญที่สุดคือ ${dinnerDp?.title || 'PRIME DINNER'} (${dinnerDp?.timeLabel || '17.00 - 21.00 น.'}) คาดการณ์ลูกค้าจะเข้ามารวม ~${dinnerDp?.forecastCount || 45} ท่าน (กรอบ ${dinnerDp?.forecastLowCount}-${dinnerDp?.forecastHighCount} ท่าน) ซึ่งจะดันให้อัตราครองที่นั่งแตะ ${peakCapacityLoad}% ของความจุร้าน
 
-            const fallbackBriefing = `[สถานการณ์ปัจจุบัน]
-วันนี้ (${dayOfWeekThai}) ลูกค้าจริงสะสมอยู่ที่ ${totalActualPax} ท่าน (${totalActualBills} บิล) อัตราความเร็วในการเข้าร้าน ${paceTxt} ${mapsLeadTxt}
-
-[การคาดการณ์ช่วงพีคถัดไป]
-คาดการณ์ยอดปิดวันรวมที่ ~${forecastedClosingPax} ท่าน โดยช่วงเวลาเร่งด่วนที่สุดคือ ${peakHour ? `${peakHour.hour}.00 น. (~${peakHour.isFuture ? peakHour.forecast : peakHour.actual} ท่าน)` : 'ช่วงเย็น'} ซึ่งจะดึงให้อัตราครองโต๊ะของร้านขึ้นสู่ ${peakCapacityLoad}% ของความจุ
-
-[ข้อเสนอแนะเชิงปฏิบัติการ]
-1. ฝ่ายครัว: เตรียมวัตถุดิบเมนูยอดนิยมและตั้งกระทะหลักให้พร้อมก่อนเวลา 17.30 น.
-2. ฝ่ายบริการ: ตรวจสอบโต๊ะโซนหน้าและสำรองที่นั่งสำหรับ Walk-in ที่เดินทางตาม Google Maps
-3. ฝ่ายบาร์: จัดเตรียมเครื่องดื่มต้อนรับสำหรับรองรับลูกค้าระหว่างรอเปิดโต๊ะช่วงพีค`
+[คำแนะนำการปฏิบัติการ]
+1. ฝ่ายครัว: เตรียมสำรองวัตถุดิบอาหารจานหลักและเนื้อสเต็กล่วงหน้าก่อน 17.30 น.
+2. ฝ่ายบริการ: จัดโต๊ะโซนหน้าให้พร้อมรองรับ Walk-in ที่ตามเส้นทาง Google Maps
+3. ฝ่ายบาร์: เสริมกำลังคนช่วง 18.00-20.00 น. เพื่อออกเครื่องดื่มได้ทันท่วงที`
 
             setAiBriefing(fallbackBriefing)
             toast.success('สังเคราะห์บทวิเคราะห์ปฏิบัติการเรียบร้อย')
@@ -576,16 +654,18 @@ ${JSON.stringify(summaryPayload, null, 2)}
         }
     }
 
-    // Auto run AI briefing once when data arrives
+    // Auto-run AI briefing once on mount
     useEffect(() => {
         if (!aiBriefing && points.length > 0 && !loading) {
             runAiSynthesis()
         }
     }, [points.length, loading])
 
+    const latestActivePt = activePoints.length > 0 ? activePoints[activePoints.length - 1] : null
+
     return (
         <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] mb-6 overflow-hidden font-sans">
-            {/* 1. Header Ribbon & Key Indicators */}
+            {/* 1. Header Ribbon */}
             <div className="p-3 sm:p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 text-[10px] font-mono font-bold bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] uppercase tracking-wider">
@@ -593,15 +673,15 @@ ${JSON.stringify(summaryPayload, null, 2)}
                     </span>
                     <div>
                         <h3 className="font-mono text-sm sm:text-base font-bold text-[oklch(18%_0.012_28)] uppercase">
-                            Intraday Guest Traffic & Ad-Intent Predictor
+                            Intraday Guest Traffic & Daypart Predictor
                         </h3>
                         <p className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                            ความหนาแน่นลูกค้าจริง + สถิติเดิม ({dayOfWeekThai} ย้อนหลัง 4 วีค) + สัญญาณนำร่อง Ad Landing
+                            ความหนาแน่นลูกค้าจริง + กรอบพยากรณ์ 3 ปัจจัย (ต่ำ-ฐาน-สูง) + สรุปแบ่งตามช่วงเวลา
                         </p>
                     </div>
                 </div>
 
-                {/* KPI Metrics */}
+                {/* Key Summary Stats */}
                 <div className="flex items-center gap-3 sm:gap-4 font-mono text-xs flex-wrap">
                     <div>
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] block">GUESTS TODAY</span>
@@ -624,7 +704,7 @@ ${JSON.stringify(summaryPayload, null, 2)}
                     </div>
 
                     <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4 hidden sm:block">
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">AD INTENT PULSE</span>
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">AD INTENT LEADS</span>
                         <span className="font-bold text-sm text-[oklch(45%_0.08_140)] tabular-nums">
                             {adStats.totalAdDirections} Maps / {adStats.totalAdPageviews} Views
                         </span>
@@ -649,7 +729,17 @@ ${JSON.stringify(summaryPayload, null, 2)}
                             : 'text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
-                    [1] กราฟคาดการณ์ทราฟฟิก (Traffic & Ad Curve)
+                    [1] กราฟคาดการณ์ความหนาแน่น (Horizon Curve)
+                </button>
+                <button
+                    onClick={() => setActiveSubTab('dayparts')}
+                    className={`px-4 py-2 border-r border-[oklch(85%_0.012_28)] transition-colors uppercase font-bold ${
+                        activeSubTab === 'dayparts' 
+                            ? 'bg-[oklch(94%_0.010_28)] text-[oklch(18%_0.012_28)] border-b-2 border-b-[oklch(52%_0.20_28)]' 
+                            : 'text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
+                    }`}
+                >
+                    [2] สรุปรายช่วงเวลา Dayparts (4 ช่วง)
                 </button>
                 <button
                     onClick={() => setActiveSubTab('ai_deepdive')}
@@ -659,7 +749,7 @@ ${JSON.stringify(summaryPayload, null, 2)}
                             : 'text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
-                    <span>[2] บทวิเคราะห์ AI ปฏิบัติการ</span>
+                    <span>[3] บทวิเคราะห์ AI ปฏิบัติการ</span>
                     <span className="px-1.5 py-0.2 bg-[oklch(45%_0.08_140)] text-white text-[9px]">LIVE</span>
                 </button>
                 <button
@@ -670,506 +760,568 @@ ${JSON.stringify(summaryPayload, null, 2)}
                             : 'text-[oklch(55%_0.010_28)] hover:bg-[oklch(94%_0.010_28)]'
                     }`}
                 >
-                    [3] วิเคราะห์ที่มาลูกค้าจาก Ad ({adStats.adSources.length} แหล่ง)
+                    [4] เจาะลึก Ads ({adStats.adSources.length} แหล่ง)
                 </button>
             </div>
 
-            {/* 3. AI Executive Highlight Banner (Always Visible on Overview) */}
-            {activeSubTab === 'overview' && aiBriefing && (
-                <div className="p-3 sm:p-4 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] font-bold text-[oklch(45%_0.08_140)] uppercase tracking-wider">
-                                AI OPERATIONAL BRIEFING // คำแนะนำสด
-                            </span>
-                        </div>
-                        <p className="font-mono text-[11px] sm:text-xs text-[oklch(18%_0.012_28)] leading-relaxed whitespace-pre-line line-clamp-3">
-                            {aiBriefing}
-                        </p>
-                    </div>
-                    <button
-                        onClick={runAiSynthesis}
-                        disabled={aiLoading}
-                        className="self-start sm:self-center shrink-0 px-3 py-1.5 font-mono text-[10px] font-bold bg-[oklch(18%_0.012_28)] text-white hover:bg-[oklch(25%_0.015_28)] transition-colors disabled:opacity-50"
-                    >
-                        {aiLoading ? 'กำลังวิเคราะห์...' : '🔄 สแกน AI สด'}
-                    </button>
-                </div>
-            )}
-
-            {/* Tab 1: Visual Interactive SVG Chart */}
+            {/* 3. Main View: Unified Confidence Horizon Chart */}
             {activeSubTab === 'overview' && (
-                <div 
-                    ref={containerRef} 
-                    onClick={() => setHoveredHour(null)}
-                    className="p-2 sm:p-4 relative w-full select-none"
-                >
-                    {/* Legend */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-5 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)] flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3.5 h-3 bg-[oklch(52%_0.16_28)] opacity-90 inline-block" />
-                            <span className="font-bold text-[oklch(18%_0.012_28)]">ลูกค้าจริง (Pax)</span>
-                        </div>
-                        {pathForecast && (
+                <div>
+                    <div 
+                        ref={containerRef} 
+                        onClick={() => setHoveredHour(null)}
+                        className="p-2 sm:p-4 relative w-full select-none"
+                    >
+                        {/* Compact Visual Legend */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)] flex-wrap">
                             <div className="flex items-center gap-1.5">
-                                <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.20_28)] inline-block opacity-90" />
-                                <span className="font-bold text-[oklch(52%_0.20_28)]">เส้นเดิม (ฐาน Base)</span>
+                                <span className="w-3.5 h-1.5 bg-[oklch(52%_0.16_28)] inline-block" />
+                                <span className="font-bold text-[oklch(18%_0.012_28)]">ลูกค้าจริง (Pax)</span>
                             </div>
-                        )}
-                        {pathForecastHigh && (
+                            {pathForecastBase && (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.20_28)] inline-block opacity-90" />
+                                    <span className="font-bold text-[oklch(52%_0.20_28)]">เส้นเดิม (ฐาน Base)</span>
+                                </div>
+                            )}
+                            {pathForecastHigh && (
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-3 h-1.5 bg-[oklch(52%_0.20_28)] opacity-20 border border-dashed border-[oklch(45%_0.08_140)] inline-block" />
+                                    <span className="text-[oklch(45%_0.08_140)] font-bold">กรอบพยากรณ์ (ต่ำ - สูง)</span>
+                                </div>
+                            )}
                             <div className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(45%_0.08_140)] inline-block" />
-                                <span className="text-[oklch(45%_0.08_140)] font-bold">สูง (High)</span>
+                                <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(65%_0.010_28)] inline-block" />
+                                <span>สถิติเดิม ({dayOfWeekThai})</span>
                             </div>
-                        )}
-                        {pathForecastLow && (
                             <div className="flex items-center gap-1.5">
-                                <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
-                                <span className="text-[oklch(55%_0.010_28)]">ต่ำ (Low)</span>
+                                <span className="w-2 h-2 rounded-full bg-[oklch(45%_0.08_140)] inline-block" />
+                                <span className="text-[oklch(45%_0.08_140)] font-bold">สัญญาณ Ads 📍</span>
                             </div>
-                        )}
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
-                            <span>สถิติเดิม ({dayOfWeekThai})</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2.5 h-2.5 rounded-full bg-[oklch(45%_0.08_140)] inline-block" />
-                            <span className="text-[oklch(45%_0.08_140)] font-bold">สัญญาณ Ads</span>
-                        </div>
-                    </div>
 
-                    {/* SVG Graphic */}
-                    <div className="w-full">
-                        <svg
-                            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-                            style={{ width: '100%', height: `${svgHeight}px` }}
-                            className="w-full block select-none"
-                        >
-                            <defs>
-                                <style>{`
-                                    @keyframes forecastFlow {
-                                        from { stroke-dashoffset: 20; }
-                                        to { stroke-dashoffset: 0; }
-                                    }
-                                    .forecast-dash-line {
-                                        animation: forecastFlow 2.2s linear infinite;
-                                    }
-                                `}</style>
-                            </defs>
-
-                            {/* Rush Hour Highlight Bands */}
-                            {/* Lunch: 12:00 - 14:00 (idx 1 to 3) */}
-                            <rect
-                                x={getX(1)}
-                                y={padYTop}
-                                width={getX(3) - getX(1)}
-                                height={plotHeight}
-                                fill="oklch(94% 0.010 28)"
-                                opacity="0.8"
-                            />
-                            <text
-                                x={(getX(1) + getX(3)) / 2}
-                                y={padYTop + 12}
-                                textAnchor="middle"
-                                className={`font-mono ${isMobile ? 'text-[8px]' : 'text-[9px]'} font-bold fill-[oklch(55%_0.010_28)] uppercase`}
+                        {/* Responsive SVG Chart */}
+                        <div className="w-full">
+                            <svg
+                                viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                                style={{ width: '100%', height: `${svgHeight}px` }}
+                                className="w-full block select-none"
                             >
-                                LUNCH RUSH
-                            </text>
+                                <defs>
+                                    {/* Actual Fill Gradient */}
+                                    <linearGradient id="trafficActualFill" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="oklch(52% 0.16 28)" stopOpacity="0.25" />
+                                        <stop offset="100%" stopColor="oklch(52% 0.16 28)" stopOpacity="0.02" />
+                                    </linearGradient>
 
-                            {/* Dinner: 18:00 - 21:00 (idx 7 to 10) */}
-                            <rect
-                                x={getX(7)}
-                                y={padYTop}
-                                width={getX(10) - getX(7)}
-                                height={plotHeight}
-                                fill="oklch(94% 0.010 28)"
-                                opacity="0.8"
-                            />
-                            <text
-                                x={(getX(7) + getX(10)) / 2}
-                                y={padYTop + 12}
-                                textAnchor="middle"
-                                className={`font-mono ${isMobile ? 'text-[8px]' : 'text-[9px]'} font-bold fill-[oklch(55%_0.010_28)] uppercase`}
-                            >
-                                PRIME DINNER
-                            </text>
+                                    <style>{`
+                                        @keyframes forecastStreamline {
+                                            from { stroke-dashoffset: 20; }
+                                            to { stroke-dashoffset: 0; }
+                                        }
+                                        .forecast-stream-line {
+                                            animation: forecastStreamline 2.2s linear infinite;
+                                        }
+                                    `}</style>
+                                </defs>
 
-                            {/* Horizontal Gridlines & Y-Axis Labels */}
-                            {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                                const y = svgHeight - padYBottom - ratio * plotHeight
-                                const val = Math.round(ratio * maxPaxScale)
-                                return (
-                                    <g key={ratio}>
-                                        <line
-                                            x1={padLeft}
-                                            y1={y}
-                                            x2={svgWidth - padRight}
-                                            y2={y}
-                                            stroke="oklch(88% 0.012 28)"
-                                            strokeDasharray={ratio === 0 ? 'none' : '3 3'}
-                                            strokeWidth={ratio === 0 ? '1.5' : '1'}
-                                        />
-                                        <text
-                                            x={padLeft - 6}
-                                            y={y + 3.5}
-                                            textAnchor="end"
-                                            className="font-mono text-[9px] fill-[oklch(55%_0.010_28)] tabular-nums"
-                                        >
-                                            {val}
-                                        </text>
-                                    </g>
-                                )
-                            })}
+                                {/* Rush Hour Background Shaded Bands */}
+                                <rect
+                                    x={getX(1)}
+                                    y={padYTop}
+                                    width={getX(3) - getX(1)}
+                                    height={plotHeight}
+                                    fill="oklch(94% 0.010 28)"
+                                    opacity="0.7"
+                                />
+                                <text
+                                    x={(getX(1) + getX(3)) / 2}
+                                    y={padYTop + 12}
+                                    textAnchor="middle"
+                                    className="font-mono text-[8px] sm:text-[9px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
+                                >
+                                    LUNCH RUSH
+                                </text>
 
-                            {/* Capacity Ceiling Guideline */}
-                            {(() => {
-                                const capY = getY(totalSeats)
-                                if (capY >= padYTop && capY <= svgHeight - padYBottom) {
+                                <rect
+                                    x={getX(6)}
+                                    y={padYTop}
+                                    width={getX(10) - getX(6)}
+                                    height={plotHeight}
+                                    fill="oklch(94% 0.010 28)"
+                                    opacity="0.7"
+                                />
+                                <text
+                                    x={(getX(6) + getX(10)) / 2}
+                                    y={padYTop + 12}
+                                    textAnchor="middle"
+                                    className="font-mono text-[8px] sm:text-[9px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
+                                >
+                                    PRIME DINNER RUSH
+                                </text>
+
+                                {/* Horizontal Gridlines & Clean Y Labels */}
+                                {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                                    const y = svgHeight - padYBottom - ratio * plotHeight
+                                    const val = Math.round(ratio * maxPaxScale)
                                     return (
-                                        <g>
+                                        <g key={ratio}>
                                             <line
                                                 x1={padLeft}
-                                                y1={capY}
+                                                y1={y}
                                                 x2={svgWidth - padRight}
-                                                y2={capY}
-                                                stroke="oklch(52% 0.20 28)"
-                                                strokeDasharray="2 2"
-                                                strokeWidth="1"
-                                                opacity="0.6"
+                                                y2={y}
+                                                stroke="oklch(88% 0.012 28)"
+                                                strokeDasharray={ratio === 0 ? 'none' : '3 3'}
+                                                strokeWidth={ratio === 0 ? '1.5' : '1'}
                                             />
                                             <text
-                                                x={svgWidth - padRight}
-                                                y={capY - 4}
+                                                x={padLeft - 6}
+                                                y={y + 3.5}
                                                 textAnchor="end"
-                                                className="font-mono text-[8px] font-bold fill-[oklch(52%_0.20_28)] uppercase"
+                                                className="font-mono text-[9px] fill-[oklch(55%_0.010_28)] tabular-nums"
                                             >
-                                                MAX CAPACITY ({totalSeats} ที่นั่ง)
+                                                {val}
                                             </text>
                                         </g>
                                     )
-                                }
-                                return null
-                            })()}
+                                })}
 
-                            {/* Historical Baseline Path (Dashed Gray) */}
-                            {pathBaseline && (
-                                <path
-                                    d={pathBaseline}
-                                    fill="none"
-                                    stroke="oklch(60% 0.015 28)"
-                                    strokeWidth="1.8"
-                                    strokeDasharray="4 4"
-                                />
-                            )}
+                                {/* 4-Week Baseline Curve (Dashed Warm Gray) */}
+                                {pathBaseline && (
+                                    <path
+                                        d={pathBaseline}
+                                        fill="none"
+                                        stroke="oklch(65% 0.010 28)"
+                                        strokeWidth="1.6"
+                                        strokeDasharray="4 4"
+                                    />
+                                )}
 
-                            {/* Shaded Forecast Fan / Scenario Cone (พื้นที่กรอบคาดการณ์ ต่ำ - สูง) */}
-                            {pathForecastFan && (
-                                <path
-                                    d={pathForecastFan}
-                                    fill="oklch(52% 0.20 28)"
-                                    opacity="0.07"
-                                />
-                            )}
+                                {/* Shaded Forecast Confidence Cone (พื้นที่กรอบพยากรณ์ ต่ำ - สูง) */}
+                                {pathForecastFan && (
+                                    <path
+                                        d={pathForecastFan}
+                                        fill="oklch(52% 0.20 28)"
+                                        opacity="0.10"
+                                    />
+                                )}
 
-                            {/* Low Forecast Scenario Line (ต่ำ) */}
-                            {pathForecastLow && (
-                                <path
-                                    d={pathForecastLow}
-                                    fill="none"
-                                    stroke="oklch(60% 0.015 28)"
-                                    strokeWidth="1.5"
-                                    strokeDasharray="4 3"
-                                    opacity="0.75"
-                                />
-                            )}
+                                {/* Low Scenario Bound Line (ต่ำ) */}
+                                {pathForecastLow && (
+                                    <path
+                                        d={pathForecastLow}
+                                        fill="none"
+                                        stroke="oklch(60% 0.015 28)"
+                                        strokeWidth="1.2"
+                                        strokeDasharray="4 3"
+                                        opacity="0.7"
+                                    />
+                                )}
 
-                            {/* High Forecast Scenario Line (สูง) */}
-                            {pathForecastHigh && (
-                                <path
-                                    d={pathForecastHigh}
-                                    fill="none"
-                                    stroke="oklch(45% 0.08 140)"
-                                    strokeWidth="1.8"
-                                    strokeDasharray="4 3"
-                                    opacity="0.85"
-                                />
-                            )}
+                                {/* High Scenario Bound Line (สูง) */}
+                                {pathForecastHigh && (
+                                    <path
+                                        d={pathForecastHigh}
+                                        fill="none"
+                                        stroke="oklch(45% 0.08 140)"
+                                        strokeWidth="1.4"
+                                        strokeDasharray="4 3"
+                                        opacity="0.85"
+                                    />
+                                )}
 
-                            {/* Predictive Forecast Path (Animated Flowing Dash - เส้นเดิม ฐาน) */}
-                            {pathForecast && (
-                                <path
-                                    d={pathForecast}
-                                    fill="none"
-                                    stroke="oklch(52% 0.20 28)"
-                                    strokeWidth={isMobile ? '2.5' : '3'}
-                                    strokeDasharray="6 4"
-                                    strokeLinecap="round"
-                                    className="forecast-dash-line opacity-90"
-                                />
-                            )}
+                                {/* Actual Pax Area Fill */}
+                                {pathAreaActual && (
+                                    <path
+                                        d={pathAreaActual}
+                                        fill="url(#trafficActualFill)"
+                                    />
+                                )}
 
-                            {/* Forecast Projected End Pips & Tags at 23:00 (ต่ำ / เส้นเดิม ฐาน / สูง) */}
-                            {points.length > 0 && isViewingToday && (() => {
-                                const lastBase = points[points.length - 1]
-                                if (!lastBase.isFuture) return null
+                                {/* Forecast Base Line (Animated Flowing Dash - เส้นเดิม ฐาน) */}
+                                {pathForecastBase && (
+                                    <path
+                                        d={pathForecastBase}
+                                        fill="none"
+                                        stroke="oklch(52% 0.20 28)"
+                                        strokeWidth={isMobile ? '2.2' : '2.8'}
+                                        strokeDasharray="6 4"
+                                        strokeLinecap="round"
+                                        className="forecast-stream-line opacity-90"
+                                    />
+                                )}
 
-                                const fx = getX(hours.indexOf(lastBase.hour))
-                                const fyBase = getY(lastBase.forecast)
-                                const fyHigh = getY(lastBase.forecastHigh || lastBase.forecast)
-                                const fyLow = getY(lastBase.forecastLow || lastBase.forecast)
+                                {/* Actual Pax Line (Solid Clay Terracotta) */}
+                                {pathActual && (
+                                    <path
+                                        d={pathActual}
+                                        fill="none"
+                                        stroke="oklch(52% 0.16 28)"
+                                        strokeWidth={isMobile ? '2.2' : '2.8'}
+                                        strokeLinecap="round"
+                                    />
+                                )}
 
-                                return (
-                                    <g>
-                                        {/* High Pax Tag */}
-                                        {lastBase.forecastHigh > lastBase.forecast && (
-                                            <g>
-                                                <circle
-                                                    cx={fx}
-                                                    cy={fyHigh}
-                                                    r={isMobile ? '2.5' : '3'}
-                                                    fill="oklch(97% 0.008 28)"
-                                                    stroke="oklch(45% 0.08 140)"
-                                                    strokeWidth="1.5"
-                                                />
-                                                <text
-                                                    x={fx - 4}
-                                                    y={fyHigh - 5}
-                                                    textAnchor="end"
-                                                    className="font-mono text-[8px] font-bold fill-[oklch(45%_0.08_140)] tabular-nums"
-                                                >
-                                                    สูง ~{lastBase.forecastHigh}p
-                                                </text>
-                                            </g>
-                                        )}
+                                {/* Terminal Stacked Tags at 23:00 (ชัดเจน ไม่ตกขอบ) */}
+                                {points.length > 0 && isViewingToday && (() => {
+                                    const lastPt = points[points.length - 1]
+                                    if (!lastPt.isFuture) return null
 
-                                        {/* Base Pax Tag (เส้นเดิม) */}
-                                        <circle
-                                            cx={fx}
-                                            cy={fyBase}
-                                            r={isMobile ? '3' : '3.5'}
-                                            fill="oklch(97% 0.008 28)"
-                                            stroke="oklch(52% 0.20 28)"
-                                            strokeWidth="1.5"
-                                        />
-                                        <text
-                                            x={fx - 4}
-                                            y={lastBase.forecastHigh > lastBase.forecast ? fyBase + 10 : fyBase - 8}
-                                            textAnchor="end"
-                                            className="font-mono text-[8px] font-bold fill-[oklch(52%_0.20_28)] tabular-nums"
-                                        >
-                                            ฐาน ~{lastBase.forecast}p
-                                        </text>
+                                    const fx = getX(hours.length - 1)
+                                    const fyBase = getY(lastPt.forecast)
+                                    const fyHigh = getY(lastPt.forecastHigh || lastPt.forecast)
+                                    const fyLow = getY(lastPt.forecastLow || lastPt.forecast)
 
-                                        {/* Low Pax Tag */}
-                                        {lastBase.forecastLow < lastBase.forecast && (
-                                            <g>
-                                                <circle
-                                                    cx={fx}
-                                                    cy={fyLow}
-                                                    r={isMobile ? '2.5' : '3'}
-                                                    fill="oklch(97% 0.008 28)"
-                                                    stroke="oklch(60% 0.015 28)"
-                                                    strokeWidth="1.5"
-                                                />
-                                                <text
-                                                    x={fx - 4}
-                                                    y={fyLow + 10}
-                                                    textAnchor="end"
-                                                    className="font-mono text-[8px] fill-[oklch(55%_0.010_28)] tabular-nums"
-                                                >
-                                                    ต่ำ ~{lastBase.forecastLow}p
-                                                </text>
-                                            </g>
-                                        )}
-                                    </g>
-                                )
-                            })()}
+                                    return (
+                                        <g>
+                                            {/* High Tag */}
+                                            {lastPt.forecastHigh > lastPt.forecast && (
+                                                <g>
+                                                    <circle cx={fx} cy={fyHigh} r="2.5" fill="oklch(45% 0.08 140)" />
+                                                    <text
+                                                        x={fx + 5}
+                                                        y={fyHigh + 3}
+                                                        textAnchor="start"
+                                                        className="font-mono text-[8px] font-bold fill-[oklch(45%_0.08_140)] tabular-nums"
+                                                    >
+                                                        สูง ~{lastPt.forecastHigh}p
+                                                    </text>
+                                                </g>
+                                            )}
 
-                            {/* Actual Pax Columns / Bars */}
-                            {points.map((pt, i) => {
-                                const cx = getX(i)
-                                const colWidth = Math.max(8, (plotWidth / hours.length) * 0.45)
-                                const isFuture = pt.isFuture
+                                            {/* Base Tag (เส้นเดิม) */}
+                                            <circle cx={fx} cy={fyBase} r="3" fill="oklch(52% 0.20 28)" />
+                                            <text
+                                                x={fx + 5}
+                                                y={fyBase + 3}
+                                                textAnchor="start"
+                                                className="font-mono text-[8px] font-bold fill-[oklch(52%_0.20_28)] tabular-nums"
+                                            >
+                                                ฐาน ~{lastPt.forecast}p
+                                            </text>
 
-                                // If future, don't draw actual bar
-                                if (isFuture) return null
+                                            {/* Low Tag */}
+                                            {lastPt.forecastLow < lastPt.forecast && (
+                                                <g>
+                                                    <circle cx={fx} cy={fyLow} r="2.5" fill="oklch(60% 0.015 28)" />
+                                                    <text
+                                                        x={fx + 5}
+                                                        y={fyLow + 3}
+                                                        textAnchor="start"
+                                                        className="font-mono text-[8px] fill-[oklch(55%_0.010_28)] tabular-nums"
+                                                    >
+                                                        ต่ำ ~{lastPt.forecastLow}p
+                                                    </text>
+                                                </g>
+                                            )}
+                                        </g>
+                                    )
+                                })()}
 
-                                const barHeight = (pt.actual / maxPaxScale) * plotHeight
-                                const barY = svgHeight - padYBottom - barHeight
+                                {/* Live Precision Radar Marker at Current Hour */}
+                                {latestActivePt && (() => {
+                                    const liveX = getX(hours.indexOf(latestActivePt.hour))
+                                    const liveY = getY(latestActivePt.actual)
+                                    return (
+                                        <g>
+                                            <circle cx={liveX} cy={liveY} r="7" fill="oklch(52% 0.16 28)" opacity="0.18" />
+                                            <circle cx={liveX} cy={liveY} r="4" fill="none" stroke="oklch(52% 0.16 28)" strokeWidth="1.5" />
+                                            <circle cx={liveX} cy={liveY} r="2.5" fill="oklch(52% 0.16 28)" stroke="white" strokeWidth="1" />
+                                        </g>
+                                    )
+                                })()}
 
-                                return (
-                                    <g key={`bar-${pt.hour}`}>
-                                        <rect
-                                            x={cx - colWidth / 2}
-                                            y={barY}
-                                            width={colWidth}
-                                            height={barHeight}
-                                            fill="oklch(52% 0.16 28)"
-                                            opacity={hoveredHour === pt.hour ? "1" : "0.85"}
-                                        />
-                                    </g>
-                                )
-                            })}
-
-                            {/* Ad Intent Micro-Track Ribbon (Below the Chart Axis) */}
-                            <g>
-                                <line
-                                    x1={padLeft}
-                                    y1={svgHeight - padYBottom + 12}
-                                    x2={svgWidth - padRight}
-                                    y2={svgHeight - padYBottom + 12}
-                                    stroke="oklch(88% 0.012 28)"
-                                    strokeWidth="1"
-                                />
-                                <text
-                                    x={padLeft - 6}
-                                    y={svgHeight - padYBottom + 22}
-                                    textAnchor="end"
-                                    className="font-mono text-[8px] font-bold fill-[oklch(45%_0.08_140)] uppercase"
-                                >
-                                    ADS
-                                </text>
+                                {/* Data Points & Ad Markers on Chart */}
                                 {points.map((pt, i) => {
                                     const cx = getX(i)
-                                    const totalAdSignals = (pt.adDirections * 3) + pt.adViews
-                                    if (totalAdSignals === 0) return null
+                                    const cy = pt.isFuture ? getY(pt.forecast) : getY(pt.actual)
+                                    const isHovered = hoveredHour === pt.hour
+                                    const showTick = !isMobile || pt.hour % 2 === 1 || isHovered || pt.hour === 23
 
-                                    const radius = Math.min(6, Math.max(2.5, Math.sqrt(totalAdSignals) * 1.5))
                                     return (
-                                        <g key={`ad-${pt.hour}`}>
-                                            <circle
-                                                cx={cx}
-                                                cy={svgHeight - padYBottom + 20}
-                                                r={radius}
-                                                fill="oklch(45% 0.08 140)"
-                                                opacity={pt.adDirections > 0 ? "0.9" : "0.4"}
+                                        <g 
+                                            key={pt.hour}
+                                            onMouseEnter={() => setHoveredHour(pt.hour)}
+                                            onTouchStart={() => setHoveredHour(pt.hour)}
+                                            className="cursor-pointer"
+                                        >
+                                            {/* Hit Column */}
+                                            <rect
+                                                x={cx - (plotWidth / (hours.length - 1)) / 2}
+                                                y={padYTop}
+                                                width={plotWidth / (hours.length - 1)}
+                                                height={plotHeight + 25}
+                                                fill="transparent"
                                             />
+
+                                            {/* Ad Intent Indicator Badge (Directly on Hour Column) */}
                                             {pt.adDirections > 0 && (
+                                                <g>
+                                                    <circle
+                                                        cx={cx}
+                                                        y={padYTop + 4}
+                                                        r="3.5"
+                                                        fill="oklch(45% 0.08 140)"
+                                                    />
+                                                    <text
+                                                        x={cx}
+                                                        y={padYTop - 2}
+                                                        textAnchor="middle"
+                                                        className="font-mono text-[7.5px] font-bold fill-[oklch(45%_0.08_140)]"
+                                                    >
+                                                        {pt.adDirections}📍
+                                                    </text>
+                                                </g>
+                                            )}
+
+                                            {/* Data Point Dot */}
+                                            {!pt.isFuture && (
+                                                <circle
+                                                    cx={cx}
+                                                    cy={cy}
+                                                    r={isHovered ? "4" : "2.5"}
+                                                    fill="oklch(52% 0.16 28)"
+                                                    stroke="white"
+                                                    strokeWidth="1"
+                                                />
+                                            )}
+
+                                            {/* Clean X-Axis Tick Label (No Collisions!) */}
+                                            {showTick && (
                                                 <text
                                                     x={cx}
-                                                    y={svgHeight - padYBottom + 32}
+                                                    y={svgHeight - padYBottom + 16}
                                                     textAnchor="middle"
-                                                    className="font-mono text-[7px] font-bold fill-[oklch(45%_0.08_140)]"
+                                                    className={`font-mono text-[9px] ${
+                                                        isHovered 
+                                                            ? 'font-bold fill-[oklch(18%_0.012_28)]' 
+                                                            : pt.isFuture 
+                                                            ? 'fill-[oklch(55%_0.010_28)]' 
+                                                            : 'font-bold fill-[oklch(18%_0.012_28)]'
+                                                    }`}
                                                 >
-                                                    {pt.adDirections}📍
+                                                    {pt.hour}.00
                                                 </text>
+                                            )}
+
+                                            {/* Vertical Guide Line on Hover */}
+                                            {isHovered && (
+                                                <line
+                                                    x1={cx}
+                                                    y1={padYTop}
+                                                    x2={cx}
+                                                    y2={svgHeight - padYBottom}
+                                                    stroke="oklch(52% 0.20 28)"
+                                                    strokeWidth="1"
+                                                    strokeDasharray="2 2"
+                                                />
                                             )}
                                         </g>
                                     )
                                 })}
-                            </g>
+                            </svg>
+                        </div>
 
-                            {/* X-Axis Labels and Interactive Hit Columns */}
-                            {points.map((pt, i) => {
-                                const cx = getX(i)
-                                const isHovered = hoveredHour === pt.hour
-                                const showLabel = !isMobile || pt.hour % 2 === 1 || isHovered || pt.hour === 23
+                        {/* Interactive Tooltip Banner */}
+                        {hoveredHour !== null && (() => {
+                            const pt = points.find(p => p.hour === hoveredHour)
+                            if (!pt) return null
 
-                                return (
-                                    <g
-                                        key={pt.hour}
-                                        onMouseEnter={() => setHoveredHour(pt.hour)}
-                                        onTouchStart={() => setHoveredHour(pt.hour)}
-                                        className="cursor-pointer"
-                                    >
-                                        {/* Invisible Touch Column */}
-                                        <rect
-                                            x={cx - (plotWidth / (hours.length - 1)) / 2}
-                                            y={padYTop}
-                                            width={plotWidth / (hours.length - 1)}
-                                            height={plotHeight + 35}
-                                            fill="transparent"
-                                        />
-
-                                        {/* Hour Tick Label */}
-                                        {showLabel && (
-                                            <text
-                                                x={cx}
-                                                y={svgHeight - padYBottom + 3}
-                                                textAnchor="middle"
-                                                className={`font-mono text-[9px] ${
-                                                    isHovered 
-                                                        ? 'font-bold fill-[oklch(18%_0.012_28)]' 
-                                                        : pt.isFuture 
-                                                        ? 'fill-[oklch(55%_0.010_28)]' 
-                                                        : 'font-bold fill-[oklch(18%_0.012_28)]'
-                                                }`}
-                                            >
-                                                {pt.hour}.00
-                                            </text>
+                            return (
+                                <div className="mt-2 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                            เวลา {pt.hour}.00 - {pt.hour + 1}.00 น.
+                                        </span>
+                                        {pt.isFuture ? (
+                                            <span className="px-1.5 py-0.5 bg-[oklch(52%_0.20_28)] text-white text-[10px]">
+                                                คาดการณ์ (FORECAST)
+                                            </span>
+                                        ) : (
+                                            <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-white text-[10px]">
+                                                ยอดจริง (ACTUAL)
+                                            </span>
                                         )}
+                                    </div>
 
-                                        {/* Hovered Guide Line */}
-                                        {isHovered && (
-                                            <line
-                                                x1={cx}
-                                                y1={padYTop}
-                                                x2={cx}
-                                                y2={svgHeight - padYBottom}
-                                                stroke="oklch(52% 0.20 28)"
-                                                strokeWidth="1"
-                                                strokeDasharray="2 2"
-                                            />
-                                        )}
-                                    </g>
-                                )
-                            })}
-                        </svg>
+                                    <div className="flex items-center gap-4 flex-wrap">
+                                        <div>
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">
+                                                {pt.isFuture ? 'EST. GUESTS (กรอบ ต่ำ-สูง)' : 'ACTUAL GUESTS'}
+                                            </span>
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                {pt.isFuture ? `~${pt.forecast} ท่าน (กรอบ ${pt.forecastLow}-${pt.forecastHigh})` : `${pt.actual} ท่าน (${pt.bills} บิล)`}
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">4-WK BASELINE</span>
+                                            <span className="text-[oklch(42%_0.010_28)]">
+                                                ~{pt.baseline} ท่าน
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">AD INTENT LEADS</span>
+                                            <span className="font-bold text-[oklch(45%_0.08_140)]">
+                                                {pt.adDirections} Maps / {pt.adViews} Views
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })()}
                     </div>
 
-                    {/* Interactive Tooltip Card */}
-                    {hoveredHour !== null && (() => {
-                        const pt = points.find(p => p.hour === hoveredHour)
-                        if (!pt) return null
+                    {/* 4. EXECUTIVE DAYPARTS SUMMARY BREAKDOWN (สรุป 4 ช่วงเวลาประจำวัน) */}
+                    <div className="border-t border-[oklch(85%_0.012_28)] p-3 sm:p-4 bg-[oklch(94%_0.010_28)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)]">
+                                DAYPART SUMMARY // สรุปเจาะลึก 4 ช่วงเวลาของวัน
+                            </span>
+                            <span className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                เปรียบเทียบยอดจริง vs คาดการณ์ (ต่ำ-สูง) vs สถิติเดิม
+                            </span>
+                        </div>
 
-                        return (
-                            <div className="mt-2 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
-                                <div>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)] mr-2">
-                                        ช่วงเวลา {pt.hour}.00 - {pt.hour + 1}.00 น.
-                                    </span>
-                                    {pt.isFuture ? (
-                                        <span className="px-1.5 py-0.5 bg-[oklch(52%_0.20_28)] text-white text-[10px]">
-                                            คาดการณ์ (FORECAST)
-                                        </span>
-                                    ) : (
-                                        <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-white text-[10px]">
-                                            ยอดจริง (ACTUAL)
-                                        </span>
-                                    )}
-                                </div>
+                        {/* 4-Cell Brutalist Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+                            {dayparts.map((dp) => {
+                                const isPassed = dp.status === 'passed'
+                                const isActive = dp.status === 'active'
 
-                                <div className="flex items-center gap-4">
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">
-                                            {pt.isFuture ? 'EST. GUESTS' : 'ACTUAL GUESTS'}
+                                return (
+                                    <div 
+                                        key={dp.key}
+                                        className={`p-3 border transition-colors ${
+                                            isActive 
+                                                ? 'border-[oklch(52%_0.20_28)] bg-[oklch(97%_0.008_28)] shadow-xs' 
+                                                : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
+                                        }`}
+                                    >
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="font-bold text-xs text-[oklch(18%_0.012_28)]">
+                                                {dp.title}
+                                            </span>
+                                            <span className={`px-1.5 py-0.2 text-[9px] font-bold ${
+                                                isPassed 
+                                                    ? 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]' 
+                                                    : isActive 
+                                                    ? 'bg-[oklch(52%_0.20_28)] text-white animate-pulse' 
+                                                    : 'bg-[oklch(45%_0.08_140)] text-white'
+                                            }`}>
+                                                {isPassed ? 'PASSED' : isActive ? 'NOW ACTIVE' : 'UPCOMING'}
+                                            </span>
+                                        </div>
+
+                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block mb-2">
+                                            {dp.timeLabel}
                                         </span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                            {pt.isFuture ? `~${pt.forecast}` : pt.actual} ท่าน
-                                        </span>
+
+                                        <div className="space-y-1 mb-2">
+                                            <div className="flex items-baseline justify-between">
+                                                <span className="text-[11px] text-[oklch(42%_0.010_28)]">
+                                                    {isPassed ? 'ลูกค้าจริง' : 'คาดการณ์'}
+                                                </span>
+                                                <span className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tabular-nums">
+                                                    {isPassed ? `${dp.actualCount} ท่าน` : `~${dp.forecastCount} ท่าน`}
+                                                </span>
+                                            </div>
+
+                                            {!isPassed && (
+                                                <div className="flex items-center justify-between text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    <span>กรอบความแปรผัน:</span>
+                                                    <span className="tabular-nums font-bold">
+                                                        ต่ำ {dp.forecastLowCount} - สูง {dp.forecastHighCount}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center justify-between text-[10px]">
+                                                <span className="text-[oklch(55%_0.010_28)]">สถิติเดิม ({dp.baselineCount} ท่าน):</span>
+                                                <span className={`font-bold tabular-nums ${dp.diffPct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                                    {dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}
+                                                </span>
+                                            </div>
+
+                                            {dp.adDirCount > 0 && (
+                                                <div className="flex items-center justify-between text-[10px] text-[oklch(45%_0.08_140)] pt-0.5 border-t border-[oklch(90%_0.012_28)]">
+                                                    <span>สัญญาณ Ads:</span>
+                                                    <span className="font-bold">{dp.adDirCount} Maps</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <p className="text-[9.5px] text-[oklch(55%_0.010_28)] line-clamp-2 leading-tight pt-1 border-t border-[oklch(90%_0.012_28)]">
+                                            {dp.note}
+                                        </p>
                                     </div>
-
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">4-WK BASELINE</span>
-                                        <span className="text-[oklch(42%_0.010_28)]">
-                                            ~{pt.baseline} ท่าน
-                                        </span>
-                                    </div>
-
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">AD INTENT LEADS</span>
-                                        <span className="font-bold text-[oklch(45%_0.08_140)]">
-                                            {pt.adDirections} Maps / {pt.adViews} Views
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        )
-                    })()}
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
             )}
 
-            {/* Tab 2: Full AI Operational Briefing */}
+            {/* Tab 2: Standalone Dayparts Detailed View */}
+            {activeSubTab === 'dayparts' && (
+                <div className="p-4 space-y-4 font-mono text-xs">
+                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
+                        <div>
+                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase">
+                                Comprehensive Dayparts Performance & Operational Forecast
+                            </h4>
+                            <p className="text-[11px] text-[oklch(42%_0.010_28)]">
+                                แจกแจงการคาดการณ์จำนวนลูกค้า กรอบความเชื่อมั่น และคำแนะนำทีมงานแยกตาม 4 ช่วงเวลา
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {dayparts.map(dp => (
+                            <div key={dp.key} className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)]">{dp.title}</h5>
+                                        <span className="text-[11px] text-[oklch(55%_0.010_28)]">{dp.timeLabel}</span>
+                                    </div>
+                                    <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white text-[10px] font-bold uppercase">
+                                        {dp.status}
+                                    </span>
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 p-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-center">
+                                    <div>
+                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">เป้าฐาน (BASE)</span>
+                                        <span className="font-bold text-base text-[oklch(18%_0.012_28)]">
+                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastCount}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">กรอบต่ำ (LOW)</span>
+                                        <span className="font-bold text-base text-[oklch(55%_0.010_28)]">
+                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastLowCount}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">กรอบสูง (HIGH)</span>
+                                        <span className="font-bold text-base text-[oklch(45%_0.08_140)]">
+                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastHighCount}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed bg-[oklch(97%_0.008_28)] p-2.5 border border-[oklch(88%_0.012_28)]">
+                                    <strong className="text-[oklch(18%_0.012_28)]">คำแนะนำ:</strong> {dp.note}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Tab 3: Full AI Operational Briefing */}
             {activeSubTab === 'ai_deepdive' && (
                 <div className="p-4 space-y-4 font-mono text-xs">
                     <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
@@ -1193,37 +1345,10 @@ ${JSON.stringify(summaryPayload, null, 2)}
                     <div className="p-4 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] leading-relaxed whitespace-pre-line text-sm text-[oklch(18%_0.012_28)]">
                         {aiBriefing || 'กำลังดึงข้อมูลและวิเคราะห์...'}
                     </div>
-
-                    {/* Operational Checkpoints */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block uppercase">PEAK CAPACITY ALIGNMENT</span>
-                            <span className="font-bold text-base text-[oklch(18%_0.012_28)]">{peakCapacityLoad}%</span>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
-                                {peakCapacityLoad >= 80 ? 'มีความเสี่ยงคิวหน้าร้าน ต้องเร่ง Table Turnover' : 'รองรับได้สบาย โต๊ะเพียงพอ'}
-                            </p>
-                        </div>
-                        <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block uppercase">AD-TO-WALKIN CONVERSION</span>
-                            <span className="font-bold text-base text-[oklch(45%_0.08_140)]">{adStats.totalAdDirections} LEADS</span>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
-                                ลูกค้ากดขอ GPS นำทาง คาดการณ์เข้าสู่ร้านภายใน 30-90 นาที
-                            </p>
-                        </div>
-                        <div className="p-3 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block uppercase">DAYPART VELOCITY</span>
-                            <span className="font-bold text-base text-[oklch(52%_0.20_28)]">
-                                {paceMultiplier >= 1.0 ? `+${Math.round((paceMultiplier - 1) * 100)}%` : `-${Math.round((1 - paceMultiplier) * 100)}%`}
-                            </span>
-                            <p className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
-                                เทียบกับค่าเฉลี่ย 4 สัปดาห์ก่อนหน้าในวันเดียวกัน
-                            </p>
-                        </div>
-                    </div>
                 </div>
             )}
 
-            {/* Tab 3: Ad Attribution & Channel Breakdown */}
+            {/* Tab 4: Ad Attribution & Channel Breakdown */}
             {activeSubTab === 'ad_breakdown' && (
                 <div className="p-4 space-y-4 font-mono text-xs">
                     <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
@@ -1240,7 +1365,6 @@ ${JSON.stringify(summaryPayload, null, 2)}
                         </span>
                     </div>
 
-                    {/* Attribution Table */}
                     <div className="border border-[oklch(85%_0.012_28)] overflow-x-auto">
                         <table className="w-full text-left border-collapse">
                             <thead>
