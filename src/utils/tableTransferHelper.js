@@ -284,3 +284,34 @@ export function stripInternalTransferTags(remark = '') {
         .replace(/Merged offline/gi, '')
         .trim();
 }
+
+/**
+ * Checks if a booking is an empty placeholder pickup/takeaway order (0 items and 0 amount).
+ * These ghost records occur when a takeaway order is initiated in POS but abandoned without ordering items.
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isGhostPickupBooking(booking) {
+    if (!booking) return false;
+    const isPickupType = !booking.table_id || 
+                         booking.booking_type === 'pickup' || 
+                         (booking.booking_type || '').includes('takeaway');
+    const hasNoItems = !booking.order_items || booking.order_items.length === 0;
+    const hasNoAmount = parseFloat(booking.total_amount || booking.total_price || 0) === 0;
+    return Boolean(isPickupType && hasNoItems && hasNoAmount);
+}
+
+/**
+ * Checks if a booking is an internal maintenance/floor block holding the table.
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isInternalBlockBooking(booking) {
+    if (!booking) return false;
+    const note = booking.customer_note || '';
+    const isBlockNote = note === 'Internal Block' || note === 'Maintenance Block';
+    const hasNoItems = !booking.order_items || booking.order_items.length === 0;
+    const hasNoAmount = parseFloat(booking.total_amount || booking.total_price || 0) === 0;
+    return Boolean(isBlockNote && hasNoItems && hasNoAmount);
+}
+

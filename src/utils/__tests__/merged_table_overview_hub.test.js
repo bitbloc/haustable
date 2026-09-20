@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTableTransferInfo } from '../tableTransferHelper';
+import { parseTableTransferInfo, isGhostPickupBooking } from '../tableTransferHelper';
 
 describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Architecture', () => {
     const mockBookings = [
@@ -111,5 +111,60 @@ describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Arch
         expect(shouldShowPaymentBadge(newlyOpenedTable)).toBe(false);
         expect(shouldShowPaymentBadge(diningTableWithItems)).toBe(false);
         expect(shouldShowPaymentBadge(completedBill)).toBe(true);
+    });
+
+    it('should correctly identify and filter ghost pickup bookings (empty 0 items and ฿0)', () => {
+        const ghostPickup1 = {
+            id: 'bd3c797c-b48d-4df6-b427-4876327f05a4',
+            booking_short_id: 'B35E',
+            status: 'seated',
+            booking_type: 'pickup',
+            table_id: null,
+            customer_note: 'ออเดอร์กลับบ้าน',
+            total_amount: 0,
+            order_items: []
+        };
+        const ghostPickup2 = {
+            id: 'b1001747-70f8-4200-a22f-4763735f9ec3',
+            booking_short_id: '5A14',
+            status: 'seated',
+            booking_type: 'pickup',
+            table_id: null,
+            customer_note: 'ออเดอร์กลับบ้าน',
+            total_amount: 0,
+            order_items: []
+        };
+        const validTakeaway = {
+            id: 'valid-pickup-1',
+            booking_short_id: 'C999',
+            status: 'seated',
+            booking_type: 'pickup',
+            table_id: null,
+            customer_note: 'ออเดอร์กลับบ้าน',
+            total_amount: 150,
+            order_items: [{ name: 'Americano', quantity: 1, price: 150 }]
+        };
+        const activeDineInTable = {
+            id: 'table-seated-1',
+            booking_short_id: 'T111',
+            status: 'seated',
+            booking_type: 'dine_in',
+            table_id: 'table-uuid-1',
+            customer_note: null,
+            total_amount: 0,
+            order_items: []
+        };
+
+        expect(isGhostPickupBooking(ghostPickup1)).toBe(true);
+        expect(isGhostPickupBooking(ghostPickup2)).toBe(true);
+        expect(isGhostPickupBooking(validTakeaway)).toBe(false);
+        // An in-store table that is seated before placing order is not a ghost pickup
+        expect(isGhostPickupBooking(activeDineInTable)).toBe(false);
+
+        // Filter list test
+        const testList = [ghostPickup1, ghostPickup2, validTakeaway, activeDineInTable];
+        const cleaned = testList.filter(b => !isGhostPickupBooking(b));
+        expect(cleaned.length).toBe(2);
+        expect(cleaned.map(b => b.booking_short_id)).toEqual(['C999', 'T111']);
     });
 });

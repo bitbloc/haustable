@@ -33,7 +33,7 @@ import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDu
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
-import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
+import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 
@@ -192,11 +192,9 @@ export default function AllDailyBillsHub({
     // Filter & Priority Search Logic
     const filteredBookings = useMemo(() => {
         return (bookings || []).filter(b => {
-            // Exclude internal floor blocks / maintenance holds that are not customer orders
-            const isInternalBlock = (b.customer_note === 'Internal Block' || b.customer_note === 'Maintenance Block') && 
-                                    (!b.order_items || b.order_items.length === 0) && 
-                                    parseFloat(b.total_amount || b.total_price || 0) === 0
-            if (isInternalBlock) return false
+            // Exclude internal floor blocks and empty ghost pickups
+            if (isInternalBlockBooking(b)) return false
+            if (isGhostPickupBooking(b)) return false
 
             const transfer = parseTableTransferInfo(b)
 
@@ -316,10 +314,8 @@ export default function AllDailyBillsHub({
         let countWithDuration = 0
 
         ;(bookings || []).forEach(b => {
-            const isInternalBlock = (b.customer_note === 'Internal Block' || b.customer_note === 'Maintenance Block') && 
-                                    (!b.order_items || b.order_items.length === 0) && 
-                                    parseFloat(b.total_amount || b.total_price || 0) === 0
-            if (isInternalBlock) return
+            if (isInternalBlockBooking(b)) return
+            if (isGhostPickupBooking(b)) return
 
             const transfer = parseTableTransferInfo(b)
             const amt = parseFloat(b.total_amount || b.total_price || 0)

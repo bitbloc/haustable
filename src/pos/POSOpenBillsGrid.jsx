@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
-import { parseTableTransferInfo } from '../utils/tableTransferHelper';
+import { parseTableTransferInfo, isGhostPickupBooking } from '../utils/tableTransferHelper';
 
 export function getOrderCategoryType(order) {
     if (!order) return 'direct';
@@ -130,10 +130,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
     // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills)
     const activeOrders = orders.filter(o => {
         if (o.status === 'completed' || o.status === 'void' || o.status === 'cancelled') return false;
-        const isGhostPickup = (!o.table_id || o.booking_type === 'pickup') && 
-                              (!o.order_items || o.order_items.length === 0) && 
-                              (!o.total_amount || o.total_amount === 0);
-        return !isGhostPickup;
+        return !isGhostPickupBooking(o);
     });
     
     // Categorize void vs merged
@@ -171,13 +168,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         const isVoid = order.status === 'void' || order.status === 'cancelled';
         const startMins = Math.max(0, Math.floor((Date.now() - new Date(order.booking_time).getTime()) / 60000));
         const isStale = startMins >= 2880;
-        
-        const isGhostPickup = (!order.table_id || order.booking_type === 'pickup') && 
-                              (!order.order_items || order.order_items.length === 0) && 
-                              (!order.total_amount || order.total_amount === 0);
+        const isGhost = isGhostPickupBooking(order);
 
         // Status mode filter
-        if (statusMode === 'active' && (isVoid || isGhostPickup)) return false;
+        if (statusMode === 'active' && (isVoid || isGhost)) return false;
         if (statusMode === 'void' && (!isVoid || transfer.isMergedSource)) return false;
         if (statusMode === 'merged' && !transfer.isMergedSource) return false;
         if (statusMode === 'stale' && (!isStale || isVoid)) return false;

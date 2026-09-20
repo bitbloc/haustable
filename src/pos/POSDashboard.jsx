@@ -1876,9 +1876,10 @@ export default function POSDashboard() {
             // 1. Create walk-in if no active booking
             if (!bookingId) {
                 const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
+                const pickupNote = currentOrder.customer || 'ออเดอร์กลับบ้าน';
                 const newBooking = selectedTable 
                     ? await createWalkIn(selectedTable, null, memberIdToPass)
-                    : await createWalkInPickup('Walk-in Customer', memberIdToPass);
+                    : await createWalkInPickup(pickupNote, memberIdToPass);
                 if (!newBooking) return;
                 bookingId = newBooking.id;
                 currentBooking = newBooking;
@@ -2423,36 +2424,37 @@ export default function POSDashboard() {
         setView('menu');
     }, []);
 
-    const handleNewWalkInPickup = useCallback(async () => {
-        // Direct 1-click takeaway order: no redundant pop-up modal
+    const handleNewWalkInPickup = useCallback(() => {
+        // Direct 1-click takeaway order: switch to menu with clean takeaway cart (deferred DB creation)
         setSelectedTable(null);
         localStorage.removeItem('pos_active_table_id');
+        setActiveBooking(null);
+        if (activeBookingRef) activeBookingRef.current = null;
         setAttachedMemberCrm(null);
+        setCurrentOrder({
+            items: [],
+            customer: 'ออเดอร์กลับบ้าน',
+            table: null
+        });
+        setView('menu');
+    }, []);
 
-        const toastId = toast.loading('กำลังเปิดออเดอร์กลับบ้าน...');
-        try {
-            const newBooking = await createWalkInPickup('ออเดอร์กลับบ้าน');
-            if (newBooking) {
-                handleSelectPickupOrder(newBooking);
-                toast.success('เปิดออเดอร์กลับบ้านเรียบร้อย', { id: toastId });
-            } else {
-                toast.error('ไม่สามารถเปิดออเดอร์กลับบ้านได้', { id: toastId });
-            }
-        } catch (err) {
-            console.error('Failed to create takeaway order:', err);
-            toast.error('เกิดข้อผิดพลาดในการเปิดออเดอร์กลับบ้าน', { id: toastId });
-        }
-    }, [createWalkInPickup, handleSelectPickupOrder]);
-
-    const confirmNewWalkInPickup = useCallback(async () => {
+    const confirmNewWalkInPickup = useCallback(() => {
         const note = pickupNoteInput.trim() || 'ออเดอร์กลับบ้าน';
         setShowPickupModal(false);
         setPickupNoteInput('');
-        const newBooking = await createWalkInPickup(note);
-        if (newBooking) {
-            handleSelectPickupOrder(newBooking);
-        }
-    }, [createWalkInPickup, handleSelectPickupOrder, pickupNoteInput]);
+        setSelectedTable(null);
+        localStorage.removeItem('pos_active_table_id');
+        setActiveBooking(null);
+        if (activeBookingRef) activeBookingRef.current = null;
+        setAttachedMemberCrm(null);
+        setCurrentOrder({
+            items: [],
+            customer: note,
+            table: null
+        });
+        setView('menu');
+    }, [pickupNoteInput]);
 
     useEffect(() => {
         const autoSelectPending = async () => {
@@ -2474,11 +2476,26 @@ export default function POSDashboard() {
             // Return from Menu key-in back to Tables floorplan, preserving active table & items
             setView('tables');
         } else {
+            // Safety cleanup: If current activeBooking was an empty placeholder pickup with 0 items, void it
+            if (activeBooking && (!activeBooking.table_id || activeBooking.booking_type === 'pickup')) {
+                const hasNoItems = (!currentOrder?.items || currentOrder.items.length === 0) &&
+                                   (!activeBooking.order_items || activeBooking.order_items.length === 0);
+                if (hasNoItems && activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
+                    supabase
+                        .from('bookings')
+                        .update({ status: 'void' })
+                        .eq('id', activeBooking.id)
+                        .then(() => {})
+                        .catch(err => console.error('Failed to void abandoned pickup:', err));
+                }
+            }
+
             // Full reset to clean Tables floorplan
             localStorage.removeItem('pos_active_table_id');
             setView('tables');
             setSelectedTable(null);
             setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
             setCurrentOrder({ items: [], customer: null, table: null });
             setAttachedMemberCrm(null);
             const cfdIdleDetail = { type: 'IDLE', timestamp: Date.now() };
@@ -2489,7 +2506,7 @@ export default function POSDashboard() {
                 }
             } catch (e) {}
         }
-    }, [selectedTable, view]);
+    }, [activeBooking, currentOrder, selectedTable, view]);
 
     const handleAddToOrder = useCallback((item) => {
         setCurrentOrder(prev => {
@@ -2861,9 +2878,10 @@ export default function POSDashboard() {
         // 1. Create walk-in if no active booking
         if (!bookingId) {
             const memberIdToPass = attachedMemberCrm?.id || activeBooking?.user_id || activeBooking?.profiles?.id || null;
+            const pickupNote = currentOrder.customer || 'ออเดอร์กลับบ้าน';
             const newBooking = selectedTable 
                 ? await createWalkIn(selectedTable, null, memberIdToPass)
-                : await createWalkInPickup('Walk-in Customer', memberIdToPass);
+                : await createWalkInPickup(pickupNote, memberIdToPass);
             if (!newBooking) return;
             bookingId = newBooking.id;
             currentBooking = newBooking;
@@ -3746,12 +3764,29 @@ export default function POSDashboard() {
                         if (!selectedTable && !activeBooking) {
                             setSelectedTable(null);
                             setActiveBooking(null);
-                            setCurrentOrder({ items: [], customer: 'Walk-in Pick-up', table: null });
+                            if (activeBookingRef) activeBookingRef.current = null;
+                            setCurrentOrder({ items: [], customer: 'ออเดอร์กลับบ้าน', table: null });
                             setAttachedMemberCrm(null);
                             localStorage.removeItem('pos_active_table_id');
                         }
                         setView('menu');
                     } else {
+                        // Safety cleanup when navigating away: void empty pickup if abandoned
+                        if (activeBooking && (!activeBooking.table_id || activeBooking.booking_type === 'pickup')) {
+                            const hasNoItems = (!currentOrder?.items || currentOrder.items.length === 0) &&
+                                               (!activeBooking.order_items || activeBooking.order_items.length === 0);
+                            if (hasNoItems && activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
+                                supabase
+                                    .from('bookings')
+                                    .update({ status: 'void' })
+                                    .eq('id', activeBooking.id)
+                                    .then(() => {})
+                                    .catch(err => console.error('Failed to void abandoned pickup:', err));
+                            }
+                            setActiveBooking(null);
+                            if (activeBookingRef) activeBookingRef.current = null;
+                            setCurrentOrder({ items: [], customer: null, table: null });
+                        }
                         setView(v);
                     }
                 }}

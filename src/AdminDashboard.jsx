@@ -27,6 +27,7 @@ import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import TaxInvoiceModal from './components/admin/tax/TaxInvoiceModal'
 import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
+import { isGhostPickupBooking, isInternalBlockBooking } from './utils/tableTransferHelper'
 
 export default function AdminDashboard() {
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
@@ -332,11 +333,9 @@ export default function AdminDashboard() {
     const dailyBookings = useMemo(() => {
         const isToday = selectedDate === getThaiDate()
         return bookings.filter(b => {
-            // Exclude internal floor blocks / maintenance holds that are not customer orders
-            const isInternalBlock = (b.customer_note === 'Internal Block' || b.customer_note === 'Maintenance Block') && 
-                                    (!b.order_items || b.order_items.length === 0) && 
-                                    parseFloat(b.total_amount || b.total_price || 0) === 0
-            if (isInternalBlock) return false
+            // Exclude internal floor blocks / maintenance holds and empty ghost pickups
+            if (isInternalBlockBooking(b)) return false
+            if (isGhostPickupBooking(b)) return false
 
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
@@ -360,12 +359,13 @@ export default function AdminDashboard() {
 
     // 2. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
-        bookings.filter(b => b.status === 'pending').sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+        bookings.filter(b => b.status === 'pending' && !isGhostPickupBooking(b)).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
         , [bookings])
 
     // 3. Schedule: Confirmed / Seated / Ready for selected date
     const scheduleBookings = useMemo(() => {
         return bookings.filter(b => {
+            if (isGhostPickupBooking(b)) return false
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
             const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'

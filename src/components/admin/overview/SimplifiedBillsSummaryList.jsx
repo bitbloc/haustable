@@ -2,6 +2,7 @@
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly } from '../../../utils/timeUtils'
 import { getShortBookingId } from '../../../utils/printerHelper'
+import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 
 /**
  * SimplifiedBillsSummaryList
@@ -20,14 +21,19 @@ export default function SimplifiedBillsSummaryList({
     const [page, setPage] = useState(1)
     const pageSize = 15
 
+    // Clean bookings: purge ghost pickups and maintenance blocks
+    const validBookings = useMemo(() => {
+        return (bookings || []).filter(b => !isGhostPickupBooking(b) && !isInternalBlockBooking(b))
+    }, [bookings])
+
     // Sort by most recent first
     const sortedBookings = useMemo(() => {
-        return [...bookings].sort((a, b) => {
+        return [...validBookings].sort((a, b) => {
             const timeA = new Date(a.booking_time || a.created_at).getTime()
             const timeB = new Date(b.booking_time || b.created_at).getTime()
             return timeB - timeA
         })
-    }, [bookings])
+    }, [validBookings])
 
     // Filtered bookings
     const filteredBookings = useMemo(() => {
@@ -53,7 +59,7 @@ export default function SimplifiedBillsSummaryList({
         let activeCount = 0
         let pickupCount = 0
 
-        bookings.forEach(b => {
+        validBookings.forEach(b => {
             const amt = Number(b.total_amount || 0)
             const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
             if (['completed', 'paid', 'success'].includes(b.status)) {
@@ -70,13 +76,13 @@ export default function SimplifiedBillsSummaryList({
         })
 
         return {
-            totalCount: bookings.length,
+            totalCount: validBookings.length,
             settledCount,
             activeCount,
             pickupCount,
             totalRevenue
         }
-    }, [bookings])
+    }, [validBookings])
 
     // Pagination slice
     const totalPages = Math.max(1, Math.ceil(filteredBookings.length / pageSize))
