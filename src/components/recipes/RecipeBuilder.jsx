@@ -12,6 +12,7 @@ import { calculateRecipeCost, getLayerColor, calculateRealUnitCost } from '../..
 import { THAI_UNITS, suggestConversionFactor, areUnitTypesCompatible } from '../../utils/unitUtils';
 import { toast } from 'sonner';
 import PriceSimulator from './PriceSimulator';
+import { logStaffActivity } from '../../utils/auditLogger';
 
 // ── 1. Mini Modal for Quick Stock Item Edit ──
 function EditStockModal({ item, onClose, onSave }) {
@@ -882,6 +883,18 @@ export default function RecipeBuilder({ parentId, parentType = 'menu', initialPr
                 // Update Base Recipe Material Cost
                 await supabase.from('stock_items').update({ cost_price: totalCost }).eq('id', parentId);
             }
+
+            logStaffActivity('sop', 'recipe_save', {
+                reason: `บันทึกส่วนผสมสูตร ${parentType === 'menu' ? 'เมนู' : 'สูตรกลาง'}: ${parentItem?.name || parentId}`,
+                metadata: {
+                    parent_id: parentId,
+                    parent_type: parentType,
+                    name: parentItem?.name,
+                    ingredients_count: payloadItems.length,
+                    total_cost: totalCost,
+                    price: currentPrice
+                }
+            });
 
             toast.success('บันทึกสูตรเรียบร้อย');
             onClose();

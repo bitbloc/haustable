@@ -101,13 +101,15 @@ export default function AdminStaffLogsPage() {
         let stockCount = 0;
         let posCount = 0;
         let shiftCount = 0;
+        let sopCount = 0;
         let adminCount = 0;
 
         logs.forEach(l => {
             if (l.module === 'stock') stockCount++;
             else if (l.module === 'pos') posCount++;
             else if (l.module === 'shift') shiftCount++;
-            else if (l.module === 'admin') adminCount++;
+            else if (l.module === 'sop') sopCount++;
+            else if (l.module === 'admin' || l.module === 'tax') adminCount++;
         });
 
         return {
@@ -115,6 +117,7 @@ export default function AdminStaffLogsPage() {
             stockCount,
             posCount,
             shiftCount,
+            sopCount,
             adminCount
         };
     }, [logs]);
@@ -131,12 +134,16 @@ export default function AdminStaffLogsPage() {
 
     const getModuleBadge = (mod) => {
         switch (mod) {
+            case 'sop':
+                return { label: 'สูตร & SOP', bg: 'bg-[oklch(92%_0.07_45)] text-[oklch(38%_0.16_45)] border-[oklch(80%_0.09_45)]' };
             case 'stock':
                 return { label: 'คลังสต็อก', bg: 'bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.12_140)] border-[oklch(80%_0.06_140)]' };
             case 'pos':
                 return { label: 'POS & โต๊ะ', bg: 'bg-[oklch(93%_0.03_230)] text-[oklch(38%_0.12_230)] border-[oklch(82%_0.05_230)]' };
             case 'shift':
                 return { label: 'กะ / เงินสด', bg: 'bg-[oklch(93%_0.04_300)] text-[oklch(38%_0.12_300)] border-[oklch(82%_0.06_300)]' };
+            case 'tax':
+                return { label: 'ภาษี & บัญชี', bg: 'bg-[oklch(93%_0.04_180)] text-[oklch(38%_0.12_180)] border-[oklch(82%_0.06_180)]' };
             case 'admin':
                 return { label: 'หลังบ้าน', bg: 'bg-[oklch(92%_0.05_28)] text-[oklch(40%_0.15_28)] border-[oklch(80%_0.08_28)]' };
             default:
@@ -159,7 +166,7 @@ export default function AdminStaffLogsPage() {
                             บันทึกการทำงานของพนักงานและระบบ (Staff Activity Logs)
                         </h1>
                         <p className="text-sm text-[oklch(45%_0.010_28)] mt-1">
-                            รายงานความโปร่งใสแบบละเอียด: การปรับสต็อก, ย้ายโต๊ะ, รวมบิล, ยกเลิกรายการ, และการตั้งค่าหลังบ้าน
+                            รายงานความโปร่งใสแบบละเอียด: ปรับแก้ SOP, ปรับสต็อก, ย้ายโต๊ะ, รวมบิล, ยกเลิกรายการ, และหลังบ้าน
                         </p>
                     </div>
 
@@ -185,11 +192,17 @@ export default function AdminStaffLogsPage() {
                 </div>
 
                 {/* Summary Metrics Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
                         <span className="text-xs font-mono text-[oklch(50%_0.010_28)] uppercase tracking-wider block">กิจกรรมทั้งหมด</span>
                         <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.total}</div>
                         <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">ในรอบเวลาที่เลือก</span>
+                    </div>
+
+                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
+                        <span className="text-xs font-mono text-[oklch(38%_0.16_45)] uppercase tracking-wider block">สูตร & SOP</span>
+                        <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.sopCount}</div>
+                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">สร้าง/แก้ไข SOP บาร์&ครัว</span>
                     </div>
 
                     <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
@@ -207,13 +220,13 @@ export default function AdminStaffLogsPage() {
                     <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
                         <span className="text-xs font-mono text-[oklch(38%_0.12_300)] uppercase tracking-wider block">กะ & เงินสด</span>
                         <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.shiftCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">เปิด-ปิดกะ / นำเงินเข้า-ออก</span>
+                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">เปิด-ปิดกะ / เงินทอน</span>
                     </div>
 
-                    <div className="col-span-2 sm:col-span-1 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
+                    <div className="bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm">
                         <span className="text-xs font-mono text-[oklch(52%_0.16_28)] uppercase tracking-wider block">หลังบ้านแอดมิน</span>
                         <div className="text-2xl font-bold font-mono text-[oklch(18%_0.012_28)] mt-1.5">{stats.adminCount}</div>
-                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">แก้ไขเมนู / ตั้งค่าระบบ</span>
+                        <span className="text-[11px] text-[oklch(45%_0.010_28)] mt-1 block">เมนู / ผังโต๊ะ / โปรโมชั่น</span>
                     </div>
                 </div>
 
@@ -225,10 +238,11 @@ export default function AdminStaffLogsPage() {
                         <div className="flex flex-wrap gap-1.5">
                             {[
                                 { id: 'all', label: 'ทั้งหมด' },
+                                { id: 'sop', label: 'สูตร & SOP' },
+                                { id: 'admin', label: 'หลังบ้านแอดมิน' },
                                 { id: 'stock', label: 'สต็อกวัตถุดิบ' },
                                 { id: 'pos', label: 'POS & โต๊ะ' },
-                                { id: 'shift', label: 'กะ / เงินสด' },
-                                { id: 'admin', label: 'หลังบ้านแอดมิน' }
+                                { id: 'shift', label: 'กะ / เงินสด' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}

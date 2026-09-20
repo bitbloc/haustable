@@ -293,8 +293,47 @@ export default function AdminSettings() {
         try {
             const { error } = await supabase.from('app_settings').upsert({ key, value: String(value) });
             if (error) throw error;
-            logStaffActivity('admin', 'settings_update', {
-                reason: `แก้ไขการตั้งค่า: ${key}`,
+
+            let actionType = 'settings_update';
+            let reason = `แก้ไขการตั้งค่า: ${key}`;
+
+            if (key === 'shop_mode_table') {
+                actionType = 'toggle_service_table';
+                reason = value === 'manual_open' ? 'เปิดรับจองโต๊ะทานที่ร้าน (Manual Open)' : (value === 'manual_close' ? 'ปิดรับจองโต๊ะทานที่ร้านชั่วคราว (Manual Close)' : 'เปิด-ปิดรับจองโต๊ะอัตโนมัติตามเวลา (Auto)');
+            } else if (key === 'shop_mode_pickup') {
+                actionType = 'toggle_service_pickup';
+                reason = value === 'manual_open' ? 'เปิดรับออเดอร์สั่งกลับบ้าน (Manual Open)' : (value === 'manual_close' ? 'ปิดรับออเดอร์สั่งกลับบ้านชั่วคราว (Manual Close)' : 'เปิด-ปิดรับออเดอร์กลับบ้านอัตโนมัติตามเวลา (Auto)');
+            } else if (key === 'shop_mode_hausmade') {
+                actionType = 'toggle_service_hausmade';
+                reason = value === 'manual_open' ? 'เปิดร้านค้าออนไลน์ HAUSMADE (Manual Open)' : (value === 'manual_close' ? 'ปิดร้านค้าออนไลน์ HAUSMADE ชั่วคราว (Manual Close)' : 'เปิด-ปิดร้าน HAUSMADE อัตโนมัติตามเวลา (Auto)');
+            } else if (key === 'qr_ordering_enabled') {
+                actionType = 'toggle_qr_ordering';
+                reason = String(value) === 'true' ? 'เปิดระบบสั่งอาหารผ่าน QR บนโต๊ะ' : 'ปิดระบบสั่งอาหารผ่าน QR บนโต๊ะ';
+            } else if (key === 'song_request_enabled') {
+                actionType = 'toggle_song_request';
+                reason = String(value) === 'true' ? 'เปิดระบบขอเพลงหน้าโต๊ะ' : 'ปิดระบบขอเพลงหน้าโต๊ะ';
+            } else if (key === 'is_menu_system_enabled') {
+                actionType = 'toggle_menu_system';
+                reason = String(value) === 'true' ? 'เปิดระบบเมนูอาหาร' : 'ปิดระบบเมนูอาหาร';
+            } else if (key === 'qr_kitchen_cutoff_enabled') {
+                actionType = 'toggle_kitchen_cutoff';
+                reason = String(value) === 'true' ? 'เปิดระบบตัดรอบเวลาปิดครัว' : 'ปิดระบบตัดรอบเวลาปิดครัว';
+            } else if (key === 'easyslip_enabled_booking') {
+                actionType = 'toggle_easyslip_booking';
+                reason = String(value) === 'true' ? 'เปิดระบบตรวจสลิปอัตโนมัติสำหรับการจอง' : 'ปิดระบบตรวจสลิปอัตโนมัติสำหรับการจอง';
+            } else if (key === 'easyslip_enabled_pickup') {
+                actionType = 'toggle_easyslip_pickup';
+                reason = String(value) === 'true' ? 'เปิดระบบตรวจสลิปอัตโนมัติสำหรับสั่งกลับบ้าน' : 'ปิดระบบตรวจสลิปอัตโนมัติสำหรับสั่งกลับบ้าน';
+            } else if (key === 'default_vat_enabled') {
+                actionType = 'toggle_vat_mode';
+                reason = String(value) === 'true' ? 'เปิดระบบคิดคำนวณ VAT 7% หน้าร้าน' : 'ปิดระบบคิดคำนวณ VAT 7% หน้าร้าน';
+            } else if (key === 'qr_gps_enabled') {
+                actionType = 'toggle_qr_gps';
+                reason = String(value) === 'true' ? 'เปิดระบบตรวจพิกัด GPS หน้าร้านสำหรับ QR' : 'ปิดระบบตรวจพิกัด GPS หน้าร้านสำหรับ QR';
+            }
+
+            logStaffActivity('admin', actionType, {
+                reason,
                 metadata: {
                     setting_key: key,
                     value: typeof value === 'object' ? JSON.stringify(value) : String(value)

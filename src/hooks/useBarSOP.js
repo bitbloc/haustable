@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { logStaffActivity } from '../utils/auditLogger';
 // Global lock to prevent concurrent database sync runs
 let globalSyncPromise = null;
 
@@ -667,6 +668,18 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     .single();
                 if (error) throw error;
                 result = data;
+
+                logStaffActivity('sop', 'sop_update', {
+                    reason: `แก้ไขสูตร SOP: ${recipe.name}`,
+                    metadata: {
+                        sop_id: recipe.id,
+                        name: recipe.name,
+                        department: recipe.department || department,
+                        ingredients_count: updatedIngredients?.length || 0,
+                        steps_count: (recipe.steps || []).length,
+                        is_published: recipe.is_published
+                    }
+                });
             } else {
                 // Create
                 const { data, error } = await supabase
@@ -676,6 +689,18 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                     .single();
                 if (error) throw error;
                 result = data;
+
+                logStaffActivity('sop', 'sop_create', {
+                    reason: `สร้างสูตร SOP ใหม่: ${recipe.name}`,
+                    metadata: {
+                        sop_id: result?.id,
+                        name: recipe.name,
+                        department: recipe.department || department,
+                        ingredients_count: updatedIngredients?.length || 0,
+                        steps_count: (recipe.steps || []).length,
+                        is_published: recipe.is_published
+                    }
+                });
             }
 
             toast.success('บันทึก SOP สำเร็จ');
@@ -695,7 +720,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             // Get source_stock_item_id first to delete from stock_items as well
             const { data: recipe } = await supabase
                 .from('sop_recipes')
-                .select('source_stock_item_id')
+                .select('name, source_stock_item_id')
                 .eq('id', id)
                 .single();
 
@@ -708,6 +733,14 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             if (recipe && recipe.source_stock_item_id) {
                 await supabase.from('stock_items').delete().eq('id', recipe.source_stock_item_id);
             }
+
+            logStaffActivity('sop', 'sop_delete', {
+                reason: `ลบสูตร SOP: ${recipe?.name || id}`,
+                metadata: {
+                    sop_id: id,
+                    name: recipe?.name
+                }
+            });
 
             setRecipes(prev => prev.filter(r => r.id !== id));
             toast.success('ลบ SOP สำเร็จ');
@@ -742,6 +775,14 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
 
             const newRecipe = await saveSOPRecipe(clonePayload);
             if (newRecipe) {
+                logStaffActivity('sop', 'sop_duplicate', {
+                    reason: `คัดลอกสูตร SOP จาก: ${target.name} → ${newRecipe.name}`,
+                    metadata: {
+                        source_id: recipeId,
+                        new_id: newRecipe.id,
+                        name: newRecipe.name
+                    }
+                });
                 await fetchRecipes(activeCategory);
                 toast.success(`คัดลอกสูตร "${newRecipe.name}" สำเร็จ`);
                 return newRecipe;
@@ -766,6 +807,16 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 .single();
             if (error) throw error;
 
+            logStaffActivity('sop', 'sop_category_save', {
+                reason: `บันทึกหมวดหมู่ SOP: ${category.label || category.id}`,
+                metadata: {
+                    category_id: category.id,
+                    label: category.label,
+                    icon: category.icon,
+                    department: category.department || department
+                }
+            });
+
             cacheRef.current.categories = null; // Invalidate cache
             await fetchCategories();
             return data;
@@ -774,7 +825,7 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
             toast.error('บันทึกหมวดหมู่ไม่สำเร็จ');
             return null;
         }
-    }, [fetchCategories]);
+    }, [fetchCategories, department]);
 
     // ────────────────────────────────
     // Delete Category
@@ -786,6 +837,11 @@ export default function useBarSOP({ department = 'bar', staffMode = false } = {}
                 .delete()
                 .eq('id', id);
             if (error) throw error;
+
+            logStaffActivity('sop', 'sop_category_delete', {
+                reason: `ลบหมวดหมู่ SOP: ${id}`,
+                metadata: { category_id: id }
+            });
 
             cacheRef.current.categories = null;
             await fetchCategories();

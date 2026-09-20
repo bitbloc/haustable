@@ -7,6 +7,7 @@ import { DndContext, closestCorners, MouseSensor, TouchSensor, useSensor, useSen
 import { arrayMove, SortableContext, rectSortingStrategy, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { toast } from 'sonner'
+import { logStaffActivity } from '../../utils/auditLogger'
 
 // --- Reusable Rams Confirmation Dialog ---
 function ConfirmModal({ isOpen, title, message, confirmText = 'ยืนยัน', cancelText = 'ยกเลิก', isDanger = false, onConfirm, onCancel }) {
@@ -675,6 +676,10 @@ export default function MenuItemList() {
         try {
             const { error } = await supabase.from('menu_items').update({ is_available: newValue }).eq('id', item.id)
             if (error) throw error
+            logStaffActivity('admin', 'menu_toggle_stock', {
+                reason: `เปลี่ยนสถานะเมนู: ${item.name} (${newValue ? 'เปิดขาย' : 'ปิดการขาย / หมด'})`,
+                metadata: { item_id: item.id, name: item.name, is_available: newValue }
+            });
         } catch (err) {
             console.error('Toggle stock error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !newValue } : i))
@@ -691,6 +696,10 @@ export default function MenuItemList() {
         try {
             const { error } = await supabase.from('menu_items').update({ is_pickup_available: newValue }).eq('id', item.id)
             if (error) throw error
+            logStaffActivity('admin', 'menu_toggle_pickup', {
+                reason: `เปลี่ยนสถานะรับกลับบ้าน (Pick-up): ${item.name} (${newValue ? 'เปิดรับ' : 'ปิดรับ'})`,
+                metadata: { item_id: item.id, name: item.name, is_pickup_available: newValue }
+            });
         } catch (err) {
             console.error('Toggle pickup error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: !newValue } : i))
@@ -792,6 +801,10 @@ export default function MenuItemList() {
                                     }).eq('id', id)
 
                                     if (archiveError) throw archiveError
+                                    logStaffActivity('admin', 'menu_archive', {
+                                        reason: `ย้ายเมนูเข้า Archived (ซ่อน): ${name}`,
+                                        metadata: { item_id: id, name }
+                                    });
                                     setMenuItems(prev => prev.filter(i => i.id !== id))
                                     setIsModalOpen(false)
                                     toast.success('ย้ายเมนูไปที่ Archived เรียบร้อย')
@@ -802,6 +815,10 @@ export default function MenuItemList() {
                         throw error
                     }
                     
+                    logStaffActivity('admin', 'menu_delete', {
+                        reason: `ลบเมนูอาหาร: ${name}`,
+                        metadata: { item_id: id, name }
+                    });
                     setMenuItems(prev => prev.filter(i => i.id !== id))
                     setIsModalOpen(false)
                     toast.success('ลบเมนูเรียบร้อย')
@@ -947,6 +964,18 @@ export default function MenuItemList() {
             if (editingItem) {
                 const { error } = await supabase.from('menu_items').update(payload).eq('id', savedItemId)
                 if (error) throw error
+                logStaffActivity('admin', 'menu_update', {
+                    amount: priceNum,
+                    reason: `แก้ไขเมนู: ${trimmedName} (฿${priceNum})`,
+                    metadata: {
+                        item_id: savedItemId,
+                        name: trimmedName,
+                        price: priceNum,
+                        category: selectedCatName,
+                        is_available: formData.is_available,
+                        is_recommended: formData.is_recommended
+                    }
+                });
             } else {
                 const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0
                 payload.sort_order = maxSort + 1
@@ -954,6 +983,17 @@ export default function MenuItemList() {
                 const { data: inserted, error } = await supabase.from('menu_items').insert(payload).select().single()
                 if (error) throw error
                 savedItemId = inserted.id
+
+                logStaffActivity('admin', 'menu_create', {
+                    amount: priceNum,
+                    reason: `สร้างเมนูใหม่: ${trimmedName} (฿${priceNum})`,
+                    metadata: {
+                        item_id: savedItemId,
+                        name: trimmedName,
+                        price: priceNum,
+                        category: selectedCatName
+                    }
+                });
             }
 
             // Sync Option Groups

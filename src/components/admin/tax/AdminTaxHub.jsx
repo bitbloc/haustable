@@ -19,6 +19,7 @@ import {
 import { supabase } from '../../../lib/supabaseClient';
 import { formatTaxId, formatBranch } from '../../../utils/thaiTaxHelper';
 import { toast } from 'sonner';
+import { logStaffActivity } from '../../../utils/auditLogger';
 
 // Sub Tabs Components
 import SalesTaxReportTab from './SalesTaxReportTab';
@@ -335,6 +336,18 @@ export default function AdminTaxHub() {
             localStorage.setItem('onhaus_tax_invoices', JSON.stringify(updatedInvoices));
 
             toast.success(`ยกเลิกเอกสาร ${cancellationTarget.invoice_number} เรียบร้อยแล้ว`);
+
+            logStaffActivity('tax', 'tax_invoice_void', {
+                amount: cancellationTarget.total_amount || 0,
+                reason: `ยกเลิกใบกำกับภาษี ${cancellationTarget.invoice_number}: ${cancellationReason.trim()}`,
+                metadata: {
+                    invoice_id: cancellationTarget.id,
+                    invoice_number: cancellationTarget.invoice_number,
+                    customer_name: cancellationTarget.customer_name,
+                    cancellation_reason: cancellationReason.trim()
+                }
+            });
+
             setCancellationTarget(null);
             setCancellationReason('');
         } catch (err) {

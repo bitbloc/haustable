@@ -9,6 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import RecipeBuilder from '../recipes/RecipeBuilder';
 import { toast } from 'sonner';
+import { logStaffActivity } from '../../utils/auditLogger';
 
 const FOLDER_STORAGE_KEY = 'recipe_lab_custom_folders_v1';
 
@@ -439,6 +440,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
             if (error) throw error;
             
+            logStaffActivity('sop', 'recipe_formula_create', {
+                reason: `สร้างสูตรกลาง: ${name}`,
+                metadata: {
+                    formula_id: data.id,
+                    name,
+                    category: initialCategory
+                }
+            });
+
             toast.success(`สร้างสูตร "${name}" สำเร็จ`);
             setIsCreateOpen(false);
             await loadData();
@@ -454,8 +464,18 @@ export default function RecipeLabPage({ isEmbedded = false }) {
 
     const handleDelete = async (id) => {
         try {
+            const itemToDelete = labItems.find(i => i.id === id);
             const { error } = await supabase.from('stock_items').delete().eq('id', id);
             if (error) throw error;
+
+            logStaffActivity('sop', 'recipe_formula_delete', {
+                reason: `ลบสูตรกลาง: ${itemToDelete?.name || id}`,
+                metadata: {
+                    formula_id: id,
+                    name: itemToDelete?.name
+                }
+            });
+
             toast.success('ลบสูตรกลางเรียบร้อย');
             loadData();
         } catch (err) {
@@ -472,6 +492,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                 .update({ name: editingName.trim() })
                 .eq('id', itemId);
             if (error) throw error;
+
+            logStaffActivity('sop', 'recipe_formula_rename', {
+                reason: `เปลี่ยนชื่อสูตรกลางเป็น: ${editingName.trim()}`,
+                metadata: {
+                    formula_id: itemId,
+                    new_name: editingName.trim()
+                }
+            });
+
             toast.success('เปลี่ยนชื่อสูตรสำเร็จ');
             setEditingItemId(null);
             loadData();
@@ -492,6 +521,15 @@ export default function RecipeLabPage({ isEmbedded = false }) {
                 .update({ category: dbCategory })
                 .eq('id', itemId);
             if (error) throw error;
+
+            logStaffActivity('sop', 'recipe_folder_move', {
+                reason: `ย้ายโฟลเดอร์สูตร: ${targetCategory}`,
+                metadata: {
+                    formula_id: itemId,
+                    folder: targetCategory
+                }
+            });
+
             toast.success(`ย้ายสูตรไปที่ "${targetCategory === 'restock' || targetCategory === 'uncategorized' ? 'ทั่วไป' : targetCategory}" แล้ว`);
             setActiveDropdownId(null);
             loadData();

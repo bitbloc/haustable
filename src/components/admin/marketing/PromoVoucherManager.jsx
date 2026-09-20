@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit2, Search, Tag, Calendar, DollarSign, Percent, Copy, 
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import { logStaffActivity } from '../../../utils/auditLogger'
 
 export default function PromoVoucherManager() {
     const [codes, setCodes] = useState([])
@@ -139,12 +140,29 @@ export default function PromoVoucherManager() {
                     .update(payload)
                     .eq('id', editingCode.id)
                 if (error) throw error
+                logStaffActivity('admin', 'promo_update', {
+                    reason: `แก้ไขโค้ดโปรโมชั่น: ${cleanCode}`,
+                    metadata: {
+                        promo_id: editingCode.id,
+                        code: cleanCode,
+                        discount_type: payload.discount_type,
+                        discount_value: payload.discount_value
+                    }
+                })
                 toast.success(`อัปเดตโค้ด "${cleanCode}" เรียบร้อย`)
             } else {
                 const { error } = await supabase
                     .from('promotion_codes')
                     .insert(payload)
                 if (error) throw error
+                logStaffActivity('admin', 'promo_create', {
+                    reason: `สร้างโค้ดโปรโมชั่นใหม่: ${cleanCode}`,
+                    metadata: {
+                        code: cleanCode,
+                        discount_type: payload.discount_type,
+                        discount_value: payload.discount_value
+                    }
+                })
                 toast.success(`สร้างโค้ดโปรโมชั่น "${cleanCode}" เรียบร้อย`)
             }
 
@@ -161,6 +179,13 @@ export default function PromoVoucherManager() {
         try {
             const { error } = await supabase.from('promotion_codes').delete().eq('id', code.id)
             if (error) throw error
+            logStaffActivity('admin', 'promo_delete', {
+                reason: `ลบโค้ดโปรโมชั่น: ${code.code}`,
+                metadata: {
+                    promo_id: code.id,
+                    code: code.code
+                }
+            })
             toast.success(`ลบโค้ด ${code.code} แล้ว`)
             fetchCodes()
         } catch (err) {
@@ -176,6 +201,10 @@ export default function PromoVoucherManager() {
                             .update({ is_active: false })
                             .eq('id', code.id)
                         if (updErr) throw updErr
+                        logStaffActivity('admin', 'promo_deactivate', {
+                            reason: `ปิดการใช้งานโค้ดโปรโมชั่น (Deactivate): ${code.code}`,
+                            metadata: { promo_id: code.id, code: code.code }
+                        })
                         toast.success(`ปิดการใช้งานโค้ด ${code.code} แล้ว`)
                         fetchCodes()
                     } catch (dErr) {

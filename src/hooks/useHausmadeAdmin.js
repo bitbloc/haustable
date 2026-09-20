@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { logStaffActivity } from '../utils/auditLogger'
 
 export function useHausmadeAdmin() {
     const [orders, setOrders] = useState([])
@@ -140,6 +141,25 @@ export function useHausmadeAdmin() {
             const { error } = await supabase.from('app_settings').upsert(updates, { onConflict: 'key' })
             if (error) throw error
 
+            if (newSettings.shopModeHausmade && newSettings.shopModeHausmade !== settings.shopModeHausmade) {
+                logStaffActivity('admin', 'toggle_service_hausmade', {
+                    reason: newSettings.shopModeHausmade === 'manual_open' ? 'เปิดร้านออนไลน์ HAUSMADE' : (newSettings.shopModeHausmade === 'manual_close' ? 'ปิดร้านออนไลน์ HAUSMADE' : 'เปิด-ปิดร้าน HAUSMADE ตามเวลา (Auto)'),
+                    metadata: {
+                        mode: newSettings.shopModeHausmade,
+                        previous_mode: settings.shopModeHausmade
+                    }
+                })
+            }
+
+            logStaffActivity('admin', 'hausmade_settings_update', {
+                reason: `แก้ไขการตั้งค่าร้าน HAUSMADE`,
+                metadata: {
+                    shopMode: newSettings.shopModeHausmade,
+                    shippingFee: newSettings.shippingFee,
+                    freeShippingMinItems: newSettings.freeShippingMinItems
+                }
+            })
+
             setSettings(newSettings)
             return { success: true }
         } catch (err) {
@@ -213,6 +233,17 @@ export function useHausmadeAdmin() {
                 }
             }
 
+            logStaffActivity('admin', 'hausmade_order_status', {
+                bookingId: orderId,
+                reason: `อัปเดตสถานะออเดอร์ HAUSMADE: ${status} (#${orderId})`,
+                metadata: {
+                    booking_id: orderId,
+                    status,
+                    courier: courierName,
+                    tracking: trackingNumber
+                }
+            })
+
             // Refresh orders list
             await fetchAdminData()
             return { success: true }
@@ -246,6 +277,15 @@ export function useHausmadeAdmin() {
                     } catch (e) {}
                 }
             }
+
+            logStaffActivity('admin', 'hausmade_order_status', {
+                reason: `อัปเดตสถานะกลุ่ม (${idList.length} ออเดอร์) เป็น: ${status}`,
+                metadata: {
+                    count: idList.length,
+                    status,
+                    courier: courierName
+                }
+            })
 
             await fetchAdminData()
             return { success: true, count: idList.length }

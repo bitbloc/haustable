@@ -3,6 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { Calendar, ChevronLeft, ChevronRight, Trash2, ShieldAlert, Sparkles, Check, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { logStaffActivity } from '../../../utils/auditLogger';
 
 export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
     const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -115,9 +116,11 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
         if (selectedDates.size === 0) return;
         setIsSaving(true);
         try {
-            const payload = Array.from(selectedDates).map(dateStr => ({
+            const blockedArray = Array.from(selectedDates);
+            const blockReason = reason.trim() || 'ปิดรับจอง';
+            const payload = blockedArray.map(dateStr => ({
                 blocked_date: dateStr,
-                reason: reason.trim() || 'ปิดรับจอง'
+                reason: blockReason
             }));
 
             const { error } = await supabase
@@ -125,6 +128,15 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
                 .upsert(payload, { onConflict: 'blocked_date', ignoreDuplicates: true });
 
             if (error) throw error;
+
+            logStaffActivity('admin', 'calendar_block_dates', {
+                reason: `ปิดรับจองในปฏิทิน (${blockedArray.length} วัน): ${blockReason}`,
+                metadata: {
+                    dates: blockedArray,
+                    count: blockedArray.length,
+                    reason: blockReason
+                }
+            });
 
             toast.success(`บล็อก ${selectedDates.size} วันเรียบร้อยแล้ว`);
             setSelectedDates(new Set());
@@ -142,6 +154,15 @@ export default function VisualCalendarBlocker({ blockedList = [], onRefresh }) {
         try {
             const { error } = await supabase.from('blocked_dates').delete().eq('id', id);
             if (error) throw error;
+
+            logStaffActivity('admin', 'calendar_unblock_date', {
+                reason: `ปลดล็อกเปิดรับจองวันที่ ${dateLabel || id}`,
+                metadata: {
+                    id,
+                    date: dateLabel
+                }
+            });
+
             toast.success(`ปลดล็อกวันที่ ${dateLabel || ''} เรียบร้อย`);
             if (onRefresh) onRefresh();
         } catch (err) {

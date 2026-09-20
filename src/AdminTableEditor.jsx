@@ -8,6 +8,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { QRCodeSVG } from 'qrcode.react';
 import { getAppOrigin, safeTimestampUrl, safeCssUrl } from './utils/urlHelper';
 import { toast } from 'sonner';
+import { logStaffActivity } from './utils/auditLogger';
 
 // Draggable Table Unit Component
 const DraggableTable = ({ table, onSelect, isSelected }) => {
@@ -248,6 +249,13 @@ export default function AdminTableEditor() {
             const { error } = await supabase.from('tables_layout').upsert(updates);
             if (error) throw error;
 
+            logStaffActivity('admin', 'floorplan_save', {
+                reason: `บันทึกผังโต๊ะร้านทั้งหมด (${tables.length} โต๊ะ)`,
+                metadata: {
+                    tables_count: tables.length
+                }
+            });
+
             toast.success('Floorplan saved successfully', {
                 description: `Updated geometry for ${tables.length} table units`
             });
@@ -278,6 +286,15 @@ export default function AdminTableEditor() {
             const { data, error } = await supabase.from('tables_layout').insert(dup).select().single();
             if (error) throw error;
 
+            logStaffActivity('admin', 'table_duplicate', {
+                reason: `คัดลอกโต๊ะ: ${selectedTable.table_name} → ${dupName}`,
+                metadata: {
+                    original_id: selectedTable.id,
+                    new_id: data.id,
+                    new_name: dupName
+                }
+            });
+
             setTables([...tables, data]);
             setSelectedTable(data);
             toast.success(`Duplicated ${selectedTable.table_name} to ${dupName}`);
@@ -306,6 +323,16 @@ export default function AdminTableEditor() {
             }).select().single();
 
             if (error) throw error;
+
+            logStaffActivity('admin', 'table_create', {
+                reason: `เพิ่มโต๊ะใหม่: ${data.table_name}`,
+                metadata: {
+                    table_id: data.id,
+                    table_name: data.table_name,
+                    capacity: data.capacity,
+                    shape: data.shape
+                }
+            });
 
             setTables([...tables, data]);
             setSelectedTable(data);
@@ -403,6 +430,15 @@ export default function AdminTableEditor() {
         try {
             const { error } = await supabase.from('tables_layout').delete().eq('id', id);
             if (error) throw error;
+
+            logStaffActivity('admin', 'table_delete', {
+                reason: `ลบโต๊ะออกจากผัง: ${tableName}`,
+                metadata: {
+                    table_id: id,
+                    table_name: tableName
+                }
+            });
+
             toast.success(`Deleted ${tableName}`);
         } catch (err) {
             toast.error('Failed to delete: ' + err.message);

@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { Search, Save, RotateCcw, Filter, AlertCircle, Check, CheckCircle2, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
+import { logStaffActivity } from '../../../utils/auditLogger'
 
 export default function DrinkStampManager() {
     const [categoriesList, setCategoriesList] = useState([])
@@ -158,6 +159,13 @@ export default function DrinkStampManager() {
             setInitialCategoriesList(JSON.parse(JSON.stringify(categoriesList)))
             setInitialAllItemsList(JSON.parse(JSON.stringify(allItemsList)))
             setHasUnsavedChanges(false)
+            logStaffActivity('admin', 'stamp_settings_update', {
+                reason: `ปรับการสะสมแต้มเครื่องดื่ม (${changedCats.length} หมวด, ${changedItems.length} เมนู)`,
+                metadata: {
+                    categories_changed: changedCats.length,
+                    items_changed: changedItems.length
+                }
+            })
             toast.success(`บันทึกการตั้งค่าสะสมแก้ว 10 แถม 1 เรียบร้อยแล้ว (อัปเดต ${changedCats.length} หมวดหมู่, ${changedItems.length} เมนู)`)
         } catch (err) {
             console.error('Failed to save stamp settings:', err)

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { safeTimestampUrl, safeCssUrl } from '../../utils/urlHelper';
 import { getThaiDate } from '../../utils/timeUtils';
 import ManualBookingModal from '../admin/ManualBookingModal';
+import { logStaffActivity } from '../../utils/auditLogger';
 
 export default function TableManager({ isStaffView = false, onSelectTable: externalSelectTable }) {
     const [tables, setTables] = useState([]);
@@ -219,21 +220,34 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             const durationMs = (Number(seatingForm.durationHours) || 2) * 60 * 60 * 1000;
             const endTime = new Date(now.getTime() + durationMs);
 
+            const isBlock = !!seatingForm.isMaintenanceBlock;
             const payload = {
                 table_id: seatingModalTable.id,
                 booking_time: now.toISOString(),
                 end_time: endTime.toISOString(),
                 booking_type: 'walk_in',
                 status: 'seated',
-                pickup_contact_name: seatingForm.isMaintenanceBlock ? 'MAINTENANCE' : (seatingForm.guestName.trim() || 'Walk-in Guest'),
-                customer_note: seatingForm.isMaintenanceBlock ? 'Maintenance Block' : seatingForm.note.trim(),
+                pickup_contact_name: isBlock ? 'MAINTENANCE' : (seatingForm.guestName.trim() || 'Walk-in Guest'),
+                customer_note: isBlock ? 'Maintenance Block' : seatingForm.note.trim(),
                 pax: Number(seatingForm.pax) || seatingModalTable.capacity || 2,
                 total_amount: 0,
                 tracking_token: crypto.randomUUID()
             };
 
-            const { error } = await supabase.from('bookings').insert(payload);
+            const { data: insertedBooking, error } = await supabase.from('bookings').insert(payload).select().maybeSingle();
             if (error) throw error;
+
+            logStaffActivity(isStaffView ? 'pos' : 'admin', isBlock ? 'table_block_maintenance' : 'table_seat_walkin', {
+                booking_id: insertedBooking?.id || null,
+                reason: isBlock ? `ระงับการใช้โต๊ะชั่วคราว (Maintenance Block): ${seatingModalTable.table_name}` : `เปิดโต๊ะ Walk-in: ${seatingModalTable.table_name} (${seatingForm.pax} ท่าน)`,
+                metadata: {
+                    table_id: seatingModalTable.id,
+                    table_name: seatingModalTable.table_name,
+                    pax: seatingForm.pax,
+                    duration_hours: seatingForm.durationHours,
+                    guest_name: seatingForm.guestName
+                }
+            });
 
             toast.success(`Seated ${seatingModalTable.table_name} (${seatingForm.pax} Guests)`, {
                 description: `Duration: ${seatingForm.durationHours}h • Until ${endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
@@ -268,6 +282,16 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
 
             if (error) throw error;
 
+            logStaffActivity(isStaffView ? 'pos' : 'admin', isInternalBlock ? 'table_unblock_maintenance' : 'table_release', {
+                booking_id: bookingId,
+                reason: isInternalBlock ? `ปลดระงับโต๊ะ: ${tableName}` : `เคลียร์/ปิดโต๊ะ: ${tableName}`,
+                metadata: {
+                    booking_id: bookingId,
+                    table_name: tableName,
+                    status: targetStatus
+                }
+            });
+
             toast.success(`Table ${tableName} Released`, {
                 description: 'Table is now free for new guests'
             });
@@ -296,6 +320,16 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                 .eq('id', booking.id);
 
             if (error) throw error;
+
+            logStaffActivity(isStaffView ? 'pos' : 'admin', 'table_extend_time', {
+                booking_id: booking.id,
+                reason: `ต่อเวลานั่งโต๊ะ ${inspectedTable?.table?.table_name || ''} (+${addMinutes} นาที)`,
+                metadata: {
+                    booking_id: booking.id,
+                    add_minutes: addMinutes,
+                    table_name: inspectedTable?.table?.table_name
+                }
+            });
 
             toast.success(`Extended +${addMinutes} Mins`, {
                 description: `New End Time: ${newEnd.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
@@ -357,6 +391,16 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
                 .eq('id', transferModalData.booking.id);
 
             if (error) throw error;
+
+            logStaffActivity(isStaffView ? 'pos' : 'admin', 'move_table', {
+                booking_id: transferModalData.booking.id,
+                reason: `ย้ายโต๊ะ: ${transferModalData.fromTable.table_name} → ${targetTableName}`,
+                metadata: {
+                    from_table_name: transferModalData.fromTable.table_name,
+                    to_table_name: targetTableName,
+                    booking_id: transferModalData.booking.id
+                }
+            });
 
             toast.success(`Guest moved from ${transferModalData.fromTable.table_name} to ${targetTableName}`, {
                 description: 'Orders and live tracking updated automatically'

@@ -130,7 +130,13 @@ export async function fetchUnifiedStaffAuditLogs({
             if (startDate) q = q.gte('created_at', startDate);
             if (endDate) q = q.lte('created_at', endDate);
             if (module && module !== 'all') {
-                q = q.eq('module', module);
+                if (module === 'sop') {
+                    q = q.or('module.eq.sop,action_type.ilike.%sop%,action_type.ilike.%recipe%');
+                } else if (module === 'admin') {
+                    q = q.or('module.eq.admin,module.eq.tax,action_type.ilike.%menu%,action_type.ilike.%setting%,action_type.ilike.%table%,action_type.ilike.%promo%,action_type.ilike.%stamp%,action_type.ilike.%toggle%,action_type.ilike.%calendar%');
+                } else {
+                    q = q.eq('module', module);
+                }
             }
             if (staffName && staffName !== 'all') {
                 q = q.ilike('staff_name', `%${staffName}%`);
@@ -141,10 +147,12 @@ export async function fetchUnifiedStaffAuditLogs({
                 console.warn('[AuditLogger] Error fetching pos_audit_logs:', error);
                 return [];
             }
-            return (data || []).map(row => {
+            const mapped = (data || []).map(row => {
                 const mod = row.module || row.metadata?.module || (
                     row.action_type.includes('shift') || row.action_type.includes('cash') ? 'shift' :
-                    row.action_type.includes('menu') || row.action_type.includes('admin') || row.action_type.includes('setting') ? 'admin' :
+                    row.action_type.includes('sop') || row.action_type.includes('recipe') ? 'sop' :
+                    row.action_type.includes('tax') ? 'tax' :
+                    row.action_type.includes('menu') || row.action_type.includes('admin') || row.action_type.includes('setting') || row.action_type.includes('table') || row.action_type.includes('promo') || row.action_type.includes('stamp') || row.action_type.includes('hausmade') || row.action_type.includes('toggle') || row.action_type.includes('calendar') ? 'admin' :
                     row.action_type.includes('stock') ? 'stock' : 'pos'
                 );
 
@@ -163,6 +171,11 @@ export async function fetchUnifiedStaffAuditLogs({
                     description: row.reason || formatAuditDescription(row.action_type, row.metadata, row.bookings)
                 };
             });
+
+            if (module && module !== 'all') {
+                return mapped.filter(item => item.module === module || (module === 'admin' && item.module === 'tax'));
+            }
+            return mapped;
         };
 
         const fetchStockTx = async () => {
@@ -261,16 +274,106 @@ function formatAuditTitle(actionType, metadata = {}, booking = null) {
             return `ปิดกะการขาย (สรุปยอดเงินสด)`;
         case 'cash_adjustment':
             return `ปรับยอดเงินสดในเก๊ะ (${metadata.type === 'in' ? 'นำเงินเข้า' : 'นำเงินออก'})`;
+        case 'sop_create':
+            return `สร้างสูตร SOP ใหม่: ${metadata.name || ''}`;
+        case 'sop_update':
+            return `แก้ไขสูตร SOP: ${metadata.name || ''}`;
+        case 'sop_delete':
+            return `ลบสูตร SOP: ${metadata.name || ''}`;
+        case 'sop_duplicate':
+            return `คัดลอกสูตร SOP: ${metadata.name || ''}`;
+        case 'sop_category_save':
+            return `บันทึกหมวดหมู่ SOP: ${metadata.label || ''}`;
+        case 'sop_category_delete':
+            return `ลบหมวดหมู่ SOP: ${metadata.id || ''}`;
+        case 'recipe_save':
+            return `ปรับแต่งส่วนผสมสูตร: ${metadata.name || 'สูตร'}`;
+        case 'recipe_formula_create':
+            return `สร้างสูตรกลาง (Recipe Lab): ${metadata.name || ''}`;
+        case 'recipe_formula_delete':
+            return `ลบสูตรกลาง (Recipe Lab): ${metadata.id || ''}`;
+        case 'recipe_formula_rename':
+            return `เปลี่ยนชื่อสูตรกลาง: ${metadata.new_name || ''}`;
+        case 'recipe_folder_move':
+            return `ย้ายโฟลเดอร์สูตร: ${metadata.folder || ''}`;
+        case 'table_create':
+            return `เพิ่มโต๊ะใหม่: ${metadata.table_name || ''}`;
+        case 'table_update':
+            return `แก้ไขข้อมูลโต๊ะ: ${metadata.table_name || ''}`;
+        case 'table_delete':
+            return `ลบโต๊ะออกจากผัง: ${metadata.table_name || ''}`;
+        case 'table_duplicate':
+            return `คัดลอกโต๊ะ: ${metadata.new_name || ''}`;
+        case 'floorplan_save':
+            return `บันทึกผังร้านทั้งหมด (${metadata.tables_count || 0} โต๊ะ)`;
         case 'menu_update':
             return `แก้ไขเมนูอาหาร: ${metadata.menu_name || 'เมนู'}`;
         case 'menu_create':
             return `สร้างเมนูอาหารใหม่: ${metadata.menu_name || 'เมนู'}`;
+        case 'menu_delete':
+            return `ลบเมนูอาหาร: ${metadata.menu_name || 'เมนู'}`;
+        case 'menu_archive':
+            return `ย้ายเมนูลงถังขยะ: ${metadata.menu_name || 'เมนู'}`;
+        case 'menu_toggle_stock':
+            return `${metadata.is_in_stock ? 'เปิดขายเมนู' : 'ปิดสถานะของหมด'}: ${metadata.menu_name || 'เมนู'}`;
+        case 'menu_toggle_pickup':
+            return `${metadata.is_pickup_available ? 'เปิดสั่งกลับบ้าน' : 'ปิดสั่งกลับบ้าน'}: ${metadata.menu_name || 'เมนู'}`;
         case 'settings_update':
             return `แก้ไขการตั้งค่าระบบหลังบ้าน`;
+        case 'promo_create':
+            return `สร้างโค้ดโปรโมชั่น: ${metadata.code || ''}`;
+        case 'promo_update':
+            return `แก้ไขโค้ดโปรโมชั่น: ${metadata.code || ''}`;
+        case 'promo_delete':
+            return `ลบโค้ดโปรโมชั่น: ${metadata.code || ''}`;
+        case 'stamp_settings_update':
+            return `ปรับตั้งค่าสะสมแต้มเครื่องดื่ม`;
+        case 'hausmade_order_status':
+            return `อัปเดตสถานะออเดอร์ HAUSMADE (#${metadata.booking_id || ''})`;
+        case 'hausmade_settings_update':
+            return `แก้ไขการตั้งค่าร้าน HAUSMADE`;
         case 'tax_invoice_void':
             return `ยกเลิกใบกำกับภาษีเต็มรูป: ${metadata.invoice_number || ''}`;
         case 'tax_invoice_create':
             return `ออกใบกำกับภาษีเต็มรูป: ${metadata.invoice_number || ''}`;
+        case 'toggle_service_table':
+            return `ปรับโหมดรับจองโต๊ะ: ${metadata.value === 'manual_open' ? 'เปิดรับจอง (Manual)' : metadata.value === 'manual_close' ? 'ปิดรับจอง (Manual)' : 'เปิด-ปิดตามเวลา (Auto)'}`;
+        case 'toggle_service_pickup':
+            return `${metadata.value === 'manual_open' || metadata.enabled ? 'เปิดรับออเดอร์กลับบ้าน (Pickup)' : (metadata.value === 'manual_close' ? 'ปิดรับออเดอร์กลับบ้าน (Pickup)' : 'เปิด-ปิดกลับบ้านตามเวลา (Auto)')}`;
+        case 'toggle_service_hausmade':
+            return `${metadata.mode === 'manual_open' || metadata.value === 'manual_open' || metadata.enabled ? 'เปิดร้านออนไลน์ HAUSMADE' : (metadata.mode === 'manual_close' || metadata.value === 'manual_close' ? 'ปิดร้านออนไลน์ HAUSMADE' : 'เปิด-ปิดร้านตามเวลา (Auto)')}`;
+        case 'toggle_qr_ordering':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดระบบสั่งอาหาร QR' : 'ปิดระบบสั่งอาหาร QR'}`;
+        case 'toggle_song_request':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดระบบขอเพลงหน้าโต๊ะ' : 'ปิดระบบขอเพลงหน้าโต๊ะ'}`;
+        case 'toggle_menu_system':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดระบบเมนูอาหาร' : 'ปิดระบบเมนูอาหาร'}`;
+        case 'toggle_kitchen_cutoff':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดระบบตัดรอบเวลาปิดครัว' : 'ปิดระบบตัดรอบเวลาปิดครัว'}`;
+        case 'toggle_easyslip_booking':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดตรวจสลิปโต๊ะอัตโนมัติ (EasySlip)' : 'ปิดตรวจสลิปโต๊ะอัตโนมัติ (EasySlip)'}`;
+        case 'toggle_easyslip_pickup':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดตรวจสลิปกลับบ้านอัตโนมัติ (EasySlip)' : 'ปิดตรวจสลิปกลับบ้านอัตโนมัติ (EasySlip)'}`;
+        case 'toggle_vat_mode':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดคิดคำนวณ VAT 7% หน้าร้าน' : 'ปิดคิดคำนวณ VAT 7% หน้าร้าน'}`;
+        case 'toggle_qr_gps':
+            return `${String(metadata.value) === 'true' || metadata.enabled ? 'เปิดตรวจ GPS หน้าร้าน (QR)' : 'ปิดตรวจ GPS หน้าร้าน (QR)'}`;
+        case 'calendar_block_dates':
+            return `ปิดรับจองในปฏิทิน (${metadata.count || metadata.dates?.length || 1} วัน)`;
+        case 'calendar_unblock_date':
+            return `ปลดล็อกเปิดรับจองในปฏิทิน: ${metadata.date || ''}`;
+        case 'table_seat_walkin':
+            return `เปิดโต๊ะ Walk-in: ${metadata.table_name || 'โต๊ะ'} (${metadata.pax || 2} ท่าน)`;
+        case 'table_block_maintenance':
+            return `ปิดปรับปรุงโต๊ะ (Maintenance): ${metadata.table_name || 'โต๊ะ'}`;
+        case 'table_release':
+            return `เคลียร์/ปิดโต๊ะ: ${metadata.table_name || 'โต๊ะ'}`;
+        case 'table_unblock_maintenance':
+            return `เปิดใช้งานโต๊ะตามปกติ: ${metadata.table_name || 'โต๊ะ'}`;
+        case 'table_extend_time':
+            return `ต่อเวลาโต๊ะ: ${metadata.table_name || 'โต๊ะ'} (+${metadata.add_minutes || 30} นาที)`;
+        case 'promo_deactivate':
+            return `ปิดใช้งานโค้ดโปรโมชั่น: ${metadata.code || ''}`;
         default:
             return actionType.replace(/_/g, ' ').toUpperCase();
     }
