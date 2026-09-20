@@ -1,7 +1,7 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw, ArrowUpRight, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
+import { RotateCcw, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate } from './utils/timeUtils'
 import { toast } from 'sonner'
@@ -627,17 +627,6 @@ export default function AdminDashboard() {
                             <FileText size={13} />
                             <span className="hidden md:inline">สลิปปิดวัน (PNG)</span>
                         </button>
-
-                        {/* Direct POS Link */}
-                        <a
-                            href="/pos"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
-                        >
-                            <span>POS</span>
-                            <ArrowUpRight size={13} />
-                        </a>
 
                         {/* Refresh */}
                         <button 

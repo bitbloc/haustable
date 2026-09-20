@@ -1,7 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
-import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
@@ -489,7 +488,7 @@ export default function SimplifiedLiveOverview({
                             : 'ลองเลือกตัวกรองอื่นเพื่อดูรายการโต๊ะ'}
                     </p>
                     {selectedFilter !== 'all' && (
-                        <div className="pt-1 flex justify-center gap-2">
+                        <div className="pt-1 flex justify-center">
                             <button
                                 type="button"
                                 onClick={() => setSelectedFilter('all')}
@@ -497,13 +496,6 @@ export default function SimplifiedLiveOverview({
                             >
                                 ดูผังโต๊ะทั้งหมด ({counts.total} โต๊ะ)
                             </button>
-                            <Link
-                                to="/pos"
-                                target="_blank"
-                                className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)]"
-                            >
-                                ไปที่ POS เปิดโต๊ะ ➔
-                            </Link>
                         </div>
                     )}
                 </div>
@@ -654,15 +646,6 @@ export default function SimplifiedLiveOverview({
                                                             >
                                                                 เคลียร์
                                                             </button>
-                                                            <Link
-                                                                to={`/pos?table=${item.table.table_name}`}
-                                                                target="_blank"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
-                                                                title="เปิดใน POS"
-                                                            >
-                                                                POS ➔
-                                                            </Link>
                                                         </>
                                                     ) : (
                                                         <span className="text-[10px] text-[oklch(60%_0.010_28)]">พร้อมเปิดโต๊ะ</span>
@@ -820,17 +803,10 @@ export default function SimplifiedLiveOverview({
                                             type="button"
                                             disabled={actionLoading}
                                             onClick={() => handleReleaseTable(item.booking.id, item.table.table_name)}
-                                            className="px-4 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold text-xs rounded-sm cursor-pointer"
+                                            className="px-4 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
                                         >
                                             เคลียร์โต๊ะนี้
                                         </button>
-                                        <Link
-                                            to={`/pos?table=${item.table.table_name}`}
-                                            target="_blank"
-                                            className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono font-bold text-xs rounded-sm cursor-pointer ml-auto"
-                                        >
-                                            เปิด POS โต๊ะนี้ ➔
-                                        </Link>
                                     </>
                                 )}
                             </div>
@@ -1124,7 +1100,7 @@ export default function SimplifiedLiveOverview({
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleExtendTable(inspectingTable.booking, 30)}
-                                        className="flex-1 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
+                                        className="flex-1 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
                                     >
                                         +30 นาที
                                     </button>
@@ -1132,17 +1108,10 @@ export default function SimplifiedLiveOverview({
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleReleaseTable(inspectingTable.booking.id, inspectingTable.table.table_name)}
-                                        className="flex-1 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
+                                        className="flex-1 py-2.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
                                     >
                                         เคลียร์โต๊ะ
                                     </button>
-                                    <Link
-                                        to={`/pos?table=${inspectingTable.table.table_name}`}
-                                        target="_blank"
-                                        className="flex-1 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm text-center cursor-pointer"
-                                    >
-                                        เปิดใน POS ➔
-                                    </Link>
                                 </>
                             )}
                         </div>
