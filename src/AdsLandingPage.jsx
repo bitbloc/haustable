@@ -12,6 +12,8 @@ import {
     trackBookletClick,
     trackBookingClick,
     trackPickupClick,
+    trackFullMenuClick,
+    trackAtmosphereClick,
     logAdEvent
 } from './utils/analyticsHelper';
 
@@ -534,7 +536,10 @@ export default function AdsLandingPage() {
                         MENU
                     </button>
                     <button
-                        onClick={() => setActiveSection('atmosphere')}
+                        onClick={() => {
+                            setActiveSection('atmosphere');
+                            trackAtmosphereClick('/link');
+                        }}
                         className={`py-4 flex items-center justify-center gap-2 font-mono text-xs font-bold tracking-widest cursor-pointer transition-colors ${activeSection === 'atmosphere' ? 'bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)]' : 'bg-transparent text-[var(--color-hallmark-ink-muted)] hover:bg-[var(--color-hallmark-paper-dark)] hover:text-[var(--color-hallmark-ink)]'}`}
                     >
                         {activeSection === 'atmosphere' && <span className="text-[var(--color-brand)] font-black">*</span>}
@@ -611,7 +616,11 @@ export default function AdsLandingPage() {
                                 {/* Accordion Toggle Button */}
                                 <div>
                                     <button
-                                        onClick={() => setShowAllMenu(!showAllMenu)}
+                                        onClick={() => {
+                                            const next = !showAllMenu;
+                                            setShowAllMenu(next);
+                                            if (next) trackFullMenuClick('/link');
+                                        }}
                                         className="w-full p-4 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:bg-neutral-800 transition-colors font-mono text-[11px] font-bold uppercase tracking-widest cursor-pointer"
                                     >
                                         {showAllMenu ? "[-] CLOSE FULL MENU" : "[+] VIEW FULL MENU"}
@@ -739,7 +748,10 @@ export default function AdsLandingPage() {
                                     {atmImages.map((url, i) => (
                                         <div
                                             key={i}
-                                            onClick={() => setSelectedLightbox({ type: 'atm', url })}
+                                            onClick={() => {
+                                                trackAtmosphereClick('/link');
+                                                setSelectedLightbox({ type: 'atm', url });
+                                            }}
                                             className="bg-[var(--color-hallmark-paper)] cursor-pointer aspect-square overflow-hidden group flex"
                                         >
                                             <img 
@@ -771,7 +783,10 @@ export default function AdsLandingPage() {
                                     {customerCheckins.map((checkin, i) => (
                                         <div
                                             key={i}
-                                            onClick={() => setSelectedLightbox({ type: 'checkin', item: checkin })}
+                                            onClick={() => {
+                                                trackAtmosphereClick('/link');
+                                                setSelectedLightbox({ type: 'checkin', item: checkin });
+                                            }}
                                             className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group aspect-square overflow-hidden flex"
                                         >
                                             <img 

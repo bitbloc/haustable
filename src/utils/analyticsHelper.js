@@ -275,3 +275,31 @@ export const trackPickupClick = (pageLocation = '/link') => {
     });
 };
 
+/**
+ * Track Full Menu Expansion
+ * @param {string} pageLocation 
+ */
+export const trackFullMenuClick = (pageLocation = '/link') => {
+    if (isDebounced('full_menu_click', 1500)) return;
+
+    trackEvent('view_full_menu', {
+        page_location: pageLocation,
+        event_category: 'engagement',
+        event_label: 'full_menu_expand'
+    });
+};
+
+/**
+ * Track Atmosphere / Vibe View
+ * @param {string} pageLocation 
+ */
+export const trackAtmosphereClick = (pageLocation = '/link') => {
+    if (isDebounced('atmosphere_click', 2000)) return;
+
+    trackEvent('view_atmosphere', {
+        page_location: pageLocation,
+        event_category: 'engagement',
+        event_label: 'vibe_gallery_view'
+    });
+};
+

@@ -209,13 +209,18 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         }
     }, [bookings, currentBangkokHour, isViewingToday])
 
-    // 0.1 Ad Leads Signals & Lift
+    // 0.1 Ad Leads Signals & Multi-Tier Lift
     const adSignals = useMemo(() => {
         let totalDirections = 0
         let totalPageviews = 0
         let totalLine = 0
-        const hourlyDirections = {}
-        hours.forEach(h => { hourlyDirections[h] = 0 })
+        let totalPhone = 0
+        let totalBooking = 0
+        let totalPickup = 0
+        let totalMenu = 0
+        let totalVibe = 0
+        const hourlyWeighted = {}
+        hours.forEach(h => { hourlyWeighted[h] = 0 })
 
         adEvents.forEach(e => {
             const h = getBangkokHour(e.created_at)
@@ -223,22 +228,45 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             if (ev === 'page_view') totalPageviews++
             else if (ev === 'click_directions' || ev === 'find_location') {
                 totalDirections++
-                if (hourlyDirections[h] !== undefined) hourlyDirections[h]++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 3.0
+            } else if (ev === 'click_phone' || ev === 'contact') {
+                totalPhone++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.5
             } else if (ev === 'click_line' || ev === 'generate_lead') {
                 totalLine++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.0
+            } else if (ev === 'click_booking_link') {
+                totalBooking++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.0
+            } else if (ev === 'click_pickup_link') {
+                totalPickup++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 1.5
+            } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu') {
+                totalMenu++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 0.6
+            } else if (ev === 'view_atmosphere') {
+                totalVibe++
+                if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 0.4
             }
         })
 
+        const totalHighIntent = totalDirections + totalLine + totalPhone + totalBooking + totalPickup + totalMenu + totalVibe
         const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
-        const recentDirections = (hourlyDirections[cappedHour] || 0) + (hourlyDirections[cappedHour - 1] || 0)
+        const recentWeighted = (hourlyWeighted[cappedHour] || 0) + (hourlyWeighted[cappedHour - 1] || 0)
         // Ad Lift percentage for upcoming revenue (up to +30%)
-        const adLiftPct = Math.min(0.30, recentDirections * 0.05 + totalLine * 0.03)
+        const adLiftPct = Math.min(0.30, recentWeighted * 0.04)
 
         return {
             totalDirections,
             totalPageviews,
             totalLine,
-            recentDirections,
+            totalPhone,
+            totalBooking,
+            totalPickup,
+            totalMenu,
+            totalVibe,
+            totalHighIntent,
+            recentWeighted,
             adLiftPct
         }
     }, [adEvents, hours, currentBangkokHour])
@@ -530,7 +558,13 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                         </div>
                         <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)] border-l border-[oklch(88%_0.012_28)] pl-2">
                             <span className="font-bold text-[oklch(45%_0.08_140)]">แรงหนุน Ads:</span>
-                            <span>{adSignals.adLiftPct > 0 ? `+${Math.round(adSignals.adLiftPct * 100)}% (${adSignals.recentDirections} ขอทาง Maps)` : 'ปกติ (ไม่มี Ads เร่งด่วน)'}</span>
+                            <span>
+                                {adSignals.adLiftPct > 0 
+                                    ? `+${Math.round(adSignals.adLiftPct * 100)}% (${adSignals.totalHighIntent} Leads · ${adSignals.totalDirections} Maps · ${adSignals.totalBooking + adSignals.totalPickup} จอง/รับ)` 
+                                    : adSignals.totalHighIntent > 0 
+                                    ? `${adSignals.totalHighIntent} Leads (สำรวจเมนู/วิว)` 
+                                    : 'ปกติ (ไม่มี Ads เร่งด่วน)'}
+                            </span>
                         </div>
                         {upcomingBookingsData.count > 0 && (
                             <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)] border-l border-[oklch(88%_0.012_28)] pl-2">
