@@ -35,7 +35,10 @@ export default function SimplifiedBillsSummaryList({
             return sortedBookings.filter(b => ['completed', 'paid', 'success'].includes(b.status))
         }
         if (statusFilter === 'active') {
-            return sortedBookings.filter(b => ['seated', 'ready'].includes(b.status))
+            return sortedBookings.filter(b => {
+                const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
+                return ['seated', 'ready'].includes(b.status) && !isPickup
+            })
         }
         if (statusFilter === 'pickup') {
             return sortedBookings.filter(b => b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway'))
@@ -52,13 +55,16 @@ export default function SimplifiedBillsSummaryList({
 
         bookings.forEach(b => {
             const amt = Number(b.total_amount || 0)
+            const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
             if (['completed', 'paid', 'success'].includes(b.status)) {
                 settledCount++
                 totalRevenue += amt
             } else if (['seated', 'ready'].includes(b.status)) {
-                activeCount++
+                if (!isPickup) {
+                    activeCount++
+                }
             }
-            if (b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')) {
+            if (isPickup) {
                 pickupCount++
             }
         })
@@ -185,6 +191,7 @@ export default function SimplifiedBillsSummaryList({
                                     const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
                                     const itemsCount = b.order_items?.length || 0
                                     const amount = Number(b.total_amount || 0)
+                                    const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
                                     const isPaid = ['completed', 'paid', 'success'].includes(b.status)
                                     const isSeated = ['seated', 'ready'].includes(b.status)
                                     const isCancelled = ['cancelled', 'void'].includes(b.status)
@@ -211,7 +218,7 @@ export default function SimplifiedBillsSummaryList({
                                             <td className="py-2.5 px-3 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
                                                 <div className="flex items-center gap-1.5">
                                                     <span>{tableName}</span>
-                                                    {b.booking_type === 'pickup' && (
+                                                    {isPickup && (
                                                         <span className="text-[9px] px-1 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs">
                                                             กลับบ้าน
                                                         </span>
@@ -247,13 +254,17 @@ export default function SimplifiedBillsSummaryList({
                                                     <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.012_140)]">
                                                         ชำระแล้ว
                                                     </span>
-                                                ) : isSeated ? (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                                                        กำลังทาน
-                                                    </span>
                                                 ) : isCancelled ? (
                                                     <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)]">
                                                         ยกเลิก
+                                                    </span>
+                                                ) : isPickup ? (
+                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                        ได้รับออเดอร์
+                                                    </span>
+                                                ) : isSeated ? (
+                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                        กำลังทาน
                                                     </span>
                                                 ) : (
                                                     <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]">
