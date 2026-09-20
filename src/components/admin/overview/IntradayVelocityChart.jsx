@@ -1,5 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { supabase } from '../../../lib/supabaseClient'
 
 // Helper: Extract Asia/Bangkok hour (0 - 23) reliably across all browser environments
 const getBangkokHour = (timeInput) => {
@@ -13,10 +14,36 @@ const getBangkokHour = (timeInput) => {
     }
 }
 
-export default function IntradayVelocityChart({ bookings = [], selectedDate, loading = false }) {
+export default function IntradayVelocityChart({ bookings = [], selectedDate, loading = false, totalSeats = 45 }) {
     const [hoveredHour, setHoveredHour] = useState(null)
     const containerRef = useRef(null)
     const [containerWidth, setContainerWidth] = useState(800)
+    const [adEvents, setAdEvents] = useState([])
+
+    // Fetch Ad Landing Events for Selected Date to factor in Google Maps Directions and Leads
+    useEffect(() => {
+        let isMounted = true
+        async function fetchAdLandingEvents() {
+            try {
+                const queryDay = selectedDate || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+                const { data, error } = await supabase
+                    .from('ad_events')
+                    .select('*')
+                    .gte('created_at', `${queryDay}T00:00:00+07:00`)
+                    .lte('created_at', `${queryDay}T23:59:59+07:00`)
+                    .order('created_at', { ascending: true })
+                    .limit(1000)
+
+                if (!error && data && isMounted) {
+                    setAdEvents(data)
+                }
+            } catch (err) {
+                console.warn('[VelocityChart] Ad events fallback:', err?.message)
+            }
+        }
+        fetchAdLandingEvents()
+        return () => { isMounted = false }
+    }, [selectedDate])
 
     // Restaurant operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
@@ -150,6 +177,108 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         return points.filter(p => p.hour <= cappedHour)
     }, [points, isViewingToday, currentBangkokHour])
 
+    // 0. Upcoming confirmed bookings for the rest of today (Hard Guaranteed Floor)
+    const upcomingBookingsData = useMemo(() => {
+        const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
+        const futureConfirmed = (bookings || []).filter(b => {
+            const status = (b.status || '').toLowerCase()
+            const isConfirmed = status === 'confirmed' || status === 'seated' || status === 'ready'
+            if (!isConfirmed) return false
+            const timeStr = b.booking_time || b.created_at
+            if (!timeStr) return false
+            const h = getBangkokHour(timeStr)
+            return isViewingToday ? h > cappedHour : true
+        })
+
+        let guaranteedPax = 0
+        let guaranteedRevenue = 0
+        futureConfirmed.forEach(b => {
+            const pax = parseInt(b.pax || 2, 10)
+            guaranteedPax += pax
+            let billAmt = Number(b.total_amount ?? b.total_price ?? b.deposit_amount ?? 0)
+            if (!billAmt) {
+                billAmt = pax * 380 // Estimated dinner spend per head
+            }
+            guaranteedRevenue += billAmt
+        })
+
+        return {
+            count: futureConfirmed.length,
+            pax: guaranteedPax,
+            revenue: guaranteedRevenue
+        }
+    }, [bookings, currentBangkokHour, isViewingToday])
+
+    // 0.1 Ad Leads Signals & Lift
+    const adSignals = useMemo(() => {
+        let totalDirections = 0
+        let totalPageviews = 0
+        let totalLine = 0
+        const hourlyDirections = {}
+        hours.forEach(h => { hourlyDirections[h] = 0 })
+
+        adEvents.forEach(e => {
+            const h = getBangkokHour(e.created_at)
+            const ev = e.event_name || ''
+            if (ev === 'page_view') totalPageviews++
+            else if (ev === 'click_directions' || ev === 'find_location') {
+                totalDirections++
+                if (hourlyDirections[h] !== undefined) hourlyDirections[h]++
+            } else if (ev === 'click_line' || ev === 'generate_lead') {
+                totalLine++
+            }
+        })
+
+        const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
+        const recentDirections = (hourlyDirections[cappedHour] || 0) + (hourlyDirections[cappedHour - 1] || 0)
+        // Ad Lift percentage for upcoming revenue (up to +30%)
+        const adLiftPct = Math.min(0.30, recentDirections * 0.05 + totalLine * 0.03)
+
+        return {
+            totalDirections,
+            totalPageviews,
+            totalLine,
+            recentDirections,
+            adLiftPct
+        }
+    }, [adEvents, hours, currentBangkokHour])
+
+    // 0.2 Seasonality & Day-of-Week
+    const dayOfWeek = useMemo(() => {
+        try {
+            const d = selectedDate ? new Date(`${selectedDate}T12:00:00+07:00`) : new Date()
+            return d.getDay() // 0 = Sun, 5 = Fri, 6 = Sat
+        } catch {
+            return 1
+        }
+    }, [selectedDate])
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 5 || dayOfWeek === 6
+    const weekendMultiplier = isWeekend ? 1.25 : 1.0
+
+    // 0.3 Hourly Physical Table Capacity Ceiling & Spend-Per-Head by Daypart
+    const getHourSpendPerHead = (h) => {
+        if (h >= 11 && h <= 13) return 200 // Lunch Rush
+        if (h >= 14 && h <= 16) return 150 // Afternoon Cafe
+        if (h >= 17 && h <= 20) return Math.round(420 * weekendMultiplier) // Prime Dinner
+        return 300 // Late Night Bar
+    }
+
+    const getHourCapacityCeiling = (h) => {
+        const turnRate = (h >= 12 && h <= 13) || (h >= 18 && h <= 20) ? 1.15 : 0.85
+        const maxPax = Math.round(totalSeats * turnRate)
+        const maxRev = maxPax * getHourSpendPerHead(h)
+        return { maxPax, maxRev }
+    }
+
+    // Cumulative venue capacity ceiling across all hours
+    const capacityCeilingTotal = useMemo(() => {
+        let total = 0
+        hours.forEach(h => {
+            total += getHourCapacityCeiling(h).maxRev
+        })
+        return total
+    }, [hours, totalSeats, weekendMultiplier])
+
     // 1. Calculate Predictive Forecast Trajectory (Base, High, Low)
     const { projectedTotal, forecastPoints, projectedHigh, forecastHighPoints, projectedLow, forecastLowPoints } = useMemo(() => {
         if (!isViewingToday || activePoints.length === 0) {
@@ -181,16 +310,45 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         const currentWeight = curveWeights[lastIdx] || 0.5
         const remainingWeight = Math.max(0.01, 1.0 - currentWeight)
 
-        // Project full day closing total (Base):
+        // Baseline reference
         const baseTarget = Math.max(12000, currentActual)
-        const paceProjected = currentActual > 0 ? (currentActual / currentWeight) : baseTarget
-        const blended = Math.round(paceProjected * 0.75 + baseTarget * 0.25)
-        const finalEst = Math.max(currentActual, blended)
+        const rawPace = (currentWeight > 0 && baseTarget > 0) ? (currentActual / (baseTarget * currentWeight)) : 1.0
+        const paceFactor = Math.max(0.70, Math.min(1.80, rawPace))
 
-        // Scenarios: High (+25% on remaining delta) and Low (-25% on remaining delta)
+        // Calculate expected remaining revenue with Ad Lift & Daypart Dynamics
+        let expectedRemainingBase = 0
+        let cumulativeMaxCeiling = currentActual
+
+        for (let i = lastIdx + 1; i < hours.length; i++) {
+            const h = hours[i]
+            const stepWeight = ((curveWeights[i] || 1.0) - (curveWeights[i - 1] || 0))
+            const rawHourRev = stepWeight * baseTarget * paceFactor
+            // Near-term hours (next 1-2 hours) get boosted by Ad Intent
+            const isNearTerm = i <= lastIdx + 2
+            const adBoost = isNearTerm ? (1 + adSignals.adLiftPct) : 1.0
+            const hourExpected = Math.round(rawHourRev * adBoost)
+
+            // Clamp by physical table capacity ceiling
+            const { maxRev } = getHourCapacityCeiling(h)
+            cumulativeMaxCeiling += maxRev
+            expectedRemainingBase += Math.min(hourExpected, maxRev)
+        }
+
+        // Hard Floor: At least current actual + guaranteed upcoming bookings
+        const guaranteedFloor = currentActual + upcomingBookingsData.revenue
+
+        // Base forecast (Blended with capacity ceiling and guaranteed floor)
+        let finalEst = Math.max(guaranteedFloor, Math.min(cumulativeMaxCeiling, currentActual + expectedRemainingBase))
+
+        // High forecast (Bull case: strong ad conversion + full walk-in saturation, clamped by venue ceiling)
+        let finalHigh = Math.min(cumulativeMaxCeiling, Math.round(currentActual + (finalEst - currentActual) * 1.25))
+
+        // Low forecast (Bear case: walk-in slow down, but anchored by guaranteed floor)
+        let finalLow = Math.max(guaranteedFloor, Math.round(currentActual + (finalEst - currentActual) * 0.75))
+
         const remainingDelta = Math.max(0, finalEst - currentActual)
-        const finalHigh = Math.round(currentActual + remainingDelta * 1.25)
-        const finalLow = Math.round(currentActual + remainingDelta * 0.75)
+        const highDelta = Math.max(0, finalHigh - currentActual)
+        const lowDelta = Math.max(0, finalLow - currentActual)
 
         const fPoints = []
         const fHighPoints = []
@@ -207,11 +365,11 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             fPoints.push({ hour: h, cumulative: cum, idx: i })
 
             // High trajectory (Bull factor)
-            const cumHigh = Math.round(currentActual + (finalHigh - currentActual) * clampedProgress)
+            const cumHigh = Math.round(currentActual + highDelta * clampedProgress)
             fHighPoints.push({ hour: h, cumulative: cumHigh, idx: i })
 
             // Low trajectory (Bear factor)
-            const cumLow = Math.round(currentActual + (finalLow - currentActual) * clampedProgress)
+            const cumLow = Math.round(currentActual + lowDelta * clampedProgress)
             fLowPoints.push({ hour: h, cumulative: cumLow, idx: i })
         }
 
@@ -223,7 +381,7 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             projectedLow: finalLow,
             forecastLowPoints: fLowPoints
         }
-    }, [isViewingToday, activePoints, hours, totalRevenue])
+    }, [isViewingToday, activePoints, hours, totalRevenue, adSignals, upcomingBookingsData, totalSeats, weekendMultiplier])
 
     const maxVal = useMemo(() => {
         const maxCum = points.length > 0 ? points[points.length - 1].cumulative : 0
@@ -360,6 +518,33 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 onClick={() => setHoveredHour(null)}
                 className="p-2 sm:p-4 relative w-full"
             >
+                {/* Executive Predictive Drivers Indicator Strip */}
+                {isViewingToday && projectedTotal > totalRevenue && (
+                    <div className="flex items-center gap-2 sm:gap-3 px-3 py-1.5 mb-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-[10.5px] font-mono flex-wrap">
+                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider text-[9.5px] bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.2">
+                            DRIVERS
+                        </span>
+                        <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)]">
+                            <span className="font-bold text-[oklch(18%_0.012_28)]">ความจุโต๊ะ:</span>
+                            <span>{totalSeats} ที่นั่ง (เพดาน ~฿{Math.round(capacityCeilingTotal / 1000)}k)</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)] border-l border-[oklch(88%_0.012_28)] pl-2">
+                            <span className="font-bold text-[oklch(45%_0.08_140)]">แรงหนุน Ads:</span>
+                            <span>{adSignals.adLiftPct > 0 ? `+${Math.round(adSignals.adLiftPct * 100)}% (${adSignals.recentDirections} ขอทาง Maps)` : 'ปกติ (ไม่มี Ads เร่งด่วน)'}</span>
+                        </div>
+                        {upcomingBookingsData.count > 0 && (
+                            <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)] border-l border-[oklch(88%_0.012_28)] pl-2">
+                                <span className="font-bold text-[oklch(52%_0.20_28)]">ยอดจองเย็น:</span>
+                                <span>{upcomingBookingsData.count} โต๊ะ ({upcomingBookingsData.pax} คน ~฿{upcomingBookingsData.revenue.toLocaleString()})</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-1 text-[oklch(42%_0.010_28)] border-l border-[oklch(88%_0.012_28)] pl-2 hidden md:flex">
+                            <span className="font-bold text-[oklch(18%_0.012_28)]">ตัวคูณวัน:</span>
+                            <span>{isWeekend ? 'สุดสัปดาห์ (+25% ดินเนอร์)' : 'วันธรรมดา (สปีดปกติ)'}</span>
+                        </div>
+                    </div>
+                )}
+
                 {/* Visual Legend */}
                 <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)] flex-wrap">
                     <div className="flex items-center gap-1.5">

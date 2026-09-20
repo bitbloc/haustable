@@ -271,15 +271,19 @@ export default function IntradayTrafficPredictor({
         // Calculate today's pacing multiplier vs historical baseline so far
         let baselineSoFar = 0
         let actualSoFar = 0
+        let totalBaseline = 0
         hours.forEach(h => {
+            const bVal = baseline[h] || 0
+            totalBaseline += bVal
             if (h <= cappedHour) {
-                baselineSoFar += (baseline[h] || 0)
+                baselineSoFar += bVal
                 actualSoFar += (hourlyActualPax[h] || 0)
             }
         })
 
         const rawPace = baselineSoFar > 0 ? (actualSoFar / baselineSoFar) : 1.0
         const paceMultiplier = Math.max(0.65, Math.min(1.75, rawPace * 0.75 + 0.25))
+        const dayPacePct = baselineSoFar > 0 ? Math.round(((actualSoFar - baselineSoFar) / baselineSoFar) * 100) : 0
 
         // Ad Intent Lead Lift
         const recentHighIntent = hours.reduce((acc, h) => {
@@ -383,10 +387,12 @@ export default function IntradayTrafficPredictor({
 
         const dayparts = daypartDefinitions.map(dp => {
             let actualCount = 0
+            let actualBills = 0
             let forecastCount = 0
             let forecastHighCount = 0
             let forecastLowCount = 0
             let baselineCount = 0
+            let baselinePassedCount = 0
             let adDirCount = 0
             let adViewCount = 0
 
@@ -398,6 +404,8 @@ export default function IntradayTrafficPredictor({
                 if (pt) {
                     if (!pt.isFuture) {
                         actualCount += pt.actual
+                        actualBills += (pt.bills || 0)
+                        baselinePassedCount += pt.baseline
                         allFuture = false
                     } else {
                         allPassed = false
@@ -416,18 +424,26 @@ export default function IntradayTrafficPredictor({
             else if (!allFuture) status = 'active'
 
             const targetPax = (status === 'passed') ? actualCount : forecastCount
+            const diffCount = targetPax - baselineCount
             const diffPct = baselineCount > 0 ? Math.round(((targetPax - baselineCount) / baselineCount) * 100) : 0
+            const activePacePct = baselinePassedCount > 0 
+                ? Math.round(((actualCount - baselinePassedCount) / baselinePassedCount) * 100) 
+                : 0
 
             return {
                 ...dp,
                 status, // 'passed' | 'active' | 'upcoming'
                 actualCount,
+                actualBills,
                 forecastCount,
                 forecastHighCount,
                 forecastLowCount,
                 baselineCount,
+                baselinePassedCount,
                 targetPax,
+                diffCount,
                 diffPct,
+                activePacePct,
                 adDirCount,
                 adViewCount
             }
@@ -437,6 +453,9 @@ export default function IntradayTrafficPredictor({
             points,
             totalActualPax,
             totalActualBills,
+            baselineSoFar,
+            totalBaseline,
+            dayPacePct,
             forecastedClosingPax,
             forecastedClosingPaxHigh,
             forecastedClosingPaxLow,
@@ -459,6 +478,9 @@ export default function IntradayTrafficPredictor({
         points, 
         totalActualPax, 
         totalActualBills, 
+        baselineSoFar,
+        totalBaseline,
+        dayPacePct,
         forecastedClosingPax, 
         forecastedClosingPaxHigh, 
         forecastedClosingPaxLow, 
@@ -584,9 +606,10 @@ export default function IntradayTrafficPredictor({
                 forecastedClosingPax,
                 forecastRange: `ต่ำ ${forecastedClosingPaxLow} - สูง ${forecastedClosingPaxHigh} ท่าน`,
                 pacingPercent: Math.round((paceMultiplier - 1) * 100),
+                dayPacePercent: dayPacePct,
                 peakHour: peakHour ? `${peakHour.hour}.00 น. (~${peakHour.isFuture ? peakHour.forecast : peakHour.actual} ท่าน)` : 'N/A',
                 peakCapacityLoad: `${peakCapacityLoad}%`,
-                daypartsSummary: dayparts.map(dp => `${dp.title} (${dp.timeLabel}): ${dp.status === 'passed' ? `จริง ${dp.actualCount}` : `คาดการณ์ ~${dp.forecastCount} (กรอบ ${dp.forecastLowCount}-${dp.forecastHighCount})`} ท่าน, เทียบสถิติ ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}, Ads Maps: ${dp.adDirCount}`),
+                daypartsSummary: dayparts.map(dp => `${dp.title} (${dp.timeLabel}): ${dp.status === 'passed' ? `ลูกค้าจริง ${dp.actualCount} ท่าน (${dp.actualBills} บิล) เทียบสถิติเดิม ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}` : dp.status === 'active' ? `ลูกค้าจริงขณะนี้ ${dp.actualCount} ท่าน (ปิดช่วง ~${dp.forecastCount} กรอบ ${dp.forecastLowCount}-${dp.forecastHighCount}) เทียบสถิติ ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}` : `คาดการณ์ ~${dp.forecastCount} (กรอบ ${dp.forecastLowCount}-${dp.forecastHighCount}) เทียบสถิติเดิม ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}`}, Ads Maps: ${dp.adDirCount}`),
                 adLandingMetrics: {
                     pageviews: adStats.totalAdPageviews,
                     directionsClicks: adStats.totalAdDirections,
@@ -684,11 +707,23 @@ ${JSON.stringify(summaryPayload, null, 2)}
                 {/* Key Summary Stats */}
                 <div className="flex items-center gap-3 sm:gap-4 font-mono text-xs flex-wrap">
                     <div>
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">GUESTS TODAY</span>
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">GUESTS TODAY (เข้าจริง)</span>
                         <span className="font-bold text-base sm:text-lg text-[oklch(18%_0.012_28)] tabular-nums">
                             {totalActualPax} ท่าน
                         </span>
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] ml-1">({totalActualBills} บิล)</span>
+                    </div>
+
+                    <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4">
+                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">อัตราเทียบสถิติเดิม (PACE)</span>
+                        <div className="flex items-baseline gap-1">
+                            <span className={`font-bold text-sm sm:text-base tabular-nums ${dayPacePct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                {dayPacePct >= 0 ? `+${dayPacePct}%` : `${dayPacePct}%`} {dayPacePct >= 0 ? '↗' : '↘'}
+                            </span>
+                            <span className="text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
+                                (ฐาน ~{baselineSoFar})
+                            </span>
+                        </div>
                     </div>
 
                     <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4">
@@ -1190,6 +1225,7 @@ ${JSON.stringify(summaryPayload, null, 2)}
                             {dayparts.map((dp) => {
                                 const isPassed = dp.status === 'passed'
                                 const isActive = dp.status === 'active'
+                                const isUpcoming = dp.status === 'upcoming'
 
                                 return (
                                     <div 
@@ -1222,26 +1258,44 @@ ${JSON.stringify(summaryPayload, null, 2)}
                                         <div className="space-y-1 mb-2">
                                             <div className="flex items-baseline justify-between">
                                                 <span className="text-[11px] text-[oklch(42%_0.010_28)]">
-                                                    {isPassed ? 'ลูกค้าจริง' : 'คาดการณ์'}
+                                                    {isPassed ? 'ลูกค้าจริง' : isActive ? 'ลูกค้าจริงสะสม' : 'เป้าคาดการณ์'}
                                                 </span>
                                                 <span className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)] tabular-nums">
-                                                    {isPassed ? `${dp.actualCount} ท่าน` : `~${dp.forecastCount} ท่าน`}
+                                                    {isPassed ? `${dp.actualCount} ท่าน` : isActive ? `${dp.actualCount} ท่าน` : `~${dp.forecastCount} ท่าน`}
                                                 </span>
                                             </div>
 
-                                            {!isPassed && (
+                                            {isPassed && (
+                                                <div className="flex items-center justify-between text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    <span>บิลเช็คสำเร็จ:</span>
+                                                    <span className="font-bold tabular-nums text-[oklch(18%_0.012_28)]">
+                                                        {dp.actualBills} บิล
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {isActive && (
+                                                <div className="flex items-center justify-between text-[10px] text-[oklch(55%_0.010_28)]">
+                                                    <span>คาดการณ์ปิดช่วง:</span>
+                                                    <span className="tabular-nums font-bold text-[oklch(52%_0.20_28)]">
+                                                        ~{dp.forecastCount} (กรอบ {dp.forecastLowCount}-{dp.forecastHighCount})
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {isUpcoming && (
                                                 <div className="flex items-center justify-between text-[10px] text-[oklch(55%_0.010_28)]">
                                                     <span>กรอบความแปรผัน:</span>
                                                     <span className="tabular-nums font-bold">
-                                                        ต่ำ {dp.forecastLowCount} - สูง {dp.forecastHighCount}
+                                                        ต่ำ {dp.forecastLowCount} - สูง {dp.forecastHighCount} ท่าน
                                                     </span>
                                                 </div>
                                             )}
 
                                             <div className="flex items-center justify-between text-[10px]">
                                                 <span className="text-[oklch(55%_0.010_28)]">สถิติเดิม ({dp.baselineCount} ท่าน):</span>
-                                                <span className={`font-bold tabular-nums ${dp.diffPct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(55%_0.010_28)]'}`}>
-                                                    {dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}
+                                                <span className={`font-bold tabular-nums ${dp.diffPct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                                    {dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`} {dp.diffPct >= 0 ? '↗' : '↘'}
                                                 </span>
                                             </div>
 
@@ -1267,56 +1321,196 @@ ${JSON.stringify(summaryPayload, null, 2)}
             {/* Tab 2: Standalone Dayparts Detailed View */}
             {activeSubTab === 'dayparts' && (
                 <div className="p-4 space-y-4 font-mono text-xs">
-                    <div className="flex items-center justify-between border-b border-[oklch(85%_0.012_28)] pb-2">
+                    {/* Header with Executive Synthesis Ribbon */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[oklch(85%_0.012_28)] pb-3">
                         <div>
-                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[10px] uppercase">
+                                    DAYPART PERFORMANCE AUDIT
+                                </span>
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                    อัปเดตลูกค้าเข้าจริง & อัตราเติบโตเทียบสถิติ 4 สัปดาห์
+                                </span>
+                            </div>
+                            <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-tight">
                                 Comprehensive Dayparts Performance & Operational Forecast
                             </h4>
                             <p className="text-[11px] text-[oklch(42%_0.010_28)]">
-                                แจกแจงการคาดการณ์จำนวนลูกค้า กรอบความเชื่อมั่น และคำแนะนำทีมงานแยกตาม 4 ช่วงเวลา
+                                แจกแจงยอดลูกค้าจริง เทียบฐานประวัติศาสตร์ (4-Wk Baseline) อัตราความเร็ว และคำแนะนำทีมงาน
                             </p>
+                        </div>
+
+                        {/* Quick KPI Badge */}
+                        <div className="flex items-center gap-2 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] p-2">
+                            <div className="text-right">
+                                <span className="text-[9px] text-[oklch(55%_0.010_28)] block">ความเร็วรวมทั้งวัน</span>
+                                <span className={`font-bold text-sm ${dayPacePct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'}`}>
+                                    {dayPacePct >= 0 ? `+${dayPacePct}% ↗` : `${dayPacePct}% ↘`}
+                                </span>
+                            </div>
+                            <div className="border-l border-[oklch(85%_0.012_28)] pl-2 text-right">
+                                <span className="text-[9px] text-[oklch(55%_0.010_28)] block">ลูกค้าจริงรวม</span>
+                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                                    {totalActualPax} ท่าน <span className="text-[10px] font-normal text-[oklch(55%_0.010_28)]">({totalActualBills} บิล)</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
 
+                    {/* 4 Detailed Daypart Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {dayparts.map(dp => (
-                            <div key={dp.key} className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)]">{dp.title}</h5>
-                                        <span className="text-[11px] text-[oklch(55%_0.010_28)]">{dp.timeLabel}</span>
-                                    </div>
-                                    <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-white text-[10px] font-bold uppercase">
-                                        {dp.status}
-                                    </span>
-                                </div>
+                        {dayparts.map(dp => {
+                            const isPassed = dp.status === 'passed'
+                            const isActive = dp.status === 'active'
 
-                                <div className="grid grid-cols-3 gap-2 p-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-center">
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">เป้าฐาน (BASE)</span>
-                                        <span className="font-bold text-base text-[oklch(18%_0.012_28)]">
-                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastCount}
+                            return (
+                                <div 
+                                    key={dp.key} 
+                                    className={`p-4 border transition-all ${
+                                        isActive 
+                                            ? 'border-[oklch(52%_0.20_28)] bg-[oklch(96%_0.012_28)] shadow-sm' 
+                                            : isPassed 
+                                            ? 'border-[oklch(85%_0.012_28)] bg-[oklch(95%_0.008_28)]'
+                                            : 'border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]'
+                                    } space-y-3`}
+                                >
+                                    {/* Card Header */}
+                                    <div className="flex items-center justify-between border-b border-[oklch(88%_0.012_28)] pb-2">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h5 className="font-bold text-sm text-[oklch(18%_0.012_28)]">{dp.title}</h5>
+                                                {isActive && (
+                                                    <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[oklch(52%_0.20_28)]">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.20_28)] animate-ping" />
+                                                        LIVE
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">{dp.timeLabel}</span>
+                                        </div>
+                                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                                            isPassed 
+                                                ? 'bg-[oklch(88%_0.012_28)] text-[oklch(35%_0.010_28)]' 
+                                                : isActive 
+                                                ? 'bg-[oklch(52%_0.20_28)] text-white' 
+                                                : 'bg-[oklch(45%_0.08_140)] text-white'
+                                        }`}>
+                                            {isPassed ? 'PASSED // เสร็จสิ้น' : isActive ? 'NOW ACTIVE // เปิดบริการ' : 'UPCOMING // รอเปิดรอบ'}
                                         </span>
                                     </div>
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">กรอบต่ำ (LOW)</span>
-                                        <span className="font-bold text-base text-[oklch(55%_0.010_28)]">
-                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastLowCount}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">กรอบสูง (HIGH)</span>
-                                        <span className="font-bold text-base text-[oklch(45%_0.08_140)]">
-                                            {dp.status === 'passed' ? dp.actualCount : dp.forecastHighCount}
-                                        </span>
-                                    </div>
-                                </div>
 
-                                <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed bg-[oklch(97%_0.008_28)] p-2.5 border border-[oklch(88%_0.012_28)]">
-                                    <strong className="text-[oklch(18%_0.012_28)]">คำแนะนำ:</strong> {dp.note}
-                                </p>
-                            </div>
-                        ))}
+                                    {/* 3 Metric Columns based on State */}
+                                    <div className="grid grid-cols-3 gap-2 p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-center">
+                                        {/* Column 1: Primary Figure */}
+                                        <div className="flex flex-col justify-between">
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block leading-tight">
+                                                {isPassed ? 'ลูกค้าเข้าจริง' : isActive ? 'ลูกค้าจริงขณะนี้' : 'เป้าคาดการณ์ (BASE)'}
+                                            </span>
+                                            <div className="my-1">
+                                                <span className="font-bold text-base sm:text-lg text-[oklch(18%_0.012_28)] tabular-nums">
+                                                    {isPassed ? `${dp.actualCount}` : isActive ? `${dp.actualCount}` : `~${dp.forecastCount}`}
+                                                </span>
+                                                <span className="text-[11px] text-[oklch(55%_0.010_28)] ml-0.5">ท่าน</span>
+                                            </div>
+                                            <span className="text-[9.5px] text-[oklch(42%_0.010_28)] block">
+                                                {isPassed ? `${dp.actualBills} บิลเช็คบิลแล้ว` : isActive ? `${dp.actualBills} บิลเปิดสะสม` : 'ความน่าจะเป็นสูงสุด'}
+                                            </span>
+                                        </div>
+
+                                        {/* Column 2: Context / Range / Forecast */}
+                                        <div className="flex flex-col justify-between border-x border-[oklch(88%_0.012_28)] px-1">
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block leading-tight">
+                                                {isPassed ? 'สถิติเดิม (4-WK)' : isActive ? 'คาดการณ์ปิดช่วง' : 'กรอบความแปรผัน'}
+                                            </span>
+                                            <div className="my-1">
+                                                {isPassed ? (
+                                                    <span className="font-bold text-base sm:text-lg text-[oklch(42%_0.010_28)] tabular-nums">
+                                                        ~{dp.baselineCount}
+                                                        <span className="text-[11px] font-normal text-[oklch(55%_0.010_28)] ml-0.5">ท่าน</span>
+                                                    </span>
+                                                ) : isActive ? (
+                                                    <span className="font-bold text-base sm:text-lg text-[oklch(52%_0.20_28)] tabular-nums">
+                                                        ~{dp.forecastCount}
+                                                        <span className="text-[11px] font-normal text-[oklch(55%_0.010_28)] ml-0.5">ท่าน</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="font-bold text-xs sm:text-sm text-[oklch(42%_0.010_28)] tabular-nums">
+                                                        {dp.forecastLowCount} - {dp.forecastHighCount}
+                                                        <span className="text-[10px] font-normal text-[oklch(55%_0.010_28)] ml-0.5">ท่าน</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="text-[9.5px] text-[oklch(42%_0.010_28)] block">
+                                                {isPassed ? 'เฉลี่ยย้อนหลัง 4 สัปดาห์' : isActive ? `กรอบต่ำ ${dp.forecastLowCount} - สูง ${dp.forecastHighCount}` : 'ต่ำ (Low) ถึง สูง (High)'}
+                                            </span>
+                                        </div>
+
+                                        {/* Column 3: Rate of Change vs Baseline */}
+                                        <div className="flex flex-col justify-between">
+                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block leading-tight">
+                                                {isPassed ? 'อัตราเทียบสถิติเดิม' : isActive ? 'แนวโน้มเทียบสถิติ' : 'อัตราเติบโตคาดการณ์'}
+                                            </span>
+                                            <div className="my-1">
+                                                <span className={`font-bold text-base sm:text-lg tabular-nums ${
+                                                    dp.diffPct >= 0 ? 'text-[oklch(45%_0.08_140)]' : 'text-[oklch(52%_0.16_28)]'
+                                                }`}>
+                                                    {dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`} {dp.diffPct >= 0 ? '↗' : '↘'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[9.5px] text-[oklch(42%_0.010_28)] block">
+                                                {isPassed 
+                                                    ? (dp.diffCount >= 0 ? `เพิ่มขึ้น +${dp.diffCount} ท่าน` : `ลดลง ${dp.diffCount} ท่าน`)
+                                                    : (dp.diffCount >= 0 ? `คาดเพิ่ม +${dp.diffCount} ท่าน` : `คาดลด ${dp.diffCount} ท่าน`)
+                                                }
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Visual Comparison Progress Bar vs 4-Wk Baseline */}
+                                    <div className="space-y-1">
+                                        <div className="flex items-center justify-between text-[10px] text-[oklch(55%_0.010_28)]">
+                                            <span>
+                                                {isPassed ? 'ผลงานจริง vs ค่าเฉลี่ยประวัติศาสตร์' : 'เปรียบเทียบกับค่าเฉลี่ยประวัติศาสตร์'}
+                                            </span>
+                                            <span className="font-bold">
+                                                {dp.baselineCount > 0 
+                                                    ? `${Math.round(((isPassed ? dp.actualCount : dp.forecastCount) / dp.baselineCount) * 100)}% ของค่าเฉลี่ย`
+                                                    : '100%'}
+                                            </span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-[oklch(88%_0.012_28)] rounded-xs overflow-hidden relative">
+                                            <div 
+                                                className={`h-full transition-all duration-500 ${
+                                                    dp.diffPct >= 0 ? 'bg-[oklch(45%_0.08_140)]' : 'bg-[oklch(52%_0.16_28)]'
+                                                }`}
+                                                style={{ 
+                                                    width: `${Math.min(100, Math.max(5, dp.baselineCount > 0 ? Math.round(((isPassed ? dp.actualCount : dp.forecastCount) / (dp.baselineCount * 1.5)) * 100) : 50))}%` 
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Ad Intent Signals Badge if any */}
+                                    {dp.adDirCount > 0 && (
+                                        <div className="flex items-center justify-between text-[11px] p-2 bg-[oklch(92%_0.012_140)] border border-[oklch(82%_0.08_140)] text-[oklch(35%_0.08_140)]">
+                                            <div className="flex items-center gap-1.5">
+                                                <span>📍</span>
+                                                <span className="font-bold">สัญญาณนำร่อง Ads:</span>
+                                                <span>{dp.adDirCount} ขอทาง (Google Maps) / {dp.adViewCount} เปิดชมเมนู</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-white px-1.5 py-0.2">
+                                                HIGH INTENT
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Operational Directive / Staff Guidance */}
+                                    <p className="text-[11px] text-[oklch(42%_0.010_28)] leading-relaxed bg-[oklch(97%_0.008_28)] p-2.5 border border-[oklch(88%_0.012_28)]">
+                                        <strong className="text-[oklch(18%_0.012_28)]">คำแนะนำทีมงาน:</strong> {dp.note}
+                                    </p>
+                                </div>
+                            )
+                        })}
                     </div>
                 </div>
             )}
