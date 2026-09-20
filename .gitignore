@@ -48,4 +48,4 @@ backups/
 *.tar.gz
 *.sql.zip
 
-
+supabase/.temp/

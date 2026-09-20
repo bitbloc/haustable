@@ -6,6 +6,7 @@ import { safeTimestampUrl } from '../../../utils/urlHelper';
 import { testEasySlipConnection } from '../../../utils/slipVerificationHelper';
 import VisualCalendarBlocker from './VisualCalendarBlocker';
 import TimeSlotStudio from './TimeSlotStudio';
+import AdminTestSandboxModal from '../AdminTestSandboxModal';
 
 export default function GeneralBookingSettingsTab({
     settings,
@@ -23,6 +24,7 @@ export default function GeneralBookingSettingsTab({
     const [cleaningSlips, setCleaningSlips] = useState(false);
     const [testingEasySlip, setTestingEasySlip] = useState(false);
     const [easySlipQuota, setEasySlipQuota] = useState(null);
+    const [isTestSandboxOpen, setIsTestSandboxOpen] = useState(false);
 
     const handleTestEasySlip = async () => {
         setTestingEasySlip(true);
@@ -495,15 +497,25 @@ export default function GeneralBookingSettingsTab({
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={handleTestEasySlip}
-                        disabled={testingEasySlip}
-                        className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-black rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
-                    >
-                        <RefreshCw size={13} className={testingEasySlip ? 'animate-spin' : ''} />
-                        <span>{testingEasySlip ? 'กำลังตรวจสอบ...' : 'ทดสอบการเชื่อมต่อ API'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setIsTestSandboxOpen(true)}
+                            className="px-3.5 py-2 bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                            title="เปิดศูนย์ทดสอบจำลองระบบ POS"
+                        >
+                            <span>🧪 TEST SANDBOX</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleTestEasySlip}
+                            disabled={testingEasySlip}
+                            className="px-4 py-2 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-black rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer shrink-0"
+                        >
+                            <RefreshCw size={13} className={testingEasySlip ? 'animate-spin' : ''} />
+                            <span>{testingEasySlip ? 'กำลังตรวจสอบ...' : 'ทดสอบการเชื่อมต่อ API'}</span>
+                        </button>
+                    </div>
                 </div>
 
                 {easySlipQuota && (
@@ -838,6 +850,14 @@ export default function GeneralBookingSettingsTab({
                     </button>
                 </div>
             </div>
+
+            {/* Zero-Cost Real-Amounts POS Test Sandbox Modal */}
+            {isTestSandboxOpen && (
+                <AdminTestSandboxModal
+                    isOpen={isTestSandboxOpen}
+                    onClose={() => setIsTestSandboxOpen(false)}
+                />
+            )}
         </div>
     );
 }

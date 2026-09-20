@@ -99,6 +99,62 @@ async function verifySignature(body: string, signature: string, secret: string) 
   return base64Signature === signature
 }
 
+async function fetchExchangeRate(fromCurrency: string = 'USD'): Promise<number> {
+  const norm = (fromCurrency || 'USD').toUpperCase().trim();
+  if (norm === 'THB' || norm === 'บาท') return 1.0;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const resp = await fetch(`https://api.exchangerate-api.com/v4/latest/${norm}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (resp.ok) {
+      const data = await resp.json();
+      const rate = Number(data?.rates?.THB);
+      if (rate && rate > 0) {
+        console.log(`[ExchangeRate] Live rate for ${norm}->THB from exchangerate-api: ${rate}`);
+        return rate;
+      }
+    }
+  } catch (err) {
+    console.warn(`[ExchangeRate] primary API failed for ${norm}:`, err);
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const resp = await fetch(`https://open.er-api.com/v6/latest/${norm}`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    if (resp.ok) {
+      const data = await resp.json();
+      const rate = Number(data?.rates?.THB);
+      if (rate && rate > 0) {
+        console.log(`[ExchangeRate] Live rate for ${norm}->THB from open.er-api: ${rate}`);
+        return rate;
+      }
+    }
+  } catch (err) {
+    console.warn(`[ExchangeRate] secondary API failed for ${norm}:`, err);
+  }
+
+  // Reliable fallback rates if network fails
+  const fallbackRates: Record<string, number> = {
+    'USD': 33.50,
+    'EUR': 36.50,
+    'SGD': 25.50,
+    'JPY': 0.22,
+    'GBP': 43.50,
+    'CNY': 4.70
+  };
+  const fallback = fallbackRates[norm] || 33.50;
+  console.log(`[ExchangeRate] Using fallback rate for ${norm}->THB: ${fallback}`);
+  return fallback;
+}
+
 async function scanReceiptImageWithGemini(
   base64ImagesInput: string | string[],
   apiKey: string,
@@ -133,18 +189,31 @@ CRITICAL INSTRUCTIONS FOR HORIZONTAL / ROTATED / SIDEWAYS PHOTOS (แนวน�
 Extract and return ONLY a valid JSON object matching this schema:
 {
   "is_receipt": true, // Set to true for ANY bill, slip, invoice, receipt, or transaction voucher in any orientation. Set to false ONLY for random unrelated photos (e.g. selfie, food plate without bill, meme, cat, sticker).
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด')",
-  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set in Thai Baht (do NOT sum page subtotals if one page shows the grand total; extract the final net amount). Search for 'Total', 'ยอดสุทธิ', 'ยอดรวม', 'รวมทั้งสิ้น', 'จำนวนเงิน', 'BAHT', 'THB' in any orientation.
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแก๊สหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟฟ้าประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่าบริการ Supabase Pro Plan')",
+  "currency": "THB", // Currency detected: 'THB' (default for Thai receipts/bills), 'USD' (if $, USD, US Dollar, US$), 'EUR', 'SGD', 'JPY', 'GBP'
+  "original_amount": 0.00, // Grand total payable in the original document currency (e.g. 26.75 for $26.75 USD)
+  "amount": 0.00, // Grand total payable amount (search for 'Total', 'Amount paid', 'ยอดสุทธิ', 'ยอดรวม', 'รวมทั้งสิ้น', 'จำนวนเงิน', 'BAHT', 'THB', '$', 'USD' in any orientation)
   "expense_date": "YYYY-MM-DD", // Date of purchase/payment. If missing or year in Buddhist Era (2569 -> 2026), convert to Gregorian YYYY-MM-DD. If missing, use today's date
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
-  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
+  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'Supabase Pte. Ltd.', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Lotus', 'Big C')",
   "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
   "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
-  "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, power bills), false otherwise
+  "vat_included": true, // Boolean: true if VAT/Tax is included in the bill (like Makro, gas stations, power bills, Supabase Tax 7%), false otherwise
   "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
-  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
+  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD', 'หมูสามชั้น 3kg, นม 4 แกลลอน')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
+
+CRITICAL RULES FOR FOREIGN CURRENCY & DOLLAR RECEIPTS ($ / USD):
+- Foreign tech, developer, and cloud invoices (e.g. Supabase, Vercel, GitHub, OpenAI, Midjourney, Figma, Google Workspace, AWS, Adobe, Namecheap) are billed in US Dollars ($ / USD).
+- If the document displays '$', 'USD', or 'US Dollar':
+  * Set "currency": "USD"
+  * Set "original_amount": <amount in USD as positive number, e.g. 26.75>
+  * Set "amount": <amount in USD as positive number, e.g. 26.75>
+  * Set "category": "software_service"
+  * In "notes", include the original USD breakdown (e.g. 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD')
+- If the document is in another foreign currency (EUR, SGD, JPY, GBP), set "currency" and "original_amount" accordingly.
+- If the document is standard Thai currency (฿, บาท, THB), set "currency": "THB" and "original_amount" to the Baht amount.
 
 Category Rules:
 - Cooking Gas / LPG / Gas Tanks (แก๊สหุงต้ม, แก๊สครัว, ถังแก๊ส, เวิลด์แก๊ส, สยามแก๊ส, ปตท.แก๊ส, ร้านส่งแก๊ส, ค่าเติมแก๊ส) -> 'utilities'
@@ -156,7 +225,7 @@ Category Rules:
 - Staff Wages (ค่าแรง, เงินเดือน, ค่าจ้างพาร์ทไทม์, โอที) -> 'staff_wages'
 - Equipment & Packaging (แก้วกาแฟ, ฝา, หลอด, ถุงหิ้ว, ถุงขยะ, กล่องอาหาร, ทิชชู่, น้ำยาล้างจาน, อุปกรณ์ครัว) -> 'equipment_supplies'
 - Maintenance & Repairs (ช่างไฟ, ช่างประปา, ล้างแอร์, ซ่อมตู้เย็น, HomePro, ไทวัสดุ, ดูโฮม) -> 'maintenance'
-- Software & Subscriptions (Spotify, Canva, POS, ระบบรายเดือน) -> 'software_service'
+- Software & Subscriptions (Supabase, Vercel, Spotify, Canva, POS, ระบบรายเดือน, Cloud, AI tools) -> 'software_service'
 
 Special Rules for Online Ads & Google Ads Statement (ใบแจ้งยอด Google Ads / Facebook Ads):
 - In "Google Statement" / "Google Ads" monthly account statements:
@@ -244,7 +313,7 @@ Payment Method Rules:
   throw lastError || new Error('Failed to scan receipt with Gemini AI');
 }
 
-function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount: number = 1) {
+function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount: number = 1, conversionInfo: any = null) {
   const categoryLabels: Record<string, string> = {
     'raw_material': '🛒 วัตถุดิบ & ของสด (MAKRO/ตลาด)',
     'marketing': '📣 ค่ายิงแอด & การตลาด',
@@ -271,7 +340,9 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
   const amountStr = `฿${Number(expense.amount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const headerTitle = pageCount > 1 ? `RECEIPT RECORDED · ${pageCount} PAGES (AI)` : "RECEIPT RECORDED (AI)";
-  const headerSubtitle = pageCount > 1 ? `เอกสารชุด ${pageCount} แผ่น (วิเคราะห์รวมเป็น 1 บิล)` : "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ";
+  const headerSubtitle = pageCount > 1 
+    ? `เอกสารชุด ${pageCount} แผ่น (วิเคราะห์รวมเป็น 1 บิล)` 
+    : (conversionInfo ? `ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ · แปลง ${conversionInfo.currency} เป็นบาท` : "ระบบลงบัญชีค่าใช้จ่ายอัตโนมัติ");
 
   const detailRows: any[] = [];
 
@@ -315,6 +386,30 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
       ]
     }
   );
+
+  // If currency was auto-converted from USD / foreign currency, show original amount and rate
+  if (conversionInfo && conversionInfo.currency && conversionInfo.currency !== 'THB') {
+    detailRows.push(
+      {
+        type: "box",
+        layout: "horizontal",
+        margin: "sm",
+        contents: [
+          { type: "text", text: "ยอดเดิม (สกุลเงิน)", color: "#78736A", size: "xs", flex: 4 },
+          { type: "text", text: `${conversionInfo.symbol || ''}${Number(conversionInfo.originalAmount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${conversionInfo.currency}`, color: "#C85A32", size: "xs", weight: "bold", align: "end", flex: 4 }
+        ]
+      },
+      {
+        type: "box",
+        layout: "horizontal",
+        margin: "sm",
+        contents: [
+          { type: "text", text: "อัตราแลกเปลี่ยน", color: "#78736A", size: "xs", flex: 4 },
+          { type: "text", text: `~${Number(conversionInfo.rate || 0).toFixed(2)} บาท / ${conversionInfo.currency}`, color: "#2D804E", size: "xs", weight: "bold", align: "end", flex: 4 }
+        ]
+      }
+    );
+  }
 
   if (expense.vat_included && expense.vat_amount > 0) {
     detailRows.push({
@@ -409,7 +504,15 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
               layout: "vertical",
               margin: "md",
               contents: [
-                { type: "text", text: pageCount > 1 ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว", color: "#4A6B3D", weight: "bold", size: "xs" },
+                { 
+                  type: "text", 
+                  text: pageCount > 1 
+                    ? `บันทึกชุดเอกสาร (${pageCount} แผ่น) เข้าหลังบ้านเรียบร้อยแล้ว` 
+                    : (conversionInfo ? `บันทึกและแปลงค่าเงิน ${conversionInfo.currency} เรียบร้อยแล้ว` : "บันทึกข้อมูลเข้าหลังบ้านเรียบร้อยแล้ว"), 
+                  color: "#4A6B3D", 
+                  weight: "bold", 
+                  size: "xs" 
+                },
                 { type: "text", text: vendorDisplay, weight: "bold", color: "#1E1B18", size: "sm", margin: "xs", wrap: true },
                 { type: "text", text: expense.title || 'ค่าใช้จ่ายร้าน', color: "#78736A", size: "xs", margin: "xs", wrap: true }
               ]
@@ -3465,12 +3568,40 @@ Deno.serve(async (req) => {
           const ocrResult = await scanReceiptImageWithGemini(base64List, geminiApiKey, preferredModel)
           console.log('Gemini OCR Multi-Page Result:', JSON.stringify(ocrResult))
 
-          const amount = Number(ocrResult?.amount) || 0
-          const hasReceiptIndicator = ocrResult?.is_receipt === true || amount > 0 || (ocrResult?.vendor_name && ocrResult?.vendor_name !== 'ไม่ระบุ')
+          const rawAmount = Number(ocrResult?.amount) || 0
+          const hasReceiptIndicator = ocrResult?.is_receipt === true || rawAmount > 0 || (ocrResult?.vendor_name && ocrResult?.vendor_name !== 'ไม่ระบุ')
 
-          if (!ocrResult || !hasReceiptIndicator || amount <= 0) {
+          if (!ocrResult || !hasReceiptIndicator || rawAmount <= 0) {
             console.log('Image(s) not recognized as valid expense receipt or amount <= 0. Skipping.')
             continue
+          }
+
+          // --- Automatic Currency Conversion (e.g. USD / Dollar to THB) ---
+          let detectedCurrency = String(ocrResult.currency || 'THB').toUpperCase().trim()
+          let originalAmount = Number(ocrResult.original_amount) || rawAmount
+          const textBlob = `${ocrResult.title || ''} ${ocrResult.notes || ''} ${ocrResult.vendor_name || ''}`
+
+          // Detect USD if AI returned THB but text clearly contains dollar signs or foreign tech vendors
+          if (detectedCurrency === 'THB' && (textBlob.includes('$') || /\bUSD\b|\bdollar\b/i.test(textBlob))) {
+            if (!ocrResult.vendor_tax_id || textBlob.includes('$')) {
+              detectedCurrency = 'USD'
+            }
+          }
+
+          let amount = rawAmount
+          let conversionInfo: any = null
+
+          if (detectedCurrency !== 'THB' && originalAmount > 0) {
+            const rate = await fetchExchangeRate(detectedCurrency)
+            amount = parseFloat((originalAmount * rate).toFixed(2))
+            const currencySymbol = detectedCurrency === 'USD' ? '$' : (detectedCurrency === 'EUR' ? '€' : (detectedCurrency === 'GBP' ? '£' : ''))
+            conversionInfo = {
+              currency: detectedCurrency,
+              symbol: currencySymbol,
+              originalAmount: originalAmount,
+              rate: rate
+            }
+            console.log(`[Currency] Auto-converted ${originalAmount} ${detectedCurrency} to ฿${amount} THB (rate: ${rate})`)
           }
 
           let vatAmount = 0
@@ -3485,12 +3616,17 @@ Deno.serve(async (req) => {
           if (pageCount > 1 && !title.includes('ชุด') && !title.includes('แผ่น')) {
             title = `${title} (ชุด ${pageCount} แผ่น)`
           }
-          const category = ocrResult.category || 'raw_material'
+          const category = ocrResult.category || (detectedCurrency !== 'THB' ? 'software_service' : 'raw_material')
           const vendorName = ocrResult.vendor_name || 'ไม่ระบุ'
           const vendorTaxId = (ocrResult.vendor_tax_id || '').replace(/\D/g, '') || null
           const docType = ocrResult.doc_type || 'tax_invoice'
           const paymentMethod = ocrResult.payment_method || 'TRANSFER'
-          const notes = ocrResult.notes || ''
+          let notes = ocrResult.notes || ''
+
+          if (conversionInfo && !notes.includes(conversionInfo.currency) && !notes.includes(conversionInfo.rate.toFixed(2))) {
+            const conversionNote = `แปลงอัตโนมัติจาก ${conversionInfo.symbol}${conversionInfo.originalAmount.toFixed(2)} ${conversionInfo.currency} @ ${conversionInfo.rate.toFixed(2)} บาท/${conversionInfo.currency}`
+            notes = notes ? `${notes} · ${conversionNote}` : conversionNote
+          }
 
           // 4. Insert into store_expenses table
           const { data: inserted, error: insertErr } = await supabaseAdmin
@@ -3542,7 +3678,7 @@ Deno.serve(async (req) => {
             vat_amount: vatAmount,
             payment_method: paymentMethod,
             notes
-          }, dateFormatted, pageCount)
+          }, dateFormatted, pageCount, conversionInfo)
 
           // 7. Reply to LINE Group / User
           const replyResp = await fetch('https://api.line.me/v2/bot/message/reply', {

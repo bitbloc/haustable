@@ -81,6 +81,58 @@ import { parseReceiptUrls, urlToBase64 } from './receiptImageHelper';
 export { parseReceiptUrls, urlToBase64 };
 
 /**
+ * Fetch real-time exchange rate to THB with fallback
+ * @param {string} fromCurrency - Source currency (default 'USD')
+ * @returns {Promise<number>} Exchange rate to THB
+ */
+export async function fetchExchangeRate(fromCurrency = 'USD') {
+    const norm = (fromCurrency || 'USD').toUpperCase().trim();
+    if (norm === 'THB' || norm === 'บาท') return 1.0;
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        const resp = await fetch(`https://api.exchangerate-api.com/v4/latest/${norm}`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (resp.ok) {
+            const data = await resp.json();
+            const rate = Number(data?.rates?.THB);
+            if (rate && rate > 0) return rate;
+        }
+    } catch (err) {
+        console.warn(`[ExchangeRate] primary API failed for ${norm}:`, err);
+    }
+
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2500);
+        const resp = await fetch(`https://open.er-api.com/v6/latest/${norm}`, {
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+        if (resp.ok) {
+            const data = await resp.json();
+            const rate = Number(data?.rates?.THB);
+            if (rate && rate > 0) return rate;
+        }
+    } catch (err) {
+        console.warn(`[ExchangeRate] secondary API failed for ${norm}:`, err);
+    }
+
+    const fallbackRates = {
+        'USD': 33.50,
+        'EUR': 36.50,
+        'SGD': 25.50,
+        'JPY': 0.22,
+        'GBP': 43.50,
+        'CNY': 4.70
+    };
+    return fallbackRates[norm] || 33.50;
+}
+
+/**
  * Rotates a base64 or URL image by specified degrees (e.g. 90, 180, 270) using canvas
  * @param {string} base64Str - Image data URL or HTTP URL
  * @param {number} degrees - Degrees to rotate clockwise (default 90)
@@ -159,18 +211,31 @@ CRITICAL ORIENTATION & ROTATION INSTRUCTIONS (แนวนอน / หมุน�
 
 Extract and return ONLY a valid JSON object matching this schema:
 {
-  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแกัสหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่ายิงแอด Facebook Ads')",
-  "amount": 0.00, // CRITICAL: Extract the SINGLE final grand total payable amount of the entire set (do NOT sum page subtotals if one page shows the grand total; extract the final net amount).
+  "title": "Clear concise summary in Thai (e.g. 'ซื้อเนื้อสัตว์ ผักสด Makro ศรีนครินทร์${isMultiPage ? ` (ชุด ${imagesArray.length} แผ่น)` : ''}', 'ค่าแกัสหุงต้มครัว (เวิลด์แก๊ส)', 'ค่าน้ำมันรถ ปตท.', 'ค่าไฟประจำเดือน', 'ค่าน้ำแข็งหลอด', 'ค่าบริการ Supabase Pro Plan')",
+  "currency": "THB", // Currency detected: 'THB' (default for Thai receipts/bills), 'USD' (if $, USD, US Dollar, US$), 'EUR', 'SGD', 'JPY', 'GBP'
+  "original_amount": 0.00, // Grand total payable in the original document currency (e.g. 26.75 for $26.75 USD)
+  "amount": 0.00, // Grand total payable amount (search for 'Total', 'Amount paid', 'ยอดสุทธิ', 'ยอดรวม', 'รวมทั้งสิ้น', 'จำนวนเงิน', 'BAHT', 'THB', '$', 'USD' in any orientation)
   "expense_date": "YYYY-MM-DD", // CRITICAL: Date in Gregorian/Common Era (ค.ศ. เช่น '2026-08-31'). If receipt/slip is in Thai Buddhist Era (พ.ศ. 25XX), MUST convert to ค.ศ. (ค.ศ. = พ.ศ. - 543, e.g. 2569 -> 2026, 2568 -> 2025, 2567 -> 2024). Inspect the year digits carefully!
   "category": "raw_material", // EXACTLY ONE OF: 'raw_material', 'marketing', 'fuel_logistics', 'utilities', 'rent', 'staff_wages', 'equipment_supplies', 'maintenance', 'software_service', 'other'
-  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Facebook Ads')",
+  "vendor_name": "Name of store/vendor (e.g. 'Siam Makro', 'Supabase Pte. Ltd.', 'ร้านแก๊ส / เวิลด์แก๊ส / สยามแก๊ส', 'ปั๊ม ปตท. (PTT)', 'โรงน้ำแข็ง', 'การไฟฟ้านครหลวง', 'Facebook Ads')",
   "vendor_tax_id": "13-digit Thai Tax ID if visible, else empty string",
   "doc_type": "tax_invoice", // EXACTLY ONE OF: 'tax_invoice' (Full tax invoice / ใบกำกับภาษีเต็มรูป), 'cash_bill' (Cash receipt / บิลเงินสด), 'receipt_voucher' (Payment voucher / ใบสำคัญรับเงิน), 'slip_only' (Bank transfer slip / สลิปโอน)
   "vat_included": true, // Boolean: true if VAT 7% is included in the bill (like Makro, gas stations, power bills), false otherwise
   "payment_method": "TRANSFER", // DEFAULT IS ALWAYS 'TRANSFER'. Use 'CASH' only if explicitly marked as cash payment, or 'CREDIT' if marked as credit card.
-  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'หมูสามชั้น 3kg, นม 4 แกลลอน', 'น้ำแข็งหลอด 5 กระสอบ')",
+  "notes": "Comprehensive summary of purchased line items from all pages in Thai (e.g. 'แก๊สถัง 15kg 2 ถัง', 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD', 'หมูสามชั้น 3kg, นม 4 แกลลอน')",
   "confidence": 0.95 // Confidence score from 0.0 to 1.0
 }
+
+CRITICAL RULES FOR FOREIGN CURRENCY & DOLLAR RECEIPTS ($ / USD):
+- Foreign tech, developer, and cloud invoices (e.g. Supabase, Vercel, GitHub, OpenAI, Midjourney, Figma, Google Workspace, AWS, Adobe, Namecheap) are billed in US Dollars ($ / USD).
+- If the document displays '$', 'USD', or 'US Dollar':
+  * Set "currency": "USD"
+  * Set "original_amount": <amount in USD as positive number, e.g. 26.75>
+  * Set "amount": <amount in USD as positive number, e.g. 26.75>
+  * Set "category": "software_service"
+  * In "notes", include the original USD breakdown (e.g. 'Supabase Pro Plan $25.00 + Tax 7% $1.75 = $26.75 USD')
+- If the document is in another foreign currency (EUR, SGD, JPY, GBP), set "currency" and "original_amount" accordingly.
+- If the document is standard Thai currency (฿, บาท, THB), set "currency": "THB" and "original_amount" to the Baht amount.
 
 Thai Date & Buddhist Year Rules (พ.ศ. -> ค.ศ.):
 - Slips and receipts frequently use Thai Buddhist Era (พ.ศ. 25XX) and Thai months (ม.ค., ก.พ., มี.ค., เม.ย., พ.ค., มิ.ย., ก.ค., ส.ค., ก.ย., ต.ค., พ.ย., ธ.ค.).
@@ -310,6 +375,41 @@ Payment Method Rules:
                         const d = yyyymmdd[3].padStart(2, '0');
                         parsed.expense_date = `${y}-${m}-${d}`;
                     }
+                }
+            }
+
+            // Auto-detect and convert Foreign Currency (USD / EUR / etc.) to Thai Baht
+            let detectedCurrency = String(parsed.currency || 'THB').toUpperCase().trim();
+            const rawAmount = Number(parsed.amount) || 0;
+            const originalAmount = Number(parsed.original_amount) || rawAmount;
+            const textBlob = `${parsed.title || ''} ${parsed.notes || ''} ${parsed.vendor_name || ''}`;
+
+            if (detectedCurrency === 'THB' && (textBlob.includes('$') || /\bUSD\b|\bdollar\b/i.test(textBlob))) {
+                if (!parsed.vendor_tax_id || textBlob.includes('$')) {
+                    detectedCurrency = 'USD';
+                }
+            }
+
+            if (detectedCurrency !== 'THB' && originalAmount > 0) {
+                const rate = await fetchExchangeRate(detectedCurrency);
+                const thbAmount = parseFloat((originalAmount * rate).toFixed(2));
+                const currencySymbol = detectedCurrency === 'USD' ? '$' : (detectedCurrency === 'EUR' ? '€' : (detectedCurrency === 'GBP' ? '£' : ''));
+                
+                parsed.conversion = {
+                    currency: detectedCurrency,
+                    symbol: currencySymbol,
+                    originalAmount: originalAmount,
+                    rate: rate,
+                    convertedAmount: thbAmount
+                };
+                parsed.amount = thbAmount;
+                if (!parsed.category || parsed.category === 'raw_material') {
+                    parsed.category = 'software_service';
+                }
+
+                const conversionNote = `แปลงอัตโนมัติจาก ${currencySymbol}${originalAmount.toFixed(2)} ${detectedCurrency} @ ${rate.toFixed(2)} บาท/${detectedCurrency}`;
+                if (!parsed.notes?.includes(detectedCurrency)) {
+                    parsed.notes = parsed.notes ? `${parsed.notes} · ${conversionNote}` : conversionNote;
                 }
             }
 

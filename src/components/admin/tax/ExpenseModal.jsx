@@ -64,6 +64,7 @@ export default function ExpenseModal({
     const [imagePreviewZoom, setImagePreviewZoom] = useState(false);
     const [zoomPageIndex, setZoomPageIndex] = useState(0);
     const [compareImage, setCompareImage] = useState(null);
+    const [conversionNotice, setConversionNotice] = useState(null);
     const [existingExpensesList, setExistingExpensesList] = useState(() => {
         try {
             const local = localStorage.getItem('onhaus_store_expenses');
@@ -188,8 +189,15 @@ export default function ExpenseModal({
             if (data.notes) setNotes(data.notes);
             if (data.confidence) setAiConfidence(Math.round(data.confidence * 100));
 
+            if (data.conversion) {
+                setConversionNotice(data.conversion);
+                toast.success(`Gemini AI: แปลงค่าเงิน ${data.conversion.currency} เป็นบาทสำเร็จ: ฿${Number(data.amount || 0).toLocaleString()} (เรท ~${data.conversion.rate})`);
+            } else {
+                setConversionNotice(null);
+                toast.success(`Gemini AI ประมวลผลสำเร็จ: ${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()}`);
+            }
+
             setAiScannedSuccess(true);
-            toast.success(`Gemini AI ประมวลผลสำเร็จ: ${data.vendor_name || 'บิล'} ฿${Number(data.amount || 0).toLocaleString()}`);
         } catch (err) {
             if (err.message === 'MISSING_API_KEY') {
                 setShowApiKeyModal(true);
@@ -600,6 +608,14 @@ export default function ExpenseModal({
                                         className="w-full bg-transparent border-none font-mono font-black text-2xl text-[var(--color-ink)] focus:outline-none placeholder:text-gray-300"
                                     />
                                 </div>
+                                {conversionNotice && (
+                                    <div className="mt-2 pt-1.5 border-t border-[var(--color-rule)] flex items-center justify-between text-[10px] font-mono text-[var(--color-accent)]">
+                                        <span>AUTO-CONVERTED:</span>
+                                        <span className="font-bold">
+                                            {conversionNotice.symbol}{conversionNotice.originalAmount} {conversionNotice.currency} @ ~{conversionNotice.rate} ฿/{conversionNotice.currency}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className="sm:col-span-5 border border-[var(--color-rule)] p-3 bg-[var(--color-paper-2)]">

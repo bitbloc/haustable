@@ -5,6 +5,7 @@ import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import HoldToDeleteButton from './components/HoldToDeleteButton'
 import ManualBookingModal from './components/admin/ManualBookingModal'
+import AdminTestSandboxModal from './components/admin/AdminTestSandboxModal'
 import { formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime, getThaiDate } from './utils/timeUtils'
 import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
@@ -121,6 +122,7 @@ export default function AdminBookings() {
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [editingBooking, setEditingBooking] = useState(null) // Booking object being edited
     const [isManualBookingOpen, setIsManualBookingOpen] = useState(false) // Manual Backoffice Booking Modal
+    const [isTestSandboxOpen, setIsTestSandboxOpen] = useState(false) // Zero-Cost Real-Amounts POS Sandbox Modal
 
     // Concurrency & Lifecycle Guards to prevent memory leaks and request storms
     const isMountedRef = useRef(true)
@@ -665,6 +667,14 @@ export default function AdminBookings() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <button 
+                            type="button"
+                            onClick={() => setIsTestSandboxOpen(true)}
+                            className="px-3.5 py-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-ink)] hover:text-[var(--color-paper)] text-[var(--color-ink)] font-bold uppercase transition-colors flex items-center gap-1.5 border border-[var(--color-rule)] cursor-pointer"
+                            title="ศูนย์ทดสอบระบบ POS และการหักเงินมัดจำ (Zero-Cost Simulator)"
+                        >
+                            <span>🧪 TEST SANDBOX (POS ENGINE)</span>
+                        </button>
                         <button 
                             type="button"
                             onClick={() => setIsManualBookingOpen(true)}
@@ -1394,6 +1404,17 @@ export default function AdminBookings() {
                     onClose={() => setIsManualBookingOpen(false)}
                     tablesList={tablesList}
                     existingBookings={bookings}
+                    onSuccess={() => {
+                        fetchBookings(false)
+                    }}
+                />
+            )}
+            {/* Zero-Cost Real-Amounts POS Test Sandbox Modal */}
+            {isTestSandboxOpen && (
+                <AdminTestSandboxModal
+                    isOpen={isTestSandboxOpen}
+                    onClose={() => setIsTestSandboxOpen(false)}
+                    tablesList={tablesList}
                     onSuccess={() => {
                         fetchBookings(false)
                     }}
