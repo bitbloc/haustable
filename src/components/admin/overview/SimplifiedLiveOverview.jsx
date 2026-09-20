@@ -26,8 +26,8 @@ export default function SimplifiedLiveOverview({
     const [tables, setTables] = useState([])
     const [liveBookings, setLiveBookings] = useState([])
     const [loadingTables, setLoadingTables] = useState(true)
-    const [selectedFilter, setSelectedFilter] = useState('all') // all, occupied, calling, upcoming, free
-    const [zoomMode, setZoomMode] = useState('standard') // 'compact' (หลายโต๊ะ), 'standard' (สมดุล), 'focus' (โต๊ะเดียว)
+    const [selectedFilter, setSelectedFilter] = useState('occupied') // 'occupied' by default as requested: เน้นโต๊ะที่เปิดอยู่ เป็น default *
+    const [zoomMode, setZoomMode] = useState('list') // 'list' (List สรุป - default for Backoffice), 'compact', 'standard', 'focus'
     const [focusedTableIndex, setFocusedTableIndex] = useState(0)
     const [inspectingTable, setInspectingTable] = useState(null) // Table selected for full food checklist modal
     const [currentTime, setCurrentTime] = useState(Date.now())
@@ -405,8 +405,20 @@ export default function SimplifiedLiveOverview({
 
                 {/* Right: Zoom Controls & Fullscreen Trigger */}
                 <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
-                    {/* 3-Level Zoom Selector */}
+                    {/* View / Density Selector */}
                     <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-sm font-mono text-[11px]">
+                        <button
+                            type="button"
+                            onClick={() => setZoomMode('list')}
+                            className={`px-2.5 py-1 rounded-xs font-bold transition-all cursor-pointer ${
+                                zoomMode === 'list'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-white'
+                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                            }`}
+                            title="List สรุปโต๊ะสด (Default Summary List)"
+                        >
+                            List สรุป
+                        </button>
                         <button
                             type="button"
                             onClick={() => setZoomMode('compact')}
@@ -427,9 +439,9 @@ export default function SimplifiedLiveOverview({
                                     ? 'bg-[oklch(18%_0.012_28)] text-white'
                                     : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
-                            title="ซูมแบบมาตรฐาน (Standard)"
+                            title="ซูมแบบการ์ด (Standard Grid)"
                         >
-                            มาตรฐาน
+                            การ์ด
                         </button>
                         <button
                             type="button"
@@ -474,9 +486,9 @@ export default function SimplifiedLiveOverview({
             {/* 2. Rapid Filter Chips (Thumb-friendly on iPhone) */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs pb-1">
                 {[
-                    { id: 'all', label: 'ทั้งหมด', count: counts.total },
-                    { id: 'occupied', label: 'กำลังเปิดโต๊ะ', count: counts.occupied },
+                    { id: 'occupied', label: 'กำลังเปิดโต๊ะ', count: counts.occupied, isDefault: true },
                     { id: 'calling', label: 'เรียกพนักงาน / บิล', count: counts.calling, alert: counts.calling > 0 },
+                    { id: 'all', label: 'ทั้งหมด', count: counts.total },
                     { id: 'upcoming', label: 'จองล่วงหน้า', count: counts.upcoming },
                     { id: 'free', label: 'โต๊ะว่าง', count: counts.free }
                 ].map(chip => (
@@ -489,6 +501,7 @@ export default function SimplifiedLiveOverview({
                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                         } ${chip.alert ? 'ring-1 ring-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]' : ''}`}
                     >
+                        {chip.isDefault && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />}
                         <span>{chip.label}</span>
                         <span className={`px-1.5 py-0.2 text-[10px] rounded-xs tabular-nums ${
                             selectedFilter === chip.id ? 'bg-white/20 text-white' : 'bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)]'
@@ -505,8 +518,203 @@ export default function SimplifiedLiveOverview({
                     กำลังดึงข้อมูลโต๊ะสดแบบเรียลไทม์...
                 </div>
             ) : filteredFloor.length === 0 ? (
-                <div className="py-16 text-center font-mono text-xs text-[oklch(55%_0.010_28)] border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
-                    ไม่มีโต๊ะในหมวดหมู่นี้
+                <div className="py-12 px-4 text-center font-mono border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] rounded-sm space-y-3">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[oklch(45%_0.08_140)] mx-auto" />
+                    <h4 className="font-bold text-sm sm:text-base text-[oklch(18%_0.012_28)]">
+                        {selectedFilter === 'occupied' ? `ไม่มีโต๊ะที่กำลังเปิดอยู่ในขณะนี้ (0/${counts.total} โต๊ะ)` : 'ไม่มีโต๊ะในหมวดหมู่นี้'}
+                    </h4>
+                    <p className="text-xs text-[oklch(55%_0.010_28)] max-w-sm mx-auto">
+                        {selectedFilter === 'occupied' 
+                            ? 'ทุกโต๊ะว่างและพร้อมให้บริการ หรือยังไม่มีลูกค้าเปิดโต๊ะเช็คอิน'
+                            : 'ลองเลือกตัวกรองอื่นเพื่อดูรายการโต๊ะ'}
+                    </p>
+                    {selectedFilter !== 'all' && (
+                        <div className="pt-1 flex justify-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedFilter('all')}
+                                className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
+                            >
+                                ดูผังโต๊ะทั้งหมด ({counts.total} โต๊ะ)
+                            </button>
+                            <Link
+                                to="/pos"
+                                target="_blank"
+                                className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(90%_0.012_28)]"
+                            >
+                                ไปที่ POS เปิดโต๊ะ ➔
+                            </Link>
+                        </div>
+                    )}
+                </div>
+            ) : zoomMode === 'list' ? (
+                /* -------------------------------------------------------------
+                   ZOOM LEVEL 0: SUMMARY LIST (LIST สรุป - DEFAULT FOR BACKOFFICE)
+                ------------------------------------------------------------- */
+                <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-sm overflow-hidden shadow-2xs">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left font-mono text-xs border-collapse">
+                            <thead>
+                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[11px] font-bold">
+                                    <th className="py-2.5 px-3 whitespace-nowrap">โต๊ะ / ความจุ</th>
+                                    <th className="py-2.5 px-3 whitespace-nowrap">เวลา / สถานะ</th>
+                                    <th className="py-2.5 px-3 whitespace-nowrap">รายการอาหารที่สั่ง</th>
+                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">ยอดรวมบิล</th>
+                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">การดำเนินการ</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
+                                {filteredFloor.map(item => {
+                                    const isOccupied = item.state.status === 'occupied'
+                                    const isUpcoming = item.state.status === 'upcoming'
+                                    const isBlocked = item.state.status === 'blocked'
+                                    const orderItems = item.orderItems
+
+                                    // Food items preview text
+                                    const itemPreviews = orderItems.map(it => `${it.quantity}x ${it.menu_items?.name || 'อาหาร'}`)
+                                    const foodText = itemPreviews.length > 0 
+                                        ? itemPreviews.slice(0, 3).join(', ') + (itemPreviews.length > 3 ? ` (+${itemPreviews.length - 3})` : '')
+                                        : 'ยังไม่มีรายการ'
+
+                                    // Progressive stay color
+                                    let durationPill = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
+                                    if (isOccupied) {
+                                        if (item.elapsedMins >= 75) durationPill = 'bg-[oklch(52%_0.16_28)] text-white'
+                                        else if (item.elapsedMins >= 45) durationPill = 'bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)]'
+                                        else durationPill = 'bg-[oklch(45%_0.08_140)] text-white'
+                                    }
+
+                                    return (
+                                        <tr
+                                            key={item.table.id}
+                                            onClick={() => setInspectingTable(item)}
+                                            className={`hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer select-none ${
+                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : ''
+                                            }`}
+                                        >
+                                            {/* Table & Pax */}
+                                            <td className="py-3 px-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-base text-[oklch(18%_0.012_28)]">
+                                                        {item.table.table_name}
+                                                    </span>
+                                                    <span className="text-[10px] px-1.5 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs">
+                                                        {item.table.capacity} Pax
+                                                    </span>
+                                                </div>
+                                            </td>
+
+                                            {/* Time / Status */}
+                                            <td className="py-3 px-3 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    {isOccupied ? (
+                                                        <>
+                                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-xs tabular-nums ${durationPill}`}>
+                                                                {formatThaiDuration(item.elapsedMins)}
+                                                            </span>
+                                                            <span className="text-[10px] text-[oklch(55%_0.010_28)] hidden sm:inline tabular-nums">
+                                                                (เริ่ม {formatThaiTimeOnly(item.booking?.booking_time)})
+                                                            </span>
+                                                        </>
+                                                    ) : isUpcoming ? (
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-black">
+                                                            จองล่วงหน้า
+                                                        </span>
+                                                    ) : isBlocked ? (
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-black/40 text-white">
+                                                            BLOCKED
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]">
+                                                            โต๊ะว่าง
+                                                        </span>
+                                                    )}
+
+                                                    {/* Call Staff / Bill Alert Badge */}
+                                                    {(item.hasCallBill || item.hasCallStaff) && (
+                                                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-xs animate-pulse">
+                                                            🔔 {item.hasCallBill ? 'เช็คบิล' : 'เรียกพนักงาน'}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Order Items Preview */}
+                                            <td className="py-3 px-3 max-w-[280px] truncate">
+                                                {isOccupied ? (
+                                                    <div className="flex items-center gap-1.5 truncate">
+                                                        <span className="font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                                            {orderItems.length} รายการ:
+                                                        </span>
+                                                        <span className="text-[11px] text-[oklch(55%_0.010_28)] truncate">
+                                                            {foodText}
+                                                        </span>
+                                                        <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline">
+                                                            [ดูครบ]
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[oklch(60%_0.010_28)] text-[11px]">-</span>
+                                                )}
+                                            </td>
+
+                                            {/* Total Amount */}
+                                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                                                <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                                    {isOccupied ? `฿${item.billTotal.toLocaleString()}` : '-'}
+                                                </span>
+                                            </td>
+
+                                            {/* Actions */}
+                                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    {isOccupied && item.booking ? (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                disabled={actionLoading}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    handleExtendTable(item.booking, 30)
+                                                                }}
+                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs cursor-pointer"
+                                                                title="ต่อเวลาอีก 30 นาที"
+                                                            >
+                                                                +30น.
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                disabled={actionLoading}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    handleReleaseTable(item.booking.id, item.table.table_name)
+                                                                }}
+                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xs cursor-pointer"
+                                                                title="เคลียร์โต๊ะนี้"
+                                                            >
+                                                                เคลียร์
+                                                            </button>
+                                                            <Link
+                                                                to={`/pos?table=${item.table.table_name}`}
+                                                                target="_blank"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-xs cursor-pointer"
+                                                                title="เปิดใน POS"
+                                                            >
+                                                                POS ➔
+                                                            </Link>
+                                                        </>
+                                                    ) : (
+                                                        <span className="text-[10px] text-[oklch(60%_0.010_28)]">พร้อมเปิดโต๊ะ</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             ) : zoomMode === 'focus' ? (
                 /* -------------------------------------------------------------

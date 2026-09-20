@@ -20,6 +20,7 @@ import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
 import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
 import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
+import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBillsSummaryList'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
@@ -683,13 +684,43 @@ export default function AdminDashboard() {
 
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
                 {overviewMode === 'simplified' ? (
-                    <div className="mb-6">
+                    <div className="space-y-6 mb-6">
+                        {/* 1. Simplified Live Floor (Focused on Occupied Tables by Default) */}
                         <SimplifiedLiveOverview 
                             bookings={dailyBookings}
                             revenueToday={revenueToday}
                             shifts={shifts}
                             loading={loading}
                             onRefresh={() => fetchData(true, selectedDate)}
+                            onOpenProMode={() => handleSetOverviewMode('pro')}
+                        />
+
+                        {/* 1.2 Incoming Online Booking Alert if pending */}
+                        {pendingBookings.length > 0 && (
+                            <div className="p-3 bg-[oklch(95%_0.02_65)] border border-[oklch(75%_0.18_65)] rounded-sm flex items-center justify-between font-mono text-xs text-[oklch(18%_0.012_28)]">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-[oklch(75%_0.18_65)] animate-ping" />
+                                    <span className="font-bold">🔔 มีคำขอจองโต๊ะใหม่ {pendingBookings.length} รายการใน Inbox</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        handleSetOverviewMode('pro')
+                                        setActiveTab('inbox')
+                                    }}
+                                    className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-white text-[11px] font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
+                                >
+                                    ตรวจสอบรายการจอง ➔
+                                </button>
+                            </div>
+                        )}
+
+                        {/* 1.5 Backoffice Simplified Daily Bills Summary List */}
+                        <SimplifiedBillsSummaryList 
+                            bookings={dailyBookings}
+                            loading={loading}
+                            onViewSlip={setViewSlipUrl}
+                            onPrintSlip={handlePrint}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                         />
                     </div>
@@ -741,47 +772,47 @@ export default function AdminDashboard() {
                         <LiveFloorQuickStatus 
                             onOccupancyChange={setFloorOccupancy}
                         />
+
+                        {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
+                        <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] pt-4 font-mono text-xs no-scrollbar">
+                            {[
+                                { key: 'bills', label: 'ALL BILLS', count: dailyBookings.length, icon: Receipt },
+                                { key: 'shifts', label: 'SHIFTS (กะเงินสด)', count: shifts.length, icon: Layers },
+                                { key: 'inbox', label: 'INBOX', count: pendingBookings.length, icon: Inbox },
+                                { key: 'schedule', label: 'SCHEDULE', count: scheduleBookings.length, icon: Clock },
+                                { key: 'dine_in', label: 'DINE-IN', count: dineInCount, icon: Utensils },
+                                { key: 'pickup', label: 'PICKUP', count: pickupCount, icon: ShoppingBag }
+                            ].map((tab) => {
+                                const isActive = activeTab === tab.key
+                                const Icon = tab.icon
+                                return (
+                                    <button
+                                        key={tab.key}
+                                        onClick={() => setActiveTab(tab.key)}
+                                        className={`pb-2.5 px-3.5 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[1px] flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+                                            isActive 
+                                                ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
+                                                : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                        }`}
+                                    >
+                                        <Icon size={14} className={isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'} />
+                                        <span>{tab.label}</span>
+                                        <span className={`px-1.5 py-0.2 rounded-xs text-[10px] tabular-nums font-mono ${
+                                            isActive ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'
+                                        }`}>
+                                            {tab.count}
+                                        </span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* 5. Tab Content: Master Bills Hub / Inbox / Schedule */}
+                        <div>
+                            {getTabContent()}
+                        </div>
                     </div>
                 )}
-
-                {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
-                <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
-                    {[
-                        { key: 'bills', label: 'ALL BILLS', count: dailyBookings.length, icon: Receipt },
-                        { key: 'shifts', label: 'SHIFTS (กะเงินสด)', count: shifts.length, icon: Layers },
-                        { key: 'inbox', label: 'INBOX', count: pendingBookings.length, icon: Inbox },
-                        { key: 'schedule', label: 'SCHEDULE', count: scheduleBookings.length, icon: Clock },
-                        { key: 'dine_in', label: 'DINE-IN', count: dineInCount, icon: Utensils },
-                        { key: 'pickup', label: 'PICKUP', count: pickupCount, icon: ShoppingBag }
-                    ].map((tab) => {
-                        const isActive = activeTab === tab.key
-                        const Icon = tab.icon
-                        return (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                className={`pb-2.5 px-3.5 font-bold uppercase tracking-wider transition-all border-b-2 -mb-[1px] flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-                                    isActive 
-                                        ? 'border-[oklch(52%_0.16_28)] text-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)]' 
-                                        : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                            >
-                                <Icon size={14} className={isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'} />
-                                <span>{tab.label}</span>
-                                <span className={`px-1.5 py-0.2 rounded-xs text-[10px] tabular-nums font-mono ${
-                                    isActive ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'
-                                }`}>
-                                    {tab.count}
-                                </span>
-                            </button>
-                        )
-                    })}
-                </div>
-
-                {/* 5. Tab Content: Master Bills Hub / Inbox / Schedule */}
-                <div>
-                    {getTabContent()}
-                </div>
             </div>
 
             {/* Daily Summary PNG Slip Modal */}
