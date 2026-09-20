@@ -304,52 +304,9 @@ export default function SimplifiedLiveOverview({
         }
     }
 
-    // Release table
-    const handleReleaseTable = async (bookingId, tableName) => {
-        setActionLoading(true)
-        try {
-            const currentBooking = liveBookings.find(b => b.id === bookingId)
-            const isInternalBlock = currentBooking?.customer_note === 'Internal Block' || currentBooking?.customer_note === 'Maintenance Block'
-            const targetStatus = isInternalBlock ? 'cancelled' : 'completed'
 
-            const { error } = await supabase
-                .from('bookings')
-                .update({ status: targetStatus, end_time: new Date().toISOString() })
-                .eq('id', bookingId)
 
-            if (error) throw error
-            toast.success(`เคลียร์โต๊ะ ${tableName} เรียบร้อย`)
-            setInspectingTable(null)
-            fetchFloorData(true)
-        } catch (err) {
-            toast.error('เคลียร์โต๊ะไม่สำเร็จ: ' + err.message)
-        } finally {
-            setActionLoading(false)
-        }
-    }
 
-    // Extend table duration
-    const handleExtendTable = async (booking, mins = 30) => {
-        setActionLoading(true)
-        try {
-            const currentEnd = booking.end_time ? new Date(booking.end_time) : new Date(new Date(booking.booking_time).getTime() + 2 * 60 * 60 * 1000)
-            const baseTime = currentEnd > new Date() ? currentEnd : new Date()
-            const newEnd = new Date(baseTime.getTime() + mins * 60 * 1000)
-
-            const { error } = await supabase
-                .from('bookings')
-                .update({ end_time: newEnd.toISOString() })
-                .eq('id', booking.id)
-
-            if (error) throw error
-            toast.success(`ต่อเวลาโต๊ะ +${mins} นาทีเรียบร้อย`)
-            fetchFloorData(true)
-        } catch (err) {
-            toast.error('ต่อเวลาไม่สำเร็จ: ' + err.message)
-        } finally {
-            setActionLoading(false)
-        }
-    }
 
     return (
         <div 
@@ -512,7 +469,7 @@ export default function SimplifiedLiveOverview({
                                     <th className="py-2.5 px-3 whitespace-nowrap">เวลา / สถานะ</th>
                                     <th className="py-2.5 px-3 whitespace-nowrap">รายการอาหารที่สั่ง</th>
                                     <th className="py-2.5 px-3 text-right whitespace-nowrap">ยอดรวมบิล</th>
-                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">การดำเนินการ</th>
+                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">รายละเอียดบิล</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
@@ -617,38 +574,24 @@ export default function SimplifiedLiveOverview({
                                                 </span>
                                             </td>
 
-                                            {/* Actions */}
+                                            {/* Bill Details */}
                                             <td className="py-3 px-3 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-1.5">
+                                                <div className="flex items-center justify-end">
                                                     {isOccupied && item.booking ? (
-                                                        <>
-                                                            <button
-                                                                type="button"
-                                                                disabled={actionLoading}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    handleExtendTable(item.booking, 30)
-                                                                }}
-                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs cursor-pointer"
-                                                                title="ต่อเวลาอีก 30 นาที"
-                                                            >
-                                                                +30น.
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                disabled={actionLoading}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation()
-                                                                    handleReleaseTable(item.booking.id, item.table.table_name)
-                                                                }}
-                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
-                                                                title="เคลียร์โต๊ะนี้"
-                                                            >
-                                                                เคลียร์
-                                                            </button>
-                                                        </>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                setInspectingTable(item)
+                                                            }}
+                                                            className="px-2.5 py-1 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1"
+                                                            title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
+                                                        >
+                                                            <span>ดูบิลอาหาร</span>
+                                                            <span>➔</span>
+                                                        </button>
                                                     ) : (
-                                                        <span className="text-[10px] text-[oklch(60%_0.010_28)]">พร้อมเปิดโต๊ะ</span>
+                                                        <span className="text-[10px] text-[oklch(60%_0.010_28)]">โต๊ะว่าง</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -787,27 +730,19 @@ export default function SimplifiedLiveOverview({
                                 )}
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex flex-wrap gap-2 pt-4 border-t border-[oklch(85%_0.012_28)]">
+                            {/* Actions / View Details */}
+                            <div className="flex items-center justify-between pt-4 border-t border-[oklch(85%_0.012_28)]">
+                                <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                                    ⓘ การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
+                                </span>
                                 {item.booking && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            disabled={actionLoading}
-                                            onClick={() => handleExtendTable(item.booking, 30)}
-                                            className="px-4 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
-                                        >
-                                            +30 นาที
-                                        </button>
-                                        <button
-                                            type="button"
-                                            disabled={actionLoading}
-                                            onClick={() => handleReleaseTable(item.booking.id, item.table.table_name)}
-                                            className="px-4 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
-                                        >
-                                            เคลียร์โต๊ะนี้
-                                        </button>
-                                    </>
+                                    <button
+                                        type="button"
+                                        onClick={() => setInspectingTable(item)}
+                                        className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
+                                    >
+                                        ดูรายการอาหารครบ ➔
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -1092,28 +1027,18 @@ export default function SimplifiedLiveOverview({
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="pt-3 mt-2 flex flex-wrap gap-2">
-                            {inspectingTable.booking && (
-                                <>
-                                    <button
-                                        type="button"
-                                        disabled={actionLoading}
-                                        onClick={() => handleExtendTable(inspectingTable.booking, 30)}
-                                        className="flex-1 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
-                                    >
-                                        +30 นาที
-                                    </button>
-                                    <button
-                                        type="button"
-                                        disabled={actionLoading}
-                                        onClick={() => handleReleaseTable(inspectingTable.booking.id, inspectingTable.table.table_name)}
-                                        className="flex-1 py-2.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
-                                    >
-                                        เคลียร์โต๊ะ
-                                    </button>
-                                </>
-                            )}
+                        {/* Modal Footer (Read-only Remote Cockpit) */}
+                        <div className="pt-3 mt-2 flex items-center justify-between gap-3 border-t border-[oklch(85%_0.012_28)]">
+                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                ⓘ การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setInspectingTable(null)}
+                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
+                            >
+                                ✕ ปิดหน้าต่าง
+                            </button>
                         </div>
                     </div>
                 </div>
