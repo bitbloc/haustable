@@ -19,6 +19,7 @@ import AdminShiftsLedgerTab from './components/admin/overview/AdminShiftsLedgerT
 import AllDailyBillsHub from './components/admin/overview/AllDailyBillsHub'
 import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastBar'
 import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
+import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
@@ -33,6 +34,21 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor, dine_in, pickup
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
+    const [overviewMode, setOverviewMode] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_admin_overview_mode') || 'simplified'
+        } catch {
+            return 'simplified'
+        }
+    })
+
+    const handleSetOverviewMode = (mode) => {
+        setOverviewMode(mode)
+        try {
+            localStorage.setItem('onhaus_admin_overview_mode', mode)
+        } catch {}
+    }
+
     const [slipData, setSlipData] = useState(null) // { booking, type }
     const [viewSlipUrl, setViewSlipUrl] = useState(null)
     const [taxInvoiceBooking, setTaxInvoiceBooking] = useState(null)
@@ -600,6 +616,35 @@ export default function AdminDashboard() {
                             <span className="hidden sm:inline">{soundMuted ? 'MUTED' : 'ALERT ON'}</span>
                         </button>
 
+                        {/* Mode Switcher: Simplified Live (Default) vs Pro Mode */}
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm font-mono text-xs shadow-2xs">
+                            <button
+                                type="button"
+                                onClick={() => handleSetOverviewMode('simplified')}
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    overviewMode === 'simplified'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
+                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title="โหมดสด: แสดงสถานะโต๊ะสดและรายการอาหาร (เหมาะสำหรับมือถือ/iPad)"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                                <span>LIVE OVERVIEW</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleSetOverviewMode('pro')}
+                                className={`px-2.5 sm:px-3 py-1.5 rounded-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    overviewMode === 'pro'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
+                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title="โหมดโปร: ชาร์ตวิเคราะห์สถิติความเร็วยอดขายและการเงินเชิงลึก"
+                            >
+                                <span>PRO ANALYTICS</span>
+                            </button>
+                        </div>
+
                         {/* Export Daily Summary PNG Slip */}
                         <button 
                             type="button"
@@ -608,7 +653,8 @@ export default function AdminDashboard() {
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
                             <FileText size={14} />
-                            <span>EXPORT สลิปปิดวัน (PNG)</span>
+                            <span className="hidden md:inline">EXPORT สลิปปิดวัน (PNG)</span>
+                            <span className="md:hidden">สลิปปิดวัน</span>
                         </button>
 
                         {/* Direct POS Link */}
@@ -618,7 +664,7 @@ export default function AdminDashboard() {
                             rel="noreferrer"
                             className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
                         >
-                            <span>OPEN POS</span>
+                            <span>POS</span>
                             <ArrowUpRight size={14} />
                         </a>
 
@@ -630,59 +676,73 @@ export default function AdminDashboard() {
                             className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            <span>REFRESH</span>
+                            <span className="hidden sm:inline">REFRESH</span>
                         </button>
                     </div>
                 </div>
 
-                {/* 1. Live Pulse KPI Strip & Payment Breakdown */}
-                <LivePulseMetrics 
-                    revenueToday={revenueToday}
-                    completedOrdersCount={completedOrdersCount}
-                    activeUnpaidRevenue={activeUnpaidRevenue}
-                    activeUnpaidCount={activeUnpaidCount}
-                    totalTables={floorOccupancy.totalTables}
-                    occupiedTables={floorOccupancy.occupiedTables}
-                    totalGuests={floorOccupancy.totalGuests}
-                    pendingInboxCount={pendingBookings.length}
-                    dineInCount={dineInCount}
-                    pickupCount={pickupCount}
-                    paymentBreakdown={paymentBreakdown}
-                    loading={loading}
-                />
+                {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
+                {overviewMode === 'simplified' ? (
+                    <div className="mb-6">
+                        <SimplifiedLiveOverview 
+                            bookings={dailyBookings}
+                            revenueToday={revenueToday}
+                            shifts={shifts}
+                            loading={loading}
+                            onRefresh={() => fetchData(true, selectedDate)}
+                            onOpenProMode={() => handleSetOverviewMode('pro')}
+                        />
+                    </div>
+                ) : (
+                    <div className="space-y-6 mb-6">
+                        {/* 1. Live Pulse KPI Strip & Payment Breakdown */}
+                        <LivePulseMetrics 
+                            revenueToday={revenueToday}
+                            completedOrdersCount={completedOrdersCount}
+                            activeUnpaidRevenue={activeUnpaidRevenue}
+                            activeUnpaidCount={activeUnpaidCount}
+                            totalTables={floorOccupancy.totalTables}
+                            occupiedTables={floorOccupancy.occupiedTables}
+                            totalGuests={floorOccupancy.totalGuests}
+                            pendingInboxCount={pendingBookings.length}
+                            dineInCount={dineInCount}
+                            pickupCount={pickupCount}
+                            paymentBreakdown={paymentBreakdown}
+                            loading={loading}
+                        />
 
-                {/* 1.2 Handcrafted Data Visual: Intraday Sales Velocity Curve */}
-                <IntradayVelocityChart
-                    bookings={dailyBookings}
-                    selectedDate={selectedDate}
-                    loading={loading}
-                />
+                        {/* 1.2 Handcrafted Data Visual: Intraday Sales Velocity Curve */}
+                        <IntradayVelocityChart
+                            bookings={dailyBookings}
+                            selectedDate={selectedDate}
+                            loading={loading}
+                        />
 
-                {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
-                <DailyShiftsCashFlowWidget
-                    shifts={shifts}
-                    loading={loading}
-                    selectedDate={selectedDate}
-                    onSelectShiftTab={setActiveTab}
-                    onRefreshShifts={() => fetchData(false, selectedDate)}
-                />
+                        {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
+                        <DailyShiftsCashFlowWidget
+                            shifts={shifts}
+                            loading={loading}
+                            selectedDate={selectedDate}
+                            onSelectShiftTab={setActiveTab}
+                            onRefreshShifts={() => fetchData(false, selectedDate)}
+                        />
 
-                {/* 2. Owner Direct Broadcast to POS Screen */}
-                <div className="mb-6">
-                    <OwnerPosBroadcastBar />
-                </div>
+                        {/* 2. Owner Direct Broadcast to POS Screen */}
+                        <OwnerPosBroadcastBar />
 
-                {/* 2.5 Handcrafted Data Visual: Table Turn Dwell Time & Service Mix Flow */}
-                <FloorTurnoverGauge
-                    bookings={dailyBookings}
-                    totalTables={floorOccupancy.totalTables}
-                    occupiedTables={floorOccupancy.occupiedTables}
-                />
+                        {/* 2.5 Handcrafted Data Visual: Table Turn Dwell Time & Service Mix Flow */}
+                        <FloorTurnoverGauge
+                            bookings={dailyBookings}
+                            totalTables={floorOccupancy.totalTables}
+                            occupiedTables={floorOccupancy.occupiedTables}
+                        />
 
-                {/* 3. Interactive Live Floor & 1-Tap Table Block (Shown always for quick overview) */}
-                <LiveFloorQuickStatus 
-                    onOccupancyChange={setFloorOccupancy}
-                />
+                        {/* 3. Interactive Live Floor & 1-Tap Table Block */}
+                        <LiveFloorQuickStatus 
+                            onOccupancyChange={setFloorOccupancy}
+                        />
+                    </div>
+                )}
 
                 {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
                 <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] mb-6 font-mono text-xs no-scrollbar">
