@@ -4,6 +4,7 @@ import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
+import { formatOrderItemOptions } from '../../../utils/menuHelper'
 
 /**
  * SimplifiedLiveOverview Component
@@ -717,7 +718,7 @@ export default function SimplifiedLiveOverview({
                                                         const itemName = it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                         const lineTotal = price * Number(it.quantity || 1)
-                                                        const options = it.selected_options
+                                                        const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.special_instructions)
 
                                                         return (
                                                             <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
@@ -729,10 +730,14 @@ export default function SimplifiedLiveOverview({
                                                                         <span className="font-bold text-[oklch(18%_0.012_28)] text-[11px] leading-tight block truncate">
                                                                             {itemName}
                                                                         </span>
-                                                                        {options && (
-                                                                            <span className="text-[10px] text-[oklch(52%_0.16_28)] block truncate">
-                                                                                {typeof options === 'object' ? JSON.stringify(options).replace(/["{}]/g, ' ') : String(options)}
-                                                                            </span>
+                                                                        {optList.length > 0 && (
+                                                                            <div className="text-[10px] text-[oklch(52%_0.16_28)] space-y-0.5 mt-0.5">
+                                                                                {optList.map((optStr, optIdx) => (
+                                                                                    <span key={optIdx} className="block truncate font-medium">
+                                                                                        • {optStr}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -835,7 +840,7 @@ export default function SimplifiedLiveOverview({
                                     const itemName = item.menu_items?.name || 'รายการอาหาร'
                                     const price = Number(item.price_at_time || item.menu_items?.price || 0)
                                     const lineTotal = price * Number(item.quantity || 1)
-                                    const options = item.selected_options
+                                    const optList = formatOrderItemOptions(item.selected_options, item.item_note || item.special_instructions)
 
                                     return (
                                         <div key={item.id || idx} className="py-2.5 flex items-start justify-between gap-3">
@@ -847,10 +852,14 @@ export default function SimplifiedLiveOverview({
                                                     <span className="font-bold text-sm text-[oklch(18%_0.012_28)] block">
                                                         {itemName}
                                                     </span>
-                                                    {options && (
-                                                        <span className="text-[11px] text-[oklch(52%_0.16_28)] block mt-0.5">
-                                                            {typeof options === 'object' ? JSON.stringify(options).replace(/["{}]/g, ' ') : String(options)}
-                                                        </span>
+                                                    {optList.length > 0 && (
+                                                        <div className="text-[11px] text-[oklch(52%_0.16_28)] space-y-0.5 mt-1">
+                                                            {optList.map((optStr, optIdx) => (
+                                                                <span key={optIdx} className="block font-medium">
+                                                                    • {optStr}
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                     )}
                                                 </div>
                                             </div>

@@ -120,6 +120,11 @@ export const formatOrderItemOptions = (options, itemNote = null) => {
         }
     }
 
+    const IGNORED_OPTION_KEYS = new Set([
+        'group_id', 'choice_id', 'option_id', 'item_id', 'menu_item_id', 
+        'id', 'created_at', 'updated_at', 'price', 'extra_price', 'price_adjustment'
+    ])
+
     const formatSingleOpt = (opt) => {
         if (!opt) return ''
         if (typeof opt === 'string' || typeof opt === 'number') {
@@ -136,13 +141,25 @@ export const formatOrderItemOptions = (options, itemNote = null) => {
             const priceStr = price > 0 ? ` (+฿${price})` : ''
 
             if (group && name) {
+                // If group name is redundant or already captured in choice name
+                const gLower = group.toLowerCase()
+                const nLower = name.toLowerCase()
+                if (nLower.includes(gLower) || gLower.includes(nLower)) {
+                    return `${name}${priceStr}`
+                }
+                const gTokens = gLower.split(/[\s,()\/]+/).filter(t => t.length >= 3)
+                const nTokens = nLower.split(/[\s,()\/]+/).filter(t => t.length >= 3)
+                const hasCommonToken = gTokens.some(t => nTokens.includes(t))
+                if (hasCommonToken && (nLower.includes('add') || nLower.includes('no') || nLower.includes('รับ') || nLower.includes('ไม่'))) {
+                    return `${name}${priceStr}`
+                }
                 return `${group}: ${name}${priceStr}`
             }
             if (name) {
                 return `${name}${priceStr}`
             }
-            // If it's a key-value object
-            const entries = Object.entries(opt)
+            // If it's a key-value object (ignore internal database keys like group_id, choice_id)
+            const entries = Object.entries(opt).filter(([k]) => !IGNORED_OPTION_KEYS.has(k.toLowerCase()))
             if (entries.length > 0) {
                 const parts = entries
                     .map(([k, v]) => {
