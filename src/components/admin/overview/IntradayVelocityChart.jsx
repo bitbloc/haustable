@@ -142,12 +142,51 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
     const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
     const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
 
+    // 1. Calculate Predictive Forecast Trajectory (from latest active hour point forward to 23:00)
+    const { projectedTotal, forecastPoints } = useMemo(() => {
+        if (!isViewingToday || activePoints.length === 0) {
+            return { projectedTotal: 0, forecastPoints: [] }
+        }
+
+        const lastActive = activePoints[activePoints.length - 1]
+        const lastIdx = hours.indexOf(lastActive.hour)
+        if (lastIdx === -1 || lastIdx >= hours.length - 1) {
+            return { projectedTotal: totalRevenue, forecastPoints: [] }
+        }
+
+        const currentActual = lastActive.cumulative
+        const curveWeights = [0.03, 0.12, 0.24, 0.30, 0.35, 0.40, 0.50, 0.68, 0.84, 0.93, 0.97, 0.99, 1.0]
+        const currentWeight = curveWeights[lastIdx] || 0.5
+        const remainingWeight = Math.max(0.01, 1.0 - currentWeight)
+
+        // Project full day closing total:
+        const baseTarget = Math.max(12000, currentActual)
+        const paceProjected = currentActual > 0 ? (currentActual / currentWeight) : baseTarget
+        const blended = Math.round(paceProjected * 0.75 + baseTarget * 0.25)
+        const finalEst = Math.max(currentActual, blended)
+
+        const fPoints = []
+        for (let i = lastIdx; i < hours.length; i++) {
+            const h = hours[i]
+            const w = curveWeights[i] || 1.0
+            const progress = (w - currentWeight) / remainingWeight
+            const cum = Math.round(currentActual + (finalEst - currentActual) * Math.max(0, Math.min(1, progress)))
+            fPoints.push({
+                hour: h,
+                cumulative: cum,
+                idx: i
+            })
+        }
+
+        return { projectedTotal: finalEst, forecastPoints: fPoints }
+    }, [isViewingToday, activePoints, hours, totalRevenue])
+
     const maxVal = useMemo(() => {
         const maxCum = points.length > 0 ? points[points.length - 1].cumulative : 0
         const maxBench = benchmarkPoints.length > 0 ? benchmarkPoints[benchmarkPoints.length - 1].expectedCumulative : 0
-        const ceiling = Math.max(maxCum, maxBench, 12000)
+        const ceiling = Math.max(maxCum, maxBench, projectedTotal || 0, 12000)
         return Math.ceil(ceiling / 5000) * 5000
-    }, [points, benchmarkPoints])
+    }, [points, benchmarkPoints, projectedTotal])
 
     const getX = (idx) => padLeft + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxVal) * plotHeight
@@ -187,6 +226,13 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         return { pathActual: pathAct, pathArea: pathAr, pathBenchmark: pathBench }
     }, [points, activePoints, benchmarkPoints, hours, maxVal, plotWidth, plotHeight, svgHeight, padLeft, padRight])
 
+    // Generate Forecast Path
+    const pathForecast = useMemo(() => {
+        if (!forecastPoints || forecastPoints.length < 2) return ''
+        const coords = forecastPoints.map(pt => `${getX(pt.idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
+        return `M ${coords.join(' L ')}`
+    }, [forecastPoints, maxVal, plotWidth, plotHeight, padLeft, padRight, svgHeight])
+
     // Peak rush hour
     const peakHour = useMemo(() => {
         let maxS = 0
@@ -222,17 +268,25 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 </div>
 
                 {/* Key Summary Stats */}
-                <div className="flex items-center gap-4 font-mono text-xs">
+                <div className="flex items-center gap-3 sm:gap-4 font-mono text-xs flex-wrap">
                     <div>
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] block">CUMULATIVE TODAY</span>
                         <span className="font-bold text-base sm:text-lg text-[oklch(18%_0.012_28)] tabular-nums">
                             ฿{totalRevenue.toLocaleString()}
                         </span>
                     </div>
+                    {projectedTotal > totalRevenue && (
+                        <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4">
+                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">EST. CLOSING (คาดการณ์ปิดวัน)</span>
+                            <span className="font-bold text-sm sm:text-base text-[oklch(52%_0.20_28)] tabular-nums">
+                                ~฿{projectedTotal.toLocaleString()}
+                            </span>
+                        </div>
+                    )}
                     {peakHour && peakHour.sale > 0 && (
-                        <div className="border-l border-[oklch(85%_0.012_28)] pl-4">
+                        <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4 hidden sm:block">
                             <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PEAK RUSH</span>
-                            <span className="font-bold text-sm text-[oklch(52%_0.20_28)] tabular-nums">
+                            <span className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                 {peakHour.hour}.00 น. (฿{peakHour.sale.toLocaleString()})
                             </span>
                         </div>
@@ -247,14 +301,20 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                 className="p-2 sm:p-4 relative w-full"
             >
                 {/* Visual Legend */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)]">
+                <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 font-mono text-[11px] mb-2 text-[oklch(42%_0.010_28)] flex-wrap">
                     <div className="flex items-center gap-1.5">
                         <span className="w-3.5 h-1.5 bg-[oklch(52%_0.20_28)] rounded-xs inline-block" />
-                        <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดขายจริงวันนี้</span>
+                        <span className="font-bold text-[oklch(18%_0.012_28)]">ยอดขายจริง</span>
                     </div>
+                    {pathForecast && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.20_28)] inline-block opacity-80" />
+                            <span className="font-bold text-[oklch(52%_0.20_28)]">เส้นโมชันคาดการณ์ (Forecast)</span>
+                        </div>
+                    )}
                     <div className="flex items-center gap-1.5">
                         <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
-                        <span>Benchmark คาดการณ์</span>
+                        <span>Benchmark ค่าเฉลี่ย</span>
                     </div>
                 </div>
 
@@ -271,6 +331,19 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                 <stop offset="0%" stopColor="oklch(52% 0.20 28)" stopOpacity="0.30" />
                                 <stop offset="100%" stopColor="oklch(52% 0.20 28)" stopOpacity="0.02" />
                             </linearGradient>
+                            <style>{`
+                                @keyframes forecastStream {
+                                    from {
+                                        stroke-dashoffset: 20;
+                                    }
+                                    to {
+                                        stroke-dashoffset: 0;
+                                    }
+                                }
+                                .forecast-flow-line {
+                                    animation: forecastStream 2.2s linear infinite;
+                                }
+                            `}</style>
                         </defs>
 
                         {/* Rush Hour Highlight Banners */}
@@ -375,6 +448,48 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             />
                         )}
 
+                        {/* Animated Smooth Predictive Forecast Line (โมชันเส้นประคาดการณ์แบบลื่นไหล) */}
+                        {pathForecast && (
+                            <path
+                                d={pathForecast}
+                                fill="none"
+                                stroke="oklch(52% 0.20 28)"
+                                strokeWidth={isMobile ? '2.5' : '3'}
+                                strokeDasharray="6 4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="forecast-flow-line opacity-80"
+                            />
+                        )}
+
+                        {/* Forecast Projected End Pip & Tag at 23:00 */}
+                        {forecastPoints && forecastPoints.length > 1 && (() => {
+                            const lastF = forecastPoints[forecastPoints.length - 1]
+                            const fx = getX(lastF.idx)
+                            const fy = getY(lastF.cumulative)
+                            return (
+                                <g>
+                                    <circle
+                                        cx={fx}
+                                        cy={fy}
+                                        r={isMobile ? '3' : '3.5'}
+                                        fill="oklch(97% 0.008 28)"
+                                        stroke="oklch(52% 0.20 28)"
+                                        strokeWidth="1.5"
+                                        strokeDasharray="2 1"
+                                    />
+                                    <text
+                                        x={fx - 4}
+                                        y={fy - 8}
+                                        textAnchor="end"
+                                        className="font-mono text-[9px] font-bold fill-[oklch(52%_0.20_28)] tabular-nums"
+                                    >
+                                        EST. ~฿{projectedTotal >= 1000 ? `${Math.round(projectedTotal / 1000)}k` : projectedTotal}
+                                    </text>
+                                </g>
+                            )
+                        })()}
+
                         {/* Actual Cumulative Main Line (Vibrant Clay Terracotta / Red) */}
                         {pathActual && (
                             <path
@@ -387,27 +502,39 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             />
                         )}
 
-                        {/* Live Now Pulsating Marker on the latest hour point */}
-                        {latestActive && (
-                            <g>
-                                <circle
-                                    cx={getX(hours.indexOf(latestActive.hour))}
-                                    cy={getY(latestActive.cumulative)}
-                                    r={isMobile ? '6' : '8'}
-                                    fill="oklch(52% 0.20 28)"
-                                    opacity="0.3"
-                                    className="animate-ping"
-                                />
-                                <circle
-                                    cx={getX(hours.indexOf(latestActive.hour))}
-                                    cy={getY(latestActive.cumulative)}
-                                    r={isMobile ? '3.5' : '4.5'}
-                                    fill="oklch(52% 0.20 28)"
-                                    stroke="white"
-                                    strokeWidth="2"
-                                />
-                            </g>
-                        )}
+                        {/* Live Now Precision Radar Marker (สุขุม นิ่ง สวยงาม ไม่กระพริบเร็วหรือกดลง) */}
+                        {latestActive && (() => {
+                            const liveX = getX(hours.indexOf(latestActive.hour))
+                            const liveY = getY(latestActive.cumulative)
+                            return (
+                                <g>
+                                    <circle
+                                        cx={liveX}
+                                        cy={liveY}
+                                        r={isMobile ? '7' : '9'}
+                                        fill="oklch(52% 0.20 28)"
+                                        opacity="0.18"
+                                    />
+                                    <circle
+                                        cx={liveX}
+                                        cy={liveY}
+                                        r={isMobile ? '4.5' : '5.5'}
+                                        fill="none"
+                                        stroke="oklch(52% 0.20 28)"
+                                        strokeWidth="1.5"
+                                        opacity="0.75"
+                                    />
+                                    <circle
+                                        cx={liveX}
+                                        cy={liveY}
+                                        r={isMobile ? '3' : '3.5'}
+                                        fill="oklch(52% 0.20 28)"
+                                        stroke="white"
+                                        strokeWidth="1.5"
+                                    />
+                                </g>
+                            )
+                        })()}
 
                         {/* Interactive Data Points and Invisible Hit Columns for mobile tap */}
                         {points.map((pt, i) => {
