@@ -150,16 +150,30 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         return points.filter(p => p.hour <= cappedHour)
     }, [points, isViewingToday, currentBangkokHour])
 
-    // 1. Calculate Predictive Forecast Trajectory (from latest active hour point forward to 23:00)
-    const { projectedTotal, forecastPoints } = useMemo(() => {
+    // 1. Calculate Predictive Forecast Trajectory (Base, High, Low)
+    const { projectedTotal, forecastPoints, projectedHigh, forecastHighPoints, projectedLow, forecastLowPoints } = useMemo(() => {
         if (!isViewingToday || activePoints.length === 0) {
-            return { projectedTotal: 0, forecastPoints: [] }
+            return { 
+                projectedTotal: 0, 
+                forecastPoints: [], 
+                projectedHigh: 0, 
+                forecastHighPoints: [], 
+                projectedLow: 0, 
+                forecastLowPoints: [] 
+            }
         }
 
         const lastActive = activePoints[activePoints.length - 1]
         const lastIdx = hours.indexOf(lastActive.hour)
         if (lastIdx === -1 || lastIdx >= hours.length - 1) {
-            return { projectedTotal: totalRevenue, forecastPoints: [] }
+            return { 
+                projectedTotal: totalRevenue, 
+                forecastPoints: [],
+                projectedHigh: totalRevenue,
+                forecastHighPoints: [],
+                projectedLow: totalRevenue,
+                forecastLowPoints: []
+            }
         }
 
         const currentActual = lastActive.cumulative
@@ -167,34 +181,56 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         const currentWeight = curveWeights[lastIdx] || 0.5
         const remainingWeight = Math.max(0.01, 1.0 - currentWeight)
 
-        // Project full day closing total:
+        // Project full day closing total (Base):
         const baseTarget = Math.max(12000, currentActual)
         const paceProjected = currentActual > 0 ? (currentActual / currentWeight) : baseTarget
         const blended = Math.round(paceProjected * 0.75 + baseTarget * 0.25)
         const finalEst = Math.max(currentActual, blended)
 
+        // Scenarios: High (+25% on remaining delta) and Low (-25% on remaining delta)
+        const remainingDelta = Math.max(0, finalEst - currentActual)
+        const finalHigh = Math.round(currentActual + remainingDelta * 1.25)
+        const finalLow = Math.round(currentActual + remainingDelta * 0.75)
+
         const fPoints = []
+        const fHighPoints = []
+        const fLowPoints = []
+
         for (let i = lastIdx; i < hours.length; i++) {
             const h = hours[i]
             const w = curveWeights[i] || 1.0
             const progress = (w - currentWeight) / remainingWeight
-            const cum = Math.round(currentActual + (finalEst - currentActual) * Math.max(0, Math.min(1, progress)))
-            fPoints.push({
-                hour: h,
-                cumulative: cum,
-                idx: i
-            })
+            const clampedProgress = Math.max(0, Math.min(1, progress))
+
+            // Base trajectory
+            const cum = Math.round(currentActual + remainingDelta * clampedProgress)
+            fPoints.push({ hour: h, cumulative: cum, idx: i })
+
+            // High trajectory (Bull factor)
+            const cumHigh = Math.round(currentActual + (finalHigh - currentActual) * clampedProgress)
+            fHighPoints.push({ hour: h, cumulative: cumHigh, idx: i })
+
+            // Low trajectory (Bear factor)
+            const cumLow = Math.round(currentActual + (finalLow - currentActual) * clampedProgress)
+            fLowPoints.push({ hour: h, cumulative: cumLow, idx: i })
         }
 
-        return { projectedTotal: finalEst, forecastPoints: fPoints }
+        return { 
+            projectedTotal: finalEst, 
+            forecastPoints: fPoints,
+            projectedHigh: finalHigh,
+            forecastHighPoints: fHighPoints,
+            projectedLow: finalLow,
+            forecastLowPoints: fLowPoints
+        }
     }, [isViewingToday, activePoints, hours, totalRevenue])
 
     const maxVal = useMemo(() => {
         const maxCum = points.length > 0 ? points[points.length - 1].cumulative : 0
         const maxBench = benchmarkPoints.length > 0 ? benchmarkPoints[benchmarkPoints.length - 1].expectedCumulative : 0
-        const ceiling = Math.max(maxCum, maxBench, projectedTotal || 0, 12000)
+        const ceiling = Math.max(maxCum, maxBench, projectedHigh || projectedTotal || 0, 12000)
         return Math.ceil(ceiling / 5000) * 5000
-    }, [points, benchmarkPoints, projectedTotal])
+    }, [points, benchmarkPoints, projectedHigh, projectedTotal])
 
     const getX = (idx) => padLeft + (idx / (hours.length - 1)) * plotWidth
     const getY = (val) => svgHeight - padYBottom - (val / maxVal) * plotHeight
@@ -226,12 +262,31 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
         return { pathActual: pathAct, pathArea: pathAr, pathBenchmark: pathBench }
     }, [points, activePoints, benchmarkPoints, hours, maxVal, plotWidth, plotHeight, svgHeight, padLeft, padRight])
 
-    // Generate Forecast Path
+    // Generate Forecast Path (Base)
     const pathForecast = useMemo(() => {
         if (!forecastPoints || forecastPoints.length < 2) return ''
         const coords = forecastPoints.map(pt => `${getX(pt.idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
         return `M ${coords.join(' L ')}`
     }, [forecastPoints, maxVal, plotWidth, plotHeight, padLeft, padRight, svgHeight])
+
+    // Generate Forecast Paths for High, Low, and Shaded Confidence Fan
+    const { pathForecastHigh, pathForecastLow, pathForecastFan } = useMemo(() => {
+        if (!forecastHighPoints || forecastHighPoints.length < 2 || !forecastLowPoints || forecastLowPoints.length < 2) {
+            return { pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
+        }
+
+        const highCoords = forecastHighPoints.map(pt => `${getX(pt.idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
+        const lowCoords = forecastLowPoints.map(pt => `${getX(pt.idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
+
+        const pHigh = `M ${highCoords.join(' L ')}`
+        const pLow = `M ${lowCoords.join(' L ')}`
+
+        // Connect High forward, then Low in reverse to form a closed polygon
+        const reversedLow = [...forecastLowPoints].reverse().map(pt => `${getX(pt.idx).toFixed(1)},${getY(pt.cumulative).toFixed(1)}`)
+        const pFan = `M ${highCoords.join(' L ')} L ${reversedLow.join(' L ')} Z`
+
+        return { pathForecastHigh: pHigh, pathForecastLow: pLow, pathForecastFan: pFan }
+    }, [forecastHighPoints, forecastLowPoints, maxVal, plotWidth, plotHeight, padLeft, padRight, svgHeight])
 
     // Peak rush hour
     const peakHour = useMemo(() => {
@@ -277,10 +332,15 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                     </div>
                     {projectedTotal > totalRevenue && (
                         <div className="border-l border-[oklch(85%_0.012_28)] pl-3 sm:pl-4">
-                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">EST. CLOSING (คาดการณ์ปิดวัน)</span>
-                            <span className="font-bold text-sm sm:text-base text-[oklch(52%_0.20_28)] tabular-nums">
-                                ~฿{projectedTotal.toLocaleString()}
-                            </span>
+                            <span className="text-[10px] text-[oklch(55%_0.010_28)] block">EST. CLOSING (คาดการณ์ปิดวัน: ฐาน / กรอบ)</span>
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="font-bold text-sm sm:text-base text-[oklch(52%_0.20_28)] tabular-nums">
+                                    ~฿{projectedTotal.toLocaleString()}
+                                </span>
+                                <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)] tabular-nums">
+                                    (ต่ำ ฿{projectedLow >= 1000 ? `${Math.round(projectedLow / 1000)}k` : projectedLow} - สูง ฿{projectedHigh >= 1000 ? `${Math.round(projectedHigh / 1000)}k` : projectedHigh})
+                                </span>
+                            </div>
                         </div>
                     )}
                     {peakHour && peakHour.sale > 0 && (
@@ -308,12 +368,24 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                     </div>
                     {pathForecast && (
                         <div className="flex items-center gap-1.5">
-                            <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.20_28)] inline-block opacity-80" />
-                            <span className="font-bold text-[oklch(52%_0.20_28)]">เส้นโมชันคาดการณ์ (Forecast)</span>
+                            <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.20_28)] inline-block opacity-90" />
+                            <span className="font-bold text-[oklch(52%_0.20_28)]">เส้นเดิม (ฐาน Base)</span>
+                        </div>
+                    )}
+                    {pathForecastHigh && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(45%_0.08_140)] inline-block" />
+                            <span className="text-[oklch(45%_0.08_140)] font-bold">สูง (High)</span>
+                        </div>
+                    )}
+                    {pathForecastLow && (
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
+                            <span className="text-[oklch(55%_0.010_28)]">ต่ำ (Low)</span>
                         </div>
                     )}
                     <div className="flex items-center gap-1.5">
-                        <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(60%_0.015_28)] inline-block" />
+                        <span className="w-3.5 h-1 border-t-2 border-dashed border-[oklch(65%_0.010_28)] inline-block" />
                         <span>Benchmark ค่าเฉลี่ย</span>
                     </div>
                 </div>
@@ -448,7 +520,40 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                             />
                         )}
 
-                        {/* Animated Smooth Predictive Forecast Line (โมชันเส้นประคาดการณ์แบบลื่นไหล) */}
+                        {/* Shaded Forecast Fan / Scenario Cone (พื้นที่กรอบคาดการณ์ ต่ำ - สูง) */}
+                        {pathForecastFan && (
+                            <path
+                                d={pathForecastFan}
+                                fill="oklch(52% 0.20 28)"
+                                opacity="0.07"
+                            />
+                        )}
+
+                        {/* Low Forecast Scenario Line (ต่ำ) */}
+                        {pathForecastLow && (
+                            <path
+                                d={pathForecastLow}
+                                fill="none"
+                                stroke="oklch(60% 0.015 28)"
+                                strokeWidth="1.5"
+                                strokeDasharray="4 3"
+                                opacity="0.75"
+                            />
+                        )}
+
+                        {/* High Forecast Scenario Line (สูง) */}
+                        {pathForecastHigh && (
+                            <path
+                                d={pathForecastHigh}
+                                fill="none"
+                                stroke="oklch(45% 0.08 140)"
+                                strokeWidth="1.8"
+                                strokeDasharray="4 3"
+                                opacity="0.85"
+                            />
+                        )}
+
+                        {/* Animated Smooth Predictive Forecast Line (โมชันเส้นประคาดการณ์แบบลื่นไหล - เส้นเดิม ฐาน) */}
                         {pathForecast && (
                             <path
                                 d={pathForecast}
@@ -458,20 +563,49 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                 strokeDasharray="6 4"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
-                                className="forecast-flow-line opacity-80"
+                                className="forecast-flow-line opacity-90"
                             />
                         )}
 
-                        {/* Forecast Projected End Pip & Tag at 23:00 */}
+                        {/* Forecast Projected End Pips & Tags at 23:00 (ต่ำ / เส้นเดิม ฐาน / สูง) */}
                         {forecastPoints && forecastPoints.length > 1 && (() => {
-                            const lastF = forecastPoints[forecastPoints.length - 1]
-                            const fx = getX(lastF.idx)
-                            const fy = getY(lastF.cumulative)
+                            const lastBase = forecastPoints[forecastPoints.length - 1]
+                            const lastHigh = forecastHighPoints?.[forecastHighPoints.length - 1]
+                            const lastLow = forecastLowPoints?.[forecastLowPoints.length - 1]
+
+                            const fx = getX(lastBase.idx)
+                            const fyBase = getY(lastBase.cumulative)
+                            const fyHigh = lastHigh ? getY(lastHigh.cumulative) : fyBase
+                            const fyLow = lastLow ? getY(lastLow.cumulative) : fyBase
+
                             return (
                                 <g>
+                                    {/* High Scenario Tag */}
+                                    {projectedHigh > projectedTotal && (
+                                        <g>
+                                            <circle
+                                                cx={fx}
+                                                cy={fyHigh}
+                                                r={isMobile ? '2.5' : '3'}
+                                                fill="oklch(97% 0.008 28)"
+                                                stroke="oklch(45% 0.08 140)"
+                                                strokeWidth="1.5"
+                                            />
+                                            <text
+                                                x={fx - 4}
+                                                y={fyHigh - 5}
+                                                textAnchor="end"
+                                                className="font-mono text-[8px] font-bold fill-[oklch(45%_0.08_140)] tabular-nums"
+                                            >
+                                                สูง ~฿{projectedHigh >= 1000 ? `${Math.round(projectedHigh / 1000)}k` : projectedHigh}
+                                            </text>
+                                        </g>
+                                    )}
+
+                                    {/* Base Scenario Tag (เส้นเดิม) */}
                                     <circle
                                         cx={fx}
-                                        cy={fy}
+                                        cy={fyBase}
                                         r={isMobile ? '3' : '3.5'}
                                         fill="oklch(97% 0.008 28)"
                                         stroke="oklch(52% 0.20 28)"
@@ -480,12 +614,34 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
                                     />
                                     <text
                                         x={fx - 4}
-                                        y={fy - 8}
+                                        y={projectedHigh > projectedTotal ? fyBase + 10 : fyBase - 8}
                                         textAnchor="end"
                                         className="font-mono text-[9px] font-bold fill-[oklch(52%_0.20_28)] tabular-nums"
                                     >
-                                        EST. ~฿{projectedTotal >= 1000 ? `${Math.round(projectedTotal / 1000)}k` : projectedTotal}
+                                        ฐาน ~฿{projectedTotal >= 1000 ? `${Math.round(projectedTotal / 1000)}k` : projectedTotal}
                                     </text>
+
+                                    {/* Low Scenario Tag */}
+                                    {projectedLow < projectedTotal && (
+                                        <g>
+                                            <circle
+                                                cx={fx}
+                                                cy={fyLow}
+                                                r={isMobile ? '2.5' : '3'}
+                                                fill="oklch(97% 0.008 28)"
+                                                stroke="oklch(60% 0.015 28)"
+                                                strokeWidth="1.5"
+                                            />
+                                            <text
+                                                x={fx - 4}
+                                                y={fyLow + 10}
+                                                textAnchor="end"
+                                                className="font-mono text-[8px] fill-[oklch(55%_0.010_28)] tabular-nums"
+                                            >
+                                                ต่ำ ~฿{projectedLow >= 1000 ? `${Math.round(projectedLow / 1000)}k` : projectedLow}
+                                            </text>
+                                        </g>
+                                    )}
                                 </g>
                             )
                         })()}

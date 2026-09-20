@@ -12,6 +12,7 @@ import { playOrderAlert } from './utils/audioHelper'
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
 import IntradayVelocityChart from './components/admin/overview/IntradayVelocityChart'
+import IntradayTrafficPredictor from './components/admin/overview/IntradayTrafficPredictor'
 import FloorTurnoverGauge from './components/admin/overview/FloorTurnoverGauge'
 import LiveFloorQuickStatus from './components/admin/overview/LiveFloorQuickStatus'
 import DailyShiftsCashFlowWidget from './components/admin/overview/DailyShiftsCashFlowWidget'
@@ -764,6 +765,14 @@ export default function AdminDashboard() {
                             bookings={dailyBookings}
                             selectedDate={selectedDate}
                             loading={loading}
+                        />
+
+                        {/* 1.3 Tri-Data Fusion: Intraday Customer Traffic & Ad-Intent Rush Predictor with AI Briefing */}
+                        <IntradayTrafficPredictor
+                            bookings={dailyBookings}
+                            selectedDate={selectedDate}
+                            loading={loading}
+                            totalSeats={floorOccupancy.totalTables > 0 ? floorOccupancy.totalTables * 3 : 45}
                         />
 
                         {/* 1.5 Executive Daily Shifts & Cash In/Out Summary */}
