@@ -53,6 +53,7 @@ const ArcadeClaim = lazy(() => import('./pages/arcade/ArcadeClaim'))
 const HausmadeShopPage = lazy(() => import('./pages/HausmadeShopPage'))
 const HausmadeAdminPage = lazy(() => import('./pages/admin/HausmadeAdminPage'))
 const HausmadeKeychainPage = lazy(() => import('./pages/HausmadeKeychainPage'))
+const AdminStaffLogsPage = lazy(() => import('./pages/admin/AdminStaffLogsPage'))
 
 const FallbackLoader = () => (
   <div className="min-h-screen bg-[#ECECE9] flex flex-col items-center justify-center text-[#181815] font-mono text-xs uppercase tracking-widest gap-3 select-none">
@@ -223,6 +224,7 @@ function App() {
                   <Route path="arcade" element={<AdminMarketingPage defaultTab="arcade" />} />
                   <Route path="songs" element={<AdminMarketingPage defaultTab="songs" />} />
                   <Route path="hausmade" element={<HausmadeAdminPage />} />
+                  <Route path="logs" element={<AdminStaffLogsPage />} />
                   <Route path="settings" element={<AdminSettings />} />
                 </Route>
 

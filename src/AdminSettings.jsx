@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import { supabase } from './lib/supabaseClient';
 import { DEFAULT_CRM_TIERS, parseTiersConfig } from './utils/crmHelper';
 import { getAppOrigin } from './utils/urlHelper';
+import { logStaffActivity } from './utils/auditLogger';
 
 // Subcomponents
 import CheckinManager from './components/admin/CheckinManager';
@@ -292,6 +293,13 @@ export default function AdminSettings() {
         try {
             const { error } = await supabase.from('app_settings').upsert({ key, value: String(value) });
             if (error) throw error;
+            logStaffActivity('admin', 'settings_update', {
+                reason: `แก้ไขการตั้งค่า: ${key}`,
+                metadata: {
+                    setting_key: key,
+                    value: typeof value === 'object' ? JSON.stringify(value) : String(value)
+                }
+            });
         } catch (err) {
             console.error(err);
             toast.error('บันทึกไม่สำเร็จ โปรดลองใหม่');

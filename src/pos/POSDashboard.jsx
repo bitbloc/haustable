@@ -2694,6 +2694,20 @@ export default function POSDashboard() {
                     // Void in active shift transactions if present
                     voidShiftTransaction(bookingId);
 
+                    // Record staff audit trail
+                    logPosAudit('void_bill', {
+                        bookingId,
+                        amount: activeBooking?.total_amount || 0,
+                        reason: `ยกเลิกบิล: โต๊ะ ${selectedTable?.table_name || activeBooking?.tables_layout?.table_name || 'ไม่ระบุ'}`,
+                        metadata: {
+                            module: 'pos',
+                            table_id: targetTableId,
+                            table_name: selectedTable?.table_name || activeBooking?.tables_layout?.table_name,
+                            total_amount: activeBooking?.total_amount,
+                            items_count: activeBooking?.order_items?.length || 0
+                        }
+                    });
+
                     // Update posCache: thoroughly purge all bookings matching targetTableId
                     try {
                         const cached = (posCache.getBookings() || []).filter(b => {
@@ -3235,6 +3249,21 @@ export default function POSDashboard() {
                 const freshList = (posCache.getBookings() || []).map(b => b.id === data.id ? data : b);
                 posCache.setBookings(freshList);
             }
+
+            // Record staff audit trail for move table
+            logPosAudit('move_table', {
+                bookingId: activeBooking.id,
+                reason: `ย้ายโต๊ะ: ${activeBooking?.tables_layout?.table_name || 'เดิม'} → ${targetTable.table_name}`,
+                metadata: {
+                    module: 'pos',
+                    from_table_id: activeBooking.table_id,
+                    from_table_name: activeBooking?.tables_layout?.table_name || 'ไม่ระบุ',
+                    to_table_id: targetTable.id,
+                    to_table_name: targetTable.table_name,
+                    pax: activeBooking.pax,
+                    booking_id: activeBooking.id
+                }
+            });
             
             toast.success(`ย้ายโต๊ะสำเร็จ ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
             setShowMoveModal(false);
@@ -3481,6 +3510,23 @@ export default function POSDashboard() {
                 : `รวมบิลเข้าโต๊ะ ${targetTable.table_name} สำเร็จ!`;
 
             toast.success(successMsg, { id: toastId, duration: 4500 });
+
+            // Record staff audit trail for merge bills
+            logPosAudit('merge_bills', {
+                bookingId: targetBooking.id,
+                amount: sourceOriginalTotal,
+                reason: `รวมบิล: โต๊ะ ${selectedTable?.table_name || 'เดิม'} เข้าโต๊ะ ${targetTable?.table_name || 'หลัก'}`,
+                metadata: {
+                    module: 'pos',
+                    source_booking_id: activeBooking.id,
+                    target_booking_id: targetBooking.id,
+                    source_table_name: selectedTable?.table_name,
+                    target_table_name: targetTable?.table_name,
+                    source_total: sourceOriginalTotal,
+                    new_target_total: newTargetTotal
+                }
+            });
+
             setShowMergeModal(false);
             setRefreshKey(prev => prev + 1);
             triggerDebouncedRefresh();

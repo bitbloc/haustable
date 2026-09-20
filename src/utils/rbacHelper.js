@@ -10,14 +10,15 @@ export const ADMIN_MODULES = [
     { key: 'financial', label: 'Financial & Insights', path: '/admin/financial', match: (p) => p === '/admin/financial' },
     { key: 'tax', label: 'Tax & Invoices', path: '/admin/tax', match: (p) => p.startsWith('/admin/tax') },
     { key: 'marketing', label: 'Marketing & Loyalty', path: '/admin/marketing', match: (p) => p.startsWith('/admin/marketing') || p.startsWith('/admin/promotions') || p.startsWith('/admin/rewards') || p.startsWith('/admin/members') || p.startsWith('/admin/arcade') || p.startsWith('/admin/songs') || p.startsWith('/admin/stamps') },
+    { key: 'logs', label: 'Staff Activity Logs', path: '/admin/logs', match: (p) => p.startsWith('/admin/logs') },
     { key: 'settings', label: 'Settings', path: '/admin/settings', match: (p) => p.startsWith('/admin/settings') }
 ]
 
 // Default Role Permissions Preset
 export const ROLE_PERMISSIONS = {
-    owner: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'settings'],
-    admin: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'settings'],
-    manager: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'marketing'],
+    owner: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'logs', 'settings'],
+    admin: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'financial', 'tax', 'marketing', 'logs', 'settings'],
+    manager: ['overview', 'tables', 'bookings', 'hausmade', 'menu', 'marketing', 'logs'],
     staff: ['tables', 'bookings', 'hausmade'],
     cashier: ['tables', 'bookings', 'overview', 'hausmade'],
     kitchen: ['menu', 'bookings'],

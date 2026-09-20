@@ -35,10 +35,16 @@ export function safeTimestampUrl(url, timestamp = Date.now()) {
   return `${trimmed}${hasParams ? '&' : '?'}t=${timestamp}`;
 }
 
+export const SUPABASE_STORAGE_HOST = 'lxfavbzmebqqsffgyyph.supabase.co';
+
 /**
- * Safely optimizes an image URL via wsrv.nl image proxy for fast loading and reduced bandwidth.
+ * Safely optimizes an image URL.
+ * - Internal system assets stored in Supabase Storage ('lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/')
+ *   leverage native Supabase Pro Image Transformation (/storage/v1/render/image/public/...) for high-speed WebP rendering.
+ * - External URLs (or when forceExternal is true) route through wsrv.nl proxy.
+ * - Note: Public ad pages (e.g. AdsLandingPage /link) keep their own external proxy to protect Supabase quotas.
  */
-export function optimizeImageUrl(url, width = 600, quality = 80) {
+export function optimizeImageUrl(url, width = 600, quality = 80, forceExternal = false) {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/') || !trimmed.startsWith('http')) {
@@ -46,6 +52,16 @@ export function optimizeImageUrl(url, width = 600, quality = 80) {
   }
   try {
     const cleanUrl = trimmed.split('?')[0];
+
+    // Native Supabase Pro Image Transformation for internal storage assets
+    if (!forceExternal && cleanUrl.includes(`${SUPABASE_STORAGE_HOST}/storage/v1/object/public/`)) {
+      const transformed = cleanUrl.replace(
+        '/storage/v1/object/public/',
+        '/storage/v1/render/image/public/'
+      );
+      return `${transformed}?width=${width}&quality=${quality}&format=webp&resize=contain`;
+    }
+
     return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&q=${quality}&output=webp`;
   } catch {
     return trimmed;

@@ -178,16 +178,37 @@ export async function logPosAudit(actionType, { bookingId = null, amount = 0, re
         }
         if (!staffName) staffName = localStorage.getItem('staff_name') || 'Cashier';
         const shiftId = shift?.id ? String(shift.id) : null;
+        const resolvedModule = metadata.module || (actionType.includes('shift') || actionType.includes('cash') ? 'shift' : 'pos');
         
-        await supabase.rpc('log_pos_audit_event', {
-            p_shift_id: shiftId,
-            p_staff_name: staffName,
-            p_action_type: actionType,
-            p_booking_id: bookingId,
-            p_amount: Number(amount) || 0,
-            p_reason: reason || null,
-            p_metadata: metadata || {}
+        const enrichedMeta = {
+            module: resolvedModule,
+            ...metadata
+        };
+
+        // Attempt direct insert into pos_audit_logs with module column
+        const { error: insErr } = await supabase.from('pos_audit_logs').insert({
+            shift_id: shiftId,
+            staff_name: staffName,
+            action_type: actionType,
+            booking_id: bookingId,
+            amount: Number(amount) || 0,
+            reason: reason || null,
+            metadata: enrichedMeta,
+            module: resolvedModule
         });
+
+        if (insErr) {
+            // Fallback to RPC
+            await supabase.rpc('log_pos_audit_event', {
+                p_shift_id: shiftId,
+                p_staff_name: staffName,
+                p_action_type: actionType,
+                p_booking_id: bookingId,
+                p_amount: Number(amount) || 0,
+                p_reason: reason || null,
+                p_metadata: enrichedMeta
+            });
+        }
     } catch (err) {
         console.warn('[Audit Log] Failed to record audit log:', err);
     }

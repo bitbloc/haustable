@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { formatStockDisplay } from './utils/stockUtils';
+import { logStaffActivity } from './utils/auditLogger';
 import { 
     Package, 
     Scan, 
@@ -204,6 +205,23 @@ export default function StockPage() {
                      // fire-and-forget audit log
                  }
 
+                 // Centralized Staff Activity Trail
+                 logStaffActivity('stock', 'stock_audit', {
+                     staffName: performedBy,
+                     amount: Math.abs(diff),
+                     reason: `ตรวจนับสต็อก: ${oldItem?.name || 'วัตถุดิบ'} (${oldQty} → ${roundedChange} ${oldItem?.unit || ''}) | โน้ต: ${diagNote}`,
+                     metadata: {
+                         module: 'stock',
+                         item_id: itemId,
+                         item_name: oldItem?.name,
+                         unit: oldItem?.unit,
+                         old_quantity: oldQty,
+                         new_quantity: roundedChange,
+                         diff,
+                         note: diagNote
+                     }
+                 });
+
             } else {
                  // Relative Update (In/Out)
                  const { error } = await supabase.from('stock_transactions').insert({
@@ -213,8 +231,24 @@ export default function StockPage() {
                     performed_by: performedBy, 
                     note: diagNote
                 });
-                if (error) throw error;
-            }
+                 if (error) throw error;
+
+                 const targetItem = items.find(i => i.id === itemId);
+                 logStaffActivity('stock', type === 'in' || roundedChange > 0 ? 'stock_in' : 'stock_out', {
+                     staffName: performedBy,
+                     amount: Math.abs(roundedChange),
+                     reason: `${type === 'in' ? 'รับเข้าสต็อก' : 'เบิกใช้/ตัดสต็อก'}: ${targetItem?.name || 'วัตถุดิบ'} (${roundedChange >= 0 ? '+' : ''}${roundedChange} ${targetItem?.unit || ''}) | โน้ต: ${diagNote}`,
+                     metadata: {
+                         module: 'stock',
+                         item_id: itemId,
+                         item_name: targetItem?.name,
+                         unit: targetItem?.unit,
+                         quantity_change: roundedChange,
+                         type,
+                         note: diagNote
+                     }
+                 });
+             }
 
             // --- FINAL VERIFICATION FETCH ---
             // Fetch the item directly from DB to confirm final quantity

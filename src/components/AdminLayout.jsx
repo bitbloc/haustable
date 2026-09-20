@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
-import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, Shield, ShoppingBag } from 'lucide-react'
+import { LayoutDashboard, TrendingUp, Utensils, Settings, LogOut, Calendar, Tag, LayoutGrid, Menu, X, ArrowUpRight, Receipt, Lock, Shield, ShieldCheck, ShoppingBag } from 'lucide-react'
 // eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -152,6 +152,13 @@ export default function AdminLayout() {
             icon: Tag, 
             label: 'Marketing & Loyalty',
             isActive: (pathname) => pathname.startsWith('/admin/marketing') || pathname.startsWith('/admin/promotions') || pathname.startsWith('/admin/rewards') || pathname.startsWith('/admin/members') || pathname.startsWith('/admin/arcade') || pathname.startsWith('/admin/songs') || pathname.startsWith('/admin/stamps')
+        },
+        { 
+            key: 'logs',
+            path: '/admin/logs', 
+            icon: ShieldCheck, 
+            label: 'Staff Activity Logs',
+            isActive: (pathname) => pathname.startsWith('/admin/logs')
         },
         { 
             key: 'settings',

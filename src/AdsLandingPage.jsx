@@ -18,6 +18,8 @@ import {
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
 
+// IMPORTANT: Preserved wsrv.nl external proxy for public AdsLandingPage (/link)
+// Public viral/ad traffic can be unpredictable in volume. Keeping external proxy prevents consuming Supabase Pro transformation/egress quotas.
 const optimizeImageUrl = (url, width = 850, quality = 75) => {
     if (!url) return '';
     // Skip data URLs or local paths (relative paths)
