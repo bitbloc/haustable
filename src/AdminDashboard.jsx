@@ -580,7 +580,7 @@ export default function AdminDashboard() {
                     {/* Date Picker & Controls Ribbon */}
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Quick Date Switcher */}
-                        <div className="flex items-center gap-1 bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-1 font-mono text-xs font-bold">
+                        <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-1 font-mono text-xs font-bold">
                             <Calendar size={14} className="text-[oklch(52%_0.16_28)] ml-1" />
                             <input
                                 type="date"
@@ -590,13 +590,13 @@ export default function AdminDashboard() {
                             />
                             <button
                                 onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
                             >
                                 วันนี้
                             </button>
                             <button
                                 onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-white' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
+                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
                             >
                                 เมื่อวาน
                             </button>
@@ -617,45 +617,15 @@ export default function AdminDashboard() {
                             <span className="hidden sm:inline">{soundMuted ? 'MUTED' : 'ALERT ON'}</span>
                         </button>
 
-                        {/* Mode Switcher: Simplified Live (Default) vs Pro Mode */}
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-sm font-mono text-xs shadow-2xs">
-                            <button
-                                type="button"
-                                onClick={() => handleSetOverviewMode('simplified')}
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                    overviewMode === 'simplified'
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
-                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                                title="โหมดสด: แสดงสถานะโต๊ะสดและรายการอาหาร (เหมาะสำหรับมือถือ/iPad)"
-                            >
-                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
-                                <span>LIVE OVERVIEW</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleSetOverviewMode('pro')}
-                                className={`px-2.5 sm:px-3 py-1.5 rounded-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                                    overviewMode === 'pro'
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
-                                        : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                                title="โหมดโปร: ชาร์ตวิเคราะห์สถิติความเร็วยอดขายและการเงินเชิงลึก"
-                            >
-                                <span>PRO ANALYTICS</span>
-                            </button>
-                        </div>
-
                         {/* Export Daily Summary PNG Slip */}
                         <button 
                             type="button"
                             onClick={() => setShowDailySummaryModal(true)}
-                            className="px-3.5 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+                            className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
-                            <FileText size={14} />
-                            <span className="hidden md:inline">EXPORT สลิปปิดวัน (PNG)</span>
-                            <span className="md:hidden">สลิปปิดวัน</span>
+                            <FileText size={13} />
+                            <span className="hidden md:inline">สลิปปิดวัน (PNG)</span>
                         </button>
 
                         {/* Direct POS Link */}
@@ -663,10 +633,10 @@ export default function AdminDashboard() {
                             href="/pos"
                             target="_blank"
                             rel="noreferrer"
-                            className="px-3 py-2 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
+                            className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors"
                         >
                             <span>POS</span>
-                            <ArrowUpRight size={14} />
+                            <ArrowUpRight size={13} />
                         </a>
 
                         {/* Refresh */}
@@ -674,12 +644,50 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={() => fetchData(false, selectedDate)} 
                             disabled={loading}
-                            className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                             <span className="hidden sm:inline">REFRESH</span>
                         </button>
                     </div>
+                </div>
+
+                {/* MASTER COCKPIT MODE SWITCHER (Hallmark Dieter Rams Dual-Pillar) */}
+                <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1 rounded-sm gap-1 mb-6 font-mono text-xs sm:text-sm shadow-2xs">
+                    <button
+                        type="button"
+                        onClick={() => handleSetOverviewMode('simplified')}
+                        className={`py-3 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+                            overviewMode === 'simplified'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs ring-1 ring-[oklch(18%_0.012_28)]'
+                                : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                        }`}
+                    >
+                        <span className={`w-2.5 h-2.5 rounded-full ${overviewMode === 'simplified' ? 'bg-[oklch(52%_0.16_28)] animate-pulse' : 'bg-current opacity-30'}`} />
+                        <span className="tracking-wide">SIMPLIFIED LIVE // โต๊ะสดหน้าร้าน</span>
+                        <span className={`hidden md:inline text-[10px] px-2 py-0.5 rounded-xs uppercase ${
+                            overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                        }`}>
+                            ค่าเริ่มต้น
+                        </span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSetOverviewMode('pro')}
+                        className={`py-3 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+                            overviewMode === 'pro'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs ring-1 ring-[oklch(18%_0.012_28)]'
+                                : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
+                        }`}
+                    >
+                        <span className={`w-2.5 h-2.5 rounded-xs ${overviewMode === 'pro' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-30'}`} />
+                        <span className="tracking-wide">PRO ANALYTICS // วิเคราะห์เชิงลึก</span>
+                        <span className={`hidden md:inline text-[10px] px-2 py-0.5 rounded-xs uppercase ${
+                            overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                        }`}>
+                            ชาร์ต & กะ
+                        </span>
+                    </button>
                 </div>
 
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
@@ -708,7 +716,7 @@ export default function AdminDashboard() {
                                         handleSetOverviewMode('pro')
                                         setActiveTab('inbox')
                                     }}
-                                    className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-white text-[11px] font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
+                                    className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
                                 >
                                     ตรวจสอบรายการจอง ➔
                                 </button>
@@ -723,6 +731,26 @@ export default function AdminDashboard() {
                             onPrintSlip={handlePrint}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                         />
+
+                        {/* 1.8 Hallmark Stark Callout to Pro Analytics Mode */}
+                        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono text-xs shadow-2xs">
+                            <div>
+                                <span className="font-bold text-[oklch(18%_0.012_28)] text-sm block">
+                                    ต้องการดูข้อมูลสถิติเชิงลึก หรือการจัดการกะเงินสด?
+                                </span>
+                                <span className="text-[11px] text-[oklch(55%_0.010_28)] mt-0.5 block">
+                                    มีชาร์ตความเร็วยอดขาย Intraday Velocity, เมนูวิเคราะห์ BCG Matrix, P&L Waterfall, และสมุดกะเงินสด
+                                </span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleSetOverviewMode('pro')}
+                                className="px-4 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-xs whitespace-nowrap cursor-pointer transition-colors self-start sm:self-auto flex items-center gap-1.5 shadow-2xs"
+                            >
+                                <span>เปิดโหมด PRO ANALYTICS</span>
+                                <span>➔</span>
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <div className="space-y-6 mb-6">

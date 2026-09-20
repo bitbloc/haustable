@@ -403,60 +403,33 @@ export default function SimplifiedLiveOverview({
                     </div>
                 </div>
 
-                {/* Right: Zoom Controls & Fullscreen Trigger */}
+                {/* Right: View Density & Fullscreen Trigger */}
                 <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
-                    {/* View / Density Selector */}
+                    {/* View Density: List สรุป (Default) vs ผังการ์ด (Grid) */}
                     <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-sm font-mono text-[11px]">
                         <button
                             type="button"
                             onClick={() => setZoomMode('list')}
-                            className={`px-2.5 py-1 rounded-xs font-bold transition-all cursor-pointer ${
+                            className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer ${
                                 zoomMode === 'list'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                     : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
-                            title="List สรุปโต๊ะสด (Default Summary List)"
+                            title="List สรุปโต๊ะเปิดอยู่ (มุมมองรายการกระชับ)"
                         >
                             List สรุป
                         </button>
                         <button
                             type="button"
-                            onClick={() => setZoomMode('compact')}
-                            className={`px-2.5 py-1 rounded-xs font-bold transition-all cursor-pointer ${
-                                zoomMode === 'compact'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                            }`}
-                            title="ซูมแบบหลายโต๊ะ (Bird's-eye View)"
-                        >
-                            หลายโต๊ะ
-                        </button>
-                        <button
-                            type="button"
                             onClick={() => setZoomMode('standard')}
-                            className={`px-2.5 py-1 rounded-xs font-bold transition-all cursor-pointer ${
-                                zoomMode === 'standard'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white'
+                            className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer ${
+                                zoomMode === 'standard' || zoomMode === 'compact'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                     : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                             }`}
-                            title="ซูมแบบการ์ด (Standard Grid)"
+                            title="ผังการ์ด (มุมมองกล่องโต๊ะ)"
                         >
-                            การ์ด
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setZoomMode('focus')
-                                setFocusedTableIndex(0)
-                            }}
-                            className={`px-2.5 py-1 rounded-xs font-bold transition-all cursor-pointer ${
-                                zoomMode === 'focus'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                            }`}
-                            title="ซูมแบบโต๊ะเดียว (Single Table Focus)"
-                        >
-                            โต๊ะเดียว
+                            ผังการ์ด
                         </button>
                     </div>
 
@@ -467,44 +440,31 @@ export default function SimplifiedLiveOverview({
                         className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono text-[11px] font-bold rounded-sm uppercase tracking-wider transition-colors cursor-pointer flex items-center gap-1"
                         title={isFullscreen ? 'ออกจากโหมดเต็มจอ' : 'เปิดโหมดเต็มจอ (สำหรับ iPad/หน้าร้าน)'}
                     >
-                        <span>{isFullscreen ? '✕ EXIT' : '⛶ FULLSCREEN'}</span>
+                        <span>{isFullscreen ? '✕ EXIT' : '⛶ เต็มจอ'}</span>
                     </button>
-
-                    {/* Pro Mode Quick Jump */}
-                    {onOpenProMode && (
-                        <button
-                            type="button"
-                            onClick={onOpenProMode}
-                            className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[11px] font-bold rounded-sm uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                            PRO MODE ➔
-                        </button>
-                    )}
                 </div>
             </div>
 
-            {/* 2. Rapid Filter Chips (Thumb-friendly on iPhone) */}
+            {/* 2. Rapid Filter Chips (Pure Essentials Only) */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs pb-1">
                 {[
                     { id: 'occupied', label: 'กำลังเปิดโต๊ะ', count: counts.occupied, isDefault: true },
-                    { id: 'calling', label: 'เรียกพนักงาน / บิล', count: counts.calling, alert: counts.calling > 0 },
-                    { id: 'all', label: 'ทั้งหมด', count: counts.total },
-                    { id: 'upcoming', label: 'จองล่วงหน้า', count: counts.upcoming },
-                    { id: 'free', label: 'โต๊ะว่าง', count: counts.free }
+                    ...(counts.calling > 0 ? [{ id: 'calling', label: 'เรียกพนักงาน / บิล', count: counts.calling, alert: true }] : []),
+                    { id: 'all', label: 'ผังโต๊ะทั้งหมด', count: counts.total }
                 ].map(chip => (
                     <button
                         key={chip.id}
                         onClick={() => setSelectedFilter(chip.id)}
                         className={`px-3 py-1.5 rounded-sm font-bold transition-all whitespace-nowrap border cursor-pointer flex items-center gap-1.5 ${
                             selectedFilter === chip.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)] shadow-sm'
+                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-sm'
                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                         } ${chip.alert ? 'ring-1 ring-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]' : ''}`}
                     >
                         {chip.isDefault && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />}
                         <span>{chip.label}</span>
                         <span className={`px-1.5 py-0.2 text-[10px] rounded-xs tabular-nums ${
-                            selectedFilter === chip.id ? 'bg-white/20 text-white' : 'bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                            selectedFilter === chip.id ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)]'
                         }`}>
                             {chip.count}
                         </span>
@@ -533,7 +493,7 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setSelectedFilter('all')}
-                                className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-white text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
+                                className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-xs font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
                             >
                                 ดูผังโต๊ะทั้งหมด ({counts.total} โต๊ะ)
                             </button>
@@ -579,9 +539,9 @@ export default function SimplifiedLiveOverview({
                                     // Progressive stay color
                                     let durationPill = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
                                     if (isOccupied) {
-                                        if (item.elapsedMins >= 75) durationPill = 'bg-[oklch(52%_0.16_28)] text-white'
+                                        if (item.elapsedMins >= 75) durationPill = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                                         else if (item.elapsedMins >= 45) durationPill = 'bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)]'
-                                        else durationPill = 'bg-[oklch(45%_0.08_140)] text-white'
+                                        else durationPill = 'bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)]'
                                     }
 
                                     return (
@@ -617,11 +577,11 @@ export default function SimplifiedLiveOverview({
                                                             </span>
                                                         </>
                                                     ) : isUpcoming ? (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-black">
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]">
                                                             จองล่วงหน้า
                                                         </span>
                                                     ) : isBlocked ? (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-black/40 text-white">
+                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)]">
                                                             BLOCKED
                                                         </span>
                                                     ) : (
@@ -689,7 +649,7 @@ export default function SimplifiedLiveOverview({
                                                                     e.stopPropagation()
                                                                     handleReleaseTable(item.booking.id, item.table.table_name)
                                                                 }}
-                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white rounded-xs cursor-pointer"
+                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
                                                                 title="เคลียร์โต๊ะนี้"
                                                             >
                                                                 เคลียร์
@@ -698,7 +658,7 @@ export default function SimplifiedLiveOverview({
                                                                 to={`/pos?table=${item.table.table_name}`}
                                                                 target="_blank"
                                                                 onClick={(e) => e.stopPropagation()}
-                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white rounded-xs cursor-pointer"
+                                                                className="px-2 py-1 text-[10px] font-bold bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
                                                                 title="เปิดใน POS"
                                                             >
                                                                 POS ➔
@@ -902,7 +862,7 @@ export default function SimplifiedLiveOverview({
                             if (item.elapsedMins >= 75) {
                                 borderStyle = 'border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]'
                                 bgStyle = 'bg-[oklch(96%_0.02_28)]'
-                                pillStyle = 'bg-[oklch(52%_0.16_28)] text-white'
+                                pillStyle = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                             } else if (item.elapsedMins >= 45) {
                                 borderStyle = 'border-[oklch(75%_0.18_65)]'
                                 bgStyle = 'bg-[oklch(96%_0.02_65)]'
@@ -910,18 +870,18 @@ export default function SimplifiedLiveOverview({
                             } else {
                                 borderStyle = 'border-[oklch(52%_0.16_28)]'
                                 bgStyle = 'bg-[oklch(95%_0.015_28)]'
-                                pillStyle = 'bg-[oklch(52%_0.16_28)] text-white'
+                                pillStyle = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
                             }
                             statusText = formatShortDuration(item.elapsedMins)
                         } else if (isUpcoming) {
                             borderStyle = 'border-[oklch(60%_0.15_60)]'
                             bgStyle = 'bg-[oklch(96%_0.02_60)]'
-                            pillStyle = 'bg-[oklch(60%_0.15_60)] text-black'
+                            pillStyle = 'bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]'
                             statusText = 'RESERVED'
                         } else if (isBlocked) {
                             borderStyle = 'border-[oklch(35%_0.010_28)]'
-                            bgStyle = 'bg-[oklch(30%_0.010_28)] text-white'
-                            pillStyle = 'bg-black/40 text-white'
+                            bgStyle = 'bg-[oklch(30%_0.010_28)] text-[oklch(97%_0.008_28)]'
+                            pillStyle = 'bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)]'
                             statusText = 'BLOCKED'
                         }
 
@@ -1082,7 +1042,7 @@ export default function SimplifiedLiveOverview({
                             <button
                                 type="button"
                                 onClick={() => setInspectingTable(null)}
-                                className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-black p-1 cursor-pointer"
+                                className="font-mono text-xs font-bold text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] p-1 cursor-pointer"
                             >
                                 ✕ ปิด
                             </button>
@@ -1116,7 +1076,7 @@ export default function SimplifiedLiveOverview({
                                     return (
                                         <div key={item.id || idx} className="py-2.5 flex items-start justify-between gap-3">
                                             <div className="flex items-start gap-2.5">
-                                                <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-white font-bold rounded-xs text-[11px] tabular-nums mt-0.5">
+                                                <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold rounded-xs text-[11px] tabular-nums mt-0.5">
                                                     {item.quantity}
                                                 </span>
                                                 <div>
@@ -1172,14 +1132,14 @@ export default function SimplifiedLiveOverview({
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleReleaseTable(inspectingTable.booking.id, inspectingTable.table.table_name)}
-                                        className="flex-1 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold text-xs rounded-sm cursor-pointer"
+                                        className="flex-1 py-2 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm cursor-pointer"
                                     >
                                         เคลียร์โต๊ะ
                                     </button>
                                     <Link
                                         to={`/pos?table=${inspectingTable.table.table_name}`}
                                         target="_blank"
-                                        className="flex-1 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-white font-mono font-bold text-xs rounded-sm text-center cursor-pointer"
+                                        className="flex-1 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-xs rounded-sm text-center cursor-pointer"
                                     >
                                         เปิดใน POS ➔
                                     </Link>

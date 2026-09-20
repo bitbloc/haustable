@@ -132,7 +132,7 @@ export default function SimplifiedBillsSummaryList({
                             }}
                             className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer border ${
                                 statusFilter === tab.id
-                                    ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                             }`}
                         >
@@ -164,7 +164,7 @@ export default function SimplifiedBillsSummaryList({
                     ไม่พบรายการบิลในหมวดหมู่นี้
                 </div>
             ) : (
-                <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-white">
+                <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(97%_0.008_28)]">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs border-collapse">
                             <thead>
@@ -279,7 +279,7 @@ export default function SimplifiedBillsSummaryList({
                                                         <button
                                                             type="button"
                                                             onClick={() => onViewSlip(b.slip_url)}
-                                                            className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-white rounded-xs cursor-pointer"
+                                                            className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
                                                             title="ดูสลิปโอนเงิน"
                                                         >
                                                             โอน
@@ -305,7 +305,7 @@ export default function SimplifiedBillsSummaryList({
                                     type="button"
                                     disabled={page <= 1}
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
+                                    className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
                                 >
                                     ◀ ย้อนกลับ
                                 </button>
@@ -313,7 +313,7 @@ export default function SimplifiedBillsSummaryList({
                                     type="button"
                                     disabled={page >= totalPages}
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                    className="px-2 py-1 bg-white border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
+                                    className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
                                 >
                                     ถัดไป ▶
                                 </button>
