@@ -15,6 +15,7 @@ import CasualDiningInsights from './financial/CasualDiningInsights'
 import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
 import ProfitWaterfallChart from './financial/ProfitWaterfallChart'
 import InteractiveBcgScatter from './financial/InteractiveBcgScatter'
+import IntradayVelocityDaypartCockpit from './financial/IntradayVelocityDaypartCockpit'
 import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '../../utils/categoryClassifier'
 
 export default function AdminFinancialDashboard() {
@@ -1002,6 +1003,7 @@ export default function AdminFinancialDashboard() {
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] overflow-x-auto no-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
                 {[
                     { id: 'master', label: 'ภาพรวม [MASTER COCKPIT]' },
+                    { id: 'velocity_daypart', label: 'ความเร็วและช่วงเวลา [VELOCITY & DAYPART]' },
                     { id: 'ledger', label: `สมุดบัญชีธุรกรรม [LEDGER: ${rawTransactionsData.length}]` },
                     { id: 'summary', label: 'สรุปยอดและกระทบยอด [RECONCILIATION]' },
                     { id: 'heatmap', label: 'สถิติช่วงเวลา [HEATMAP 7x12]' },
@@ -1034,6 +1036,18 @@ export default function AdminFinancialDashboard() {
                             timeRangeLabel={getTimeRangeLabel()} 
                         />
 
+                        {/* Intraday & Monthly Velocity Cockpit embedded in Master */}
+                        <IntradayVelocityDaypartCockpit
+                            bookings={rawTransactionsData}
+                            filterMode={filterMode}
+                            selectedDate={selectedDate}
+                            selectedMonth={selectedMonth}
+                            selectedYear={selectedYear}
+                            totalSeats={45}
+                            loading={loading}
+                            totalExpenses={liveMetrics.totalExpenses}
+                        />
+
                         <DetailedSalesSummary 
                             data={{
                                 paymentMethods: paymentMethodsData,
@@ -1049,6 +1063,20 @@ export default function AdminFinancialDashboard() {
                             timeRangeLabel={getTimeRangeLabel()}
                         />
                     </div>
+                )}
+
+                {/* Dedicated Intraday & Monthly Velocity Daypart Tab */}
+                {activeTab === 'velocity_daypart' && (
+                    <IntradayVelocityDaypartCockpit
+                        bookings={rawTransactionsData}
+                        filterMode={filterMode}
+                        selectedDate={selectedDate}
+                        selectedMonth={selectedMonth}
+                        selectedYear={selectedYear}
+                        totalSeats={45}
+                        loading={loading}
+                        totalExpenses={liveMetrics.totalExpenses}
+                    />
                 )}
 
                 {/* Dedicated Ledger Tab */}

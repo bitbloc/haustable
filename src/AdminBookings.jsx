@@ -11,6 +11,7 @@ import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
 import { parseTableTransferInfo } from './utils/tableTransferHelper'
 import { isValidUuid } from './utils/urlHelper'
+import { calculateBookingFinancials } from './utils/bookingHelper'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
@@ -1447,10 +1448,30 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
     const [contactPhone, setContactPhone] = useState(booking.pickup_contact_phone || booking.profiles?.phone_number || '')
     const [customerNote, setCustomerNote] = useState(booking.customer_note || '')
     const [staffRemark, setStaffRemark] = useState(booking.staff_remark || '')
+    const initialDiscount = Number(booking.discount_amount || 0)
+    const initialNetTotal = Number(booking.total_amount || 0)
+    const initialSubtotal = initialNetTotal + initialDiscount
+
     const [status, setStatus] = useState(booking.status || 'pending')
-    const [totalAmount, setTotalAmount] = useState(booking.total_amount || 0)
+    const [subtotalAmount, setSubtotalAmount] = useState(initialSubtotal > 0 ? initialSubtotal : initialNetTotal)
+    const [discountType, setDiscountType] = useState('percent')
+    const [discountValue, setDiscountValue] = useState(() => {
+        if (initialDiscount > 0 && initialSubtotal > 0) {
+            return Math.round((initialDiscount / initialSubtotal) * 100)
+        }
+        return ''
+    })
     const [depositAmount, setDepositAmount] = useState(booking.deposit_amount || 0)
     const [saving, setSaving] = useState(false)
+
+    const financials = useMemo(() => {
+        return calculateBookingFinancials({
+            subtotal: subtotalAmount,
+            discountType,
+            discountValue,
+            depositAmount
+        })
+    }, [subtotalAmount, discountType, discountValue, depositAmount])
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -1469,7 +1490,8 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
             customer_note: customerNote,
             staff_remark: staffRemark,
             status,
-            total_amount: Number(totalAmount),
+            total_amount: financials.netTotal,
+            discount_amount: financials.discountAmount,
             deposit_amount: Number(depositAmount)
         })
 
@@ -1609,53 +1631,155 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                     </div>
 
                     {/* Status & Financial Adjustments */}
-                    <div className="grid grid-cols-3 gap-3">
-                        <div>
-                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
-                                STATUS
-                            </label>
-                            <select
-                                value={status}
-                                onChange={(e) => setStatus(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
-                            >
-                                <option value="pending">PENDING</option>
-                                <option value="confirmed">CONFIRMED</option>
-                                <option value="seated">SEATED</option>
-                                <option value="preparing">PREPARING</option>
-                                <option value="ready">READY</option>
-                                <option value="completed">COMPLETED</option>
-                                <option value="cancelled">CANCELLED</option>
-                                <option value="void">VOID</option>
-                            </select>
+                    <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] space-y-3">
+                        <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-[var(--color-muted)] uppercase">
+                                STATUS & FINANCIAL ADJUSTMENTS
+                            </span>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => setDepositAmount(Math.round(financials.netTotal * 0.5))}
+                                    className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[9px] font-bold hover:bg-[var(--color-paper-2)] cursor-pointer"
+                                >
+                                    มัดจำ 50%
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDepositAmount(financials.netTotal)}
+                                    className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[9px] font-bold hover:bg-[var(--color-paper-2)] cursor-pointer"
+                                >
+                                    ชำระเต็ม 100%
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDepositAmount(0)}
+                                    className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-rule)] text-[9px] font-bold hover:bg-[var(--color-paper-2)] cursor-pointer"
+                                >
+                                    มัดจำ ฿0
+                                </button>
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
-                                TOTAL AMOUNT (฿)
-                            </label>
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={totalAmount}
-                                onChange={(e) => setTotalAmount(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
-                            />
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            {/* Status */}
+                            <div className="sm:col-span-3">
+                                <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                    STATUS
+                                </label>
+                                <select
+                                    value={status}
+                                    onChange={(e) => setStatus(e.target.value)}
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                >
+                                    <option value="pending">PENDING</option>
+                                    <option value="confirmed">CONFIRMED</option>
+                                    <option value="seated">SEATED</option>
+                                    <option value="preparing">PREPARING</option>
+                                    <option value="ready">READY</option>
+                                    <option value="completed">COMPLETED</option>
+                                    <option value="cancelled">CANCELLED</option>
+                                    <option value="void">VOID</option>
+                                </select>
+                            </div>
+
+                            {/* Subtotal */}
+                            <div className="sm:col-span-3">
+                                <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                    SUBTOTAL (฿)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={subtotalAmount}
+                                    onChange={(e) => setSubtotalAmount(e.target.value)}
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                />
+                            </div>
+
+                            {/* Discount */}
+                            <div className="sm:col-span-3">
+                                <div className="flex justify-between items-center mb-1">
+                                    <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase">
+                                        DISCOUNT
+                                    </label>
+                                    <div className="inline-flex border border-[var(--color-rule)] bg-[var(--color-paper)] p-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('percent')}
+                                            className={`px-1.5 py-0.5 text-[8px] font-bold font-mono cursor-pointer ${
+                                                discountType === 'percent'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                    : 'text-[var(--color-neutral)]'
+                                            }`}
+                                        >
+                                            %
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDiscountType('amount')}
+                                            className={`px-1.5 py-0.5 text-[8px] font-bold font-mono cursor-pointer ${
+                                                discountType === 'amount'
+                                                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
+                                                    : 'text-[var(--color-neutral)]'
+                                            }`}
+                                        >
+                                            ฿
+                                        </button>
+                                    </div>
+                                </div>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max={discountType === 'percent' ? '100' : undefined}
+                                    step={discountType === 'percent' ? '1' : '0.01'}
+                                    placeholder={discountType === 'percent' ? '10%' : '100฿'}
+                                    value={discountValue}
+                                    onChange={(e) => setDiscountValue(e.target.value)}
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                />
+                            </div>
+
+                            {/* Net Total */}
+                            <div className="sm:col-span-3 p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">
+                                <span className="text-[10px] font-bold text-[var(--color-muted)] uppercase block">
+                                    NET TOTAL (฿)
+                                </span>
+                                <span className="text-sm font-bold font-mono text-[var(--color-ink)] tabular-nums block">
+                                    ฿{financials.netTotal.toFixed(2)}
+                                </span>
+                                {financials.discountAmount > 0 && (
+                                    <span className="text-[9px] font-mono text-[var(--color-accent-2)]">
+                                        -฿{financials.discountAmount.toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
-                        <div>
-                            <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
-                                DEPOSIT PAID (฿)
-                            </label>
-                            <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
-                                className="w-full p-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
-                            />
+                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--color-rule)]">
+                            <div>
+                                <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                    DEPOSIT PAID (฿)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={depositAmount}
+                                    onChange={(e) => setDepositAmount(e.target.value)}
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
+                                />
+                            </div>
+
+                            <div className="p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">
+                                <span className="text-[10px] font-bold text-[var(--color-muted)] uppercase block">
+                                    REMAINING DUE (ยอดคงเหลือ)
+                                </span>
+                                <span className="text-sm font-bold font-mono text-[var(--color-ink)] tabular-nums block">
+                                    ฿{financials.remainingDue.toFixed(2)}
+                                </span>
+                            </div>
                         </div>
                     </div>
 

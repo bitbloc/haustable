@@ -12,5 +12,6 @@ npx supabase functions deploy send-line-push --project-ref lxfavbzmebqqsffgyyph 
 npx supabase functions deploy send-web-push --project-ref lxfavbzmebqqsffgyyph --no-verify-jwt
 npx supabase functions deploy send-booking-ticket --project-ref lxfavbzmebqqsffgyyph --no-verify-jwt
 npx supabase functions deploy pos-line-hub --project-ref lxfavbzmebqqsffgyyph --no-verify-jwt
+npx supabase functions deploy line-webhook --project-ref lxfavbzmebqqsffgyyph --no-verify-jwt
 
 echo "Deployment complete! Make sure you have run 'npx supabase login' beforehand."

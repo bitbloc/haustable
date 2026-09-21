@@ -550,6 +550,547 @@ function createReceiptFlexMessage(expense: any, dateFormatted: string, pageCount
   };
 }
 
+// ==========================================
+// --- STPREDICT & SAI MU ORACLE HELPERS ---
+// ==========================================
+
+function getDailySaiMuContext(dateObj: Date) {
+  const dayIndex = dateObj.getDay();
+  const daysMap = [
+    {
+      dayName: 'วันอาทิตย์',
+      element: 'ธาตุไฟ',
+      powerNumber: 6,
+      luckyColors: 'เขียวเหนี่ยวทรัพย์, ดำ/ม่วงเสริมอำนาจ',
+      unluckyColor: 'น้ำเงิน/ฟ้า',
+      luckyDirection: 'ทิศตะวันออกเฉียงใต้',
+      deity: 'พระสิวลีมหาลาภ & พระสุริยเทพ',
+      saiMuHacks: 'วางผลส้มมงคลหรือเครื่องดื่มโทนส้ม-เขียวหน้าร้าน เปิดไฟป้ายร้านสว่างสดใสเพื่อดึงดูดพลังสุริยะ'
+    },
+    {
+      dayName: 'วันจันทร์',
+      element: 'ธาตุดิน',
+      powerNumber: 15,
+      luckyColors: 'ส้ม/เหลืองทองเปิดทรัพย์, ม่วงเม็ดมะปราง',
+      unluckyColor: 'แดง',
+      luckyDirection: 'ทิศตะวันออก',
+      deity: 'ท้าวเวสสุวรรณ & แม่นางกวัก',
+      saiMuHacks: 'ถวายน้ำสะอาดใสแจ๋วที่โต๊ะบูชา ยิ้มแย้มต้อนรับด้วยวาจามหาเสน่ห์ เจรจาปิดการขายคล่องตัว'
+    },
+    {
+      dayName: 'วันอังคาร',
+      element: 'ธาตุลม',
+      powerNumber: 8,
+      luckyColors: 'น้ำตาลทอง, น้ำเงิน/ฟ้ามหาเศรษฐี',
+      unluckyColor: 'ขาว/ครีม',
+      luckyDirection: 'ทิศตะวันออกเฉียงใต้',
+      deity: 'พระพิฆเนศ & พระราหูมหาลาภ',
+      saiMuHacks: 'เคลียร์เคาน์เตอร์แคชเชียร์และบาร์น้ำให้โล่งสะอาด อากาศถ่ายเท รับคลื่นพลังงานเงินหมุนเวียนเร็ว'
+    },
+    {
+      dayName: 'วันพุธ',
+      element: 'ธาตุน้ำ',
+      powerNumber: 17,
+      luckyColors: 'ดำ/เทาเงินเหนี่ยวดวงการค้า, ฟ้าคราม',
+      unluckyColor: 'ชมพู',
+      luckyDirection: 'ทิศใต้',
+      deity: 'พระแม่ลักษมี & พระอุปคุต',
+      saiMuHacks: 'เปิดเพลงคลอเบาๆ จังหวะชวนผ่อนคลาย จัดไฟวอร์มไวท์อบอุ่น ดึงดูดลูกค้าให้นั่งชิลและสั่งเพิ่ม'
+    },
+    {
+      dayName: 'วันพฤหัสบดี',
+      element: 'ธาตุดิน',
+      powerNumber: 19,
+      luckyColors: 'แดงส้มมหาลาภ, ขาว/ทองประกาย',
+      unluckyColor: 'ดำ/ม่วงเข้ม',
+      luckyDirection: 'ทิศตะวันตก',
+      deity: 'พระพรหม & หลวงพ่อโสธร',
+      saiMuHacks: 'จัดระเบียบเงินในลิ้นชักเรียงแบงก์หน้าเดียวกัน ตั้งจิตขอบคุณลูกค้าทุกท่าน เสริมบารมีร้านค้า'
+    },
+    {
+      dayName: 'วันศุกร์',
+      element: 'ธาตุน้ำ',
+      powerNumber: 21,
+      luckyColors: 'ชมพูดึงดูดลูกค้า, เขียวมรกตเรียกบิลใหญ่',
+      unluckyColor: 'เทา/ดำด้าน',
+      luckyDirection: 'ทิศเหนือ',
+      deity: 'พระแม่ลักษมี & เจ้าแม่กวนอิม',
+      saiMuHacks: 'ฉีดกลิ่นหอมสะอาดสดชื่นบริเวณทางเข้าร้าน ตกแต่งมุมถ่ายรูปสวยๆ รับทราฟฟิกสายเช็คอิน'
+    },
+    {
+      dayName: 'วันเสาร์',
+      element: 'ธาตุไฟ',
+      powerNumber: 10,
+      luckyColors: 'น้ำเงินเข้ม, ทองอร่ามเหนี่ยวทรัพย์ก้อนโต',
+      unluckyColor: 'เขียวตองอ่อน',
+      luckyDirection: 'ทิศตะวันตกเฉียงใต้',
+      deity: 'พญานาคราชริมโขง & พระศิวะ',
+      saiMuHacks: 'ตั้งแก้วน้ำสะอาดริมแม่น้ำ/หน้าร้าน ขอบารมีพญานาคราชประทานโชคลาภ ดึงดูดครอบครัวและกลุ่มเพื่อนบิลใหญ่'
+    }
+  ];
+  return daysMap[dayIndex] || daysMap[0];
+}
+
+async function generateIntradayTrafficWithSaiMu(
+  summaryPayload: any,
+  apiKey: string,
+  preferredModel: string = 'gemini-3.7-flash'
+): Promise<any> {
+  const saiMu = summaryPayload.saiMuContext;
+  const promptText = `
+You are the Executive Operations & Marketing Strategist and Astrological Business Advisor (ที่ปรึกษากลยุทธ์และการตลาดร้านอาหารควบคู่ศาสตร์สายมูมงคลการค้า) for "IN THE HAUS" restaurant.
+Analyze the following live intraday traffic data, Ad Intent leads, Dayparts projection, and the day's auspicious Sai Mu astrological context:
+
+${JSON.stringify(summaryPayload, null, 2)}
+
+Your task: Synthesize a sharp, executive-level summary and actionable advice that combines scientific restaurant operations with Thai auspicious Sai Mu principles (ฤกษ์นาทีทองดูดทรัพย์, สีมงคล, ทริคมูรับทรัพย์).
+Guidelines:
+1. "sai_mu_oracle.auspicious_window": Identify the Golden Auspicious Hour (ฤกษ์นาทีทองเปิดรับทรัพย์) by aligning the Peak Hour (~${summaryPayload.peakHour || '18.00 - 20.00 น.'}) with Thai merchant astrology.
+2. "sai_mu_oracle.lucky_color_advice": Recommend employee attire / decor accents based on ${saiMu.luckyColors} (warn to avoid ${saiMu.unluckyColor}).
+3. "sai_mu_oracle.money_direction": Auspicious direction (${saiMu.luckyDirection}) for cashier / welcoming host / altar.
+4. "sai_mu_oracle.sai_mu_hack": A concise, modern lucky tip for front-of-house (1-2 sentences).
+5. "operational_advice.kitchen_bar": Concrete prep advice for kitchen and bar for the dinner rush (1-2 sentences).
+6. "operational_advice.floor_service": Seating and host strategy for walk-ins vs reservations (1-2 sentences).
+7. "operational_advice.marketing_ads": Actionable ad timing or content boost advice based on Ad leads (1-2 sentences).
+8. "executive_summary": 2 sentences summarizing the overall day pacing and closing outlook.
+
+Return ONLY a valid JSON object matching this schema:
+{
+  "sai_mu_oracle": {
+    "auspicious_window": "string",
+    "lucky_color_advice": "string",
+    "money_direction": "string",
+    "sai_mu_hack": "string"
+  },
+  "operational_advice": {
+    "kitchen_bar": "string",
+    "floor_service": "string",
+    "marketing_ads": "string"
+  },
+  "executive_summary": "string"
+}
+`;
+
+  if (apiKey) {
+    const candidateModels = Array.from(new Set([
+      preferredModel,
+      'gemini-3.7-flash',
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-1.5-flash-latest',
+      'gemini-1.5-flash'
+    ]));
+
+    for (const model of candidateModels) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            generationConfig: {
+              response_mime_type: 'application/json',
+              temperature: 0.2
+            }
+          })
+        });
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          console.warn(`[Gemini Traffic AI ${model}] failed status ${response.status}`);
+          continue;
+        }
+
+        const resJson = await response.json();
+        const rawText = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawText) continue;
+
+        const cleaned = rawText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const parsed = JSON.parse(cleaned);
+        if (parsed?.sai_mu_oracle && parsed?.operational_advice) {
+          return parsed;
+        }
+      } catch (err: any) {
+        console.warn(`[Gemini Traffic AI Error with ${model}]:`, err?.message);
+      }
+    }
+  }
+
+  // Deterministic Fallback if Gemini fails or is unconfigured
+  const peakHourStr = summaryPayload.peakHour || '19.00 น.';
+  const primeDinner = summaryPayload.dayparts?.find((d: any) => d.key === 'dinner');
+  const dinnerForecast = primeDinner ? primeDinner.forecastPax : 35;
+  const adDirs = summaryPayload.adStats?.totalAdDirections || 0;
+
+  return {
+    sai_mu_oracle: {
+      auspicious_window: `ฤกษ์เปิดทรัพย์ ${peakHourStr} (ช่วงเหนี่ยวทรัพย์หนาแน่น)`,
+      lucky_color_advice: `ทีมงานสวมใส่หรือพกไอเทม ${saiMu.luckyColors} เปิดรับทรัพย์ (เลี่ยง ${saiMu.unluckyColor})`,
+      money_direction: `จัดโต๊ะต้อนรับหรือเคาน์เตอร์คิดเงินทาง ${saiMu.luckyDirection} เสริมพลัง ${saiMu.element}`,
+      sai_mu_hack: saiMu.saiMuHacks
+    },
+    operational_advice: {
+      kitchen_bar: `เตรียมสำรองสต็อกวัตถุดิบและพรีเซตเครื่องดื่มล่วงหน้าก่อน 17.30 น. เพื่อรองรับ ~${dinnerForecast} ท่านช่วง Prime Dinner`,
+      floor_service: `จัดโซนโต๊ะรองรับกลุ่ม Walk-in ควบคู่กับลูกค้าที่โทร/LINE จองโต๊ะล่วงหน้าเพื่อการระบายรอบโต๊ะที่รวดเร็ว`,
+      marketing_ads: adDirs > 0
+        ? `พบสัญญาณลูกค้าขอเส้นทางใน Google Maps ${adDirs} ครั้ง เตรียมทีมหน้าร้านต้อนรับกลุ่มที่กำลังเดินทางมา`
+        : `บูสต์โพสต์โปรโมทบรรยากาศริมโขงและเมนูซิกเนเจอร์ช่วง 15.30-17.30 น. เพื่อดึงดูดลูกค้ามื้อค่ำ`
+    },
+    executive_summary: `วันนี้ทราฟฟิกมีจังหวะความเร็ว ${summaryPayload.dayPacePct >= 0 ? `+${summaryPayload.dayPacePct}%` : `${summaryPayload.dayPacePct}%`} เทียบสถิติเดิม คาดการณ์ยอดปิดวันรวม ~${summaryPayload.forecastedClosingPax} ท่าน`
+  };
+}
+
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+function createTrafficPredictorFlexMessage(
+  trafficData: any,
+  saiMuData: any,
+  aiAnalysis: any,
+  dateTitleStr: string,
+  currentTimeFormatted: string,
+  nextHoursInfo: { label: string; forecastPax: number }
+) {
+  const {
+    totalActualPax,
+    totalActualBills,
+    forecastedClosingPax,
+    forecastedClosingPaxLow,
+    forecastedClosingPaxHigh,
+    dayPacePct,
+    peakHour,
+    peakCapacityLoad,
+    dayparts
+  } = trafficData;
+
+  const peakHourLabel = peakHour ? `${peakHour.hour}.00 - ${peakHour.hour + 1}.00 น.` : '19.00 - 20.00 น.';
+  const peakPaxVal = peakHour ? (peakHour.isFuture ? peakHour.forecast : peakHour.actual) : 0;
+
+  // Render Daypart Rows (Hallmark Zero-Icon Minimalist Badges)
+  const daypartRows = (dayparts || []).map((dp: any, idx: number) => {
+    let statusBg = "#F4F1EA";
+    let statusColor = "#78736A";
+    let statusText = "FORECAST";
+
+    if (dp.status === 'passed') {
+      statusBg = "#E8F0E4";
+      statusColor = "#4A6B3D";
+      statusText = "PASSED";
+    } else if (dp.status === 'active') {
+      statusBg = "#FDEBD0";
+      statusColor = "#B45309";
+      statusText = "LIVE ACTIVE";
+    }
+
+    const paxDisplay = dp.status === 'passed'
+      ? `${dp.actualPax} ท่าน`
+      : `~${dp.forecastPax} ท่าน`;
+
+    return {
+      type: "box",
+      layout: "horizontal",
+      margin: idx === 0 ? "xs" : "sm",
+      contents: [
+        {
+          type: "box",
+          layout: "vertical",
+          flex: 6,
+          contents: [
+            { type: "text", text: dp.title, size: "xs", weight: "bold", color: "#1E1B18" },
+            { type: "text", text: dp.timeLabel, size: "xxs", color: "#78736A" }
+          ]
+        },
+        {
+          type: "box",
+          layout: "vertical",
+          flex: 3,
+          contents: [
+            { type: "text", text: paxDisplay, size: "xs", weight: "bold", color: "#1E1B18", align: "end" },
+            { type: "text", text: `เทียบฐาน ${dp.diffPct >= 0 ? `+${dp.diffPct}%` : `${dp.diffPct}%`}`, size: "xxs", color: dp.diffPct >= 0 ? "#4A6B3D" : "#888888", align: "end" }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          flex: 3,
+          justifyContent: "flex-end",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              backgroundColor: statusBg,
+              cornerRadius: "xs",
+              paddingStart: "sm",
+              paddingEnd: "sm",
+              paddingTop: "xs",
+              paddingBottom: "xs",
+              contents: [
+                { type: "text", text: statusText, size: "xxs", weight: "bold", color: statusColor }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+  });
+
+  return {
+    type: "bubble",
+    size: "mega",
+    header: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#1E1B18",
+      paddingAll: "18px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "HAUS PRO FORECAST // FAST DIGEST", size: "xxs", weight: "bold", color: "#C85A32", flex: 8 },
+            { type: "text", text: `[${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#E6E1D6", align: "end", flex: 4, gravity: "center" }
+          ]
+        },
+        {
+          type: "text",
+          text: `พยากรณ์ทราฟฟิก & สรุปข้อมูลฉับไว · ${dateTitleStr}`,
+          size: "sm",
+          weight: "bold",
+          color: "#FBF9F5",
+          margin: "xs"
+        }
+      ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FBF9F5",
+      paddingAll: "16px",
+      contents: [
+        // 1. HIGHLIGHT DIGEST BOX: ณ ปัจจุบัน & คาดการณ์ช่วงถัดไป (อ่านจบใน 3 วิ)
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#F4F1EA",
+          cornerRadius: "sm",
+          borderColor: "#E6E1D6",
+          borderWidth: "1px",
+          paddingAll: "14px",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: `SNAPSHOT ปัจจุบัน [${currentTimeFormatted}]`, size: "xxs", weight: "bold", color: "#C85A32", flex: 7 },
+                {
+                  type: "text",
+                  text: `${dayPacePct >= 0 ? `+${dayPacePct}%` : `${dayPacePct}%`} PACING`,
+                  size: "xxs",
+                  weight: "bold",
+                  color: dayPacePct >= 0 ? "#4A6B3D" : "#9E2D2D",
+                  align: "end",
+                  flex: 5
+                }
+              ]
+            },
+            { type: "separator", margin: "sm", color: "#E6E1D6" },
+            {
+              type: "box",
+              layout: "horizontal",
+              margin: "sm",
+              contents: [
+                {
+                  type: "box",
+                  layout: "vertical",
+                  flex: 6,
+                  contents: [
+                    { type: "text", text: "ลูกค้าจริงสะสมขณะนี้:", size: "xxs", color: "#78736A" },
+                    { type: "text", text: `${totalActualPax} ท่าน`, size: "lg", weight: "bold", color: "#1E1B18" },
+                    { type: "text", text: `ชำระแล้ว ${totalActualBills} บิล`, size: "xxs", color: "#78736A" }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  flex: 6,
+                  alignItems: "flex-end",
+                  contents: [
+                    { type: "text", text: `คาดการณ์ 1-2 ชม. ข้างหน้า:`, size: "xxs", color: "#78736A" },
+                    { type: "text", text: `~${nextHoursInfo.forecastPax} ท่าน`, size: "lg", weight: "bold", color: "#C85A32" },
+                    { type: "text", text: `(${nextHoursInfo.label})`, size: "xxs", color: "#78736A" }
+                  ]
+                }
+              ]
+            },
+            { type: "separator", margin: "sm", color: "#E6E1D6" },
+            {
+              type: "box",
+              layout: "horizontal",
+              margin: "sm",
+              contents: [
+                { type: "text", text: "คาดการณ์ยอดปิดวัน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 5 },
+                { type: "text", text: `~${forecastedClosingPax} ท่าน (${forecastedClosingPaxLow}-${forecastedClosingPaxHigh})`, size: "xxs", weight: "bold", color: "#1E1B18", align: "end", flex: 7 }
+              ]
+            },
+            {
+              type: "box",
+              layout: "horizontal",
+              margin: "xs",
+              contents: [
+                { type: "text", text: "ชั่วโมงลูกค้าสูงสุด (Peak):", size: "xxs", weight: "bold", color: "#C85A32", flex: 5 },
+                { type: "text", text: `${peakHourLabel} (~${peakPaxVal} คน | โหลด ${peakCapacityLoad}%)`, size: "xxs", color: "#C85A32", align: "end", flex: 7 }
+              ]
+            }
+          ]
+        },
+
+        // 2. FAST ACTION & SAI MU (กลยุทธ์ & เสริมดวง ย่อยเร็ว)
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#FFFDF7",
+          borderColor: "#E8DEC8",
+          borderWidth: "1px",
+          cornerRadius: "sm",
+          paddingAll: "12px",
+          margin: "md",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: "SAI MU & ACTION // เสริมดวง & สิ่งที่ต้องทำทันที", size: "xxs", weight: "bold", color: "#B45309", flex: 8 },
+                { type: "text", text: `[${saiMuData.dayName}]`, size: "xxs", weight: "bold", color: "#78736A", align: "end", flex: 4 }
+              ]
+            },
+            { type: "separator", margin: "sm", color: "#E8DEC8" },
+            {
+              type: "box",
+              layout: "vertical",
+              margin: "xs",
+              spacing: "xs",
+              contents: [
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: "ฤกษ์ดูดทรัพย์:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
+                    { type: "text", text: aiAnalysis.sai_mu_oracle.auspicious_window, size: "xxs", color: "#B45309", weight: "bold", flex: 9, wrap: true }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: "สีมงคล / เลี่ยง:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
+                    { type: "text", text: `${saiMuData.luckyColors} (เลี่ยง: ${saiMuData.unluckyColor})`, size: "xxs", color: "#4A6B3D", weight: "bold", flex: 9, wrap: true }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: "ทิศรับเงิน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
+                    { type: "text", text: `${saiMuData.luckyDirection} (เสริมพลัง: ${saiMuData.element})`, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: "ทริคหน้าร้าน:", size: "xxs", weight: "bold", color: "#1E1B18", flex: 3 },
+                    { type: "text", text: aiAnalysis.sai_mu_oracle.sai_mu_hack, size: "xxs", color: "#555555", flex: 9, wrap: true }
+                  ]
+                },
+                { type: "separator", margin: "xs", color: "#E8DEC8" },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  margin: "xs",
+                  contents: [
+                    { type: "text", text: "ครัวและบาร์:", size: "xxs", weight: "bold", color: "#C85A32", flex: 3 },
+                    { type: "text", text: aiAnalysis.operational_advice.kitchen_bar, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "horizontal",
+                  contents: [
+                    { type: "text", text: "จัดโต๊ะ/บริการ:", size: "xxs", weight: "bold", color: "#C85A32", flex: 3 },
+                    { type: "text", text: aiAnalysis.operational_advice.floor_service, size: "xxs", color: "#1E1B18", flex: 9, wrap: true }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+
+        // 3. DAYPARTS TIMELINE (4 ช่วงเวลา ย่ออ่านง่าย)
+        {
+          type: "box",
+          layout: "horizontal",
+          margin: "sm",
+          contents: [
+            { type: "text", text: "DAYPARTS TIMELINE // 4 ช่วงเวลาของวัน", size: "xxs", weight: "bold", color: "#78736A", flex: 1 }
+          ]
+        },
+        ...daypartRows
+      ]
+    },
+    footer: {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FBF9F5",
+      paddingAll: "14px",
+      spacing: "xs",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "sm",
+          contents: [
+            {
+              type: "button",
+              style: "secondary",
+              height: "sm",
+              action: {
+                type: "message",
+                label: "ยอดขายสด (STSALES)",
+                text: "stsales"
+              },
+              color: "#F4F1EA"
+            },
+            {
+              type: "button",
+              style: "secondary",
+              height: "sm",
+              action: {
+                type: "message",
+                label: "บิลล่าสุด (STBILL)",
+                text: "stbill"
+              },
+              color: "#F4F1EA"
+            },
+            {
+              type: "button",
+              style: "secondary",
+              height: "sm",
+              action: {
+                type: "message",
+                label: "ออเดอร์ครัว (STORDER)",
+                text: "storder"
+              },
+              color: "#F4F1EA"
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -2613,6 +3154,398 @@ Deno.serve(async (req) => {
           continue
         }
 
+        // --- NEW: Intraday Traffic Prediction & Sai Mu Oracle (stpredict / ทำนาย / พยากรณ์ / stforecast) ---
+        if (
+          text === 'stpredict' || text === 'predict' || text === 'ทำนาย' ||
+          text === 'พยากรณ์' || text === 'stforecast' || text === 'st forecast'
+        ) {
+          console.log('Processing stpredict command...')
+          try {
+            const now = new Date()
+            const thNow = new Date(now.getTime() + (7 * 60 * 60 * 1000))
+            const todayStr = thNow.toISOString().split('T')[0]
+            const currentBangkokHour = thNow.getUTCHours()
+            const currentBangkokMinute = thNow.getUTCMinutes()
+            const currentTimeFormatted = `${String(currentBangkokHour).padStart(2, '0')}.${String(currentBangkokMinute).padStart(2, '0')} น.`
+
+            const thaiDays = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์']
+            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม']
+            const dayOfWeekIndex = thNow.getUTCDay()
+            const dayName = thaiDays[dayOfWeekIndex]
+            const dateNum = thNow.getUTCDate()
+            const monthName = thaiMonths[thNow.getUTCMonth()]
+            const yearThai = thNow.getUTCFullYear() + 543
+            const dateTitleStr = `${dayName}ที่ ${dateNum} ${monthName} ${yearThai}`
+
+            // 1. Fetch Historical Baseline (Past 4 weeks on same day of week)
+            const pastDates: string[] = []
+            for (let i = 1; i <= 4; i++) {
+              const d = new Date(thNow.getTime() - i * 7 * 24 * 3600 * 1000)
+              pastDates.push(d.toISOString().split('T')[0])
+            }
+            const earliestPastDate = pastDates[pastDates.length - 1]
+            const latestPastDate = pastDates[0]
+
+            const { data: pastBookings, error: pastErr } = await supabaseAdmin
+              .from('bookings')
+              .select('id, booking_time, created_at, pax, status')
+              .in('status', ['completed', 'paid', 'success', 'seated', 'confirmed', 'ready'])
+              .gte('booking_time', `${earliestPastDate}T00:00:00+07:00`)
+              .lte('booking_time', `${latestPastDate}T23:59:59+07:00`)
+
+            if (pastErr) console.warn('[stpredict] Past bookings warning:', pastErr.message)
+
+            const operatingHours = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+            const hourlyBaselineTotals: Record<number, number> = {}
+            operatingHours.forEach(h => { hourlyBaselineTotals[h] = 0 })
+            const daysWithPastData = new Set<string>()
+
+            ;(pastBookings || []).forEach((b: any) => {
+              const t = b.booking_time || b.created_at
+              if (!t) return
+              const datePart = t.split('T')[0]
+              if (pastDates.includes(datePart)) {
+                daysWithPastData.add(datePart)
+                const bDate = new Date(t)
+                const bHour = new Date(bDate.getTime() + (7 * 3600 * 1000)).getUTCHours()
+                if (hourlyBaselineTotals[bHour] !== undefined) {
+                  hourlyBaselineTotals[bHour] += Number(b.pax) || 1
+                }
+              }
+            })
+
+            const divisor = Math.max(1, daysWithPastData.size)
+            const baselineHourly: Record<number, number> = {}
+            operatingHours.forEach(h => {
+              baselineHourly[h] = Math.round(hourlyBaselineTotals[h] / divisor)
+            })
+
+            const fallbackBaseline: Record<number, number> = {
+              11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
+              17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
+            }
+            const baseline = daysWithPastData.size > 0 ? baselineHourly : fallbackBaseline
+
+            // 2. Fetch Today's Live Bookings
+            const dbStart = `${todayStr}T00:00:00+07:00`
+            const dbEnd = `${todayStr}T23:59:59+07:00`
+
+            const { data: todayBookings, error: todayErr } = await supabaseAdmin
+              .from('bookings')
+              .select('id, booking_time, created_at, pax, status, total_amount')
+              .gte('booking_time', dbStart)
+              .lte('booking_time', dbEnd)
+
+            if (todayErr) throw todayErr
+
+            const validStatuses = ['completed', 'paid', 'success', 'seated', 'confirmed', 'ready']
+            const activeBookings = (todayBookings || []).filter((b: any) => {
+              const st = (b.status || '').toLowerCase()
+              return validStatuses.includes(st) && st !== 'cancelled' && st !== 'void'
+            })
+
+            const hourlyActualPax: Record<number, number> = {}
+            const hourlyActualBills: Record<number, number> = {}
+            operatingHours.forEach(h => {
+              hourlyActualPax[h] = 0
+              hourlyActualBills[h] = 0
+            })
+
+            let totalActualPax = 0
+            let totalActualBills = activeBookings.length
+
+            activeBookings.forEach((b: any) => {
+              const t = b.booking_time || b.created_at
+              if (!t) return
+              const bDate = new Date(t)
+              const h = new Date(bDate.getTime() + (7 * 3600 * 1000)).getUTCHours()
+              const p = Number(b.pax) || 1
+              if (hourlyActualPax[h] !== undefined) {
+                hourlyActualPax[h] += p
+                hourlyActualBills[h] += 1
+                totalActualPax += p
+              }
+            })
+
+            // 3. Fetch Today's Ad Events for Lead Lift
+            const { data: adEventsData } = await supabaseAdmin
+              .from('ad_events')
+              .select('event_name, created_at, utm_source')
+              .gte('created_at', dbStart)
+              .lte('created_at', dbEnd)
+              .limit(1000)
+
+            const adEvents = adEventsData || []
+            let totalAdDirections = 0
+            let totalAdPhone = 0
+            let totalAdLine = 0
+            let totalAdBooking = 0
+            let totalAdPickup = 0
+            let totalAdMenu = 0
+            let totalAdVibe = 0
+
+            const hourlyAdLeads: Record<number, number> = {}
+            operatingHours.forEach(h => { hourlyAdLeads[h] = 0 })
+
+            adEvents.forEach((e: any) => {
+              const t = e.created_at
+              if (!t) return
+              const eDate = new Date(t)
+              const h = new Date(eDate.getTime() + (7 * 3600 * 1000)).getUTCHours()
+              const ev = e.event_name || ''
+
+              if (ev === 'click_directions' || ev === 'find_location') {
+                totalAdDirections++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 3.0
+              } else if (ev === 'click_phone' || ev === 'contact') {
+                totalAdPhone++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.5
+              } else if (ev === 'click_line' || ev === 'generate_lead') {
+                totalAdLine++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.0
+              } else if (ev === 'click_booking_link') {
+                totalAdBooking++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.0
+              } else if (ev === 'click_pickup_link') {
+                totalAdPickup++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 1.5
+              } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu') {
+                totalAdMenu++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 0.6
+              } else if (ev === 'view_atmosphere') {
+                totalAdVibe++
+                if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 0.4
+              }
+            })
+
+            // 4. Calculate Pacing & Projections
+            const cappedHour = Math.min(23, Math.max(11, currentBangkokHour))
+            let baselineSoFar = 0
+            let actualSoFar = 0
+            operatingHours.forEach(h => {
+              const bVal = baseline[h] || 0
+              if (h <= cappedHour) {
+                baselineSoFar += bVal
+                actualSoFar += (hourlyActualPax[h] || 0)
+              }
+            })
+
+            const rawPace = baselineSoFar > 0 ? (actualSoFar / baselineSoFar) : 1.0
+            const paceMultiplier = Math.max(0.65, Math.min(1.75, rawPace * 0.75 + 0.25))
+            const dayPacePct = baselineSoFar > 0 ? Math.round(((actualSoFar - baselineSoFar) / baselineSoFar) * 100) : 0
+
+            const recentHighIntent = (hourlyAdLeads[cappedHour - 1] || 0) + (hourlyAdLeads[cappedHour] || 0)
+            const adLiftPct = Math.min(0.35, recentHighIntent * 0.04)
+
+            let forecastedClosingPax = totalActualPax
+            let forecastedClosingPaxHigh = totalActualPax
+            let forecastedClosingPaxLow = totalActualPax
+
+            const points = operatingHours.map(h => {
+              const actual = hourlyActualPax[h]
+              const base = baseline[h] || 0
+              const isFuture = h > cappedHour
+
+              let forecast = null
+              let forecastHigh = null
+              let forecastLow = null
+
+              if (isFuture) {
+                const nearTermLift = (h <= cappedHour + 2) ? (1 + adLiftPct) : 1.0
+                forecast = Math.round(base * paceMultiplier * nearTermLift)
+                forecastHigh = Math.round(base * paceMultiplier * (nearTermLift + 0.25))
+                forecastLow = Math.max(0, Math.round(base * paceMultiplier * Math.max(0.4, nearTermLift - 0.25)))
+
+                forecastedClosingPax += forecast
+                forecastedClosingPaxHigh += forecastHigh
+                forecastedClosingPaxLow += forecastLow
+              }
+
+              return {
+                hour: h,
+                actual,
+                bills: hourlyActualBills[h],
+                baseline: base,
+                forecast,
+                forecastHigh,
+                forecastLow,
+                isFuture
+              }
+            })
+
+            // 5. Peak Hour & Dayparts
+            let maxPax = 0
+            let peakH = points[0]
+            points.forEach(p => {
+              const val = p.isFuture ? (p.forecast || 0) : p.actual
+              if (val > maxPax) {
+                maxPax = val
+                peakH = p
+              }
+            })
+            const totalSeats = 45
+            const peakCapacityLoad = Math.min(100, Math.round((maxPax / totalSeats) * 100))
+
+            const daypartDefs = [
+              { key: 'lunch', title: 'LUNCH RUSH', hours: [11, 12, 13], timeLabel: '11.00 - 14.00 น.' },
+              { key: 'afternoon', title: 'AFTERNOON CAFE', hours: [14, 15, 16], timeLabel: '14.00 - 17.00 น.' },
+              { key: 'dinner', title: 'PRIME DINNER', hours: [17, 18, 19, 20], timeLabel: '17.00 - 21.00 น.' },
+              { key: 'late', title: 'LATE NIGHT / BAR', hours: [21, 22, 23], timeLabel: '21.00 - 23.00 น.' }
+            ]
+
+            const dayparts = daypartDefs.map(dp => {
+              let actualCount = 0
+              let forecastCount = 0
+              let baselineCount = 0
+              let allPassed = true
+              let allFuture = true
+
+              dp.hours.forEach(h => {
+                const pt = points.find(p => p.hour === h)
+                if (pt) {
+                  baselineCount += pt.baseline
+                  if (pt.isFuture) {
+                    allPassed = false
+                    forecastCount += (pt.forecast || 0)
+                  } else {
+                    allFuture = false
+                    actualCount += pt.actual
+                    forecastCount += pt.actual
+                  }
+                }
+              })
+
+              let status = 'upcoming'
+              if (allPassed) status = 'passed'
+              else if (!allFuture) status = 'active'
+
+              const targetPax = (status === 'passed') ? actualCount : forecastCount
+              const diffPct = baselineCount > 0 ? Math.round(((targetPax - baselineCount) / baselineCount) * 100) : 0
+
+              return {
+                key: dp.key,
+                title: dp.title,
+                timeLabel: dp.timeLabel,
+                status,
+                actualPax: actualCount,
+                forecastPax: forecastCount,
+                baselinePax: baselineCount,
+                diffPct
+              }
+            })
+
+            // 6. Gemini AI + Sai Mu Oracle Synthesis
+            let geminiApiKey = Deno.env.get('GEMINI_API_KEY') || ''
+            if (!geminiApiKey) {
+              const { data: keyRow } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'gemini_api_key').maybeSingle()
+              geminiApiKey = keyRow?.value || ''
+            }
+
+            let preferredModel = 'gemini-3.7-flash'
+            const { data: modelRow } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'gemini_model').maybeSingle()
+            if (modelRow?.value) preferredModel = modelRow.value
+
+            const saiMuData = getDailySaiMuContext(thNow)
+            const summaryPayload = {
+              date: todayStr,
+              dayOfWeek: dayName,
+              totalActualPax,
+              totalActualBills,
+              forecastedClosingPax,
+              forecastRange: `ต่ำ ${forecastedClosingPaxLow} - สูง ${forecastedClosingPaxHigh} ท่าน`,
+              dayPacePct,
+              peakHour: peakH ? `${peakH.hour}.00 น.` : '19.00 น.',
+              peakCapacityLoad: `${peakCapacityLoad}%`,
+              dayparts,
+              adStats: {
+                totalAdDirections,
+                totalAdPhone,
+                totalAdLine,
+                totalAdBooking,
+                totalAdPickup,
+                totalAdMenu,
+                totalAdVibe
+              },
+              saiMuContext: saiMuData
+            }
+
+            const aiAnalysis = await generateIntradayTrafficWithSaiMu(summaryPayload, geminiApiKey, preferredModel)
+
+            // Calculate 1-2 hours forward forecast
+            let nextHoursLabel = ''
+            let nextHoursForecast = 0
+
+            if (currentBangkokHour < 11) {
+              nextHoursLabel = '11.00 - 13.00 น. (เปิดร้าน)'
+              const pt1 = points.find(p => p.hour === 11)
+              const pt2 = points.find(p => p.hour === 12)
+              nextHoursForecast = (pt1?.forecast || 0) + (pt2?.forecast || 0)
+            } else if (currentBangkokHour >= 23) {
+              nextHoursLabel = 'ช่วงปิดร้าน (Closing)'
+              nextHoursForecast = 0
+            } else {
+              const startH = currentBangkokHour + 1
+              const endH = Math.min(23, currentBangkokHour + 2)
+              nextHoursLabel = `${startH}.00 - ${endH + 1}.00 น.`
+              for (let h = startH; h <= endH; h++) {
+                const pt = points.find(p => p.hour === h)
+                if (pt) {
+                  nextHoursForecast += (pt.isFuture ? (pt.forecast || 0) : pt.actual)
+                }
+              }
+            }
+
+            const nextHoursInfo = {
+              label: nextHoursLabel,
+              forecastPax: nextHoursForecast
+            }
+
+            // 7. Render LINE Flex Message (Fast Digest Layout)
+            const predictorFlex = createTrafficPredictorFlexMessage(
+              {
+                totalActualPax,
+                totalActualBills,
+                forecastedClosingPax,
+                forecastedClosingPaxLow,
+                forecastedClosingPaxHigh,
+                dayPacePct,
+                peakHour: peakH,
+                peakCapacityLoad,
+                dayparts
+              },
+              saiMuData,
+              aiAnalysis,
+              dateTitleStr,
+              currentTimeFormatted,
+              nextHoursInfo
+            )
+
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{
+                  type: 'flex',
+                  altText: `พยากรณ์ด่วน [${currentTimeFormatted}] (${dateTitleStr}): 1-2 ชม. ถัดไป ~${nextHoursInfo.forecastPax} ท่าน (ปิดวัน ~${forecastedClosingPax} ท่าน)`,
+                  contents: predictorFlex
+                }]
+              })
+            })
+          } catch (err: any) {
+            console.error('stpredict Error:', err)
+            await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}` },
+              body: JSON.stringify({
+                replyToken: event.replyToken,
+                messages: [{ type: 'text', text: '❌ ไม่สามารถประมวลผลการทำนายได้: ' + err.message }]
+              })
+            })
+          }
+          continue
+        }
+
         // --- NEW: Recent Bills List (stbill / stbills / บิลล่าสุด / บิล) ---
         if (text === 'stbill' || text === 'stbills' || text === 'บิลล่าสุด' || text === 'บิล') {
           console.log('Processing stbill command...')
@@ -3404,6 +4337,7 @@ Deno.serve(async (req) => {
                     spacing: "xs",
                     contents: [
                       { type: "text", text: "• stsales หรือ ยอดขาย : สรุปยอดขายหน้าร้านวันนี้", size: "xs", color: "#1E1B18" },
+                      { type: "text", text: "• stpredict หรือ ทำนาย : พยากรณ์ลูกค้าต่อชั่วโมง & ทริคสายมู AI", size: "xs", color: "#C85A32", weight: "bold" },
                       { type: "text", text: "• stbill หรือ บิลล่าสุด : ดู 6 บิลที่ชำระเงินล่าสุด", size: "xs", color: "#1E1B18" },
                       { type: "text", text: "• storder : ดูออเดอร์สดที่กำลังทำในครัว", size: "xs", color: "#1E1B18" },
                       { type: "text", text: "• sttable หรือ โต๊ะ 3 : ดูสถานะโต๊ะและยอดค้าง", size: "xs", color: "#1E1B18" },

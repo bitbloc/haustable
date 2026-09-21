@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toThaiISO, getThaiDate } from '../timeUtils'
 import { checkOverlap } from '../availabilityUtils'
+import { calculateBookingFinancials, formatDiscountRemarkTag } from '../bookingHelper'
 
 describe('Manual Booking Calculations & Overlap Detection', () => {
     it('should generate valid Thailand ISO timestamps (+07:00)', () => {
@@ -62,5 +63,111 @@ describe('Manual Booking Calculations & Overlap Detection', () => {
         const fullRemark = customRemark ? `${defaultTag} · ${customRemark}` : defaultTag
 
         expect(fullRemark).toBe('[MANUAL_ADMIN] รับจองผ่าน LINE · ลูกค้าโอน SCB ยอด 503 บาท จากคุณชิดชนก')
+    })
+
+    describe('Discount and Financial Breakdown Calculations (bookingHelper)', () => {
+        it('should calculate percentage discount accurately', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 1000,
+                discountType: 'percent',
+                discountValue: 10,
+                depositAmount: 450
+            })
+
+            expect(res.subtotal).toBe(1000)
+            expect(res.discountAmount).toBe(100)
+            expect(res.netTotal).toBe(900)
+            expect(res.depositAmount).toBe(450)
+            expect(res.remainingDue).toBe(450)
+        })
+
+        it('should calculate fixed price/amount discount accurately', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 1200,
+                discountType: 'amount',
+                discountValue: 200,
+                depositAmount: 500
+            })
+
+            expect(res.subtotal).toBe(1200)
+            expect(res.discountAmount).toBe(200)
+            expect(res.netTotal).toBe(1000)
+            expect(res.depositAmount).toBe(500)
+            expect(res.remainingDue).toBe(500)
+        })
+
+        it('should handle decimal percentages with precision', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 1500,
+                discountType: 'percent',
+                discountValue: 12.5,
+                depositAmount: 0
+            })
+
+            // 1500 * 0.125 = 187.5
+            expect(res.discountAmount).toBe(187.5)
+            expect(res.netTotal).toBe(1312.5)
+            expect(res.remainingDue).toBe(1312.5)
+        })
+
+        it('should cap percentage discount at 100%', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 500,
+                discountType: 'percent',
+                discountValue: 150,
+                depositAmount: 0
+            })
+
+            expect(res.discountAmount).toBe(500)
+            expect(res.netTotal).toBe(0)
+            expect(res.remainingDue).toBe(0)
+        })
+
+        it('should cap fixed amount discount at subtotal (cannot exceed total bill)', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 350,
+                discountType: 'amount',
+                discountValue: 500,
+                depositAmount: 0
+            })
+
+            expect(res.discountAmount).toBe(350)
+            expect(res.netTotal).toBe(0)
+            expect(res.remainingDue).toBe(0)
+        })
+
+        it('should accurately calculate 50% and 100% deposit on net discounted total', () => {
+            const res = calculateBookingFinancials({
+                subtotal: 1000,
+                discountType: 'percent',
+                discountValue: 20 // Net total = 800
+            })
+
+            const halfDeposit = Math.round(res.netTotal * 0.5)
+            expect(halfDeposit).toBe(400)
+
+            const fullDeposit = res.netTotal
+            expect(fullDeposit).toBe(800)
+
+            const withDeposit = calculateBookingFinancials({
+                subtotal: 1000,
+                discountType: 'percent',
+                discountValue: 20,
+                depositAmount: halfDeposit
+            })
+
+            expect(withDeposit.remainingDue).toBe(400)
+        })
+
+        it('should format discount remark tags cleanly', () => {
+            const percentTag = formatDiscountRemarkTag('percent', 15, 150)
+            expect(percentTag).toBe('[ส่วนลด 15%: -฿150.00]')
+
+            const amountTag = formatDiscountRemarkTag('amount', 50, 50)
+            expect(amountTag).toBe('[ส่วนลด: -฿50.00]')
+
+            const noDiscountTag = formatDiscountRemarkTag('percent', 0, 0)
+            expect(noDiscountTag).toBe('')
+        })
     })
 })
