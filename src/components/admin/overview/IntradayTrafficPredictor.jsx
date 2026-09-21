@@ -161,8 +161,8 @@ export default function IntradayTrafficPredictor({
             } catch (err) {
                 console.warn('[TrafficPredictor] Historical baseline fallback:', err?.message)
                 const fallbackDistribution = {
-                    11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
-                    17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
+                    11: 1, 12: 1, 13: 2, 14: 1, 15: 1, 16: 1,
+                    17: 3, 18: 4, 19: 4, 20: 3, 21: 2, 22: 1, 23: 0
                 }
                 if (isMounted) setHistoricalAverages(fallbackDistribution)
             }
@@ -314,8 +314,8 @@ export default function IntradayTrafficPredictor({
         const totalContentExplores = totalAdMenu + totalAdVibe
 
         const baseline = historicalAverages || {
-            11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
-            17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
+            11: 1, 12: 1, 13: 2, 14: 1, 15: 1, 16: 1,
+            17: 3, 18: 4, 19: 4, 20: 3, 21: 2, 22: 1, 23: 0
         }
 
         const cappedHour = isViewingToday 

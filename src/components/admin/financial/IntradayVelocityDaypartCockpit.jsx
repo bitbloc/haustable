@@ -185,13 +185,14 @@ export default function IntradayVelocityDaypartCockpit({
     // 1. HISTORICAL BASELINE FETCHING (4 Weeks Same Day-of-Week)
     // =========================================================================
     const [historicalBaseline, setHistoricalBaseline] = useState(() => {
+        // Authentic fallback baseline profile for IN THE HAUS (45 seats restaurant/bar)
         const fallbackPax = {
-            11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
-            17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
+            11: 1, 12: 1, 13: 2, 14: 1, 15: 1, 16: 1,
+            17: 3, 18: 4, 19: 4, 20: 3, 21: 2, 22: 1, 23: 0
         }
-        const totalP = Object.values(fallbackPax).reduce((a, b) => a + b, 0)
+        const totalP = Object.values(fallbackPax).reduce((a, b) => a + b, 0) // ~23 pax
         const fallbackSales = {}
-        const defaultTarget = 35000
+        const defaultTarget = 7500
         ;[11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].forEach(h => {
             fallbackSales[h] = Math.round((fallbackPax[h] / totalP) * defaultTarget)
         })
@@ -207,13 +208,13 @@ export default function IntradayVelocityDaypartCockpit({
         let isMounted = true
         async function fetchHistoricalBaseline() {
             const fallbackPax = isWeekend ? {
-                11: 6, 12: 14, 13: 16, 14: 10, 15: 8, 16: 9,
-                17: 15, 18: 22, 19: 25, 20: 18, 21: 12, 22: 6, 23: 2
+                11: 2, 12: 3, 13: 3, 14: 2, 15: 2, 16: 2,
+                17: 5, 18: 6, 19: 5, 20: 4, 21: 2, 22: 1, 23: 0
             } : {
-                11: 4, 12: 10, 13: 12, 14: 7, 15: 5, 16: 6,
-                17: 9, 18: 15, 19: 18, 20: 14, 21: 8, 22: 4, 23: 1
+                11: 1, 12: 1, 13: 2, 14: 1, 15: 1, 16: 1,
+                17: 3, 18: 4, 19: 4, 20: 3, 21: 2, 22: 1, 23: 0
             }
-            const defaultDayTarget = isWeekend ? 55000 : 35000
+            const defaultDayTarget = isWeekend ? 10500 : 7500
             const totalFallbackPax = Object.values(fallbackPax).reduce((a, b) => a + b, 0)
             const fallbackSales = {}
             hours.forEach(h => {
@@ -229,9 +230,10 @@ export default function IntradayVelocityDaypartCockpit({
                 const earliestDate = pastDates[pastDates.length - 1]
                 const latestDate = pastDates[0]
 
+                // Query bookings for past 4 weeks (removed total_price to prevent column error)
                 const { data, error } = await supabase
                     .from('bookings')
-                    .select('id, booking_time, created_at, pax, total_amount, total_price, deposit_amount, status')
+                    .select('id, booking_time, created_at, pax, total_amount, deposit_amount, status')
                     .in('status', ['completed', 'paid', 'success', 'seated', 'confirmed', 'ready'])
                     .gte('booking_time', `${earliestDate}T00:00:00+07:00`)
                     .lte('booking_time', `${latestDate}T23:59:59+07:00`)
@@ -252,7 +254,7 @@ export default function IntradayVelocityDaypartCockpit({
                         const h = getBangkokHour(t)
                         if (hourlyPax[h] !== undefined) {
                             const p = parseInt(b.pax || 1, 10)
-                            let amt = Number(b.total_amount ?? b.total_price ?? b.deposit_amount ?? 0)
+                            let amt = Number(b.total_amount ?? b.deposit_amount ?? 0)
                             hourlyPax[h] += p
                             hourlySales[h] += amt
                         }
@@ -266,7 +268,7 @@ export default function IntradayVelocityDaypartCockpit({
                     let totP = 0
                     let totS = 0
                     hours.forEach(h => {
-                        avgPax[h] = Math.max(1, Math.round(hourlyPax[h] / count))
+                        avgPax[h] = Math.max(0, Math.round(hourlyPax[h] / count))
                         avgSales[h] = Math.round(hourlySales[h] / count)
                         totP += avgPax[h]
                         totS += avgSales[h]
@@ -275,7 +277,7 @@ export default function IntradayVelocityDaypartCockpit({
                         setHistoricalBaseline({
                             pax: avgPax,
                             sales: avgSales,
-                            totalPax: totP,
+                            totalPax: totP || totalFallbackPax,
                             totalSales: totS || defaultDayTarget
                         })
                     }
@@ -418,13 +420,18 @@ export default function IntradayVelocityDaypartCockpit({
             }
         })
 
-        // Benchmark target setup
-        const defaultTarget = isWeekend ? 55000 : 35000
-        const maxCumulative = Math.max(totalGross * 1.25, historicalBaseline.totalSales, defaultTarget)
-        const curveWeights = [0.03, 0.12, 0.24, 0.30, 0.35, 0.40, 0.50, 0.68, 0.84, 0.93, 0.97, 0.99, 1.0]
+        // Dynamic operational target grounded in the restaurant's actual historical scale
+        const baseSalesBenchmark = historicalBaseline.totalSales > 0 
+            ? historicalBaseline.totalSales 
+            : (isWeekend ? 10500 : 7500)
+        // Set realistic target: 15% stretch above day's historical average, or at least current gross
+        const targetBenchmark = Math.max(Math.round(baseSalesBenchmark * 1.15 / 100) * 100, Math.round(baseSalesBenchmark))
+        const defaultTarget = Math.max(targetBenchmark, Math.round(totalGross / 100) * 100)
+        const maxCumulative = Math.max(totalGross * 1.15, defaultTarget)
+        const curveWeights = [0.03, 0.08, 0.15, 0.20, 0.25, 0.30, 0.45, 0.65, 0.82, 0.92, 0.97, 0.99, 1.0]
         const benchmarkPoints = hours.map((h, idx) => ({
             hour: h,
-            expectedCumulative: Math.round(maxCumulative * (curveWeights[idx] || 1))
+            expectedCumulative: Math.round(defaultTarget * (curveWeights[idx] || 1))
         }))
 
         const cappedHour = isViewingToday ? Math.min(23, Math.max(11, currentBangkokTime.hour)) : 23
@@ -805,8 +812,9 @@ ${monthMetrics?.monthlyDayparts?.map(dp => `  * ${dp.label} (${dp.rangeText}): �
                 promptContext = `
 คุณคือผู้จัดการกะและผู้อำนวยการปฏิบัติการร้านอาหาร "IN THE HAUS"
 จงวิเคราะห์สถานการณ์ความเร็วยอดขายและทราฟฟิกลูกค้า (Intraday Velocity & Traffic) ประจำวัน ${dayOfWeekThai} (${selectedDate || todayBangkok}):
-- ยอดขายสะสมขณะนี้: ฿${dayMetrics?.totalGross?.toLocaleString() || 0} (เป้าหมายประจำวัน: ฿${dayMetrics?.defaultTarget?.toLocaleString() || 0})
-- ลูกค้าเข้าจริง: ${dayMetrics?.totalGuests || 0} ท่าน (คาดการณ์ตามสถิติ: ~${historicalBaseline?.totalPax || 0} ท่าน)
+- ข้อมูลบริบทของร้าน: ร้านอาหารและบาร์ริมแม่น้ำโขง จังหวัดนครพนม ความจุร้าน 45 ที่นั่ง
+- ยอดขายสะสมขณะนี้: ฿${dayMetrics?.totalGross?.toLocaleString() || 0} จากเป้าหมายประจำวัน ฿${dayMetrics?.defaultTarget?.toLocaleString() || 0} (เฉลี่ยสถิติวัน${dayOfWeekThai}ปกติ ~฿${historicalBaseline?.totalSales?.toLocaleString() || 0})
+- ลูกค้าเข้าจริงสะสม: ${dayMetrics?.totalGuests || 0} ท่าน (เฉลี่ยสถิติปกติวัน${dayOfWeekThai}: ~${historicalBaseline?.totalPax || 0} ท่าน, คาดการณ์ปิดวัน: ~${dayMetrics?.projectedClosingPax || 0} ท่าน)
 - สัญญาณความสนใจจาก Ad Leads: ${dayMetrics?.adHighIntent || 0} ครั้ง (ขอเส้นทาง/โทร/จอง/สั่งอาหาร)
 - สถิติแยก 4 Dayparts:
 ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpperCase()}]: ยอด ฿${dp.sales?.toLocaleString() || 0} ลูกค้าจริง ${dp.pax || 0} ท่าน (สถิติปกติ ~${dp.baselinePax || 0} ท่าน)`).join('\n') || '-'}
