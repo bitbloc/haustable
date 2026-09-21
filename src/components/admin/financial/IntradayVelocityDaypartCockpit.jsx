@@ -782,7 +782,7 @@ export default function IntradayVelocityDaypartCockpit({
         setAiLoading(true)
         try {
             const apiKey = await getGeminiApiKey()
-            const model = await getGeminiPreferredModel() || 'gemini-2.5-flash'
+            const preferredModel = await getGeminiPreferredModel() || 'gemini-2.5-flash'
 
             if (!apiKey) {
                 toast.error('กรุณาตั้งค่า Gemini API Key ในระบบก่อนใช้งาน')
@@ -795,46 +795,79 @@ export default function IntradayVelocityDaypartCockpit({
                 promptContext = `
 คุณคือผู้อำนวยการฝ่ายการเงินและยุทธศาสตร์ร้านอาหาร "IN THE HAUS" 
 จงวิเคราะห์ภาพรวมผลการดำเนินงานและสถิติความเร็วรายชั่วโมง (Hourly Velocity) ประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}:
-- ยอดขายรวมทั้งเดือน: ฿${monthMetrics?.monthGross.toLocaleString()}
-- จำนวนลูกค้าสะสม: ${monthMetrics?.monthPax.toLocaleString()} ท่าน (เฉลี่ย ฿${monthMetrics?.monthPax > 0 ? Math.round(monthMetrics.monthGross / monthMetrics.monthPax) : 0}/หัว)
-- ชั่วโมงคุ้มทุนรายวันเฉลี่ย: ${monthMetrics?.breakEvenHour} (เป้าหมาย ฿${monthMetrics?.dailyExpenseTarget.toLocaleString()})
+- ยอดขายรวมทั้งเดือน: ฿${monthMetrics?.monthGross?.toLocaleString() || 0}
+- จำนวนลูกค้าสะสม: ${monthMetrics?.monthPax?.toLocaleString() || 0} ท่าน (เฉลี่ย ฿${monthMetrics?.monthPax > 0 ? Math.round(monthMetrics.monthGross / monthMetrics.monthPax) : 0}/หัว)
+- ชั่วโมงคุ้มทุนรายวันเฉลี่ย: ${monthMetrics?.breakEvenHour || '-'} (เป้าหมาย ฿${monthMetrics?.dailyExpenseTarget?.toLocaleString() || 0})
 - สัดส่วน 4 Dayparts:
-${monthMetrics?.monthlyDayparts.map(dp => `  * ${dp.label} (${dp.rangeText}): ฿${dp.sales.toLocaleString()} (${dp.percent}%) ลูกค้า ${dp.pax} ท่าน ความเร็ว ฿${dp.hourlyVelocity.toLocaleString()}/ชม.`).join('\n')}
+${monthMetrics?.monthlyDayparts?.map(dp => `  * ${dp.label} (${dp.rangeText}): ฿${dp.sales.toLocaleString()} (${dp.percent}%) ลูกค้า ${dp.pax} ท่าน ความเร็ว ฿${dp.hourlyVelocity.toLocaleString()}/ชม.`).join('\n') || '-'}
 `
             } else {
                 promptContext = `
 คุณคือผู้จัดการกะและผู้อำนวยการปฏิบัติการร้านอาหาร "IN THE HAUS"
 จงวิเคราะห์สถานการณ์ความเร็วยอดขายและทราฟฟิกลูกค้า (Intraday Velocity & Traffic) ประจำวัน ${dayOfWeekThai} (${selectedDate || todayBangkok}):
-- ยอดขายสะสมขณะนี้: ฿${dayMetrics?.totalGross.toLocaleString()} (เป้าหมายประจำวัน: ฿${dayMetrics?.defaultTarget.toLocaleString()})
-- ลูกค้าเข้าจริง: ${dayMetrics?.totalGuests} ท่าน (คาดการณ์ตามสถิติ: ~${historicalBaseline.totalPax} ท่าน)
-- สัญญาณความสนใจจาก Ad Leads: ${dayMetrics?.adHighIntent} ครั้ง (ขอเส้นทาง/โทร/จอง/สั่งอาหาร)
+- ยอดขายสะสมขณะนี้: ฿${dayMetrics?.totalGross?.toLocaleString() || 0} (เป้าหมายประจำวัน: ฿${dayMetrics?.defaultTarget?.toLocaleString() || 0})
+- ลูกค้าเข้าจริง: ${dayMetrics?.totalGuests || 0} ท่าน (คาดการณ์ตามสถิติ: ~${historicalBaseline?.totalPax || 0} ท่าน)
+- สัญญาณความสนใจจาก Ad Leads: ${dayMetrics?.adHighIntent || 0} ครั้ง (ขอเส้นทาง/โทร/จอง/สั่งอาหาร)
 - สถิติแยก 4 Dayparts:
-${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCase()}]: ยอด ฿${dp.sales.toLocaleString()} ลูกค้าจริง ${dp.pax} ท่าน (สถิติปกติ ~${dp.baselinePax} ท่าน)`).join('\n')}
+${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpperCase()}]: ยอด ฿${dp.sales?.toLocaleString() || 0} ลูกค้าจริง ${dp.pax || 0} ท่าน (สถิติปกติ ~${dp.baselinePax || 0} ท่าน)`).join('\n') || '-'}
 `
             }
 
             const promptText = `${promptContext}
-ให้เขียนบทวิเคราะห์เชิงยุทธศาสตร์ที่เฉียบคม สุภาพ และปฏิบัติได้จริง (ภาษาไทย ความยาว 180-240 คำ):
-1. ข้อสังเกตสำคัญของความเร็วยอดขายและการครองที่นั่ง
-2. คำแนะนำเชิงปฏิบัติการสำหรับทีมครัว บาร์ และหน้าร้าน
-3. ยุทธวิธีผลักดันยอดขายปิดบิลให้ถึงเป้าหมายประจำวัน/เดือน`
+ให้เขียนบทวิเคราะห์เชิงยุทธศาสตร์ที่เฉียบคม สุภาพ และปฏิบัติได้จริงเป็นภาษาไทย โดยแบ่งเนื้อหาออกเป็น 3 หมวดหมู่ชัดเจน:
+[1. การวิเคราะห์ความเร็วยอดขายและการครองที่นั่ง]
+[2. คำแนะนำเชิงปฏิบัติการสำหรับทีมครัว บาร์ และหน้าร้าน]
+[3. ยุทธวิธีผลักดันยอดขายปิดบิลสู่เป้าหมาย]
 
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: promptText }] }],
-                    generationConfig: { maxOutputTokens: 600, temperature: 0.3 }
-                })
-            })
+ข้อกำหนดสำคัญ:
+- ต้องตอบให้ครบถ้วนทั้ง 3 หมวดหมู่ข้างต้นและเขียนสรุปให้จบสมบูรณ์ ห้ามตัดจบกลางคัน
+- ห้ามใช้เครื่องหมายดอกจัน (ห้ามใส่ **) ในการตกแต่งข้อความ ให้ใช้ข้อความที่อ่านง่าย สะอาดตา
+- ความยาวเนื้อหาประมาณ 200-350 คำ`
 
-            const result = await response.json()
-            const textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text
+            const candidateModels = [
+                preferredModel,
+                'gemini-2.5-flash',
+                'gemini-2.0-flash',
+                'gemini-1.5-flash'
+            ].filter((v, i, a) => v && a.indexOf(v) === i)
+
+            let textOutput = null
+            let lastError = null
+
+            for (const model of candidateModels) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: promptText }] }],
+                            generationConfig: { maxOutputTokens: 8192, temperature: 0.3 }
+                        })
+                    })
+
+                    if (!response.ok) {
+                        const errData = await response.json().catch(() => ({}))
+                        const errMsg = errData?.error?.message || response.statusText
+                        if (response.status === 404 || errMsg.toLowerCase().includes('not found')) {
+                            lastError = new Error(`[${model}] ${errMsg}`)
+                            continue
+                        }
+                        throw new Error(errMsg)
+                    }
+
+                    const result = await response.json()
+                    textOutput = result.candidates?.[0]?.content?.parts?.[0]?.text
+                    if (textOutput) break
+                } catch (e) {
+                    lastError = e
+                }
+            }
+
             if (textOutput) {
                 setAiBriefing(textOutput)
                 toast.success('วิเคราะห์บทวิเคราะห์กลยุทธ์เรียบร้อยแล้ว')
             } else {
-                throw new Error('No text generated')
+                throw lastError || new Error('No text generated')
             }
         } catch (err) {
             console.error('AI Briefing error:', err)
@@ -847,11 +880,94 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
     const copyBriefingToClipboard = () => {
         if (!aiBriefing) return
         if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            navigator.clipboard.writeText(aiBriefing)
+            const cleanText = aiBriefing.replace(/\*\*/g, '')
+            navigator.clipboard.writeText(cleanText)
             setCopiedBriefing(true)
             toast.success('คัดลอกบทวิเคราะห์กลยุทธ์แล้ว')
             setTimeout(() => setCopiedBriefing(false), 2000)
         }
+    }
+
+    const renderBriefingContent = (text) => {
+        if (!text) return null
+
+        const renderInline = (line, key) => {
+            const parts = line.split(/(\*\*.*?\*\*)/g)
+            return (
+                <span key={key}>
+                    {parts.map((part, pIdx) => {
+                        if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+                            return (
+                                <strong key={pIdx} className="font-bold text-[oklch(18%_0.012_28)]">
+                                    {part.slice(2, -2)}
+                                </strong>
+                            )
+                        }
+                        return part
+                    })}
+                </span>
+            )
+        }
+
+        const hasBracketSections = /\[[0-9A-Za-zก-๙\s\.\,\-\_]+\]/.test(text)
+        if (hasBracketSections) {
+            const rawSections = text.split(/(?=\[[0-9A-Za-zก-๙\s\.\,\-\_]+\])/g).filter(s => s && s.trim())
+            const intro = !rawSections[0].trim().startsWith('[') ? rawSections.shift().trim() : null
+
+            return (
+                <div className="space-y-3">
+                    {intro && (
+                        <div className="p-3 bg-[oklch(96%_0.010_28)] border border-[oklch(85%_0.012_28)] text-xs text-[oklch(18%_0.012_28)] font-medium leading-relaxed">
+                            {intro.split('\n').map((line, idx) => (
+                                <p key={idx}>{renderInline(line, idx)}</p>
+                            ))}
+                        </div>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {rawSections.map((sec, idx) => {
+                            const match = sec.match(/^\[(.*?)\]([\s\S]*)$/)
+                            const title = match ? match[1].trim() : `ประเด็นที่ ${idx + 1}`
+                            const content = match ? match[2].trim() : sec.trim()
+                            return (
+                                <div key={idx} className="p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between">
+                                    <div>
+                                        <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wide border-b border-[oklch(85%_0.012_28)] pb-1.5 mb-2 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />
+                                            <span>[{title}]</span>
+                                        </div>
+                                        <div className="text-xs text-[oklch(28%_0.012_28)] leading-relaxed space-y-1.5">
+                                            {content.split('\n').map((line, lIdx) => {
+                                                const trimmed = line.trim()
+                                                if (!trimmed) return null
+                                                return (
+                                                    <p key={lIdx} className="leading-relaxed">
+                                                        {renderInline(trimmed, lIdx)}
+                                                    </p>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )
+        }
+
+        return (
+            <div className="text-xs text-[oklch(18%_0.012_28)] leading-relaxed font-sans bg-[oklch(94%_0.010_28)] p-4 border border-[oklch(85%_0.012_28)] space-y-1.5">
+                {text.split('\n').map((line, idx) => {
+                    const trimmed = line.trim()
+                    if (!trimmed) return <div key={idx} className="h-1" />
+                    return (
+                        <p key={idx} className="leading-relaxed">
+                            {renderInline(trimmed, idx)}
+                        </p>
+                    )
+                })}
+            </div>
+        )
     }
 
     // =========================================================================
@@ -2151,7 +2267,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     disabled={aiLoading}
                                     className="px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold transition-all disabled:opacity-50"
                                 >
-                                    {aiLoading ? 'กำลังประมวลผลข้อมูลกะ…' : 'สร้างบทวิเคราะห์ AI [GENERATE]'}
+                                    {aiLoading ? 'กำลังประมวลผลข้อมูลกะ…' : (aiBriefing ? 'วิเคราะห์ใหม่ [RE-GENERATE]' : 'สร้างบทวิเคราะห์ AI [GENERATE]')}
                                 </button>
                                 {aiBriefing && (
                                     <button
@@ -2166,9 +2282,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
 
                         {aiBriefing ? (
                             <div className="space-y-3 pt-2">
-                                <div className="text-xs text-[oklch(18%_0.012_28)] whitespace-pre-line leading-relaxed font-sans bg-[oklch(94%_0.010_28)] p-4 border border-[oklch(85%_0.012_28)]">
-                                    {aiBriefing}
-                                </div>
+                                {renderBriefingContent(aiBriefing)}
                                 <div className="flex justify-end">
                                     <button
                                         onClick={copyBriefingToClipboard}
