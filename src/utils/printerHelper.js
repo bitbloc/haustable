@@ -1082,8 +1082,10 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
             encoder.line(`เวลาสั่ง: ${orderPlacedStr}`);
         }
 
-        encoder.line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`)
-               .line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
+        if (!isPickupOrder) {
+            encoder.line(`จำนวนคน: ${booking.pax || booking.guest_count || 1} ท่าน`);
+        }
+        encoder.line(`จำนวนรายการ: ${totalItemsCount} ชิ้น`)
                .bold(false)
                .line(divider);
     } else {
@@ -1130,7 +1132,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
         if (customerPhone) {
             encoder.line(`เบอร์โทร: ${customerPhone}`);
         }
-        if (booking.pax || booking.guest_count) {
+        if (!isPickupOrder && (booking.pax || booking.guest_count)) {
             encoder.line(`จำนวนคน (PAX): ${booking.pax || booking.guest_count} ท่าน`);
         }
         if (staffName) {
@@ -1451,7 +1453,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(footerTableTitle)
                .size(0, 0)
                .bold(true)
-               .line(`[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น | ${paxCount} ท่าน`)
+               .line(`[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น${!isPickupOrder ? ` | ${paxCount} ท่าน` : ''}`)
                .bold(false)
                .line(doubleDivider);
 

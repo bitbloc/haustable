@@ -934,7 +934,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             <div class="row"><span class="label">วันที่ออกบิล / DATE</span> <span class="val">${orderPlacedStr}</span></div>
                         `}
                         <div class="row"><span class="label">ลูกค้า / GUEST</span> <span class="val">${booking.profiles?.display_name || booking.pickup_contact_name || 'ลูกค้าทั่วไป (Walk-in)'}</span></div>
-                        <div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || booking.guest_count || 1} คน</span></div>
+                        ${!isPickupOrder ? `<div class="row"><span class="label">จำนวนคน / PAX</span> <span class="val">${booking.pax || booking.guest_count || 1} คน</span></div>` : ''}
                         ${(booking.profiles?.phone_number || booking.pickup_contact_phone) ? `<div class="row"><span class="label">เบอร์โทร / PHONE</span> <span class="val">${booking.profiles?.phone_number || booking.pickup_contact_phone}</span></div>` : ''}
                         ${(activeTab !== 'kitchen' && activeTab !== 'bar' && staffName) ? `<div class="row"><span class="label">พนักงาน / STAFF</span> <span class="val">${staffName}</span></div>` : ''}
                         
@@ -992,7 +992,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         return `
                             <div class="kitchen-footer-block">
                                 <div class="kitchen-footer-table">${footerTableTitle}</div>
-                                <div class="kitchen-footer-sub">[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น | ${paxCount} ท่าน</div>
+                                <div class="kitchen-footer-sub">[ ${slipLabel} ] ${timeOnlyStr} | ${totalItemsCount} ชิ้น${!isPickupOrder ? ` | ${paxCount} ท่าน` : ''}</div>
                             </div>
                         `;
                     })()}
@@ -1513,10 +1513,12 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                         )}
                                     </div>
                                 </div>
-                                <div className="text-right font-mono text-xs">
-                                    <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PAX / จำนวน</span>
-                                    <span className="font-bold text-[oklch(18%_0.012_28)]">{booking.pax || 1} ท่าน</span>
-                                </div>
+                                {!isPickupOrder && (
+                                    <div className="text-right font-mono text-xs">
+                                        <span className="text-[10px] text-[oklch(55%_0.010_28)] block">PAX / จำนวน</span>
+                                        <span className="font-bold text-[oklch(18%_0.012_28)]">{booking.pax || 1} ท่าน</span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Table Transfer Banner Strip */}
@@ -1794,7 +1796,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                             {footerTableTitle}
                                         </div>
                                         <div className="text-xs font-mono font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
-                                            [ {slipLabel} ] {timeOnlyStr} | {totalItemsCount} ชิ้น | {paxCount} ท่าน
+                                            [ {slipLabel} ] {timeOnlyStr} | {totalItemsCount} ชิ้น{!isPickupOrder ? ` | ${paxCount} ท่าน` : ''}
                                         </div>
                                     </div>
                                 );
