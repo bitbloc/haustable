@@ -73,4 +73,42 @@ describe('POS Menu Key-In & Slip Printing Integrity', () => {
             expect(localDraftItems[0].name).toBe('Latte');
         });
     });
+
+    describe('Pickup Date & Time Slip Formatting', () => {
+        it('resolves pickup appointment date and time for pickup slip', () => {
+            const booking = {
+                id: 'pickup-test-1',
+                booking_type: 'pickup',
+                created_at: '2026-09-21T04:02:00.000Z', // 11:02 Thai time
+                booking_time: '2026-09-21T05:30:00.000Z', // 12:30 Thai time
+            };
+
+            const isPickupOrder = booking.booking_type === 'pickup';
+            const pickupAppointmentRaw = booking.booking_time || booking.pickup_time || booking.service_time;
+            const resolvedAppointmentDate = pickupAppointmentRaw ? new Date(pickupAppointmentRaw) : null;
+            const pickupDisplayStr = resolvedAppointmentDate ? resolvedAppointmentDate.toLocaleString('th-TH', {
+                year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+            }) : null;
+
+            expect(isPickupOrder).toBe(true);
+            expect(pickupDisplayStr).toContain('2569');
+            expect(pickupDisplayStr).toContain('12:30');
+        });
+
+        it('extracts pickup time from customer note if booking_time is not set', () => {
+            const booking = {
+                id: 'pickup-test-2',
+                booking_type: 'pickup',
+                created_at: '2026-09-21T04:02:00.000Z',
+                customer_note: 'เวลานัดรับ: 13:45 ขอเผ็ดน้อย',
+            };
+
+            const combinedNotes = `${booking.customer_note || ''} ${booking.staff_remark || ''}`;
+            const match = combinedNotes.match(/(?:เวลานัดรับ|เวลารับ|รับเวลา|pickup time)[:\s]*([0-9]{1,2}[:.][0-9]{2})/i);
+            const pickupDisplayStr = match && match[1] ? `${match[1].replace('.', ':')} น.` : null;
+
+            expect(pickupDisplayStr).toBe('13:45 น.');
+        });
+    });
 });
+

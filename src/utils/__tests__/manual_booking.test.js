@@ -169,5 +169,37 @@ describe('Manual Booking Calculations & Overlap Detection', () => {
             const noDiscountTag = formatDiscountRemarkTag('percent', 0, 0)
             expect(noDiscountTag).toBe('')
         })
+
+        it('should classify payment status correctly as UNPAID, PARTIAL, or PAID', () => {
+            const getPaymentStatus = (booking) => {
+                const totalAmt = Number(booking.total_amount || 0)
+                const depAmt = Number(booking.deposit_amount || 0)
+                const remainingDue = Math.max(0, totalAmt - depAmt)
+                const isCancelledOrVoid = booking.status === 'cancelled' || booking.status === 'void'
+                const isCompleted = booking.status === 'completed' || booking.status === 'paid' || booking.status === 'success'
+                const isLineman = (booking.source || '').toLowerCase() === 'lineman'
+                const isFullyPaid = isCompleted || (depAmt >= totalAmt && totalAmt > 0) || isLineman
+                const isPartialPaid = !isFullyPaid && depAmt > 0 && remainingDue > 0
+                const isUnpaid = !isCancelledOrVoid && !isFullyPaid && !isPartialPaid && totalAmt > 0
+
+                if (isFullyPaid) return 'PAID'
+                if (isPartialPaid) return 'PARTIAL'
+                if (isUnpaid) return 'UNPAID'
+                return 'OTHER'
+            }
+
+            // Unpaid case (like user order #9FCF: ฿6,714 total, 0 deposit, status confirmed)
+            expect(getPaymentStatus({ total_amount: 6714, deposit_amount: 0, status: 'confirmed' })).toBe('UNPAID')
+
+            // Partial deposit case
+            expect(getPaymentStatus({ total_amount: 6714, deposit_amount: 2000, status: 'confirmed' })).toBe('PARTIAL')
+
+            // Fully paid via 100% deposit
+            expect(getPaymentStatus({ total_amount: 6714, deposit_amount: 6714, status: 'confirmed' })).toBe('PAID')
+
+            // Completed order
+            expect(getPaymentStatus({ total_amount: 6714, deposit_amount: 0, status: 'completed' })).toBe('PAID')
+        })
     })
 })
+

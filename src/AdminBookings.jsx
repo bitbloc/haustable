@@ -101,6 +101,41 @@ export const getOrderOrigin = (b) => {
     }
 }
 
+// Pure payment status resolver for booking records (Dieter Rams + Thai Modern)
+export const getBookingPaymentStatusInfo = (booking) => {
+    if (!booking) {
+        return {
+            totalAmt: 0,
+            depAmt: 0,
+            remainingDue: 0,
+            isCancelledOrVoid: false,
+            isFullyPaid: false,
+            isPartialPaid: false,
+            isUnpaid: false
+        }
+    }
+    const totalAmt = Number(booking.total_amount || 0)
+    const depAmt = Number(booking.deposit_amount || 0)
+    const remainingDue = Math.max(0, totalAmt - depAmt)
+    const isCancelledOrVoid = booking.status === 'cancelled' || booking.status === 'void'
+    const isCompleted = booking.status === 'completed' || booking.status === 'paid' || booking.status === 'success'
+    const isLineman = (booking.source || '').toLowerCase() === 'lineman' || (booking.staff_remark || '').toLowerCase().includes('lineman')
+
+    const isFullyPaid = isCompleted || (depAmt >= totalAmt && totalAmt > 0) || isLineman
+    const isPartialPaid = !isFullyPaid && depAmt > 0 && remainingDue > 0
+    const isUnpaid = !isCancelledOrVoid && !isFullyPaid && !isPartialPaid && totalAmt > 0
+
+    return {
+        totalAmt,
+        depAmt,
+        remainingDue,
+        isCancelledOrVoid,
+        isFullyPaid,
+        isPartialPaid,
+        isUnpaid
+    }
+}
+
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
     const [tablesList, setTablesList] = useState([])
@@ -976,6 +1011,9 @@ export default function AdminBookings() {
                                     const itemCount = booking.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0
                                     const transfer = parseTableTransferInfo(booking, bookings)
 
+                                    const paymentInfo = getBookingPaymentStatusInfo(booking)
+                                    const { totalAmt, remainingDue, isCancelledOrVoid, isFullyPaid, isPartialPaid, isUnpaid } = paymentInfo
+
                                     return (
                                         <tr 
                                             key={booking.id} 
@@ -1084,7 +1122,7 @@ export default function AdminBookings() {
                                                         ฿{formatCurrency(booking.total_amount)}
                                                     </div>
 
-                                                    <div className="flex items-center gap-1.5 text-[10px]">
+                                                    <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                                                         <span className="text-[var(--color-neutral)]">
                                                             {itemCount > 0 ? `${itemCount} items` : 'Reservation only'}
                                                         </span>
@@ -1100,21 +1138,51 @@ export default function AdminBookings() {
                                                                 -฿{formatCurrency(booking.discount_amount)}
                                                             </span>
                                                         )}
+
+                                                        {isUnpaid && (
+                                                            <span className="bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] px-1 border border-[oklch(70%_0.12_28)] text-[9px] font-bold">
+                                                                ค้างจ่าย ฿{formatCurrency(totalAmt)}
+                                                            </span>
+                                                        )}
+                                                        {isPartialPaid && (
+                                                            <span className="bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] px-1 border border-[oklch(70%_0.12_28)] text-[9px] font-bold">
+                                                                ค้าง ฿{formatCurrency(remainingDue)}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </td>
 
                                             {/* Status Badge */}
                                             <td className="p-3 border-r border-[var(--color-rule)]">
-                                                {transfer.isMergedSource ? (
-                                                    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
-                                                        MERGED (โต๊ะรวม)
-                                                    </span>
-                                                ) : (
-                                                    <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
-                                                        {booking.status}
-                                                    </span>
-                                                )}
+                                                <div className="flex flex-col gap-1 items-start">
+                                                    {transfer.isMergedSource ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]" title={`บิลนี้รวมเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
+                                                            MERGED (โต๊ะรวม)
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`inline-flex items-center px-2 py-0.5 text-[10px] font-bold uppercase border ${getStatusBadgeClass(booking.status)}`}>
+                                                            {booking.status}
+                                                        </span>
+                                                    )}
+
+                                                    {/* Payment Status Indicator */}
+                                                    {!isCancelledOrVoid && (
+                                                        isFullyPaid ? (
+                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[9px] font-mono font-bold uppercase border bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border-[oklch(45%_0.08_140)]">
+                                                                PAID (จ่ายแล้ว)
+                                                            </span>
+                                                        ) : isPartialPaid ? (
+                                                            <span className="inline-flex items-center px-1.5 py-0.2 text-[9px] font-mono font-bold uppercase border bg-[oklch(95%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(60%_0.12_28)]">
+                                                                มัดจำแล้ว (ค้าง ฿{formatCurrency(remainingDue)})
+                                                            </span>
+                                                        ) : isUnpaid ? (
+                                                            <span className="inline-flex items-center px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase border-2 bg-[oklch(96%_0.02_28)] text-[oklch(40%_0.16_28)] border-[oklch(52%_0.16_28)]">
+                                                                ยังไม่ได้จ่ายเงิน (UNPAID)
+                                                            </span>
+                                                        ) : null
+                                                    )}
+                                                </div>
                                             </td>
 
                                             {/* Actions */}
@@ -1357,13 +1425,35 @@ export default function AdminBookings() {
                                 )}
                                 {booking.deposit_amount > 0 && (
                                     <div className="flex justify-between text-[var(--color-ink)] font-bold">
-                                        <span>ADVANCE DEPOSIT PAID:</span>
+                                        <span>ADVANCE DEPOSIT PAID (มัดจำแล้ว):</span>
                                         <span>-฿{formatCurrency(booking.deposit_amount)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between font-bold text-sm text-[var(--color-ink)] pt-2 border-t border-[var(--color-rule)]">
                                     <span>FINAL AMOUNT DUE:</span>
                                     <span>฿{formatCurrency(Math.max(0, Number(booking.total_amount || 0) - Number(booking.deposit_amount || 0)))}</span>
+                                </div>
+
+                                {/* Payment Status Row */}
+                                <div className="flex justify-between items-center pt-2 border-t border-[var(--color-rule)]">
+                                    <span className="font-bold text-[10px] text-[var(--color-muted)] uppercase">สถานะการชำระเงิน:</span>
+                                    {isCancelledOrVoid ? (
+                                        <span className="px-2 py-0.5 bg-[var(--color-paper)] text-[var(--color-muted)] border border-[var(--color-rule)] font-mono font-bold text-[10px] uppercase">
+                                            ยกเลิก (CANCELLED)
+                                        </span>
+                                    ) : isFullyPaid ? (
+                                        <span className="px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(45%_0.08_140)] font-mono font-bold text-[10px] uppercase">
+                                            ชำระครบแล้ว (PAID)
+                                        </span>
+                                    ) : isPartialPaid ? (
+                                        <span className="px-2 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono font-bold text-[10px] uppercase">
+                                            มัดจำแล้ว ฿{formatCurrency(paymentInfo.depAmt)} (รอเก็บ ฿{formatCurrency(remainingDue)})
+                                        </span>
+                                    ) : isUnpaid ? (
+                                        <span className="px-2.5 py-1 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] font-mono font-bold text-[11px] uppercase tracking-wider">
+                                            ยังไม่ได้จ่ายเงิน (UNPAID)
+                                        </span>
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -1523,17 +1613,17 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                 {/* Transfer Info Banner if Merged / Moved */}
                 {transfer.isMergedSource && (
                     <div className="mb-4 p-2.5 bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] text-xs font-mono font-bold">
-                        ⚠️ โต๊ะรวม: บิลนี้โอนรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว
+                        [MERGED] โต๊ะรวม: บิลนี้โอนรายการอาหารไปยัง <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว
                     </div>
                 )}
                 {transfer.isMergedTarget && (
                     <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] text-xs font-mono font-bold">
-                        🔗 โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
+                        [COMBINED] โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
                     </div>
                 )}
                 {transfer.isMoved && (
                     <div className="mb-4 p-2.5 bg-[oklch(92%_0.02_220)] border border-[oklch(82%_0.02_220)] text-[oklch(30%_0.10_220)] text-xs font-mono font-bold">
-                        🔄 ย้ายโต๊ะ: ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong>
+                        [MOVED] ย้ายโต๊ะ: ลูกค้าย้ายมาจาก <strong>โต๊ะ {transfer.movedFromTable}</strong>
                     </div>
                 )}
 

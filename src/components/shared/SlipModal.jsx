@@ -649,9 +649,33 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
             `
         }
 
-        // Payment Method / PAID Badge Section for Receipt
+        // Payment Method / Status Section
         let paymentMethodHtml = ''
-        if (activeTab === 'receipt') {
+        if (activeTab === 'billing') {
+            if (depositAmt >= totalAmt && totalAmt > 0) {
+                paymentMethodHtml = `
+                    <div class="payment-section">
+                        <div class="paid-badge">ชำระเงินแล้ว / PAID</div>
+                    </div>
+                `
+            } else if (depositAmt > 0) {
+                paymentMethodHtml = `
+                    <div class="payment-section">
+                        <div style="font-weight: bold; font-size: 10px; text-align: center; border: 1px dashed #b91c1c; padding: 4px; color: #b91c1c;">
+                            มัดจำแล้ว ฿${Math.ceil(depositAmt).toLocaleString()} · ค้างชำระ: ฿${Math.ceil(balanceDue).toLocaleString()}
+                        </div>
+                    </div>
+                `
+            } else {
+                paymentMethodHtml = `
+                    <div class="payment-section">
+                        <div style="font-weight: bold; font-size: 11px; text-align: center; border: 2px solid #b91c1c; padding: 4px; color: #b91c1c; text-transform: uppercase;">
+                            สถานะ: ยังไม่ได้ชำระเงิน / UNPAID
+                        </div>
+                    </div>
+                `
+            }
+        } else if (activeTab === 'receipt') {
             const pMethod = String(paymentMethod || '').toLowerCase();
             let methodLabel = 'โอนเงินผ่าน QR (PromptPay)';
             if (pMethod === 'cash') {
@@ -902,7 +926,7 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                         <div class="row"><span class="label">บริการ / SERVICE</span> <span class="val" style="font-weight: bold;">${isOnlinePickup ? 'ONLINE PICKUP (รับกลับออนไลน์)' : (isOnlineBooking ? 'ONLINE BOOKING (จองโต๊ะออนไลน์)' : (isPickupOrder ? 'รับกลับบ้าน (TAKEAWAY)' : 'ทานที่ร้าน (DINE-IN)'))}</span></div>
                         ${isPickupOrder ? `
                             <div class="row"><span class="label">เวลาที่สั่ง / ORDER TIME</span> <span class="val">${orderPlacedStr}</span></div>
-                            <div class="row"><span class="label">วันเวลามารับ / PICKUP TIME</span> <span class="val" style="font-weight: bold; color: #b91c1c;">${formattedBookingTimeStr}</span></div>
+                            <div class="row"><span class="label">วันเวลาที่มารับ / PICKUP TIME</span> <span class="val" style="font-weight: bold; color: #b91c1c;">${formattedBookingTimeStr}</span></div>
                         ` : isOnlineBooking ? `
                             <div class="row"><span class="label">เวลาทำรายการ / BOOKED AT</span> <span class="val">${orderPlacedStr}</span></div>
                             <div class="row"><span class="label">วันเวลาที่จอง / RESERVATION</span> <span class="val" style="font-weight: bold; color: #b91c1c;">${formattedBookingTimeStr}</span></div>
@@ -1239,6 +1263,39 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
     const isOnlineSource = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || noteLower.includes('online') || !!booking.payment_slip_url || isLineman
     const isPickupOrder = booking.booking_type === 'pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ') || noteLower.includes('pickup') || (!booking.tables_layout && sourceLower !== 'qr') || isLineman
     
+    const isOnlinePickup = isOnlineSource && isPickupOrder && !isLineman
+    const isOnlineBooking = isOnlineSource && !isPickupOrder && sourceLower !== 'qr' && !isLineman
+
+    // Scheduled Pickup / Booking appointment timestamp (when customer arrives/picks up)
+    const bookingAppointmentRaw = booking.booking_time || booking.pickup_time || booking.service_time
+    let resolvedAppointmentDate = null
+
+    if (bookingAppointmentRaw && !isNaN(new Date(bookingAppointmentRaw).getTime())) {
+        resolvedAppointmentDate = new Date(bookingAppointmentRaw)
+    } else if ((booking.service_date || booking.booking_date) && (booking.service_time || booking.pickup_time_slot)) {
+        const dStr = booking.service_date || booking.booking_date
+        const tStr = booking.service_time || booking.pickup_time_slot
+        const combined = new Date(`${dStr}T${tStr.padStart(5, '0')}:00+07:00`)
+        if (!isNaN(combined.getTime())) {
+            resolvedAppointmentDate = combined
+        }
+    }
+
+    let pickupDisplayStr = null
+    if (resolvedAppointmentDate) {
+        pickupDisplayStr = resolvedAppointmentDate.toLocaleString('th-TH', {
+            year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+        })
+    } else {
+        const combinedNotes = `${booking.customer_note || ''} ${booking.staff_remark || ''}`
+        const match = combinedNotes.match(/(?:เวลานัดรับ|เวลารับ|รับเวลา|pickup time)[:\s]*([0-9]{1,2}[:.][0-9]{2})/i)
+        if (match && match[1]) {
+            pickupDisplayStr = `${match[1].replace('.', ':')} น.`
+        } else if (isPickupOrder) {
+            pickupDisplayStr = orderPlacedStr
+        }
+    }
+    
     const transfer = parseTableTransferInfo(booking);
     const isSplitChild = remarkLower.includes('split');
     const hasItems = Array.isArray(booking.order_items) && booking.order_items.length > 0;
@@ -1465,21 +1522,34 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                             {/* Table Transfer Banner Strip */}
                             {transfer.isMergedSource && (
                                 <div className="bg-[oklch(94%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)] p-2.5 rounded-sm text-[10px] font-mono font-bold space-y-0.5">
-                                    <div>⚠️ โต๊ะรวม: โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</div>
+                                    <div>[MERGED] โต๊ะรวม: โอนรายการทั้งหมดไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> เรียบร้อยแล้ว</div>
                                     {transfer.originalTotal > 0 && <div>ยอดเงินเดิมก่อนรวมบิล: ฿{transfer.originalTotal.toLocaleString()}</div>}
                                 </div>
                             )}
                             {transfer.isMergedTarget && (
                                 <div className="bg-[oklch(92%_0.02_140)] border border-[oklch(82%_0.04_140)] text-[oklch(30%_0.08_140)] p-2 rounded-sm text-[10px] font-mono font-bold">
-                                    🔗 โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
+                                    [COMBINED] โต๊ะรวม: บิลนี้รวมรายการอาหารมาจาก <strong>{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}</strong>
                                 </div>
                             )}
                         </div>
 
                         {/* Order Metadata Grid */}
                         <div className="grid grid-cols-2 gap-y-1 text-[11px] border-b border-[oklch(88%_0.010_28)] pb-2.5 font-mono">
-                            <span className="text-[oklch(55%_0.010_28)]">วันที่ & เวลา:</span>
+                            <span className="text-[oklch(55%_0.010_28)]">
+                                {isPickupOrder ? 'เวลาที่สั่ง:' : (isOnlineBooking ? 'เวลาทำรายการ:' : 'วันที่ & เวลา:')}
+                            </span>
                             <span className="text-right text-[oklch(18%_0.012_28)] font-semibold">{orderPlacedStr}</span>
+
+                            {((isPickupOrder && pickupDisplayStr) || (isOnlineBooking && pickupDisplayStr)) && (
+                                <>
+                                    <span className="text-[oklch(55%_0.010_28)]">
+                                        {isPickupOrder ? 'วันเวลาที่มารับ:' : 'วันเวลาที่จอง:'}
+                                    </span>
+                                    <span className="text-right text-[oklch(52%_0.16_28)] font-bold">
+                                        {pickupDisplayStr}
+                                    </span>
+                                </>
+                            )}
 
                             <span className="text-[oklch(55%_0.010_28)]">ลูกค้า:</span>
                             <span className="text-right text-[oklch(18%_0.012_28)] font-semibold truncate">
@@ -1576,6 +1646,28 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
                                         ฿{Math.ceil(displayTotalAmount).toLocaleString()}
                                     </span>
                                 </div>
+
+                                {/* BILL TAB PAYMENT STATUS NOTICE */}
+                                {activeTab === 'billing' && (
+                                    <div className={`p-2 rounded-sm border text-center font-mono mt-2 ${
+                                        depositAmount > 0 
+                                            ? 'bg-[oklch(96%_0.02_28)] border border-[oklch(75%_0.08_28)] text-[oklch(40%_0.14_28)]' 
+                                            : 'bg-[oklch(96%_0.02_28)] border-2 border-[oklch(52%_0.16_28)] text-[oklch(40%_0.16_28)]'
+                                    }`}>
+                                        {depositAmount > 0 ? (
+                                            <div className="space-y-0.5">
+                                                <div className="font-bold text-[10px] uppercase tracking-wider">
+                                                    มัดจำแล้ว ฿{depositAmount.toLocaleString()} · ค้างชำระ: ฿{Math.ceil(displayTotalAmount).toLocaleString()}
+                                                </div>
+                                                <div className="text-[9px]">สถานะ: ชำระมัดจำบางส่วน (PARTIAL)</div>
+                                            </div>
+                                        ) : (
+                                            <div className="font-bold text-[11px] uppercase tracking-wider">
+                                                สถานะ: ยังไม่ได้ชำระเงิน (UNPAID)
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
