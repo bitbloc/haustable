@@ -781,13 +781,7 @@ ${JSON.stringify(summaryPayload, null, 2)}
         }
     }
 
-    // Auto-run AI briefing once on mount
-    useEffect(() => {
-        if (!aiBriefing && points.length > 0 && !loading) {
-            runAiSynthesis()
-        }
-    }, [points.length, loading])
-
+    // Note: AI briefing runs strictly on-demand when user clicks the generate button (zero auto-run)
     const latestActivePt = activePoints.length > 0 ? activePoints[activePoints.length - 1] : null
 
     return (

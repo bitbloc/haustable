@@ -68,6 +68,8 @@ export default function HauspeopleExporter({ checkins, onClose }) {
                 quality: 1.0,
                 pixelRatio: 2, 
                 cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 style: {
                     transform: 'scale(1)',
                     transformOrigin: 'top left',

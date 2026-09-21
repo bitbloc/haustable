@@ -127,6 +127,8 @@ export default function HausmadeOnlineBillModal({
                 pixelRatio: 3,
                 quality: 1.0,
                 cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 style: {
                     transform: 'none',
                     margin: '0',
@@ -160,6 +162,8 @@ export default function HausmadeOnlineBillModal({
                 pixelRatio: 2.5,
                 quality: 1.0,
                 cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 style: {
                     transform: 'none',
                     margin: '0',

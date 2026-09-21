@@ -1,17 +1,17 @@
+const fs = require('fs');
+const env = fs.readFileSync('.env', 'utf8').split('\n').reduce((acc, line) => {
+    if (!line || !line.includes('=')) return acc;
+    const parts = line.split('=');
+    const key = parts[0].trim();
+    const val = parts.slice(1).join('=').trim().replace(/['"]+/g, '');
+    if(key) acc[key] = val;
+    return acc;
+}, {});
 const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient('https://lxfavbzmebqqsffgyyph.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4ZmF2YnptZWJxcXNmZmd5eXBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0MjI5MTMsImV4cCI6MjA4MDk5ODkxM30.oMFT06OnUFzrmGjGpW12jizbxvwcwFeKV7r6HykrLfI');
+const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_KEY);
 
-async function main() {
-  const start = '2026-08-27T00:00:00+07:00';
-  const end = '2026-08-27T23:59:59+07:00';
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('id, status, total_amount, booking_time, updated_at, staff_remark')
-    .gte('booking_time', start)
-    .lte('booking_time', end);
-
-  console.log('Today bookings count:', data ? data.length : 0);
-  console.log('Today bookings:', JSON.stringify(data, null, 2));
+async function check() {
+    const { data } = await supabase.from('bookings').select('id, created_at, booking_time, status, total_amount, pax, booking_type').order('created_at', { ascending: false }).limit(5);
+    console.log(data);
 }
-
-main();
+check();

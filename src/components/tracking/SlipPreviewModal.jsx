@@ -40,7 +40,9 @@ export default function SlipPreviewModal({ isOpen, onClose, data, optionMap }) {
                 cacheBust: true,
                 backgroundColor: '#FAF9F5', 
                 pixelRatio: 3,
-                skipAutoScale: true
+                skipAutoScale: true,
+                skipFonts: true,
+                fontEmbedCSS: ''
             })
 
             setImageUrl(dataUrl)

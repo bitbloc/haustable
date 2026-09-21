@@ -1214,7 +1214,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
             const dataUrl = await toPng(slipRef.current, { 
                 cacheBust: true, 
                 backgroundColor: '#ffffff', 
-                pixelRatio: 3 
+                pixelRatio: 3,
+                skipFonts: true,
+                fontEmbedCSS: ''
             })
             const link = document.createElement('a')
             link.href = dataUrl
@@ -1235,7 +1237,9 @@ export default function SlipModal({ booking, type, isAdmin = false, onClose }) {
             const dataUrl = await toPng(slipRef.current, { 
                 cacheBust: true, 
                 backgroundColor: '#ffffff', 
-                pixelRatio: 3 
+                pixelRatio: 3,
+                skipFonts: true,
+                fontEmbedCSS: ''
             })
             const res = await fetch(dataUrl)
             const blob = await res.blob()

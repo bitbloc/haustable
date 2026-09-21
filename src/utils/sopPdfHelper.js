@@ -81,6 +81,8 @@ export async function generateSOPPdfDocument(element, options = {}) {
                 backgroundColor: '#fbf9f5', // Warm paper tint
                 cacheBust: false,
                 quality: 0.98,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 width: standardWidth,
                 height: standardHeight,
                 canvasWidth: Math.round(standardWidth * pixelRatio),
@@ -110,6 +112,8 @@ export async function generateSOPPdfDocument(element, options = {}) {
                 pixelRatio: 1.5,
                 backgroundColor: '#ffffff',
                 cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 width: standardWidth,
                 height: standardHeight,
                 style: {

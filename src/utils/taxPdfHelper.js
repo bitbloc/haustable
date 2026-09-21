@@ -84,6 +84,8 @@ export async function generateTaxDocumentPdf(element, options = {}) {
                 backgroundColor: '#ffffff',
                 cacheBust: false,
                 quality: 0.98,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 width: standardWidth,
                 height: standardHeight,
                 canvasWidth: Math.round(standardWidth * adaptivePixelRatio),
@@ -113,6 +115,8 @@ export async function generateTaxDocumentPdf(element, options = {}) {
                 pixelRatio: 1.5,
                 backgroundColor: '#ffffff',
                 cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: '',
                 width: standardWidth,
                 height: standardHeight,
                 style: {

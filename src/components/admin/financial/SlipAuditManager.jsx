@@ -426,7 +426,9 @@ export default function SlipAuditManager({
             const image = await toPng(element, {
                 pixelRatio: 3,
                 backgroundColor: '#ffffff',
-                cacheBust: true
+                cacheBust: true,
+                skipFonts: true,
+                fontEmbedCSS: ''
             });
 
             const link = document.createElement('a');

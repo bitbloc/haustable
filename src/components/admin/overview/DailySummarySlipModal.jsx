@@ -391,6 +391,7 @@ export default function DailySummarySlipModal({
                     quality: 0.98,
                     cacheBust: true,
                     skipFonts: true, // Prevents CORS external font download failure
+                    fontEmbedCSS: '',
                     backgroundColor: '#ffffff',
                     width: fullWidth,
                     height: fullHeight,
