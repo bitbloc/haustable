@@ -797,40 +797,71 @@ export default function IntradayVelocityDaypartCockpit({
                 return
             }
 
+            // Extract detailed Ad & Search Intent intelligence
+            const adMapsCount = adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length
+            const adContactCount = adEvents.filter(e => ['click_phone', 'contact', 'click_line'].includes(e.event_name)).length
+            const adBookingCount = adEvents.filter(e => ['click_booking_link', 'click_pickup_link'].includes(e.event_name)).length
+            const adMenuCount = adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe'].includes(e.event_name)).length
+            const adTotalEvents = adEvents.length
+            
+            const adSourceMap = {}
+            adEvents.forEach(e => {
+                const src = e.utm_source || 'Direct / ไม่ระบุ'
+                adSourceMap[src] = (adSourceMap[src] || 0) + 1
+            })
+            const adSourceSummary = Object.entries(adSourceMap)
+                .map(([src, count]) => `${src} (${count})`)
+                .join(', ') || 'ไม่มีข้อมูลช่องทาง'
+
             let promptContext = ''
             if (filterMode === 'month') {
                 promptContext = `
 คุณคือผู้อำนวยการฝ่ายการเงินและยุทธศาสตร์ร้านอาหาร "IN THE HAUS" 
-จงวิเคราะห์ภาพรวมผลการดำเนินงานและสถิติความเร็วรายชั่วโมง (Hourly Velocity) ประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}:
+จงวิเคราะห์ภาพรวมผลการดำเนินงาน สถิติความเร็วรายชั่วโมง (Hourly Velocity) และข้อมูล Ad Attribution ประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}:
+- ข้อมูลบริบทของร้าน: ร้านอาหารและบาร์ริมแม่น้ำโขง จังหวัดนครพนม ความจุร้าน 45 ที่นั่ง
 - ยอดขายรวมทั้งเดือน: ฿${monthMetrics?.monthGross?.toLocaleString() || 0}
 - จำนวนลูกค้าสะสม: ${monthMetrics?.monthPax?.toLocaleString() || 0} ท่าน (เฉลี่ย ฿${monthMetrics?.monthPax > 0 ? Math.round(monthMetrics.monthGross / monthMetrics.monthPax) : 0}/หัว)
 - ชั่วโมงคุ้มทุนรายวันเฉลี่ย: ${monthMetrics?.breakEvenHour || '-'} (เป้าหมาย ฿${monthMetrics?.dailyExpenseTarget?.toLocaleString() || 0})
 - สัดส่วน 4 Dayparts:
 ${monthMetrics?.monthlyDayparts?.map(dp => `  * ${dp.label} (${dp.rangeText}): ฿${dp.sales.toLocaleString()} (${dp.percent}%) ลูกค้า ${dp.pax} ท่าน ความเร็ว ฿${dp.hourlyVelocity.toLocaleString()}/ชม.`).join('\n') || '-'}
+- สรุปสัญญาณแคมเปญออนไลน์ (Ad Attribution): รวม ${adTotalEvents} ปฏิสัมพันธ์ (ขอเส้นทาง Maps: ${adMapsCount}, โทร/LINE: ${adContactCount}, จอง/สั่งกลับ: ${adBookingCount}, สำรวจเมนู/วิวริมโขง: ${adMenuCount}, ช่องทางหลัก: ${adSourceSummary})
 `
             } else {
                 promptContext = `
 คุณคือผู้จัดการกะและผู้อำนวยการปฏิบัติการร้านอาหาร "IN THE HAUS"
-จงวิเคราะห์สถานการณ์ความเร็วยอดขายและทราฟฟิกลูกค้า (Intraday Velocity & Traffic) ประจำวัน ${dayOfWeekThai} (${selectedDate || todayBangkok}):
+จงวิเคราะห์สถานการณ์ความเร็วยอดขาย ทราฟฟิกลูกค้า (Intraday Velocity & Traffic) และเจาะลึกสัญญาณ Ad Intent Leads ประจำวัน ${dayOfWeekThai} (${selectedDate || todayBangkok}):
 - ข้อมูลบริบทของร้าน: ร้านอาหารและบาร์ริมแม่น้ำโขง จังหวัดนครพนม ความจุร้าน 45 ที่นั่ง
 - ยอดขายสะสมขณะนี้: ฿${dayMetrics?.totalGross?.toLocaleString() || 0} จากเป้าหมายประจำวัน ฿${dayMetrics?.defaultTarget?.toLocaleString() || 0} (เฉลี่ยสถิติวัน${dayOfWeekThai}ปกติ ~฿${historicalBaseline?.totalSales?.toLocaleString() || 0})
 - ลูกค้าเข้าจริงสะสม: ${dayMetrics?.totalGuests || 0} ท่าน (เฉลี่ยสถิติปกติวัน${dayOfWeekThai}: ~${historicalBaseline?.totalPax || 0} ท่าน, คาดการณ์ปิดวัน: ~${dayMetrics?.projectedClosingPax || 0} ท่าน)
-- สัญญาณความสนใจจาก Ad Leads: ${dayMetrics?.adHighIntent || 0} ครั้ง (ขอเส้นทาง/โทร/จอง/สั่งอาหาร)
 - สถิติแยก 4 Dayparts:
 ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpperCase()}]: ยอด ฿${dp.sales?.toLocaleString() || 0} ลูกค้าจริง ${dp.pax || 0} ท่าน (สถิติปกติ ~${dp.baselinePax || 0} ท่าน)`).join('\n') || '-'}
+- สัญญาณความสนใจจากแคมเปญออนไลน์ (Ad & Search Intent Leads): รวม ${adTotalEvents} ปฏิสัมพันธ์ (${dayMetrics?.adHighIntent || 0} High-Intent Leads)
+  * ขอเส้นทาง Google Maps (สัญญาณลูกค้าน่าจะกำลังเดินทางมา): ${adMapsCount} ครั้ง
+  * โทรศัพท์ / ทัก LINE Official (สอบถามโต๊ะ/สั่งอาหารล่วงหน้า): ${adContactCount} ครั้ง
+  * จองโต๊ะ / สั่งกลับบ้านผ่านลิงก์: ${adBookingCount} ครั้ง
+  * สำรวจเมนูอาหาร / ดูภาพบรรยากาศริมโขง: ${adMenuCount} ครั้ง
+  * ช่องทางแคมเปญที่มา (UTM Sources): ${adSourceSummary}
 `
             }
 
             const promptText = `${promptContext}
 ให้เขียนบทวิเคราะห์เชิงยุทธศาสตร์ที่เฉียบคม สุภาพ และปฏิบัติได้จริงเป็นภาษาไทย โดยแบ่งเนื้อหาออกเป็น 3 หมวดหมู่ชัดเจน:
 [1. การวิเคราะห์ความเร็วยอดขายและการครองที่นั่ง]
-[2. คำแนะนำเชิงปฏิบัติการสำหรับทีมครัว บาร์ และหน้าร้าน]
-[3. ยุทธวิธีผลักดันยอดขายปิดบิลสู่เป้าหมาย]
+- ประเมินยอดขายสะสมและจำนวนลูกค้าจริงเทียบกับสถิติตามจริงของวัน${dayOfWeekThai} (~฿${historicalBaseline?.totalSales?.toLocaleString()} / ~${historicalBaseline?.totalPax} ท่าน)
+- วิเคราะห์การครองที่นั่งของแต่ละ Daypart อย่างเป็นธรรม (เข้าใจธรรมชาติร้านริมน้ำที่ยอดรายได้หลักจะเข้าช่วง Prime Dinner 17.00-21.00 น.)
+
+[2. วิเคราะห์สัญญาณออนไลน์และการเชื่อมโยงสู่ยอดขาย (Ad & Customer Intent)]
+- วิเคราะห์เจาะลึกสัญญาณ Ad Intent Leads ทั้ง 4 มิติ (ขอเส้นทาง ${adMapsCount}, โทร/LINE ${adContactCount}, จอง/สั่งกลับ ${adBookingCount}, สำรวจเมนู ${adMenuCount}) ว่าสะท้อนถึงลูกค้าประเภทใด
+- อธิบายการเชื่อมโยงสู่หน้าร้านจริง เช่น หากมีการขอทาง/โทร บ่งชี้กลุ่ม Walk-in หรือนัดหมายโต๊ะวิวริมโขง และให้คำแนะนำการตลาดว่าควรดันคอนเทนต์ภาพวิวริมโขงหรือเมนูเด็ดช่วงเวลาใด
+
+[3. คำแนะนำเชิงปฏิบัติการและยุทธวิธีผลักดันยอดสู่เป้าหมาย]
+- คำแนะนำรูปธรรมสำหรับทีมหน้าร้าน ครัว และบาร์ เพื่อรับมือช่วงเวลาที่เหลือของวัน
+- ยุทธวิธีจัดสรรโต๊ะริมน้ำ การดันเครื่องดื่ม/เมนูสร้างกำไร เพื่อผลักดันยอดปิดวันให้ถึงเป้าหมายประจำวัน ฿${dayMetrics?.defaultTarget?.toLocaleString()}
 
 ข้อกำหนดสำคัญ:
 - ต้องตอบให้ครบถ้วนทั้ง 3 หมวดหมู่ข้างต้นและเขียนสรุปให้จบสมบูรณ์ ห้ามตัดจบกลางคัน
 - ห้ามใช้เครื่องหมายดอกจัน (ห้ามใส่ **) ในการตกแต่งข้อความ ให้ใช้ข้อความที่อ่านง่าย สะอาดตา
-- ความยาวเนื้อหาประมาณ 200-350 คำ`
+- ความยาวเนื้อหาประมาณ 240-360 คำ`
 
             const candidateModels = [
                 preferredModel,
