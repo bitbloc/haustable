@@ -84,12 +84,32 @@ export default function IntradayVelocityDaypartCockpit({
     const [hoveredHour, setHoveredHour] = useState(null)
     const [activeSubTab, setActiveSubTab] = useState('chart') // 'chart' | 'dayparts' | 'ad_briefing'
     const [monthViewMode, setMonthViewMode] = useState('pacing') // 'pacing' | 'weekday_weekend' | 'dayparts' | 'ranking'
+    const [showPredict, setShowPredict] = useState(() => {
+        try {
+            const saved = localStorage.getItem('intraday_cockpit_show_predict')
+            return saved !== null ? JSON.parse(saved) : true
+        } catch {
+            return true
+        }
+    })
     const [adEvents, setAdEvents] = useState([])
     const [aiBriefing, setAiBriefing] = useState(null)
     const [aiLoading, setAiLoading] = useState(false)
     const [copiedBriefing, setCopiedBriefing] = useState(false)
     const containerRef = useRef(null)
     const [containerWidth, setContainerWidth] = useState(800)
+
+    const togglePredict = () => {
+        setShowPredict(prev => {
+            const next = !prev
+            try {
+                localStorage.setItem('intraday_cockpit_show_predict', JSON.stringify(next))
+            } catch {
+                // ignore
+            }
+            return next
+        })
+    }
 
     // Operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
@@ -1199,18 +1219,22 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     </div>
                                     {filterMode === 'day' && (
                                         <>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
-                                                <span className="text-[oklch(52%_0.16_28)] font-bold">
-                                                    เส้นประพยากรณ์ลูกค้า (Forecast Stream)
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-3.5 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
-                                                <span className="text-[oklch(45%_0.08_140)]">
-                                                    กรอบพยากรณ์ (ต่ำ-สูง)
-                                                </span>
-                                            </div>
+                                            {showPredict && (
+                                                <>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
+                                                        <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                                            เส้นประพยากรณ์ลูกค้า (Forecast Stream)
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-3.5 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
+                                                        <span className="text-[oklch(45%_0.08_140)]">
+                                                            กรอบพยากรณ์ (ต่ำ-สูง)
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-3.5 h-1 border-t border-dashed border-[oklch(65%_0.010_28)]" />
                                                 <span className="text-[oklch(42%_0.010_28)]">
@@ -1227,10 +1251,12 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     </div>
                                     {filterMode === 'day' && (
                                         <>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(18%_0.012_28)]" />
-                                                <span className="text-[oklch(18%_0.012_28)]">คาดการณ์สะสมปิดวัน</span>
-                                            </div>
+                                            {showPredict && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(18%_0.012_28)]" />
+                                                    <span className="text-[oklch(18%_0.012_28)]">คาดการณ์สะสมปิดวัน</span>
+                                                </div>
+                                            )}
                                             <div className="flex items-center gap-1.5">
                                                 <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(55%_0.010_28)]" />
                                                 <span className="text-[oklch(42%_0.010_28)]">เกณฑ์เป้าหมาย (Benchmark)</span>
@@ -1241,8 +1267,25 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                             )}
                         </div>
 
-                        <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono">
-                            เปิดบริการ 11:00 - 23:00 // Dual Horizon
+                        {/* Right Action: Predict Toggle Button & Hours */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {filterMode === 'day' && (
+                                <button
+                                    onClick={togglePredict}
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                        showPredict
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
+                                            : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                    }`}
+                                    title="คลิกเพื่อเปิด/ปิดเส้นประพยากรณ์และกรอบความแปรผัน (Predict Layer Toggle)"
+                                >
+                                    <span className={`w-1.5 h-1.5 rounded-full ${showPredict ? 'bg-[oklch(52%_0.16_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                    <span>{showPredict ? 'เส้น PREDICT [ON]' : 'เส้น PREDICT [OFF]'}</span>
+                                </button>
+                            )}
+                            <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono hidden sm:block">
+                                เปิดบริการ 11:00 - 23:00 // Dual Horizon
+                            </div>
                         </div>
                     </div>
 
@@ -1550,7 +1593,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     )}
 
                                     {/* Shaded Forecast Confidence Fan (พื้นที่กรอบพยากรณ์ ต่ำ - สูง) */}
-                                    {pathForecastFan && (
+                                    {showPredict && pathForecastFan && (
                                         <path
                                             d={pathForecastFan}
                                             fill="oklch(52% 0.16 28)"
@@ -1559,7 +1602,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     )}
 
                                     {/* Low Scenario Bound Line (ต่ำ) */}
-                                    {pathForecastLow && (
+                                    {showPredict && pathForecastLow && (
                                         <path
                                             d={pathForecastLow}
                                             fill="none"
@@ -1571,7 +1614,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     )}
 
                                     {/* High Scenario Bound Line (สูง) */}
-                                    {pathForecastHigh && (
+                                    {showPredict && pathForecastHigh && (
                                         <path
                                             d={pathForecastHigh}
                                             fill="none"
@@ -1583,7 +1626,7 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                     )}
 
                                     {/* Forecast Base Line (ANIMATED FLOWING DASH - เส้นประพยากรณ์ลูกค้า) */}
-                                    {pathForecastBase && (
+                                    {showPredict && pathForecastBase && (
                                         <path
                                             d={pathForecastBase}
                                             fill="none"
@@ -1606,8 +1649,8 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                         />
                                     )}
 
-                                    {/* Terminal Prediction Tags at 23:00 */}
-                                    {dayMetrics?.points && isViewingToday && (() => {
+                                    {/* Terminal Prediction Tags at 23:00 (Shown only when showPredict is ON) */}
+                                    {showPredict && dayMetrics?.points && isViewingToday && (() => {
                                         const lastPt = dayMetrics.points[dayMetrics.points.length - 1]
                                         const fx = getX(23)
                                         const fyBase = getYPax(lastPt.forecast)
@@ -1687,8 +1730,8 @@ ${dayMetrics?.daypartBreakdown.map(dp => `  * ${dp.label} [${dp.status.toUpperCa
                                         )
                                     })()}
 
-                                    {/* Dashed Projected Sales Velocity Line (From Current Hour to Closing) */}
-                                    {pathForecastSales && (
+                                    {/* Dashed Projected Sales Velocity Line (Shown only when showPredict is ON) */}
+                                    {showPredict && pathForecastSales && (
                                         <path
                                             d={pathForecastSales}
                                             fill="none"
