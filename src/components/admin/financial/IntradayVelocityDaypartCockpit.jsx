@@ -82,6 +82,7 @@ export default function IntradayVelocityDaypartCockpit({
     totalExpenses = 0
 }) {
     const [hoveredHour, setHoveredHour] = useState(null)
+    const [drilldownHour, setDrilldownHour] = useState(null)
     const [activeSubTab, setActiveSubTab] = useState('chart') // 'chart' | 'dayparts' | 'ad_briefing'
     const [monthViewMode, setMonthViewMode] = useState('pacing') // 'pacing' | 'weekday_weekend' | 'dayparts' | 'ranking'
     const [showPredict, setShowPredict] = useState(() => {
@@ -144,7 +145,9 @@ export default function IntradayVelocityDaypartCockpit({
     const todayBangkok = useMemo(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }), [])
     const isViewingToday = useMemo(() => {
         if (filterMode !== 'day') return false
-        return !selectedDate || selectedDate === todayBangkok
+        if (!selectedDate) return true
+        const dStr = String(selectedDate).split('T')[0]
+        return dStr === todayBangkok
     }, [filterMode, selectedDate, todayBangkok])
 
     const targetDateObj = useMemo(() => {
@@ -583,6 +586,17 @@ export default function IntradayVelocityDaypartCockpit({
 
         const projectedClosingPax = totalGuests > 0 ? forecastedClosingPax : historicalBaseline.totalPax
 
+        const hoursElapsed = isViewingToday
+            ? Math.max(1, (currentBangkokTime.hour - 11) + (currentBangkokTime.minute / 60))
+            : 12
+        const currentVelocityPerHour = Math.round(totalGross / hoursElapsed)
+        const pctOfTarget = defaultTarget > 0 ? Math.round((totalGross / defaultTarget) * 100) : 0
+        const paceDeltaPct = latestExpected > 0 ? Math.round(((totalGross - latestExpected) / latestExpected) * 1000) / 10 : 0
+
+        const adDirs = adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length
+        const adCalls = adEvents.filter(e => ['click_phone', 'contact'].includes(e.event_name)).length
+        const adBookings = adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'generate_lead', 'click_line'].includes(e.event_name)).length
+
         return {
             totalGross,
             totalGuests,
@@ -598,9 +612,46 @@ export default function IntradayVelocityDaypartCockpit({
             forecastedClosingPaxHigh,
             forecastedClosingPaxLow,
             cappedHour,
-            paceMultiplier
+            paceMultiplier,
+            baselinePaxSoFar: baselineSoFar,
+            latestExpected,
+            currentVelocityPerHour,
+            hoursElapsed,
+            pctOfTarget,
+            paceDeltaPct,
+            adDirs,
+            adCalls,
+            adBookings
         }
     }, [filterMode, validOrders, hours, totalSeats, adEvents, isViewingToday, currentBangkokTime, isWeekend, historicalBaseline])
+
+    // Memoize Drill-down Data for Selected Hour
+    const { drillHourData, drillHourOrders, drillTopItems } = useMemo(() => {
+        if (drilldownHour === null || !dayMetrics?.points) {
+            return { drillHourData: null, drillHourOrders: [], drillTopItems: [] }
+        }
+        const pt = dayMetrics.points.find(p => p.hour === drilldownHour)
+        const orders = (validOrders || []).filter(b => {
+            const t = b.booking_time || b.created_at
+            return getBangkokHour(t) === drilldownHour
+        })
+
+        const itemMap = {}
+        orders.forEach(b => {
+            const items = Array.isArray(b.order_items) ? b.order_items : []
+            items.forEach(it => {
+                const name = it.name || it.item_name || it.menu_items?.name_th || it.menu_items?.name || 'รายการทั่วไป'
+                const qty = Number(it.quantity || 1)
+                const price = Number(it.price_at_time ?? it.menu_items?.price ?? 0)
+                if (!itemMap[name]) itemMap[name] = { name, qty: 0, total: 0 }
+                itemMap[name].qty += qty
+                itemMap[name].total += price * qty
+            })
+        })
+        const topItems = Object.values(itemMap).sort((a, b) => b.total - a.total).slice(0, 4)
+
+        return { drillHourData: pt, drillHourOrders: orders, drillTopItems: topItems }
+    }, [drilldownHour, dayMetrics, validOrders])
 
     // =========================================================================
     // 4. MONTH MODE COMPUTATION
@@ -1092,7 +1143,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             return { pathForecastBase: '', pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
         }
 
-        const lastActive = dayMetrics.points.find(p => p.hour === cappedHour) || dayMetrics.points[0]
+        const startHour = Math.min(22, cappedHour)
+        const lastActive = dayMetrics.points.find(p => p.hour === startHour) || dayMetrics.points[0]
         const futurePoints = dayMetrics.points.filter(p => p.hour >= lastActive.hour)
         if (futurePoints.length < 2) {
             return { pathForecastBase: '', pathForecastHigh: '', pathForecastLow: '', pathForecastFan: '' }
@@ -1140,15 +1192,16 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     // 4. Path for Projected Sales Velocity Curve (Connecting Current Sales to Closing Target)
     const pathForecastSales = useMemo(() => {
         if (!isViewingToday || !dayMetrics?.points) return ''
-        const futurePts = dayMetrics.points.filter(p => p.hour >= cappedHour)
+        const startH = Math.min(22, cappedHour)
+        const futurePts = dayMetrics.points.filter(p => p.hour >= startH)
         if (futurePts.length < 2) return ''
 
-        const curSales = dayMetrics.points.find(p => p.hour === cappedHour)?.cumulativeSales || 0
+        const curSales = dayMetrics.points.find(p => p.hour === startH)?.cumulativeSales || 0
         const targetEnd = dayMetrics.projectedClosingSales || dayMetrics.defaultTarget
-        const totalRemaining = Math.max(1, 23 - cappedHour)
+        const totalRemaining = Math.max(1, 23 - startH)
 
         const coords = futurePts.map(pt => {
-            const fraction = (pt.hour - cappedHour) / totalRemaining
+            const fraction = (pt.hour - startH) / totalRemaining
             const sVal = Math.round(curSales + (targetEnd - curSales) * fraction)
             return `${getX(pt.hour).toFixed(1)},${getYMoney(sVal).toFixed(1)}`
         })
@@ -1165,6 +1218,31 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     const colorAccent2 = 'oklch(45% 0.08 140)' // Banana-Leaf Green
     const colorBaselinePax = 'oklch(62% 0.08 28)' // Warm Muted Terracotta for Historical Pax Baseline
     const colorBenchmarkSales = 'oklch(45% 0.015 28)' // Refined Charcoal Slate for Sales Target Benchmark
+
+    // Operating Daypart & Dynamic Action Recommendation
+    const currentDaypart = useMemo(() => {
+        return DAYPARTS.find(dp => dp.hours.includes(currentBangkokTime.hour)) || DAYPARTS[3]
+    }, [currentBangkokTime.hour])
+
+    const operatingActionText = useMemo(() => {
+        if (!dayMetrics) return 'การดำเนินงานเป็นไปตามเกณฑ์ปกติ'
+        const pace = dayMetrics.paceDeltaPct || 0
+        const dpId = currentDaypart.id
+
+        if (dpId === 'lunch') {
+            return pace < -10
+                ? 'เร่งสปีดบริการจานด่วน & จัดเตรียม Takeaway หน้าร้าน'
+                : 'ครัวสแตนด์บายจานด่วนต่อเนื่อง · ดูแลโต๊ะจองรอบบ่าย'
+        } else if (dpId === 'afternoon') {
+            return 'บาร์ชูเมนูกาแฟดริป & เบเกอรี่ · เช็คเซ็ตติ้งโต๊ะรับรอบดินเนอร์'
+        } else if (dpId === 'dinner') {
+            return pace < -10
+                ? 'เปิดรับ Walk-in หน้าบาร์ทันที · นำเสนอ Chef Special'
+                : 'ครัวหลักเดินเครื่องเต็มสเตชั่น · สแตนด์บายพนักงานเสิร์ฟรอบพีค'
+        } else {
+            return 'เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์'
+        }
+    }, [dayMetrics, currentDaypart])
 
     return (
         <div ref={containerRef} className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans text-[oklch(18%_0.012_28)]">
@@ -1297,54 +1375,107 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     </>
                 ) : (
                     <>
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">01 // CUMULATIVE SALES</div>
+                        <div className="p-4 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                                <span>01 // CUMULATIVE SALES</span>
+                                {dayMetrics?.pctOfTarget > 0 && (
+                                    <span className="text-[oklch(18%_0.012_28)] font-bold">{dayMetrics.pctOfTarget}% OF TARGET</span>
+                                )}
+                            </div>
                             <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                 ฿{dayMetrics?.totalGross.toLocaleString()}
                             </div>
-                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                {dayMetrics?.totalGross > 0
-                                    ? `คาดการณ์ปิดวัน: ~฿${dayMetrics?.projectedClosingSales.toLocaleString()}`
-                                    : `เป้าหมายประจำวัน: ฿${dayMetrics?.defaultTarget.toLocaleString()}`}
+                            <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center gap-1.5 flex-wrap">
+                                <span>เป้า: ฿{dayMetrics?.defaultTarget.toLocaleString()}</span>
+                                <span className="text-[oklch(85%_0.012_28)]">·</span>
+                                <span className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)] font-bold" : "text-[oklch(52%_0.16_28)] font-bold"}>
+                                    {dayMetrics?.paceDeltaPct >= 0 ? `▲ +${dayMetrics?.paceDeltaPct}%` : `▼ ${dayMetrics?.paceDeltaPct}%`} vs expected
+                                </span>
                             </div>
                         </div>
 
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">02 // GUEST TRAFFIC</div>
+                        <div className="p-4 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                                <span>02 // GUEST TRAFFIC</span>
+                                <span className={dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)] font-bold" : "text-[oklch(52%_0.16_28)] font-bold"}>
+                                    {dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW NORMAL'}
+                                </span>
+                            </div>
                             <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)]">
-                                {dayMetrics?.totalGuests} ท่าน
+                                {dayMetrics?.totalGuests} Pax
                             </div>
                             <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
                                 {dayMetrics?.totalGuests > 0
-                                    ? `คาดการณ์ปิดวัน: ~${dayMetrics?.projectedClosingPax} ท่าน (กรอบ ${dayMetrics?.forecastedClosingPaxLow}-${dayMetrics?.forecastedClosingPaxHigh})`
-                                    : `สถิติปกติ (${dayOfWeekThai}): ~${historicalBaseline.totalPax} ท่าน`}
+                                    ? `Forecast ปิดวัน: ~${dayMetrics?.projectedClosingPax} Pax (กรอบ ${dayMetrics?.forecastedClosingPaxLow}-${dayMetrics?.forecastedClosingPaxHigh})`
+                                    : `สถิติเดิม (${dayOfWeekThai}): ~${historicalBaseline.totalPax} Pax`}
                             </div>
                         </div>
 
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">03 // VELOCITY SPEED</div>
+                        <div className="p-4 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                                <span>03 // SALES VELOCITY</span>
+                                <span className="text-[oklch(18%_0.012_28)] font-bold">{isViewingToday ? `11:00 - ${currentBangkokTime.label}` : '11:00 - 23:00'}</span>
+                            </div>
                             <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
-                                ฿{dayMetrics?.peakHourPoint?.sale ? dayMetrics.peakHourPoint.sale.toLocaleString() : '0'}
+                                ฿{dayMetrics?.currentVelocityPerHour?.toLocaleString() || 0} <span className="text-sm font-normal text-[oklch(42%_0.010_28)]">/ hr</span>
                             </div>
                             <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
                                 {dayMetrics?.peakHourPoint?.sale > 0
-                                    ? `พีคสุด: ${dayMetrics.peakHourPoint.hour}.00 น.`
+                                    ? `พีคสุด: ฿${dayMetrics.peakHourPoint.sale.toLocaleString()} (${dayMetrics.peakHourPoint.hour}.00 น.)`
                                     : `ช่วงพีคตามสถิติ: 18.00 - 20.00 น.`}
                             </div>
                         </div>
 
-                        <div className="p-4 space-y-1">
-                            <div className="text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">04 // AD & SEARCH INTENT</div>
+                        <div className="p-4 space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
+                                <span>04 // ONLINE INTENT LEADS</span>
+                                <span className="text-[oklch(45%_0.08_140)] font-bold">ACTIVE FUNNEL</span>
+                            </div>
                             <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(45%_0.08_140)]">
                                 {dayMetrics?.adHighIntent} สัญญาณ
                             </div>
                             <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                                แผนที่ / โทร / จอง / รับอาหาร
+                                แผนที่ {dayMetrics?.adDirs || 0} · โทร {dayMetrics?.adCalls || 0} · ไลน์/จอง {dayMetrics?.adBookings || 0}
                             </div>
                         </div>
                     </>
                 )}
             </div>
+
+            {/* ========================================================================= */}
+            {/* 2.5 OPERATING SIGNAL & NOW ANCHOR BAR (Control Panel Action Anchor)      */}
+            {/* ========================================================================= */}
+            {filterMode === 'day' && isViewingToday && (
+                <div className="px-4 py-2.5 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs font-mono">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold tracking-wider text-[11px]">
+                            NOW {currentBangkokTime.label}
+                        </span>
+                        <span className="font-bold text-[oklch(18%_0.012_28)]">
+                            {currentDaypart.label.toUpperCase()} ({currentDaypart.rangeText})
+                        </span>
+                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
+                        <span className="text-[oklch(42%_0.010_28)]">
+                            TRAFFIC: <strong className={dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]"}>{dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW EXPECTED'}</strong>
+                        </span>
+                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
+                        <span className="text-[oklch(42%_0.010_28)]">
+                            SALES PACE: <strong className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]"}>{dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}% (ON PACE)` : `${dayMetrics?.paceDeltaPct}% (BEHIND)`}</strong>
+                        </span>
+                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
+                        <span className="text-[oklch(42%_0.010_28)]">
+                            NEXT 60M: <strong className="text-[oklch(18%_0.012_28)]">~฿{Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 0.8 / 50) * 50} - ฿{Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 1.25 / 50) * 50}</strong>
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-[oklch(42%_0.010_28)] font-bold tracking-wider">ACTION:</span>
+                        <span className="px-2 py-0.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-semibold text-[oklch(18%_0.012_28)] text-[11px]">
+                            {operatingActionText}
+                        </span>
+                    </div>
+                </div>
+            )}
 
             {/* ========================================================================= */}
             {/* 3. VIEW 1: COCKPIT MAIN DUAL-LAYER GRAPH (When activeSubTab === 'chart')   */}
@@ -1676,9 +1807,25 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     const actualBarH = getYBarHeight(pt.pax, maxPaxScale)
                                     const isHovered = hoveredHour === pt.hour
                                     const isPeak = dayMetrics.peakHourPoint?.hour === pt.hour && pt.pax > 0
+                                    const isDrilldown = drilldownHour === pt.hour
 
                                     return (
                                         <g key={pt.hour}>
+                                            {/* Active Column Highlight for Drill-Down Selection */}
+                                            {isDrilldown && (
+                                                <rect
+                                                    x={x - (plotWidth / (hours.length - 1)) * 0.48}
+                                                    y={padYTop}
+                                                    width={(plotWidth / (hours.length - 1)) * 0.96}
+                                                    height={plotHeight}
+                                                    fill="oklch(52% 0.16 28 / 0.10)"
+                                                    stroke="oklch(52% 0.16 28 / 0.45)"
+                                                    strokeWidth="1.2"
+                                                    strokeDasharray="3 3"
+                                                    className="pointer-events-none"
+                                                />
+                                            )}
+
                                             {/* Expected Baseline Ghost Bar */}
                                             <rect
                                                 x={x - 7}
@@ -1699,12 +1846,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop + plotHeight - actualBarH}
                                                     width={14}
                                                     height={actualBarH}
-                                                    fill={isHovered || isPeak ? colorAccent : 'oklch(60% 0.12 28)'}
+                                                    fill={isDrilldown || isHovered || isPeak ? colorAccent : 'oklch(60% 0.12 28)'}
                                                     className="transition-colors duration-150 pointer-events-none"
                                                 />
                                             )}
 
-                                            {/* Invisible Full-Height Touch/Hover Hitbox */}
+                                            {/* Full-Height Touch/Hover Hitbox for Drilldown Inspection */}
                                             <rect
                                                 x={x - (plotWidth / (hours.length - 1)) * 0.45}
                                                 y={padYTop}
@@ -1714,6 +1861,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 className="cursor-pointer"
                                                 onMouseEnter={() => setHoveredHour(pt.hour)}
                                                 onMouseLeave={() => setHoveredHour(null)}
+                                                onClick={() => setDrilldownHour(prev => prev === pt.hour ? null : pt.hour)}
                                             />
 
                                             {/* Ad Intent Beacon Pin if leads happened at this hour */}
@@ -1753,10 +1901,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             d={pathBaselinePax}
                                             fill="none"
                                             stroke={colorBaselinePax}
-                                            strokeWidth="1.6"
-                                            strokeDasharray="2.5 3"
+                                            strokeWidth="1.2"
+                                            strokeDasharray="2 3"
                                             strokeLinecap="round"
-                                            opacity="0.85"
+                                            opacity="0.45"
                                         />
                                     )}
 
@@ -1896,9 +2044,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     d={pathD}
                                                     fill="none"
                                                     stroke={colorBenchmarkSales}
-                                                    strokeWidth="1.6"
-                                                    strokeDasharray="6 4"
-                                                    opacity="0.9"
+                                                    strokeWidth="1.3"
+                                                    strokeDasharray="4 4"
+                                                    opacity="0.55"
                                                 />
                                                 {/* Subtle Terminal Target Tag at 23:00 */}
                                                 {lastBpt && (
@@ -1982,15 +2130,20 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             {hours.map((h) => {
                                 const x = getX(h)
                                 const isHovered = hoveredHour === h
+                                const isDrill = drilldownHour === h
                                 return (
-                                    <g key={h}>
+                                    <g
+                                        key={h}
+                                        onClick={() => setDrilldownHour(prev => prev === h ? null : h)}
+                                        className="cursor-pointer"
+                                    >
                                         <line
                                             x1={x}
                                             y1={padYTop + plotHeight}
                                             x2={x}
-                                            y2={padYTop + plotHeight + 4}
-                                            stroke={colorRule}
-                                            strokeWidth="1"
+                                            y2={padYTop + plotHeight + (isDrill ? 6 : 4)}
+                                            stroke={isDrill ? colorAccent : colorRule}
+                                            strokeWidth={isDrill ? "2" : "1"}
                                         />
                                         <text
                                             x={x}
@@ -1998,8 +2151,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             textAnchor="middle"
                                             fontSize="9"
                                             fontFamily="monospace"
-                                            fill={isHovered ? colorInk : colorMuted}
-                                            fontWeight={isHovered ? 'bold' : 'normal'}
+                                            fill={isDrill ? colorAccent : (isHovered ? colorInk : colorMuted)}
+                                            fontWeight={isDrill || isHovered ? 'bold' : 'normal'}
                                         >
                                             {h}:00
                                         </text>
@@ -2049,6 +2202,20 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </g>
                             )}
                         </svg>
+                    </div>
+
+                    {/* Operational Helper Footnote */}
+                    <div className="mt-2 flex items-center justify-between text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                        <span>💡 คลิกที่แท่งชั่วโมงบนกราฟเพื่อเปิด Hourly Drill-Down Inspector (ดูบิล & เมนูยอดนิยม)</span>
+                        {drilldownHour !== null && (
+                            <button
+                                type="button"
+                                onClick={() => setDrilldownHour(null)}
+                                className="underline hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                            >
+                                ปิดการเลือกชั่วโมง [{drilldownHour}:00] ✕
+                            </button>
+                        )}
                     </div>
 
                     {/* Live Synchronized Tooltip Box */}
@@ -2122,6 +2289,118 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     </div>
                                 )
                             })()}
+                        </div>
+                    )}
+
+                    {/* Hourly Drill-Down Inspector Drawer (Zero Page Transition) */}
+                    {filterMode === 'day' && drilldownHour !== null && drillHourData && (
+                        <div className="mt-4 p-4 md:p-5 bg-[oklch(94%_0.010_28)] border-2 border-[oklch(18%_0.012_28)] font-mono text-xs space-y-4 animate-in fade-in duration-200">
+                            {/* Header */}
+                            <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-[oklch(85%_0.012_28)]">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                    <span className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-[11px] tracking-wider uppercase">
+                                        HOURLY INSPECTOR // {drilldownHour}:00 - {drilldownHour + 1}:00
+                                    </span>
+                                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)]">
+                                        {DAYPARTS.find(d => d.hours.includes(drilldownHour))?.label || ''}
+                                    </span>
+                                    <span className="text-[oklch(85%_0.012_28)]">|</span>
+                                    <span className="text-[oklch(42%_0.010_28)]">
+                                        {drillHourData.isFuture ? 'ช่วงเวลาคาดการณ์ล่วงหน้า (FORECAST INTERVAL)' : (drillHourData.sale > 0 ? 'บันทึกยอดขายจริงแล้ว (RECORDED)' : 'ไม่มีรายการคำสั่งซื้อ')}
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setDrilldownHour(null)}
+                                    className="px-2.5 py-1 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] border border-[oklch(85%_0.012_28)] font-bold text-[11px] transition-colors cursor-pointer"
+                                >
+                                    ESC / ปิด [✕]
+                                </button>
+                            </div>
+
+                            {/* 4 Metric Cells */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)]">
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">HOURLY SALES</div>
+                                    <div className="text-lg md:text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                        ฿{(drillHourData.sale || 0).toLocaleString()}
+                                    </div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
+                                        สะสมสิ้นชั่วโมง: ฿{(drillHourData.cumulativeSales || 0).toLocaleString()}
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)]">
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">GUEST TRAFFIC</div>
+                                    <div className="text-lg md:text-xl font-bold text-[oklch(52%_0.16_28)] mt-0.5">
+                                        {drillHourData.isFuture ? `~${drillHourData.forecast} Pax` : `${drillHourData.pax || 0} Pax`}
+                                    </div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
+                                        สถิติเฉลี่ยเดิม: ~{drillHourData.baselinePax} Pax
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)]">
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">BILLS & AVERAGE CHECK</div>
+                                    <div className="text-lg md:text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5">
+                                        {drillHourOrders.length} บิล
+                                    </div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
+                                        เฉลี่ย ฿{drillHourOrders.length > 0 ? Math.round((drillHourData.sale || 0) / drillHourOrders.length).toLocaleString() : 0} / บิล
+                                    </div>
+                                </div>
+
+                                <div className="p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)]">
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] font-bold">ONLINE SEARCH INTENT</div>
+                                    <div className="text-lg md:text-xl font-bold text-[oklch(45%_0.08_140)] mt-0.5">
+                                        {(drillHourData.adDirs || 0) + (drillHourData.adLeads || 0)} Signals
+                                    </div>
+                                    <div className="text-[10px] text-[oklch(42%_0.010_28)] mt-1">
+                                        Directions: {drillHourData.adDirs || 0} · Inquiries: {drillHourData.adLeads || 0}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Top Items Ordered in this hour */}
+                            <div className="pt-2">
+                                <div className="text-[11px] font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider mb-2 flex items-center justify-between">
+                                    <span>TOP MENU ITEMS ORDERED IN THIS HOUR // รายการอาหารยอดนิยม</span>
+                                    <span className="text-[10px] text-[oklch(42%_0.010_28)] font-normal">
+                                        {drillTopItems.length > 0 ? `${drillTopItems.length} รายการหลัก` : ''}
+                                    </span>
+                                </div>
+
+                                {drillTopItems.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                                        {drillTopItems.map((item, idx) => (
+                                            <div
+                                                key={item.name + idx}
+                                                className="p-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex items-center justify-between"
+                                            >
+                                                <div className="min-w-0 pr-2">
+                                                    <div className="font-bold text-[11px] text-[oklch(18%_0.012_28)] truncate" title={item.name}>
+                                                        {idx + 1}. {item.name}
+                                                    </div>
+                                                    <div className="text-[10px] text-[oklch(42%_0.010_28)]">
+                                                        จำนวน {item.qty} ที่
+                                                    </div>
+                                                </div>
+                                                <div className="text-right flex-shrink-0">
+                                                    <div className="font-bold text-[oklch(18%_0.012_28)]">
+                                                        ฿{item.total.toLocaleString()}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-4 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] text-center text-[oklch(42%_0.010_28)] text-[11px]">
+                                        {drillHourData.isFuture
+                                            ? 'ช่วงเวลาคาดการณ์ในอนาคต — ยังไม่มีรายการคำสั่งซื้อจริงที่ถูกบันทึก'
+                                            : 'ไม่มีรายการสั่งซื้อในช่วงชั่วโมงนี้'}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
