@@ -107,8 +107,7 @@ export default function AdminDashboard() {
                         quantity,
                         price_at_time,
                         selected_options,
-                        item_note,
-                        special_instructions,
+                        custom_name,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -127,8 +126,7 @@ export default function AdminDashboard() {
                         quantity,
                         price_at_time,
                         selected_options,
-                        item_note,
-                        special_instructions,
+                        custom_name,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -147,8 +145,7 @@ export default function AdminDashboard() {
                         quantity,
                         price_at_time,
                         selected_options,
-                        item_note,
-                        special_instructions,
+                        custom_name,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),

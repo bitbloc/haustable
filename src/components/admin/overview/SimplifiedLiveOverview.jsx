@@ -112,8 +112,7 @@ export default function SimplifiedLiveOverview({
                         quantity,
                         price_at_time,
                         selected_options,
-                        item_note,
-                        special_instructions,
+                        custom_name,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, phone_number ),
