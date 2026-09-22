@@ -7,6 +7,7 @@ import { resolveMenuItemId } from '../utils/menuHelper';
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
+ * Strictly separates active seated dining sessions from unseated advance reservations.
  */
 function isBookingSessionActive(b, startOfToday, endOfToday, now) {
     if (!b) return false;
@@ -26,12 +27,7 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
         // Seated booking must be today or at most 12 hours old
         return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
     }
-    if (isToday && b.status === 'ready') return true;
-    if (isToday && b.status === 'confirmed') {
-        const bTime = new Date(b.booking_time);
-        const diffMins = (bTime.getTime() - now.getTime()) / 60000;
-        if (diffMins <= 30 && diffMins >= -120) return true;
-    }
+    if (isToday && b.status === 'ready' && b.booking_type !== 'pickup') return true;
     if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
     return false;
 }
@@ -48,11 +44,11 @@ export function usePOSOrder() {
         if (!isOnline()) {
             console.log('[Offline Mode] Fetching active booking from local cache for table:', tableId);
             const bookings = posCache.getBookings();
-            const booking = bookings.find(b => {
-                if (String(b.table_id) !== String(tableId)) return false;
-                return isBookingSessionActive(b, startOfToday, endOfToday, now);
-            });
-            return booking || null;
+            // Prioritize seated dining sessions first
+            const seated = bookings.find(b => String(b.table_id) === String(tableId) && b.status === 'seated' && isBookingSessionActive(b, startOfToday, endOfToday, now));
+            if (seated) return seated;
+            const otherActive = bookings.find(b => String(b.table_id) === String(tableId) && isBookingSessionActive(b, startOfToday, endOfToday, now));
+            return otherActive || null;
         }
 
         try {
@@ -70,8 +66,11 @@ export function usePOSOrder() {
                 }
             }
 
-            // Find the booking actively occupying this table in-store (strictly fresh)
-            const data = (candidates || []).find(b => isBookingSessionActive(b, startOfToday, endOfToday, now)) || null;
+            const validCandidates = (candidates || []).filter(b => isBookingSessionActive(b, startOfToday, endOfToday, now));
+            
+            // Absolute Priority: Seated in-store session always takes precedence over any other status
+            const seatedBooking = validCandidates.find(b => b.status === 'seated');
+            const data = seatedBooking || validCandidates.find(b => b.status === 'pending') || validCandidates[0] || null;
 
             if (data) {
                 // Update local bookings cache
@@ -87,6 +86,8 @@ export function usePOSOrder() {
         } catch (err) {
             console.error('Network error fetching booking, fallback to cache:', err);
             const bookings = posCache.getBookings();
+            const seated = bookings.find(b => String(b.table_id) === String(tableId) && b.status === 'seated' && isBookingSessionActive(b, startOfToday, endOfToday, now));
+            if (seated) return seated;
             return bookings.find(b => String(b.table_id) === String(tableId) && isBookingSessionActive(b, startOfToday, endOfToday, now)) || null;
         }
     }, []);

@@ -30,6 +30,7 @@ import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
 import { isGhostPickupBooking, isInternalBlockBooking } from './utils/tableTransferHelper'
 
 export default function AdminDashboard() {
+    const [tables, setTables] = useState([])
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, title: '', message: '', action: null })
     const [bookings, setBookings] = useState([]) // Stores Pending (All) + Selected Date Bookings
     const [shifts, setShifts] = useState([]) // Stores shifts for Selected Date / Active shift
@@ -96,15 +97,18 @@ export default function AdminDashboard() {
         const requestId = ++activeRequestIdRef.current
         if (!isSilent) setLoading(true)
         try {
-            // 1. Fetch ALL Pending (Inbox) across all dates
+            // 1. Fetch ALL Pending (Inbox) across all dates with full order_items fields
             const pendingReq = supabase
                 .from('bookings')
                 .select(`
                     *,
                     order_items (
+                        id,
                         quantity,
                         price_at_time,
                         selected_options,
+                        item_note,
+                        special_instructions,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -114,15 +118,17 @@ export default function AdminDashboard() {
                 .order('booking_time', { ascending: true })
 
             // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
-            // Strict matching across booking_time or created_at (NEVER match on updated_at to prevent historical backfills from polluting daily revenue)
             const dateReq = supabase
                 .from('bookings')
                 .select(`
                     *,
                     order_items (
+                        id,
                         quantity,
                         price_at_time,
                         selected_options,
+                        item_note,
+                        special_instructions,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -137,9 +143,12 @@ export default function AdminDashboard() {
                 .select(`
                     *,
                     order_items (
+                        id,
                         quantity,
                         price_at_time,
                         selected_options,
+                        item_note,
+                        special_instructions,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -148,7 +157,7 @@ export default function AdminDashboard() {
                 .in('status', ['seated', 'confirmed', 'ready'])
                 .order('booking_time', { ascending: false })
 
-            // 4. Fetch Shifts for queryDate (all shifts opened or closed on this date, plus currently open shift if today)
+            // 4. Fetch Shifts for queryDate
             const isToday = queryDate === getThaiDate()
             let shiftsReq = supabase
                 .from('pos_shifts')
@@ -163,7 +172,14 @@ export default function AdminDashboard() {
                     .lte('opened_at', `${queryDate}T23:59:59+07:00`)
             }
 
-            const [pendingRes, dateRes, seatedRes, shiftsRes] = await Promise.all([pendingReq, dateReq, seatedReq, shiftsReq])
+            // 5. Fetch Table Layout once to serve as single source of truth for floor views
+            const tablesReq = supabase
+                .from('tables_layout')
+                .select('*')
+
+            const [pendingRes, dateRes, seatedRes, shiftsRes, tablesRes] = await Promise.all([
+                pendingReq, dateReq, seatedReq, shiftsReq, tablesReq
+            ])
 
             if (pendingRes.error) throw pendingRes.error
             if (dateRes.error) throw dateRes.error
@@ -171,7 +187,7 @@ export default function AdminDashboard() {
             // Guard against race conditions if another request was triggered
             if (requestId !== activeRequestIdRef.current) return
 
-            // Merge and Deduplicate
+            // Merge and Deduplicate Bookings
             const map = new Map()
             ;(pendingRes.data || []).forEach(b => map.set(b.id, b))
             ;(dateRes.data || []).forEach(b => map.set(b.id, b))
@@ -179,6 +195,13 @@ export default function AdminDashboard() {
 
             setBookings(Array.from(map.values()))
             setShifts(shiftsRes?.data || [])
+
+            if (tablesRes?.data) {
+                const sortedTables = (tablesRes.data || []).slice().sort((a, b) => 
+                    (a.table_name || '').localeCompare(b.table_name || '', undefined, { numeric: true, sensitivity: 'base' })
+                )
+                setTables(sortedTables)
+            }
 
         } catch (error) {
             if (requestId !== activeRequestIdRef.current) return
@@ -565,23 +588,23 @@ export default function AdminDashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-[oklch(85%_0.012_28)]">
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-sm">
+                            <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-[oklch(45%_0.08_140)] bg-[oklch(92%_0.012_140)] px-2 py-0.5 rounded-xs">
                                 SYSTEM COCKPIT // 2026
                             </span>
-                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] tracking-wider">
                                 BACKOFFICE OVERVIEW
                             </span>
                         </div>
-                        <h1 className="font-mono text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-1">
+                        <h1 className="font-sans text-2xl md:text-3xl font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-1">
                             EXECUTIVE OVERVIEW
                         </h1>
                     </div>
 
                     {/* Date Picker & Controls Ribbon */}
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                         {/* Quick Date Switcher */}
                         <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm p-1 font-mono text-xs font-bold">
-                            <Calendar size={14} className="text-[oklch(52%_0.16_28)] ml-1" />
+                            <Calendar size={14} className="text-[oklch(52%_0.16_28)] ml-1 shrink-0" />
                             <input
                                 type="date"
                                 value={selectedDate}
@@ -589,14 +612,16 @@ export default function AdminDashboard() {
                                 className="bg-transparent border-none text-[oklch(18%_0.012_28)] font-mono text-xs font-bold focus:outline-none cursor-pointer"
                             />
                             <button
+                                type="button"
                                 onClick={() => handleDateChange(getThaiDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
+                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer ${selectedDate === getThaiDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 วันนี้
                             </button>
                             <button
+                                type="button"
                                 onClick={() => handleDateChange(getYesterdayDate())}
-                                className={`px-2 py-0.5 rounded-sm text-[10px] cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'hover:bg-[oklch(92%_0.012_28)]'}`}
+                                className={`px-2 py-0.5 rounded-xs text-[10px] font-sans font-medium cursor-pointer ${selectedDate === getYesterdayDate() ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'hover:bg-[oklch(92%_0.012_28)] text-[oklch(42%_0.010_28)]'}`}
                             >
                                 เมื่อวาน
                             </button>
@@ -606,7 +631,7 @@ export default function AdminDashboard() {
                         <button
                             type="button"
                             onClick={() => setSoundMuted(!soundMuted)}
-                            className={`p-2 rounded-sm border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 ${
+                            className={`p-2 rounded-sm border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
                                 soundMuted 
                                     ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]' 
                                     : 'bg-[oklch(92%_0.012_140)] border-[oklch(82%_0.08_140)] text-[oklch(35%_0.08_140)]'
@@ -621,11 +646,12 @@ export default function AdminDashboard() {
                         <button 
                             type="button"
                             onClick={() => setShowDailySummaryModal(true)}
-                            className="px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                            className="px-2.5 sm:px-3 py-1.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] text-xs font-bold rounded-sm flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer whitespace-nowrap"
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
                             <FileText size={13} />
-                            <span className="hidden md:inline">สลิปปิดวัน (PNG)</span>
+                            <span className="font-sans font-medium">สลิปปิดวัน</span>
+                            <span className="hidden sm:inline font-mono text-[11px]">(PNG)</span>
                         </button>
 
                         {/* Refresh */}
@@ -633,7 +659,7 @@ export default function AdminDashboard() {
                             type="button"
                             onClick={() => fetchData(false, selectedDate)} 
                             disabled={loading}
-                            className="px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-2.5 sm:px-3 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-sm flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                         >
                             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                             <span className="hidden sm:inline">REFRESH</span>
@@ -641,20 +667,21 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* MASTER COCKPIT MODE SWITCHER (Hallmark Dieter Rams Dual-Pillar) */}
-                <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1 rounded-sm gap-1 mb-6 font-mono text-xs sm:text-sm shadow-2xs">
+                {/* MASTER COCKPIT MODE SWITCHER (Hallmark Dieter Rams Dual-Pillar - Zero-wrap Gate 49) */}
+                <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-1 rounded-sm gap-1 mb-6 text-xs sm:text-sm shadow-2xs">
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('simplified')}
-                        className={`py-3 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+                        className={`py-2.5 sm:py-3 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 select-none whitespace-nowrap ${
                             overviewMode === 'simplified'
                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs ring-1 ring-[oklch(18%_0.012_28)]'
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
-                        <span className={`w-2.5 h-2.5 rounded-full ${overviewMode === 'simplified' ? 'bg-[oklch(52%_0.16_28)] animate-pulse' : 'bg-current opacity-30'}`} />
-                        <span className="tracking-wide">SIMPLIFIED LIVE // โต๊ะสดหน้าร้าน</span>
-                        <span className={`hidden md:inline text-[10px] px-2 py-0.5 rounded-xs uppercase ${
+                        <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(52%_0.16_28)] animate-pulse' : 'bg-current opacity-30'}`} />
+                        <span className="sm:hidden text-xs font-sans font-medium">โต๊ะสดหน้าร้าน</span>
+                        <span className="hidden sm:inline font-mono tracking-wide">SIMPLIFIED LIVE // <span className="font-sans font-semibold tracking-normal">โต๊ะสดหน้าร้าน</span></span>
+                        <span className={`hidden lg:inline text-[10px] font-mono px-2 py-0.5 rounded-xs uppercase ${
                             overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                         }`}>
                             ค่าเริ่มต้น
@@ -663,15 +690,16 @@ export default function AdminDashboard() {
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('pro')}
-                        className={`py-3 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none ${
+                        className={`py-2.5 sm:py-3 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 sm:gap-2 select-none whitespace-nowrap ${
                             overviewMode === 'pro'
                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs ring-1 ring-[oklch(18%_0.012_28)]'
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
-                        <span className={`w-2.5 h-2.5 rounded-xs ${overviewMode === 'pro' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-30'}`} />
-                        <span className="tracking-wide">PRO ANALYTICS // วิเคราะห์เชิงลึก</span>
-                        <span className={`hidden md:inline text-[10px] px-2 py-0.5 rounded-xs uppercase ${
+                        <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(45%_0.08_140)]' : 'bg-current opacity-30'}`} />
+                        <span className="sm:hidden text-xs font-sans font-medium">วิเคราะห์กะ</span>
+                        <span className="hidden sm:inline font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-semibold tracking-normal">วิเคราะห์เชิงลึก</span></span>
+                        <span className={`hidden lg:inline text-[10px] font-mono px-2 py-0.5 rounded-xs uppercase ${
                             overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]/20 text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(42%_0.010_28)]'
                         }`}>
                             ชาร์ต & กะ
@@ -682,8 +710,9 @@ export default function AdminDashboard() {
                 {/* OVERVIEW CONTENT: SIMPLIFIED LIVE (DEFAULT) vs PRO MODE */}
                 {overviewMode === 'simplified' ? (
                     <div className="space-y-6 mb-6">
-                        {/* 1. Simplified Live Floor (Focused on Occupied Tables by Default) */}
+                        {/* 1. Simplified Live Floor (Driven by parent bookings & tables) */}
                         <SimplifiedLiveOverview 
+                            tables={tables}
                             bookings={dailyBookings}
                             revenueToday={revenueToday}
                             shifts={shifts}

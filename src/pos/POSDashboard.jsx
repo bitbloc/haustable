@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import POSLayout from './POSLayout';
-import POSTableGrid from './POSTableGrid';
+import POSTableGrid, { getReservationDiffMins, formatReservationCountdown } from './POSTableGrid';
 import POSMenuGrid from './POSMenuGrid';
 import POSOrderPanel from './POSOrderPanel';
 import { usePOSOrder } from '../hooks/usePOSOrder';
@@ -2266,8 +2266,25 @@ export default function POSDashboard() {
             if (currentReqId !== tableSelectRequestIdRef.current) return;
 
             if (upcomingRes) {
-                // Table has an online reservation! Open the dedicated Online Reservation Check-in Card
-                setOnlineReservationModalData({ table, reservation: upcomingRes });
+                const diffMins = getReservationDiffMins(upcomingRes.booking_time);
+
+                // If reservation is imminent (<= 45 mins), open reservation check-in modal as primary
+                if (diffMins <= 45) {
+                    setOnlineReservationModalData({ table, reservation: upcomingRes, diffMins });
+                    return;
+                }
+
+                // Reservation is far in advance (> 45 mins) -> Customer hasn't arrived yet!
+                // Open table for on-site walk-in guests by default, completely isolated from future reservation.
+                setActiveBooking(null);
+                if (activeBookingRef) activeBookingRef.current = null;
+                setCurrentOrder({
+                    items: [],
+                    customer: 'Walk-in Guest',
+                    table: table
+                });
+                setOpenTablePaxInput(String(table.capacity || 2));
+                setOpenTableModalData({ table, upcomingReservation: upcomingRes, reservationDiffMins: diffMins });
                 return;
             }
 
@@ -4169,19 +4186,19 @@ export default function POSDashboard() {
                 onClose={() => setShowOfflineQueueDrawer(false)}
             />
 
-            {/* Open Table Modal */}
+            {/* Open Table Modal · Dieter Rams + Thai Modern OKLCH (Hallmark Approved - Zero Slop) */}
             {openTableModalData && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 select-none font-sans">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[#1A1A1A]">
-                        <div className="p-4 border-b border-[#D1D1CD] flex items-center justify-between">
+                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 select-none font-sans animate-in fade-in duration-150">
+                    <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[var(--color-ink)]">
+                        <div className="p-4 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper-2)]">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-[#3C3D40] text-white flex items-center justify-center font-mono font-bold text-sm shadow-sm">
+                                <div className="w-9 h-9 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center font-mono font-bold text-sm shadow-xs">
                                     {openTableModalData.table.table_name}
                                 </div>
                                 <div>
-                                    <h3 className="font-mono font-bold text-xs uppercase tracking-wider">เปิดโต๊ะ (Open Table)</h3>
-                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5">
-                                        ความจุแนะนำ: {openTableModalData.table.capacity || 2} คน
+                                    <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">เปิดโต๊ะ (Open Table)</h3>
+                                    <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">
+                                        ความจุแนะนำ: {openTableModalData.table.capacity || 2} ที่นั่ง
                                     </p>
                                 </div>
                             </div>
@@ -4189,7 +4206,7 @@ export default function POSDashboard() {
                                 onClick={() => {
                                     setOpenTableModalData(null);
                                 }} 
-                                className="p-1.5 hover:bg-[#EAEAE6] rounded-lg text-[#767673] hover:text-[#1A1A1A] transition-colors cursor-pointer"
+                                className="p-1.5 hover:bg-[var(--color-paper)] rounded-sm text-[var(--color-neutral)] hover:text-[var(--color-ink)] transition-colors cursor-pointer"
                             >
                                 <X size={18} />
                             </button>
@@ -4197,23 +4214,42 @@ export default function POSDashboard() {
                         
                         <div className="p-6 flex flex-col items-center gap-4">
                             {openTableModalData.upcomingReservation && (
-                                <div className="w-full bg-amber-50 border border-amber-300 rounded-xl p-3 text-xs text-amber-900 flex flex-col gap-1">
-                                    <div className="flex items-center gap-1.5 font-bold font-mono uppercase text-[11px]">
-                                        <AlertCircle size={14} className="text-amber-600 shrink-0" />
-                                        <span>แจ้งเตือน: โต๊ะนี้มีคิวจองล่วงหน้าวันนี้</span>
+                                <div className="w-full bg-[var(--color-paper-2)] border border-amber-500/40 rounded-sm p-3.5 text-xs text-[var(--color-ink)] flex flex-col gap-2">
+                                    <div className="flex items-center justify-between pb-1.5 border-b border-[var(--color-rule)]">
+                                        <div className="flex items-center gap-1.5 font-mono font-bold uppercase text-[11px] text-amber-900">
+                                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                                            <span>มีคิวจองล่วงหน้า: {new Date(openTableModalData.upcomingReservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
+                                        </div>
+                                        <span className="font-mono text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded font-bold">
+                                            {formatReservationCountdown(openTableModalData.upcomingReservation.booking_time)}
+                                        </span>
                                     </div>
-                                    <p className="text-[11px] leading-relaxed">
-                                        มีคิวจองเวลา <strong>{new Date(openTableModalData.upcomingReservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</strong> (คุณ{openTableModalData.upcomingReservation.pickup_contact_name || openTableModalData.upcomingReservation.customer_name || 'ลูกค้าออนไลน์'}, {openTableModalData.upcomingReservation.pax || 2} คน)
+                                    <p className="text-[11px] leading-relaxed text-[var(--color-ink)]">
+                                        คุณ{openTableModalData.upcomingReservation.pickup_contact_name || openTableModalData.upcomingReservation.customer_name || 'ลูกค้าออนไลน์'} ({openTableModalData.upcomingReservation.pax || 2} คน) — สามารถเปิดรับลูกค้า Walk-in ได้ตามปกติ
                                     </p>
-                                    <p className="text-[10px] text-amber-700 font-mono">
-                                        * กรุณาแจ้งลูกค้า Walk-in ให้คืนโต๊ะก่อนเวลานัดหมาย หรือเลือกเปิดโต๊ะอื่น
-                                    </p>
+                                    <div className="pt-1.5 border-t border-[var(--color-rule)] flex justify-between items-center">
+                                        <span className="text-[10px] text-[var(--color-neutral)] font-mono">
+                                            * เมื่อเช็คบิล คิวจองยังคงอยู่ครบถ้วน
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const res = openTableModalData.upcomingReservation;
+                                                const tbl = openTableModalData.table;
+                                                const diff = openTableModalData.reservationDiffMins;
+                                                setOpenTableModalData(null);
+                                                setOnlineReservationModalData({ table: tbl, reservation: res, diffMins: diff });
+                                            }}
+                                            className="text-[10px] font-mono font-bold text-[var(--color-accent)] hover:underline cursor-pointer"
+                                        >
+                                            ลูกค้าจองมาถึงก่อนเวลา? เช็คอินคิวจอง
+                                        </button>
+                                    </div>
                                 </div>
                             )}
 
-                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[#1A1A1A] flex items-center gap-1.5">
-                                <Users size={16} className="text-[#3C3D40]" />
-                                <span>ระบุจำนวนลูกค้า (คน) *</span>
+                            <div className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-1.5">
+                                <span>ระบุจำนวนลูกค้า Walk-in (คน) *</span>
                             </div>
                             
                             {/* Large Stepper Control */}
@@ -4221,7 +4257,7 @@ export default function POSDashboard() {
                                 <button 
                                     type="button"
                                     onClick={() => setOpenTablePaxInput(prev => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
+                                    className="w-12 h-12 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer select-none touch-manipulation"
                                 >
                                     -
                                 </button>
@@ -4231,13 +4267,13 @@ export default function POSDashboard() {
                                     max="99"
                                     value={openTablePaxInput}
                                     onChange={(e) => setOpenTablePaxInput(e.target.value)}
-                                    className="w-24 h-12 bg-white border-2 border-[#3C3D40] rounded-xl text-center text-2xl font-mono font-black text-[#1A1A1A] focus:outline-none focus:border-[#52281C] shadow-inner"
+                                    className="w-24 h-12 bg-[var(--color-paper)] border-2 border-[var(--color-ink)] rounded-sm text-center text-2xl font-mono font-black text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-accent)] shadow-inner"
                                     autoFocus
                                 />
                                 <button 
                                     type="button"
                                     onClick={() => setOpenTablePaxInput(prev => String((parseInt(prev) || 1) + 1))}
-                                    className="w-12 h-12 rounded-xl bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-sm cursor-pointer select-none touch-manipulation"
+                                    className="w-12 h-12 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-2xl font-bold flex items-center justify-center active:scale-95 transition-all shadow-xs cursor-pointer select-none touch-manipulation"
                                 >
                                     +
                                 </button>
@@ -4250,7 +4286,7 @@ export default function POSDashboard() {
                                         key={num}
                                         type="button"
                                         onClick={() => setOpenTablePaxInput(String(num))}
-                                        className={`min-h-[44px] py-2.5 rounded-xl font-mono font-bold text-sm transition-all cursor-pointer touch-manipulation ${parseInt(openTablePaxInput) === num ? 'bg-[#3C3D40] text-white shadow-md scale-[1.03]' : 'bg-white border border-[#D1D1CD] hover:border-[#1A1A1A] text-[#1A1A1A]'}`}
+                                        className={`min-h-[44px] py-2.5 rounded-sm font-mono font-bold text-sm transition-all cursor-pointer touch-manipulation ${parseInt(openTablePaxInput) === num ? 'bg-[var(--color-ink)] text-[var(--color-paper)] shadow-xs scale-[1.02]' : 'bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)]'}`}
                                     >
                                         {num}
                                     </button>
@@ -4258,37 +4294,37 @@ export default function POSDashboard() {
                             </div>
                         </div>
 
-                        <div className="p-4 border-t border-[#D1D1CD] bg-[#EBEBE9] flex gap-3">
+                        <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex gap-3">
                             <button
                                 type="button"
                                 onClick={() => {
                                     setOpenTableModalData(null);
                                 }}
-                                className="flex-1 min-h-[44px] bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] py-3 rounded-xl font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-sm active:scale-98 touch-manipulation"
+                                className="flex-1 min-h-[44px] bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-3 rounded-sm font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
                             >
                                 ยกเลิก (Cancel)
                             </button>
                             <button
                                 type="button"
                                 onClick={handleConfirmOpenTable}
-                                className="flex-1 min-h-[44px] bg-[#3C3D40] hover:bg-[#1A1A1A] text-white py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
+                                className="flex-1 min-h-[44px] bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
                             >
-                                <Check size={16} /> เปิดโต๊ะ (Open Table)
+                                เปิดโต๊ะ (Open Table)
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Online Reservation Check-in Modal · Hallmark & Dieter Rams Compliant */}
+            {/* Online Reservation Check-in Modal · Hallmark & Dieter Rams Compliant (Zero Decorative Slop) */}
             {/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · minimal-rams-thai-modern */}
             {onlineReservationModalData && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 select-none font-sans animate-in fade-in zoom-in-95 duration-150">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-sm w-full max-w-md overflow-hidden shadow-2xl text-[oklch(18%_0.012_28)]">
                         {/* Header */}
                         <div className="p-4 border-b border-[oklch(85%_0.012_28)] flex items-center justify-between bg-amber-500/10">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-10 h-10 rounded-xl bg-amber-500 text-black flex items-center justify-center font-mono font-black text-base shadow-xs">
+                                <div className="w-10 h-10 rounded-sm bg-amber-500 text-black flex items-center justify-center font-mono font-black text-base shadow-xs">
                                     {onlineReservationModalData.table.table_name}
                                 </div>
                                 <div>
@@ -4296,7 +4332,7 @@ export default function POSDashboard() {
                                         <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-amber-950">
                                             คิวจองโต๊ะออนไลน์ (ONLINE RESERVATION)
                                         </h3>
-                                        <span className="bg-amber-500 text-black text-[9px] font-mono font-bold px-1.5 py-0.5 rounded leading-none uppercase">
+                                        <span className="bg-amber-500 text-black text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-xs leading-none uppercase">
                                             RESERVED
                                         </span>
                                     </div>
@@ -4307,7 +4343,7 @@ export default function POSDashboard() {
                             </div>
                             <button 
                                 onClick={() => setOnlineReservationModalData(null)} 
-                                className="p-1.5 hover:bg-[oklch(94%_0.010_28)] rounded-lg text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
+                                className="p-1.5 hover:bg-[oklch(94%_0.010_28)] rounded-sm text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer"
                             >
                                 <X size={18} />
                             </button>
@@ -4315,53 +4351,58 @@ export default function POSDashboard() {
 
                         {/* Reservation Details */}
                         <div className="p-5 flex flex-col gap-3">
-                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-xl p-3.5 flex flex-col gap-2 shadow-xs">
+                            <div className="bg-white border border-[oklch(85%_0.012_28)] rounded-sm p-3.5 flex flex-col gap-2 shadow-xs font-mono">
                                 <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
-                                    <span className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">เวลานัดหมาย (TIME)</span>
-                                    <span className="text-sm font-mono font-black text-amber-900 bg-amber-100 px-2 py-0.5 rounded">
-                                        ⏰ {new Date(onlineReservationModalData.reservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
-                                    </span>
+                                    <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">เวลานัดหมาย (TIME)</span>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-sm font-black text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-xs">
+                                            {new Date(onlineReservationModalData.reservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                                        </span>
+                                        <span className="text-[10px] text-amber-900 font-bold">
+                                            ({formatReservationCountdown(onlineReservationModalData.reservation.booking_time)})
+                                        </span>
+                                    </div>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)]">ชื่อผู้จอง:</span>
+                                    <span className="text-[oklch(55%_0.010_28)] font-sans">ชื่อผู้จอง:</span>
                                     <span className="font-bold text-[oklch(18%_0.012_28)]">
                                         {onlineReservationModalData.reservation.pickup_contact_name || onlineReservationModalData.reservation.customer_name || onlineReservationModalData.reservation.profiles?.display_name || 'ลูกค้าออนไลน์'}
                                     </span>
                                 </div>
                                 {(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number) && (
                                     <div className="flex justify-between items-center text-xs">
-                                        <span className="text-[oklch(55%_0.010_28)]">เบอร์โทร:</span>
-                                        <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
+                                        <span className="text-[oklch(55%_0.010_28)] font-sans">เบอร์โทร:</span>
+                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
                                             {onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number}
                                         </span>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)]">จำนวนแขก:</span>
-                                    <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">
-                                        👥 {onlineReservationModalData.reservation.pax || onlineReservationModalData.table.capacity || 2} คน
+                                    <span className="text-[oklch(55%_0.010_28)] font-sans">จำนวนแขก:</span>
+                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                        {onlineReservationModalData.reservation.pax || onlineReservationModalData.table.capacity || 2} คน
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)]">สถานะมัดจำ:</span>
+                                    <span className="text-[oklch(55%_0.010_28)] font-sans">สถานะมัดจำ:</span>
                                     {onlineReservationModalData.reservation.payment_slip_url ? (
-                                        <span className="text-emerald-700 font-bold flex items-center gap-1">
-                                            ✅ มัดจำแล้ว ฿{(onlineReservationModalData.reservation.total_amount || 0).toLocaleString()}
+                                        <span className="text-emerald-700 font-bold">
+                                            [DEPOSIT PAID] ฿{(onlineReservationModalData.reservation.total_amount || 0).toLocaleString()}
                                         </span>
                                     ) : (
-                                        <span className="text-amber-800 font-mono font-bold">
+                                        <span className="text-amber-800 font-bold">
                                             รอชำระหน้าร้าน
                                         </span>
                                     )}
                                 </div>
                                 {onlineReservationModalData.reservation.customer_note && (
-                                    <div className="mt-1 pt-1.5 border-t border-[oklch(85%_0.012_28)] text-xs text-[oklch(52%_0.16_28)] italic">
+                                    <div className="mt-1 pt-1.5 border-t border-[oklch(85%_0.012_28)] text-xs text-[oklch(52%_0.16_28)] italic font-sans">
                                         "{onlineReservationModalData.reservation.customer_note}"
                                     </div>
                                 )}
                                 {onlineReservationModalData.reservation.order_items && onlineReservationModalData.reservation.order_items.length > 0 && (
                                     <div className="mt-1 pt-2 border-t border-[oklch(85%_0.012_28)] text-xs">
-                                        <span className="text-[10px] font-mono font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
+                                        <span className="text-[10px] font-bold text-[oklch(55%_0.010_28)] uppercase tracking-wider">
                                             สั่งอาหารล่วงหน้า ({onlineReservationModalData.reservation.order_items.length} รายการ):
                                         </span>
                                         <p className="font-sans text-[11px] text-[oklch(18%_0.012_28)] mt-0.5 truncate">
@@ -4382,9 +4423,9 @@ export default function POSDashboard() {
                             <button
                                 type="button"
                                 onClick={() => handleSeatOnlineReservation(onlineReservationModalData.table, onlineReservationModalData.reservation)}
-                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                             >
-                                <Check size={16} /> เช็คอินลูกค้านั่งโต๊ะ (SEAT GUEST NOW)
+                                เช็คอินลูกค้านั่งโต๊ะ (SEAT GUEST NOW)
                             </button>
 
                             {/* Secondary Action: Walk-in with Notice */}
@@ -4394,18 +4435,19 @@ export default function POSDashboard() {
                                     onClick={() => {
                                         const res = onlineReservationModalData.reservation;
                                         const tbl = onlineReservationModalData.table;
+                                        const diff = onlineReservationModalData.diffMins || getReservationDiffMins(res.booking_time);
                                         setOnlineReservationModalData(null);
                                         setOpenTablePaxInput(String(tbl.capacity || 2));
-                                        setOpenTableModalData({ table: tbl, upcomingReservation: res });
+                                        setOpenTableModalData({ table: tbl, upcomingReservation: res, reservationDiffMins: diff });
                                     }}
-                                    className="flex-1 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] py-2.5 rounded-xl font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
+                                    className="flex-1 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
                                 >
-                                    🚶‍♂️ เปิด Walk-in ชั่วคราว
+                                    เปิด Walk-in ชั่วคราว
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setOnlineReservationModalData(null)}
-                                    className="px-4 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-xl font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
+                                    className="px-4 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
                                 >
                                     ปิด
                                 </button>

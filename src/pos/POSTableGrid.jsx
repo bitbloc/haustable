@@ -27,6 +27,28 @@ import { posCache } from '../utils/offlineHelper';
 import { parseTableTransferInfo } from '../utils/tableTransferHelper';
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
 
+export const getReservationDiffMins = (bookingTime, now = new Date()) => {
+    if (!bookingTime) return 9999;
+    const bTime = new Date(bookingTime).getTime();
+    return Math.round((bTime - now.getTime()) / 60000);
+};
+
+export const formatReservationCountdown = (bookingTime, now = new Date()) => {
+    if (!bookingTime) return '';
+    const diff = getReservationDiffMins(bookingTime, now);
+    if (diff < 0) {
+        const overdue = Math.abs(diff);
+        return overdue < 60 ? `เลย ${overdue}น.` : `เลย ${Math.floor(overdue / 60)}ชม.`;
+    }
+    if (diff <= 45) {
+        return `อีก ${diff} นาที`;
+    }
+    const hours = Math.floor(diff / 60);
+    const mins = diff % 60;
+    if (hours === 0) return `อีก ${mins} นาที`;
+    return mins === 0 ? `อีก ${hours} ชม.` : `อีก ${hours}ชม.${mins}น.`;
+};
+
 const formatUpcomingResTime = (timeStr) => {
     if (!timeStr) return '';
     try {
@@ -48,6 +70,7 @@ const formatUpcomingResTime = (timeStr) => {
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
+ * Strictly isolates seated dining sessions from unseated advance reservations.
  */
 function isTableSessionActive(b, startOfToday, endOfToday, now) {
     if (!b) return false;
@@ -67,12 +90,7 @@ function isTableSessionActive(b, startOfToday, endOfToday, now) {
         // Seated booking must be today or at most 12 hours old
         return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
     }
-    if (isToday && b.status === 'ready') return true;
-    if (isToday && b.status === 'confirmed') {
-        const bTime = new Date(b.booking_time);
-        const diffMins = (bTime.getTime() - now.getTime()) / 60000;
-        if (diffMins <= 30 && diffMins >= -120) return true;
-    }
+    if (isToday && b.status === 'ready' && b.booking_type !== 'pickup') return true;
     if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
     return false;
 }
@@ -146,10 +164,34 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 const merged = cachedTables.map(t => {
                     const tableBookings = cachedBookings.filter(b => String(b.table_id) === String(t.id) && !['completed', 'void', 'cancelled', 'no_show'].includes(b.status));
                     const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
+                    const upcomingRes = tableBookings.find(b => {
+                        if (b.id === booking?.id) return false;
+                        if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
+                        const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                        return isToday && (new Date(b.booking_time).getTime() > now.getTime() - 30 * 60000);
+                    });
+
+                    const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
+                    const isUpcomingImminent = upcomingRes && diffMins <= 45;
+                    const isUpcomingFar = upcomingRes && diffMins > 45;
+
+                    let status = 'free';
+                    if (booking) {
+                        status = booking.status === 'pending' ? 'pending' : 'occupied';
+                    } else if (isUpcomingImminent) {
+                        status = 'reserved';
+                    }
+
+                    const hasRealConflict = Boolean(booking && upcomingRes && diffMins <= 60);
+
                     return {
                         ...t,
-                        status: booking ? (booking.status === 'pending' ? 'pending' : 'occupied') : 'free',
-                        booking: booking || null
+                        status: status,
+                        booking: booking || null,
+                        upcomingReservation: upcomingRes || null,
+                        isAdvanceReserved: Boolean(isUpcomingFar),
+                        reservationDiffMins: diffMins,
+                        upcomingConflict: hasRealConflict ? upcomingRes : null
                     };
                 });
                 setTables(merged);
@@ -457,20 +499,29 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                     const hasNewOrder = isRecentPendingBooking || hasUnviewedRecentItems;
 
-                    // 2. Upcoming advance reservation (scheduled for later today or future dates)
+                    // 2. Upcoming advance reservation (scheduled for later today, not yet seated)
                     const upcomingRes = tableBookings.find(b => {
                         if (b.id === activeBooking?.id) return false;
-                        if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+                        if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
                         const bTime = new Date(b.booking_time);
-                        return bTime.getTime() > now.getTime() - 15 * 60000;
+                        const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                        return isToday && (bTime.getTime() > now.getTime() - 30 * 60000);
                     });
+
+                    const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
+                    const isUpcomingImminent = upcomingRes && diffMins <= 45;
+                    const isUpcomingFar = upcomingRes && diffMins > 45;
 
                     let status = 'free';
                     if (activeBooking) {
                         status = activeBooking.status === 'pending' ? 'pending' : 'occupied';
-                    } else if (upcomingRes && (upcomingRes.booking_time >= startOfToday && upcomingRes.booking_time <= endOfToday)) {
+                    } else if (isUpcomingImminent) {
                         status = 'reserved';
+                    } else {
+                        status = 'free';
                     }
+
+                    const hasRealConflict = Boolean(activeBooking && upcomingRes && diffMins <= 60);
 
                     return {
                         ...t,
@@ -478,7 +529,9 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         hasNewOrder: Boolean(hasNewOrder),
                         booking: activeBooking || null,
                         upcomingReservation: upcomingRes || null,
-                        upcomingConflict: (activeBooking && upcomingRes) ? upcomingRes : null
+                        isAdvanceReserved: Boolean(isUpcomingFar),
+                        reservationDiffMins: diffMins,
+                        upcomingConflict: hasRealConflict ? upcomingRes : null
                     };
                 });
 
@@ -498,20 +551,32 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const booking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
                         const upcomingRes = tableBookings.find(b => {
                             if (b.id === booking?.id) return false;
-                            const bTime = new Date(b.booking_time);
-                            return bTime.getTime() > now.getTime() - 15 * 60000;
+                            if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
+                            const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                            return isToday && (new Date(b.booking_time).getTime() > now.getTime() - 30 * 60000);
                         });
+
+                        const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
+                        const isUpcomingImminent = upcomingRes && diffMins <= 45;
+                        const isUpcomingFar = upcomingRes && diffMins > 45;
+
                         let status = 'free';
                         if (booking) {
                             status = booking.status === 'pending' ? 'pending' : 'occupied';
-                        } else if (upcomingRes && (upcomingRes.booking_time >= startOfToday && upcomingRes.booking_time <= endOfToday)) {
+                        } else if (isUpcomingImminent) {
                             status = 'reserved';
                         }
+
+                        const hasRealConflict = Boolean(booking && upcomingRes && diffMins <= 60);
+
                         return {
                             ...t,
                             status,
                             booking: booking || null,
-                            upcomingReservation: upcomingRes || null
+                            upcomingReservation: upcomingRes || null,
+                            isAdvanceReserved: Boolean(isUpcomingFar),
+                            reservationDiffMins: diffMins,
+                            upcomingConflict: hasRealConflict ? upcomingRes : null
                         };
                     });
                     setTables(merged);
@@ -525,20 +590,28 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
     }, []);
 
     const filteredTables = useMemo(() => {
-        if (!searchQuery.trim()) {
-            return statusFilter === 'all' ? tables : tables.filter(t => t.status === statusFilter);
-        }
-        const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
         return tables.filter(table => {
+            let matchesStatus = true;
+            if (statusFilter === 'free') {
+                matchesStatus = table.status === 'free';
+            } else if (statusFilter === 'reserved') {
+                matchesStatus = table.status === 'reserved' || Boolean(table.upcomingReservation);
+            } else if (statusFilter !== 'all') {
+                matchesStatus = table.status === statusFilter;
+            }
+
+            if (!matchesStatus) return false;
+            if (!searchQuery.trim()) return true;
+
+            const q = searchQuery.toLowerCase().trim().replace(/^#/, '');
             const tableName = (table.table_name || '').toLowerCase();
             const booking = table.booking;
             const shortId = booking ? getShortBookingId(booking).toLowerCase() : '';
             const tokenStr = (booking?.tracking_token || '').toLowerCase();
             const custName = (booking?.profiles?.display_name || booking?.customer_name || booking?.pickup_contact_name || booking?.customer_note || '').toLowerCase();
+            const resName = (table.upcomingReservation?.pickup_contact_name || table.upcomingReservation?.customer_name || table.upcomingReservation?.profiles?.display_name || '').toLowerCase();
 
-            const matchesSearch = tableName.includes(q) || shortId.includes(q) || tokenStr.includes(q) || custName.includes(q);
-            const matchesStatus = statusFilter === 'all' || table.status === statusFilter;
-            return matchesSearch && matchesStatus;
+            return tableName.includes(q) || shortId.includes(q) || tokenStr.includes(q) || custName.includes(q) || resName.includes(q);
         });
     }, [tables, searchQuery, statusFilter]);
 
@@ -598,15 +671,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('free')}
-                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'free' ? 'bg-emerald-100 text-emerald-900 shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'free' ? 'bg-[oklch(92%_0.04_140)] text-[oklch(25%_0.08_140)] border border-[oklch(80%_0.06_140)] font-bold shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
-                            <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                            <span className="w-2 h-2 rounded-full bg-[oklch(50%_0.12_140)]"></span>
                             ว่าง
                         </button>
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('reserved')}
-                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'reserved' ? 'bg-amber-500 text-amber-950 font-black shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'reserved' ? 'bg-amber-100 text-amber-950 border border-amber-400 font-bold shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-amber-500"></span>
                             จองแล้ว
@@ -614,7 +687,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('occupied')}
-                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'occupied' ? 'bg-[var(--color-accent)] text-white shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'occupied' ? 'bg-[var(--color-accent)] text-[var(--color-paper)] font-bold shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-white"></span>
                             มีลูกค้า
@@ -622,7 +695,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         <button 
                             type="button"
                             onClick={() => setStatusFilter('pending')}
-                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'pending' ? 'bg-amber-200 text-amber-900 shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
+                            className={`min-h-[38px] px-3.5 py-1.5 rounded-md transition-all cursor-pointer flex items-center gap-1.5 touch-manipulation ${statusFilter === 'pending' ? 'bg-amber-200 text-amber-950 font-bold shadow-xs' : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'}`}
                         >
                             <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse"></span>
                             รอรับออเดอร์
@@ -687,10 +760,10 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 {viewMode === 'floorplan' ? (
                     <div className="flex-1 w-full h-full relative">
                         {/* Status Legend Overlay */}
-                        <div className="absolute bottom-4 left-4 z-20 bg-[#F5F5F2] border border-[#D1D1CD] p-4 rounded-xl shadow-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[#767673] select-none">
-                            <span className="text-[#1A1A1A] border-b border-[#D1D1CD] pb-1.5 mb-1">คำอธิบายสถานะโต๊ะ (TABLE STATUS)</span>
+                        <div className="absolute bottom-4 left-4 z-20 bg-[var(--color-paper)] border border-[var(--color-rule)] p-3.5 rounded-xl shadow-md flex flex-col gap-2 text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-neutral)] select-none">
+                            <span className="text-[var(--color-ink)] border-b border-[var(--color-rule)] pb-1.5 mb-0.5">คำอธิบายสถานะโต๊ะ (TABLE STATUS)</span>
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#00CC44] border border-black/10"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[oklch(50%_0.12_140)] border border-black/10"></span>
                                 <span>ว่าง (VACANT)</span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -698,15 +771,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                 <span>จองแล้ว (RESERVED)</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FF3300] border border-black/10"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent)] border border-black/10"></span>
                                 <span>มีลูกค้า (OCCUPIED)</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <span className="w-2.5 h-2.5 rounded-full bg-[#FFAA00] animate-pulse border border-black/10"></span>
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse border border-black/10"></span>
                                 <span>รอรับออเดอร์ (PENDING)</span>
                             </div>
-                            <div className="border-t border-[#D1D1CD] pt-2 mt-1 flex items-center gap-2">
-                                <span className="bg-[#1A1A1A] text-white text-[8px] font-black px-1 py-0.5 rounded tracking-normal">SLIP</span>
+                            <div className="border-t border-[var(--color-rule)] pt-2 mt-1 flex items-center gap-2">
+                                <span className="bg-[var(--color-ink)] text-[var(--color-paper)] text-[8px] font-mono font-black px-1.5 py-0.5 rounded tracking-normal">SLIP</span>
                                 <span>แนบสลิปแล้ว</span>
                             </div>
                         </div>
@@ -721,15 +794,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             {({ zoomIn, zoomOut, resetTransform }) => (
                                 <>
                                     {/* Floating Zoom Controls */}
-                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[#F5F5F2] border border-[#D1D1CD] p-1 rounded-lg shadow-md">
-                                        <button type="button" onClick={() => zoomIn()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom In"><ZoomIn size={14} /></button>
-                                        <button type="button" onClick={() => zoomOut()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Zoom Out"><ZoomOut size={14} /></button>
-                                        <button type="button" onClick={() => resetTransform()} className="p-2 hover:bg-[#E0E0DC] rounded transition-colors text-[#1A1A1A] cursor-pointer" title="Reset View"><Maximize size={14} /></button>
+                                    <div className="absolute top-4 right-4 z-20 flex flex-col gap-1 bg-[var(--color-paper)] border border-[var(--color-rule)] p-1 rounded-lg shadow-md">
+                                        <button type="button" onClick={() => zoomIn()} className="p-2 hover:bg-[var(--color-paper-2)] rounded transition-colors text-[var(--color-ink)] cursor-pointer" title="Zoom In"><ZoomIn size={14} /></button>
+                                        <button type="button" onClick={() => zoomOut()} className="p-2 hover:bg-[var(--color-paper-2)] rounded transition-colors text-[var(--color-ink)] cursor-pointer" title="Zoom Out"><ZoomOut size={14} /></button>
+                                        <button type="button" onClick={() => resetTransform()} className="p-2 hover:bg-[var(--color-paper-2)] rounded transition-colors text-[var(--color-ink)] cursor-pointer" title="Reset View"><Maximize size={14} /></button>
                                     </div>
                                     
                                     <TransformComponent wrapperClass="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center" contentClass="w-full h-full flex items-center justify-center">
                                         <div
-                                            className="relative transition-shadow duration-300 shadow-md border border-[#D1D1CD] rounded-[24px] overflow-hidden bg-[#E1E1DE]"
+                                            className="relative transition-shadow duration-300 shadow-md border border-[var(--color-rule)] rounded-[24px] overflow-hidden bg-[var(--color-paper-2)]"
                                             style={{
                                                 width: '1000px',
                                                 height: '750px',
@@ -740,8 +813,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                             }}
                                         >
                                             {!floorplanUrl && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-[#767673] font-mono font-bold uppercase tracking-widest opacity-40 select-none">
-                                                    <Map size={36} className="mb-2 text-[#767673]" />
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest opacity-40 select-none">
+                                                    <Map size={36} className="mb-2 text-[var(--color-neutral)]" />
                                                     <span>NO FLOORPLAN SCHEMATIC</span>
                                                 </div>
                                             )}
@@ -765,7 +838,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     // Regular grid layout (highly stable list fallback)
                     <div className="flex-1 p-6 overflow-y-auto scrollbar-none pos-table-grid-scroll">
                         {filteredTables.length === 0 ? (
-                            <div className="flex flex-col h-full items-center justify-center text-[#767673] gap-2 font-mono text-xs font-bold uppercase tracking-wider">
+                            <div className="flex flex-col h-full items-center justify-center text-[var(--color-neutral)] gap-2 font-mono text-xs font-bold uppercase tracking-wider">
                                 <AlertCircle size={24} />
                                 <span>No tables found matching registry query</span>
                             </div>
@@ -931,15 +1004,21 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                     {table.upcomingConflict && (
                         <button
                             type="button"
-                            onClick={(e) => { e.stopPropagation(); onReassign(table.booking); }}
-                            className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse shadow cursor-pointer pointer-events-auto"
+                            onClick={(e) => { e.stopPropagation(); onReassign(table.upcomingConflict); }}
+                            className="bg-amber-500 text-black text-[7px] font-mono font-black px-1.5 py-0.5 rounded leading-none animate-pulse shadow cursor-pointer pointer-events-auto"
+                            title="ใกล้ถึงเวลาจอง คลิกเพื่อย้ายคิวจองไปโต๊ะอื่น"
                         >
-                            [CONFLICT] ชนคิว
+                            ชนคิว {formatUpcomingResTime(table.upcomingConflict.booking_time)}
                         </button>
                     )}
                     {isReserved && (
                         <span className="bg-amber-500 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none shadow-xs">
                             จอง
+                        </span>
+                    )}
+                    {table.isAdvanceReserved && !isOccupied && !isPending && (
+                        <span className="bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)] text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none">
+                            ว่าง
                         </span>
                     )}
                     {transfer.isMergedTarget && (
@@ -964,7 +1043,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                     )}
                     {hasCallStaff && (
                         <span className="bg-yellow-400 text-black text-[7px] font-mono font-black px-1.5 py-0.5 rounded leading-none animate-pulse shadow-xs border border-yellow-600">
-                            ⚡ เรียกพนักงาน
+                            เรียกพนักงาน
                         </span>
                     )}
                     {hasCallBill && (
@@ -993,11 +1072,15 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                 {/* Upcoming Advance Reservation on Free or Reserved Table */}
                 {table.upcomingReservation && !isOccupied && !isPending && (
                     <div className="flex flex-col items-center mt-0.5 max-w-[95%]">
-                        <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight truncate max-w-full">
-                            RES: {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                        <span className={`text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight truncate max-w-full ${
+                            isReserved 
+                                ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                : 'bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)]'
+                        }`}>
+                            RES {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})
                         </span>
                         {(table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name) && (
-                            <span className="text-[7px] font-mono font-bold text-amber-900 truncate max-w-full mt-0.5">
+                            <span className="text-[7px] font-mono font-bold truncate max-w-full mt-0.5 opacity-80">
                                 {table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name}
                             </span>
                         )}
@@ -1044,6 +1127,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
     const isOccupied = table.status === 'occupied';
     const isPending = table.status === 'pending';
     const isReserved = table.status === 'reserved';
+    const isAdvanceReserved = table.isAdvanceReserved && !isOccupied && !isPending;
     const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
     
     const hasOrder = Boolean(table.hasNewOrder);
@@ -1094,9 +1178,19 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                              รออนุมัติ GPS
                          </span>
                      )}
+                     {table.upcomingConflict && (
+                         <span className="bg-amber-500 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse shadow-xs">
+                             ชนคิว {formatUpcomingResTime(table.upcomingConflict.booking_time)}
+                         </span>
+                     )}
                      {isReserved && (
                          <span className="bg-amber-500 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
                              จองแล้ว · RESERVED
+                         </span>
+                     )}
+                     {isAdvanceReserved && (
+                         <span className="bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)] text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
+                             ว่าง · มีจอง {formatUpcomingResTime(table.upcomingReservation.booking_time)}
                          </span>
                      )}
                      {transfer.isMergedTarget && (
@@ -1122,7 +1216,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                      )}
                      {hasCallStaff && (
                          <span className="bg-yellow-400 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse shadow-xs border border-yellow-600">
-                             ⚡ เรียกพนักงาน
+                             เรียกพนักงาน
                          </span>
                      )}
                      {hasCallBill && (
@@ -1138,10 +1232,12 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Center row: Table Info */}
             <div className="flex flex-col items-center gap-0.5 my-2.5 select-none">
                  <span className="font-mono font-bold text-2xl tracking-tight">{table.table_name}</span>
-                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : isReserved ? 'text-amber-800' : 'text-[var(--color-neutral)]'}`}>
+                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : isReserved ? 'text-amber-800' : isAdvanceReserved ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--color-neutral)]'}`}>
                      {isReserved && table.upcomingReservation 
                          ? (table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name || 'ONLINE RESERVED')
-                         : (table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT')}
+                         : isAdvanceReserved && table.upcomingReservation
+                         ? `รับ WALK-IN ได้ (${formatReservationCountdown(table.upcomingReservation.booking_time)})`
+                         : (table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT · ว่าง')}
                  </span>
             </div>
             
@@ -1154,9 +1250,13 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                         <span>{new Date(table.booking.booking_time).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit'})}</span>
                     </div>
                 ) : table.upcomingReservation && (
-                    <div className="flex items-center gap-0.5 text-amber-900 bg-amber-100 border border-amber-300 px-1.5 py-0.5 rounded-xs text-[8px] font-mono font-bold">
+                    <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-xs text-[8px] font-mono font-bold ${
+                        isReserved 
+                            ? 'text-amber-900 bg-amber-100 border border-amber-300' 
+                            : 'text-[oklch(30%_0.08_140)] bg-[oklch(92%_0.04_140)] border border-[oklch(80%_0.06_140)]'
+                    }`}>
                         <Clock size={9} />
-                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({table.upcomingReservation.pax || 2}p)</span>
+                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})</span>
                     </div>
                 )}
             </div>

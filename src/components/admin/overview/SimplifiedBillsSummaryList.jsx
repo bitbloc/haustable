@@ -1,14 +1,13 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly } from '../../../utils/timeUtils'
-import { getShortBookingId } from '../../../utils/printerHelper'
 import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 
 /**
  * SimplifiedBillsSummaryList
  * Clean, lightweight tabular summary list for Backoffice Simplified mode.
- * Replaces the heavy AllDailyBillsHub in Simplified view with a concise,
- * scannable ledger of today's bills.
+ * Dual-display: Responsive card view on mobile (<640px) and high-density table on desktop (>=640px).
+ * Restored 2+1 typography, strict 4px/8px grid scale, and zero card-in-card nesting.
  */
 export default function SimplifiedBillsSummaryList({
     bookings = [],
@@ -92,19 +91,22 @@ export default function SimplifiedBillsSummaryList({
     }, [filteredBookings, page, pageSize])
 
     return (
-        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-sm p-4 sm:p-5 font-mono space-y-4 shadow-2xs">
+        <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-sm p-4 sm:p-5 font-sans space-y-4 shadow-2xs">
             {/* Header Strip */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[oklch(85%_0.012_28)]">
                 <div>
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
-                            SUMMARY LEDGER // บันทึกบิลวันนี้
+                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] uppercase tracking-wider">
+                            SUMMARY LEDGER
                         </span>
-                        <span className="text-[10px] px-1.5 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs tabular-nums">
+                        <span className="text-[11px] font-semibold text-[oklch(52%_0.16_28)]">
+                            // บันทึกบิลวันนี้
+                        </span>
+                        <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs tabular-nums">
                             {metrics.totalCount} บิล
                         </span>
                     </div>
-                    <h3 className="text-lg font-bold text-[oklch(18%_0.012_28)] tracking-tight mt-0.5">
+                    <h3 className="text-lg font-bold text-[oklch(18%_0.012_28)] mt-0.5">
                         LIST สรุปบิลประจำวัน
                     </h3>
                 </div>
@@ -113,13 +115,13 @@ export default function SimplifiedBillsSummaryList({
                 <div className="flex items-center gap-2 flex-wrap text-xs">
                     <div className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] block">ปิดยอดแล้ว ({metrics.settledCount})</span>
-                        <span className="font-bold text-[oklch(45%_0.08_140)] tabular-nums">
+                        <span className="font-mono font-bold text-[oklch(45%_0.08_140)] tabular-nums">
                             ฿{metrics.totalRevenue.toLocaleString()}
                         </span>
                     </div>
                     <div className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs">
                         <span className="text-[10px] text-[oklch(55%_0.010_28)] block">กำลังเปิดบิลอยู่</span>
-                        <span className="font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                        <span className="font-mono font-bold text-[oklch(52%_0.16_28)] tabular-nums">
                             {metrics.activeCount} โต๊ะ
                         </span>
                     </div>
@@ -128,7 +130,7 @@ export default function SimplifiedBillsSummaryList({
 
             {/* Quick Filter Segmented Control */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-xs">
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs">
                     {[
                         { id: 'all', label: 'ทั้งหมด', count: metrics.totalCount },
                         { id: 'settled', label: 'ชำระแล้ว', count: metrics.settledCount },
@@ -142,14 +144,14 @@ export default function SimplifiedBillsSummaryList({
                                 setStatusFilter(tab.id)
                                 setPage(1)
                             }}
-                            className={`px-3 py-1 rounded-xs font-bold transition-all cursor-pointer border ${
+                            className={`px-3 py-1.5 rounded-xs font-semibold transition-all cursor-pointer border whitespace-nowrap ${
                                 statusFilter === tab.id
                                     ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)]'
                                     : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                             }`}
                         >
                             <span>{tab.label}</span>
-                            <span className="ml-1.5 text-[10px] opacity-75 tabular-nums">({tab.count})</span>
+                            <span className="ml-1.5 font-mono text-[10px] opacity-80 tabular-nums">({tab.count})</span>
                         </button>
                     ))}
                 </div>
@@ -159,14 +161,14 @@ export default function SimplifiedBillsSummaryList({
                     <button
                         type="button"
                         onClick={onOpenProMode}
-                        className="text-[11px] font-bold text-[oklch(52%_0.16_28)] hover:underline cursor-pointer flex items-center gap-1"
+                        className="text-[11px] font-semibold text-[oklch(52%_0.16_28)] hover:underline cursor-pointer flex items-center gap-1 whitespace-nowrap"
                     >
                         <span>จัดการขั้นสูงใน PRO MODE ➔</span>
                     </button>
                 )}
             </div>
 
-            {/* Tabular Summary Table */}
+            {/* Content Area */}
             {loading ? (
                 <div className="py-12 text-center text-xs text-[oklch(55%_0.010_28)] animate-pulse">
                     กำลังโหลดรายการบิล...
@@ -176,153 +178,245 @@ export default function SimplifiedBillsSummaryList({
                     ไม่พบรายการบิลในหมวดหมู่นี้
                 </div>
             ) : (
-                <div className="border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(97%_0.008_28)]">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse">
-                            <thead>
-                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[11px] font-bold">
-                                    <th className="py-2.5 px-3 whitespace-nowrap">เวลา</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap">โต๊ะ / ประเภท</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap hidden sm:table-cell">ลูกค้า</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap">รายการอาหาร</th>
-                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">ยอดรวม</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap">สถานะ</th>
-                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">สลิป</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
-                                {paginatedBookings.map((b) => {
-                                    const timeStr = formatThaiTimeOnly(b.booking_time || b.created_at)
-                                    const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
-                                    const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
-                                    const itemsCount = b.order_items?.length || 0
-                                    const amount = Number(b.total_amount || 0)
-                                    const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
-                                    const isPaid = ['completed', 'paid', 'success'].includes(b.status)
-                                    const isSeated = ['seated', 'ready'].includes(b.status)
-                                    const isCancelled = ['cancelled', 'void'].includes(b.status)
+                <>
+                    {/* MOBILE CARD VIEW (< 640px) - Zero Horizontal Drag, Immediate Action Buttons */}
+                    <div className="sm:hidden divide-y divide-[oklch(88%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(97%_0.008_28)]">
+                        {paginatedBookings.map((b) => {
+                            const timeStr = formatThaiTimeOnly(b.booking_time || b.created_at)
+                            const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
+                            const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
+                            const itemsCount = b.order_items?.length || 0
+                            const amount = Number(b.total_amount || 0)
+                            const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
+                            const isPaid = ['completed', 'paid', 'success'].includes(b.status)
+                            const isSeated = ['seated', 'ready'].includes(b.status)
+                            const isCancelled = ['cancelled', 'void'].includes(b.status)
 
-                                    // Preview up to 2 item names
-                                    const itemNames = (b.order_items || [])
-                                        .map(it => it.menu_items?.name)
-                                        .filter(Boolean)
-                                    const itemsPreview = itemNames.length > 0 
-                                        ? itemNames.slice(0, 2).join(', ') + (itemNames.length > 2 ? ` (+${itemNames.length - 2})` : '')
-                                        : '-'
+                            const itemNames = (b.order_items || [])
+                                .map(it => it.menu_items?.name)
+                                .filter(Boolean)
+                            const itemsPreview = itemNames.length > 0 
+                                ? itemNames.slice(0, 2).join(', ') + (itemNames.length > 2 ? ` (+${itemNames.length - 2})` : '')
+                                : '-'
 
-                                    return (
-                                        <tr 
-                                            key={b.id}
-                                            className="hover:bg-[oklch(96%_0.008_28)] transition-colors"
-                                        >
-                                            {/* Time */}
-                                            <td className="py-2.5 px-3 text-[oklch(55%_0.010_28)] tabular-nums whitespace-nowrap">
-                                                {timeStr}
-                                            </td>
+                            return (
+                                <div key={b.id} className="p-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)]">{tableName}</span>
+                                            {isPickup && (
+                                                <span className="text-[9px] px-1 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs">
+                                                    กลับบ้าน
+                                                </span>
+                                            )}
+                                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] tabular-nums">{timeStr}</span>
+                                        </div>
+                                        <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                            ฿{amount.toLocaleString()}
+                                        </span>
+                                    </div>
 
-                                            {/* Table / Type */}
-                                            <td className="py-2.5 px-3 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span>{tableName}</span>
-                                                    {isPickup && (
-                                                        <span className="text-[9px] px-1 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs">
-                                                            กลับบ้าน
+                                    <div className="flex items-center justify-between text-xs gap-2">
+                                        <div className="text-[oklch(42%_0.010_28)] truncate max-w-[180px]">
+                                            {itemsCount > 0 ? (
+                                                <span><strong className="text-[oklch(18%_0.012_28)]">{itemsCount} รายการ:</strong> {itemsPreview}</span>
+                                            ) : (
+                                                customerName
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {isPaid ? (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.012_140)]">
+                                                    ชำระแล้ว
+                                                </span>
+                                            ) : isCancelled ? (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)]">
+                                                    ยกเลิก
+                                                </span>
+                                            ) : isSeated ? (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                    กำลังทาน
+                                                </span>
+                                            ) : (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]">
+                                                    {b.status}
+                                                </span>
+                                            )}
+
+                                            {onPrintSlip && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onPrintSlip(b, 'order')}
+                                                    className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs cursor-pointer"
+                                                >
+                                                    สลิป
+                                                </button>
+                                            )}
+                                            {b.slip_url && onViewSlip && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onViewSlip(b.slip_url)}
+                                                    className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
+                                                >
+                                                    โอน
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* DESKTOP TABULAR VIEW (>= 640px) */}
+                    <div className="hidden sm:block border border-[oklch(85%_0.012_28)] rounded-xs overflow-hidden bg-[oklch(97%_0.008_28)]">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs border-collapse font-sans">
+                                <thead>
+                                    <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[11px] font-bold">
+                                        <th className="py-2.5 px-3 whitespace-nowrap">เวลา</th>
+                                        <th className="py-2.5 px-3 whitespace-nowrap">โต๊ะ / ประเภท</th>
+                                        <th className="py-2.5 px-3 whitespace-nowrap">ลูกค้า</th>
+                                        <th className="py-2.5 px-3 whitespace-nowrap">รายการอาหาร</th>
+                                        <th className="py-2.5 px-3 text-right whitespace-nowrap">ยอดรวม</th>
+                                        <th className="py-2.5 px-3 whitespace-nowrap">สถานะ</th>
+                                        <th className="py-2.5 px-3 text-right whitespace-nowrap">สลิป</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
+                                    {paginatedBookings.map((b) => {
+                                        const timeStr = formatThaiTimeOnly(b.booking_time || b.created_at)
+                                        const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
+                                        const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
+                                        const itemsCount = b.order_items?.length || 0
+                                        const amount = Number(b.total_amount || 0)
+                                        const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
+                                        const isPaid = ['completed', 'paid', 'success'].includes(b.status)
+                                        const isSeated = ['seated', 'ready'].includes(b.status)
+                                        const isCancelled = ['cancelled', 'void'].includes(b.status)
+
+                                        const itemNames = (b.order_items || [])
+                                            .map(it => it.menu_items?.name)
+                                            .filter(Boolean)
+                                        const itemsPreview = itemNames.length > 0 
+                                            ? itemNames.slice(0, 2).join(', ') + (itemNames.length > 2 ? ` (+${itemNames.length - 2})` : '')
+                                            : '-'
+
+                                        return (
+                                            <tr 
+                                                key={b.id}
+                                                className="hover:bg-[oklch(96%_0.008_28)] transition-colors"
+                                            >
+                                                {/* Time */}
+                                                <td className="py-2.5 px-3 font-mono text-[oklch(55%_0.010_28)] tabular-nums whitespace-nowrap">
+                                                    {timeStr}
+                                                </td>
+
+                                                {/* Table / Type */}
+                                                <td className="py-2.5 px-3 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-mono">{tableName}</span>
+                                                        {isPickup && (
+                                                            <span className="text-[9px] px-1 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs font-normal">
+                                                                กลับบ้าน
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Customer */}
+                                                <td className="py-2.5 px-3 text-[oklch(42%_0.010_28)] truncate max-w-[140px]">
+                                                    {customerName}
+                                                </td>
+
+                                                {/* Items Preview */}
+                                                <td className="py-2.5 px-3 text-[oklch(42%_0.010_28)] truncate max-w-[200px]">
+                                                    {itemsCount > 0 ? (
+                                                        <span>
+                                                            <strong className="text-[oklch(18%_0.012_28)] mr-1">{itemsCount} รายการ:</strong>
+                                                            <span className="text-xs text-[oklch(55%_0.010_28)]">{itemsPreview}</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[oklch(60%_0.010_28)]">-</span>
+                                                    )}
+                                                </td>
+
+                                                {/* Total Amount */}
+                                                <td className="py-2.5 px-3 text-right font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums whitespace-nowrap">
+                                                    ฿{amount.toLocaleString()}
+                                                </td>
+
+                                                {/* Status Badge */}
+                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                    {isPaid ? (
+                                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.012_140)]">
+                                                            ชำระแล้ว
+                                                        </span>
+                                                    ) : isCancelled ? (
+                                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)]">
+                                                            ยกเลิก
+                                                        </span>
+                                                    ) : isPickup ? (
+                                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                            ได้รับออเดอร์
+                                                        </span>
+                                                    ) : isSeated ? (
+                                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
+                                                            กำลังทาน
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]">
+                                                            {b.status}
                                                         </span>
                                                     )}
-                                                </div>
-                                            </td>
+                                                </td>
 
-                                            {/* Customer */}
-                                            <td className="py-2.5 px-3 text-[oklch(42%_0.010_28)] truncate max-w-[140px] hidden sm:table-cell">
-                                                {customerName}
-                                            </td>
-
-                                            {/* Items Preview */}
-                                            <td className="py-2.5 px-3 text-[oklch(42%_0.010_28)] truncate max-w-[200px]">
-                                                {itemsCount > 0 ? (
-                                                    <span>
-                                                        <strong className="text-[oklch(18%_0.012_28)] mr-1">{itemsCount} รายการ:</strong>
-                                                        <span className="text-[11px] text-[oklch(55%_0.010_28)]">{itemsPreview}</span>
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[oklch(60%_0.010_28)]">-</span>
-                                                )}
-                                            </td>
-
-                                            {/* Total Amount */}
-                                            <td className="py-2.5 px-3 text-right font-bold text-[oklch(18%_0.012_28)] tabular-nums whitespace-nowrap">
-                                                ฿{amount.toLocaleString()}
-                                            </td>
-
-                                            {/* Status Badge */}
-                                            <td className="py-2.5 px-3 whitespace-nowrap">
-                                                {isPaid ? (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.012_140)]">
-                                                        ชำระแล้ว
-                                                    </span>
-                                                ) : isCancelled ? (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(55%_0.010_28)]">
-                                                        ยกเลิก
-                                                    </span>
-                                                ) : isPickup ? (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                                                        ได้รับออเดอร์
-                                                    </span>
-                                                ) : isSeated ? (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                                                        กำลังทาน
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]">
-                                                        {b.status}
-                                                    </span>
-                                                )}
-                                            </td>
-
-                                            {/* Digital Slip Actions */}
-                                            <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    {onPrintSlip && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onPrintSlip(b, 'order')}
-                                                            className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs cursor-pointer"
-                                                            title="เปิดดูสลิปบิลดิจิทัล"
-                                                        >
-                                                            สลิป
-                                                        </button>
-                                                    )}
-                                                    {b.slip_url && onViewSlip && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onViewSlip(b.slip_url)}
-                                                            className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
-                                                            title="ดูสลิปโอนเงิน"
-                                                        >
-                                                            โอน
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
+                                                {/* Digital Slip Actions */}
+                                                <td className="py-2.5 px-3 text-right whitespace-nowrap">
+                                                    <div className="flex items-center justify-end gap-1.5">
+                                                        {onPrintSlip && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onPrintSlip(b, 'order')}
+                                                                className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs cursor-pointer"
+                                                                title="เปิดดูสลิปบิลดิจิทัล"
+                                                            >
+                                                                สลิป
+                                                            </button>
+                                                        )}
+                                                        {b.slip_url && onViewSlip && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onViewSlip(b.slip_url)}
+                                                                className="px-2 py-0.5 text-[10px] font-bold bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] rounded-xs cursor-pointer"
+                                                                title="ดูสลิปโอนเงิน"
+                                                            >
+                                                                โอน
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
                     {/* Pagination Bar */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-3 py-2 bg-[oklch(94%_0.010_28)] border-t border-[oklch(85%_0.012_28)] text-[11px]">
+                        <div className="flex items-center justify-between px-3 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-xs">
                             <span className="text-[oklch(55%_0.010_28)]">
-                                หน้า {page} จาก {totalPages} ({filteredBookings.length} รายการ)
+                                หน้า <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{page}</span> จาก <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{totalPages}</span> ({filteredBookings.length} รายการ)
                             </span>
-                            <div className="flex items-center gap-1 font-bold">
+                            <div className="flex items-center gap-1.5 font-bold">
                                 <button
                                     type="button"
                                     disabled={page <= 1}
                                     onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
+                                    className="px-2.5 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer hover:bg-[oklch(92%_0.012_28)] transition-colors"
                                 >
                                     ◀ ย้อนกลับ
                                 </button>
@@ -330,14 +424,14 @@ export default function SimplifiedBillsSummaryList({
                                     type="button"
                                     disabled={page >= totalPages}
                                     onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                    className="px-2 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer"
+                                    className="px-2.5 py-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs disabled:opacity-30 cursor-pointer hover:bg-[oklch(92%_0.012_28)] transition-colors"
                                 >
                                     ถัดไป ▶
                                 </button>
                             </div>
                         </div>
                     )}
-                </div>
+                </>
             )}
         </div>
     )
