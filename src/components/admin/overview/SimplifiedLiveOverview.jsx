@@ -712,7 +712,7 @@ export default function SimplifiedLiveOverview({
                                         </div>
                                     )}
 
-                                    {/* 2. Menu Items Checklist on Card (Top 3 Items + Modal Trigger, Zero Scroll Hijacking) */}
+                                    {/* 2. Menu Items Checklist on Card (All Items Shown Directly) */}
                                     {isOccupied ? (
                                         <div className="mt-3 pt-2.5 border-t border-[oklch(88%_0.012_28)]">
                                             <div className="flex items-center justify-between pb-2 text-[11px] font-bold text-[oklch(55%_0.010_28)]">
@@ -725,15 +725,15 @@ export default function SimplifiedLiveOverview({
                                                     ยังไม่มีรายการสั่งอาหาร
                                                 </span>
                                             ) : (
-                                                <div className="space-y-2 divide-y divide-[oklch(90%_0.010_28)]">
-                                                    {orderItems.slice(0, 3).map((it, idx) => {
-                                                        const itemName = it.menu_items?.name || 'อาหาร'
+                                                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 divide-y divide-[oklch(90%_0.010_28)] overscroll-contain">
+                                                    {orderItems.map((it, idx) => {
+                                                        const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                         const lineTotal = price * Number(it.quantity || 1)
-                                                        const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.special_instructions)
+                                                        const optList = formatOrderItemOptions(it.selected_options)
 
                                                         return (
-                                                            <div key={it.id || idx} className="pt-2 first:pt-0 flex items-start justify-between gap-2">
+                                                            <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
                                                                 <div className="flex items-start gap-1.5 min-w-0 flex-1">
                                                                     <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums shrink-0 text-xs">
                                                                         {it.quantity}x
@@ -744,7 +744,7 @@ export default function SimplifiedLiveOverview({
                                                                         </span>
                                                                         {optList.length > 0 && (
                                                                             <div className="text-[11px] text-[oklch(52%_0.16_28)] space-y-0.5 mt-0.5">
-                                                                                {optList.slice(0, 2).map((optStr, optIdx) => (
+                                                                                {optList.map((optStr, optIdx) => (
                                                                                     <span key={optIdx} className="block truncate font-medium">
                                                                                         • {optStr}
                                                                                     </span>
@@ -759,14 +759,6 @@ export default function SimplifiedLiveOverview({
                                                             </div>
                                                         )
                                                     })}
-
-                                                    {orderItems.length > 3 && (
-                                                        <div className="pt-2 text-center">
-                                                            <span className="text-[11px] font-semibold text-[oklch(52%_0.16_28)] hover:underline inline-flex items-center gap-1">
-                                                                +อีก {orderItems.length - 3} รายการ (แตะเพื่อดูบิลครบ) ➔
-                                                            </span>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -859,10 +851,10 @@ export default function SimplifiedLiveOverview({
                                 </div>
                             ) : (
                                 inspectingTable.orderItems.map((item, idx) => {
-                                    const itemName = item.menu_items?.name || 'รายการอาหาร'
+                                    const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
                                     const price = Number(item.price_at_time || item.menu_items?.price || 0)
                                     const lineTotal = price * Number(item.quantity || 1)
-                                    const optList = formatOrderItemOptions(item.selected_options, item.item_note || item.special_instructions)
+                                    const optList = formatOrderItemOptions(item.selected_options)
 
                                     return (
                                         <div key={item.id || idx} className="py-2.5 flex items-start justify-between gap-3">
