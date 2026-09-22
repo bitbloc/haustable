@@ -1,4 +1,4 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) · slop: pass (1–58) */
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { getGeminiApiKey, getGeminiPreferredModel } from '../../../utils/geminiOcrHelper'
@@ -1163,6 +1163,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     const colorMuted = 'oklch(42% 0.010 28)'
     const colorAccent = 'oklch(52% 0.16 28)' // Terracotta
     const colorAccent2 = 'oklch(45% 0.08 140)' // Banana-Leaf Green
+    const colorBaselinePax = 'oklch(62% 0.08 28)' // Warm Muted Terracotta for Historical Pax Baseline
+    const colorBenchmarkSales = 'oklch(45% 0.015 28)' // Refined Charcoal Slate for Sales Target Benchmark
 
     return (
         <div ref={containerRef} className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans text-[oklch(18%_0.012_28)]">
@@ -1365,60 +1367,69 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     </div>
                                 </>
                             ) : (
-                                <>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3 h-3 bg-[oklch(52%_0.16_28)]" />
-                                        <span className="text-[oklch(18%_0.012_28)] font-bold">
-                                            {filterMode === 'month' ? 'ยอดขายเฉลี่ยรายชม. (฿)' : 'ลูกค้าจริง (Pax)'}
-                                        </span>
-                                    </div>
-                                    {filterMode === 'day' && (
-                                        <>
-                                            {showPredict && (
-                                                <>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="w-4 h-1 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
-                                                        <span className="text-[oklch(52%_0.16_28)] font-bold">
-                                                            เส้นประพยากรณ์ลูกค้า (Forecast Stream)
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="w-3.5 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
-                                                        <span className="text-[oklch(45%_0.08_140)]">
-                                                            กรอบพยากรณ์ (ต่ำ-สูง)
-                                                        </span>
-                                                    </div>
-                                                </>
-                                            )}
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-3.5 h-1 border-t border-dashed border-[oklch(65%_0.010_28)]" />
-                                                <span className="text-[oklch(42%_0.010_28)]">
-                                                    สถิติเดิม ({dayOfWeekThai})
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="w-3.5 h-1 bg-[oklch(18%_0.012_28)]" />
-                                        <span className="text-[oklch(18%_0.012_28)] font-bold">
-                                            {filterMode === 'month' ? 'เส้นสะสมเฉลี่ยต่อวัน (฿)' : 'ยอดขายสะสมจริง (฿)'}
-                                        </span>
-                                    </div>
-                                    {filterMode === 'day' && (
-                                        <>
-                                            {showPredict && (
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(18%_0.012_28)]" />
-                                                    <span className="text-[oklch(18%_0.012_28)]">คาดการณ์สะสมปิดวัน</span>
+                                <div className="flex items-center gap-3 md:gap-4 flex-wrap">
+                                    {/* 1. กลุ่มลูกค้า (PAX TRAFFIC CLUSTER) */}
+                                    <div className="flex items-center gap-2.5 flex-wrap sm:pr-3.5 sm:border-r border-[oklch(85%_0.012_28)]">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 bg-[oklch(52%_0.16_28)]" />
+                                            <span className="text-[oklch(18%_0.012_28)] font-bold">
+                                                {filterMode === 'month' ? 'ยอดขายเฉลี่ยรายชม. (฿)' : 'ลูกค้าจริง (Pax)'}
+                                            </span>
+                                        </div>
+                                        {filterMode === 'day' && (
+                                            <>
+                                                <div className="flex items-center gap-1.5" title="สถิติจำนวนลูกค้าเฉลี่ยรอบ 4 สัปดาห์ (วันเดียวกัน)">
+                                                    <span className="w-3.5 h-0.5 border-t-2 border-dotted border-[oklch(62%_0.08_28)]" />
+                                                    <span className="text-[oklch(48%_0.08_28)]">
+                                                        สถิติลูกค้าเดิม ({dayOfWeekThai}) [Pax]
+                                                    </span>
                                                 </div>
-                                            )}
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(55%_0.010_28)]" />
-                                                <span className="text-[oklch(42%_0.010_28)]">เกณฑ์เป้าหมาย (Benchmark)</span>
-                                            </div>
-                                        </>
-                                    )}
-                                </>
+                                                {showPredict && (
+                                                    <>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="w-4 h-0.5 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
+                                                            <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                                                เส้นพยากรณ์ลูกค้า (Forecast)
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="w-3 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
+                                                            <span className="text-[oklch(45%_0.08_140)]">
+                                                                กรอบพยากรณ์ (ต่ำ-สูง)
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* 2. กลุ่มยอดขายสะสม (SALES VELOCITY CLUSTER) */}
+                                    <div className="flex items-center gap-2.5 flex-wrap">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="w-3.5 h-1 bg-[oklch(18%_0.012_28)]" />
+                                            <span className="text-[oklch(18%_0.012_28)] font-bold">
+                                                {filterMode === 'month' ? 'เส้นสะสมเฉลี่ยต่อวัน (฿)' : 'ยอดขายสะสมจริง (฿)'}
+                                            </span>
+                                        </div>
+                                        {filterMode === 'day' && (
+                                            <>
+                                                <div className="flex items-center gap-1.5" title="เกณฑ์เป้าหมายยอดขายสะสมตามช่วงเวลา (Benchmark Target)">
+                                                    <span className="w-3.5 h-0.5 border-t-2 border-dashed border-[oklch(45%_0.015_28)]" />
+                                                    <span className="text-[oklch(38%_0.015_28)] font-medium">
+                                                        เกณฑ์เป้าหมายสะสม (Benchmark ฿)
+                                                    </span>
+                                                </div>
+                                                {showPredict && (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-3.5 h-0.5 border-t border-dashed border-[oklch(18%_0.012_28)]" />
+                                                        <span className="text-[oklch(18%_0.012_28)]">คาดการณ์สะสมปิดวัน</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </div>
 
@@ -1736,14 +1747,16 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             {/* ================================================================= */}
                             {filterMode === 'day' && (
                                 <>
-                                    {/* 4-Week Baseline Curve */}
+                                    {/* 4-Week Baseline Curve (สถิติลูกค้าเดิม - Pax Baseline) */}
                                     {pathBaselinePax && (
                                         <path
                                             d={pathBaselinePax}
                                             fill="none"
-                                            stroke="oklch(65% 0.010 28)"
-                                            strokeWidth="1.5"
-                                            strokeDasharray="4 4"
+                                            stroke={colorBaselinePax}
+                                            strokeWidth="1.6"
+                                            strokeDasharray="2.5 3"
+                                            strokeLinecap="round"
+                                            opacity="0.85"
                                         />
                                     )}
 
@@ -1865,23 +1878,47 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             {/* ================================================================= */}
                             {filterMode === 'day' && (
                                 <>
-                                    {/* Benchmark Target Dotted Curve */}
+                                    {/* Benchmark Target Curve (เกณฑ์เป้าหมายสะสมยอดขาย - Sales Benchmark Target) */}
                                     {(() => {
                                         const bpts = dayMetrics?.benchmarkPoints || []
+                                        if (bpts.length === 0) return null
                                         const pathD = bpts.reduce((acc, p, i) => {
                                             const x = getX(p.hour)
                                             const y = getYMoney(p.expectedCumulative)
                                             return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`
                                         }, '')
+                                        const lastBpt = bpts[bpts.length - 1]
+                                        const targetAmt = lastBpt?.expectedCumulative || 0
+
                                         return (
-                                            <path
-                                                d={pathD}
-                                                fill="none"
-                                                stroke="oklch(65% 0.010 28)"
-                                                strokeWidth="1.5"
-                                                strokeDasharray="3 3"
-                                                opacity="0.85"
-                                            />
+                                            <g key="benchmark-target-layer">
+                                                <path
+                                                    d={pathD}
+                                                    fill="none"
+                                                    stroke={colorBenchmarkSales}
+                                                    strokeWidth="1.6"
+                                                    strokeDasharray="6 4"
+                                                    opacity="0.9"
+                                                />
+                                                {/* Subtle Terminal Target Tag at 23:00 */}
+                                                {lastBpt && (
+                                                    <g>
+                                                        <circle
+                                                            cx={getX(23)}
+                                                            cy={getYMoney(targetAmt)}
+                                                            r="2.5"
+                                                            fill={colorBenchmarkSales}
+                                                        />
+                                                        <text
+                                                            x={getX(23) + 6}
+                                                            y={getYMoney(targetAmt) + 3}
+                                                            className="font-mono text-[8.5px] font-semibold fill-[oklch(45%_0.015_28)] select-none tabular-nums"
+                                                        >
+                                                            เป้า ฿{Math.round(targetAmt / 1000)}k
+                                                        </text>
+                                                    </g>
+                                                )}
+                                            </g>
                                         )
                                     })()}
 
@@ -2058,7 +2095,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 {pt?.isFuture ? `~${pt?.forecast} ท่าน (กรอบ ${pt?.forecastLow}-${pt?.forecastHigh})` : `${pt?.pax || 0} ท่าน`}
                                             </span>
                                             <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
-                                                (สถิติปกติ: ~{pt?.baselinePax} ท่าน)
+                                                (สถิติเดิม: ~{pt?.baselinePax} ท่าน)
                                             </span>
                                         </div>
                                         <div>
@@ -2073,7 +2110,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 ฿{(pt?.cumulativeSales || 0).toLocaleString()}
                                             </span>
                                             <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
-                                                (เป้า: ฿{(pt?.benchmarkCumulative || 0).toLocaleString()})
+                                                (เกณฑ์เป้า: ฿{(pt?.benchmarkCumulative || 0).toLocaleString()})
                                             </span>
                                         </div>
                                         <div>
