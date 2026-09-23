@@ -86,6 +86,23 @@ function isTableSessionActive(b, startOfToday, endOfToday, now) {
     const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
     const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
 
+    // If there is no active shift and the booking belongs to a closed shift, it is not an active dining session
+    try {
+        const activeShiftStr = localStorage.getItem('pos_current_shift');
+        if (!activeShiftStr) {
+            const historyStr = localStorage.getItem('pos_shift_history');
+            if (historyStr) {
+                const history = JSON.parse(historyStr);
+                const latestClosed = Array.isArray(history) && history.length > 0 ? history[0] : null;
+                if (latestClosed?.closedAt) {
+                    const bTime = new Date(b.booking_time || b.created_at).getTime();
+                    const closedTime = new Date(latestClosed.closedAt).getTime();
+                    if (bTime <= closedTime) return false;
+                }
+            }
+        }
+    } catch (e) {}
+
     if (b.status === 'seated') {
         // Seated booking must be today or at most 12 hours old
         return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));

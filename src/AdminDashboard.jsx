@@ -369,6 +369,11 @@ export default function AdminDashboard() {
     }
 
     // --- DERIVED STATE ---
+    // Shift state derived helpers
+    const activeShift = useMemo(() => (shifts || []).find(s => s.status === 'open'), [shifts])
+    const latestClosedShift = useMemo(() => (shifts || []).filter(s => s.status === 'closed').sort((a, b) => new Date(b.closed_at || b.opened_at) - new Date(a.closed_at || a.opened_at))[0] || null, [shifts])
+    const isShiftOpen = Boolean(activeShift)
+
     // 1. All Daily Bookings (for the selected date, all statuses + active tables on floor)
     const dailyBookings = useMemo(() => {
         const isToday = selectedDate === getThaiDate()
@@ -379,8 +384,8 @@ export default function AdminDashboard() {
 
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
-            // When viewing today, include currently seated active tables even if opened before midnight
-            const isCurrentSeated = isToday && (b.status === 'seated' || (b.status === 'ready' && b.booking_type !== 'pickup'))
+            // When viewing today, include currently seated active tables only if POS shift is active
+            const isCurrentSeated = isToday && isShiftOpen && (b.status === 'seated' || (b.status === 'ready' && b.booking_type !== 'pickup'))
             return isDateMatch || isCurrentSeated
         }).sort((a, b) => {
             const getPriority = (st) => {
@@ -395,7 +400,7 @@ export default function AdminDashboard() {
             if (pA !== pB) return pA - pB
             return new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at)
         })
-    }, [bookings, selectedDate])
+    }, [bookings, selectedDate, isShiftOpen])
 
     // 2. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
@@ -677,6 +682,34 @@ export default function AdminDashboard() {
                             <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                             <span className="hidden sm:inline">REFRESH</span>
                         </button>
+                    </div>
+                </div>
+
+                {/* SHIFT STATUS BANNER (Dieter Rams / Thai Modern Structural Indicator) */}
+                <div className={`mb-4 px-3.5 py-2 rounded-xs border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
+                    isShiftOpen
+                        ? 'bg-[oklch(96%_0.02_140)] border-[oklch(80%_0.08_140)] text-[oklch(25%_0.08_140)]'
+                        : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                }`}>
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${isShiftOpen ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                        <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
+                            {isShiftOpen ? 'POS SHIFT ACTIVE // กะกำลังทำงาน' : 'POS SHIFT CLOSED // กะปิดอยู่'}
+                        </span>
+                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
+                        <span className="font-sans font-medium text-xs">
+                            {isShiftOpen ? (
+                                <>พนักงานประจำเครื่อง: <strong className="font-bold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดรอบเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
+                            ) : latestClosedShift ? (
+                                <>หน้าร้านยังไม่เปิดรอบขาย (รอบล่าสุดปิดเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
+                            ) : (
+                                <>หน้าร้านยังไม่มีการเปิดรอบการขายบนเครื่อง POS</>
+                            )}
+                        </span>
+                    </div>
+
+                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] self-end sm:self-auto uppercase">
+                        {isShiftOpen ? '[ONLINE TERMINAL ACTIVE]' : '[TERMINAL CLOSED]'}
                     </div>
                 </div>
 

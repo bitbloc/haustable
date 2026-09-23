@@ -691,7 +691,29 @@ export default function POSDashboard() {
             const rawBytes = encodeShiftClosureReportData(compiledReport, reportPaperSize, 'sunmi');
             const printRes = await printToSunmiBuiltIn(rawBytes);
             
-            // 6. Close shift locally & cloud with accurate summary
+            // 6. Auto-settle any lingering open/seated tables from this shift so nothing is orphaned in Supabase
+            if (isOnline()) {
+                try {
+                    await supabase
+                        .from('bookings')
+                        .update({
+                            status: 'completed',
+                            payment_method: 'qr',
+                            staff_remark: '[QR] Auto-settled on shift close'
+                        })
+                        .in('status', ['seated', 'ready'])
+                        .lte('booking_time', new Date().toISOString());
+
+                    await supabase
+                        .from('order_items')
+                        .update({ is_checked: true, status: 'served' })
+                        .eq('status', 'pending');
+                } catch (cleanErr) {
+                    console.warn('Auto-resolving lingering open tables on shift close:', cleanErr);
+                }
+            }
+
+            // 7. Close shift locally & cloud with accurate summary
             closeShift(actual, accurateSummary);
             localStorage.removeItem('pos_active_staff');
             setActiveStaff(null);
@@ -712,6 +734,17 @@ export default function POSDashboard() {
             
             // Fallback close shift locally in case of error
             try {
+                if (isOnline()) {
+                    await supabase
+                        .from('bookings')
+                        .update({
+                            status: 'completed',
+                            payment_method: 'qr',
+                            staff_remark: '[QR] Auto-settled on shift close'
+                        })
+                        .in('status', ['seated', 'ready'])
+                        .lte('booking_time', new Date().toISOString());
+                }
                 const summary = getShiftSummary();
                 closeShift(actual, summary);
                 localStorage.removeItem('pos_active_staff');
@@ -5071,6 +5104,25 @@ export default function POSDashboard() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Open Orders Warning if any tables/orders are still open */}
+                            {(() => {
+                                try {
+                                    const cached = posCache.getBookings() || [];
+                                    const count = cached.filter(b => b && (b.status === 'seated' || b.status === 'ready' || (b.status === 'pending' && b.table_id))).length;
+                                    if (count === 0) return null;
+                                    return (
+                                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900 shadow-xs">
+                                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
+                                            <span className="font-bold">
+                                                มีโต๊ะที่ยังไม่เช็คบิลค้างอยู่ {count} โต๊ะ — ระบบจะทำการเคลียร์และบันทึกปิดรอบอัตโนมัติเมื่อยืนยัน
+                                            </span>
+                                        </div>
+                                    );
+                                } catch {
+                                    return null;
+                                }
+                            })()}
 
                             {/* Expected Cash reconciliation */}
                             <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-4 flex justify-between items-center shadow-sm shrink-0">

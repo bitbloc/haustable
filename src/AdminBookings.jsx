@@ -11,7 +11,7 @@ import { getShortBookingId } from './utils/printerHelper'
 import { formatOrderItemOptions } from './utils/menuHelper'
 import { parseTableTransferInfo } from './utils/tableTransferHelper'
 import { isValidUuid } from './utils/urlHelper'
-import { calculateBookingFinancials } from './utils/bookingHelper'
+import { calculateBookingFinancials, getBookingPaymentStatusInfo } from './utils/bookingHelper'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
