@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
-import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration } from '../../../utils/timeUtils'
+import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationMinutes, formatThaiDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 
@@ -66,6 +66,7 @@ export default function SimplifiedLiveOverview({
     revenueToday = 0, 
     yesterdayRevenue = 0,
     shifts = [], 
+    selectedDate = getThaiDate(),
     loading = false, 
     onRefresh,
     onOpenProMode 
@@ -80,10 +81,20 @@ export default function SimplifiedLiveOverview({
     const [actionLoading, setActionLoading] = useState(false)
     const containerRef = useRef(null)
 
+    const isToday = !selectedDate || selectedDate === getThaiDate()
+
     // Driver by parent if provided, avoiding redundant duplicate fetches
     const isParentDriven = parentTables.length > 0 || parentBookings.length > 0
     const tables = parentTables.length > 0 ? parentTables : internalTables
     const liveBookings = parentBookings.length > 0 ? parentBookings : internalBookings
+
+    // Total guests across bookings for selected date
+    const totalGuestsOnDate = useMemo(() => {
+        return liveBookings.reduce((sum, b) => {
+            if (['cancelled', 'void'].includes(b.status)) return sum
+            return sum + (Number(b.pax) || 1)
+        }, 0)
+    }, [liveBookings])
 
     // Shift Awareness: Determine whether front-of-house POS shift is active or closed
     const activeShift = useMemo(() => (shifts || []).find(s => s.status === 'open'), [shifts])
@@ -366,83 +377,60 @@ export default function SimplifiedLiveOverview({
                 isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
             }`}
         >
-            {/* Shift Status Banner inside Overview */}
-            <div className={`px-3.5 py-2.5 rounded-xs border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                isShiftOpen 
-                    ? 'bg-[oklch(96%_0.02_140)] border-[oklch(82%_0.08_140)] text-[oklch(25%_0.08_140)]' 
-                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
-            }`}>
-                <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${isShiftOpen ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                    <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
-                        {isShiftOpen ? 'POS SHIFT ACTIVE // กะกำลังทำงาน' : 'POS SHIFT CLOSED // กะปิดอยู่'}
-                    </span>
-                    <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                    <span className="font-sans font-medium text-xs">
-                        {isShiftOpen ? (
-                            <>พนักงานประจำเครื่อง: <strong className="font-bold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดรอบเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
-                        ) : latestClosedShift ? (
-                            <>หน้าร้านยังไม่เปิดรอบขาย (รอบล่าสุดปิดเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
-                        ) : (
-                            <>หน้าร้านยังไม่มีการเปิดรอบขายบนเครื่อง POS</>
-                        )}
-                    </span>
-                </div>
-                <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase self-end sm:self-auto">
-                    {isShiftOpen ? '[READY FOR ORDERS]' : '[TERMINAL CLOSED]'}
-                </span>
-            </div>
-
             {/* 1. Hero Pulse: 3-Second Executive Awareness Strip (Equal Weight Blocks) */}
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-xs shadow-2xs">
                 {/* 3 Primary KPIs: Balanced visual weight */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
-                    {/* KPI 1: LIVE NOW / FLOOR STATUS */}
+                    {/* KPI 1: LIVE NOW / FLOOR STATUS / DATE SUMMARY */}
                     <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
                         <div className="flex items-center justify-between">
                             <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                {isShiftOpen ? 'LIVE NOW' : 'FLOOR STATUS'}
+                                {!isToday ? 'DATE SUMMARY' : isShiftOpen ? 'LIVE NOW' : 'FLOOR STATUS'}
                             </span>
-                            <span className={`w-2 h-2 rounded-full ${isShiftOpen ? 'bg-[oklch(18%_0.012_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                            <span className={`w-2 h-2 rounded-full ${!isToday ? 'bg-[oklch(55%_0.010_28)]' : isShiftOpen ? 'bg-[oklch(18%_0.012_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
                         </div>
                         <div className="mt-1 flex items-baseline gap-2">
                             <h2 className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                {isShiftOpen ? counts.occupied : 0}
+                                {!isToday ? liveBookings.length : (isShiftOpen ? counts.occupied : 0)}
                             </h2>
                             <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
-                                {isShiftOpen 
-                                    ? `${counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · ${counts.occupancyPct}% occupied`
-                                    : 'กะปิดอยู่ · ยังไม่เปิดรอบขาย'
+                                {!isToday 
+                                    ? `บันทึกประวัติย้อนหลัง · ${liveBookings.length} ออเดอร์`
+                                    : isShiftOpen 
+                                        ? `${counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · ${counts.occupancyPct}% occupied`
+                                        : 'กะปิดอยู่ · ยังไม่เปิดรอบขาย'
                                 }
                             </span>
                         </div>
                     </div>
 
-                    {/* KPI 2: PEOPLE IN STORE */}
+                    {/* KPI 2: PEOPLE IN STORE / GUESTS ON DATE */}
                     <div className="pt-3 sm:pt-0 sm:px-4">
                         <div className="flex items-center justify-between">
                             <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                PEOPLE IN STORE
+                                {!isToday ? 'GUESTS ON DATE' : 'PEOPLE IN STORE'}
                             </span>
                         </div>
                         <div className="mt-1 flex items-baseline gap-2">
                             <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                {isShiftOpen ? counts.totalGuests : 0}
+                                {!isToday ? totalGuestsOnDate : (isShiftOpen ? counts.totalGuests : 0)}
                             </div>
                             <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
-                                {isShiftOpen 
-                                    ? `pax ในร้าน (${counts.occupied}/${counts.total} โต๊ะ)`
-                                    : '0 pax (หน้าร้านปิดรอบขาย)'
+                                {!isToday 
+                                    ? `pax รวมตลอดวัน (${formatThaiDateOnly(selectedDate)})`
+                                    : isShiftOpen 
+                                        ? `pax ในร้าน (${counts.occupied}/${counts.total} โต๊ะ)`
+                                        : '0 pax (หน้าร้านปิดรอบขาย)'
                                 }
                             </span>
                         </div>
                     </div>
 
-                    {/* KPI 3: SALES TODAY */}
+                    {/* KPI 3: SALES TODAY / DAILY REVENUE */}
                     <div className="pt-3 sm:pt-0 sm:px-4">
                         <div className="flex items-center justify-between">
                             <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
-                                SALES TODAY
+                                {!isToday ? 'DAILY REVENUE' : 'SALES TODAY'}
                             </span>
                         </div>
                         <div className="mt-1">
@@ -459,9 +447,9 @@ export default function SimplifiedLiveOverview({
                 {/* Sub-bar: Density Switcher & Fullscreen (Restrained and Aligned) */}
                 <div className="mt-4 pt-3 border-t border-[oklch(88%_0.012_28)] flex items-center justify-between flex-wrap gap-2 text-xs">
                     <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)]">
-                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">CURRENT ACTIVITY</span>
+                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">{!isToday ? 'FLOOR SNAPSHOT' : 'CURRENT ACTIVITY'}</span>
                         <span>//</span>
-                        <span>{isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'กะปิดหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
+                        <span>{!isToday ? `ผังโต๊ะบันทึกย้อนหลัง (${counts.total} โต๊ะ)` : isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'กะปิดหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
                     </div>
 
                     <div className="flex items-center gap-2">

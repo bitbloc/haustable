@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { RotateCcw, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
-import { getThaiDate } from './utils/timeUtils'
+import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime } from './utils/timeUtils'
 import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
@@ -686,32 +686,58 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* SHIFT STATUS BANNER (Dieter Rams / Thai Modern Structural Indicator) */}
-                <div className={`mb-4 px-3.5 py-2 rounded-xs border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
-                    isShiftOpen
-                        ? 'bg-[oklch(96%_0.02_140)] border-[oklch(80%_0.08_140)] text-[oklch(25%_0.08_140)]'
-                        : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
-                }`}>
-                    <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${isShiftOpen ? 'bg-[oklch(45%_0.08_140)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                        <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
-                            {isShiftOpen ? 'POS SHIFT ACTIVE // กะกำลังทำงาน' : 'POS SHIFT CLOSED // กะปิดอยู่'}
-                        </span>
-                        <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
-                        <span className="font-sans font-medium text-xs">
-                            {isShiftOpen ? (
-                                <>พนักงานประจำเครื่อง: <strong className="font-bold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดรอบเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
-                            ) : latestClosedShift ? (
-                                <>หน้าร้านยังไม่เปิดรอบขาย (รอบล่าสุดปิดเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
-                            ) : (
-                                <>หน้าร้านยังไม่มีการเปิดรอบการขายบนเครื่อง POS</>
-                            )}
-                        </span>
-                    </div>
+                {(() => {
+                    const isToday = selectedDate === getThaiDate()
+                    return (
+                        <div className={`mb-4 px-3.5 py-2 rounded-xs border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 select-none ${
+                            !isToday
+                                ? 'bg-[oklch(95%_0.008_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                : isShiftOpen
+                                    ? 'bg-[oklch(96%_0.02_140)] border-[oklch(80%_0.08_140)] text-[oklch(25%_0.08_140)]'
+                                    : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                        }`}>
+                            <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${
+                                    !isToday
+                                        ? 'bg-[oklch(55%_0.010_28)]'
+                                        : isShiftOpen 
+                                            ? 'bg-[oklch(45%_0.08_140)] animate-pulse' 
+                                            : 'bg-[oklch(55%_0.010_28)]'
+                                }`} />
+                                <span className="font-mono font-bold tracking-wider text-[11px] uppercase">
+                                    {!isToday
+                                        ? 'HISTORICAL RECORD // รอบขายย้อนหลัง'
+                                        : isShiftOpen 
+                                            ? 'POS SHIFT ACTIVE // กะกำลังทำงาน' 
+                                            : 'POS SHIFT CLOSED // กะปิดอยู่'
+                                    }
+                                </span>
+                                <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
+                                <span className="font-sans font-medium text-xs">
+                                    {!isToday ? (
+                                        latestClosedShift ? (
+                                            <>รอบการขายสิ้นสุดสมบูรณ์ (ปิดรอบเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>{shifts.length > 1 ? ` · ทั้งหมด ${shifts.length} กะ` : ''})</>
+                                        ) : (
+                                            <>ไม่มีประวัติรอบการขายบนเครื่อง POS ในวันที่ {formatThaiDateOnly(selectedDate)}</>
+                                        )
+                                    ) : isShiftOpen ? (
+                                        <>พนักงานประจำเครื่อง: <strong className="font-bold text-[oklch(18%_0.012_28)]">{activeShift.staff_name}</strong> (เปิดรอบเมื่อ {formatThaiTimeOnly(activeShift.opened_at)})</>
+                                    ) : latestClosedShift ? (
+                                        <>หน้าร้านยังไม่เปิดรอบขาย (รอบล่าสุดปิดเมื่อ <span className="font-mono font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(latestClosedShift.closed_at)}</span> โดย <strong className="font-bold text-[oklch(18%_0.012_28)]">{latestClosedShift.staff_name}</strong>)</>
+                                    ) : (
+                                        <>หน้าร้านยังไม่มีการเปิดรอบการขายบนเครื่อง POS</>
+                                    )}
+                                </span>
+                            </div>
 
-                    <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] self-end sm:self-auto uppercase">
-                        {isShiftOpen ? '[ONLINE TERMINAL ACTIVE]' : '[TERMINAL CLOSED]'}
-                    </div>
-                </div>
+                            <div className="font-mono text-[10px] text-[oklch(55%_0.010_28)] self-end sm:self-auto uppercase">
+                                {!isToday 
+                                    ? (latestClosedShift ? '[ARCHIVED SHIFT]' : '[NO SHIFT RECORD]')
+                                    : isShiftOpen ? '[ONLINE TERMINAL ACTIVE]' : '[TERMINAL CLOSED]'}
+                            </div>
+                        </div>
+                    )
+                })()}
 
                 {/* MASTER COCKPIT MODE SWITCHER (Tabular Grid - Dieter Rams Zero-wrap) */}
                 <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs gap-0.5 mb-5 text-xs sm:text-sm">
@@ -751,6 +777,7 @@ export default function AdminDashboard() {
                             revenueToday={revenueToday}
                             yesterdayRevenue={yesterdayRevenue}
                             shifts={shifts}
+                            selectedDate={selectedDate}
                             loading={loading}
                             onRefresh={() => fetchData(true, selectedDate)}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
@@ -779,6 +806,7 @@ export default function AdminDashboard() {
                         {/* 1.5 Backoffice Simplified Daily Bills Summary List */}
                         <SimplifiedBillsSummaryList 
                             bookings={dailyBookings}
+                            selectedDate={selectedDate}
                             loading={loading}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
                         />

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Lock, Unlock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw, Timer } from 'lucide-react'
+import { Lock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw, Timer } from 'lucide-react'
 
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
@@ -217,98 +217,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         return { status: 'free', booking: null }
     }
 
-    const handleTableClick = async (table, state) => {
-        if (state.status === 'free') {
-            // 1-Tap Quick Walk-in Block
-            await quickBlockTable(table)
-        } else {
-            // Open inspection sheet / modal
-            setSelectedTableData({ table, state })
-        }
-    }
-
-    const quickBlockTable = async (table) => {
-        setActionLoading(true)
-        try {
-            const now = new Date()
-            const endTime = new Date(now.getTime() + 2 * 60 * 60 * 1000) // +2 Hours
-
-            const payload = {
-                table_id: table.id,
-                booking_time: now.toISOString(),
-                end_time: endTime.toISOString(),
-                booking_type: 'walk_in',
-                status: 'seated',
-                pickup_contact_name: 'Walk-in Guest',
-                customer_note: 'Internal Block',
-                pax: table.capacity || 2,
-                total_amount: 0,
-                tracking_token: crypto.randomUUID()
-            }
-
-            const { error } = await supabase.from('bookings').insert(payload)
-            if (error) throw error
-
-            toast.success(`Blocked ${table.table_name} for 2 Hours`, {
-                description: 'Tap table again to release',
-                duration: 2500
-            })
-            fetchFloorData()
-        } catch (err) {
-            toast.error('Failed to block table: ' + err.message)
-        } finally {
-            setActionLoading(false)
-        }
-    }
-
-    const handleReleaseTable = async (bookingId, tableName) => {
-        setActionLoading(true)
-        try {
-            const currentBooking = selectedTableData?.state?.booking
-            const isInternalBlock = currentBooking?.customer_note === 'Internal Block' || 
-                                    currentBooking?.customer_note === 'Maintenance Block' ||
-                                    ((!currentBooking?.order_items || currentBooking?.order_items?.length === 0) && parseFloat(currentBooking?.total_amount || 0) === 0)
-            const targetStatus = isInternalBlock ? 'cancelled' : 'completed'
-
-            const { error } = await supabase
-                .from('bookings')
-                .update({ status: targetStatus, end_time: new Date().toISOString() })
-                .eq('id', bookingId)
-
-            if (error) throw error
-
-            toast.success(`Released ${tableName}`, { description: 'Table is now available' })
-            setSelectedTableData(null)
-            fetchFloorData()
-        } catch (err) {
-            toast.error('Failed to release: ' + err.message)
-        } finally {
-            setActionLoading(false)
-        }
-    }
-
-    const handleExtendTable = async (booking, mins = 30) => {
-        setActionLoading(true)
-        try {
-            const currentEnd = booking.end_time ? new Date(booking.end_time) : new Date(new Date(booking.booking_time).getTime() + 2 * 60 * 60 * 1000)
-            const baseTime = currentEnd > new Date() ? currentEnd : new Date()
-            const newEnd = new Date(baseTime.getTime() + mins * 60 * 1000)
-
-            const { error } = await supabase
-                .from('bookings')
-                .update({ end_time: newEnd.toISOString() })
-                .eq('id', booking.id)
-
-            if (error) throw error
-
-            toast.success(`Extended +${mins} mins`, { description: `New end time: ${newEnd.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}` })
-            setSelectedTableData(null)
-            fetchFloorData()
-        } catch (err) {
-            toast.error('Failed to extend: ' + err.message)
-        } finally {
-            setActionLoading(false)
-        }
+    const handleTableClick = (table, state) => {
+        setSelectedTableData({ table, state })
     }
 
     return (
@@ -529,25 +439,23 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                             )
                         })()}
 
-                        <div className="flex flex-col sm:flex-row gap-2 mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
-                            {selectedTableData.state.booking && (
-                                <>
-                                    <button
-                                        onClick={() => handleExtendTable(selectedTableData.state.booking, 30)}
-                                        disabled={actionLoading}
-                                        className="flex-1 py-2.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold text-xs uppercase rounded-sm"
-                                    >
-                                        +30 MINS
-                                    </button>
-                                    <button
-                                        onClick={() => handleReleaseTable(selectedTableData.state.booking.id, selectedTableData.table.table_name)}
-                                        disabled={actionLoading}
-                                        className="flex-1 py-2.5 bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-white font-mono font-bold text-xs uppercase rounded-sm flex items-center justify-center gap-1.5"
-                                    >
-                                        <Unlock size={14} /> RELEASE TABLE
-                                    </button>
-                                </>
-                            )}
+                        {!selectedTableData.state.booking && (
+                            <div className="my-6 py-4 text-center font-mono text-xs text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] rounded-xs border border-[oklch(88%_0.010_28)]">
+                                โต๊ะว่าง พร้อมเปิดบริการที่หน้าเครื่อง POS
+                            </div>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mt-4 pt-3 border-t border-[oklch(85%_0.012_28)]">
+                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                                [INFO] การเปิดโต๊ะ เช็คบิล และเคลียร์โต๊ะ ดำเนินการผ่านเครื่อง POS หน้าร้าน
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedTableData(null)}
+                                className="px-5 py-2 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold text-xs rounded-sm cursor-pointer whitespace-nowrap self-end sm:self-auto"
+                            >
+                                ✕ ปิดหน้าต่าง
+                            </button>
                         </div>
                     </div>
                 </div>

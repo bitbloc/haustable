@@ -1,6 +1,5 @@
-/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo } from 'react'
-import { formatThaiTimeOnly } from '../../../utils/timeUtils'
+import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
 import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 
 /**
@@ -11,11 +10,13 @@ import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tab
  */
 export default function SimplifiedBillsSummaryList({
     bookings = [],
+    selectedDate = getThaiDate(),
     loading = false,
     onViewSlip,
     onPrintSlip,
     onOpenProMode
 }) {
+    const isToday = !selectedDate || selectedDate === getThaiDate()
     const [statusFilter, setStatusFilter] = useState('all') // all, settled, active, pickup
     const [page, setPage] = useState(1)
     const [inspectingBill, setInspectingBill] = useState(null)
@@ -60,7 +61,7 @@ export default function SimplifiedBillsSummaryList({
         let pickupCount = 0
 
         validBookings.forEach(b => {
-            const amt = Number(b.total_amount || 0)
+            const amt = Number(b.total_amount || b.total_price || 0)
             const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
             if (['completed', 'paid', 'success'].includes(b.status)) {
                 settledCount++
@@ -97,10 +98,10 @@ export default function SimplifiedBillsSummaryList({
             <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-3 pb-3 border-b border-[oklch(85%_0.012_28)]">
                 <div>
                     <div className="font-mono text-[10px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
-                        TODAY // สรุปบิลประจำวัน
+                        {isToday ? 'TODAY // สรุปบิลประจำวัน' : `${selectedDate} // สรุปบิลย้อนหลัง`}
                     </div>
                     <h3 className="text-xl sm:text-2xl font-bold text-[oklch(18%_0.012_28)] mt-0.5 tracking-tight">
-                        LIST สรุปบิลประจำวัน
+                        {isToday ? 'LIST สรุปบิลประจำวัน' : `LIST สรุปบิลวันที่ ${formatThaiDateOnly(selectedDate)}`}
                     </h3>
                     <div className="font-mono text-xs text-[oklch(55%_0.010_28)] mt-1">
                         <span className="font-bold text-[oklch(18%_0.012_28)] text-sm">฿{metrics.totalRevenue.toLocaleString()}</span> · {metrics.totalCount} orders ({metrics.settledCount} ชำระแล้ว)
@@ -165,7 +166,7 @@ export default function SimplifiedBillsSummaryList({
                             const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
                             const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
                             const itemsCount = b.order_items?.length || 0
-                            const amount = Number(b.total_amount || 0)
+                            const amount = Number(b.total_amount || b.total_price || 0)
                             const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
                             const isPaid = ['completed', 'paid', 'success'].includes(b.status)
                             const isSeated = ['seated', 'ready'].includes(b.status)
@@ -258,7 +259,7 @@ export default function SimplifiedBillsSummaryList({
                                         const tableName = b.tables_layout?.table_name || (b.booking_type === 'pickup' ? 'PICKUP' : 'WALK-IN')
                                         const customerName = b.profiles?.display_name || b.customer_name || 'ลูกค้าทั่วไป'
                                         const itemsCount = b.order_items?.length || 0
-                                        const amount = Number(b.total_amount || 0)
+                                        const amount = Number(b.total_amount || b.total_price || 0)
                                         const isPickup = b.booking_type === 'pickup' || (b.booking_type || '').includes('takeaway')
                                         const isPaid = ['completed', 'paid', 'success'].includes(b.status)
                                         const isSeated = ['seated', 'ready'].includes(b.status)
@@ -499,7 +500,7 @@ export default function SimplifiedBillsSummaryList({
                             <div className="flex justify-between items-center text-sm font-bold text-[oklch(18%_0.012_28)]">
                                 <span>ยอดสุทธิทั้งสิ้น:</span>
                                 <span className="font-mono text-lg text-[oklch(18%_0.012_28)] tabular-nums">
-                                    ฿{Number(inspectingBill.total_amount || 0).toLocaleString()}
+                                    ฿{Number(inspectingBill.total_amount || inspectingBill.total_price || 0).toLocaleString()}
                                 </span>
                             </div>
                         </div>
