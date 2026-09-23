@@ -399,6 +399,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                             const itemCount = items.reduce((sum, i) => sum + (i.quantity || 1), 0);
                             const itemsTotal = items.reduce((sum, i) => sum + ((i.price_at_time || i.price || 0) * (i.quantity || 1)), 0);
                             const totalAmount = order.total_amount || itemsTotal;
+                            const orderDeposit = Number(order.deposit_amount || 0);
+                            const orderNetTotal = Number(order.total_amount || itemsTotal || 0);
+                            const orderIsPaid = !isVoid && !isMerged && ((order.status === 'completed' || order.status === 'paid' || order.status === 'success') || (orderNetTotal > 0 && orderDeposit >= orderNetTotal));
+                            const orderIsPartial = !isVoid && !isMerged && !orderIsPaid && orderDeposit > 0;
                             const hasUnsentItems = !isVoid && !isMerged && items.some(i => 
                                 i.status === 'pending' || 
                                 (!i.db_id && typeof i.id === 'string' && i.id.startsWith('local_'))
@@ -463,6 +467,18 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             ) : (
                                                 <span className="bg-slate-700 text-white font-mono text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
                                                     บิลหน้าร้าน
+                                                </span>
+                                            )}
+
+                                            {orderIsPaid && (
+                                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                    ชำระแล้ว · PAID
+                                                </span>
+                                            )}
+
+                                            {orderIsPartial && (
+                                                <span className="bg-amber-100 text-amber-800 border border-amber-300 font-mono text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                    มัดจำ ฿{orderDeposit.toLocaleString()}
                                                 </span>
                                             )}
 
@@ -550,9 +566,11 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             ? 'text-[oklch(52%_0.16_28)]' 
                                             : isVoid 
                                                 ? 'text-red-600 line-through' 
-                                                : 'text-[oklch(52%_0.16_28)]'
+                                                : orderIsPaid
+                                                    ? 'text-emerald-700'
+                                                    : 'text-[oklch(52%_0.16_28)]'
                                         }`}>
-                                            {isMerged ? `฿0 (โอนไป ${transfer.targetTableDisplay || transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}`}
+                                            {isMerged ? `฿0 (โอนไป ${transfer.targetTableDisplay || transfer.mergedToTable})` : `฿${totalAmount.toLocaleString()}${orderIsPaid ? ' (ชำระแล้ว)' : ''}`}
                                         </span>
                                     </div>
 
@@ -562,7 +580,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                const slipType = (order.status === 'completed' || order.status === 'paid' || order.status === 'success') ? 'receipt' : 'kitchen';
+                                                const slipType = (order.status === 'completed' || order.status === 'paid' || order.status === 'success' || orderIsPaid) ? 'receipt' : 'kitchen';
                                                 onOpenSlip && onOpenSlip(order, slipType);
                                             }}
                                             className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-1.5 rounded-lg transition-[background-color,transform] duration-150 flex items-center justify-center gap-1 shadow-2xs active:scale-98 cursor-pointer truncate"

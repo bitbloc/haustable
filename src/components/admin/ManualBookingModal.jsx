@@ -281,9 +281,11 @@ export default function ManualBookingModal({
                 }
             }
 
-            // 3. Format Staff Remark (Include discount details if applicable)
+            // 3. Format Staff Remark (Include discount details & payment tag if applicable)
             const discountTag = formatDiscountRemarkTag(discountType, discountValue, financials.discountAmount)
-            const defaultRemarkTag = `[MANUAL_ADMIN] รับจองผ่าน ${source.toUpperCase()}${discountTag ? ` · ${discountTag}` : ''}`
+            const payMethodTag = paymentMethod ? `[PAID: ${paymentMethod.toUpperCase()}]` : ''
+            const tags = [discountTag, payMethodTag].filter(Boolean).join(' · ')
+            const defaultRemarkTag = `[MANUAL_ADMIN] รับจองผ่าน ${source.toUpperCase()}${tags ? ` · ${tags}` : ''}`
             const fullStaffRemark = staffRemark.trim()
                 ? `${defaultRemarkTag} · ${staffRemark.trim()}`
                 : defaultRemarkTag

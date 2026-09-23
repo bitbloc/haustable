@@ -496,7 +496,7 @@ export default function POSDashboard() {
             const data = await fetchShiftBookings(
                 supabase,
                 currentShift,
-                'id, status, total_amount, discount_amount, staff_remark, customer_note, payment_slip_url, booking_time, updated_at'
+                'id, status, total_amount, discount_amount, deposit_amount, payment_method, source, booking_type, order_type, table_id, staff_remark, customer_note, payment_slip_url, booking_time, updated_at'
             );
 
             const metrics = calculateShiftMetrics(currentShift, data || []);
@@ -2693,6 +2693,30 @@ export default function POSDashboard() {
 
     const handleClearOrderOrTable = async () => {
         const targetTableId = activeBooking?.table_id || selectedTable?.id;
+        
+        // If booking is already completed or fully paid without a physical table (e.g. advance takeaway):
+        const bStatus = (activeBooking?.status || '').toLowerCase();
+        const isSettled = bStatus === 'completed' || bStatus === 'paid' || (
+            activeBooking && 
+            (Number(activeBooking.deposit_amount) || 0) >= (Number(activeBooking.total_amount) || 0) &&
+            (Number(activeBooking.total_amount) || 0) > 0
+        );
+
+        if (isSettled && !targetTableId) {
+            setSelectedTable(null);
+            localStorage.removeItem('pos_active_table_id');
+            setActiveBooking(null);
+            if (activeBookingRef) activeBookingRef.current = null;
+            setAttachedMemberCrm(null);
+            setCurrentOrder({
+                items: [],
+                customer: 'Walk-in Guest',
+                table: null
+            });
+            setView('tables');
+            return;
+        }
+
         if (activeBooking) {
             const isConfirmed = window.confirm(`⚠️ คุณต้องการยกเลิกบิล / เคลียร์โต๊ะนี้ใช่หรือไม่?\nการดำเนินการนี้จะเปลี่ยนสถานะบิลเป็นยกเลิก (Void) และคืนค่าโต๊ะเป็นว่างทันที`);
             if (isConfirmed) {
@@ -2941,7 +2965,10 @@ export default function POSDashboard() {
             }
         }
 
-        const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - freeDrinkDiscVal));
+        const effectiveBookingDiscount = (promoDiscount > 0 || manualDiscount > 0) ? 0 : (parseFloat(activeBooking?.discount_amount) || 0);
+        const effectiveBookingXhaus = (xhausDiscount > 0) ? 0 : (parseFloat(activeBooking?.xhaus_discount) || 0);
+
+        const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - effectiveBookingDiscount - xhausDiscount - effectiveBookingXhaus - freeDrinkDiscVal));
         const calculatedTax = includeTax ? Math.ceil((netBeforeTax * 7) / 100) : 0;
         const fullBillTotal = Math.ceil(Math.max(0, netBeforeTax + calculatedTax));
         const depositPaid = activeBooking?.deposit_amount ? Math.ceil(parseFloat(activeBooking.deposit_amount)) : 0;
@@ -2966,14 +2993,16 @@ export default function POSDashboard() {
             } catch (e) {}
         }
 
+        const totalDiscountToRecord = memberDiscount + promoDiscount + manualDiscount + effectiveBookingDiscount + xhausDiscount + effectiveBookingXhaus + freeDrinkDiscVal;
+
         const success = await completeCheckout(
             bookingId, 
             finalTotal, 
             paymentMethod, 
-            memberDiscount + promoDiscount + manualDiscount + xhausDiscount + freeDrinkDiscVal, 
+            totalDiscountToRecord, 
             pointsEarned, 
             xhausToRedeem, 
-            xhausDiscount,
+            xhausDiscount || effectiveBookingXhaus,
             finalRewardCode,
             rewardId,
             fallbackProfileId,

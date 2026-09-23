@@ -102,39 +102,8 @@ export const getOrderOrigin = (b) => {
 }
 
 // Pure payment status resolver for booking records (Dieter Rams + Thai Modern)
-export const getBookingPaymentStatusInfo = (booking) => {
-    if (!booking) {
-        return {
-            totalAmt: 0,
-            depAmt: 0,
-            remainingDue: 0,
-            isCancelledOrVoid: false,
-            isFullyPaid: false,
-            isPartialPaid: false,
-            isUnpaid: false
-        }
-    }
-    const totalAmt = Number(booking.total_amount || 0)
-    const depAmt = Number(booking.deposit_amount || 0)
-    const remainingDue = Math.max(0, totalAmt - depAmt)
-    const isCancelledOrVoid = booking.status === 'cancelled' || booking.status === 'void'
-    const isCompleted = booking.status === 'completed' || booking.status === 'paid' || booking.status === 'success'
-    const isLineman = (booking.source || '').toLowerCase() === 'lineman' || (booking.staff_remark || '').toLowerCase().includes('lineman')
+export { getBookingPaymentStatusInfo } from './utils/bookingHelper'
 
-    const isFullyPaid = isCompleted || (depAmt >= totalAmt && totalAmt > 0) || isLineman
-    const isPartialPaid = !isFullyPaid && depAmt > 0 && remainingDue > 0
-    const isUnpaid = !isCancelledOrVoid && !isFullyPaid && !isPartialPaid && totalAmt > 0
-
-    return {
-        totalAmt,
-        depAmt,
-        remainingDue,
-        isCancelledOrVoid,
-        isFullyPaid,
-        isPartialPaid,
-        isUnpaid
-    }
-}
 
 export default function AdminBookings() {
     const [bookings, setBookings] = useState([])
@@ -1283,6 +1252,8 @@ export default function AdminBookings() {
                 const booking = bookings.find(b => b.id === id)
                 if (!booking) return null
                 const transfer = parseTableTransferInfo(booking, bookings)
+                const paymentInfo = getBookingPaymentStatusInfo(booking)
+                const { totalAmt, remainingDue, isCancelledOrVoid, isFullyPaid, isPartialPaid, isUnpaid } = paymentInfo
 
                 return (
                     <div key={id} className="mt-2 p-4 bg-[var(--color-paper)] border border-[var(--color-rule)] space-y-4">
@@ -1552,6 +1523,15 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
         return ''
     })
     const [depositAmount, setDepositAmount] = useState(booking.deposit_amount || 0)
+    const [paymentMethod, setPaymentMethod] = useState(() => {
+        if (booking.payment_method) return booking.payment_method.toLowerCase()
+        if (booking.payment_slip_url || booking.slip_url) return 'transfer'
+        const rem = (booking.staff_remark || '').toLowerCase()
+        if (rem.includes('cash') || rem.includes('เงินสด')) return 'cash'
+        if (rem.includes('credit') || rem.includes('บัตร')) return 'credit'
+        if (rem.includes('transfer') || rem.includes('qr') || rem.includes('โอน')) return 'transfer'
+        return booking.table_id ? 'cash' : 'transfer'
+    })
     const [saving, setSaving] = useState(false)
 
     const financials = useMemo(() => {
@@ -1579,6 +1559,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
             pickup_contact_phone: contactPhone,
             customer_note: customerNote,
             staff_remark: staffRemark,
+            payment_method: paymentMethod,
             status,
             total_amount: financials.netTotal,
             discount_amount: financials.discountAmount,
@@ -1847,7 +1828,7 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-[var(--color-rule)]">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-[var(--color-rule)]">
                             <div>
                                 <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
                                     DEPOSIT PAID (฿)
@@ -1860,6 +1841,22 @@ function EditBookingModal({ booking, tablesList, onClose, onSave }) {
                                     onChange={(e) => setDepositAmount(e.target.value)}
                                     className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] tabular-nums"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold text-[var(--color-muted)] uppercase block mb-1">
+                                    PAYMENT METHOD (ช่องทางชำระ)
+                                </label>
+                                <select
+                                    value={paymentMethod}
+                                    onChange={(e) => setPaymentMethod(e.target.value)}
+                                    className="w-full p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] text-xs font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] uppercase"
+                                >
+                                    <option value="transfer">โอนเงิน / สแกน QR (TRANSFER)</option>
+                                    <option value="cash">เงินสด (CASH)</option>
+                                    <option value="credit">บัตรเครดิต (CREDIT)</option>
+                                    <option value="unpaid">ยังไม่ชำระ (UNPAID)</option>
+                                </select>
                             </div>
 
                             <div className="p-2 bg-[var(--color-paper)] border border-[var(--color-rule)] flex flex-col justify-between">

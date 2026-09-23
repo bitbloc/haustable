@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight, Coffee, Sparkles } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, Banknote, UserPlus, ReceiptText, AlertCircle, Receipt, Check, Printer, Send, Bell, RefreshCw, Coins, Tag, Percent, Ticket, Gift, QrCode, X, Search, Edit, Utensils, ArrowLeft, ArrowRight, Coffee, Sparkles, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -645,12 +645,48 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         return Math.min(...prices);
     }, [useFreeDrinkQuota, order.items, isItemDrinkStampEligible]);
 
-    const netBeforeTax = Math.ceil(Math.max(0, subtotal - memberDiscount - promoDiscount - manualDiscount - xhausDiscount - rewardDiscount - freeDrinkDiscount));
+    // 6. Pre-existing Booking Discount & xHaus Discount from database (e.g. advance bookings with 10% discount)
+    const bookingDiscountAmount = parseFloat(booking?.discount_amount) || 0;
+    const hasLocalDiscountOverride = promoDiscount > 0 || manualDiscount > 0;
+    const effectiveBookingDiscount = hasLocalDiscountOverride ? 0 : bookingDiscountAmount;
+
+    const bookingDiscountPercentStr = React.useMemo(() => {
+        if (effectiveBookingDiscount <= 0) return null;
+        const remarkMatch = (booking?.staff_remark || '').match(/\[ส่วนลด\s*([\d.]+)%/i);
+        if (remarkMatch && remarkMatch[1]) {
+            return `${remarkMatch[1]}%`;
+        }
+        if (subtotal > 0) {
+            const pct = Math.round((effectiveBookingDiscount / subtotal) * 100);
+            if (pct > 0 && Math.abs((effectiveBookingDiscount / subtotal) * 100 - pct) < 0.1) {
+                return `${pct}%`;
+            }
+        }
+        return null;
+    }, [booking?.staff_remark, effectiveBookingDiscount, subtotal]);
+
+    const effectiveBookingXhausDiscount = (xhausDiscount > 0) ? 0 : (parseFloat(booking?.xhaus_discount) || 0);
+
+    const totalCalculatedDiscounts = memberDiscount + promoDiscount + manualDiscount + effectiveBookingDiscount + xhausDiscount + effectiveBookingXhausDiscount + rewardDiscount + freeDrinkDiscount;
+    const netBeforeTax = Math.ceil(Math.max(0, subtotal - totalCalculatedDiscounts));
     const tax = includeTax ? Math.ceil((netBeforeTax * 7) / 100) : 0;
+    const netTotalWithTax = netBeforeTax + tax;
     
     const depositPaid = booking?.deposit_amount ? Math.ceil(parseFloat(booking.deposit_amount)) : 0;
     const splitPaidAmount = getSplitTotalPaid(booking);
-    const total = Math.ceil(Math.max(0, netBeforeTax + tax - depositPaid - splitPaidAmount));
+    const totalPaidAmount = depositPaid + splitPaidAmount;
+    const remainingDue = Math.ceil(Math.max(0, netTotalWithTax - totalPaidAmount));
+
+    // Clear logic to distinguish between PAID IN FULL (ชำระแล้ว/โอนชำระครบแล้ว) vs PARTIAL DEPOSIT (มัดจำ)
+    const bStatus = (booking?.status || '').toLowerCase();
+    const isStatusCompleted = bStatus === 'completed' || bStatus === 'paid' || bStatus === 'success';
+    const isLineman = (booking?.source || '').toLowerCase() === 'lineman' || (booking?.staff_remark || '').toLowerCase().includes('lineman');
+    const isAmountFullyCovered = netTotalWithTax > 0 && totalPaidAmount >= netTotalWithTax;
+    const isDbFullyCovered = (Number(booking?.total_amount) || 0) > 0 && (Number(booking?.deposit_amount) || 0) >= (Number(booking?.total_amount) || 0) && remainingDue === 0;
+
+    const isFullyPaid = isStatusCompleted || isLineman || isAmountFullyCovered || isDbFullyCovered;
+    const isPartialDeposit = !isFullyPaid && depositPaid > 0;
+    const total = isFullyPaid ? 0 : remainingDue;
     
     // xhaus points earned
     const currentMemberForPoints = attachedMemberCrm || booking?.profiles;
@@ -658,7 +694,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         ? parseFloat(currentMemberForPoints.multiplier) 
         : (currentMemberForPoints?.current_tier === 'Inner Haus' ? 1.50 : (currentMemberForPoints?.current_tier === 'Haus People' ? 1.25 : 1.00));
     const finalMultiplier = isNaN(pointsMultiplier) ? 1.0 : pointsMultiplier;
-    const pointsEarned = Math.floor((total / baseSpendUnit) * finalMultiplier * 100) / 100;
+    const pointsEarned = Math.floor(((isFullyPaid ? netTotalWithTax : total) / baseSpendUnit) * finalMultiplier * 100) / 100;
     
     // CFD Broadcast Channel (BroadcastChannel + Supabase Realtime for cross-origin)
     const cfdChannel = React.useRef(null);
@@ -1321,8 +1357,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </div>
                     )}
 
-                    {(promoDiscount > 0 || manualDiscount > 0 || xhausDiscount > 0 || rewardDiscount > 0) && (
+                    {(promoDiscount > 0 || manualDiscount > 0 || effectiveBookingDiscount > 0 || xhausDiscount > 0 || effectiveBookingXhausDiscount > 0 || rewardDiscount > 0) && (
                         <div className="space-y-1 border-t border-[#D1D1CD]/40 pt-1.5 mt-1 text-xs">
+                            {effectiveBookingDiscount > 0 && !promoDiscount && !manualDiscount && (
+                                <div className="flex justify-between items-center text-blue-600 font-bold py-0.5">
+                                    <span>DISCOUNT (ส่วนลด{bookingDiscountPercentStr ? ` ${bookingDiscountPercentStr}` : ''})</span>
+                                    <span>-฿{Math.ceil(effectiveBookingDiscount).toLocaleString()}</span>
+                                </div>
+                            )}
+
                             {promoDiscount > 0 && (
                                 <div className="flex justify-between items-center text-green-600 font-bold py-0.5">
                                     <span>PROMO DISCOUNT ({selectedPromo?.code})</span>
@@ -1337,10 +1380,10 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 </div>
                             )}
 
-                            {xhausDiscount > 0 && (
+                            {(xhausDiscount > 0 || effectiveBookingXhausDiscount > 0) && (
                                 <div className="flex justify-between items-center text-amber-700 font-bold py-0.5">
-                                    <span>xhaus REDEEMED (ตัดแต้ม -{xhausToRedeem || Math.ceil(xhausDiscount)} xhaus)</span>
-                                    <span>-฿{Math.ceil(xhausDiscount).toLocaleString()}</span>
+                                    <span>xhaus REDEEMED (ตัดแต้ม -{xhausToRedeem || Math.ceil(xhausDiscount || effectiveBookingXhausDiscount)} xhaus)</span>
+                                    <span>-฿{Math.ceil(xhausDiscount || effectiveBookingXhausDiscount).toLocaleString()}</span>
                                 </div>
                             )}
                             
@@ -1376,14 +1419,35 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                         </span>
                     </div>
 
-                    {depositPaid > 0 && (
+                    {/* Payment / Deposit Status Row */}
+                    {isFullyPaid && (totalPaidAmount > 0 || isStatusCompleted) && (
+                        <div className="flex justify-between items-center text-emerald-700 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
+                            <span className="flex items-center gap-1.5">
+                                <CheckCircle size={13} className="text-emerald-600" />
+                                <span>PAID IN FULL (ชำระเงินครบแล้ว)</span>
+                                {booking?.payment_method && (
+                                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] px-1.5 py-0.2 rounded font-mono uppercase">
+                                        {booking.payment_method === 'transfer' ? 'โอนเงิน / QR' : booking.payment_method.toUpperCase()}
+                                    </span>
+                                )}
+                            </span>
+                            <span>-฿{Math.ceil(totalPaidAmount || netTotalWithTax).toLocaleString()}</span>
+                        </div>
+                    )}
+
+                    {isPartialDeposit && (
                         <div className="flex justify-between items-center text-orange-600 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
-                            <span>DEPOSIT PAID (โอนมัดจำแล้ว)</span>
+                            <span className="flex items-center gap-1.5">
+                                <span>DEPOSIT PAID (โอนมัดจำแล้ว)</span>
+                                <span className="text-[10px] text-orange-700/80 font-normal">
+                                    (คงเหลือ ฿{remainingDue.toLocaleString()})
+                                </span>
+                            </span>
                             <span>-฿{Math.ceil(depositPaid).toLocaleString()}</span>
                         </div>
                     )}
 
-                    {splitPaidAmount > 0 && (
+                    {splitPaidAmount > 0 && !isFullyPaid && (
                         <div className="flex justify-between items-center text-emerald-700 font-bold py-1 border-b border-dashed border-[#D1D1CD] mb-1 text-xs">
                             <span>ชำระแบ่งจ่ายแล้ว ({getBookingSplitRounds(booking).length} รอบ)</span>
                             <span>-฿{Math.ceil(splitPaidAmount).toLocaleString()}</span>
@@ -1391,16 +1455,33 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     )}
 
                     <div className="flex justify-between items-end text-[#1A1A1A] pt-2">
-                        <span className="text-xs font-bold pb-1 text-[#767673]">
-                            {splitPaidAmount > 0 ? 'REMAINING DUE / คงเหลือ' : 'NET TOTAL'}
-                        </span>
-                        <div className="flex items-center gap-2">
-                            {(depositPaid + splitPaidAmount) >= (netBeforeTax + tax) && (netBeforeTax + tax) > 0 && (
-                                <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wider">
-                                    [ PAID ]
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold text-[#767673]">
+                                {isFullyPaid 
+                                    ? 'NET TOTAL (ยอดสุทธิ)' 
+                                    : (totalPaidAmount > 0 ? 'REMAINING DUE / ยอดค้างชำระ' : 'NET TOTAL')}
+                            </span>
+                            {isFullyPaid && (
+                                <span className="text-[10px] font-mono text-emerald-700 font-bold">
+                                    ยอดค้างชำระ: ฿0
                                 </span>
                             )}
-                            <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">฿{total.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {isFullyPaid ? (
+                                <div className="flex items-center gap-2">
+                                    <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wider flex items-center gap-1">
+                                        [ ชำระแล้ว · PAID ]
+                                    </span>
+                                    <span className="text-2xl font-black text-emerald-700 tracking-tight">
+                                        ฿{netTotalWithTax.toLocaleString()}
+                                    </span>
+                                </div>
+                            ) : (
+                                <span className="text-2xl font-black text-[oklch(52%_0.16_28)] tracking-tight">
+                                    ฿{remainingDue.toLocaleString()}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1408,45 +1489,95 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                 {/* Primary Action Row */}
                 {(order.items.length > 0 || booking) && (
                     <div className="space-y-2 pt-1">
-                        <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold uppercase tracking-wider">
-                            {/* Promo & Discount Trigger */}
-                            <button
-                                type="button"
-                                onClick={() => setActiveModal('discount')}
-                                className={`w-full py-3.5 rounded-xl border transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] ${
-                                    (selectedPromo || parseFloat(manualDiscountVal) > 0)
-                                    ? 'bg-[#E6F4FF] border-blue-300 text-blue-800'
-                                    : 'bg-white hover:bg-[#F5F5F2] border-[#D1D1CD] text-[#1A1A1A]'
-                                }`}
-                            >
-                                <Tag size={14} /> 
-                                {(selectedPromo || parseFloat(manualDiscountVal) > 0) ? 'Promo Applied' : 'Discount / Promo'}
-                            </button>
-
-                            {/* Pay / Checkout Trigger */}
-                            {hasNewItems ? (
-                                <button 
-                                    disabled={isSubmitting}
-                                    onClick={() => !isSubmitting && onOpenSlip && onOpenSlip('kitchen')}
-                                    className="w-full bg-[#00CC44] hover:bg-[#00B33C] disabled:opacity-50 disabled:cursor-not-allowed border border-[#009933] text-white py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer touch-manipulation font-bold text-sm"
-                                >
-                                    {isSubmitting ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
-                                    {isSubmitting ? 'Sending...' : 'Send to Kitchen'}
-                                </button>
-                            ) : (
+                        {isFullyPaid && !hasNewItems ? (
+                            /* Already Fully Paid Order Actions */
+                            <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold uppercase tracking-wider">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setCashReceivedInput(''); // reset cash received input
-                                        setCashStep('input');
-                                        setActiveModal('checkout');
-                                    }}
-                                    className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                    onClick={() => onOpenSlip && onOpenSlip('receipt')}
+                                    className="w-full bg-emerald-600 hover:bg-emerald-700 border border-emerald-700 text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                    title="พิมพ์ใบเสร็จรับเงินสำหรับออเดอร์ที่ชำระครบแล้ว"
                                 >
-                                    <CreditCard size={16} /> Pay / Checkout
+                                    <ReceiptText size={16} /> พิมพ์ใบเสร็จ (Receipt)
                                 </button>
-                            )}
-                        </div>
+
+                                {booking?.status !== 'completed' ? (
+                                    <button
+                                        type="button"
+                                        disabled={isSubmitting}
+                                        onClick={async () => {
+                                            if (booking?.id) {
+                                                const toastId = toast.loading('กำลังบันทึกปิดบิล...');
+                                                try {
+                                                    await supabase
+                                                        .from('bookings')
+                                                        .update({ status: 'completed' })
+                                                        .eq('id', booking.id);
+                                                    toast.success('ปิดบิลเรียบร้อยแล้ว (Completed)', { id: toastId });
+                                                    onClear && onClear();
+                                                } catch (e) {
+                                                    toast.error('ไม่สามารถอัปเดตสถานะบิลได้', { id: toastId });
+                                                }
+                                            }
+                                        }}
+                                        className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black border border-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                    >
+                                        <Check size={16} /> ปิดบิล (Complete)
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={onClear}
+                                        className="w-full bg-[oklch(94%_0.010_28)] hover:bg-[oklch(88%_0.015_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] py-3.5 rounded-xl transition-all shadow-sm active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                    >
+                                        <Check size={16} /> เสร็จสิ้น (Close)
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            /* Unpaid / Regular Checkout Actions */
+                            <div className="grid grid-cols-2 gap-2.5 font-mono text-xs font-bold uppercase tracking-wider">
+                                {/* Promo & Discount Trigger */}
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveModal('discount')}
+                                    className={`w-full py-3.5 rounded-xl border transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] ${
+                                        (selectedPromo || parseFloat(manualDiscountVal) > 0 || effectiveBookingDiscount > 0)
+                                        ? 'bg-[#E6F4FF] border-blue-300 text-blue-800'
+                                        : 'bg-white hover:bg-[#F5F5F2] border-[#D1D1CD] text-[#1A1A1A]'
+                                    }`}
+                                >
+                                    <Tag size={14} /> 
+                                    {(selectedPromo || parseFloat(manualDiscountVal) > 0 || effectiveBookingDiscount > 0) 
+                                        ? (bookingDiscountPercentStr ? `ลด ${bookingDiscountPercentStr}` : 'Discount Applied') 
+                                        : 'Discount / Promo'}
+                                </button>
+
+                                {/* Pay / Checkout Trigger */}
+                                {hasNewItems ? (
+                                    <button 
+                                        disabled={isSubmitting}
+                                        onClick={() => !isSubmitting && onOpenSlip && onOpenSlip('kitchen')}
+                                        className="w-full bg-[#00CC44] hover:bg-[#00B33C] disabled:opacity-50 disabled:cursor-not-allowed border border-[#009933] text-white py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] cursor-pointer touch-manipulation font-bold text-sm"
+                                    >
+                                        {isSubmitting ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                                        {isSubmitting ? 'Sending...' : 'Send to Kitchen'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setCashReceivedInput(''); // reset cash received input
+                                            setCashStep('input');
+                                            setActiveModal('checkout');
+                                        }}
+                                        className="w-full bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] border border-[oklch(42%_0.16_28)] text-white py-3.5 rounded-xl transition-all shadow-md active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 touch-manipulation font-bold text-sm"
+                                    >
+                                        <CreditCard size={16} /> Pay / Checkout ฿{remainingDue.toLocaleString()}
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         {/* Secondary Slip / Split Payment Row */}
                         {!hasNewItems && (
@@ -1458,18 +1589,30 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                 >
                                     <ReceiptText size={14} /> Kitchen Slip
                                 </button>
-                                {booking && (
+
+                                {isFullyPaid && booking?.payment_slip_url ? (
                                     <button 
                                         type="button"
-                                        onClick={() => onOpenSplitPayment?.(includeTax)}
-                                        className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer touch-manipulation border ${
-                                            splitPaidAmount > 0
-                                                ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-black'
-                                                : 'bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] text-[#1A1A1A]'
-                                        }`}
+                                        onClick={() => setViewSlipModalUrl(booking.payment_slip_url)}
+                                        className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 py-2.5 rounded-xl text-emerald-800 transition-all shadow-sm cursor-pointer touch-manipulation"
                                     >
-                                        <Coins size={14} />
-                                        <span>Split ({getBookingSplitRounds(booking).length > 0 ? `รอบ ${getBookingSplitRounds(booking).length + 1}` : 'Payment'})</span>
+                                        <Receipt size={14} /> ดูสลิปโอน (Proof)
+                                    </button>
+                                ) : !isFullyPaid ? (
+                                    <button 
+                                        type="button"
+                                        onClick={() => onOpenSplitPayment && onOpenSplitPayment(includeTax)}
+                                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl transition-all shadow-sm cursor-pointer touch-manipulation border bg-white hover:bg-[#FDFDFD] border-[#D1D1CD] text-[#1A1A1A]"
+                                    >
+                                        <Coins size={14} /> Split (Payment)
+                                    </button>
+                                ) : (
+                                    <button 
+                                        type="button"
+                                        onClick={() => onOpenSlip && onOpenSlip('receipt')}
+                                        className="flex items-center justify-center gap-2 bg-white hover:bg-[#FDFDFD] border border-[#D1D1CD] py-2.5 rounded-xl text-[#1A1A1A] transition-all shadow-sm cursor-pointer touch-manipulation"
+                                    >
+                                        <ReceiptText size={14} /> Print Receipt
                                     </button>
                                 )}
                             </div>
@@ -2403,12 +2546,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             type="button"
                                             onClick={() => {
                                                 if (onOpenSlip) {
-                                                    const totalDiscountVal = memberDiscount + promoDiscount + manualDiscount + xhausDiscount + rewardDiscount + freeDrinkDiscount;
+                                                    const totalDiscountVal = memberDiscount + promoDiscount + manualDiscount + effectiveBookingDiscount + xhausDiscount + effectiveBookingXhausDiscount + rewardDiscount + freeDrinkDiscount;
                                                     onOpenSlip('billing', {
                                                         discount_amount: totalDiscountVal,
                                                         total_amount: total,
-                                                        xhaus_discount: xhausDiscount,
-                                                        manual_discount: manualDiscount,
+                                                        xhaus_discount: xhausDiscount || effectiveBookingXhausDiscount,
+                                                        manual_discount: manualDiscount > 0 ? manualDiscount : effectiveBookingDiscount,
                                                         promo_discount: promoDiscount,
                                                         member_discount: memberDiscount,
                                                         include_tax: includeTax
@@ -2480,9 +2623,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         includeTax,
                                                         pointsEarned,
                                                         totalXhausRedeemed,
-                                                        xhausDiscount,
+                                                        xhausDiscount || effectiveBookingXhausDiscount,
                                                         promoDiscount + rewardDiscount,
-                                                        manualDiscount,
+                                                        manualDiscount > 0 ? manualDiscount : effectiveBookingDiscount,
                                                         finalRewardCode,
                                                         finalRewardId,
                                                         useFreeDrinkQuota,
@@ -2519,9 +2662,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                     includeTax,
                                                     pointsEarned,
                                                     totalXhausRedeemed,
-                                                    xhausDiscount,
+                                                    xhausDiscount || effectiveBookingXhausDiscount,
                                                     promoDiscount + rewardDiscount,
-                                                    manualDiscount,
+                                                    manualDiscount > 0 ? manualDiscount : effectiveBookingDiscount,
                                                     finalRewardCode,
                                                     finalRewardId,
                                                     useFreeDrinkQuota,

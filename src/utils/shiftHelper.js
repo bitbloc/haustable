@@ -11,10 +11,18 @@ export const getBookingPaymentBreakdown = (b) => {
     const explicitMethod = (b.payment_method || '').toLowerCase();
     const orderType = (b.order_type || '').toLowerCase();
     const bookingType = (b.booking_type || '').toLowerCase();
+    const source = (b.source || '').toLowerCase();
 
     // Determine if this is an online e-commerce / shipping order
-    const isOnline = orderType === 'hausmade_shipping' || (bookingType === 'hausmade' && !b.table_id && orderType !== 'hausmade_pickup');
+    const isOnline = orderType === 'hausmade_shipping' || 
+                     (bookingType === 'hausmade' && !b.table_id && orderType !== 'hausmade_pickup') ||
+                     source === 'lineman' || source === 'online' || source === 'line' || source === 'facebook';
     
+    // 0. Explicit Unpaid Status
+    if (explicitMethod === 'unpaid') {
+        return { cash: 0, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Unpaid' };
+    }
+
     // 1. Check for split payment annotation in remark, e.g. [SPLIT_ROUNDS: [...]] or [SPLIT: CASH=100, QR=200, CREDIT=0]
     const splitRoundsMatch = remark.match(/\[SPLIT_ROUNDS:\s*(\[.*?\])\s*\]/is);
     const splitMatch = remark.match(/\[split(?![_a-z0-9]):?\s*([^\]]+)\]/i) || remark.match(/\bsplit:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
@@ -71,26 +79,48 @@ export const getBookingPaymentBreakdown = (b) => {
     }
 
     // 2. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
-    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+    if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('[paid: cash]') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
         return { cash: total, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Cash' };
     }
 
     // 3. Explicit Credit Card Check
-    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || /credit[:=\s]+[1-9]/i.test(remark) || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+    if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('[paid: credit]') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || /credit[:=\s]+[1-9]/i.test(remark) || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
         return { cash: 0, qr: 0, credit: total, isSplit: false, isOnline, methodLabel: 'Credit Card' };
     }
 
     // 4. QR / PromptPay / Bank Transfer Check
-    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer') {
+    const isQrExplicit = explicitMethod === 'qr' || 
+                         explicitMethod === 'promptpay' || 
+                         explicitMethod === 'transfer' || 
+                         explicitMethod === 'bank_transfer' ||
+                         explicitMethod.includes('qr') || 
+                         explicitMethod.includes('transfer') || 
+                         explicitMethod.includes('promptpay') || 
+                         explicitMethod.includes('โอน');
+
+    if (remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('[qr:') || remark.includes('[paid: qr]') || remark.includes('[paid: transfer]') || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay') || remark.includes('สแกนจ่าย') || isQrExplicit) {
         return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };
     }
 
     // 5. Online Deposit / Booking Slip (Only if not settled by in-store cash/credit)
-    if (b.payment_slip_url) {
+    if (b.payment_slip_url || b.slip_url) {
         return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };
     }
 
-    // 6. Default In-store Fallback
+    // 6. Remote / Online Reservation Fallback
+    // If booked via remote channels (LINE, Facebook, Phone, Online booking, or [MANUAL_ADMIN])
+    // and no cash payment was explicitly recorded, advance payment is almost exclusively Bank Transfer / QR.
+    const isRemoteBooking = source === 'phone' || 
+                            source === 'line' || 
+                            source === 'facebook' || 
+                            source === 'online' || 
+                            remark.includes('[manual_admin]');
+
+    if (isRemoteBooking) {
+        return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };
+    }
+
+    // 7. Default In-store Seated Table Fallback
     return { cash: total, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Cash' };
 };
 
@@ -738,6 +768,16 @@ export async function fetchShiftBookings(supabaseClient, shift, selectClause = '
     const closedAt = shift.closed_at || shift.closedAt || new Date().toISOString();
     const txIds = (shift.transactions || []).map(t => t.bookingId).filter(Boolean);
 
+    // Guarantee that payment breakdown columns are never dropped when a custom selectClause is provided
+    let effectiveSelect = selectClause;
+    if (effectiveSelect !== '*' && !effectiveSelect.includes('*')) {
+        const requiredCols = ['payment_method', 'booking_type', 'order_type', 'source', 'table_id', 'deposit_amount', 'staff_remark', 'payment_slip_url'];
+        const missing = requiredCols.filter(col => !effectiveSelect.includes(col));
+        if (missing.length > 0) {
+            effectiveSelect = `${effectiveSelect}, ${missing.join(', ')}`;
+        }
+    }
+
     const bookingsMap = new Map();
 
     // 1. Fetch by explicitly recorded transaction IDs in this shift (guarantees cross-shift tables are never dropped)
@@ -745,7 +785,7 @@ export async function fetchShiftBookings(supabaseClient, shift, selectClause = '
         try {
             const { data: byTx, error: txErr } = await supabaseClient
                 .from('bookings')
-                .select(selectClause)
+                .select(effectiveSelect)
                 .in('id', txIds)
                 .in('status', ['completed', 'paid', 'success']);
             if (!txErr && byTx) {
@@ -760,7 +800,7 @@ export async function fetchShiftBookings(supabaseClient, shift, selectClause = '
     try {
         const { data: byUpdated, error: upErr } = await supabaseClient
             .from('bookings')
-            .select(selectClause)
+            .select(effectiveSelect)
             .in('status', ['completed', 'paid', 'success'])
             .gte('updated_at', openedAt)
             .lte('updated_at', closedAt);
@@ -775,7 +815,7 @@ export async function fetchShiftBookings(supabaseClient, shift, selectClause = '
     try {
         const { data: byBookingTime, error: btErr } = await supabaseClient
             .from('bookings')
-            .select(selectClause)
+            .select(effectiveSelect)
             .in('status', ['completed', 'paid', 'success'])
             .gte('booking_time', openedAt)
             .lte('booking_time', closedAt)

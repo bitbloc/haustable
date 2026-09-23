@@ -71,3 +71,65 @@ export function formatDiscountRemarkTag(discountType, discountValue, discountAmo
     }
     return `[ส่วนลด: -฿${formattedAmount}]`
 }
+
+/**
+ * Pure payment status resolver for booking and POS records (Dieter Rams + Thai Modern)
+ * Accurately determines if a booking was already paid in full from back-office (โอนชำระครบแล้ว)
+ * versus a partial advance deposit (โอนมัดจำแล้ว).
+ * 
+ * @param {Object} booking 
+ * @param {Object} [options]
+ * @param {number} [options.liveTotal] - Optional dynamic/cart net total to override DB total_amount
+ * @returns {{
+ *   totalAmt: number,
+ *   depAmt: number,
+ *   discountAmt: number,
+ *   remainingDue: number,
+ *   isCancelledOrVoid: boolean,
+ *   isFullyPaid: boolean,
+ *   isPartialPaid: boolean,
+ *   isUnpaid: boolean,
+ *   statusLabel: string,
+ *   paymentMethodLabel: string
+ * }}
+ */
+export function getBookingPaymentStatusInfo(booking, options = {}) {
+    if (!booking) {
+        return {
+            totalAmt: 0,
+            depAmt: 0,
+            remainingDue: 0,
+            isCancelledOrVoid: false,
+            isFullyPaid: false,
+            isPartialPaid: false,
+            isUnpaid: false
+        }
+    }
+
+    const baseTotal = options.liveTotal !== undefined 
+        ? Number(options.liveTotal || 0) 
+        : Number(booking.total_amount || 0)
+    const totalAmt = baseTotal
+    const depAmt = Number(booking.deposit_amount || 0)
+    const remainingDue = Math.max(0, Math.round((totalAmt - depAmt) * 100) / 100)
+
+    const isCancelledOrVoid = booking.status === 'cancelled' || booking.status === 'void'
+    const isCompleted = booking.status === 'completed' || booking.status === 'paid' || booking.status === 'success'
+    const isLineman = (booking.source || '').toLowerCase() === 'lineman' || (booking.staff_remark || '').toLowerCase().includes('lineman')
+
+    const isFullyPaid = !isCancelledOrVoid && (isCompleted || (depAmt >= totalAmt && totalAmt > 0) || isLineman)
+    const isPartialPaid = !isCancelledOrVoid && !isFullyPaid && depAmt > 0 && remainingDue > 0
+    const isUnpaid = !isCancelledOrVoid && !isFullyPaid && !isPartialPaid && totalAmt > 0
+
+    return {
+        totalAmt,
+        depAmt,
+        remainingDue,
+        isCancelledOrVoid,
+        isFullyPaid,
+        isPartialPaid,
+        isUnpaid
+    }
+}
+
+
