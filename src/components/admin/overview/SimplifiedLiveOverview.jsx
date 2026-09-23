@@ -64,6 +64,7 @@ export default function SimplifiedLiveOverview({
     tables: parentTables = [],
     bookings: parentBookings = [], 
     revenueToday = 0, 
+    yesterdayRevenue = 0,
     shifts = [], 
     loading = false, 
     onRefresh,
@@ -252,7 +253,7 @@ export default function SimplifiedLiveOverview({
             if (item.state.status === 'occupied') {
                 occupied++
                 activeRevenue += item.billTotal
-                totalGuests += Number(item.table.capacity || 2)
+                totalGuests += Number(item.booking?.guest_count || item.table.capacity || 2)
                 if (item.hasCallBill || item.hasCallStaff) calling++
             } else if (item.state.status === 'upcoming') {
                 upcoming++
@@ -272,6 +273,20 @@ export default function SimplifiedLiveOverview({
             occupancyPct: floorList.length > 0 ? Math.round((occupied / floorList.length) * 100) : 0
         }
     }, [floorList])
+
+    // Executive Trend Metric: Comparison vs yesterday's actual settled revenue
+    const trendText = useMemo(() => {
+        if (yesterdayRevenue > 0) {
+            const diff = revenueToday - yesterdayRevenue
+            const pct = Math.round((diff / yesterdayRevenue) * 100)
+            const sign = pct >= 0 ? '+' : ''
+            return `${sign}${pct}% vs yesterday`
+        }
+        if (revenueToday > 0) {
+            return `+฿${revenueToday.toLocaleString()} vs yesterday`
+        }
+        return 'พร้อมรับออเดอร์แรก'
+    }, [revenueToday, yesterdayRevenue])
 
     // Filtered list
     const filteredFloor = useMemo(() => {
@@ -337,95 +352,109 @@ export default function SimplifiedLiveOverview({
                 isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
             }`}
         >
-            {/* 1. Hero Pulse & Live Awareness Bar */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 rounded-sm flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
-                {/* Left: Dieter Rams Typography Pulse with protected Thai kerning */}
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-ping" />
-                            <span className="font-mono text-[10px] font-bold tracking-wider text-[oklch(52%_0.16_28)] uppercase">
-                                LIVE PULSE
+            {/* 1. Hero Pulse: 3-Second Executive Awareness Strip (Equal Weight Blocks) */}
+            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-xs shadow-2xs">
+                {/* 3 Primary KPIs: Balanced visual weight */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)]">
+                    {/* KPI 1: LIVE NOW */}
+                    <div className="pt-2 first:pt-0 sm:pt-0 sm:px-4 first:pl-0">
+                        <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                LIVE NOW
                             </span>
-                            <span className="font-sans text-[11px] font-semibold text-[oklch(52%_0.16_28)]">
-                                // โต๊ะสดหน้าร้าน
-                            </span>
+                            <span className="w-2 h-2 rounded-full bg-[oklch(18%_0.012_28)] animate-pulse" />
                         </div>
-                        <div className="flex items-baseline gap-2 mt-0.5">
-                            <h2 className="font-mono text-2xl sm:text-3xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                                {counts.occupied} <span className="font-sans text-sm sm:text-base font-normal text-[oklch(55%_0.010_28)]">/ {counts.total} โต๊ะ</span>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <h2 className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                {counts.occupied}
                             </h2>
-                            <span className="font-mono text-xs font-bold px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] rounded-xs tabular-nums">
-                                {counts.occupancyPct}% OCCUPIED
+                            <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                {counts.occupied === 1 ? '1 order' : `${counts.occupied} orders`} · {counts.occupancyPct}% occupied
                             </span>
                         </div>
                     </div>
 
-                    <div className="h-8 w-px bg-[oklch(85%_0.012_28)] hidden sm:block" />
-
-                    <div>
-                        <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] uppercase tracking-wider block">
-                            ACTIVE IN STORE
-                        </span>
-                        <div className="font-mono text-base sm:text-lg font-bold text-[oklch(18%_0.012_28)] tabular-nums">
-                            ฿{counts.activeRevenue.toLocaleString()}
+                    {/* KPI 2: PEOPLE IN STORE */}
+                    <div className="pt-3 sm:pt-0 sm:px-4">
+                        <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                PEOPLE IN STORE
+                            </span>
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-2">
+                            <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                {counts.totalGuests}
+                            </div>
+                            <span className="font-sans text-xs text-[oklch(55%_0.010_28)] font-medium">
+                                pax ในร้าน ({counts.occupied}/{counts.total} โต๊ะ)
+                            </span>
                         </div>
                     </div>
 
-                    <div className="h-8 w-px bg-[oklch(85%_0.012_28)] hidden sm:block" />
-
-                    <div>
-                        <span className="text-[10px] text-[oklch(55%_0.010_28)] uppercase block">
-                            <span className="font-mono tracking-wider">SETTLED TODAY</span> <span className="font-sans font-medium">(ยอดปิดแล้ว)</span>
-                        </span>
-                        <div className="font-mono text-base sm:text-lg font-bold text-[oklch(45%_0.08_140)] tabular-nums">
-                            ฿{revenueToday.toLocaleString()}
+                    {/* KPI 3: SALES TODAY */}
+                    <div className="pt-3 sm:pt-0 sm:px-4">
+                        <div className="flex items-center justify-between">
+                            <span className="font-mono text-xs font-bold tracking-wider text-[oklch(42%_0.010_28)] uppercase">
+                                SALES TODAY
+                            </span>
+                        </div>
+                        <div className="mt-1">
+                            <div className="font-mono text-3xl sm:text-4xl font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                ฿{revenueToday.toLocaleString()}
+                            </div>
+                            <div className="font-mono text-[11px] font-medium text-[oklch(55%_0.010_28)] mt-0.5">
+                                {trendText}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Right: View Density & Fullscreen Trigger (Responsive fold) */}
-                <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
-                    {/* View Density: ผังการ์ดอาหารครบ (Default) vs List สรุป */}
-                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-sm text-[11px] font-sans">
-                        <button
-                            type="button"
-                            onClick={() => setZoomMode('card')}
-                            className={`px-2.5 sm:px-3 py-1 rounded-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                zoomMode !== 'list'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                            }`}
-                            title="ผังการ์ดแสดงรายการเมนูอาหารครบถ้วน (ค่าเริ่มต้น)"
-                        >
-                            <span className="hidden sm:inline">ผังการ์ด (อาหารครบ)</span>
-                            <span className="sm:hidden">ผังการ์ด</span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setZoomMode('list')}
-                            className={`px-2.5 sm:px-3 py-1 rounded-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                zoomMode === 'list'
-                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                            }`}
-                            title="List สรุปโต๊ะเปิดอยู่ (มุมมองตารางกระชับ)"
-                        >
-                            <span className="hidden sm:inline">List สรุปโต๊ะ</span>
-                            <span className="sm:hidden">List สรุป</span>
-                        </button>
+                {/* Sub-bar: Density Switcher & Fullscreen (Restrained and Aligned) */}
+                <div className="mt-4 pt-3 border-t border-[oklch(88%_0.012_28)] flex items-center justify-between flex-wrap gap-2 text-xs">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">CURRENT ACTIVITY</span>
+                        <span>//</span>
+                        <span>{counts.occupied} โต๊ะกำลังทาน</span>
                     </div>
 
-                    {/* Fullscreen Button */}
-                    <button
-                        type="button"
-                        onClick={handleToggleFullscreen}
-                        className="px-2.5 py-1.5 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(90%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-sm uppercase transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap"
-                        title={isFullscreen ? 'ออกจากโหมดเต็มจอ' : 'เปิดโหมดเต็มจอ (สำหรับ iPad/หน้าร้าน)'}
-                    >
-                        <span className="hidden sm:inline font-mono">{isFullscreen ? '✕ EXIT' : '⛶ เต็มจอ'}</span>
-                        <span className="sm:hidden font-mono">{isFullscreen ? '✕' : '⛶'}</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* View Density Toggle */}
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                            <button
+                                type="button"
+                                onClick={() => setZoomMode('card')}
+                                className={`px-2.5 py-1 rounded-xs font-medium transition-all cursor-pointer ${
+                                    zoomMode !== 'list'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title="ผังการ์ดอาหาร"
+                            >
+                                ผังการ์ด
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setZoomMode('list')}
+                                className={`px-2.5 py-1 rounded-xs font-medium transition-all cursor-pointer ${
+                                    zoomMode === 'list'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title="List สรุปโต๊ะ"
+                            >
+                                List สรุป
+                            </button>
+                        </div>
+
+                        {/* Fullscreen Button */}
+                        <button
+                            type="button"
+                            onClick={handleToggleFullscreen}
+                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-mono rounded-xs cursor-pointer"
+                        >
+                            {isFullscreen ? '✕ EXIT' : '⛶ เต็มจอ'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -630,130 +659,125 @@ export default function SimplifiedLiveOverview({
                         const isUpcoming = item.state.status === 'upcoming'
                         const isBlocked = item.state.status === 'blocked'
                         const orderItems = item.orderItems
+                        const guestCount = item.booking?.guest_count || item.table.capacity || 2
 
-                        let borderStyle = 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
+                        let borderStyle = 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
                         let bgStyle = 'bg-[oklch(97%_0.008_28)]'
-                        let pillStyle = 'bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]'
-                        let statusText = 'ว่าง (FREE)'
 
                         if (isOccupied) {
-                            borderStyle = 'border-[oklch(52%_0.16_28)]'
-                            bgStyle = 'bg-[oklch(96%_0.015_28)]'
-                            pillStyle = 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]'
+                            // Red is STRICTLY reserved for action-required alerts (hasCallBill / hasCallStaff)
+                            borderStyle = (item.hasCallBill || item.hasCallStaff)
+                                ? 'border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]' 
+                                : 'border-[oklch(18%_0.012_28)]'
+                            bgStyle = 'bg-[oklch(97%_0.008_28)]'
                         } else if (isUpcoming) {
-                            borderStyle = 'border-[oklch(60%_0.15_60)]'
-                            bgStyle = 'bg-[oklch(96%_0.02_60)]'
-                            pillStyle = 'bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]'
-                            statusText = 'RESERVED'
+                            borderStyle = 'border-[oklch(85%_0.012_28)]'
+                            bgStyle = 'bg-[oklch(95%_0.010_28)]'
                         } else if (isBlocked) {
-                            borderStyle = 'border-[oklch(35%_0.010_28)]'
-                            bgStyle = 'bg-[oklch(30%_0.010_28)] text-[oklch(97%_0.008_28)]'
-                            pillStyle = 'bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)]'
-                            statusText = 'BLOCKED'
+                            borderStyle = 'border-[oklch(85%_0.012_28)]'
+                            bgStyle = 'bg-[oklch(92%_0.010_28)]'
                         }
 
                         return (
                             <div
                                 key={item.table.id}
                                 onClick={() => setInspectingTable(item)}
-                                className={`p-4 rounded-sm border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-sm ${bgStyle} ${borderStyle} ${
-                                    item.hasCallBill || item.hasCallStaff ? 'ring-2 ring-[oklch(75%_0.18_65)]' : ''
-                                }`}
+                                className={`p-3.5 rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs ${bgStyle} ${borderStyle}`}
                             >
-                                {/* 1. Card Top: Header & Metadata */}
+                                {/* 1. Card Top: Table Name, Pax & Time vs Total & LIVE Tag */}
                                 <div>
-                                    <div className="flex items-center justify-between pb-2 border-b border-[oklch(85%_0.012_28)]">
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)]">
-                                                {item.table.table_name}
-                                            </span>
-                                            <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[oklch(90%_0.010_28)] rounded-xs text-[oklch(42%_0.010_28)] font-semibold">
-                                                {item.table.capacity} Pax
-                                            </span>
+                                    <div className="flex items-start justify-between pb-2 border-b border-[oklch(88%_0.012_28)]">
+                                        <div>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                                    {item.table.table_name}
+                                                </span>
+                                            </div>
+                                            <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5">
+                                                {isOccupied ? (
+                                                    <>{guestCount} pax · {formatThaiTimeOnly(item.booking?.booking_time)}</>
+                                                ) : (
+                                                    <>{item.table.capacity} pax</>
+                                                )}
+                                            </div>
                                         </div>
 
-                                        {isOccupied ? (
-                                            <LiveDurationBadge startTime={item.startTime} />
-                                        ) : (
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-xs uppercase tracking-wider ${pillStyle}`}>
-                                                {statusText}
-                                            </span>
-                                        )}
+                                        <div className="text-right">
+                                            {isOccupied ? (
+                                                <>
+                                                    <div className="font-mono text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                                        ฿{item.billTotal.toLocaleString()}
+                                                    </div>
+                                                    <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-xs font-mono text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                                        LIVE
+                                                    </span>
+                                                </>
+                                            ) : isUpcoming ? (
+                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono">
+                                                    RESERVED
+                                                </span>
+                                            ) : isBlocked ? (
+                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(88%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono">
+                                                    BLOCKED
+                                                </span>
+                                            ) : (
+                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] uppercase font-mono">
+                                                    FREE
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    {/* Sitting Start Time */}
-                                    {isOccupied && (
-                                        <div className="flex items-center justify-between text-xs text-[oklch(55%_0.010_28)] pt-2">
-                                            <span>เปิดโต๊ะ: <span className="font-mono text-[11px] font-bold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(item.booking?.booking_time)}</span></span>
-                                            <span className="font-sans font-medium text-[oklch(52%_0.16_28)]">
-                                                <LiveDuration startTime={item.startTime} />
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {/* Call Staff / Bill Alert Badge */}
+                                    {/* Action Required: Call Staff / Bill Alert Badge (RED ONLY HERE) */}
                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                        <div className="mt-2.5 px-2.5 py-1 bg-[oklch(78%_0.18_65)] text-[oklch(18%_0.012_28)] text-xs font-bold rounded-xs flex items-center justify-between animate-pulse">
-                                            <span>{item.hasCallBill ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</span>
+                                        <div className="mt-2 px-2 py-1 bg-[oklch(92%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] text-xs font-bold rounded-xs flex items-center justify-between animate-pulse">
+                                            <span>[ALERT] {item.hasCallBill ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</span>
                                             <button
                                                 type="button"
                                                 onClick={(e) => handleDismissAlert(item.booking?.id, e)}
-                                                className="underline ml-1 cursor-pointer text-[11px]"
+                                                className="underline text-[10px] cursor-pointer"
                                             >
-                                                ปิดแจ้งเตือน
+                                                ปิดเตือน
                                             </button>
                                         </div>
                                     )}
 
-                                    {/* Customer Note / Remark */}
+                                    {/* Customer Note */}
                                     {item.booking?.customer_note && (
-                                        <div className="mt-2.5 px-2 py-1 bg-[oklch(92%_0.010_28)] border border-[oklch(88%_0.012_28)] rounded-xs text-xs text-[oklch(42%_0.010_28)] truncate">
+                                        <div className="mt-2 px-2 py-0.5 bg-[oklch(92%_0.010_28)] rounded-xs text-[11px] text-[oklch(42%_0.010_28)] truncate">
                                             โน้ต: "{item.booking.customer_note}"
                                         </div>
                                     )}
 
-                                    {/* 2. Menu Items Checklist on Card (All Items Shown Directly) */}
+                                    {/* 2. Menu Items Section: Prominent count, compact secondary items (~70-80% height) */}
                                     {isOccupied ? (
-                                        <div className="mt-3 pt-2.5 border-t border-[oklch(88%_0.012_28)]">
-                                            <div className="flex items-center justify-between pb-2 text-[11px] font-bold text-[oklch(55%_0.010_28)]">
-                                                <span>รายการอาหารที่สั่ง ({orderItems.length})</span>
-                                                <span className="font-mono text-[10px] uppercase tracking-wider">AMOUNT</span>
+                                        <div className="mt-2.5 pt-1.5">
+                                            <div className="font-sans text-xs font-bold text-[oklch(18%_0.012_28)] mb-1.5">
+                                                {orderItems.length} รายการ
                                             </div>
 
                                             {orderItems.length === 0 ? (
-                                                <span className="text-xs text-[oklch(60%_0.010_28)] italic block py-3 text-center">
+                                                <span className="text-xs text-[oklch(60%_0.010_28)] italic block py-2 text-center">
                                                     ยังไม่มีรายการสั่งอาหาร
                                                 </span>
                                             ) : (
-                                                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1 divide-y divide-[oklch(90%_0.010_28)] overscroll-contain">
+                                                <div className="max-h-[115px] overflow-y-auto space-y-1 pr-1 overscroll-contain divide-y divide-[oklch(92%_0.010_28)] text-xs">
                                                     {orderItems.map((it, idx) => {
                                                         const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                         const lineTotal = price * Number(it.quantity || 1)
-                                                        const optList = formatOrderItemOptions(it.selected_options)
 
                                                         return (
-                                                            <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
-                                                                <div className="flex items-start gap-1.5 min-w-0 flex-1">
-                                                                    <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums shrink-0 text-xs">
+                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[11px] text-[oklch(42%_0.010_28)]">
+                                                                <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                                                                    <span className="font-mono font-medium text-[oklch(55%_0.010_28)] tabular-nums shrink-0">
                                                                         {it.quantity}x
                                                                     </span>
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <span className="font-sans font-bold text-[oklch(18%_0.012_28)] text-xs leading-normal block truncate">
-                                                                            {itemName}
-                                                                        </span>
-                                                                        {optList.length > 0 && (
-                                                                            <div className="text-[11px] text-[oklch(52%_0.16_28)] space-y-0.5 mt-0.5">
-                                                                                {optList.map((optStr, optIdx) => (
-                                                                                    <span key={optIdx} className="block truncate font-medium">
-                                                                                        • {optStr}
-                                                                                    </span>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
+                                                                    <span className="truncate">
+                                                                        {itemName}
+                                                                    </span>
                                                                 </div>
-                                                                <span className="font-mono tabular-nums font-bold text-[oklch(18%_0.012_28)] shrink-0 text-xs">
+                                                                <span className="font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0">
                                                                     ฿{lineTotal.toLocaleString()}
                                                                 </span>
                                                             </div>
@@ -763,25 +787,25 @@ export default function SimplifiedLiveOverview({
                                             )}
                                         </div>
                                     ) : isUpcoming ? (
-                                        <div className="mt-4 py-3 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center">
-                                            <span className="text-xs font-bold text-[oklch(18%_0.012_28)] block">
-                                                จองไว้ {formatThaiTimeOnly(item.booking?.booking_time)}
+                                        <div className="mt-3 py-2 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center text-xs">
+                                            <span className="font-bold text-[oklch(18%_0.012_28)] block">
+                                                จอง {formatThaiTimeOnly(item.booking?.booking_time)}
                                             </span>
-                                            <span className="text-[11px] text-[oklch(55%_0.010_28)] block mt-0.5">
-                                                {item.booking?.customer_name || 'ลูกค้า'} ({item.booking?.guest_count || item.table.capacity} ท่าน)
+                                            <span className="text-[11px] text-[oklch(55%_0.010_28)] block">
+                                                {item.booking?.customer_name || 'ลูกค้า'} ({guestCount} ท่าน)
                                             </span>
                                         </div>
                                     ) : (
-                                        <div className="mt-4 py-3 text-center text-xs text-[oklch(60%_0.010_28)]">
-                                            โต๊ะว่าง พร้อมเปิดโต๊ะให้บริการ
+                                        <div className="mt-3 py-2 text-center text-xs text-[oklch(60%_0.010_28)]">
+                                            โต๊ะว่าง พร้อมเปิดบริการ
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Card Footer */}
-                                <div className="mt-3 pt-2.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between text-xs">
-                                    <span className="text-[11px] text-[oklch(55%_0.010_28)]">
-                                        {isOccupied ? `${orderItems.length} รายการ` : 'พร้อมให้บริการ'}
+                                {/* 3. Card Footer: Prominent TOTAL */}
+                                <div className="mt-2.5 pt-2 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between text-xs">
+                                    <span className="font-mono font-bold text-[11px] tracking-wider text-[oklch(18%_0.012_28)]">
+                                        TOTAL
                                     </span>
                                     <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
                                         {isOccupied ? `฿${item.billTotal.toLocaleString()}` : '-'}
@@ -905,8 +929,8 @@ export default function SimplifiedLiveOverview({
 
                         {/* Modal Footer (Read-only Remote Cockpit) */}
                         <div className="pt-3 mt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-[oklch(85%_0.012_28)]">
-                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
-                                ⓘ การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
+                            <span className="text-[11px] font-mono text-[oklch(55%_0.010_28)]">
+                                [INFO] การเช็คบิลและเคลียร์โต๊ะ ดำเนินการผ่าน POS หน้าร้าน
                             </span>
                             <button
                                 type="button"
