@@ -248,15 +248,6 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                             </button>
                         )}
 
-                        {!hasSession && (
-                            <button
-                                onClick={() => window.location.href = '/login?redirect=/pos'}
-                                className="min-h-[38px] flex items-center gap-1.5 bg-[var(--color-accent)] hover:opacity-90 text-[var(--color-paper)] font-mono text-xs font-bold uppercase px-3.5 py-1.5 rounded-md shadow-xs cursor-pointer select-none active:scale-95 transition-all touch-manipulation"
-                            >
-                                <Users size={14} />
-                                <span>เข้าสู่ระบบ LINE</span>
-                            </button>
-                        )}
                         
                         {/* Active Shift Employee */}
                         {(activeShift || activeStaff) && (

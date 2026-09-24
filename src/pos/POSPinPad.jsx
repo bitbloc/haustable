@@ -11,36 +11,45 @@ import React, { useState, useEffect, useCallback } from 'react';
 export default function POSPinPad({ onComplete, title, subtitle }) {
     const [pin, setPin] = useState('');
     const [isError, setIsError] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleDigit = useCallback((digit) => {
+        if (isSubmitting) return;
         setIsError(false);
         setPin(prev => {
             if (prev.length >= 4) return prev;
             const newPin = prev + digit;
             
             if (newPin.length === 4) {
+                setIsSubmitting(true);
                 // Microtask delay so 4th dot animates to filled state visually before running parent async logic
-                setTimeout(() => {
-                    onComplete(newPin, () => {
-                        // Reset callback in case parent pin check fails
-                        setIsError(true);
-                        setPin('');
-                    });
+                setTimeout(async () => {
+                    try {
+                        await onComplete(newPin, () => {
+                            // Reset callback in case parent pin check fails
+                            setIsError(true);
+                            setPin('');
+                        });
+                    } finally {
+                        setIsSubmitting(false);
+                    }
                 }, 60);
             }
             return newPin;
         });
-    }, [onComplete]);
+    }, [onComplete, isSubmitting]);
 
     const handleClear = useCallback(() => {
+        if (isSubmitting) return;
         setPin('');
         setIsError(false);
-    }, []);
+    }, [isSubmitting]);
 
     const handleBackspace = useCallback(() => {
+        if (isSubmitting) return;
         setPin(prev => prev.slice(0, -1));
         setIsError(false);
-    }, []);
+    }, [isSubmitting]);
 
     // Hardware Keyboard Listener
     useEffect(() => {
@@ -91,35 +100,39 @@ export default function POSPinPad({ onComplete, title, subtitle }) {
             </div>
 
             {/* Numeric Keypad Grid */}
-            <div className="grid grid-cols-3 gap-2 w-full touch-manipulation">
+            <div className={`grid grid-cols-3 gap-2 w-full touch-manipulation ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
                     <button
                         key={num}
                         type="button"
+                        disabled={isSubmitting}
                         onClick={() => handleDigit(String(num))}
-                        className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                        className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation disabled:opacity-50"
                     >
                         {num}
                     </button>
                 ))}
                 <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={handleClear}
-                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-red-50 active:scale-95 text-[11px] font-mono font-bold text-red-700 shadow-xs flex items-center justify-center cursor-pointer uppercase transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:bg-red-50 active:scale-95 text-[11px] font-mono font-bold text-red-700 shadow-xs flex items-center justify-center cursor-pointer uppercase transition-transform duration-75 select-none touch-manipulation disabled:opacity-50"
                 >
                     ล้าง (C)
                 </button>
                 <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={() => handleDigit('0')}
-                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation disabled:opacity-50"
                 >
                     0
                 </button>
                 <button
                     type="button"
+                    disabled={isSubmitting}
                     onClick={handleBackspace}
-                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation"
+                    className="h-12 min-h-[48px] rounded-md bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] active:scale-95 text-base font-mono font-bold text-[var(--color-ink)] shadow-xs flex items-center justify-center cursor-pointer transition-transform duration-75 select-none touch-manipulation disabled:opacity-50"
                 >
                     ←
                 </button>

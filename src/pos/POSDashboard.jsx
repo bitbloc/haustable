@@ -148,28 +148,33 @@ export default function POSDashboard() {
     });
 
     const handlePinLogin = async (staff) => {
-        setSelectedStaffForLogin(staff);
-        localStorage.setItem('pos_active_staff', JSON.stringify(staff));
-        setActiveStaff(staff);
+        try {
+            setSelectedStaffForLogin(staff);
+            localStorage.setItem('pos_active_staff', JSON.stringify(staff));
+            setActiveStaff(staff);
 
-        const existingShift = await checkAndRestoreActiveShift();
-        if (existingShift) {
-            if (existingShift.staffName !== staff.display_name) {
-                const updatedShift = {
-                    ...existingShift,
-                    staffName: staff.display_name
-                };
-                localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
-                setActiveShift(updatedShift);
-                syncShiftToCloud(updatedShift);
-                window.dispatchEvent(new Event('pos-shift-changed'));
+            const existingShift = await checkAndRestoreActiveShift();
+            if (existingShift) {
+                if (existingShift.staffName !== staff.display_name) {
+                    const updatedShift = {
+                        ...existingShift,
+                        staffName: staff.display_name
+                    };
+                    localStorage.setItem('pos_current_shift', JSON.stringify(updatedShift));
+                    setActiveShift(updatedShift);
+                    syncShiftToCloud(updatedShift);
+                    window.dispatchEvent(new Event('pos-shift-changed'));
+                } else {
+                    setActiveShift(existingShift);
+                }
+                setIsPinVerified(true);
+                toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
+                setPinInput('');
             } else {
-                setActiveShift(existingShift);
+                setShowOpeningFloatModal(true);
             }
-            setIsPinVerified(true);
-            toast.success(`ยินดีต้อนรับ: ${staff.display_name} (เข้าสู่กะปัจจุบัน)`);
-            setPinInput('');
-        } else {
+        } catch (err) {
+            console.error('Error during pin login handling:', err);
             setShowOpeningFloatModal(true);
         }
     };
@@ -4918,41 +4923,31 @@ export default function POSDashboard() {
                                     </div>
                                     <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
                                     <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
-                                    {!hasSession && (
-                                        <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/30 text-[oklch(18%_0.012_28)] rounded-xl p-3 text-[11px] font-sans text-left mt-3 flex flex-col gap-1.5 shadow-sm leading-normal">
-                                            <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1">⚠️ ไม่ได้เข้าสู่ระบบ (Guest Session)</span>
-                                            <span className="text-[oklch(42%_0.010_28)] font-sans">
-                                                ข้อมูลพนักงานจริงและฐานข้อมูลลูกค้า (CRM) จะไม่ถูกดึงจากระบบคลาวด์ กรุณาเข้าสู่ระบบผ่าน LINE (LIFF) ก่อนเข้าเวรครับ
-                                            </span>
-                                            <button 
-                                                onClick={() => window.location.href = '/login?redirect=/pos'}
-                                                className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] py-1.5 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all w-fit mt-1 shadow-sm cursor-pointer select-none"
-                                            >
-                                                เข้าสู่ระบบ LINE (LIFF)
-                                            </button>
-                                        </div>
-                                    )}
                                 </div>
 
                                 <POSPinPad 
                                     onComplete={async (enteredPin, onError) => {
                                         try {
                                             const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
-                                            if (!error && verifiedStaff && verifiedStaff.length > 0) {
-                                                handlePinLogin(verifiedStaff[0]);
+                                            if (error) {
+                                                console.error("RPC verify_staff_pin_login error:", error);
+                                                toast.error(`ไม่สามารถตรวจสอบ PIN ได้: ${error.message || 'โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'}`);
+                                                onError();
+                                                return;
+                                            }
+                                            if (verifiedStaff && verifiedStaff.length > 0) {
+                                                await handlePinLogin(verifiedStaff[0]);
                                                 return;
                                             }
                                         } catch (e) {
-                                            console.warn("RPC verify error, checking fallback staff list:", e);
+                                            console.warn("RPC verify error:", e);
+                                            toast.error('การเชื่อมต่อไปยังเซิร์ฟเวอร์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต');
+                                            onError();
+                                            return;
                                         }
 
-                                        const staff = staffList.find(s => s.pin === enteredPin);
-                                        if (staff) {
-                                            handlePinLogin(staff);
-                                        } else {
-                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                            onError();
-                                        }
+                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                        onError();
                                     }}
                                 />
                             </div>
@@ -5324,20 +5319,6 @@ export default function POSDashboard() {
                                 </div>
                                 <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">POS หน้าจอถูกล็อค</h2>
                                 <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO UNLOCK</p>
-                                {!hasSession && (
-                                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)]/30 text-[oklch(18%_0.012_28)] rounded-xl p-3 text-[11px] font-sans text-left mt-3 flex flex-col gap-1.5 shadow-sm leading-normal">
-                                        <span className="font-bold text-[oklch(52%_0.16_28)] flex items-center gap-1">⚠️ เซสชันเข้าสู่ระบบ LINE ขาดการเชื่อมต่อ</span>
-                                        <span className="text-[oklch(42%_0.010_28)] font-sans">
-                                            ไม่พบข้อมูลบัญชีพนักงานจริง เพื่อให้ระบบบันทึกชื่อผู้ปลดล็อกและการทำรายการได้ถูกต้อง กรุณาเข้าสู่ระบบผ่าน LINE ก่อนครับ
-                                        </span>
-                                        <button 
-                                            onClick={() => window.location.href = '/login?redirect=/pos'}
-                                            className="bg-[oklch(52%_0.16_28)] hover:bg-[oklch(45%_0.16_28)] text-[oklch(97%_0.008_28)] py-1.5 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wide transition-all w-fit mt-1 shadow-sm cursor-pointer select-none"
-                                        >
-                                            เข้าสู่ระบบ LINE (LIFF)
-                                        </button>
-                                    </div>
-                                )}
                             </div>
 
                             <POSPinPad 
@@ -5345,15 +5326,20 @@ export default function POSDashboard() {
                                     let staff = null;
                                     try {
                                         const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
-                                        if (!error && verifiedStaff && verifiedStaff.length > 0) {
+                                        if (error) {
+                                            console.error("RPC unlock verify error:", error);
+                                            toast.error(`ไม่สามารถตรวจสอบ PIN ได้: ${error.message || 'โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'}`);
+                                            onError();
+                                            return;
+                                        }
+                                        if (verifiedStaff && verifiedStaff.length > 0) {
                                             staff = verifiedStaff[0];
                                         }
                                     } catch (e) {
-                                        console.warn("RPC unlock verify error, checking fallback:", e);
-                                    }
-
-                                    if (!staff) {
-                                        staff = staffList.find(s => s.pin === enteredPin);
+                                        console.warn("RPC unlock verify error:", e);
+                                        toast.error('การเชื่อมต่อไปยังเซิร์ฟเวอร์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต');
+                                        onError();
+                                        return;
                                     }
 
                                     if (staff) {
