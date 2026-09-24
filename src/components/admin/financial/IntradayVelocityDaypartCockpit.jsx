@@ -132,6 +132,64 @@ export const getOperatingActionText = (daypartId, paceDeltaPct = 0) => {
     return 'เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์'
 }
 
+// Parse executive AI strategy briefing into structured sections (supports bracket titles with any characters, markdown bold, and numbered headings)
+export const parseBriefingSections = (text) => {
+    if (!text || typeof text !== 'string') return { intro: null, sections: [] }
+
+    // 1. Normalize text: remove markdown bold wrapping around bracket headers (e.g. **[1. ...]** -> [1. ...])
+    const normalized = text.replace(/\*\*(\[[^\]\r\n]+\])\*\*/g, '$1')
+
+    // 2. Test for bracket section headers (allows ANY characters inside brackets including '(', ')', '&', '/', etc.)
+    const hasBracketSections = /(?:^|\n)\s*\[[^\]\r\n]{3,120}\]/.test(normalized)
+
+    let parsedSections = []
+    let parsedIntro = null
+
+    if (hasBracketSections) {
+        // Split before any bracket header at start of line or string
+        const rawParts = normalized
+            .split(/(?=(?:^|\n)\s*\[[^\]\r\n]+\])/g)
+            .map(s => s.trim())
+            .filter(Boolean)
+
+        if (rawParts.length > 0) {
+            if (!rawParts[0].startsWith('[')) {
+                parsedIntro = rawParts.shift()
+            }
+            parsedSections = rawParts.map((sec, idx) => {
+                const match = sec.match(/^\[([^\]]+)\]\s*([\s\S]*)$/)
+                const rawTitle = match ? match[1].trim() : `ประเด็นที่ ${idx + 1}`
+                const cleanTitle = rawTitle.replace(/^\[+|\]+$/g, '').trim()
+                const content = match ? match[2].trim() : sec.trim()
+                return { title: cleanTitle, content }
+            })
+        }
+    }
+
+    // 3. Fallback: Numbered markdown headers (e.g. "### 1. ...", "1. ...", "**1. ...**")
+    if (parsedSections.length === 0) {
+        const numberedParts = normalized
+            .split(/(?=(?:^|\n)\s*(?:###\s*|\*\*\s*|\#\s*)?[1-9]\.\s+)/g)
+            .map(s => s.trim())
+            .filter(Boolean)
+
+        if (numberedParts.length >= 2) {
+            if (!/^(?:###\s*|\*\*\s*|\#\s*)?[1-9]\.\s+/.test(numberedParts[0])) {
+                parsedIntro = numberedParts.shift()
+            }
+            parsedSections = numberedParts.map((sec, idx) => {
+                const match = sec.match(/^(?:###\s*|\*\*\s*|\#\s*)?([1-9]\.\s*[^\n\r\*]+)(?:\*\*)?\s*[\r\n]+([\s\S]*)$/)
+                const rawTitle = match ? match[1].replace(/^\*\*|\*\*$/g, '').trim() : `ประเด็นที่ ${idx + 1}`
+                const cleanTitle = rawTitle.replace(/^\[+|\]+$/g, '').trim()
+                const content = match ? match[2].trim() : sec.trim()
+                return { title: cleanTitle, content }
+            })
+        }
+    }
+
+    return { intro: parsedIntro, sections: parsedSections }
+}
+
 export default function IntradayVelocityDaypartCockpit({
     bookings = [],
     filterMode = 'day', // 'day' | 'month' | 'year'
@@ -445,8 +503,28 @@ export default function IntradayVelocityDaypartCockpit({
             }
         }
         fetchAdLandingEvents()
-        return () => { isMounted = false }
+
+        // Realtime Subscription for Ad Landing Events (Zero Delay)
+        const channelName = `cockpit-ad-events-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ad_events' }, () => {
+                if (isMounted) {
+                    fetchAdLandingEvents()
+                }
+            })
+            .subscribe()
+
+        return () => {
+            isMounted = false
+            supabase.removeChannel(channel)
+        }
     }, [filterMode, selectedDate, selectedMonth, selectedYear, todayBangkok])
+
+    // Reset AI Briefing when date or mode switches to avoid showing cross-date stale analysis
+    useEffect(() => {
+        setAiBriefing(null)
+    }, [selectedDate, selectedMonth, selectedYear, filterMode])
 
     // Filter valid revenue-generating orders
     const validOrders = useMemo(() => {
@@ -1063,14 +1141,31 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
         }
     }
 
-    const copyBriefingToClipboard = () => {
+    const copyBriefingToClipboard = async () => {
         if (!aiBriefing) return
-        if (typeof navigator !== 'undefined' && navigator.clipboard) {
-            const cleanText = aiBriefing.replace(/\*\*/g, '')
-            navigator.clipboard.writeText(cleanText)
+        const cleanText = aiBriefing.replace(/\*\*/g, '')
+        try {
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(cleanText)
+            } else {
+                // Fallback for older/restricted mobile browsers
+                const textArea = document.createElement('textarea')
+                textArea.value = cleanText
+                textArea.style.position = 'fixed'
+                textArea.style.left = '-999999px'
+                textArea.style.top = '-999999px'
+                document.body.appendChild(textArea)
+                textArea.focus()
+                textArea.select()
+                document.execCommand('copy')
+                document.body.removeChild(textArea)
+            }
             setCopiedBriefing(true)
             toast.success('คัดลอกบทวิเคราะห์กลยุทธ์แล้ว')
             setTimeout(() => setCopiedBriefing(false), 2000)
+        } catch (err) {
+            console.warn('Copy briefing failed:', err)
+            toast.error('ไม่สามารถคัดลอกได้อัตโนมัติ')
         }
     }
 
@@ -1095,39 +1190,53 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             )
         }
 
-        const hasBracketSections = /\[[0-9A-Za-zก-๙\s\.\,\-\_]+\]/.test(text)
-        if (hasBracketSections) {
-            const rawSections = text.split(/(?=\[[0-9A-Za-zก-๙\s\.\,\-\_]+\])/g).filter(s => s && s.trim())
-            const intro = !rawSections[0].trim().startsWith('[') ? rawSections.shift().trim() : null
+        const { intro: parsedIntro, sections: parsedSections } = parseBriefingSections(text)
+
+        // Render multi-card grid if sections were parsed
+        if (parsedSections.length > 0) {
+            const gridColsClass = parsedSections.length === 2 
+                ? 'grid-cols-1 md:grid-cols-2' 
+                : parsedSections.length === 4
+                ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                : 'grid-cols-1 md:grid-cols-3'
 
             return (
                 <div className="space-y-3">
-                    {intro && (
+                    {parsedIntro && (
                         <div className="p-3 bg-[oklch(96%_0.010_28)] border border-[oklch(85%_0.012_28)] text-xs text-[oklch(18%_0.012_28)] font-medium leading-relaxed">
-                            {intro.split('\n').map((line, idx) => (
+                            {parsedIntro.split('\n').map((line, idx) => (
                                 <p key={idx}>{renderInline(line, idx)}</p>
                             ))}
                         </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {rawSections.map((sec, idx) => {
-                            const match = sec.match(/^\[(.*?)\]([\s\S]*)$/)
-                            const title = match ? match[1].trim() : `ประเด็นที่ ${idx + 1}`
-                            const content = match ? match[2].trim() : sec.trim()
+                    <div className={`grid ${gridColsClass} gap-3 items-stretch`}>
+                        {parsedSections.map((sec, idx) => {
+                            const lines = sec.content.split('\n').map(l => l.trim()).filter(Boolean)
                             return (
-                                <div key={idx} className="p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between">
+                                <div 
+                                    key={idx} 
+                                    className="p-3.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] flex flex-col justify-between transition-colors hover:border-[oklch(75%_0.012_28)]"
+                                >
                                     <div>
-                                        <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wide border-b border-[oklch(85%_0.012_28)] pb-1.5 mb-2 flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)]" />
-                                            <span>[{title}]</span>
+                                        <div className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wide border-b border-[oklch(85%_0.012_28)] pb-1.5 mb-2.5 flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />
+                                            <span className="truncate">[{sec.title}]</span>
                                         </div>
-                                        <div className="text-xs text-[oklch(28%_0.012_28)] leading-relaxed space-y-1.5">
-                                            {content.split('\n').map((line, lIdx) => {
-                                                const trimmed = line.trim()
-                                                if (!trimmed) return null
+                                        <div className="text-xs text-[oklch(28%_0.012_28)] leading-relaxed space-y-2">
+                                            {lines.map((line, lIdx) => {
+                                                const isBullet = /^[-*•]\s+/.test(line)
+                                                if (isBullet) {
+                                                    const cleanBulletText = line.replace(/^[-*•]\s+/, '')
+                                                    return (
+                                                        <div key={lIdx} className="flex items-start gap-2 leading-relaxed">
+                                                            <span className="w-1 h-1 rounded-full bg-[oklch(52%_0.16_28)] mt-2 shrink-0 select-none" />
+                                                            <span className="flex-1">{renderInline(cleanBulletText, lIdx)}</span>
+                                                        </div>
+                                                    )
+                                                }
                                                 return (
                                                     <p key={lIdx} className="leading-relaxed">
-                                                        {renderInline(trimmed, lIdx)}
+                                                        {renderInline(line, lIdx)}
                                                     </p>
                                                 )
                                             })}
@@ -1141,6 +1250,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
             )
         }
 
+        // Fallback for unformatted raw text
         return (
             <div className="text-xs text-[oklch(18%_0.012_28)] leading-relaxed font-sans bg-[oklch(94%_0.010_28)] p-4 border border-[oklch(85%_0.012_28)] space-y-1.5">
                 {text.split('\n').map((line, idx) => {
@@ -1361,9 +1471,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                 </div>
 
                 {/* Sub-Tabs Action Ribbon */}
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap max-w-full overflow-x-auto pb-1 md:pb-0">
                     {filterMode === 'month' ? (
-                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
+                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs shrink-0">
                             {[
                                 { id: 'pacing', label: 'เส้นความเร็วเฉลี่ย [PACING]' },
                                 { id: 'weekday_weekend', label: 'จันทร์-ศุกร์ VS เสาร์-อาทิตย์' },
@@ -1384,7 +1494,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             ))}
                         </div>
                     ) : (
-                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
+                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs shrink-0">
                             {[
                                 { id: 'chart', label: 'กราฟรวม [COCKPIT]' },
                                 { id: 'dayparts', label: '4 ช่วงเวลา [DAYPARTS]' },
@@ -2741,7 +2851,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <button
                                     onClick={generateAiBriefing}
                                     disabled={aiLoading}

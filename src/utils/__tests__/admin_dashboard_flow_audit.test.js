@@ -161,5 +161,83 @@ describe('Admin Dashboard Flow & UX/UI Audit', () => {
         expect(lateDp.id).toBe('late')
         expect(getOperatingActionText('late', 0)).toBe('เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์')
     })
+
+    it('accurately parses AI Strategy Briefing into 3 distinct sections even with parentheses, ampersands, and bold wrapping (resolves ข้อ 2 หาย bug)', async () => {
+        const { parseBriefingSections } = await import('../../components/admin/financial/IntradayVelocityDaypartCockpit.jsx')
+
+        // Exact text structure from user screenshot
+        const screenshotAiText = `
+[1. การวิเคราะห์ความเร็วยอดขายและการครองที่นั่ง]
+สถานะปัจจุบันช่วงก่อนเริ่มรอบบริการ ยอดขายสะสม ฿0 และจำนวนลูกค้า 0 ท่าน เป็นไปตามรอบเวลาปกติ โดยเป้าหมายประจำวันตั้งไว้ที่ ฿7,300 ซึ่งสูงกว่าค่าเฉลี่ยสถิติวันพฤหัสบดีทั่วไป ฿6,305 สำหรับการครองที่นั่งของร้านขนาด 45 ที่นั่ง คาดว่าจะเริ่มเคลื่อนไหวในรอบ Lunch Rush (~9 ท่าน) ต่อเนื่องรอบบ่าย (~4 ท่าน) และจะเข้าสู่ช่วงทำรายได้สูงสุดในรอบ Prime Dinner เวลา 17.00-21.00 น. (~13 ท่าน) ซึ่งเป็นธรรมชาติของร้านอาหารและบาร์ริมแม่น้ำโขงที่ลูกค้าเน้นดื่มด่ำบรรยากาศช่วงค่ำเป็นหลัก
+
+[2. วิเคราะห์สัญญาณออนไลน์และการเชื่อมโยงสู่ยอดขาย (Ad & Customer Intent)]
+สัญญาณออนไลน์รวม 101 ครั้งจากช่องทาง Direct แสดงให้เห็นว่าแบรนด์เป็นที่รู้จักและมีผู้ค้นหาโดยตรง โดยพบ High-Intent Leads รวม 4 รายการ แบ่งเป็นการโทร/LINE 2 ครั้ง และการจองโต๊ะ/สั่งล่วงหน้า 2 ครั้ง สะท้อนถึงกลุ่มลูกค้าที่มีความตั้งใจสูงและต้องการการันตีที่นั่งริมน้ำ ในส่วนของการสำรวจเมนูที่ยังเป็น 0 แนะนำให้ฝ่ายการตลาดเร่งลงคอนเทนต์ภาพบรรยากาศยามเย็นริมแม่น้ำโขงและเมนูแนะนำในช่วงเวลา 14.30-16.00 น. เพื่อกระตุ้นการตัดสินใจของกลุ่ม Walk-in ก่อนเข้าสู่ช่วงเย็น
+
+[3. คำแนะนำเชิงปฏิบัติการและยุทธวิธีผลักดันยอดสู่เป้าหมาย]
+เพื่อผลักดันยอดขายจากค่าเฉลี่ยปกติให้แตะเป้าหมาย ฿7,300 จำเป็นต้องเพิ่มยอดใช้จ่ายเฉลี่ยต่อหัวเป็น ฿260-฿300 โดยมีแนวทางปฏิบัติดังนี้:
+- ทีมหน้าร้าน: จัดเตรียมโต๊ะมุมริมแม่น้ำที่ดีที่สุดสำหรับลูกค้าที่จองล่วงหน้า และบริหารโซนที่นั่งหน้าร้านให้ดูคึกคักเพื่อดึงดูดลูกค้าสัญจร แนะนำให้ทีมบริการนำเสนอเมนู Appetizer คู่กับเครื่องดื่มพิเศษทันทีที่รับออเดอร์แรก
+- ทีมครัวและบาร์: เตรียมความพร้อมของวัตถุดิบเมนูซิกเนเจอร์และสต็อกเครื่องดื่มให้พร้อมเสิร์ฟอย่างรวดเร็ว เน้นการเชียร์ขาย Signature Drinks และเมนูกลุ่มกำไรสูง (High-Margin) ในช่วง Prime Dinner และ Late Night เพื่อเพิ่มยอดบิลต่อโต๊ะให้ถึงเป้าหมายอย่างราบรื่น
+`
+
+        const parsed = parseBriefingSections(screenshotAiText)
+
+        // 1. Must parse exactly 3 sections (Section 2 must NOT be missing!)
+        expect(parsed.sections).toHaveLength(3)
+
+        // 2. Section 1 title and content
+        expect(parsed.sections[0].title).toBe('1. การวิเคราะห์ความเร็วยอดขายและการครองที่นั่ง')
+        expect(parsed.sections[0].content).toContain('สถานะปัจจุบันช่วงก่อนเริ่มรอบบริการ')
+        // Section 1 must NOT contain section 2 text!
+        expect(parsed.sections[0].content).not.toContain('วิเคราะห์สัญญาณออนไลน์')
+
+        // 3. Section 2 (The bugged section) MUST be its own section!
+        expect(parsed.sections[1].title).toBe('2. วิเคราะห์สัญญาณออนไลน์และการเชื่อมโยงสู่ยอดขาย (Ad & Customer Intent)')
+        expect(parsed.sections[1].content).toContain('สัญญาณออนไลน์รวม 101 ครั้งจากช่องทาง Direct')
+        expect(parsed.sections[1].content).toContain('High-Intent Leads รวม 4 รายการ')
+
+        // 4. Section 3 title and content
+        expect(parsed.sections[2].title).toBe('3. คำแนะนำเชิงปฏิบัติการและยุทธวิธีผลักดันยอดสู่เป้าหมาย')
+        expect(parsed.sections[2].content).toContain('ทีมหน้าร้าน: จัดเตรียมโต๊ะมุมริมแม่น้ำ')
+        expect(parsed.sections[2].content).toContain('ทีมครัวและบาร์:')
+    })
+
+    it('handles markdown bold wrapped brackets and numbered markdown headings gracefully', async () => {
+        const { parseBriefingSections } = await import('../../components/admin/financial/IntradayVelocityDaypartCockpit.jsx')
+
+        // Case: Bold wrapped brackets
+        const boldWrapped = `
+**[1. การวิเคราะห์ภาพรวม]**
+เนื้อหาส่วนที่ 1
+
+**[2. แผนการตลาดและ Ad Intent (Online & Offline)]**
+เนื้อหาส่วนที่ 2
+
+**[3. ข้อเสนอแนะเชิงปฏิบัติการ]**
+เนื้อหาส่วนที่ 3
+`
+        const resBold = parseBriefingSections(boldWrapped)
+        expect(resBold.sections).toHaveLength(3)
+        expect(resBold.sections[0].title).toBe('1. การวิเคราะห์ภาพรวม')
+        expect(resBold.sections[1].title).toBe('2. แผนการตลาดและ Ad Intent (Online & Offline)')
+        expect(resBold.sections[2].title).toBe('3. ข้อเสนอแนะเชิงปฏิบัติการ')
+
+        // Case: Numbered markdown headers
+        const numberedHeaders = `
+### 1. การวิเคราะห์ยอดขาย
+ยอดขายเป็นไปตามเป้า
+
+### 2. สัญญาณลูกค้าออนไลน์
+มีทราฟฟิกเข้ามาต่อเนื่อง
+
+### 3. ยุทธวิธีผลักดันยอด
+ดันเมนูซิกเนเจอร์
+`
+        const resNumbered = parseBriefingSections(numberedHeaders)
+        expect(resNumbered.sections).toHaveLength(3)
+        expect(resNumbered.sections[0].title).toContain('1. การวิเคราะห์ยอดขาย')
+        expect(resNumbered.sections[1].title).toContain('2. สัญญาณลูกค้าออนไลน์')
+        expect(resNumbered.sections[2].title).toContain('3. ยุทธวิธีผลักดันยอด')
+    })
 })
+
 
