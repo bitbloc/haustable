@@ -75,6 +75,63 @@ const DAYPARTS = [
     }
 ]
 
+// Pre-opening & overnight operational profiles
+export const PRE_OPENING_DAYPARTS = {
+    overnight: {
+        id: 'overnight',
+        label: 'Overnight Closed',
+        thaiLabel: 'ปิดทำการ',
+        hours: [0, 1, 2, 3, 4, 5],
+        rangeText: '00:00 - 06:00',
+        code: 'DP_CLOSED',
+        desc: 'ร้านปิดให้บริการรอบค่ำแล้ว สรุปยอดขายประจำวันและปิดระบบ'
+    },
+    morning_prep: {
+        id: 'morning_prep',
+        label: 'Morning Prep',
+        thaiLabel: 'เตรียมเปิดร้าน',
+        hours: [6, 7, 8, 9, 10],
+        rangeText: '06:00 - 11:00',
+        code: 'DP_PREP',
+        desc: 'ช่วงเตรียมเปิดร้าน ตรวจนับสต็อกวัตถุดิบ เบเกอรี่ และจัดเตรียมโต๊ะจอง'
+    }
+}
+
+export const getOperatingDaypart = (hour) => {
+    if (hour >= 0 && hour < 6) {
+        return PRE_OPENING_DAYPARTS.overnight
+    }
+    if (hour >= 6 && hour < 11) {
+        return PRE_OPENING_DAYPARTS.morning_prep
+    }
+    return DAYPARTS.find(dp => dp.hours.includes(hour)) || DAYPARTS[3]
+}
+
+export const getOperatingActionText = (daypartId, paceDeltaPct = 0) => {
+    if (daypartId === 'morning_prep') {
+        return 'ตรวจเช็คสต็อกวัตถุดิบ & ขนม · ตรวจสอบบุ๊คกิ้งโต๊ะจองประจำวัน · เตรียมพร้อมเปิดร้าน 11.00 น.'
+    }
+    if (daypartId === 'overnight') {
+        return 'ร้านปิดให้บริการรอบค่ำแล้ว · เช็คสรุปยอดขายประจำวันและปิดระบบ'
+    }
+    if (daypartId === 'lunch') {
+        return paceDeltaPct < -10
+            ? 'เร่งสปีดบริการจานด่วน & จัดเตรียม Takeaway หน้าร้าน'
+            : 'ครัวสแตนด์บายจานด่วนต่อเนื่อง · ดูแลโต๊ะจองรอบบ่าย'
+    }
+    if (daypartId === 'afternoon') {
+        return paceDeltaPct < -10
+            ? 'จัดโปรเซ็ตเบเกอรี่คู่เครื่องดื่ม · เช็คยอดจองมื้อค่ำ'
+            : 'บาร์ชูเมนูกาแฟดริป & เบเกอรี่ · เช็คเซ็ตติ้งโต๊ะรับรอบดินเนอร์'
+    }
+    if (daypartId === 'dinner') {
+        return paceDeltaPct < -10
+            ? 'เปิดรับ Walk-in หน้าบาร์ทันที · นำเสนอ Chef Special'
+            : 'ครัวหลักเดินเครื่องเต็มสเตชั่น · สแตนด์บายพนักงานเสิร์ฟรอบพีค'
+    }
+    return 'เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์'
+}
+
 export default function IntradayVelocityDaypartCockpit({
     bookings = [],
     filterMode = 'day', // 'day' | 'month' | 'year'
@@ -481,7 +538,7 @@ export default function IntradayVelocityDaypartCockpit({
         let actualSoFar = 0
         hours.forEach(h => {
             const bVal = historicalBaseline.pax[h] || 0
-            if (h <= cappedHour) {
+            if (currentBangkokTime.hour >= 11 && h <= cappedHour) {
                 baselineSoFar += bVal
                 actualSoFar += (hourlyPax[h] || 0)
             }
@@ -515,7 +572,7 @@ export default function IntradayVelocityDaypartCockpit({
             const spendPerHead = p > 0 ? Math.round(s / p) : 0
             const seatOccupancyPct = Math.round((p / totalSeats) * 100)
 
-            const isFuture = isViewingToday ? h > cappedHour : false
+            const isFuture = isViewingToday ? (currentBangkokTime.hour < 11 ? true : h > cappedHour) : false
             let forecast = null
             let forecastHigh = null
             let forecastLow = null
@@ -624,11 +681,13 @@ export default function IntradayVelocityDaypartCockpit({
         const projectedClosingPax = totalGuests > 0 ? forecastedClosingPax : historicalBaseline.totalPax
 
         const hoursElapsed = isViewingToday
-            ? Math.max(1, (currentBangkokTime.hour - 11) + (currentBangkokTime.minute / 60))
+            ? (currentBangkokTime.hour < 11 ? 0 : Math.max(1, (currentBangkokTime.hour - 11) + (currentBangkokTime.minute / 60)))
             : 12
-        const currentVelocityPerHour = Math.round(totalGross / hoursElapsed)
+        const currentVelocityPerHour = hoursElapsed > 0 ? Math.round(totalGross / hoursElapsed) : 0
         const pctOfTarget = defaultTarget > 0 ? Math.round((totalGross / defaultTarget) * 100) : 0
-        const paceDeltaPct = latestExpected > 0 ? Math.round(((totalGross - latestExpected) / latestExpected) * 1000) / 10 : 0
+        const paceDeltaPct = (isViewingToday && currentBangkokTime.hour < 11)
+            ? 0
+            : (latestExpected > 0 ? Math.round(((totalGross - latestExpected) / latestExpected) * 1000) / 10 : 0)
 
         const adDirs = adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length
         const adCalls = adEvents.filter(e => ['click_phone', 'contact'].includes(e.event_name)).length
@@ -1258,28 +1317,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
     // Operating Daypart & Dynamic Action Recommendation
     const currentDaypart = useMemo(() => {
-        return DAYPARTS.find(dp => dp.hours.includes(currentBangkokTime.hour)) || DAYPARTS[3]
+        return getOperatingDaypart(currentBangkokTime.hour)
     }, [currentBangkokTime.hour])
 
     const operatingActionText = useMemo(() => {
-        if (!dayMetrics) return 'การดำเนินงานเป็นไปตามเกณฑ์ปกติ'
-        const pace = dayMetrics.paceDeltaPct || 0
-        const dpId = currentDaypart.id
-
-        if (dpId === 'lunch') {
-            return pace < -10
-                ? 'เร่งสปีดบริการจานด่วน & จัดเตรียม Takeaway หน้าร้าน'
-                : 'ครัวสแตนด์บายจานด่วนต่อเนื่อง · ดูแลโต๊ะจองรอบบ่าย'
-        } else if (dpId === 'afternoon') {
-            return 'บาร์ชูเมนูกาแฟดริป & เบเกอรี่ · เช็คเซ็ตติ้งโต๊ะรับรอบดินเนอร์'
-        } else if (dpId === 'dinner') {
-            return pace < -10
-                ? 'เปิดรับ Walk-in หน้าบาร์ทันที · นำเสนอ Chef Special'
-                : 'ครัวหลักเดินเครื่องเต็มสเตชั่น · สแตนด์บายพนักงานเสิร์ฟรอบพีค'
-        } else {
-            return 'เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์'
-        }
-    }, [dayMetrics, currentDaypart])
+        return getOperatingActionText(currentDaypart?.id, dayMetrics?.paceDeltaPct || 0)
+    }, [currentDaypart, dayMetrics?.paceDeltaPct])
 
     return (
         <div ref={containerRef} className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] divide-y divide-[oklch(85%_0.012_28)] font-sans text-[oklch(18%_0.012_28)] w-full max-w-full overflow-hidden">
@@ -1451,7 +1494,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         <div className="p-4 space-y-1.5">
                             <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
                                 <span>03 // SALES VELOCITY</span>
-                                <span className="text-[oklch(18%_0.012_28)] font-bold">{isViewingToday ? `11:00 - ${currentBangkokTime.label}` : '11:00 - 23:00'}</span>
+                                <span className="text-[oklch(18%_0.012_28)] font-bold">{isViewingToday ? (currentBangkokTime.hour >= 11 ? `11:00 - ${currentBangkokTime.label}` : 'รอเปิดร้าน 11:00 น.') : '11:00 - 23:00'}</span>
                             </div>
                             <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
                                 ฿{dayMetrics?.currentVelocityPerHour?.toLocaleString() || 0} <span className="text-sm font-normal text-[oklch(42%_0.010_28)]">/ hr</span>
@@ -1493,15 +1536,27 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         </span>
                         <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
                         <span className="text-[oklch(42%_0.010_28)]">
-                            TRAFFIC: <strong className={dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]"}>{dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW EXPECTED'}</strong>
+                            TRAFFIC: <strong className={currentBangkokTime.hour < 11 ? "text-[oklch(55%_0.010_28)]" : (dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]")}>
+                                {currentBangkokTime.hour < 11
+                                    ? (currentBangkokTime.hour >= 6 ? 'PRE-OPENING PREP' : 'OVERNIGHT CLOSED')
+                                    : (dayMetrics?.totalGuests >= (dayMetrics?.baselinePaxSoFar || 0) ? 'ON PACE' : 'BELOW EXPECTED')}
+                            </strong>
                         </span>
                         <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
                         <span className="text-[oklch(42%_0.010_28)]">
-                            SALES PACE: <strong className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]"}>{dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}% (ON PACE)` : `${dayMetrics?.paceDeltaPct}% (BEHIND)`}</strong>
+                            SALES PACE: <strong className={currentBangkokTime.hour < 11 ? "text-[oklch(55%_0.010_28)]" : (dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)]" : "text-[oklch(52%_0.16_28)]")}>
+                                {currentBangkokTime.hour < 11
+                                    ? 'OPENS AT 11:00'
+                                    : (dayMetrics?.paceDeltaPct >= 0 ? `+${dayMetrics?.paceDeltaPct}% (ON PACE)` : `${dayMetrics?.paceDeltaPct}% (BEHIND)`)}
+                            </strong>
                         </span>
                         <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
                         <span className="text-[oklch(42%_0.010_28)]">
-                            NEXT 60M: <strong className="text-[oklch(18%_0.012_28)]">~฿{Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 0.8 / 50) * 50} - ฿{Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 1.25 / 50) * 50}</strong>
+                            NEXT 60M: <strong className="text-[oklch(18%_0.012_28)]">
+                                {currentBangkokTime.hour < 10
+                                    ? `เป้าเที่ยง ~฿${(historicalBaseline.sales[11] || 1500).toLocaleString()}`
+                                    : `~฿${Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 0.8 / 50) * 50} - ฿${Math.round((historicalBaseline.sales[Math.min(23, currentBangkokTime.hour + 1)] || 500) * 1.25 / 50) * 50}`}
+                            </strong>
                         </span>
                     </div>
 

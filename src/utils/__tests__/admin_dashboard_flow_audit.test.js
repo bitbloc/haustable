@@ -110,4 +110,56 @@ describe('Admin Dashboard Flow & UX/UI Audit', () => {
         expect(posOnlyActions).toContain('release_table')
         expect(posOnlyActions).toContain('clear_table')
     })
+
+    it('resolves correct daypart and action recommendation across 24 hours (morning prep, overnight, operating dayparts)', async () => {
+        const { getOperatingDaypart, getOperatingActionText } = await import('../../components/admin/financial/IntradayVelocityDaypartCockpit.jsx')
+
+        // 1. Morning prep hours (06:00 - 10:59)
+        const morningHours = [6, 7, 8, 9, 10]
+        morningHours.forEach(h => {
+            const dp = getOperatingDaypart(h)
+            expect(dp.id).toBe('morning_prep')
+            expect(dp.label).toBe('Morning Prep')
+            expect(dp.rangeText).toBe('06:00 - 11:00')
+            const action = getOperatingActionText(dp.id, 0)
+            expect(action).toBe('ตรวจเช็คสต็อกวัตถุดิบ & ขนม · ตรวจสอบบุ๊คกิ้งโต๊ะจองประจำวัน · เตรียมพร้อมเปิดร้าน 11.00 น.')
+            // Must NOT show closing bar or last order in the morning!
+            expect(action).not.toContain('เช็คยอดปิดรอบบาร์')
+            expect(action).not.toContain('ลาสออเดอร์')
+        })
+
+        // 2. Overnight hours (00:00 - 05:59)
+        const overnightHours = [0, 1, 2, 3, 4, 5]
+        overnightHours.forEach(h => {
+            const dp = getOperatingDaypart(h)
+            expect(dp.id).toBe('overnight')
+            expect(dp.label).toBe('Overnight Closed')
+            expect(dp.rangeText).toBe('00:00 - 06:00')
+            const action = getOperatingActionText(dp.id, 0)
+            expect(action).toBe('ร้านปิดให้บริการรอบค่ำแล้ว · เช็คสรุปยอดขายประจำวันและปิดระบบ')
+        })
+
+        // 3. Operating hours: Lunch (11:00 - 13:59)
+        const lunchDp = getOperatingDaypart(12)
+        expect(lunchDp.id).toBe('lunch')
+        expect(getOperatingActionText('lunch', 0)).toContain('ครัวสแตนด์บายจานด่วนต่อเนื่อง')
+        expect(getOperatingActionText('lunch', -15)).toContain('เร่งสปีดบริการจานด่วน')
+
+        // 4. Operating hours: Afternoon (14:00 - 16:59)
+        const afternoonDp = getOperatingDaypart(15)
+        expect(afternoonDp.id).toBe('afternoon')
+        expect(getOperatingActionText('afternoon', 0)).toContain('บาร์ชูเมนูกาแฟดริป')
+
+        // 5. Operating hours: Dinner (17:00 - 20:59)
+        const dinnerDp = getOperatingDaypart(19)
+        expect(dinnerDp.id).toBe('dinner')
+        expect(getOperatingActionText('dinner', 0)).toContain('ครัวหลักเดินเครื่องเต็มสเตชั่น')
+        expect(getOperatingActionText('dinner', -12)).toContain('เปิดรับ Walk-in หน้าบาร์ทันที')
+
+        // 6. Operating hours: Late Night (21:00 - 23:59)
+        const lateDp = getOperatingDaypart(22)
+        expect(lateDp.id).toBe('late')
+        expect(getOperatingActionText('late', 0)).toBe('เช็คยอดปิดรอบบาร์ · ลาสออเดอร์อาหารร้อน · สแตนด์บายเครื่องดื่มชิลล์')
+    })
 })
+
