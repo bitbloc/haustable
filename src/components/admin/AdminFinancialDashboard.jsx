@@ -16,6 +16,13 @@ import UnmetNeedAnalytics from './financial/UnmetNeedAnalytics'
 import ProfitWaterfallChart from './financial/ProfitWaterfallChart'
 import InteractiveBcgScatter from './financial/InteractiveBcgScatter'
 import IntradayVelocityDaypartCockpit from './financial/IntradayVelocityDaypartCockpit'
+import ExecutiveKpiStrip from './financial/ExecutiveKpiStrip'
+import SalesTargetPaceCockpit from './financial/SalesTargetPaceCockpit'
+import SmartAnomalyAlerts from './financial/SmartAnomalyAlerts'
+import SalesDriversTable from './financial/SalesDriversTable'
+import MenuEngineeringMatrix from './financial/MenuEngineeringMatrix'
+import TrafficAndVelocityDuo from './financial/TrafficAndVelocityDuo'
+import OperationalMarginBreakdown from './financial/OperationalMarginBreakdown'
 import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '../../utils/categoryClassifier'
 
 export default function AdminFinancialDashboard() {
@@ -42,6 +49,29 @@ export default function AdminFinancialDashboard() {
     const [selectedMonth, setSelectedMonth] = useState(getCurrentBangkokMonth())
     const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
     const [compareWithPrev, setCompareWithPrev] = useState(true)
+    const [compareMode, setCompareMode] = useState('same_day_last_week') // 'same_day_last_week', 'yesterday'
+    const [dailyTarget, setDailyTarget] = useState(() => {
+        try {
+            const saved = localStorage.getItem('inth_daily_sales_target')
+            return saved ? parseInt(saved, 10) : 10000
+        } catch {
+            return 10000
+        }
+    })
+    const [isEditingTarget, setIsEditingTarget] = useState(false)
+    const [targetDraft, setTargetDraft] = useState('10000')
+
+    // Context-Aware Growth Metrics
+    const [comparisonMetrics, setComparisonMetrics] = useState({
+        salesGrowthPct: 0,
+        orderGrowthPct: 0,
+        guestGrowthPct: 0,
+        avgTicketGrowthPct: 0,
+        prevGross: 0,
+        prevOrders: 0,
+        prevGuests: 0,
+        prevAvgTicket: 0,
+    })
 
     // Real Live Financial Metrics (Connected directly to POS & Supabase)
     const [liveMetrics, setLiveMetrics] = useState({
@@ -92,9 +122,13 @@ export default function AdminFinancialDashboard() {
                 expStartDate = selectedDate
                 expEndDate = selectedDate
 
-                // Calculate previous day for comparison
+                // Calculate comparison date based on compareMode
                 const curD = new Date(selectedDate)
-                curD.setDate(curD.getDate() - 1)
+                if (compareMode === 'same_day_last_week') {
+                    curD.setDate(curD.getDate() - 7)
+                } else {
+                    curD.setDate(curD.getDate() - 1)
+                }
                 const prevDateStr = curD.toISOString().split('T')[0]
                 prevStartIso = `${prevDateStr}T00:00:00+07:00`
                 prevEndIso = `${prevDateStr}T23:59:59+07:00`
@@ -157,11 +191,15 @@ export default function AdminFinancialDashboard() {
                             id,
                             quantity,
                             price_at_time,
+                            cost_at_sale,
+                            channel,
+                            discount_applied,
                             custom_name,
                             menu_items (
                                 id,
                                 name,
                                 price,
+                                fixed_cost,
                                 category_id,
                                 menu_categories (
                                     id,
@@ -192,11 +230,15 @@ export default function AdminFinancialDashboard() {
 
             // 2. Query previous period if comparison enabled
             let prevGross = 0
+            let prevOrdersCount = 0
+            let prevGuestsCount = 0
+            let prevAvgBill = 0
+
             if (compareWithPrev) {
                 try {
                     const { data: prevData } = await supabase
                         .from('bookings')
-                        .select('total_amount, status')
+                        .select('total_amount, status, pax, discount_amount, xhaus_discount')
                         .gte('booking_time', prevStartIso)
                         .lte('booking_time', prevEndIso)
 
@@ -205,6 +247,9 @@ export default function AdminFinancialDashboard() {
                             ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
                         )
                         prevGross = prevValid.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0)
+                        prevOrdersCount = prevValid.length
+                        prevGuestsCount = prevValid.reduce((sum, b) => sum + parseInt(b.pax || 1, 10), 0)
+                        prevAvgBill = prevOrdersCount > 0 ? Math.round(prevGross / prevOrdersCount) : 0
                     }
                 } catch (e) {
                     console.warn('Could not query previous period:', e)
@@ -268,6 +313,7 @@ export default function AdminFinancialDashboard() {
             let promptpayCount = 0, creditCount = 0, cashCount = 0, walletCount = 0
             let dineInAmt = 0, takeawayAmt = 0
             let dineInTables = 0, takeawayOrders = 0
+            let totalCostRecorded = 0
 
             // Casual dining breakdown (6 core categories)
             let foodRev = 0, snackRev = 0, setRev = 0, dessertRev = 0, bevRev = 0, alcRev = 0
@@ -289,7 +335,7 @@ export default function AdminFinancialDashboard() {
             const tierMap = {}
 
             const itemAgg = {}
-            const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, items: {} }))
+            const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, guests: 0, items: {} }))
             const dayHourAgg = Array(7).fill(0).map(() => Array(12).fill(0)) // 7 days x 12 intervals
 
             const formattedRawTx = []
@@ -394,6 +440,7 @@ export default function AdminFinancialDashboard() {
                 if (hour >= 0 && hour < 24) {
                     hourlyAgg[hour].gross += amount
                     hourlyAgg[hour].bills += 1
+                    hourlyAgg[hour].guests += guests
                 }
 
                 // Heatmap Matrix mapping (11:00 to 22:00)
@@ -423,6 +470,10 @@ export default function AdminFinancialDashboard() {
                     const qty = item.quantity || 1
                     const itemPrice = parseFloat(item.price_at_time || mItem?.price || 0)
                     const itemRev = itemPrice * qty
+                    const itemUnitCost = parseFloat(item.cost_at_sale ?? mItem?.fixed_cost ?? 0)
+                    const itemTotalCost = itemUnitCost * qty
+                    totalCostRecorded += itemTotalCost
+
                     const rawCatName = mItem?.menu_categories?.name || item.category_name || item.category || 'ทั่วไป'
                     const catKey = classifyMenuCategory(rawCatName, itemName)
                     const formattedCatLabel = formatCategoryLabel(rawCatName)
@@ -431,6 +482,7 @@ export default function AdminFinancialDashboard() {
                         name: itemName,
                         quantity: qty,
                         price: itemPrice,
+                        cost: itemUnitCost,
                         category: formattedCatLabel,
                         categoryKey: catKey
                     })
@@ -464,11 +516,13 @@ export default function AdminFinancialDashboard() {
                             category: catKey,
                             units: 0,
                             revenue: 0,
+                            cost: 0,
                             price: itemPrice
                         }
                     }
                     itemAgg[itemName].units += qty
                     itemAgg[itemName].revenue += itemRev
+                    itemAgg[itemName].cost += itemTotalCost
 
                     // Accumulate Hourly Velocity Item
                     if (hour >= 0 && hour < 24) {
@@ -521,6 +575,25 @@ export default function AdminFinancialDashboard() {
                 growthPct = '+100.0'
             }
 
+            const orderGrowth = prevOrdersCount > 0 ? ((completedOrdersCount - prevOrdersCount) / prevOrdersCount) * 100 : 0
+            const guestGrowth = prevGuestsCount > 0 ? ((totalGuests - prevGuestsCount) / prevGuestsCount) * 100 : 0
+            const avgTicketGrowth = prevAvgBill > 0 ? ((avgBillSize - prevAvgBill) / prevAvgBill) * 100 : 0
+
+            setComparisonMetrics({
+                salesGrowthPct: parseFloat(growthPct),
+                orderGrowthPct: orderGrowth,
+                guestGrowthPct: guestGrowth,
+                avgTicketGrowthPct: avgTicketGrowth,
+                prevGross,
+                prevOrders: prevOrdersCount,
+                prevGuests: prevGuestsCount,
+                prevAvgTicket: prevAvgBill
+            })
+
+            const calculatedFoodCostPct = (totalGross > 0 && totalCostRecorded > 0)
+                ? parseFloat(((totalCostRecorded / totalGross) * 100).toFixed(1))
+                : 30.0
+
             setLiveMetrics({
                 totalGrossRevenue: totalGross,
                 totalDiscounts,
@@ -536,6 +609,7 @@ export default function AdminFinancialDashboard() {
                 completedOrdersCount,
                 growthVsPrevPeriod: growthPct,
                 prevPeriodGross: prevGross,
+                calculatedFoodCostPct,
             })
 
             // Format Payment Methods
@@ -564,6 +638,10 @@ export default function AdminFinancialDashboard() {
                     units: item.units,
                     revenue: item.revenue,
                     price: item.price,
+                    cost: item.cost,
+                    marginPct: item.revenue > 0 && item.cost > 0 
+                        ? Math.round(((item.revenue - item.cost) / item.revenue) * 100) 
+                        : null,
                     isBestSeller: idx === 0,
                 }))
             setTopMenuData(topList)
@@ -589,9 +667,12 @@ export default function AdminFinancialDashboard() {
                         if (sortedItems.length > 0) peakItemName = sortedItems[0][0]
                     }
                     return {
-                        hour: `${hr.toString().padStart(2, '0')}:00 - ${(hr + 1).toString().padStart(2, '0')}:00`,
+                        hour: hr,
+                        hourLabel: `${hr.toString().padStart(2, '0')}:00 - ${(hr + 1).toString().padStart(2, '0')}:00`,
+                        amount: h.gross,
                         gross: h.gross,
                         bills: h.bills,
+                        guests: h.guests || Math.round(h.bills * 1.5),
                         avgBill: h.bills > 0 ? Math.round(h.gross / h.bills) : 0,
                         peakItem: peakItemName,
                     }
@@ -719,7 +800,7 @@ export default function AdminFinancialDashboard() {
                 setLoading(false)
             }
         }
-    }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev])
+    }, [filterMode, selectedDate, selectedMonth, selectedYear, compareWithPrev, compareMode])
 
     // Leak-Proof Realtime & Visibility Change Subscriptions
     useEffect(() => {
@@ -772,6 +853,31 @@ export default function AdminFinancialDashboard() {
     const handleExportReport = () => {
         toast.success(`ส่งออกรายงานทางการเงิน (${getTimeRangeLabel()}) เรียบร้อย`)
     }
+
+    // Intraday Asia/Bangkok time metrics for Level 1 & Level 2 Cockpits
+    const currentBangkokHour = (() => {
+        try {
+            const d = new Date()
+            const hStr = d.toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour12: false, hour: '2-digit' })
+            return parseInt(hStr, 10)
+        } catch {
+            return new Date().getHours()
+        }
+    })()
+
+    const currentBangkokTimeStr = (() => {
+        try {
+            const d = new Date()
+            return d.toLocaleTimeString('en-US', { timeZone: 'Asia/Bangkok', hour12: false, hour: '2-digit', minute: '2-digit' })
+        } catch {
+            return '19:30'
+        }
+    })()
+
+    const currentHourData = hourlyVelocityData.find(h => h.hour === currentBangkokHour)
+    const currentVelocity = currentHourData?.amount || (liveMetrics.totalGrossRevenue > 0 ? Math.round(liveMetrics.totalGrossRevenue / Math.max(1, currentBangkokHour - 11 + 1)) : 0)
+    const remainingHours = Math.max(0, 23 - currentBangkokHour)
+    const forecastClose = liveMetrics.totalGrossRevenue + (remainingHours * Math.max(currentVelocity, 700))
 
     return (
         <div className="space-y-6 pb-20 text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]">
@@ -846,32 +952,32 @@ export default function AdminFinancialDashboard() {
                     </div>
                 </div>
 
-                {/* Filter Ribbon Row: Day / Month / Year Mode & Date Picker */}
-                <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono text-xs">
+                {/* Filter Ribbon Row: Day / Month / Year Mode, Compare Mode, & Date Picker */}
+                <div className="p-3 bg-[oklch(97%_0.008_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
                     
-                    {/* Period Switcher */}
-                    <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
-                        {[
-                            { id: 'day', label: 'รายวัน [DAY]' },
-                            { id: 'month', label: 'รายเดือน [MONTH]' },
-                            { id: 'year', label: 'รายปี [YEAR]' },
-                        ].map(mode => (
-                            <button
-                                key={mode.id}
-                                onClick={() => setFilterMode(mode.id)}
-                                className={`px-3.5 py-1.5 font-bold transition-colors ${
-                                    filterMode === mode.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                        : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
-                                }`}
-                            >
-                                {mode.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Date Inputs & Quick Presets */}
                     <div className="flex items-center gap-2 flex-wrap">
+                        {/* Period Switcher */}
+                        <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                            {[
+                                { id: 'day', label: 'รายวัน [DAY]' },
+                                { id: 'month', label: 'รายเดือน [MONTH]' },
+                                { id: 'year', label: 'รายปี [YEAR]' },
+                            ].map(mode => (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setFilterMode(mode.id)}
+                                    className={`px-3 py-1.5 font-bold transition-colors ${
+                                        filterMode === mode.id
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                    }`}
+                                >
+                                    {mode.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Date Inputs & Quick Presets */}
                         {filterMode === 'day' && (
                             <input
                                 type="date"
@@ -915,89 +1021,82 @@ export default function AdminFinancialDashboard() {
                             เดือนนี้
                         </button>
                     </div>
+
+                    {/* Context-Aware Comparison Mode & Location */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {compareWithPrev && filterMode === 'day' && (
+                            <div className="inline-flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setCompareMode('same_day_last_week')}
+                                    className={`px-2.5 py-1.5 font-bold transition-colors ${
+                                        compareMode === 'same_day_last_week'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                    }`}
+                                >
+                                    เทียบสัปดาห์ก่อน [W-1]
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setCompareMode('yesterday')}
+                                    className={`px-2.5 py-1.5 font-bold transition-colors ${
+                                        compareMode === 'yesterday'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                    }`}
+                                >
+                                    เทียบเมื่อวาน [D-1]
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] font-mono text-[11px]">
+                            สาขา: <strong className="text-[oklch(18%_0.012_28)]">Main (ริมโขง)</strong>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             {/* Zero State Alert (Clean Typography Enclosure) */}
             {!hasLiveData && !loading && (
-                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1">
+                <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] space-y-1 font-mono">
                     <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
-                        <span className="font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
+                        <span className="text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)]">
                             ZERO TRANSACTIONS RECORDED // {getTimeRangeLabel()}
                         </span>
                     </div>
-                    <p className="text-xs text-[oklch(42%_0.010_28)]">
+                    <p className="text-xs text-[oklch(42%_0.010_28)] font-sans">
                         ยังไม่มีรายการชำระเงินที่สมบูรณ์ในช่วงเวลานี้ ข้อมูลจะอัปเดตแบบเรียลไทม์ทันทีเมื่อมีการชำระเงินผ่านระบบ POS
                     </p>
                 </div>
             )}
 
-            {/* 2. Core Financial KPI Tabular Grid (Dieter Rams 4-Cell Matrix) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border border-[oklch(85%_0.012_28)] divide-y sm:divide-y-0 sm:divide-x divide-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
-                
-                {/* Cell 1: Gross Sales */}
-                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                        <span>01 // GROSS REVENUE</span>
-                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.completedOrdersCount} บิล</span>
-                    </div>
-                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
-                        ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
-                    </div>
-                    <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-[oklch(85%_0.012_28)]">
-                        <span className="text-[oklch(42%_0.010_28)]">ส่วนลดรวม: ฿{liveMetrics.totalDiscounts.toLocaleString()}</span>
-                        {compareWithPrev && (
-                            <span className={`font-bold ${liveMetrics.growthVsPrevPeriod.startsWith('-') ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(45%_0.08_140)]'}`}>
-                                {liveMetrics.growthVsPrevPeriod}%
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* Cell 2: Spend Per Head */}
-                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                        <span>02 // SPEND / HEAD</span>
-                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.guestCount} ท่าน</span>
-                    </div>
-                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
-                        ฿{liveMetrics.salesPerHead}
-                    </div>
-                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)]">
-                        เฉลี่ยต่อผู้ใช้บริการจริง
-                    </div>
-                </div>
-
-                {/* Cell 3: Real Net Operating Income / Expenses */}
-                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                        <span>03 // NET OPERATING</span>
-                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.hasRecordedExpenses ? 'EXPENSE SYNC' : 'GROSS NET'}</span>
-                    </div>
-                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
-                        ฿{liveMetrics.netProfitReal.toLocaleString()}
-                    </div>
-                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)] flex justify-between">
-                        <span>รายจ่ายจริง: ฿{liveMetrics.totalExpenses.toLocaleString()}</span>
-                        <span>~{liveMetrics.netProfitMarginPct}%</span>
-                    </div>
-                </div>
-
-                {/* Cell 4: Average Ticket & Table Turns */}
-                <div className="p-4 md:p-5 space-y-2 bg-[oklch(97%_0.008_28)]">
-                    <div className="flex items-center justify-between text-[11px] font-mono font-bold text-[oklch(42%_0.010_28)]">
-                        <span>04 // AVG TICKET</span>
-                        <span className="text-[oklch(18%_0.012_28)]">{liveMetrics.tableTurnoverRate} TURNS/TABLE</span>
-                    </div>
-                    <div className="font-mono text-2xl md:text-3xl font-bold tracking-tight text-[oklch(18%_0.012_28)] tabular-nums">
-                        ฿{liveMetrics.avgBillSize.toLocaleString()}
-                    </div>
-                    <div className="font-mono text-[11px] text-[oklch(42%_0.010_28)] pt-1 border-t border-[oklch(85%_0.012_28)]">
-                        ยอดเฉลี่ยต่อ 1 ออเดอร์
-                    </div>
-                </div>
-            </div>
+            {/* 2. Level 1: Executive At-A-Glance Strip (5 Decision Cards + Velocity & Forecast) */}
+            <ExecutiveKpiStrip
+                salesToday={liveMetrics.totalGrossRevenue}
+                salesGrowthPct={comparisonMetrics.salesGrowthPct}
+                orderCount={liveMetrics.completedOrdersCount}
+                orderGrowthPct={comparisonMetrics.orderGrowthPct}
+                guestCount={liveMetrics.guestCount}
+                guestGrowthPct={comparisonMetrics.guestGrowthPct}
+                avgTicket={liveMetrics.avgBillSize}
+                avgTicketGrowthPct={comparisonMetrics.avgTicketGrowthPct}
+                salesTarget={dailyTarget}
+                currentVelocityPerHour={currentVelocity}
+                forecastClose={forecastClose}
+                currentHourStr={currentBangkokTimeStr}
+                compareLabel={
+                    filterMode === 'day'
+                        ? compareMode === 'same_day_last_week' ? 'วันเดียวกันสัปดาห์ก่อน (W-1)' : 'เมื่อวานนี้ (D-1)'
+                        : filterMode === 'month' ? 'เดือนก่อนหน้า (M-1)' : 'ปีก่อนหน้า (Y-1)'
+                }
+                onEditTarget={() => {
+                    setTargetDraft(String(dailyTarget))
+                    setIsEditingTarget(true)
+                }}
+            />
 
             {/* 3. Segmented Tabular Navigation Strip */}
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] overflow-x-auto no-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
@@ -1028,40 +1127,162 @@ export default function AdminFinancialDashboard() {
             {/* 4. Sub-Components Render Viewport */}
             <div className="space-y-6">
 
-                {/* Master Tab: Compact High-Level Summary + Visual Ledger */}
+                {/* Master Tab: Revamped Ergonomic Cockpit (Levels 2 - 7) */}
                 {activeTab === 'master' && (
                     <div className="space-y-6">
-                        <ProfitWaterfallChart 
-                            liveMetrics={liveMetrics} 
-                            timeRangeLabel={getTimeRangeLabel()} 
+                        
+                        {/* Level 2: Sales vs Target & Hourly Run-Rate */}
+                        <SalesTargetPaceCockpit
+                            currentSales={liveMetrics.totalGrossRevenue}
+                            targetSales={dailyTarget}
+                            hourlyData={hourlyVelocityData}
+                            currentHour={currentBangkokHour}
+                            currentVelocity={currentVelocity}
+                            closingHour={23}
                         />
 
-                        {/* Intraday & Monthly Velocity Cockpit embedded in Master */}
-                        <IntradayVelocityDaypartCockpit
-                            bookings={rawTransactionsData}
-                            filterMode={filterMode}
-                            selectedDate={selectedDate}
-                            selectedMonth={selectedMonth}
-                            selectedYear={selectedYear}
+                        {/* Level 3: Sales Drivers & Smart Anomaly Alerts (2-col grid) */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            <div className="lg:col-span-7">
+                                <SalesDriversTable
+                                    items={topMenuData}
+                                    totalSales={liveMetrics.totalGrossRevenue}
+                                    totalOrders={liveMetrics.completedOrdersCount}
+                                    onViewAllMenu={() => setActiveTab('top_menu')}
+                                />
+                            </div>
+                            <div className="lg:col-span-5">
+                                <SmartAnomalyAlerts
+                                    foodCostPct={liveMetrics.calculatedFoodCostPct || 30.0}
+                                    foodCostTarget={30.0}
+                                    avgTicketGrowthPct={comparisonMetrics.avgTicketGrowthPct}
+                                    currentAvgTicket={liveMetrics.avgBillSize}
+                                    deliveryFeeRatioPct={diningChannelsData.find(c => c.code === 'PICKUP' || c.name?.includes('Takeaway'))?.percent || 0}
+                                    daypartAnomalies={[]}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Level 4: Menu Engineering Matrix (4 Quadrants) */}
+                        <MenuEngineeringMatrix topMenuData={topMenuData} />
+
+                        {/* Level 5: Traffic & Sales Velocity Duo (Decoupled twin sparkbars) */}
+                        <TrafficAndVelocityDuo
+                            hourlyData={hourlyVelocityData}
+                            totalGuests={liveMetrics.guestCount}
+                            totalOrders={liveMetrics.completedOrdersCount}
+                            walkInEstimates={Math.round(liveMetrics.guestCount * 1.2) || 28}
                             totalSeats={45}
-                            loading={loading}
-                            totalExpenses={liveMetrics.totalExpenses}
+                            currentHour={currentBangkokHour}
                         />
 
-                        <DetailedSalesSummary 
-                            data={{
-                                paymentMethods: paymentMethodsData,
-                                diningChannels: diningChannelsData,
-                                auditReconciliation: auditReconciliationData,
-                                hourlyVelocity: hourlyVelocityData,
-                            }}
-                            timeRangeLabel={getTimeRangeLabel()} 
+                        {/* Level 6: Channels & Payment Methods Breakdown */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Dining Channels */}
+                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                            CHANNEL
+                                        </span>
+                                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                            DINING CHANNELS // สัดส่วนช่องทางจำหน่าย
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] text-[oklch(42%_0.010_28)] font-mono">
+                                        รวม ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="p-4 space-y-3 font-mono text-xs">
+                                    {diningChannelsData.map((channel, i) => (
+                                        <div key={i} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
+                                            <div className="flex justify-between items-center">
+                                                <span className="font-bold text-[oklch(18%_0.012_28)] font-sans">{channel.name}</span>
+                                                <span className="font-bold text-[oklch(18%_0.012_28)] tabular-nums">฿{channel.amount.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[11px] text-[oklch(42%_0.010_28)]">
+                                                <span>{channel.tables ? `${channel.tables} โต๊ะ` : `${channel.orders || 0} บิล`}</span>
+                                                <span className="font-bold text-[oklch(52%_0.16_28)]">{channel.percent}%</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Payment Methods */}
+                            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
+                                <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between font-mono text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                            PAYMENT
+                                        </span>
+                                        <span className="font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
+                                            PAYMENT METHODS // รูปแบบการชำระเงิน
+                                        </span>
+                                    </div>
+                                    <span className="text-[10px] text-[oklch(42%_0.010_28)] font-mono">
+                                        รวม ฿{liveMetrics.totalGrossRevenue.toLocaleString()}
+                                    </span>
+                                </div>
+                                <div className="p-4 grid grid-cols-2 gap-2 font-mono text-xs">
+                                    {paymentMethodsData.map((pm, i) => (
+                                        <div key={i} className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] space-y-1">
+                                            <div className="flex justify-between items-center text-[10px] text-[oklch(42%_0.010_28)]">
+                                                <span className="font-bold uppercase">{pm.code}</span>
+                                                <span className="font-bold">{pm.percent}%</span>
+                                            </div>
+                                            <div className="font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                                ฿{pm.amount.toLocaleString()}
+                                            </div>
+                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] truncate font-sans">
+                                                {pm.name} ({pm.count} รายการ)
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Level 7: Operational Contribution vs Accounting Profit */}
+                        <OperationalMarginBreakdown
+                            grossSales={liveMetrics.totalGrossRevenue}
+                            discounts={liveMetrics.totalDiscounts}
+                            fixedExpenses={liveMetrics.totalExpenses}
+                            foodCostPct={liveMetrics.calculatedFoodCostPct || 30.0}
+                            packagingPct={2.5}
+                            platformFeePct={4.5}
                         />
 
-                        <DatabaseVisualLedger
-                            rawTransactions={rawTransactionsData}
-                            timeRangeLabel={getTimeRangeLabel()}
-                        />
+                        {/* Progressive Disclosure Jump Links (Deep Sub-tabs) */}
+                        <div className="p-4 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                            <span className="text-[oklch(42%_0.010_28)] font-bold">
+                                รายงานเจาะลึกเฉพาะทาง (DEEP DIVE SUB-MODULES):
+                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('velocity_daypart')}
+                                    className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-bold transition-colors cursor-pointer"
+                                >
+                                    [วิเคราะห์ความเร็ว & กะเวลา]
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('ledger')}
+                                    className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-bold transition-colors cursor-pointer"
+                                >
+                                    [สมุดบัญชีธุรกรรม ({rawTransactionsData.length})]
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveTab('summary')}
+                                    className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] hover:bg-[oklch(18%_0.012_28)] hover:text-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] font-bold transition-colors cursor-pointer"
+                                >
+                                    [กระทบยอด POS & บัญชี]
+                                </button>
+                            </div>
+                        </div>
+
                     </div>
                 )}
 
@@ -1132,6 +1353,61 @@ export default function AdminFinancialDashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Target Editing Modal Dialog */}
+            {isEditingTarget && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 space-y-4 font-mono shadow-2xl">
+                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
+                            <span className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-wide">
+                                ตั้งเป้าหมายยอดขายประจำวัน
+                            </span>
+                            <button 
+                                type="button"
+                                onClick={() => setIsEditingTarget(false)} 
+                                className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer text-sm"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-xs text-[oklch(42%_0.010_28)] block">เป้าหมายประจำวัน (บาท):</label>
+                            <input
+                                type="number"
+                                value={targetDraft}
+                                onChange={(e) => setTargetDraft(e.target.value)}
+                                className="w-full p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-xl text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                            />
+                        </div>
+                        <div className="flex gap-2 justify-end pt-2 border-t border-[oklch(85%_0.012_28)]">
+                            <button
+                                type="button"
+                                onClick={() => setIsEditingTarget(false)}
+                                className="px-3 py-1.5 text-xs text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const val = parseInt(targetDraft, 10) || 10000
+                                    setDailyTarget(val)
+                                    try {
+                                        localStorage.setItem('inth_daily_sales_target', String(val))
+                                    } catch {
+                                        // ignore
+                                    }
+                                    setIsEditingTarget(false)
+                                    toast.success(`บันทึกเป้าหมายประจำวัน ฿${val.toLocaleString()} เรียบร้อย`)
+                                }}
+                                className="px-4 py-1.5 text-xs bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-[oklch(28%_0.012_28)] cursor-pointer"
+                            >
+                                บันทึกเป้าหมาย
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
