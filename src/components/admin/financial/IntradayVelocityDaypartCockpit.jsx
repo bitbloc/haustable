@@ -1981,7 +1981,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             fontWeight="bold"
                                             fill={colorMuted}
                                         >
-                                            {dp.label.toUpperCase()} ({dp.rangeText.split(' - ')[0]})
+                                            {dp.label.toUpperCase()} ({String(dp.rangeText || '').split(' - ')[0]})
                                         </text>
                                         {idx > 0 && (
                                             <line

@@ -97,7 +97,7 @@ export default function DetailedSalesSummary({ data, timeRangeLabel }) {
                                     <span className={`text-[10px] font-mono mt-2 font-bold truncate max-w-full ${
                                         isPeak ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'
                                     }`}>
-                                        {h.hour?.split(':')[0] || idx}
+                                        {String(h.hour ?? '').split(':')[0] || idx}
                                     </span>
                                 </div>
                             )
