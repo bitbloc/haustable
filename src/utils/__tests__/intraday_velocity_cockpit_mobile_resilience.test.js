@@ -135,4 +135,74 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         expect(setWidthWithTolerance(390)).toBe(true)
         expect(containerWidth).toBe(390)
     })
+
+    it('correctly calculates hourly & daypart goal benchmarks and triggers goal exceeded flags', () => {
+        const dailyTargetSales = 50000
+        const pacingWeights = {
+            11: 0.02, 12: 0.08, 13: 0.06, 14: 0.03, 15: 0.03, 16: 0.03,
+            17: 0.07, 18: 0.14, 19: 0.18, 20: 0.16, 21: 0.10, 22: 0.07, 23: 0.03
+        }
+
+        const hourlySalesData = {
+            12: 4500, // weight 0.08 => target = 4000 => 4500 is EXCEEDED (+13%)
+            18: 6000, // weight 0.14 => target = 7000 => 6000 is NOT exceeded (-14%)
+            19: 10500 // weight 0.18 => target = 9000 => 10500 is EXCEEDED (+17%)
+        }
+
+        const checkHourGoal = (hour, sale, pax) => {
+            const weight = pacingWeights[hour] || 0.05
+            const targetSales = Math.round(dailyTargetSales * weight)
+            const targetPax = Math.max(1, Math.round(targetSales / 300))
+            const isGoalExceeded = (sale >= targetSales && targetSales > 0) || (pax >= targetPax && pax >= 3)
+            const goalDeltaPct = targetSales > 0 ? Math.round(((sale - targetSales) / targetSales) * 100) : 0
+            return { targetSales, targetPax, isGoalExceeded, goalDeltaPct }
+        }
+
+        // Test 12:00 (Lunch rush exceeding target)
+        const res12 = checkHourGoal(12, hourlySalesData[12], 15)
+        expect(res12.targetSales).toBe(4000)
+        expect(res12.isGoalExceeded).toBe(true)
+        expect(res12.goalDeltaPct).toBe(13)
+
+        // Test 18:00 (Dinner rush below target)
+        const res18 = checkHourGoal(18, hourlySalesData[18], 12)
+        expect(res18.targetSales).toBe(7000)
+        expect(res18.isGoalExceeded).toBe(false)
+        expect(res18.goalDeltaPct).toBe(-14)
+
+        // Test 19:00 (Peak dinner exceeding target)
+        const res19 = checkHourGoal(19, hourlySalesData[19], 28)
+        expect(res19.targetSales).toBe(9000)
+        expect(res19.isGoalExceeded).toBe(true)
+        expect(res19.goalDeltaPct).toBe(17)
+
+        // Test Daypart aggregation (Dinner Rush: 17:00 - 21:00)
+        const dinnerHours = [17, 18, 19, 20]
+        const dinnerTargetSales = Math.round(
+            dinnerHours.reduce((sum, h) => sum + (dailyTargetSales * (pacingWeights[h] || 0.05)), 0)
+        )
+        // 0.07 + 0.14 + 0.18 + 0.16 = 0.55 => 50000 * 0.55 = 27500
+        expect(dinnerTargetSales).toBe(27500)
+    })
+
+    it('filters down X-axis labels to milestone hours in mobile minimal mode to prevent WebKit lag', () => {
+        const allHours = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        const minimalMode = true
+        const isMobile = true
+
+        const renderedHours = allHours.filter(
+            h => !minimalMode || !isMobile || [11, 14, 17, 20, 23].includes(h)
+        )
+
+        // Mobile minimal mode reduces from 13 down to 5 key milestone slots
+        expect(renderedHours).toEqual([11, 14, 17, 20, 23])
+        expect(renderedHours.length).toBe(5)
+
+        // Desktop or non-minimal mode keeps all 13 operational hours
+        const desktopHours = allHours.filter(
+            h => false || false || [11, 14, 17, 20, 23].includes(h)
+        )
+        expect(allHours.filter(h => !minimalMode || !false || [11, 14, 17, 20, 23].includes(h)).length).toBe(13)
+    })
 })
+

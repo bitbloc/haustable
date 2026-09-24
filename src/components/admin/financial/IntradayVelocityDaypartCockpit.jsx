@@ -212,6 +212,19 @@ export default function IntradayVelocityDaypartCockpit({
             return true
         }
     })
+    const [minimalMode, setMinimalMode] = useState(() => {
+        try {
+            const saved = localStorage.getItem('intraday_cockpit_minimal_mode')
+            if (saved !== null) return JSON.parse(saved)
+            if (typeof window !== 'undefined') {
+                const isTouchMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640
+                return isTouchMobile
+            }
+            return false
+        } catch {
+            return false
+        }
+    })
     const [adEvents, setAdEvents] = useState([])
     const [aiBriefing, setAiBriefing] = useState(null)
     const [aiLoading, setAiLoading] = useState(false)
@@ -259,17 +272,30 @@ export default function IntradayVelocityDaypartCockpit({
         })
     }
 
+    const toggleMinimalMode = () => {
+        setMinimalMode(prev => {
+            const next = !prev
+            try {
+                localStorage.setItem('intraday_cockpit_minimal_mode', JSON.stringify(next))
+            } catch {
+                // ignore
+            }
+            return next
+        })
+    }
+
     // Operating hours 11:00 to 23:00 (13 slots)
     const hours = useMemo(() => [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], [])
 
-    // Track dynamic container width for 100% responsive SVG scaling (resilient against micro-jitter loops)
+    // Track dynamic container width for 100% responsive SVG scaling (resilient against micro-jitter loops & iPhone address bar reflow)
     useEffect(() => {
         if (!containerRef.current) return
+        let rAF = null
         const updateWidth = () => {
             if (containerRef.current) {
                 const w = containerRef.current.clientWidth || containerRef.current.offsetWidth
                 if (w > 0) {
-                    setContainerWidth(prev => (Math.abs(prev - w) > 2 ? Math.round(w) : prev))
+                    setContainerWidth(prev => (Math.abs(prev - w) > 4 ? Math.round(w) : prev))
                 }
             }
         }
@@ -277,16 +303,22 @@ export default function IntradayVelocityDaypartCockpit({
 
         if (typeof ResizeObserver !== 'undefined') {
             const ro = new ResizeObserver((entries) => {
-                for (let entry of entries) {
-                    const w = entry.contentRect.width
-                    if (w > 0) {
-                        const rounded = Math.round(w)
-                        setContainerWidth(prev => (Math.abs(prev - rounded) > 2 ? rounded : prev))
+                if (rAF) cancelAnimationFrame(rAF)
+                rAF = requestAnimationFrame(() => {
+                    for (let entry of entries) {
+                        const w = entry.contentRect.width
+                        if (w > 0) {
+                            const rounded = Math.round(w)
+                            setContainerWidth(prev => (Math.abs(prev - rounded) > 4 ? rounded : prev))
+                        }
                     }
-                }
+                })
             })
             ro.observe(containerRef.current)
-            return () => ro.disconnect()
+            return () => {
+                if (rAF) cancelAnimationFrame(rAF)
+                ro.disconnect()
+            }
         } else {
             window.addEventListener('resize', updateWidth)
             return () => window.removeEventListener('resize', updateWidth)
@@ -650,6 +682,15 @@ export default function IntradayVelocityDaypartCockpit({
             const spendPerHead = p > 0 ? Math.round(s / p) : 0
             const seatOccupancyPct = Math.round((p / totalSeats) * 100)
 
+            const expectedHourlySales = Math.round(
+                defaultTarget * (idx === 0 ? curveWeights[0] : (curveWeights[idx] - curveWeights[idx - 1]))
+            )
+            const targetSales = Math.max(baseS || 0, expectedHourlySales || 300)
+            const targetPax = Math.max(baseP || 0, Math.round(targetSales / 300) || 2)
+            const isGoalExceeded = s > 0 && (s >= targetSales || (p >= targetPax && p >= 3))
+            const goalDeltaPct = targetSales > 0 ? Math.round(((s - targetSales) / targetSales) * 100) : 0
+            const isPaceAhead = runningSales >= (benchmarkPoints[idx]?.expectedCumulative || 0) && runningSales > 0
+
             const isFuture = isViewingToday ? (currentBangkokTime.hour < 11 ? true : h > cappedHour) : false
             let forecast = null
             let forecastHigh = null
@@ -680,6 +721,11 @@ export default function IntradayVelocityDaypartCockpit({
                 pax: p,
                 baselinePax: baseP,
                 baselineSales: baseS,
+                targetSales,
+                targetPax,
+                isGoalExceeded,
+                goalDeltaPct,
+                isPaceAhead,
                 forecast,
                 forecastHigh,
                 forecastLow,
@@ -695,13 +741,22 @@ export default function IntradayVelocityDaypartCockpit({
             }
         })
 
-        // Dayparts breakdown with status and operational guidance
+        // Dayparts breakdown with status, operational guidance, and goal targets
         const daypartBreakdown = DAYPARTS.map(dp => {
             const dpSales = dp.hours.reduce((sum, h) => sum + (hourlySales[h] || 0), 0)
             const dpPax = dp.hours.reduce((sum, h) => sum + (hourlyPax[h] || 0), 0)
             const dpBills = dp.hours.reduce((sum, h) => sum + (hourlyBills[h] || 0), 0)
             const dpBaselinePax = dp.hours.reduce((sum, h) => sum + (historicalBaseline.pax[h] || 0), 0)
             const dpBaselineSales = dp.hours.reduce((sum, h) => sum + (historicalBaseline.sales[h] || 0), 0)
+
+            const dpTargetSales = dp.hours.reduce((sum, h) => {
+                const hIdx = hours.indexOf(h)
+                const expH = hIdx >= 0 ? Math.round(defaultTarget * (hIdx === 0 ? curveWeights[0] : (curveWeights[hIdx] - curveWeights[hIdx - 1]))) : 0
+                return sum + Math.max(historicalBaseline.sales[h] || 0, expH)
+            }, 0)
+            const isGoalExceeded = dpSales >= dpTargetSales && dpSales > 0
+            const goalDeltaPct = dpTargetSales > 0 ? Math.round(((dpSales - dpTargetSales) / dpTargetSales) * 100) : 0
+
             const pct = totalGross > 0 ? Math.round((dpSales / totalGross) * 1000) / 10 : 0
             const sph = dpPax > 0 ? Math.round(dpSales / dpPax) : 0
             const hourlyRevVelocity = Math.round(dpSales / dp.hours.length)
@@ -725,6 +780,9 @@ export default function IntradayVelocityDaypartCockpit({
                 ...dp,
                 status,
                 sales: dpSales,
+                targetSales: dpTargetSales,
+                isGoalExceeded,
+                goalDeltaPct,
                 pax: dpPax,
                 baselinePax: dpBaselinePax,
                 baselineSales: dpBaselineSales,
@@ -771,6 +829,10 @@ export default function IntradayVelocityDaypartCockpit({
         const adCalls = adEvents.filter(e => ['click_phone', 'contact'].includes(e.event_name)).length
         const adBookings = adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'generate_lead', 'click_line'].includes(e.event_name)).length
 
+        const goalExceededHoursCount = points.filter(p => p.isGoalExceeded).length
+        const isDailyGoalExceeded = totalGross >= defaultTarget && totalGross > 0
+        const dailyGoalDeltaPct = defaultTarget > 0 ? Math.round(((totalGross - defaultTarget) / defaultTarget) * 100) : 0
+
         return {
             totalGross,
             totalGuests,
@@ -795,7 +857,10 @@ export default function IntradayVelocityDaypartCockpit({
             paceDeltaPct,
             adDirs,
             adCalls,
-            adBookings
+            adBookings,
+            goalExceededHoursCount,
+            isDailyGoalExceeded,
+            dailyGoalDeltaPct
         }
     }, [filterMode, validOrders, hours, totalSeats, adEvents, isViewingToday, currentBangkokTime, isWeekend, historicalBaseline])
 
@@ -1565,14 +1630,19 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     </>
                 ) : (
                     <>
-                        <div className="p-4 space-y-1.5">
+                        <div className={`p-4 space-y-1.5 transition-colors ${dayMetrics?.isDailyGoalExceeded ? 'bg-[oklch(96%_0.02_142)] border-b-2 border-b-[oklch(50%_0.15_142)]' : ''}`}>
                             <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
                                 <span>01 // CUMULATIVE SALES</span>
-                                {dayMetrics?.pctOfTarget > 0 && (
+                                {dayMetrics?.isDailyGoalExceeded ? (
+                                    <span className="text-[oklch(38%_0.14_142)] font-bold flex items-center gap-1 animate-pulse">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_142)]" />
+                                        🎯 DAILY GOAL MET ({dayMetrics.pctOfTarget}%)
+                                    </span>
+                                ) : dayMetrics?.pctOfTarget > 0 ? (
                                     <span className="text-[oklch(18%_0.012_28)] font-bold">{dayMetrics.pctOfTarget}% OF TARGET</span>
-                                )}
+                                ) : null}
                             </div>
-                            <div className="font-mono text-xl md:text-2xl font-bold tracking-tight text-[oklch(18%_0.012_28)]">
+                            <div className={`font-mono text-xl md:text-2xl font-bold tracking-tight ${dayMetrics?.isDailyGoalExceeded ? 'text-[oklch(35%_0.14_142)]' : 'text-[oklch(18%_0.012_28)]'}`}>
                                 ฿{dayMetrics?.totalGross.toLocaleString()}
                             </div>
                             <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center gap-1.5 flex-wrap">
@@ -1581,6 +1651,14 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 <span className={dayMetrics?.paceDeltaPct >= 0 ? "text-[oklch(45%_0.08_140)] font-bold" : "text-[oklch(52%_0.16_28)] font-bold"}>
                                     {dayMetrics?.paceDeltaPct >= 0 ? `▲ +${dayMetrics?.paceDeltaPct}%` : `▼ ${dayMetrics?.paceDeltaPct}%`} vs expected
                                 </span>
+                                {dayMetrics?.goalExceededHoursCount > 0 && (
+                                    <>
+                                        <span className="text-[oklch(85%_0.012_28)]">·</span>
+                                        <span className="text-[oklch(38%_0.12_142)] font-bold">
+                                            ทะลุเป้า {dayMetrics.goalExceededHoursCount} ชม.
+                                        </span>
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -1761,14 +1839,37 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 )}
                                             </>
                                         )}
+
+                                        {/* 3. สัญลักษณ์ทะลุเป้าหมาย (GOAL EXCEEDED MARKER) */}
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[oklch(94%_0.03_142)] border border-[oklch(80%_0.08_142)] rounded-2xs" title="ช่วงเวลาที่ยอดขายหรือลูกค้าทำได้เกินเป้าหมาย (Goal Hit)">
+                                            <span className="w-2.5 h-2.5 bg-[oklch(50%_0.15_142)] rounded-2xs animate-pulse" />
+                                            <span className="text-[oklch(35%_0.12_142)] font-bold">
+                                                ทะลุเป้า (Goal Hit)
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
 
-                        {/* Right Action: Predict Toggle Button & Hours */}
+                        {/* Right Action: Minimal Mode & Predict Toggle Button & Hours */}
                         <div className="flex items-center gap-2 flex-wrap">
-                            {filterMode === 'day' && (
+                            {/* Minimal Mode Toggle for iPhone / Mobile Resilience */}
+                            <button
+                                type="button"
+                                onClick={toggleMinimalMode}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
+                                    minimalMode
+                                        ? 'bg-[oklch(45%_0.08_140)] text-white border-[oklch(45%_0.08_140)] shadow-xs'
+                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                                }`}
+                                title="โหมดมินิมอล: ลดทอนเอฟเฟกต์ประมวลผลสูง สำหรับดูบนมือถือ/iPhone ลื่นไหล 60fps ไม่หน่วง ไม่ค้าง"
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${minimalMode ? 'bg-white animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span>{minimalMode ? '⚡ MINIMAL [ON]' : '⚡ MINIMAL [OFF]'}</span>
+                            </button>
+
+                            {filterMode === 'day' && !minimalMode && (
                                 <button
                                     onClick={togglePredict}
                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-mono font-bold border transition-colors cursor-pointer ${
@@ -1783,13 +1884,30 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </button>
                             )}
                             <div className="text-[11px] text-[oklch(42%_0.010_28)] font-mono hidden sm:block">
-                                เปิดบริการ 11:00 - 23:00 // Dual Horizon
+                                {minimalMode ? 'โหมดมินิมอล // Low Latency 60fps' : 'เปิดบริการ 11:00 - 23:00 // Dual Horizon'}
                             </div>
                         </div>
                     </div>
 
+                    {/* Minimal Mode Active Status Bar on Mobile */}
+                    {minimalMode && (
+                        <div className="mb-3 px-3 py-1.5 bg-[oklch(95%_0.02_140)] border border-[oklch(85%_0.06_140)] rounded-xs flex items-center justify-between font-mono text-[10.5px] text-[oklch(28%_0.08_140)]">
+                            <div className="flex items-center gap-1.5">
+                                <span className="font-bold">⚡ MINIMAL MOBILE MODE:</span>
+                                <span>แสดงผลแบบกระชับ ตัดเอฟเฟกต์ประมวลผลสูง ไม่ค้างบน iPhone</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={toggleMinimalMode}
+                                className="underline hover:text-[oklch(18%_0.012_28)] cursor-pointer font-bold shrink-0 ml-2"
+                            >
+                                สลับดูกราฟเต็ม ➔
+                            </button>
+                        </div>
+                    )}
+
                     {/* Responsive Dual-Layer SVG Engine */}
-                    <div className="w-full overflow-x-auto no-scrollbar touch-pan-x">
+                    <div className="w-full overflow-x-auto no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
                         <svg
                             width={svgWidth}
                             height={svgHeight}
@@ -1803,6 +1921,37 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     }
                                     .forecast-stream-line {
                                         animation: forecastStreamline 2.2s linear infinite;
+                                    }
+                                    @keyframes goalGlowPulse {
+                                        0%, 100% {
+                                            opacity: 0.95;
+                                            transform: scaleY(1);
+                                        }
+                                        50% {
+                                            opacity: 1;
+                                            transform: scaleY(1.025);
+                                        }
+                                    }
+                                    @keyframes goalBeaconBounce {
+                                        0%, 100% {
+                                            transform: translateY(0);
+                                        }
+                                        50% {
+                                            transform: translateY(-2px);
+                                        }
+                                    }
+                                    .goal-exceeded-bar {
+                                        animation: goalGlowPulse 2.4s ease-in-out infinite;
+                                        transform-origin: bottom;
+                                    }
+                                    .goal-beacon-badge {
+                                        animation: goalBeaconBounce 2s ease-in-out infinite;
+                                        transform-origin: center;
+                                    }
+                                    @media (max-width: 640px) {
+                                        .forecast-stream-line {
+                                            animation: none !important;
+                                        }
                                     }
                                 `}</style>
                             </defs>
@@ -1849,8 +1998,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 )
                             })}
 
-                            {/* 2. Horizontal Gridlines (Money Axis on Left) */}
-                            {[0, 0.25, 0.5, 0.75, 1.0].map((step, idx) => {
+                            {/* 2. Horizontal Gridlines (Money Axis on Left - Streamlined in Minimal Mode) */}
+                            {(minimalMode ? [0, 0.5, 1.0] : [0, 0.25, 0.5, 0.75, 1.0]).map((step, idx) => {
                                 const y = padYTop + (1 - step) * plotHeight
                                 const valMoney = Math.round(maxSalesVal * step)
                                 const valPax = Math.round(maxPaxScale * step)
@@ -1984,6 +2133,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     const x = getX(pt.hour)
                                     const barH = getYBarHeight(pt.avgSales, Math.max(...monthMetrics.monthlyAvgHourly.map(p => p.avgSales) || [1000], 1000))
                                     const isHovered = hoveredHour === pt.hour
+                                    const monthAvgBench = monthMetrics?.monthlyAvgHourly?.length
+                                        ? (monthMetrics.monthlyAvgHourly.reduce((sum, p) => sum + p.avgSales, 0) / monthMetrics.monthlyAvgHourly.length)
+                                        : 0
+                                    const isMonthGoalExceeded = pt.avgSales > monthAvgBench && pt.avgSales > 0
+
                                     return (
                                         <g key={pt.hour}>
                                             <rect
@@ -1991,16 +2145,18 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 y={padYTop + plotHeight - barH}
                                                 width={16}
                                                 height={barH}
-                                                fill={isHovered ? colorAccent : 'oklch(85% 0.012 28)'}
+                                                fill={isMonthGoalExceeded
+                                                    ? (isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
+                                                    : (isHovered ? colorAccent : 'oklch(85% 0.012 28)')}
                                                 style={{ touchAction: 'manipulation' }}
                                                 className="transition-colors duration-150 cursor-pointer"
                                                 onMouseEnter={() => {
-                                                    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
                                                         setHoveredHour(pt.hour)
                                                     }
                                                 }}
                                                 onMouseLeave={() => {
-                                                    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
                                                         setHoveredHour(null)
                                                     }
                                                 }}
@@ -2023,6 +2179,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     const isHovered = hoveredHour === pt.hour
                                     const isPeak = dayMetrics.peakHourPoint?.hour === pt.hour && pt.pax > 0
                                     const isDrilldown = drilldownHour === pt.hour
+                                    const isGoalExceeded = !!pt.isGoalExceeded
+
+                                    // Color changes to Thai Modern Emerald Olive when hour exceeded target
+                                    const barFill = isGoalExceeded
+                                        ? (isDrilldown || isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
+                                        : (isDrilldown || isHovered || isPeak ? colorAccent : 'oklch(60% 0.12 28)')
 
                                     return (
                                         <g key={pt.hour}>
@@ -2041,18 +2203,31 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 />
                                             )}
 
-                                            {/* Expected Baseline Ghost Bar */}
-                                            <rect
-                                                x={x - 7}
-                                                y={padYTop + plotHeight - ghostBarH}
-                                                width={14}
-                                                height={ghostBarH}
-                                                fill="oklch(93% 0.012 28)"
-                                                stroke="oklch(85% 0.012 28)"
-                                                strokeWidth="1"
-                                                strokeDasharray="2 2"
-                                                className="pointer-events-none"
-                                            />
+                                            {/* Expected Baseline Ghost Bar (Streamlined tick in Minimal Mode) */}
+                                            {minimalMode ? (
+                                                <line
+                                                    x1={x - 6}
+                                                    y1={padYTop + plotHeight - ghostBarH}
+                                                    x2={x + 6}
+                                                    y2={padYTop + plotHeight - ghostBarH}
+                                                    stroke="oklch(78% 0.012 28)"
+                                                    strokeWidth="1.5"
+                                                    strokeDasharray="2 2"
+                                                    className="pointer-events-none"
+                                                />
+                                            ) : (
+                                                <rect
+                                                    x={x - 7}
+                                                    y={padYTop + plotHeight - ghostBarH}
+                                                    width={14}
+                                                    height={ghostBarH}
+                                                    fill="oklch(93% 0.012 28)"
+                                                    stroke="oklch(85% 0.012 28)"
+                                                    strokeWidth="1"
+                                                    strokeDasharray="2 2"
+                                                    className="pointer-events-none"
+                                                />
+                                            )}
 
                                             {/* Actual Pax Solid Bar */}
                                             {pt.pax > 0 && (
@@ -2061,9 +2236,46 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop + plotHeight - actualBarH}
                                                     width={14}
                                                     height={actualBarH}
-                                                    fill={isDrilldown || isHovered || isPeak ? colorAccent : 'oklch(60% 0.12 28)'}
+                                                    fill={barFill}
                                                     className="transition-colors duration-150 pointer-events-none"
                                                 />
+                                            )}
+
+                                            {/* Celebratory Goal Beacon & Micro-Motion if hour exceeded target */}
+                                            {isGoalExceeded && actualBarH > 8 && (
+                                                <g className="goal-beacon-group select-none pointer-events-none">
+                                                    {!minimalMode && (
+                                                        <circle
+                                                            cx={x}
+                                                            cy={padYTop + plotHeight - actualBarH - 6}
+                                                            r="4.5"
+                                                            fill="none"
+                                                            stroke="oklch(50% 0.15 142)"
+                                                            strokeWidth="1.5"
+                                                            style={{ animation: 'goalGlowPulse 2.4s ease-in-out infinite' }}
+                                                        />
+                                                    )}
+                                                    <circle
+                                                        cx={x}
+                                                        cy={padYTop + plotHeight - actualBarH - 6}
+                                                        r="2.5"
+                                                        fill="oklch(50% 0.15 142)"
+                                                    />
+                                                    {!minimalMode && pt.goalDeltaPct > 0 && (
+                                                        <text
+                                                            x={x}
+                                                            y={padYTop + plotHeight - actualBarH - 12}
+                                                            textAnchor="middle"
+                                                            fontSize="7.5"
+                                                            fontFamily="monospace"
+                                                            fontWeight="bold"
+                                                            fill="oklch(44% 0.17 142)"
+                                                            className="tabular-nums"
+                                                        >
+                                                            +{pt.goalDeltaPct}%
+                                                        </text>
+                                                    )}
+                                                </g>
                                             )}
 
                                             {/* Full-Height Touch/Hover Hitbox for Drilldown Inspection (iOS WebKit Hit-Test Compliant) */}
@@ -2077,12 +2289,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 style={{ pointerEvents: 'all', touchAction: 'manipulation' }}
                                                 className="cursor-pointer select-none"
                                                 onMouseEnter={() => {
-                                                    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
                                                         setHoveredHour(pt.hour)
                                                     }
                                                 }}
                                                 onMouseLeave={() => {
-                                                    if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
                                                         setHoveredHour(null)
                                                     }
                                                 }}
@@ -2136,8 +2348,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                     )}
 
-                                    {/* Shaded Forecast Confidence Fan (พื้นที่กรอบพยากรณ์ ต่ำ - สูง) */}
-                                    {showPredict && pathForecastFan && (
+                                    {/* Shaded Forecast Confidence Fan (Disabled in Minimal Mode for 60fps GPU smoothness) */}
+                                    {showPredict && !minimalMode && pathForecastFan && (
                                         <path
                                             d={pathForecastFan}
                                             fill="oklch(52% 0.16 28)"
@@ -2146,7 +2358,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     )}
 
                                     {/* Low Scenario Bound Line (ต่ำ) */}
-                                    {showPredict && pathForecastLow && (
+                                    {showPredict && !minimalMode && pathForecastLow && (
                                         <path
                                             d={pathForecastLow}
                                             fill="none"
@@ -2158,7 +2370,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     )}
 
                                     {/* High Scenario Bound Line (สูง) */}
-                                    {showPredict && pathForecastHigh && (
+                                    {showPredict && !minimalMode && pathForecastHigh && (
                                         <path
                                             d={pathForecastHigh}
                                             fill="none"
@@ -2169,7 +2381,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                     )}
 
-                                    {/* Forecast Base Line (ANIMATED FLOWING DASH - เส้นประพยากรณ์ลูกค้า) */}
+                                    {/* Forecast Base Line (ANIMATED FLOWING DASH in standard, static in minimal) */}
                                     {showPredict && pathForecastBase && (
                                         <path
                                             d={pathForecastBase}
@@ -2178,7 +2390,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             strokeWidth={isMobile ? '2.2' : '2.8'}
                                             strokeDasharray="6 4"
                                             strokeLinecap="round"
-                                            className="forecast-stream-line opacity-90"
+                                            className={minimalMode ? 'opacity-80' : 'forecast-stream-line opacity-90'}
                                         />
                                     )}
 
@@ -2193,8 +2405,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                     )}
 
-                                    {/* Terminal Prediction Tags at 23:00 (Shown only when showPredict is ON) */}
-                                    {showPredict && dayMetrics?.points && isViewingToday && (() => {
+                                    {/* Terminal Prediction Tags at 23:00 (Shown only when showPredict is ON and not minimal) */}
+                                    {showPredict && !minimalMode && dayMetrics?.points && isViewingToday && (() => {
                                         const lastPt = dayMetrics.points[dayMetrics.points.length - 1]
                                         const fx = getX(23)
                                         const fyBase = getYPax(lastPt.forecast)
@@ -2259,9 +2471,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         const bpts = dayMetrics?.benchmarkPoints || []
                                         if (bpts.length === 0) return null
                                         const pathD = bpts.reduce((acc, p, i) => {
-                                            const x = getX(p.hour)
-                                            const y = getYMoney(p.expectedCumulative)
-                                            return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`
+                                             const x = getX(p.hour)
+                                             const y = getYMoney(p.expectedCumulative)
+                                             return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`
                                         }, '')
                                         const lastBpt = bpts[bpts.length - 1]
                                         const targetAmt = lastBpt?.expectedCumulative || 0
@@ -2277,7 +2489,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     opacity="0.55"
                                                 />
                                                 {/* Subtle Terminal Target Tag at 23:00 */}
-                                                {lastBpt && (
+                                                {lastBpt && !minimalMode && (
                                                     <g>
                                                         <circle
                                                             cx={getX(23)}
@@ -2299,7 +2511,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     })()}
 
                                     {/* Dashed Projected Sales Velocity Line (Shown only when showPredict is ON) */}
-                                    {showPredict && pathForecastSales && (
+                                    {showPredict && !minimalMode && pathForecastSales && (
                                         <path
                                             d={pathForecastSales}
                                             fill="none"
@@ -2354,43 +2566,56 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 )
                             })()}
 
-                            {/* 9. X-Axis Hour Labels */}
-                            {hours.map((h) => {
-                                const x = getX(h)
-                                const isHovered = hoveredHour === h
-                                const isDrill = drilldownHour === h
-                                return (
-                                    <g
-                                        key={h}
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setDrilldownHour(prev => prev === h ? null : h)
-                                        }}
-                                        style={{ touchAction: 'manipulation' }}
-                                        className="cursor-pointer select-none"
-                                    >
-                                        <line
-                                            x1={x}
-                                            y1={padYTop + plotHeight}
-                                            x2={x}
-                                            y2={padYTop + plotHeight + (isDrill ? 6 : 4)}
-                                            stroke={isDrill ? colorAccent : colorRule}
-                                            strokeWidth={isDrill ? "2" : "1"}
-                                        />
-                                        <text
-                                            x={x}
-                                            y={padYTop + plotHeight + 16}
-                                            textAnchor="middle"
-                                            fontSize="9"
-                                            fontFamily="monospace"
-                                            fill={isDrill ? colorAccent : (isHovered ? colorInk : colorMuted)}
-                                            fontWeight={isDrill || isHovered ? 'bold' : 'normal'}
+                            {/* 9. X-Axis Hour Labels (Filter to milestone hours on mobile in Minimal Mode) */}
+                            {hours
+                                .filter(h => !minimalMode || !isMobile || [11, 14, 17, 20, 23].includes(h))
+                                .map((h) => {
+                                    const x = getX(h)
+                                    const isHovered = hoveredHour === h
+                                    const isDrill = drilldownHour === h
+                                    const pt = dayMetrics?.points?.find(p => p.hour === h)
+                                    const isGoal = filterMode === 'day' && pt?.isGoalExceeded
+
+                                    return (
+                                        <g
+                                            key={h}
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setDrilldownHour(prev => prev === h ? null : h)
+                                            }}
+                                            style={{ touchAction: 'manipulation' }}
+                                            className="cursor-pointer select-none"
                                         >
-                                            {h}:00
-                                        </text>
-                                    </g>
-                                )
-                            })}
+                                            <line
+                                                x1={x}
+                                                y1={padYTop + plotHeight}
+                                                x2={x}
+                                                y2={padYTop + plotHeight + (isDrill ? 6 : 4)}
+                                                stroke={isDrill ? colorAccent : (isGoal ? 'oklch(50% 0.15 142)' : colorRule)}
+                                                strokeWidth={isDrill ? "2" : (isGoal ? "1.5" : "1")}
+                                            />
+                                            <text
+                                                x={x}
+                                                y={padYTop + plotHeight + 16}
+                                                textAnchor="middle"
+                                                fontSize="9"
+                                                fontFamily="monospace"
+                                                fill={isDrill ? colorAccent : (isGoal ? 'oklch(44% 0.17 142)' : (isHovered ? colorInk : colorMuted))}
+                                                fontWeight={isDrill || isHovered || isGoal ? 'bold' : 'normal'}
+                                            >
+                                                {h}:00
+                                            </text>
+                                            {isGoal && !minimalMode && (
+                                                <circle
+                                                    cx={x}
+                                                    cy={padYTop + plotHeight + 23}
+                                                    r="1.8"
+                                                    fill="oklch(50% 0.15 142)"
+                                                />
+                                            )}
+                                        </g>
+                                    )
+                                })}
 
                             {/* 10. Hover Crosshair Cursor */}
                             {hoveredHour !== null && (
@@ -2486,6 +2711,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 const pt = dayMetrics?.points?.find(p => p.hour === hoveredHour)
                                 return (
                                     <div className="flex items-center gap-4 flex-wrap">
+                                        {pt?.isGoalExceeded && (
+                                            <span className="px-2 py-0.5 bg-[oklch(50%_0.15_142)] text-white font-bold text-[10px] rounded-xs flex items-center gap-1 shadow-xs animate-in fade-in duration-150">
+                                                <span>🎯 ทะลุเป้า</span>
+                                                {pt.goalDeltaPct > 0 && <span>+{pt.goalDeltaPct}%</span>}
+                                            </span>
+                                        )}
                                         <div>
                                             <span className="text-[oklch(42%_0.010_28)]">
                                                 {pt?.isFuture ? 'คาดการณ์ (FORECAST): ' : 'ลูกค้าจริง: '}
@@ -2499,8 +2730,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         </div>
                                         <div>
                                             <span className="text-[oklch(42%_0.010_28)]">ยอดขาย: </span>
-                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className={`font-bold ${pt?.isGoalExceeded ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'}`}>
                                                 ฿{(pt?.sale || 0).toLocaleString()}
+                                            </span>
+                                            <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                                (เป้าชม.: ฿{(pt?.targetSales || 0).toLocaleString()})
                                             </span>
                                         </div>
                                         <div>
@@ -2555,13 +2789,27 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                             {/* 4 Metric Cells */}
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
-                                <div className="p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] min-w-0">
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">HOURLY SALES</div>
-                                    <div className="text-base sm:text-lg md:text-xl font-bold text-[oklch(18%_0.012_28)] mt-0.5 truncate">
+                                <div className={`p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border min-w-0 ${
+                                    drillHourData.isGoalExceeded
+                                        ? 'border-[oklch(50%_0.15_142)] bg-[oklch(50%_0.15_142)]/5'
+                                        : 'border-[oklch(85%_0.012_28)]'
+                                }`}>
+                                    <div className="flex items-center justify-between gap-1">
+                                        <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">HOURLY SALES</div>
+                                        {drillHourData.isGoalExceeded && (
+                                            <span className="px-1.5 py-0.2 bg-[oklch(50%_0.15_142)] text-white text-[8px] sm:text-[9px] font-bold rounded-xs shrink-0">
+                                                🎯 ทะลุเป้า +{drillHourData.goalDeltaPct}%
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className={`text-base sm:text-lg md:text-xl font-bold mt-0.5 truncate ${
+                                        drillHourData.isGoalExceeded ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'
+                                    }`}>
                                         ฿{(drillHourData.sale || 0).toLocaleString()}
                                     </div>
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
-                                        สะสม: ฿{(drillHourData.cumulativeSales || 0).toLocaleString()}
+                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate flex items-center justify-between gap-1">
+                                        <span>สะสม: ฿{(drillHourData.cumulativeSales || 0).toLocaleString()}</span>
+                                        <span>เป้า: ฿{(drillHourData.targetSales || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
 
@@ -2670,11 +2918,15 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             const isPassed = dp.status === 'passed'
                             const isActive = dp.status === 'active'
 
+                            const isGoalHit = !!dp.isGoalExceeded
+
                             return (
                                 <div
                                     key={dp.id}
                                     className={`p-4 bg-[oklch(97%_0.008_28)] border transition-all space-y-3 ${
-                                        isActive
+                                        isGoalHit
+                                            ? 'border-[oklch(50%_0.15_142)] bg-[oklch(50%_0.15_142)]/5 ring-1 ring-[oklch(50%_0.15_142)]/30'
+                                            : isActive
                                             ? 'border-[oklch(52%_0.16_28)] shadow-sm ring-1 ring-[oklch(52%_0.16_28)]/20'
                                             : 'border-[oklch(85%_0.012_28)]'
                                     }`}
@@ -2692,26 +2944,42 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 {dp.thaiLabel} ({dp.rangeText})
                                             </div>
                                         </div>
-                                        <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 ${
-                                            isActive
-                                                ? 'bg-[oklch(52%_0.16_28)] text-white'
-                                                : isPassed
-                                                ? 'bg-[oklch(88%_0.012_28)] text-[oklch(35%_0.010_28)]'
-                                                : 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
-                                        }`}>
-                                            {isActive ? 'NOW ACTIVE' : isPassed ? 'PASSED' : 'UPCOMING'}
-                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            {isGoalHit && (
+                                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[oklch(50%_0.15_142)] text-white">
+                                                    🎯 ทะลุเป้า +{dp.goalDeltaPct}%
+                                                </span>
+                                            )}
+                                            <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 ${
+                                                isActive
+                                                    ? 'bg-[oklch(52%_0.16_28)] text-white'
+                                                    : isPassed
+                                                    ? 'bg-[oklch(88%_0.012_28)] text-[oklch(35%_0.010_28)]'
+                                                    : 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)]'
+                                            }`}>
+                                                {isActive ? 'NOW ACTIVE' : isPassed ? 'PASSED' : 'UPCOMING'}
+                                            </span>
+                                        </div>
                                     </div>
 
                                     {/* Primary Figures */}
                                     <div className="space-y-1">
                                         <div className="flex items-baseline justify-between">
-                                            <span className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                            <span className={`font-mono text-xl font-bold ${
+                                                isGoalHit ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'
+                                            }`}>
                                                 ฿{dp.sales.toLocaleString()}
                                             </span>
-                                            <span className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)]">
-                                                {dp.percent}%
-                                            </span>
+                                            <div className="flex items-center gap-1.5">
+                                                {filterMode === 'day' && dp.dpTargetSales > 0 && (
+                                                    <span className="text-[10px] font-mono text-[oklch(42%_0.010_28)]">
+                                                        (เป้า ฿{dp.dpTargetSales >= 1000 ? `${Math.round(dp.dpTargetSales / 1000)}k` : dp.dpTargetSales})
+                                                    </span>
+                                                )}
+                                                <span className="text-xs font-mono font-bold text-[oklch(52%_0.16_28)]">
+                                                    {dp.percent}%
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-between text-xs font-mono text-[oklch(42%_0.010_28)]">
                                             <span>
@@ -2771,6 +3039,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         const pt = dayMetrics?.points.find(p => p.hour === h)
                                         const dp = DAYPARTS.find(d => d.hours.includes(h))
                                         const isCurrentHour = isViewingToday && currentBangkokTime.hour === h
+                                        const isGoal = filterMode === 'day' && !!pt?.isGoalExceeded
 
                                         return (
                                             <tr
@@ -2778,6 +3047,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 className={`transition-colors ${
                                                     isCurrentHour
                                                         ? 'bg-[oklch(52%_0.16_28)]/10 font-bold'
+                                                        : isGoal
+                                                        ? 'bg-[oklch(50%_0.15_142)]/5 hover:bg-[oklch(50%_0.15_142)]/10'
                                                         : 'hover:bg-[oklch(94%_0.010_28)]'
                                                 }`}
                                             >
@@ -2786,6 +3057,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     {isCurrentHour && (
                                                         <span className="px-1 py-0.2 text-[8px] bg-[oklch(45%_0.08_140)] text-white uppercase">
                                                             NOW
+                                                        </span>
+                                                    )}
+                                                    {isGoal && (
+                                                        <span className="px-1 py-0.2 text-[8px] bg-[oklch(50%_0.15_142)] text-white uppercase font-bold">
+                                                            GOAL
                                                         </span>
                                                     )}
                                                 </td>
@@ -2800,8 +3076,15 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                         / สถิติ ~{pt?.baselinePax || 0}
                                                     </span>
                                                 </td>
-                                                <td className="p-2.5 text-right font-bold text-[oklch(18%_0.012_28)]">
+                                                <td className={`p-2.5 text-right font-bold ${
+                                                    isGoal ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'
+                                                }`}>
                                                     ฿{(pt?.sale || 0).toLocaleString()}
+                                                    {isGoal && pt?.goalDeltaPct > 0 && (
+                                                        <span className="text-[9px] ml-1 text-[oklch(50%_0.15_142)]">
+                                                            (+{pt.goalDeltaPct}%)
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="p-2.5 text-right text-[oklch(18%_0.012_28)]">
                                                     ฿{(pt?.cumulativeSales || 0).toLocaleString()}
