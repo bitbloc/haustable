@@ -578,12 +578,16 @@ export default function IntradayVelocityDaypartCockpit({
         const hourlyPax = {}
         const hourlyBills = {}
         const hourlyAdDirs = {}
+        const hourlyAdInquiries = {}
+        const hourlyAdTotal = {}
         const hourlyAdLeads = {}
         hours.forEach(h => {
             hourlySales[h] = 0
             hourlyPax[h] = 0
             hourlyBills[h] = 0
             hourlyAdDirs[h] = 0
+            hourlyAdInquiries[h] = 0
+            hourlyAdTotal[h] = 0
             hourlyAdLeads[h] = 0
         })
 
@@ -616,14 +620,22 @@ export default function IntradayVelocityDaypartCockpit({
             }
         })
 
+        let preOpeningAdSignals = 0
         adEvents.forEach(e => {
             const h = getBangkokHour(e.created_at)
-            if (h >= 11 && h <= 23) {
-                if (['click_directions', 'find_location'].includes(e.event_name)) {
-                    hourlyAdDirs[h] = (hourlyAdDirs[h] || 0) + 1
-                }
-                if (['click_directions', 'find_location', 'click_phone', 'contact', 'click_line', 'generate_lead', 'click_booking_link', 'click_pickup_link'].includes(e.event_name)) {
+            const isDir = ['click_directions', 'find_location'].includes(e.event_name)
+            const isInq = ['click_phone', 'contact', 'click_line', 'generate_lead', 'click_booking_link', 'click_pickup_link'].includes(e.event_name)
+            const isHighIntent = isDir || isInq
+
+            if (isHighIntent) {
+                if (h >= 11 && h <= 23) {
+                    if (isDir) hourlyAdDirs[h] = (hourlyAdDirs[h] || 0) + 1
+                    if (isInq) hourlyAdInquiries[h] = (hourlyAdInquiries[h] || 0) + 1
+                    hourlyAdTotal[h] = (hourlyAdTotal[h] || 0) + 1
+                    // Maintain hourlyAdLeads for pacing lift
                     hourlyAdLeads[h] = (hourlyAdLeads[h] || 0) + 1
+                } else if (h >= 0 && h < 11) {
+                    preOpeningAdSignals += 1
                 }
             }
         })
@@ -732,6 +744,8 @@ export default function IntradayVelocityDaypartCockpit({
                 forecastLow,
                 isFuture,
                 adDirs: hourlyAdDirs[h] || 0,
+                adInquiries: hourlyAdInquiries[h] || 0,
+                adTotal: hourlyAdTotal[h] || 0,
                 adLeads: hourlyAdLeads[h] || 0,
                 bills: hourlyBills[h],
                 spendPerHead,
@@ -859,6 +873,7 @@ export default function IntradayVelocityDaypartCockpit({
             adDirs,
             adCalls,
             adBookings,
+            preOpeningAdSignals,
             goalExceededHoursCount,
             isDailyGoalExceeded,
             dailyGoalDeltaPct
@@ -1716,6 +1731,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             </div>
                             <div className="text-[11px] font-mono text-[oklch(42%_0.010_28)]">
                                 แผนที่ {dayMetrics?.adDirs || 0} · โทร {dayMetrics?.adCalls || 0} · ไลน์/จอง {dayMetrics?.adBookings || 0}
+                                {dayMetrics?.preOpeningAdSignals > 0 && (
+                                    <span className="text-[oklch(55%_0.010_28)] block sm:inline sm:ml-1">
+                                        (ช่วงเช้าก่อนเปิด {dayMetrics.preOpeningAdSignals})
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </>
@@ -2329,14 +2349,20 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             />
 
                                             {/* Ad Intent Beacon Pin if leads happened at this hour (Positioned inside column top to prevent overlap) */}
-                                            {pt.adDirs > 0 && (
-                                                <g>
+                                            {pt.adTotal > 0 && (
+                                                <g
+                                                    className="cursor-pointer select-none"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        setDrilldownHour(prev => prev === pt.hour ? null : pt.hour)
+                                                    }}
+                                                >
                                                     <rect
-                                                        x={x - 11}
+                                                        x={x - 13}
                                                         y={padYTop + 4}
-                                                        width="22"
-                                                        height="11"
-                                                        rx="1.5"
+                                                        width="26"
+                                                        height="11.5"
+                                                        rx="2"
                                                         fill="oklch(45% 0.08 140)"
                                                     />
                                                     <text
@@ -2346,7 +2372,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                         fill={colorPaper}
                                                         className="font-mono text-[7px] font-bold"
                                                     >
-                                                        DIR {pt.adDirs}
+                                                        {pt.adDirs > 0 && pt.adInquiries > 0
+                                                            ? `${pt.adTotal} SIG`
+                                                            : (pt.adDirs > 0 ? `DIR ${pt.adDirs}` : `LEAD ${pt.adInquiries}`)}
                                                     </text>
                                                 </g>
                                             )}
@@ -2859,12 +2887,21 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </div>
 
                                 <div className="p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] min-w-0">
-                                    <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">ONLINE SEARCH INTENT</div>
+                                    <div className="flex items-center justify-between gap-1">
+                                        <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">ONLINE SEARCH INTENT</div>
+                                        <span className="text-[9px] text-[oklch(55%_0.010_28)] font-mono shrink-0">
+                                            {drilldownHour}:00 น.
+                                        </span>
+                                    </div>
                                     <div className="text-base sm:text-lg md:text-xl font-bold text-[oklch(45%_0.08_140)] mt-0.5 truncate">
-                                        {(drillHourData.adDirs || 0) + (drillHourData.adLeads || 0)} Signals
+                                        {drillHourData.adTotal || 0} Signals
                                     </div>
                                     <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
-                                        Dirs: {drillHourData.adDirs || 0} · Inq: {drillHourData.adLeads || 0}
+                                        {drillHourData.isFuture && (drillHourData.adTotal || 0) === 0 ? (
+                                            <span className="text-[oklch(55%_0.010_28)]">ช่วงเวลานี้ยังมาไม่ถึง</span>
+                                        ) : (
+                                            `แผนที่: ${drillHourData.adDirs || 0} · ติดต่อ/จอง: ${drillHourData.adInquiries || 0}`
+                                        )}
                                     </div>
                                 </div>
                             </div>

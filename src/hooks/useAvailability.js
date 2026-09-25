@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
-import { checkOverlap } from '../utils/availabilityUtils'
+import { checkOverlap, isBookingOverlap } from '../utils/availabilityUtils'
 
 export function useAvailability() {
     
@@ -16,7 +16,7 @@ export function useAvailability() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, booking_type')
+                .select('table_id, booking_time, end_time, booking_type, status')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
@@ -25,9 +25,10 @@ export function useAvailability() {
 
             const bookedIds = []
             const statuses = {}
+            const now = new Date()
 
             data.forEach(b => {
-                if (checkOverlap(requestedStart, requestedEnd, b.booking_time)) {
+                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: durationHours, liveBufferMinutes: 30 })) {
                     bookedIds.push(b.table_id)
                     statuses[b.table_id] = { type: b.booking_type }
                 }

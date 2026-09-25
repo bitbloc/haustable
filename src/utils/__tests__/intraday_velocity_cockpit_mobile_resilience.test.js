@@ -204,5 +204,71 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         )
         expect(allHours.filter(h => !minimalMode || !false || [11, 14, 17, 20, 23].includes(h)).length).toBe(13)
     })
+
+    it('correctly separates directions and inquiries without double-counting and tracks pre-opening signals', () => {
+        const mockAdEvents = [
+            // Pre-opening at 09:30 AM (Bangkok)
+            { event_name: 'click_phone', created_at: '2026-09-25T02:30:00Z' }, // 09:30
+            { event_name: 'click_directions', created_at: '2026-09-25T03:00:00Z' }, // 10:00
+            // Lunch Rush at 12:15 PM (Bangkok)
+            { event_name: 'click_directions', created_at: '2026-09-25T05:15:00Z' }, // 12:15
+            { event_name: 'click_phone', created_at: '2026-09-25T05:20:00Z' }, // 12:20
+            { event_name: 'click_line', created_at: '2026-09-25T05:45:00Z' }, // 12:45
+            // Afternoon at 14:10 PM (Bangkok)
+            { event_name: 'click_directions', created_at: '2026-09-25T07:10:00Z' }, // 14:10
+            { event_name: 'click_booking_link', created_at: '2026-09-25T07:30:00Z' }, // 14:30
+        ]
+
+        const hours = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        const hourlyAdDirs = {}
+        const hourlyAdInquiries = {}
+        const hourlyAdTotal = {}
+        hours.forEach(h => {
+            hourlyAdDirs[h] = 0
+            hourlyAdInquiries[h] = 0
+            hourlyAdTotal[h] = 0
+        })
+
+        let preOpeningAdSignals = 0
+        mockAdEvents.forEach(e => {
+            const h = getBangkokHour(e.created_at)
+            const isDir = ['click_directions', 'find_location'].includes(e.event_name)
+            const isInq = ['click_phone', 'contact', 'click_line', 'generate_lead', 'click_booking_link', 'click_pickup_link'].includes(e.event_name)
+            const isHighIntent = isDir || isInq
+
+            if (isHighIntent) {
+                if (h >= 11 && h <= 23) {
+                    if (isDir) hourlyAdDirs[h] = (hourlyAdDirs[h] || 0) + 1
+                    if (isInq) hourlyAdInquiries[h] = (hourlyAdInquiries[h] || 0) + 1
+                    hourlyAdTotal[h] = (hourlyAdTotal[h] || 0) + 1
+                } else if (h >= 0 && h < 11) {
+                    preOpeningAdSignals += 1
+                }
+            }
+        })
+
+        // Pre-opening check (2 events at 09:30 & 10:00)
+        expect(preOpeningAdSignals).toBe(2)
+
+        // Hour 12 (1 dir + 2 inq = 3 signals)
+        expect(hourlyAdDirs[12]).toBe(1)
+        expect(hourlyAdInquiries[12]).toBe(2)
+        expect(hourlyAdTotal[12]).toBe(3)
+
+        // Hour 14 (1 dir + 1 inq = 2 signals)
+        expect(hourlyAdDirs[14]).toBe(1)
+        expect(hourlyAdInquiries[14]).toBe(1)
+        expect(hourlyAdTotal[14]).toBe(2)
+
+        // Future hour 18 (at 16:45, hour 18 has not occurred, so signals must be 0)
+        expect(hourlyAdDirs[18]).toBe(0)
+        expect(hourlyAdInquiries[18]).toBe(0)
+        expect(hourlyAdTotal[18]).toBe(0)
+
+        // Total signals across all operational hours + pre-opening equals all high intent events
+        const totalInHours = hours.reduce((sum, h) => sum + hourlyAdTotal[h], 0)
+        expect(totalInHours + preOpeningAdSignals).toBe(mockAdEvents.length)
+        expect(totalInHours).toBe(5)
+    })
 })
 

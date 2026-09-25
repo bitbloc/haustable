@@ -176,7 +176,7 @@ export async function syncOfflineQueue(isManual = false) {
             console.log(`[Offline Sync] Processing: ${action.type}`, action.payload);
             
             if (action.type === 'create_walkin') {
-                const { tableId, tempBookingId, pax, status, bookingTime, staffRemark } = action.payload;
+                const { tableId, tempBookingId, pax, status, bookingTime, endTime, staffRemark } = action.payload;
                 
                 const { data, error } = await supabase
                     .from('bookings')
@@ -186,6 +186,7 @@ export async function syncOfflineQueue(isManual = false) {
                         booking_type: 'walk_in',
                         source: 'pos',
                         booking_time: bookingTime || new Date().toISOString(),
+                        end_time: endTime || null,
                         pax: pax || 2,
                         staff_remark: staffRemark || 'Offline Walk-in'
                     })

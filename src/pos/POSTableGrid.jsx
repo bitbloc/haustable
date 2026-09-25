@@ -1092,9 +1092,12 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                         <span className={`text-[7px] font-mono font-bold px-1 py-0.2 rounded leading-tight truncate max-w-full ${
                             isReserved 
                                 ? 'bg-amber-100 text-amber-900 border border-amber-300' 
+                                : table.reservationDiffMins < 90
+                                ? 'bg-amber-100 text-amber-950 border border-amber-400'
                                 : 'bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)]'
                         }`}>
-                            RES {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})
+                            {table.reservationDiffMins < 90 && !isReserved ? 'รอบด่วน ' : 'RES '}
+                            {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})
                         </span>
                         {(table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name) && (
                             <span className="text-[7px] font-mono font-bold truncate max-w-full mt-0.5 opacity-80">
@@ -1206,8 +1209,12 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                          </span>
                      )}
                      {isAdvanceReserved && (
-                         <span className="bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)] text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase">
-                             ว่าง · มีจอง {formatUpcomingResTime(table.upcomingReservation.booking_time)}
+                         <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase border ${
+                             table.reservationDiffMins < 90
+                                 ? 'bg-[oklch(52%_0.16_28_/_0.10)] text-[var(--color-accent)] border-[var(--color-accent)] font-bold'
+                                 : 'bg-[oklch(92%_0.04_140)] text-[oklch(30%_0.08_140)] border border-[oklch(80%_0.06_140)]'
+                         }`}>
+                             {table.reservationDiffMins < 90 ? 'รอบด่วน' : 'ว่าง'} · มีจอง {formatUpcomingResTime(table.upcomingReservation.booking_time)}
                          </span>
                      )}
                      {transfer.isMergedTarget && (
@@ -1249,11 +1256,21 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             {/* Center row: Table Info */}
             <div className="flex flex-col items-center gap-0.5 my-2.5 select-none">
                  <span className="font-mono font-bold text-2xl tracking-tight">{table.table_name}</span>
-                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${isOccupied || isPending ? 'text-white/80' : isReserved ? 'text-amber-800' : isAdvanceReserved ? 'text-[oklch(35%_0.08_140)]' : 'text-[var(--color-neutral)]'}`}>
+                 <span className={`text-[9px] font-mono font-bold tracking-widest uppercase ${
+                     isOccupied || isPending 
+                         ? 'text-white/80' 
+                         : isReserved 
+                         ? 'text-amber-800' 
+                         : isAdvanceReserved 
+                         ? (table.reservationDiffMins < 90 ? 'text-[var(--color-accent)] font-bold' : 'text-[oklch(35%_0.08_140)]') 
+                         : 'text-[var(--color-neutral)]'
+                 }`}>
                      {isReserved && table.upcomingReservation 
                          ? (table.upcomingReservation.pickup_contact_name || table.upcomingReservation.customer_name || table.upcomingReservation.profiles?.display_name || 'ONLINE RESERVED')
                          : isAdvanceReserved && table.upcomingReservation
-                         ? `รับ WALK-IN ได้ (${formatReservationCountdown(table.upcomingReservation.booking_time)})`
+                         ? (table.reservationDiffMins < 90
+                             ? `รอบด่วน (${formatReservationCountdown(table.upcomingReservation.booking_time)})`
+                             : `รับ WALK-IN ได้ (${formatReservationCountdown(table.upcomingReservation.booking_time)})`)
                          : (table.booking ? `QUEUE #${getShortBookingId(table.booking)}` : 'TABLE UNIT · ว่าง')}
                  </span>
             </div>
@@ -1270,10 +1287,12 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                     <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-xs text-[8px] font-mono font-bold ${
                         isReserved 
                             ? 'text-amber-900 bg-amber-100 border border-amber-300' 
+                            : table.reservationDiffMins < 90
+                            ? 'text-amber-950 bg-amber-100 border border-amber-400 font-bold'
                             : 'text-[oklch(30%_0.08_140)] bg-[oklch(92%_0.04_140)] border border-[oklch(80%_0.06_140)]'
                     }`}>
                         <Clock size={9} />
-                        <span>จอง {formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})</span>
+                        <span>{table.reservationDiffMins < 90 ? 'รอบด่วน ' : 'จอง '}{formatUpcomingResTime(table.upcomingReservation.booking_time)} ({formatReservationCountdown(table.upcomingReservation.booking_time)})</span>
                     </div>
                 )}
             </div>

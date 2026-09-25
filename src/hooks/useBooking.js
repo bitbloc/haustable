@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useBookingContext } from '../context/BookingContext'
 import { supabase } from '../lib/supabaseClient'
 import { toThaiISO } from '../utils/timeUtils'
+import { isBookingOverlap } from '../utils/availabilityUtils'
 import { useOrderSubmission } from './useOrderSubmission'
 
 export function useBooking() {
@@ -68,7 +69,7 @@ export function useBooking() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time, booking_type')
+                .select('table_id, booking_time, end_time, booking_type, status')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
@@ -77,17 +78,13 @@ export function useBooking() {
 
             const bookedIds = []
             const statuses = {}
+            const now = new Date()
 
             data.forEach(b => {
-                const bStart = new Date(b.booking_time)
-                // If end_time exists use it, else default to 2 hours
-                const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + (2 * 60 * 60 * 1000))
-
-                // Overlap Check: (StartA < EndB) && (EndA > StartB)
-                if ((requestedStart < bEnd) && (requestedEnd > bStart)) {
+                // Smart Dynamic Turn & Live Seated Protection
+                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30 })) {
                     bookedIds.push(b.table_id)
                     // Priority: Walk-in overrides Online (for display purpose if multiple? actually just taking last one is fine or first)
-                    // If multiple bookings overlap (rare but possible), just take one.
                     statuses[b.table_id] = { type: b.booking_type }
                 }
             })
@@ -131,24 +128,23 @@ export function useBooking() {
                 throw new Error(`ยอดขั้นต่ำต่อท่านคือ ${MIN_SPEND_PER_PAX} บาท (ขาดอีก ${requiredSpend - cartTotal} บาท)`)
             }
 
-            // Pre-flight Conflict Check (Double-Booking Prevention)
+            // Pre-flight Conflict Check (Double-Booking Prevention with Live Seated Protection)
             const bookingDateTime = toThaiISO(state.date, state.time)
             const requestedStart = new Date(bookingDateTime)
             const requestedEnd = new Date(requestedStart.getTime() + (2 * 60 * 60 * 1000))
 
             const { data: conflictBookings } = await supabase
                 .from('bookings')
-                .select('id, booking_time, end_time')
+                .select('id, booking_time, end_time, status, booking_type')
                 .eq('table_id', state.selectedTable.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', `${state.date}T00:00:00+07:00`)
                 .lte('booking_time', `${state.date}T23:59:59+07:00`)
 
             if (conflictBookings && conflictBookings.length > 0) {
+                const now = new Date()
                 const hasOverlap = conflictBookings.some(b => {
-                    const bStart = new Date(b.booking_time)
-                    const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + (2 * 60 * 60 * 1000))
-                    return (requestedStart < bEnd) && (requestedEnd > bStart)
+                    return isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30 })
                 })
                 if (hasOverlap) {
                     throw new Error('ขออภัย โต๊ะนี้เพิ่งมีผู้ทำรายการจองเข้ามาในช่วงเวลาดังกล่าว กรุณาเลือกโต๊ะอื่น (Table was just reserved by another guest)')

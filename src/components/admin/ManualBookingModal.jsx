@@ -5,7 +5,7 @@ import { getThaiDate, toThaiISO } from '../../utils/timeUtils'
 import { fetchAndSortMenu } from '../../utils/menuHelper'
 import { sendPOSBroadcast } from '../../utils/realtimeNotifier'
 import { getShortBookingId } from '../../utils/printerHelper'
-import { checkOverlap } from '../../utils/availabilityUtils'
+import { checkOverlap, isBookingOverlap } from '../../utils/availabilityUtils'
 import { calculateBookingFinancials, formatDiscountRemarkTag } from '../../utils/bookingHelper'
 import { toast } from 'sonner'
 
@@ -208,10 +208,11 @@ export default function ManualBookingModal({
         const reqStart = new Date(reqStartIso)
         const reqEnd = new Date(reqStart.getTime() + (durationHours * 60 * 60 * 1000))
 
+        const now = new Date()
         const conflicts = (existingBookings || []).filter(b => {
-            if (b.status === 'cancelled' || b.status === 'void') return false
+            if (b.status === 'cancelled' || b.status === 'void' || b.status === 'completed') return false
             if (b.table_id !== tableId) return false
-            return checkOverlap(reqStart, reqEnd, b.booking_time, 2)
+            return isBookingOverlap(reqStart, reqEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30 })
         })
 
         if (conflicts.length > 0) {

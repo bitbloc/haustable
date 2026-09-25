@@ -109,9 +109,14 @@ export function usePOSOrder() {
         }
     }, []);
 
-    const createWalkIn = async (table = null, customPax = null, userId = null) => {
+    const createWalkIn = async (table = null, customPax = null, userId = null, extraRemark = '') => {
         const tableId = table ? table.id : null;
         const capacity = customPax ? parseInt(customPax) : (table ? (table.capacity || 2) : 2);
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const durationHours = 2;
+        const endIso = new Date(now.getTime() + (durationHours * 60 * 60 * 1000)).toISOString();
+        const staffRemark = `Walk-in Guest${extraRemark || ''}`;
 
         if (!isOnline()) {
             console.log('[Offline Mode] Creating offline walk-in session');
@@ -121,10 +126,11 @@ export function usePOSOrder() {
                 table_id: tableId,
                 status: 'seated',
                 booking_type: 'walk_in',
-                booking_time: new Date().toISOString(),
+                booking_time: nowIso,
+                end_time: endIso,
                 pax: capacity,
                 user_id: userId || null,
-                staff_remark: 'Walk-in Guest (Offline)',
+                staff_remark: `${staffRemark} (Offline)`,
                 tables_layout: table || null
             };
 
@@ -141,6 +147,7 @@ export function usePOSOrder() {
                 user_id: userId || null,
                 status: 'seated',
                 bookingTime: mockBooking.booking_time,
+                endTime: mockBooking.end_time,
                 staffRemark: mockBooking.staff_remark
             });
 
@@ -155,10 +162,11 @@ export function usePOSOrder() {
                     table_id: tableId,
                     status: 'seated',
                     booking_type: 'walk_in',
-                    booking_time: new Date().toISOString(),
+                    booking_time: nowIso,
+                    end_time: endIso,
                     pax: capacity,
                     user_id: userId || null,
-                    staff_remark: 'Walk-in Guest'
+                    staff_remark: staffRemark
                 })
                 .select('*, tables_layout(*), profiles(*)')
                 .single();
@@ -179,9 +187,10 @@ export function usePOSOrder() {
                 table_id: tableId,
                 status: 'seated',
                 booking_type: 'walk_in',
-                booking_time: new Date().toISOString(),
+                booking_time: nowIso,
+                end_time: endIso,
                 pax: capacity,
-                staff_remark: 'Walk-in Guest (Offline Fallback)',
+                staff_remark: `${staffRemark} (Offline Fallback)`,
                 tables_layout: table || null
             };
 
@@ -193,8 +202,10 @@ export function usePOSOrder() {
                 tableId: tableId,
                 tempBookingId: tempId,
                 pax: mockBooking.pax,
+                user_id: userId || null,
                 status: 'seated',
                 bookingTime: mockBooking.booking_time,
+                endTime: mockBooking.end_time,
                 staffRemark: mockBooking.staff_remark
             });
 

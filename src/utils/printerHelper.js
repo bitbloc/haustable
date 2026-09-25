@@ -2213,6 +2213,7 @@ export function compileShiftReportData(shift = {}, bookingsData = [], categories
         difference,
         
         shiftId: shift.id ? String(shift.id).replace('shift_', '') : '',
+        openTablesHandover: Array.isArray(shift.openTablesHandover) ? shift.openTablesHandover : [],
         totalBookings: completedBookings.length,
         totalItemsCount,
         totalItemsAmount,
@@ -2596,6 +2597,17 @@ export function encodeShiftClosureReportData(reportData = {}, paperSize = '80mm'
         encoder.line(formatThreeCols('รายการ', 'จำนวน', 'ยอดเงิน', maxCols, 5, 10, colOpts));
         if (cancelData.wholeBill.count > 0) encoder.line(formatThreeCols('ยกเลิกบิล', cancelData.wholeBill.count, formatReceiptMoney(cancelData.wholeBill.amount), maxCols, 5, 10, colOpts));
         if (cancelData.itemLevel.count > 0) encoder.line(formatThreeCols('ยกเลิกรายเมนู', cancelData.itemLevel.count, formatReceiptMoney(cancelData.itemLevel.amount), maxCols, 5, 10, colOpts));
+    }
+
+    // Section: โต๊ะส่งมอบค้างระหว่างกะ (Open Tables Handover)
+    if (reportData.openTablesHandover && reportData.openTablesHandover.length > 0) {
+        encoder.line(divider);
+        encoder.bold(true).line('โต๊ะส่งมอบค้างข้ามกะ (Handover)').bold(false);
+        encoder.line(formatTwoCols('จำนวนโต๊ะที่ยังไม่เช็คบิล', `${reportData.openTablesHandover.length} โต๊ะ`, maxCols, null, colOpts));
+        reportData.openTablesHandover.forEach(table => {
+            const tableName = formatReportItemName(table.name || 'โต๊ะ', 19);
+            encoder.line(formatTwoCols(tableName, formatReceiptMoney(table.total || 0), maxCols, null, colOpts));
+        });
     }
 
     // Section 8: Prominent Grand Total Net Revenue Figure at Bottom

@@ -234,6 +234,10 @@ export default function POSDashboard() {
     const [showCloseShiftModal, setShowCloseShiftModal] = useState(false);
     const [openShiftForm, setOpenShiftForm] = useState({ staffName: '', openingFloat: '1000' });
     const [closeShiftForm, setCloseShiftForm] = useState({ actualCash: '' });
+    const [closeShiftMode, setCloseShiftMode] = useState('handover'); // 'handover' or 'end_of_day'
+    const [openTablesInShift, setOpenTablesInShift] = useState([]);
+    const [showForceVoidConfirm, setShowForceVoidConfirm] = useState(false);
+    const [isForceVoiding, setIsForceVoiding] = useState(false);
 
     // PIN and Cash Adjustment States
     const [staffList, setStaffList] = useState([]);
@@ -562,12 +566,50 @@ export default function POSDashboard() {
         };
     }, [fetchRealtimeSummary, triggerDebouncedShiftSummary]);
 
-    // Force re-sync when opening Close Shift modal
+    // Force re-sync and scan open tables when opening Close Shift modal
     useEffect(() => {
         if (showCloseShiftModal && activeShift) {
             checkAndRestoreActiveShift().then(fresh => {
                 if (fresh) setActiveShift(fresh);
             });
+            setShowForceVoidConfirm(false);
+
+            // Fetch live open tables to provide clear warning & handover options
+            const scanActiveTables = async () => {
+                try {
+                    let activeList = [];
+                    if (isOnline()) {
+                        const { data, error } = await supabase
+                            .from('bookings')
+                            .select('id, table_id, status, booking_time, total_amount, staff_remark, customer_name, pickup_contact_name, tables_layout(table_name)')
+                            .in('status', ['seated', 'ready', 'pending'])
+                            .order('booking_time', { ascending: true });
+                        if (!error && data) {
+                            activeList = data.filter(b => b.table_id || b.status === 'seated' || b.status === 'ready');
+                        }
+                    } else {
+                        const cached = posCache.getBookings() || [];
+                        activeList = cached.filter(b => 
+                            b && 
+                            !['completed', 'paid', 'void', 'cancelled', 'no_show'].includes(b.status) &&
+                            (b.status === 'seated' || b.status === 'ready' || (b.status === 'pending' && b.table_id))
+                        );
+                    }
+                    setOpenTablesInShift(activeList);
+                    setCloseShiftMode(activeList.length > 0 ? 'handover' : 'end_of_day');
+                } catch (e) {
+                    console.warn('[Shift Modal] Failed to scan active tables:', e);
+                    const cached = posCache.getBookings() || [];
+                    const activeList = cached.filter(b => 
+                        b && 
+                        !['completed', 'paid', 'void', 'cancelled', 'no_show'].includes(b.status) &&
+                        (b.status === 'seated' || b.status === 'ready' || (b.status === 'pending' && b.table_id))
+                    );
+                    setOpenTablesInShift(activeList);
+                    setCloseShiftMode(activeList.length > 0 ? 'handover' : 'end_of_day');
+                }
+            };
+            scanActiveTables();
         }
     }, [showCloseShiftModal]);
 
@@ -622,6 +664,12 @@ export default function POSDashboard() {
         const currentShift = getCurrentShift() || activeShift;
         const actual = parseFloat(closeShiftForm.actualCash) || 0;
         
+        // End-of-Day Guard: Must not close shop if open tables remain
+        if (closeShiftMode === 'end_of_day' && openTablesInShift.length > 0) {
+            toast.error(`ไม่สามารถปิดร้านได้เนื่องจากยังมีโต๊ะค้างอยู่ ${openTablesInShift.length} โต๊ะ กรุณาเช็คบิลก่อนปิดร้าน หรือเลือกโหมด "ส่งมอบกะ"`);
+            return;
+        }
+
         const toastId = toast.loading('กำลังปิดกะและพิมพ์รายงาน...');
         
         try {
@@ -664,7 +712,12 @@ export default function POSDashboard() {
             // 3. Compute accurate shift metrics
             const accurateSummary = calculateShiftMetrics(currentShift, bookingsData);
 
-            // 4. Compile reportData
+            // 4. Compile reportData (including open tables handover info if applicable)
+            const handoverData = (closeShiftMode === 'handover' ? openTablesInShift : []).map(b => ({
+                name: b.tables_layout?.table_name ? `โต๊ะ ${b.tables_layout.table_name}` : (b.pickup_contact_name || b.customer_name || `โต๊ะ ${b.table_id || 'Walk-in'}`),
+                total: parseFloat(b.total_amount) || 0
+            }));
+
             const compiledReport = compileShiftReportData(
                 {
                     ...currentShift,
@@ -677,7 +730,8 @@ export default function POSDashboard() {
                     creditSales: accurateSummary.creditSales,
                     totalSales: accurateSummary.totalSales,
                     totalIn: accurateSummary.totalIn,
-                    totalOut: accurateSummary.totalOut
+                    totalOut: accurateSummary.totalOut,
+                    openTablesHandover: handoverData
                 },
                 bookingsData,
                 categoriesData
@@ -696,26 +750,19 @@ export default function POSDashboard() {
             const rawBytes = encodeShiftClosureReportData(compiledReport, reportPaperSize, 'sunmi');
             const printRes = await printToSunmiBuiltIn(rawBytes);
             
-            // 6. Auto-settle any lingering open/seated tables from this shift so nothing is orphaned in Supabase
-            if (isOnline()) {
-                try {
-                    await supabase
-                        .from('bookings')
-                        .update({
-                            status: 'completed',
-                            payment_method: 'qr',
-                            staff_remark: '[QR] Auto-settled on shift close'
-                        })
-                        .in('status', ['seated', 'ready'])
-                        .lte('booking_time', new Date().toISOString());
-
-                    await supabase
-                        .from('order_items')
-                        .update({ is_checked: true, status: 'served' })
-                        .eq('status', 'pending');
-                } catch (cleanErr) {
-                    console.warn('Auto-resolving lingering open tables on shift close:', cleanErr);
-                }
+            // 6. Log audit trail (NO auto-settle of active tables - active tables remain open for next shift)
+            if (closeShiftMode === 'handover' && openTablesInShift.length > 0) {
+                logPosAudit('shift_handover', {
+                    amount: actual,
+                    reason: `ส่งมอบกะ: พนักงาน ${currentShift?.staffName || 'Staff'} ส่งมอบกะโดยคงโต๊ะไว้ ${openTablesInShift.length} โต๊ะ สำหรับกะถัดไป`,
+                    metadata: {
+                        mode: 'handover',
+                        openTablesCount: openTablesInShift.length,
+                        openTables: handoverData,
+                        expectedCash: accurateSummary.expectedCash,
+                        actualCash: actual
+                    }
+                });
             }
 
             // 7. Close shift locally & cloud with accurate summary
@@ -727,9 +774,14 @@ export default function POSDashboard() {
             setIsLocked(false);
             setShowCloseShiftModal(false);
             setCloseShiftForm({ actualCash: '' });
+            setOpenTablesInShift([]);
             
             toast.dismiss(toastId);
-            toast.success('ปิดรอบการทำงานและบันทึกประวัติสำเร็จแล้ว');
+            if (closeShiftMode === 'handover' && handoverData.length > 0) {
+                toast.success(`ส่งมอบกะสำเร็จแล้ว (คงโต๊ะค้างไว้ ${handoverData.length} โต๊ะ สำหรับกะถัดไป)`);
+            } else {
+                toast.success('ปิดรอบการทำงานสิ้นวันและบันทึกประวัติสำเร็จแล้ว');
+            }
             if (printRes) {
                 toast.success('พิมพ์ใบสรุปยอดปิดกะเรียบร้อยแล้ว');
             }
@@ -737,19 +789,8 @@ export default function POSDashboard() {
             console.error("Failed to close shift or print:", err);
             toast.dismiss(toastId);
             
-            // Fallback close shift locally in case of error
+            // Fallback close shift locally in case of error (never force-complete open tables)
             try {
-                if (isOnline()) {
-                    await supabase
-                        .from('bookings')
-                        .update({
-                            status: 'completed',
-                            payment_method: 'qr',
-                            staff_remark: '[QR] Auto-settled on shift close'
-                        })
-                        .in('status', ['seated', 'ready'])
-                        .lte('booking_time', new Date().toISOString());
-                }
                 const summary = getShiftSummary();
                 closeShift(actual, summary);
                 localStorage.removeItem('pos_active_staff');
@@ -759,10 +800,77 @@ export default function POSDashboard() {
                 setIsLocked(false);
                 setShowCloseShiftModal(false);
                 setCloseShiftForm({ actualCash: '' });
+                setOpenTablesInShift([]);
                 toast.success('ปิดรอบการทำงานสำเร็จ (เกิดข้อผิดพลาดในการดึงข้อมูลพิมพ์)');
             } catch (closeErr) {
                 toast.error('ไม่สามารถปิดรอบการทำงานได้: ' + closeErr.message);
             }
+        }
+    };
+
+    // Emergency force void all remaining tables at store close (for abandoned / ghost tables)
+    const handleForceVoidRemainingTables = async () => {
+        if (!openTablesInShift.length) return;
+        setIsForceVoiding(true);
+        const toastId = toast.loading('กำลังยกเลิกโต๊ะค้างเพื่อปิดร้าน...');
+        try {
+            const currentShift = getCurrentShift() || activeShift;
+            const staffName = currentShift?.staffName || 'Staff';
+            const ids = openTablesInShift.map(b => b.id).filter(Boolean);
+
+            if (isOnline() && ids.length > 0) {
+                const { error } = await supabase
+                    .from('bookings')
+                    .update({
+                        status: 'void',
+                        staff_remark: `[VOID_END_OF_DAY] บังคับยกเลิกโต๊ะค้างเพื่อปิดร้าน โดย ${staffName}`
+                    })
+                    .in('id', ids);
+                if (error) throw error;
+
+                // Cancel unserved items
+                await supabase
+                    .from('order_items')
+                    .update({ status: 'cancelled' })
+                    .in('booking_id', ids)
+                    .eq('status', 'pending');
+            }
+
+            // Update local posCache
+            try {
+                const cached = posCache.getBookings() || [];
+                const updated = cached.filter(b => !ids.includes(b.id));
+                posCache.setBookings(updated);
+            } catch (e) {}
+
+            logPosAudit('void_tables_end_of_day', {
+                amount: 0,
+                reason: `บังคับยกเลิกโต๊ะค้าง ${ids.length} โต๊ะ เพื่อปิดร้านสิ้นวัน โดย ${staffName}`,
+                metadata: {
+                    clearedBookingIds: ids,
+                    openTablesCount: ids.length
+                }
+            });
+
+            // Trigger floorplan clear events
+            openTablesInShift.forEach(b => {
+                if (b.table_id) {
+                    window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: b.table_id } }));
+                }
+            });
+
+            setOpenTablesInShift([]);
+            setShowForceVoidConfirm(false);
+            setCloseShiftMode('end_of_day');
+            triggerDebouncedRefresh();
+            toast.dismiss(toastId);
+            toast.success(`ยกเลิกโต๊ะค้าง ${ids.length} โต๊ะ เรียบร้อยแล้ว ตอนนี้สามารถปิดรอบสิ้นวันได้`);
+        } catch (err) {
+            console.error('Failed to force void tables:', err);
+            toast.dismiss(toastId);
+            toast.error('ไม่สามารถยกเลิกโต๊ะได้: ' + (err.message || 'Error'));
+        } finally {
+            setIsForceVoiding(false);
         }
     };
 
@@ -2407,7 +2515,15 @@ export default function POSDashboard() {
 
         const toastId = toast.loading(`กำลังเปิดโต๊ะ ${targetTable.table_name}...`);
         try {
-            const newBooking = await createWalkIn(targetTable, paxNum);
+            const upcomingRes = openTableModalData.upcomingReservation || null;
+            const diffMins = openTableModalData.reservationDiffMins;
+            const isShortTurn = upcomingRes && typeof diffMins === 'number' && diffMins < 90;
+            const resTimeStr = upcomingRes?.booking_time 
+                ? new Date(upcomingRes.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) 
+                : '';
+            const shortTurnRemark = isShortTurn ? ` [SHORT_TURN: ${diffMins}m before ${resTimeStr}]` : '';
+
+            const newBooking = await createWalkIn(targetTable, paxNum, null, shortTurnRemark);
             if (newBooking) {
                 // 0ms Optimistic table update: table turns red immediately
                 window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
@@ -2429,7 +2545,8 @@ export default function POSDashboard() {
                 setView('menu');
                 setRefreshKey(prev => prev + 1);
                 triggerDebouncedRefresh();
-                toast.success(`เปิดโต๊ะ ${targetTable.table_name} (${paxNum} คน) สำเร็จ!`, { id: toastId });
+                const shortNotice = isShortTurn ? ` (รอบด่วน ${diffMins} นาที)` : '';
+                toast.success(`เปิดโต๊ะ ${targetTable.table_name} (${paxNum} คน)${shortNotice} สำเร็จ!`, { id: toastId });
             } else {
                 toast.error('ไม่สามารถเปิดโต๊ะได้', { id: toastId });
             }
@@ -4280,40 +4397,70 @@ export default function POSDashboard() {
                         </div>
                         
                         <div className="p-6 flex flex-col items-center gap-4">
-                            {openTableModalData.upcomingReservation && (
-                                <div className="w-full bg-[var(--color-paper-2)] border border-amber-500/40 rounded-sm p-3.5 text-xs text-[var(--color-ink)] flex flex-col gap-2">
-                                    <div className="flex items-center justify-between pb-1.5 border-b border-[var(--color-rule)]">
-                                        <div className="flex items-center gap-1.5 font-mono font-bold uppercase text-[11px] text-amber-900">
-                                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                                            <span>มีคิวจองล่วงหน้า: {new Date(openTableModalData.upcomingReservation.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.</span>
+                            {openTableModalData.upcomingReservation && (() => {
+                                const diffMins = openTableModalData.reservationDiffMins;
+                                const isShortTurn = typeof diffMins === 'number' && diffMins < 90;
+                                const res = openTableModalData.upcomingReservation;
+                                const resTime = new Date(res.booking_time).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                                const guestName = res.pickup_contact_name || res.customer_name || 'ลูกค้าออนไลน์';
+
+                                return (
+                                    <div className={`w-full rounded-sm p-3.5 text-xs text-[var(--color-ink)] flex flex-col gap-2.5 border ${
+                                        isShortTurn 
+                                            ? 'bg-[oklch(52%_0.16_28_/_0.06)] border-[var(--color-accent)]' 
+                                            : 'bg-[var(--color-paper-2)] border-[var(--color-rule)]'
+                                    }`}>
+                                        <div className="flex items-center justify-between pb-1.5 border-b border-[var(--color-rule)]">
+                                            <div className="flex items-center gap-1.5 font-mono font-bold uppercase text-[11px] text-[var(--color-ink)]">
+                                                <span className={`w-2 h-2 rounded-full ${isShortTurn ? 'bg-[var(--color-accent)] animate-pulse' : 'bg-[var(--color-neutral)]'}`}></span>
+                                                <span>{isShortTurn ? 'คิวจองล่วงหน้า (รอบเวลากระชั้นชิด)' : 'มีคิวจองล่วงหน้า'}: {resTime} น.</span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                {isShortTurn && (
+                                                    <span className="font-mono text-[9px] bg-[var(--color-accent)] text-[var(--color-paper)] px-1.5 py-0.5 rounded-xs font-bold tracking-wider uppercase">
+                                                        SHORT-TURN
+                                                    </span>
+                                                )}
+                                                <span className="font-mono text-[10px] bg-[var(--color-paper)] text-[var(--color-ink)] border border-[var(--color-rule)] px-1.5 py-0.5 rounded-xs font-bold">
+                                                    {formatReservationCountdown(res.booking_time)}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span className="font-mono text-[10px] bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded font-bold">
-                                            {formatReservationCountdown(openTableModalData.upcomingReservation.booking_time)}
-                                        </span>
+
+                                        {isShortTurn ? (
+                                            <div className="space-y-1">
+                                                <p className="text-[12px] font-bold text-[var(--color-accent)] leading-relaxed">
+                                                    โต๊ะนี้มีเวลาว่างเพียง {diffMins} นาที (น้อยกว่า 1 รอบปกติ 120 นาที)
+                                                </p>
+                                                <p className="text-[11px] text-[var(--color-ink)] leading-relaxed">
+                                                    คิวถัดไป: คุณ{guestName} ({res.pax || 2} ท่าน) เวลา {resTime} น. — <span className="font-bold underline decoration-[var(--color-accent)]">กรุณาแจ้งลูกค้า Walk-in ว่าเป็นรอบรับประทานแบบเร่งด่วน หรือต้องเช็คบิลก่อน {resTime} น.</span>
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <p className="text-[11px] leading-relaxed text-[var(--color-ink)]">
+                                                คุณ{guestName} ({res.pax || 2} คน) เวลา {resTime} น. — สามารถเปิดรับลูกค้า Walk-in ได้ตามปกติ
+                                            </p>
+                                        )}
+
+                                        <div className="pt-1.5 border-t border-[var(--color-rule)] flex justify-between items-center">
+                                            <span className="text-[10px] text-[var(--color-neutral)] font-mono">
+                                                * เมื่อเช็คบิล คิวจองยังคงอยู่ครบถ้วน
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const tbl = openTableModalData.table;
+                                                    setOpenTableModalData(null);
+                                                    setOnlineReservationModalData({ table: tbl, reservation: res, diffMins });
+                                                }}
+                                                className="text-[10px] font-mono font-bold text-[var(--color-accent)] hover:underline cursor-pointer"
+                                            >
+                                                ลูกค้าจองมาถึงก่อนเวลา? เช็คอินคิวจอง
+                                            </button>
+                                        </div>
                                     </div>
-                                    <p className="text-[11px] leading-relaxed text-[var(--color-ink)]">
-                                        คุณ{openTableModalData.upcomingReservation.pickup_contact_name || openTableModalData.upcomingReservation.customer_name || 'ลูกค้าออนไลน์'} ({openTableModalData.upcomingReservation.pax || 2} คน) — สามารถเปิดรับลูกค้า Walk-in ได้ตามปกติ
-                                    </p>
-                                    <div className="pt-1.5 border-t border-[var(--color-rule)] flex justify-between items-center">
-                                        <span className="text-[10px] text-[var(--color-neutral)] font-mono">
-                                            * เมื่อเช็คบิล คิวจองยังคงอยู่ครบถ้วน
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                const res = openTableModalData.upcomingReservation;
-                                                const tbl = openTableModalData.table;
-                                                const diff = openTableModalData.reservationDiffMins;
-                                                setOpenTableModalData(null);
-                                                setOnlineReservationModalData({ table: tbl, reservation: res, diffMins: diff });
-                                            }}
-                                            className="text-[10px] font-mono font-bold text-[var(--color-accent)] hover:underline cursor-pointer"
-                                        >
-                                            ลูกค้าจองมาถึงก่อนเวลา? เช็คอินคิวจอง
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                );
+                            })()}
 
                             <div className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-1.5">
                                 <span>ระบุจำนวนลูกค้า Walk-in (คน) *</span>
@@ -4376,7 +4523,9 @@ export default function POSDashboard() {
                                 onClick={handleConfirmOpenTable}
                                 className="flex-1 min-h-[44px] bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
                             >
-                                เปิดโต๊ะ (Open Table)
+                                {openTableModalData?.upcomingReservation && openTableModalData?.reservationDiffMins < 90
+                                    ? `เปิดโต๊ะ Walk-in (รอบด่วน ${openTableModalData.reservationDiffMins} นาที)`
+                                    : 'เปิดโต๊ะ (Open Table)'}
                             </button>
                         </div>
                     </div>
@@ -5006,7 +5155,7 @@ export default function POSDashboard() {
                                         </button>
                                         <button
                                             type="submit"
-                                            className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                            className="flex-1 bg-[var(--color-accent)] hover:opacity-90 text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
                                         >
                                             <LogIn size={12} />
                                             <span>เปิดรอบขาย (Start)</span>
@@ -5100,24 +5249,171 @@ export default function POSDashboard() {
                                 </div>
                             </div>
 
-                            {/* Open Orders Warning if any tables/orders are still open */}
-                            {(() => {
-                                try {
-                                    const cached = posCache.getBookings() || [];
-                                    const count = cached.filter(b => b && (b.status === 'seated' || b.status === 'ready' || (b.status === 'pending' && b.table_id))).length;
-                                    if (count === 0) return null;
-                                    return (
-                                        <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex items-center gap-2.5 text-xs text-amber-900 shadow-xs">
-                                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping shrink-0" />
-                                            <span className="font-bold">
-                                                มีโต๊ะที่ยังไม่เช็คบิลค้างอยู่ {count} โต๊ะ — ระบบจะทำการเคลียร์และบันทึกปิดรอบอัตโนมัติเมื่อยืนยัน
-                                            </span>
+                            {/* Open Tables Intelligent Guard & Mode Selection (Option 2) */}
+                            {openTablesInShift.length > 0 ? (
+                                <div className="border border-[oklch(80%_0.04_28)] bg-[oklch(96%_0.012_28)] rounded-xl p-3.5 flex flex-col gap-3 shadow-xs">
+                                    <div className="flex items-start justify-between gap-2 border-b border-[oklch(85%_0.015_28)] pb-2.5">
+                                        <div>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
+                                                <span className="font-mono text-[10px] font-bold uppercase text-[var(--color-accent)] tracking-wider">
+                                                    ตรวจพบโต๊ะยังไม่เช็คบิล ({openTablesInShift.length} โต๊ะ)
+                                                </span>
+                                            </div>
+                                            <p className="text-xs font-bold text-[var(--color-ink)] mt-0.5">
+                                                ยอดรวมค้างชำระประเมิน ฿{openTablesInShift.reduce((sum, b) => sum + (parseFloat(b.total_amount) || 0), 0).toLocaleString()}.-
+                                            </p>
                                         </div>
-                                    );
-                                } catch {
-                                    return null;
-                                }
-                            })()}
+                                        <span className="text-[9px] font-mono font-bold text-[var(--color-neutral)] uppercase bg-white border border-[var(--color-rule)] px-2 py-0.5 rounded">
+                                            สถานะหน้าร้าน
+                                        </span>
+                                    </div>
+
+                                    {/* List of open tables */}
+                                    <div className="flex flex-wrap gap-1.5 max-h-[80px] overflow-y-auto">
+                                        {openTablesInShift.map(b => {
+                                            const tableName = b.tables_layout?.table_name ? `โต๊ะ ${b.tables_layout.table_name}` : (b.pickup_contact_name || b.customer_name || `โต๊ะ ${b.table_id || 'Walk-in'}`);
+                                            const amt = parseFloat(b.total_amount) || 0;
+                                            return (
+                                                <span key={b.id} className="inline-flex items-center gap-1 bg-white border border-[var(--color-rule)] px-2 py-1 rounded text-[10px] font-mono text-[var(--color-ink)] shadow-2xs">
+                                                    <span className="font-bold">{tableName}</span>
+                                                    <span className="text-[var(--color-neutral)]">· ฿{amt.toLocaleString()}</span>
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Mode Selector Cards */}
+                                    <div className="flex flex-col gap-2 pt-1">
+                                        <span className="text-[9px] font-mono font-bold tracking-widest text-[var(--color-neutral)] uppercase">
+                                            เลือกลักษณะการปิดกะในครั้งนี้:
+                                        </span>
+
+                                        {/* Mode 1: Handover */}
+                                        <div 
+                                            onClick={() => setCloseShiftMode('handover')}
+                                            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                                                closeShiftMode === 'handover' 
+                                                ? 'border-[var(--color-accent)] bg-white ring-1 ring-[var(--color-accent)] shadow-xs' 
+                                                : 'border-[var(--color-rule)] bg-white/60 hover:bg-white text-[var(--color-muted)]'
+                                            }`}
+                                        >
+                                            <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                                closeShiftMode === 'handover' ? 'border-[var(--color-accent)] bg-[var(--color-accent)]' : 'border-[var(--color-rule)]'
+                                            }`}>
+                                                {closeShiftMode === 'handover' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className={`font-bold ${closeShiftMode === 'handover' ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
+                                                        ส่งมอบกะ (เปลี่ยนคนทำงาน)
+                                                    </span>
+                                                    <span className="text-[8px] font-mono font-bold uppercase bg-[oklch(92%_0.02_140)] text-[oklch(40%_0.08_140)] px-1.5 py-0.5 rounded">
+                                                        แนะนำระหว่างวัน
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-[var(--color-neutral)] mt-0.5 leading-snug">
+                                                    คงโต๊ะและออเดอร์ทั้งหมดไว้บนหน้าจอ กะถัดไปมารับช่วงต่อได้ทันที (ยอดที่ยังไม่ชำระจะไม่ถูกบันทึกในกะนี้)
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Mode 2: End of Day */}
+                                        <div 
+                                            onClick={() => setCloseShiftMode('end_of_day')}
+                                            className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                                                closeShiftMode === 'end_of_day' 
+                                                ? 'border-[var(--color-ink)] bg-white ring-1 ring-[var(--color-ink)] shadow-xs' 
+                                                : 'border-[var(--color-rule)] bg-white/60 hover:bg-white text-[var(--color-muted)]'
+                                            }`}
+                                        >
+                                            <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                                                closeShiftMode === 'end_of_day' ? 'border-[var(--color-ink)] bg-[var(--color-ink)]' : 'border-[var(--color-rule)]'
+                                            }`}>
+                                                {closeShiftMode === 'end_of_day' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className={`font-bold ${closeShiftMode === 'end_of_day' ? 'text-[var(--color-ink)]' : 'text-[var(--color-neutral)]'}`}>
+                                                        เลิกงาน / ปิดร้านสิ้นวัน
+                                                    </span>
+                                                    <span className="text-[8px] font-mono font-bold uppercase bg-[oklch(90%_0.02_28)] text-[var(--color-ink)] px-1.5 py-0.5 rounded">
+                                                        ปิดรอบร้าน
+                                                    </span>
+                                                </div>
+                                                <p className="text-[10px] text-[var(--color-neutral)] mt-0.5 leading-snug">
+                                                    สำหรับสิ้นสุดวันทำงาน ต้องไม่มีโต๊ะค้างหน้าร้าน กรุณาเช็คบิลหรือเคลียร์โต๊ะก่อนปิดรอบ
+                                                </p>
+
+                                                {/* Guidance button when End of Day is selected with open tables */}
+                                                {closeShiftMode === 'end_of_day' && (
+                                                    <div className="mt-2.5 pt-2 border-t border-[var(--color-rule)] flex flex-col gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setShowCloseShiftModal(false);
+                                                                handleBackToTables();
+                                                                toast.info('เปิดผังโต๊ะหน้าร้านแล้ว กรุณาเช็คบิลหรือจัดการโต๊ะที่ค้าง');
+                                                            }}
+                                                            className="w-full bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] py-2 px-3 rounded-lg font-bold text-[11px] font-sans flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-98 transition-all"
+                                                        >
+                                                            <span>กลับไปจัดการโต๊ะหน้าร้าน ({openTablesInShift.length} โต๊ะ)</span>
+                                                        </button>
+
+                                                        {/* Secondary force void option for emergency/abandoned test tables */}
+                                                        {!showForceVoidConfirm ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setShowForceVoidConfirm(true)}
+                                                                className="text-[9px] font-mono text-[var(--color-neutral)] hover:text-red-600 underline text-center cursor-pointer py-0.5"
+                                                            >
+                                                                กรณีลูกค้ากลับหมดแล้ว / โต๊ะทดสอบ: บังคับยกเลิกโต๊ะค้าง (Void All)
+                                                            </button>
+                                                        ) : (
+                                                            <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 flex flex-col gap-1.5">
+                                                                <span className="text-[10px] font-bold text-red-800">
+                                                                    ยืนยันยกเลิกบิล (Void) โต๊ะที่ค้างอยู่ทั้ง {openTablesInShift.length} โต๊ะ ใช่หรือไม่?
+                                                                </span>
+                                                                <span className="text-[9px] text-red-600">
+                                                                    *ระบบจะบันทึกสถานะเป็นยกเลิก (Void) และลง Audit log โดยไม่สร้างยอดขายเท็จ
+                                                                </span>
+                                                                <div className="flex gap-2 mt-1">
+                                                                    <button
+                                                                        type="button"
+                                                                        disabled={isForceVoiding}
+                                                                        onClick={handleForceVoidRemainingTables}
+                                                                        className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] py-1.5 rounded cursor-pointer disabled:opacity-50"
+                                                                    >
+                                                                        {isForceVoiding ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกทั้งหมด'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowForceVoidConfirm(false)}
+                                                                        className="px-2 bg-white border border-gray-300 text-gray-700 text-[10px] rounded hover:bg-gray-100 cursor-pointer"
+                                                                    >
+                                                                        ยกเลิก
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                /* Clean Floor Indicator */
+                                <div className="bg-[oklch(96%_0.015_140)] border border-[oklch(85%_0.04_140)] rounded-xl p-3 flex items-center justify-between text-xs text-[oklch(35%_0.08_140)] shadow-xs">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-[oklch(50%_0.14_140)]" />
+                                        <span className="font-bold">หน้าร้านเรียบร้อย: ไม่มีโต๊ะที่ยังไม่เช็คบิลค้างอยู่</span>
+                                    </div>
+                                    <span className="text-[9px] font-mono font-bold uppercase bg-white/80 border border-[oklch(85%_0.04_140)] px-2 py-0.5 rounded">
+                                        0 โต๊ะค้าง
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Expected Cash reconciliation */}
                             <div className="bg-[#FFF9E6] border border-[#E5A900] rounded-xl p-4 flex justify-between items-center shadow-sm shrink-0">
@@ -5181,10 +5477,23 @@ export default function POSDashboard() {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md flex items-center justify-center gap-1.5 active:scale-98"
+                                        disabled={closeShiftMode === 'end_of_day' && openTablesInShift.length > 0}
+                                        className={`flex-1 py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-98 ${
+                                            closeShiftMode === 'end_of_day' && openTablesInShift.length > 0
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : closeShiftMode === 'handover' && openTablesInShift.length > 0
+                                            ? 'bg-[var(--color-ink)] hover:opacity-90 text-[var(--color-paper)] cursor-pointer'
+                                            : 'bg-[var(--color-accent)] hover:opacity-90 text-white cursor-pointer'
+                                        }`}
                                     >
                                         <Printer size={12} />
-                                        <span>ปิดกะและพิมพ์สรุปยอด</span>
+                                        <span>
+                                            {closeShiftMode === 'end_of_day' && openTablesInShift.length > 0
+                                                ? 'กรุณาเคลียร์โต๊ะก่อนปิดร้าน'
+                                                : closeShiftMode === 'handover' && openTablesInShift.length > 0
+                                                ? `ปิดกะและส่งมอบ (${openTablesInShift.length} โต๊ะคงอยู่)`
+                                                : 'ปิดรอบสิ้นวันและพิมพ์สรุปยอด'}
+                                        </span>
                                     </button>
                                 </div>
                             </form>
