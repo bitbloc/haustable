@@ -50,16 +50,38 @@ export default function AdminFinancialDashboard() {
     const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()))
     const [compareWithPrev, setCompareWithPrev] = useState(true)
     const [compareMode, setCompareMode] = useState('same_day_last_week') // 'same_day_last_week', 'yesterday'
+    // Separate Targets: Daily, Monthly, Yearly
     const [dailyTarget, setDailyTarget] = useState(() => {
         try {
             const saved = localStorage.getItem('inth_daily_sales_target')
-            return saved ? parseInt(saved, 10) : 10000
+            return saved ? parseInt(saved, 10) : 15000
         } catch {
-            return 10000
+            return 15000
+        }
+    })
+    const [monthlyTarget, setMonthlyTarget] = useState(() => {
+        try {
+            const saved = localStorage.getItem('inth_monthly_sales_target')
+            return saved ? parseInt(saved, 10) : 450000
+        } catch {
+            return 450000
+        }
+    })
+    const [yearlyTarget, setYearlyTarget] = useState(() => {
+        try {
+            const saved = localStorage.getItem('inth_yearly_sales_target')
+            return saved ? parseInt(saved, 10) : 5400000
+        } catch {
+            return 5400000
         }
     })
     const [isEditingTarget, setIsEditingTarget] = useState(false)
-    const [targetDraft, setTargetDraft] = useState('10000')
+    const [targetModalTab, setTargetModalTab] = useState('all') // 'all', 'day', 'month', 'year'
+    const [targetDrafts, setTargetDrafts] = useState({
+        daily: '15000',
+        monthly: '450000',
+        yearly: '5400000'
+    })
 
     // Context-Aware Growth Metrics
     const [comparisonMetrics, setComparisonMetrics] = useState({
@@ -97,6 +119,8 @@ export default function AdminFinancialDashboard() {
     const [diningChannelsData, setDiningChannelsData] = useState([])
     const [auditReconciliationData, setAuditReconciliationData] = useState(null)
     const [hourlyVelocityData, setHourlyVelocityData] = useState([])
+    const [dailyPacingData, setDailyPacingData] = useState([])
+    const [monthlyPacingData, setMonthlyPacingData] = useState([])
     const [topMenuData, setTopMenuData] = useState([])
     const [heatmapMatrixData, setHeatmapMatrixData] = useState([])
     const [shiftMetricsData, setShiftMetricsData] = useState(null)
@@ -292,6 +316,8 @@ export default function AdminFinancialDashboard() {
                 setPaymentMethodsData([])
                 setDiningChannelsData([])
                 setHourlyVelocityData([])
+                setDailyPacingData([])
+                setMonthlyPacingData([])
                 setTopMenuData([])
                 setHeatmapMatrixData(Array(7).fill(0).map(() => Array(12).fill(0)))
                 setShiftMetricsData(null)
@@ -336,6 +362,11 @@ export default function AdminFinancialDashboard() {
 
             const itemAgg = {}
             const hourlyAgg = Array(24).fill(0).map(() => ({ gross: 0, bills: 0, guests: 0, items: {} }))
+            const daysInMonthCount = filterMode === 'month' && selectedMonth
+                ? new Date(parseInt(selectedMonth.split('-')[0], 10), parseInt(selectedMonth.split('-')[1], 10), 0).getDate()
+                : 31
+            const dailyAgg = Array(daysInMonthCount + 1).fill(0).map((_, idx) => ({ day: idx, amount: 0, bills: 0, guests: 0 }))
+            const monthlyAgg = Array(13).fill(0).map((_, idx) => ({ month: idx, amount: 0, bills: 0, guests: 0 }))
             const dayHourAgg = Array(7).fill(0).map(() => Array(12).fill(0)) // 7 days x 12 intervals
 
             const formattedRawTx = []
@@ -441,6 +472,20 @@ export default function AdminFinancialDashboard() {
                     hourlyAgg[hour].gross += amount
                     hourlyAgg[hour].bills += 1
                     hourlyAgg[hour].guests += guests
+                }
+
+                // Daily & Monthly Pacing Accumulation
+                const bDay = bTime.getDate()
+                const bMonth = bTime.getMonth() + 1
+                if (bDay >= 1 && bDay <= daysInMonthCount) {
+                    dailyAgg[bDay].amount += amount
+                    dailyAgg[bDay].bills += 1
+                    dailyAgg[bDay].guests += guests
+                }
+                if (bMonth >= 1 && bMonth <= 12) {
+                    monthlyAgg[bMonth].amount += amount
+                    monthlyAgg[bMonth].bills += 1
+                    monthlyAgg[bMonth].guests += guests
                 }
 
                 // Heatmap Matrix mapping (11:00 to 22:00)
@@ -679,6 +724,8 @@ export default function AdminFinancialDashboard() {
                 })
                 .filter(h => h.gross > 0 || h.bills > 0)
             setHourlyVelocityData(formattedHourly)
+            setDailyPacingData(dailyAgg.slice(1))
+            setMonthlyPacingData(monthlyAgg.slice(1))
 
             // Format Heatmap Matrix
             const maxVal = Math.max(...dayHourAgg.flat(), 1)
@@ -854,7 +901,74 @@ export default function AdminFinancialDashboard() {
         toast.success(`ส่งออกรายงานทางการเงิน (${getTimeRangeLabel()}) เรียบร้อย`)
     }
 
-    // Intraday Asia/Bangkok time metrics for Level 1 & Level 2 Cockpits
+    // Active sales target based on current period view
+    const activeSalesTarget = useMemo(() => {
+        if (filterMode === 'month') return monthlyTarget
+        if (filterMode === 'year') return yearlyTarget
+        return dailyTarget
+    }, [filterMode, dailyTarget, monthlyTarget, yearlyTarget])
+
+    const targetMeta = useMemo(() => {
+        if (filterMode === 'month') {
+            return {
+                periodKey: 'month',
+                periodLabel: 'รายเดือน',
+                targetLabel: 'เป้าหมายรายเดือน',
+                salesCardTitle: '01 // SALES THIS MONTH',
+                salesAccumulatedLabel: 'MONTH SALES ACCUMULATED',
+                paceTitle: 'ความคืบหน้าเทียบเป้าหมายประจำเดือน (Monthly Sales vs Target)',
+                compareCode: 'vs M-1',
+                velocityUnit: '/ วัน',
+            }
+        }
+        if (filterMode === 'year') {
+            return {
+                periodKey: 'year',
+                periodLabel: 'รายปี',
+                targetLabel: 'เป้าหมายรายปี',
+                salesCardTitle: '01 // SALES THIS YEAR',
+                salesAccumulatedLabel: 'YEAR SALES ACCUMULATED',
+                paceTitle: 'ความคืบหน้าเทียบเป้าหมายประจำปี (Yearly Sales vs Target)',
+                compareCode: 'vs Y-1',
+                velocityUnit: '/ เดือน',
+            }
+        }
+        return {
+            periodKey: 'day',
+            periodLabel: 'รายวัน',
+            targetLabel: 'เป้าหมายรายวัน',
+            salesCardTitle: '01 // SALES TODAY',
+            salesAccumulatedLabel: 'TODAY SALES ACCUMULATED',
+            paceTitle: 'ความคืบหน้าเทียบเป้าหมายประจำวัน (Sales vs Target)',
+            compareCode: compareMode === 'same_day_last_week' ? 'vs W-1' : 'vs D-1',
+            velocityUnit: '/ ชม.',
+        }
+    }, [filterMode, compareMode])
+
+    // Bangkok Date and Time Metrics for Level 1 & Level 2 Cockpits
+    const { todayDay, todayMonth, todayYear, currentBangkokMonthStr } = useMemo(() => {
+        try {
+            const now = new Date()
+            const y = now.toLocaleDateString('en-US', { timeZone: 'Asia/Bangkok', year: 'numeric' })
+            const m = now.toLocaleDateString('en-US', { timeZone: 'Asia/Bangkok', month: '2-digit' })
+            const d = now.toLocaleDateString('en-US', { timeZone: 'Asia/Bangkok', day: '2-digit' })
+            return {
+                todayDay: parseInt(d, 10),
+                todayMonth: parseInt(m, 10),
+                todayYear: parseInt(y, 10),
+                currentBangkokMonthStr: `${y}-${m}`
+            }
+        } catch {
+            const now = new Date()
+            return {
+                todayDay: now.getDate(),
+                todayMonth: now.getMonth() + 1,
+                todayYear: now.getFullYear(),
+                currentBangkokMonthStr: getCurrentBangkokMonth()
+            }
+        }
+    }, [])
+
     const currentBangkokHour = (() => {
         try {
             const d = new Date()
@@ -874,10 +988,76 @@ export default function AdminFinancialDashboard() {
         }
     })()
 
-    const currentHourData = hourlyVelocityData.find(h => h.hour === currentBangkokHour)
-    const currentVelocity = currentHourData?.amount || (liveMetrics.totalGrossRevenue > 0 ? Math.round(liveMetrics.totalGrossRevenue / Math.max(1, currentBangkokHour - 11 + 1)) : 0)
-    const remainingHours = Math.max(0, 23 - currentBangkokHour)
-    const forecastClose = liveMetrics.totalGrossRevenue + (remainingHours * Math.max(currentVelocity, 700))
+    // Period specific velocity & forecast (Day / Month / Year)
+    const periodPacingMetrics = useMemo(() => {
+        if (filterMode === 'month') {
+            const [yStr, mStr] = (selectedMonth || currentBangkokMonthStr).split('-')
+            const selY = parseInt(yStr, 10) || todayYear
+            const selM = parseInt(mStr, 10) || todayMonth
+            const totalDaysInMonth = new Date(selY, selM, 0).getDate()
+            
+            const isCurMonth = (selectedMonth === currentBangkokMonthStr)
+            const daysElapsed = isCurMonth ? Math.min(totalDaysInMonth, Math.max(1, todayDay)) : totalDaysInMonth
+            const daysRemaining = isCurMonth ? Math.max(0, totalDaysInMonth - todayDay) : 0
+            
+            const avgDailySales = Math.round(liveMetrics.totalGrossRevenue / daysElapsed)
+            const forecastMonthClose = isCurMonth
+                ? liveMetrics.totalGrossRevenue + (daysRemaining * avgDailySales)
+                : liveMetrics.totalGrossRevenue
+            
+            return {
+                periodKey: 'month',
+                currentVelocity: avgDailySales,
+                velocityUnit: '/ วัน',
+                forecastClose: forecastMonthClose,
+                tagLabel: isCurMonth ? `DAY ${todayDay}/${totalDaysInMonth}` : 'CLOSED',
+                daysElapsed,
+                daysInPeriod: totalDaysInMonth,
+                daysRemaining,
+            }
+        }
+        
+        if (filterMode === 'year') {
+            const selY = parseInt(selectedYear, 10) || todayYear
+            const isCurYear = (selY === todayYear)
+            const monthsElapsed = isCurYear ? Math.min(12, Math.max(1, todayMonth)) : 12
+            const monthsRemaining = isCurYear ? Math.max(0, 12 - todayMonth) : 0
+            
+            const avgMonthlySales = Math.round(liveMetrics.totalGrossRevenue / monthsElapsed)
+            const forecastYearClose = isCurYear
+                ? liveMetrics.totalGrossRevenue + (monthsRemaining * avgMonthlySales)
+                : liveMetrics.totalGrossRevenue
+            
+            return {
+                periodKey: 'year',
+                currentVelocity: avgMonthlySales,
+                velocityUnit: '/ เดือน',
+                forecastClose: forecastYearClose,
+                tagLabel: isCurYear ? `M ${todayMonth}/12` : 'CLOSED',
+                monthsElapsed,
+                monthsInPeriod: 12,
+                monthsRemaining,
+            }
+        }
+
+        // Default: filterMode === 'day'
+        const currentHourData = hourlyVelocityData.find(h => h.hour === currentBangkokHour)
+        const currentVelocity = currentHourData?.amount || (liveMetrics.totalGrossRevenue > 0 ? Math.round(liveMetrics.totalGrossRevenue / Math.max(1, currentBangkokHour - 11 + 1)) : 0)
+        const remainingHours = Math.max(0, 23 - currentBangkokHour)
+        const forecastClose = liveMetrics.totalGrossRevenue + (remainingHours * Math.max(currentVelocity, 700))
+
+        return {
+            periodKey: 'day',
+            currentVelocity,
+            velocityUnit: '/ ชม.',
+            forecastClose,
+            tagLabel: currentBangkokTimeStr,
+            remainingHours,
+            daysElapsed: 1,
+            daysInPeriod: 1,
+            daysRemaining: 0,
+        }
+    }, [filterMode, selectedMonth, selectedYear, liveMetrics.totalGrossRevenue, hourlyVelocityData, currentBangkokHour, currentBangkokTimeStr, todayDay, todayMonth, todayYear, currentBangkokMonthStr])
 
     return (
         <div className="space-y-6 pb-20 text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]">
@@ -1083,17 +1263,27 @@ export default function AdminFinancialDashboard() {
                 guestGrowthPct={comparisonMetrics.guestGrowthPct}
                 avgTicket={liveMetrics.avgBillSize}
                 avgTicketGrowthPct={comparisonMetrics.avgTicketGrowthPct}
-                salesTarget={dailyTarget}
-                currentVelocityPerHour={currentVelocity}
-                forecastClose={forecastClose}
-                currentHourStr={currentBangkokTimeStr}
+                salesTarget={activeSalesTarget}
+                currentVelocityPerHour={periodPacingMetrics.currentVelocity}
+                velocityUnit={periodPacingMetrics.velocityUnit}
+                forecastClose={periodPacingMetrics.forecastClose}
+                currentHourStr={periodPacingMetrics.tagLabel}
+                filterMode={filterMode}
+                targetLabel={targetMeta.targetLabel}
+                salesTitle={targetMeta.salesCardTitle}
+                compareSubtext={targetMeta.compareCode}
                 compareLabel={
                     filterMode === 'day'
                         ? compareMode === 'same_day_last_week' ? 'วันเดียวกันสัปดาห์ก่อน (W-1)' : 'เมื่อวานนี้ (D-1)'
                         : filterMode === 'month' ? 'เดือนก่อนหน้า (M-1)' : 'ปีก่อนหน้า (Y-1)'
                 }
                 onEditTarget={() => {
-                    setTargetDraft(String(dailyTarget))
+                    setTargetDrafts({
+                        daily: String(dailyTarget),
+                        monthly: String(monthlyTarget),
+                        yearly: String(yearlyTarget)
+                    })
+                    setTargetModalTab(filterMode)
                     setIsEditingTarget(true)
                 }}
             />
@@ -1131,14 +1321,26 @@ export default function AdminFinancialDashboard() {
                 {activeTab === 'master' && (
                     <div className="space-y-6">
                         
-                        {/* Level 2: Sales vs Target & Hourly Run-Rate */}
+                        {/* Level 2: Sales vs Target & Period Run-Rate / Pacing */}
                         <SalesTargetPaceCockpit
                             currentSales={liveMetrics.totalGrossRevenue}
-                            targetSales={dailyTarget}
+                            targetSales={activeSalesTarget}
                             hourlyData={hourlyVelocityData}
+                            periodPacingData={filterMode === 'month' ? dailyPacingData : filterMode === 'year' ? monthlyPacingData : hourlyVelocityData}
                             currentHour={currentBangkokHour}
-                            currentVelocity={currentVelocity}
+                            currentVelocity={periodPacingMetrics.currentVelocity}
+                            velocityUnit={periodPacingMetrics.velocityUnit}
                             closingHour={23}
+                            filterMode={filterMode}
+                            daysLeft={periodPacingMetrics.daysRemaining || 0}
+                            daysInMonth={periodPacingMetrics.daysInPeriod || 30}
+                            daysElapsed={periodPacingMetrics.daysElapsed || 1}
+                            monthsLeft={periodPacingMetrics.monthsRemaining || 0}
+                            monthsElapsed={periodPacingMetrics.monthsElapsed || 1}
+                            todayDay={todayDay}
+                            todayMonth={todayMonth}
+                            selectedMonth={selectedMonth}
+                            selectedYear={selectedYear}
                         />
 
                         {/* Level 3: Sales Drivers & Smart Anomaly Alerts (2-col grid) */}
@@ -1354,57 +1556,223 @@ export default function AdminFinancialDashboard() {
                 )}
             </div>
 
-            {/* Target Editing Modal Dialog */}
+            {/* Target Editing Modal Dialog (Daily, Monthly, Yearly) */}
             {isEditingTarget && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] max-w-sm w-full p-5 space-y-4 font-mono shadow-2xl">
-                        <div className="flex justify-between items-center border-b border-[oklch(85%_0.012_28)] pb-2">
-                            <span className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-wide">
-                                ตั้งเป้าหมายยอดขายประจำวัน
-                            </span>
+                    <div className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] max-w-lg w-full max-h-[90vh] overflow-y-auto p-5 space-y-4 font-mono shadow-2xl">
+                        
+                        {/* Modal Header */}
+                        <div className="flex justify-between items-start border-b border-[oklch(85%_0.012_28)] pb-3">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                        TARGET CONFIG
+                                    </span>
+                                    <span className="font-bold text-sm text-[oklch(18%_0.012_28)] uppercase tracking-wide">
+                                        ตั้งเป้าหมายยอดขาย (Sales Targets)
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-[oklch(42%_0.010_28)] mt-1">
+                                    กำหนดเป้าหมายแยกตามรอบเวลา (รายวัน / รายเดือน / รายปี)
+                                </p>
+                            </div>
                             <button 
                                 type="button"
                                 onClick={() => setIsEditingTarget(false)} 
-                                className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer text-sm"
+                                className="text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer text-base px-1"
                             >
                                 ✕
                             </button>
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs text-[oklch(42%_0.010_28)] block">เป้าหมายประจำวัน (บาท):</label>
-                            <input
-                                type="number"
-                                value={targetDraft}
-                                onChange={(e) => setTargetDraft(e.target.value)}
-                                className="w-full p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-xl text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
-                            />
+
+                        {/* Modal Scope Selector Tabs */}
+                        <div className="flex border border-[oklch(85%_0.012_28)] divide-x divide-[oklch(85%_0.012_28)] text-xs">
+                            {[
+                                { id: 'all', label: 'ทั้งหมด [ALL]' },
+                                { id: 'day', label: 'รายวัน [DAY]' },
+                                { id: 'month', label: 'รายเดือน [MONTH]' },
+                                { id: 'year', label: 'รายปี [YEAR]' },
+                            ].map(tab => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setTargetModalTab(tab.id)}
+                                    className={`flex-1 py-1.5 font-bold transition-colors text-center ${
+                                        targetModalTab === tab.id
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(97%_0.008_28)]'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
-                        <div className="flex gap-2 justify-end pt-2 border-t border-[oklch(85%_0.012_28)]">
+
+                        {/* Form Inputs Container */}
+                        <div className="space-y-4">
+                            
+                            {/* 1. Daily Target Input */}
+                            {(targetModalTab === 'all' || targetModalTab === 'day') && (
+                                <div className={`p-3 border space-y-2 ${
+                                    filterMode === 'day' 
+                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)]/60' 
+                                        : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
+                                }`}>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                            01 // เป้าหมายรายวัน (Daily Target)
+                                        </label>
+                                        {filterMode === 'day' && (
+                                            <span className="text-[10px] px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold">
+                                                มุมมองปัจจุบัน
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-2.5 text-[oklch(55%_0.010_28)] text-base font-bold select-none">฿</span>
+                                        <input
+                                            type="number"
+                                            value={targetDrafts.daily}
+                                            onChange={(e) => setTargetDrafts(prev => ({ ...prev, daily: e.target.value }))}
+                                            className="w-full pl-8 pr-16 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-lg text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] tabular-nums"
+                                            placeholder="15000"
+                                        />
+                                        <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ วัน</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px] text-[oklch(42%_0.010_28)]">
+                                        <span>ใช้คำนวณในรายงานประจำวัน & Run-rate รายชั่วโมง</span>
+                                        <span className="text-[oklch(55%_0.010_28)]">ค่าเดิม: ฿{dailyTarget.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 2. Monthly Target Input */}
+                            {(targetModalTab === 'all' || targetModalTab === 'month') && (
+                                <div className={`p-3 border space-y-2 ${
+                                    filterMode === 'month' 
+                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)]/60' 
+                                        : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
+                                }`}>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                            02 // เป้าหมายรายเดือน (Monthly Target)
+                                        </label>
+                                        {filterMode === 'month' && (
+                                            <span className="text-[10px] px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold">
+                                                มุมมองปัจจุบัน
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-2.5 text-[oklch(55%_0.010_28)] text-base font-bold select-none">฿</span>
+                                        <input
+                                            type="number"
+                                            value={targetDrafts.monthly}
+                                            onChange={(e) => setTargetDrafts(prev => ({ ...prev, monthly: e.target.value }))}
+                                            className="w-full pl-8 pr-16 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-lg text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] tabular-nums"
+                                            placeholder="450000"
+                                        />
+                                        <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ เดือน</span>
+                                    </div>
+                                    <div className="flex flex-wrap justify-between items-center gap-1 text-[10px] text-[oklch(42%_0.010_28)]">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const d = parseInt(targetDrafts.daily, 10) || dailyTarget || 15000
+                                                setTargetDrafts(prev => ({ ...prev, monthly: String(d * 30) }))
+                                            }}
+                                            className="underline text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                        >
+                                            [คำนวณออโต้: เป้าวัน x 30 วัน = ฿{((parseInt(targetDrafts.daily, 10) || dailyTarget || 15000) * 30).toLocaleString()}]
+                                        </button>
+                                        <span className="text-[oklch(55%_0.010_28)]">ค่าเดิม: ฿{monthlyTarget.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 3. Yearly Target Input */}
+                            {(targetModalTab === 'all' || targetModalTab === 'year') && (
+                                <div className={`p-3 border space-y-2 ${
+                                    filterMode === 'year' 
+                                        ? 'border-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)]/60' 
+                                        : 'border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]'
+                                }`}>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-[oklch(18%_0.012_28)] uppercase">
+                                            03 // เป้าหมายรายปี (Yearly Target)
+                                        </label>
+                                        {filterMode === 'year' && (
+                                            <span className="text-[10px] px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold">
+                                                มุมมองปัจจุบัน
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-2.5 text-[oklch(55%_0.010_28)] text-base font-bold select-none">฿</span>
+                                        <input
+                                            type="number"
+                                            value={targetDrafts.yearly}
+                                            onChange={(e) => setTargetDrafts(prev => ({ ...prev, yearly: e.target.value }))}
+                                            className="w-full pl-8 pr-16 py-2 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-bold text-lg text-[oklch(18%_0.012_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)] tabular-nums"
+                                            placeholder="5400000"
+                                        />
+                                        <span className="absolute right-3 top-2.5 text-xs text-[oklch(42%_0.010_28)] select-none">/ ปี</span>
+                                    </div>
+                                    <div className="flex flex-wrap justify-between items-center gap-1 text-[10px] text-[oklch(42%_0.010_28)]">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const m = parseInt(targetDrafts.monthly, 10) || monthlyTarget || 450000
+                                                setTargetDrafts(prev => ({ ...prev, yearly: String(m * 12) }))
+                                            }}
+                                            className="underline text-[oklch(52%_0.16_28)] hover:text-[oklch(18%_0.012_28)] cursor-pointer"
+                                        >
+                                            [คำนวณออโต้: เป้าเดือน x 12 เดือน = ฿{((parseInt(targetDrafts.monthly, 10) || monthlyTarget || 450000) * 12).toLocaleString()}]
+                                        </button>
+                                        <span className="text-[oklch(55%_0.010_28)]">ค่าเดิม: ฿{yearlyTarget.toLocaleString()}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Modal Footer Actions */}
+                        <div className="flex gap-2 justify-end pt-3 border-t border-[oklch(85%_0.012_28)]">
                             <button
                                 type="button"
                                 onClick={() => setIsEditingTarget(false)}
-                                className="px-3 py-1.5 text-xs text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] cursor-pointer"
+                                className="px-3.5 py-2 text-xs text-[oklch(42%_0.010_28)] hover:bg-[oklch(94%_0.010_28)] border border-transparent cursor-pointer font-bold"
                             >
                                 ยกเลิก
                             </button>
                             <button
                                 type="button"
                                 onClick={() => {
-                                    const val = parseInt(targetDraft, 10) || 10000
-                                    setDailyTarget(val)
+                                    const d = Math.max(1, parseInt(targetDrafts.daily, 10) || 15000)
+                                    const m = Math.max(1, parseInt(targetDrafts.monthly, 10) || 450000)
+                                    const y = Math.max(1, parseInt(targetDrafts.yearly, 10) || 5400000)
+
+                                    setDailyTarget(d)
+                                    setMonthlyTarget(m)
+                                    setYearlyTarget(y)
+
                                     try {
-                                        localStorage.setItem('inth_daily_sales_target', String(val))
+                                        localStorage.setItem('inth_daily_sales_target', String(d))
+                                        localStorage.setItem('inth_monthly_sales_target', String(m))
+                                        localStorage.setItem('inth_yearly_sales_target', String(y))
                                     } catch {
-                                        // ignore
+                                        // ignore storage quotas
                                     }
+
                                     setIsEditingTarget(false)
-                                    toast.success(`บันทึกเป้าหมายประจำวัน ฿${val.toLocaleString()} เรียบร้อย`)
+                                    toast.success(`บันทึกเป้าหมายเรียบร้อย (รายวัน: ฿${d.toLocaleString()} | รายเดือน: ฿${m.toLocaleString()} | รายปี: ฿${y.toLocaleString()})`)
                                 }}
-                                className="px-4 py-1.5 text-xs bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-[oklch(28%_0.012_28)] cursor-pointer"
+                                className="px-4 py-2 text-xs bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold hover:bg-[oklch(28%_0.012_28)] cursor-pointer transition-colors shadow-xs"
                             >
                                 บันทึกเป้าหมาย
                             </button>
                         </div>
+
                     </div>
                 </div>
             )}

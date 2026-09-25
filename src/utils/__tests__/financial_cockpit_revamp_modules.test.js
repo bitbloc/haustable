@@ -137,4 +137,55 @@ describe('Financial Cockpit Revamp Logic & Operational Modules Audit', () => {
         expect(sameDayLastWeek).toBe('2026-09-17') // Exactly previous Thursday
         expect(yesterday).toBe('2026-09-23')       // Wednesday
     })
+
+    it('resolves separate targets and computes Monthly and Yearly pacing correctly', () => {
+        const targets = {
+            daily: 15000,
+            monthly: 450000,
+            yearly: 5400000,
+        }
+
+        const resolveTarget = (mode) => {
+            if (mode === 'month') return targets.monthly
+            if (mode === 'year') return targets.yearly
+            return targets.daily
+        }
+
+        expect(resolveTarget('day')).toBe(15000)
+        expect(resolveTarget('month')).toBe(450000)
+        expect(resolveTarget('year')).toBe(5400000)
+
+        // Monthly Pacing Test: 24th of September (30 days total)
+        const currentSalesMonth = 198492
+        const monthlyTarget = resolveTarget('month') // 450,000
+        const totalDaysInMonth = 30
+        const currentDay = 24
+        const daysRemaining = totalDaysInMonth - currentDay // 6 days left
+        const remainingToTargetMonth = Math.max(0, monthlyTarget - currentSalesMonth) // 251,508
+        const progressPctMonth = Math.min(100, Math.round((currentSalesMonth / monthlyTarget) * 100)) // 44%
+        const requiredDailyPace = Math.round(remainingToTargetMonth / daysRemaining) // 251,508 / 6 = 41,918
+        const expectedMonthProgress = Math.round((currentDay / totalDaysInMonth) * 100) // 80%
+        const isOnPaceMonth = (progressPctMonth >= expectedMonthProgress) || (currentSalesMonth >= monthlyTarget)
+
+        expect(progressPctMonth).toBe(44)
+        expect(remainingToTargetMonth).toBe(251508)
+        expect(requiredDailyPace).toBe(41918)
+        expect(isOnPaceMonth).toBe(false) // 44% vs expected 80% on day 24 indicates behind pace
+
+        // Yearly Pacing Test: Month 9 of the Year
+        const currentSalesYear = 4200000
+        const yearlyTarget = resolveTarget('year') // 5,400,000
+        const currentMonth = 9
+        const monthsRemaining = 12 - currentMonth // 3 months left
+        const remainingToTargetYear = Math.max(0, yearlyTarget - currentSalesYear) // 1,200,000
+        const progressPctYear = Math.min(100, Math.round((currentSalesYear / yearlyTarget) * 100)) // 78%
+        const requiredMonthlyPace = Math.round(remainingToTargetYear / monthsRemaining) // 1,200,000 / 3 = 400,000
+        const expectedYearProgress = Math.round((currentMonth / 12) * 100) // 75%
+        const isOnPaceYear = (progressPctYear >= expectedYearProgress) || (currentSalesYear >= yearlyTarget)
+
+        expect(progressPctYear).toBe(78)
+        expect(remainingToTargetYear).toBe(1200000)
+        expect(requiredMonthlyPace).toBe(400000)
+        expect(isOnPaceYear).toBe(true) // 78% vs expected 75% indicates on track
+    })
 })

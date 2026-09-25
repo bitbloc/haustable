@@ -20,10 +20,33 @@ export default function ExecutiveKpiStrip({
     forecastClose = 0,
     currentHourStr = '19:30',
     compareLabel = 'vs same day last week',
-    onEditTarget = null
+    onEditTarget = null,
+    filterMode = 'day',
+    targetLabel = null,
+    salesTitle = null,
+    compareSubtext = null,
+    velocityUnit = '/ ชม.',
 }) {
     const targetProgressPct = salesTarget > 0 ? Math.min(100, Math.round((salesToday / salesTarget) * 100)) : 0
     const remainingToTarget = Math.max(0, salesTarget - salesToday)
+
+    const resolvedTargetLabel = targetLabel || (
+        filterMode === 'month' ? 'เป้าหมายรายเดือน' :
+        filterMode === 'year' ? 'เป้าหมายรายปี' :
+        'เป้าหมายรายวัน'
+    )
+
+    const resolvedSalesTitle = salesTitle || (
+        filterMode === 'month' ? '01 // SALES THIS MONTH' :
+        filterMode === 'year' ? '01 // SALES THIS YEAR' :
+        '01 // SALES TODAY'
+    )
+
+    const resolvedCompareSubtext = compareSubtext || (
+        filterMode === 'month' ? 'vs M-1' :
+        filterMode === 'year' ? 'vs Y-1' :
+        'vs W-1'
+    )
 
     const formatDiff = (pct) => {
         const num = parseFloat(pct) || 0
@@ -46,7 +69,7 @@ export default function ExecutiveKpiStrip({
                     <span className="text-[oklch(55%_0.010_28)]">เปรียบเทียบ: {compareLabel}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span>เป้าหมายวันนี้: ฿{salesTarget.toLocaleString()}</span>
+                    <span>{resolvedTargetLabel}: ฿{salesTarget.toLocaleString()}</span>
                     {onEditTarget && (
                         <button
                             type="button"
@@ -62,10 +85,10 @@ export default function ExecutiveKpiStrip({
             {/* 6-Cell Responsive Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0 divide-[oklch(85%_0.012_28)]">
                 
-                {/* Cell 1: Sales Today */}
+                {/* Cell 1: Sales Today / Period */}
                 <div className="p-4 flex flex-col justify-between space-y-2 bg-[oklch(97%_0.008_28)]">
                     <div className="flex items-center justify-between text-[11px] font-mono text-[oklch(42%_0.010_28)]">
-                        <span>01 // SALES TODAY</span>
+                        <span>{resolvedSalesTitle}</span>
                         <span className="text-[9px] uppercase px-1 py-0.2 border border-[oklch(85%_0.012_28)]">NET</span>
                     </div>
                     <div>
@@ -77,7 +100,7 @@ export default function ExecutiveKpiStrip({
                         <span className={isPositive(salesGrowthPct) ? 'text-[oklch(45%_0.08_140)] font-bold' : 'text-[oklch(52%_0.16_28)] font-bold'}>
                             {formatDiff(salesGrowthPct)}
                         </span>
-                        <span className="text-[oklch(55%_0.010_28)] text-[10px] truncate max-w-[80px]">vs W-1</span>
+                        <span className="text-[oklch(55%_0.010_28)] text-[10px] truncate max-w-[80px]">{resolvedCompareSubtext}</span>
                     </div>
                 </div>
 
@@ -165,7 +188,7 @@ export default function ExecutiveKpiStrip({
                     </div>
                     <div>
                         <div className="font-mono text-xl sm:text-2xl font-bold tracking-tight text-[oklch(52%_0.16_28)] tabular-nums">
-                            ฿{Math.round(currentVelocityPerHour).toLocaleString()} <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">/ ชม.</span>
+                            ฿{Math.round(currentVelocityPerHour).toLocaleString()} <span className="text-xs font-normal text-[oklch(42%_0.010_28)]">{velocityUnit}</span>
                         </div>
                     </div>
                     <div className="font-mono text-[11px] pt-1.5 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between">
