@@ -155,10 +155,22 @@ export function useBooking() {
                 }
             }
             
-            const customerNoteContent = `Booking ${state.selectedTable?.table_name || ''} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '')
+            const promoDiscount = promotionData?.discountAmount || 0
+            const xhausDiscount = overrides.xhausDiscount || 0
+            const freeDrinkDiscount = overrides.freeDrinkDiscount || 0
+            const totalDiscountAmount = promoDiscount + xhausDiscount + freeDrinkDiscount
+            const finalTotal = overrides.finalTotal !== undefined 
+                ? overrides.finalTotal 
+                : Math.max(0, cartTotal - totalDiscountAmount)
 
-            const discountAmount = promotionData?.discountAmount || 0
-            const finalTotal = Math.max(0, cartTotal - discountAmount)
+            let extraCrmNote = ''
+            if (overrides.xhausRedeemed > 0) {
+                extraCrmNote += `\n[ใช้แต้ม xhaus: ${overrides.xhausRedeemed} เหรียญ (-฿${xhausDiscount})]`
+            }
+            if (overrides.useFreeDrinkQuota) {
+                extraCrmNote += `\n[ใช้สิทธิ์แก้วฟรี 10 แถม 1 (-฿${freeDrinkDiscount})]`
+            }
+            const customerNoteContent = `Booking ${state.selectedTable?.table_name || ''} (${state.pax} Pax)` + (state.specialRequest ? `\nNote: ${state.specialRequest}` : '') + extraCrmNote
 
             const actualDepositPaid = overrides.actualDepositPaid !== undefined 
                 ? Number(overrides.actualDepositPaid) 
@@ -169,9 +181,13 @@ export function useBooking() {
                 ? (overrides.slipVerifyResult?.bankName?.th || overrides.slipVerifyResult?.bankName?.en || '') 
                 : (overrides.slipVerifyResult?.bankName || '')
 
+            let crmTag = ''
+            if (overrides.xhausRedeemed > 0) crmTag += ` | xhaus -฿${xhausDiscount}`
+            if (overrides.useFreeDrinkQuota) crmTag += ` | แก้วฟรี -฿${freeDrinkDiscount}`
+
             const staffRemarkContent = isAutoVerified
-                ? `[ONLINE] จองโต๊ะล่วงหน้า (${isFullPaid ? `ชำระเต็มจำนวน ฿${actualDepositPaid}` : `ตรวจมัดจำ Auto EasySlip ✓ ฿${actualDepositPaid}`}${bankLabel ? ' ' + bankLabel : ''})`
-                : (isFullPaid ? `[ONLINE] จองโต๊ะล่วงหน้า (โอนเต็มจำนวน ฿${actualDepositPaid})` : '[ONLINE] จองโต๊ะล่วงหน้า')
+                ? `[ONLINE] จองโต๊ะล่วงหน้า (${isFullPaid ? `ชำระเต็มจำนวน ฿${actualDepositPaid}` : `ตรวจมัดจำ Auto EasySlip ✓ ฿${actualDepositPaid}`}${bankLabel ? ' ' + bankLabel : ''}${crmTag})`
+                : (isFullPaid ? `[ONLINE] จองโต๊ะล่วงหน้า (โอนเต็มจำนวน ฿${actualDepositPaid}${crmTag})` : `[ONLINE] จองโต๊ะล่วงหน้า${crmTag}`)
 
             const bookingPayload = {
                 source: 'online',
@@ -187,9 +203,12 @@ export function useBooking() {
                 staff_remark: staffRemarkContent,
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
-                discount_amount: promotionData?.discountAmount || 0,
+                discount_amount: totalDiscountAmount,
                 deposit_amount: actualDepositPaid,
                 tracking_token: crypto.randomUUID(),
+                xhaus_redeemed: overrides.xhausRedeemed || 0,
+                xhaus_discount: xhausDiscount,
+                use_free_drink_quota: Boolean(overrides.useFreeDrinkQuota),
                 slip_verified: isAutoVerified,
                 slip_provider: overrides.slipVerifyResult?.provider || overrides.paymentMethod || 'bank',
                 slip_trans_ref: overrides.slipVerifyResult?.transRef || null,

@@ -67,7 +67,8 @@ export function useOrderSubmission() {
     }
 
     const insertBookingWithFallback = async (payload) => {
-        let { data, error } = await supabase.from('bookings').insert(payload).select().single()
+        const { use_free_drink_quota, ...cleanPayload } = payload || {}
+        let { data, error } = await supabase.from('bookings').insert(cleanPayload).select().single()
         if (error && error.message && error.message.includes('column')) {
             console.warn('[useOrderSubmission] bookings column missing, using resilient fallback insert:', error.message)
             
@@ -232,11 +233,12 @@ export function useOrderSubmission() {
             } else if (lineIdToken) {
                 // --- LINE USER (Edge Function) ---
                 console.warn("Submitting via Edge Function (LINE LIFF Session)...")
+                const { use_free_drink_quota, ...cleanEdgeBookingData } = finalBookingPayload || {}
                 const { data, error: fnError } = await supabase.functions.invoke('manage-booking', {
                     body: { 
                         action: 'create_booking', 
                         idToken: lineIdToken,
-                        bookingData: { ...finalBookingPayload, orderItems: orderItemsPayload }
+                        bookingData: { ...cleanEdgeBookingData, orderItems: orderItemsPayload }
                     }
                 })
 
@@ -288,6 +290,59 @@ export function useOrderSubmission() {
             }
 
             if (resultData) {
+                // Deduct xhaus coins and free drink quota if redeemed by member
+                const memberUserId = resultData?.user_id || bookingPayload.user_id;
+                const numXhausRedeemed = parseFloat(bookingPayload.xhaus_redeemed) || 0;
+                const isFreeDrinkUsed = Boolean(bookingPayload.use_free_drink_quota);
+
+                if (memberUserId && (numXhausRedeemed > 0 || isFreeDrinkUsed)) {
+                    try {
+                        if (numXhausRedeemed > 0) {
+                            const { data: prof } = await supabase
+                                .from('profiles')
+                                .select('xhaus_balance, total_redeemed_xhaus')
+                                .eq('id', memberUserId)
+                                .maybeSingle();
+                            if (prof) {
+                                const curBal = parseFloat(prof.xhaus_balance) || 0;
+                                const curRedeemed = parseFloat(prof.total_redeemed_xhaus) || 0;
+                                await supabase
+                                    .from('profiles')
+                                    .update({
+                                        xhaus_balance: Math.max(0, curBal - numXhausRedeemed),
+                                        total_redeemed_xhaus: curRedeemed + numXhausRedeemed
+                                    })
+                                    .eq('id', memberUserId);
+                            }
+                        }
+
+                        if (isFreeDrinkUsed) {
+                            const { error: stampErr } = await supabase.rpc('process_drink_stamps', {
+                                p_user_id: memberUserId,
+                                p_stamp_count: 0,
+                                p_quota_used: 1
+                            });
+                            if (stampErr) {
+                                console.warn('[useOrderSubmission] process_drink_stamps fallback:', stampErr);
+                                const { data: prof } = await supabase
+                                    .from('profiles')
+                                    .select('free_drink_quota, drink_stamp_count')
+                                    .eq('id', memberUserId)
+                                    .maybeSingle();
+                                if (prof) {
+                                    if ((prof.free_drink_quota || 0) > 0) {
+                                        await supabase.from('profiles').update({ free_drink_quota: prof.free_drink_quota - 1 }).eq('id', memberUserId);
+                                    } else if ((prof.drink_stamp_count || 0) >= 10) {
+                                        await supabase.from('profiles').update({ drink_stamp_count: prof.drink_stamp_count - 10 }).eq('id', memberUserId);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (crmErr) {
+                        console.warn('[useOrderSubmission] CRM redemption deduction exception:', crmErr);
+                    }
+                }
+
                 // Instantly broadcast to all connected POS terminals (< 50ms)
                 try {
                     const custName = resultData.pickup_contact_name || resultData.customer_name || 'Guest'

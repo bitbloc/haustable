@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Upload, X, Tag, AlertCircle, Crown, Sparkles, Coins, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon } from 'lucide-react'
 import { useLanguage } from '../../context/LanguageContext'
 import { useBooking } from '../../hooks/useBooking'
@@ -9,6 +9,8 @@ import { verifyPaymentSlip } from '../../utils/slipVerificationHelper'
 import { normalizePromptPayId } from '../../utils/printerHelper'
 import generatePayload from 'promptpay-qr'
 import { QRCodeSVG } from 'qrcode.react'
+import CRMCheckoutPrivileges from '../shared/CRMCheckoutPrivileges'
+import { DEFAULT_CRM_SETTINGS } from '../../utils/crmHelper'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -35,26 +37,52 @@ export default function BookingCheckout() {
 
     // Member CRM state
     const [memberProfile, setMemberProfile] = useState(null)
-    const [crmBaseSpendAmount, setCrmBaseSpendAmount] = useState(100)
+    const [crmSettings, setCrmSettings] = useState({
+        ...DEFAULT_CRM_SETTINGS
+    })
+    const [eligibleCategoryIds, setEligibleCategoryIds] = useState(new Set())
     const [tierDetails, setTierDetails] = useState({
         current_tier: 'Haus Common',
         multiplier: 1.00,
         is_in_grace_period: false
     })
 
+    // CRM Redemption State
+    const [xhausToRedeem, setXhausToRedeem] = useState(0)
+    const [useFreeDrinkQuota, setUseFreeDrinkQuota] = useState(false)
+
     useEffect(() => {
         const loadMemberProfile = async () => {
             try {
-                // Fetch CRM base spend amount setting
+                // 1. Fetch CRM settings
                 const { data: settingData } = await supabase
                     .from('app_settings')
-                    .select('value')
-                    .eq('key', 'crm_base_spend_amount')
-                    .maybeSingle();
-                if (settingData?.value) {
-                    setCrmBaseSpendAmount(parseFloat(settingData.value) || 100);
+                    .select('key, value')
+                    .in('key', [
+                        'crm_welcome_xhaus',
+                        'crm_redeem_rate_xhaus',
+                        'crm_min_redeem_xhaus',
+                        'crm_base_spend_amount',
+                        'crm_max_redeem_percent'
+                    ]);
+                if (settingData && settingData.length > 0) {
+                    const sMap = settingData.reduce((acc, s) => ({ ...acc, [s.key]: s.value }), {});
+                    setCrmSettings(prev => ({
+                        ...prev,
+                        ...sMap
+                    }));
                 }
 
+                // 2. Fetch eligible drink categories
+                const { data: cats } = await supabase
+                    .from('menu_categories')
+                    .select('id, name')
+                    .eq('is_drink_stamp_eligible', true);
+                if (cats) {
+                    setEligibleCategoryIds(new Set(cats.map(c => c.id)));
+                }
+
+                // 3. Member Profile
                 const { data: { user } } = await supabase.auth.getUser()
                 if (user) {
                     const { data: prof } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -90,10 +118,78 @@ export default function BookingCheckout() {
     } = usePromotion()
 
     const cartTotal = cart.reduce((sum, item) => sum + ((item.totalPricePerUnit || item.price) * item.qty), 0)
-    
-    // Calculate Final Total & Deposit
-    const discountAmount = appliedPromo?.discountAmount || 0
-    const finalTotal = Math.max(0, cartTotal - discountAmount)
+
+    // Drink stamp eligibility checker
+    const isItemDrinkStampEligible = useCallback((item) => {
+        if (!item || item.is_reward) return false
+        if (item.is_drink_stamp_eligible === true) return true
+        if (item.menu_items?.is_drink_stamp_eligible === true) return true
+        if (item.menu_categories?.is_drink_stamp_eligible === true) return true
+        if (item.category_id && eligibleCategoryIds.has(item.category_id)) return true
+        const catName = String(item.category || item.menu_categories?.name || '').toLowerCase()
+        const name = String(item.name || '').toLowerCase()
+        const beverageKeywords = ['coffee', 'tea', 'drink', 'beverage', 'soda', 'matcha', 'cocoa', 'latte', 'espresso', 'americano', 'cappuccino', 'mocha', 'dirty', 'brew', 'smoothie', 'frappe', 'juice', 'milk', 'lemonade', 'water', 'กาแฟ', 'ชา', 'มัทฉะ', 'น้ำ']
+        return beverageKeywords.some(k => catName.includes(k) || name.includes(k))
+    }, [eligibleCategoryIds])
+
+    // Available Free Drinks Quota
+    const availableFreeDrinks = useMemo(() => {
+        if (!memberProfile) return 0
+        const quota = parseInt(memberProfile.free_drink_quota || 0, 10)
+        const stamps = parseInt(memberProfile.drink_stamp_count || 0, 10)
+        return Math.max(0, quota + Math.floor(stamps / 10))
+    }, [memberProfile])
+
+    const eligibleDrinkItems = useMemo(() => {
+        return cart.filter(isItemDrinkStampEligible)
+    }, [cart, isItemDrinkStampEligible])
+
+    const freeDrinkDiscount = useMemo(() => {
+        if (!useFreeDrinkQuota || availableFreeDrinks <= 0 || eligibleDrinkItems.length === 0) return 0
+        const prices = eligibleDrinkItems.map(i => parseFloat(i.totalPricePerUnit || i.price) || 0)
+        return Math.min(...prices)
+    }, [useFreeDrinkQuota, availableFreeDrinks, eligibleDrinkItems])
+
+    // Promotion Discount
+    const promoDiscount = appliedPromo?.discountAmount || 0
+    const netBeforeXhaus = Math.max(0, cartTotal - promoDiscount - freeDrinkDiscount)
+
+    // xhaus Discount Constraints
+    const memberCoinsBalance = Math.max(0, parseFloat(memberProfile?.xhaus_balance || 0))
+    const redeemRate = parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0
+    const maxRedeemPercent = parseFloat(crmSettings.crm_max_redeem_percent) || 100.0
+    const minRedeem = parseFloat(crmSettings.crm_min_redeem_xhaus) || 10.0
+
+    const maxAllowedDiscountBaht = (netBeforeXhaus * maxRedeemPercent) / 100
+    const maxCoinsAllowed = Math.min(memberCoinsBalance, Math.floor((maxAllowedDiscountBaht / redeemRate) * 100) / 100)
+
+    const effectiveXhausDiscount = useMemo(() => {
+        if (xhausToRedeem <= 0 || !memberProfile) return 0
+        const rawDisc = xhausToRedeem * redeemRate
+        return Math.min(rawDisc, maxAllowedDiscountBaht, netBeforeXhaus)
+    }, [xhausToRedeem, redeemRate, maxAllowedDiscountBaht, netBeforeXhaus, memberProfile])
+
+    // Auto-reset free drink if no eligible drinks remain
+    useEffect(() => {
+        if (useFreeDrinkQuota && eligibleDrinkItems.length === 0) {
+            setUseFreeDrinkQuota(false)
+        }
+    }, [useFreeDrinkQuota, eligibleDrinkItems.length])
+
+    // Auto-adjust xhaus if netBeforeXhaus shrinks
+    useEffect(() => {
+        if (xhausToRedeem > 0) {
+            if (maxCoinsAllowed < minRedeem) {
+                setXhausToRedeem(0)
+            } else if (xhausToRedeem > maxCoinsAllowed) {
+                setXhausToRedeem(maxCoinsAllowed)
+            }
+        }
+    }, [maxCoinsAllowed, minRedeem, xhausToRedeem])
+
+    // Total Discounts & Final Total
+    const totalDiscounts = promoDiscount + freeDrinkDiscount + effectiveXhausDiscount
+    const finalTotal = Math.max(0, cartTotal - totalDiscounts)
     const halfDeposit = Math.ceil(finalTotal * 0.5)
 
     // Payment Option: 50% Deposit vs 100% Full Payment
@@ -117,7 +213,7 @@ export default function BookingCheckout() {
     }, [cleanPromptPayId, depositAmount])
 
     // Estimated points earned
-    const estimatedPointsEarned = Math.floor((finalTotal / (crmBaseSpendAmount || 100)) * (tierDetails.multiplier || 1.0))
+    const estimatedPointsEarned = Math.floor((finalTotal / (parseFloat(crmSettings.crm_base_spend_amount) || 100)) * (tierDetails.multiplier || 1.0))
 
     // Revalidate when cartTotal changes
     useEffect(() => {
@@ -229,7 +325,12 @@ export default function BookingCheckout() {
                 slipVerifyResult: slipVerifyResult,
                 paymentMethod: paymentMethod,
                 actualDepositPaid,
-                isFullPaid: isFullPayment
+                isFullPaid: isFullPayment,
+                xhausRedeemed: xhausToRedeem,
+                xhausDiscount: effectiveXhausDiscount,
+                useFreeDrinkQuota: Boolean(useFreeDrinkQuota && freeDrinkDiscount > 0),
+                freeDrinkDiscount: freeDrinkDiscount,
+                finalTotal: finalTotal
             }) 
 
             if (result.success) {
@@ -285,6 +386,17 @@ export default function BookingCheckout() {
                             <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
                         </div>
                     </div>
+
+                    {availableFreeDrinks > 0 && (
+                        <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-xs font-mono">
+                            <span className="text-[oklch(45%_0.08_140)] font-bold">
+                                ☕ สะสมครบแล้ว! มีสิทธิ์แก้วฟรี {availableFreeDrinks} แก้ว
+                            </span>
+                            <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                {useFreeDrinkQuota ? 'กำลังใช้งาน ✓' : 'กดใช้สิทธิ์ที่หัวข้อชำระเงิน'}
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -376,21 +488,48 @@ export default function BookingCheckout() {
             </div>
 
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
-                <h3 className="text-xs font-mono font-bold text-subInk uppercase">2. {t('paymentTitle')}</h3>
-                <div className="flex gap-2">
-                    <input 
-                        type="text" 
-                        placeholder="Promo Code" 
-                        value={promoCode}
-                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                        disabled={!!appliedPromo}
-                        className="flex-1 bg-transparent border border-[var(--color-rule)] px-3 py-2 text-sm font-mono uppercase outline-none focus:border-ink disabled:opacity-50"
+                <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
+                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">2. {t('paymentTitle')}</h3>
+                    <span className="text-[10px] font-mono text-subInk">ยอดคำนวณตามจริง</span>
+                </div>
+
+                {/* CRM Privileges: Free Drink & xhaus coins redemption */}
+                {memberProfile && (
+                    <CRMCheckoutPrivileges
+                        memberProfile={memberProfile}
+                        crmSettings={crmSettings}
+                        cart={cart}
+                        isItemDrinkStampEligible={isItemDrinkStampEligible}
+                        useFreeDrinkQuota={useFreeDrinkQuota}
+                        onToggleFreeDrink={setUseFreeDrinkQuota}
+                        xhausToRedeem={xhausToRedeem}
+                        onApplyXhaus={(coins) => setXhausToRedeem(coins)}
+                        onCancelXhaus={() => setXhausToRedeem(0)}
+                        cartSubtotal={cartTotal}
+                        promoDiscount={promoDiscount}
                     />
-                    {appliedPromo ? (
-                        <button onClick={removePromo} className="text-error px-3 py-2 font-mono text-xs border border-[var(--color-rule)] hover:bg-error hover:text-paper">Remove</button>
-                    ) : (
-                        <button onClick={handleApplyCode} disabled={!promoCode || isValidating} className="bg-ink text-paper px-4 py-2 font-mono text-xs disabled:opacity-50">Apply</button>
-                    )}
+                )}
+
+                {/* PROMO CODE */}
+                <div className="pt-1">
+                    <label className="text-[11px] font-mono text-subInk font-bold block mb-1.5">
+                        โค้ดส่วนลดโปรโมชั่น (Promo Code)
+                    </label>
+                    <div className="flex gap-2">
+                        <input 
+                            type="text" 
+                            placeholder="PROMO CODE" 
+                            value={promoCode}
+                            onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                            disabled={!!appliedPromo}
+                            className="flex-1 bg-transparent border border-[var(--color-rule)] px-3 py-2 text-sm font-mono uppercase outline-none focus:border-ink disabled:opacity-50"
+                        />
+                        {appliedPromo ? (
+                            <button onClick={removePromo} className="text-error px-3 py-2 font-mono text-xs border border-[var(--color-rule)] hover:bg-error hover:text-paper">Remove</button>
+                        ) : (
+                            <button onClick={handleApplyCode} disabled={!promoCode || isValidating} className="bg-ink text-paper px-4 py-2 font-mono text-xs disabled:opacity-50">Apply</button>
+                        )}
+                    </div>
                 </div>
                 
                 {promoError && (
@@ -405,7 +544,7 @@ export default function BookingCheckout() {
                     </div>
                 )}
 
-                <div className="space-y-2 pt-2">
+                <div className="space-y-2 pt-2 border-t border-[var(--color-rule)]">
                     <div className="flex justify-between text-xs font-mono text-subInk font-bold">
                         <span>Subtotal</span>
                         <span>{cartTotal}.-</span>
@@ -417,7 +556,21 @@ export default function BookingCheckout() {
                                 Discount 
                                 {appliedPromo.discountType === 'percent' && <span className="ml-1 text-[10px] bg-[var(--color-rule)] px-1 rounded-none">{appliedPromo.discountValue}%</span>}
                             </span>
-                            <span>- {discountAmount}.-</span>
+                            <span>- {promoDiscount}.-</span>
+                        </div>
+                    )}
+
+                    {useFreeDrinkQuota && freeDrinkDiscount > 0 && (
+                        <div className="flex justify-between text-xs font-mono text-emerald-800 font-bold">
+                            <span>สิทธิ์แก้วฟรี (10 แถม 1)</span>
+                            <span>- {freeDrinkDiscount}.-</span>
+                        </div>
+                    )}
+
+                    {effectiveXhausDiscount > 0 && (
+                        <div className="flex justify-between text-xs font-mono text-amber-900 font-bold">
+                            <span>ส่วนลดเหรียญ xhaus ({xhausToRedeem} pts)</span>
+                            <span>- {effectiveXhausDiscount}.-</span>
                         </div>
                     )}
 

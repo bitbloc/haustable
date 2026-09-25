@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -20,6 +20,8 @@ import generatePayload from 'promptpay-qr'
 import { QRCodeSVG } from 'qrcode.react'
 import { Tag, AlertCircle, Crown, Coffee, QrCode, Wallet, CheckCircle2, AlertTriangle, Copy, RefreshCw, Check as CheckIcon, X as CloseIcon } from 'lucide-react'
 import { toast } from 'sonner'
+import CRMCheckoutPrivileges from './components/shared/CRMCheckoutPrivileges'
+import { DEFAULT_CRM_SETTINGS } from './utils/crmHelper'
 
 // --- Main Page ---
 export default function PickupPage() {
@@ -36,11 +38,19 @@ export default function PickupPage() {
 
     // CRM Member State
     const [memberProfile, setMemberProfile] = useState(null)
+    const [crmSettings, setCrmSettings] = useState({
+        ...DEFAULT_CRM_SETTINGS
+    })
+    const [eligibleCategoryIds, setEligibleCategoryIds] = useState(new Set())
     const [tierDetails, setTierDetails] = useState({
         current_tier: 'Haus Common',
         multiplier: 1.00,
         is_in_grace_period: false
     })
+
+    // CRM Redemption State
+    const [xhausToRedeem, setXhausToRedeem] = useState(0)
+    const [useFreeDrinkQuota, setUseFreeDrinkQuota] = useState(false)
 
     // Checkout Form State
     const [pickupTime, setPickupTime] = useState('') // Now acts as the selected value for Dropdown
@@ -110,6 +120,20 @@ export default function PickupPage() {
                 if (map.closing_time) setClosingTime(map.closing_time)
                 if (map.crm_base_spend_amount) setCrmBaseSpendAmount(parseFloat(map.crm_base_spend_amount) || 100)
                 if (map.easyslip_enabled_pickup !== undefined) setEasySlipEnabled(map.easyslip_enabled_pickup !== 'false')
+
+                setCrmSettings(prev => ({
+                    ...prev,
+                    ...map
+                }))
+            }
+
+            // Fetch eligible drink categories
+            const { data: cats } = await supabase
+                .from('menu_categories')
+                .select('id, name')
+                .eq('is_drink_stamp_eligible', true)
+            if (cats) {
+                setEligibleCategoryIds(new Set(cats.map(c => c.id)))
             }
 
             // 3. User
@@ -210,9 +234,78 @@ export default function PickupPage() {
         applyCode, removePromo, revalidatePromo 
     } = usePromotion()
 
-     // Calculate Final Total
-     const discountAmount = appliedPromo?.discountAmount || 0
-     const finalTotal = Math.max(0, cartTotal - discountAmount)
+    // Drink stamp eligibility checker
+    const isItemDrinkStampEligible = useCallback((item) => {
+        if (!item || item.is_reward) return false
+        if (item.is_drink_stamp_eligible === true) return true
+        if (item.menu_items?.is_drink_stamp_eligible === true) return true
+        if (item.menu_categories?.is_drink_stamp_eligible === true) return true
+        if (item.category_id && eligibleCategoryIds.has(item.category_id)) return true
+        const catName = String(item.category || item.menu_categories?.name || '').toLowerCase()
+        const name = String(item.name || '').toLowerCase()
+        const beverageKeywords = ['coffee', 'tea', 'drink', 'beverage', 'soda', 'matcha', 'cocoa', 'latte', 'espresso', 'americano', 'cappuccino', 'mocha', 'dirty', 'brew', 'smoothie', 'frappe', 'juice', 'milk', 'lemonade', 'water', 'กาแฟ', 'ชา', 'มัทฉะ', 'น้ำ']
+        return beverageKeywords.some(k => catName.includes(k) || name.includes(k))
+    }, [eligibleCategoryIds])
+
+    // Available Free Drinks Quota
+    const availableFreeDrinks = useMemo(() => {
+        if (!memberProfile) return 0
+        const quota = parseInt(memberProfile.free_drink_quota || 0, 10)
+        const stamps = parseInt(memberProfile.drink_stamp_count || 0, 10)
+        return Math.max(0, quota + Math.floor(stamps / 10))
+    }, [memberProfile])
+
+    const eligibleDrinkItems = useMemo(() => {
+        return cart.filter(isItemDrinkStampEligible)
+    }, [cart, isItemDrinkStampEligible])
+
+    const freeDrinkDiscount = useMemo(() => {
+        if (!useFreeDrinkQuota || availableFreeDrinks <= 0 || eligibleDrinkItems.length === 0) return 0
+        const prices = eligibleDrinkItems.map(i => parseFloat(i.totalPricePerUnit || i.price) || 0)
+        return Math.min(...prices)
+    }, [useFreeDrinkQuota, availableFreeDrinks, eligibleDrinkItems])
+
+    // Promotion Discount
+    const promoDiscount = appliedPromo?.discountAmount || 0
+    const netBeforeXhaus = Math.max(0, cartTotal - promoDiscount - freeDrinkDiscount)
+
+    // xhaus Discount Constraints
+    const memberCoinsBalance = Math.max(0, parseFloat(memberProfile?.xhaus_balance || 0))
+    const redeemRate = parseFloat(crmSettings.crm_redeem_rate_xhaus) || 1.0
+    const maxRedeemPercent = parseFloat(crmSettings.crm_max_redeem_percent) || 100.0
+    const minRedeem = parseFloat(crmSettings.crm_min_redeem_xhaus) || 10.0
+
+    const maxAllowedDiscountBaht = (netBeforeXhaus * maxRedeemPercent) / 100
+    const maxCoinsAllowed = Math.min(memberCoinsBalance, Math.floor((maxAllowedDiscountBaht / redeemRate) * 100) / 100)
+
+    const effectiveXhausDiscount = useMemo(() => {
+        if (xhausToRedeem <= 0 || !memberProfile) return 0
+        const rawDisc = xhausToRedeem * redeemRate
+        return Math.min(rawDisc, maxAllowedDiscountBaht, netBeforeXhaus)
+    }, [xhausToRedeem, redeemRate, maxAllowedDiscountBaht, netBeforeXhaus, memberProfile])
+
+    // Auto-reset free drink if no eligible drinks remain
+    useEffect(() => {
+        if (useFreeDrinkQuota && eligibleDrinkItems.length === 0) {
+            setUseFreeDrinkQuota(false)
+        }
+    }, [useFreeDrinkQuota, eligibleDrinkItems.length])
+
+    // Auto-adjust xhaus if netBeforeXhaus shrinks
+    useEffect(() => {
+        if (xhausToRedeem > 0) {
+            if (maxCoinsAllowed < minRedeem) {
+                setXhausToRedeem(0)
+            } else if (xhausToRedeem > maxCoinsAllowed) {
+                setXhausToRedeem(maxCoinsAllowed)
+            }
+        }
+    }, [maxCoinsAllowed, minRedeem, xhausToRedeem])
+
+    // Total Discounts & Final Total
+    const totalDiscounts = promoDiscount + freeDrinkDiscount + effectiveXhausDiscount
+    const finalTotal = Math.max(0, cartTotal - totalDiscounts)
+    const estimatedPointsEarned = Math.floor((finalTotal / (parseFloat(crmSettings.crm_base_spend_amount) || 100)) * (tierDetails.multiplier || 1.0))
 
      const promptPayPayload = useMemo(() => {
          if (!cleanPromptPayId) return null
@@ -330,6 +423,17 @@ export default function PickupPage() {
             const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
 
             const isAutoVerified = Boolean(slipVerifyResult?.verified)
+            let staffRemarkText = isAutoVerified 
+                ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
+                : '[ONLINE_PICKUP] สั่งรับกลับ'
+            
+            const perksUsed = []
+            if (useFreeDrinkQuota && freeDrinkDiscount > 0) perksUsed.push(`แก้วฟรี 10 แถม 1 (-฿${freeDrinkDiscount})`)
+            if (effectiveXhausDiscount > 0) perksUsed.push(`เหรียญ xhaus ${xhausToRedeem} pts (-฿${effectiveXhausDiscount})`)
+            if (perksUsed.length > 0) {
+                staffRemarkText += ` [CRM: ${perksUsed.join(', ')}]`
+            }
+
             const bookingPayload = {
                 source: 'online',
                 booking_type: 'pickup',
@@ -337,12 +441,13 @@ export default function PickupPage() {
                 booking_time: bookingDateTime,
                 pickup_contact_name: trimmedName,
                 pickup_contact_phone: trimmedPhone,
-                customer_note: customerNoteContent,
-                staff_remark: isAutoVerified 
-                    ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
-                    : '[ONLINE_PICKUP] สั่งรับกลับ',
+                customer_note: customerNoteContent + (perksUsed.length > 0 ? `\n(CRM: ${perksUsed.join(', ')})` : ''),
+                staff_remark: staffRemarkText,
                 promotion_code_id: appliedPromo?.id || null, 
-                discount_amount: appliedPromo?.discountAmount || 0,
+                discount_amount: promoDiscount,
+                xhaus_redeemed: xhausToRedeem > 0 ? xhausToRedeem : null,
+                xhaus_discount: effectiveXhausDiscount > 0 ? effectiveXhausDiscount : null,
+                use_free_drink_quota: Boolean(useFreeDrinkQuota && freeDrinkDiscount > 0),
                 total_amount: finalTotal,
                 deposit_amount: finalTotal, // 100% deposit for pickup
                 tracking_token: crypto.randomUUID(),
@@ -595,9 +700,20 @@ export default function PickupPage() {
                                             </div>
                                             <div className="bg-white/80 border border-[oklch(85%_0.012_28)] p-2 rounded-rams">
                                                 <span className="text-[8px] text-[oklch(55%_0.010_28)] uppercase block">Earn Points</span>
-                                                <span className="text-xs font-bold text-emerald-700">+{Math.floor((finalTotal / (crmBaseSpendAmount || 100)) * (tierDetails.multiplier || 1.0))} xhaus</span>
+                                                <span className="text-xs font-bold text-emerald-700">+{estimatedPointsEarned} xhaus</span>
                                             </div>
                                         </div>
+
+                                        {availableFreeDrinks > 0 && (
+                                            <div className="bg-[oklch(45%_0.08_140)]/10 border border-[oklch(45%_0.08_140)]/30 px-3 py-1.5 rounded-rams flex items-center justify-between text-xs font-mono">
+                                                <span className="text-[oklch(45%_0.08_140)] font-bold">
+                                                    ☕ สะสมครบแล้ว! มีสิทธิ์แก้วฟรี {availableFreeDrinks} แก้ว
+                                                </span>
+                                                <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                                    {useFreeDrinkQuota ? 'กำลังใช้งาน ✓' : 'กดใช้สิทธิ์ที่สรุปรายการ'}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 
@@ -616,6 +732,25 @@ export default function PickupPage() {
                                     <div className="border-t border-[var(--color-rule)] mt-2 pt-2 space-y-1">
                                          <div className="flex justify-between font-mono text-base text-subInk"><span>{t('subtotal')}</span><span>{cartTotal}.-</span></div>
                                          
+                                         {/* CRM PRIVILEGES (Redeem xhaus & Free Drink) */}
+                                         {memberProfile && (
+                                             <div className="pt-2">
+                                                 <CRMCheckoutPrivileges
+                                                     memberProfile={memberProfile}
+                                                     crmSettings={crmSettings}
+                                                     cart={cart}
+                                                     isItemDrinkStampEligible={isItemDrinkStampEligible}
+                                                     useFreeDrinkQuota={useFreeDrinkQuota}
+                                                     onToggleFreeDrink={setUseFreeDrinkQuota}
+                                                     xhausToRedeem={xhausToRedeem}
+                                                     onApplyXhaus={(coins) => setXhausToRedeem(coins)}
+                                                     onCancelXhaus={() => setXhausToRedeem(0)}
+                                                     cartSubtotal={cartTotal}
+                                                     promoDiscount={promoDiscount}
+                                                 />
+                                             </div>
+                                         )}
+
                                          {/* PROMO INPUT */}
                                          <div className="py-2">
                                             <div className="flex gap-2">
@@ -656,13 +791,27 @@ export default function PickupPage() {
                                          </div>
 
                                          {appliedPromo && (
-                                            <div className="flex justify-between font-mono text-base text-ink font-bold">
+                                            <div className="flex justify-between font-mono text-sm text-ink font-bold">
                                                 <span>
                                                     {t('discount')}
                                                     {appliedPromo.discountType === 'percent' && <span className="ml-2 text-xs bg-[var(--color-rule)] px-1.5 py-0.5 align-middle">{appliedPromo.discountValue}%</span>}
                                                 </span>
-                                                <span>- {discountAmount}.-</span>
+                                                <span>- {promoDiscount}.-</span>
                                             </div>
+                                         )}
+
+                                         {useFreeDrinkQuota && freeDrinkDiscount > 0 && (
+                                             <div className="flex justify-between font-mono text-sm text-emerald-800 font-bold">
+                                                 <span>สิทธิ์แก้วฟรี (10 แถม 1)</span>
+                                                 <span>- {freeDrinkDiscount}.-</span>
+                                             </div>
+                                         )}
+
+                                         {effectiveXhausDiscount > 0 && (
+                                             <div className="flex justify-between font-mono text-sm text-amber-900 font-bold">
+                                                 <span>ส่วนลดเหรียญ xhaus ({xhausToRedeem} pts)</span>
+                                                 <span>- {effectiveXhausDiscount}.-</span>
+                                             </div>
                                          )}
 
                                          <div className="flex justify-between font-mono font-bold text-xl pt-2 border-t border-[var(--color-rule)]">
