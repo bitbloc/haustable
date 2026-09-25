@@ -743,6 +743,7 @@ export default function IntradayVelocityDaypartCockpit({
                 forecastHigh,
                 forecastLow,
                 isFuture,
+                isLifted: isFuture && (h <= cappedHour + 2) && adLiftPct > 0,
                 adDirs: hourlyAdDirs[h] || 0,
                 adInquiries: hourlyAdInquiries[h] || 0,
                 adTotal: hourlyAdTotal[h] || 0,
@@ -876,7 +877,8 @@ export default function IntradayVelocityDaypartCockpit({
             preOpeningAdSignals,
             goalExceededHoursCount,
             isDailyGoalExceeded,
-            dailyGoalDeltaPct
+            dailyGoalDeltaPct,
+            adLiftPct
         }
     }, [filterMode, validOrders, hours, totalSeats, adEvents, isViewingToday, currentBangkokTime, isWeekend, historicalBaseline])
 
@@ -1832,16 +1834,26 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="w-4 h-0.5 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
                                                             <span className="text-[oklch(52%_0.16_28)] font-bold">
-                                                                เส้นพยากรณ์ลูกค้า (Forecast)
+                                                                เส้นพยากรณ์ลูกค้า (Forecast Pax)
                                                             </span>
                                                         </div>
                                                         <div className="flex items-center gap-1.5">
                                                             <span className="w-3 h-2 bg-[oklch(52%_0.16_28)]/20 border border-dashed border-[oklch(45%_0.08_140)]" />
                                                             <span className="text-[oklch(45%_0.08_140)]">
-                                                                กรอบพยากรณ์ (ต่ำ-สูง)
+                                                                กรอบพยากรณ์ลูกค้า (Pax สูง-ต่ำ)
                                                             </span>
                                                         </div>
                                                     </>
+                                                )}
+                                                {dayMetrics?.adHighIntent > 0 && (
+                                                    <div className="flex items-center gap-1.5" title="หมุดระบุชั่วโมงที่ได้รับสัญญาณค้นหาและติดต่อจาก Ad Leads">
+                                                        <span className="px-1 py-0.5 bg-[oklch(45%_0.08_140)] text-[oklch(97%_0.008_28)] font-mono text-[7.5px] font-bold rounded-2xs leading-none">
+                                                            SIG
+                                                        </span>
+                                                        <span className="text-[oklch(45%_0.08_140)] font-medium">
+                                                            หมุดสัญญาณ Ad Leads
+                                                        </span>
+                                                    </div>
                                                 )}
                                             </>
                                         )}
@@ -2805,6 +2817,24 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 ฿{pt?.spendPerHead || 0}
                                             </span>
                                         </div>
+                                        {pt?.adTotal > 0 && (
+                                            <div>
+                                                <span className="text-[oklch(42%_0.010_28)]">สัญญาณค้นหา: </span>
+                                                <span className="font-bold text-[oklch(45%_0.08_140)]">
+                                                    {pt.adTotal} สัญญาณ
+                                                </span>
+                                                <span className="text-[10px] text-[oklch(42%_0.010_28)] ml-1">
+                                                    (แผนที่ {pt.adDirs} · ติดต่อ {pt.adInquiries})
+                                                </span>
+                                            </div>
+                                        )}
+                                        {pt?.isFuture && pt?.isLifted && (
+                                            <div>
+                                                <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
+                                                    ⚡ ได้รับแรงหนุน Ad Lift +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })()}
@@ -2872,7 +2902,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         {drillHourData.isFuture ? `~${drillHourData.forecast} Pax` : `${drillHourData.pax || 0} Pax`}
                                     </div>
                                     <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
-                                        สถิติเดิม: ~{drillHourData.baselinePax} Pax
+                                        {drillHourData.isFuture && drillHourData.isLifted ? (
+                                            <span>สถิติเดิม: ~{drillHourData.baselinePax} Pax <span className="text-[oklch(45%_0.08_140)] font-bold">(หนุน Ad Lift +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%)</span></span>
+                                        ) : (
+                                            `สถิติเดิม: ~${drillHourData.baselinePax} Pax`
+                                        )}
                                     </div>
                                 </div>
 
@@ -2898,7 +2932,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     </div>
                                     <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate">
                                         {drillHourData.isFuture && (drillHourData.adTotal || 0) === 0 ? (
-                                            <span className="text-[oklch(55%_0.010_28)]">ช่วงเวลานี้ยังมาไม่ถึง</span>
+                                            <span className="text-[oklch(55%_0.010_28)]">
+                                                {drillHourData.isLifted
+                                                    ? `ช่วงเวลานี้ยังมาไม่ถึง · มีแรงหนุน Ad Lift +${Math.round((dayMetrics?.adLiftPct || 0) * 100)}%`
+                                                    : 'ช่วงเวลานี้ยังมาไม่ถึง'}
+                                            </span>
                                         ) : (
                                             `แผนที่: ${drillHourData.adDirs || 0} · ติดต่อ/จอง: ${drillHourData.adInquiries || 0}`
                                         )}
