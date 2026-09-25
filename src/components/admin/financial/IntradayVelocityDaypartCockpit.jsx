@@ -232,6 +232,7 @@ export default function IntradayVelocityDaypartCockpit({
     const containerRef = useRef(null)
     const inspectorRef = useRef(null)
     const chartWrapperRef = useRef(null)
+    const chartScrollRef = useRef(null)
     const [containerWidth, setContainerWidth] = useState(800)
 
     // Keyboard ESC and outside pointerdown dismiss for touch/mobile devices
@@ -1335,14 +1336,24 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
     // 6. SVG RENDER DIMENSIONS & DUAL-LAYER PROJECTION ENGINE
     // =========================================================================
     const isMobile = containerWidth < 560
-    const svgWidth = Math.max(320, containerWidth)
-    const svgHeight = isMobile ? 250 : 290
+    // Hybrid Mode: Ensure minimum comfortable width of 520px on mobile for smooth pan & zero collision
+    const svgWidth = isMobile ? Math.max(520, containerWidth) : Math.max(560, containerWidth)
+    const svgHeight = isMobile ? 260 : 290
     const padLeft = isMobile ? 38 : 50
     const padRight = isMobile ? 42 : 56 // Ample right margin for 23:00 prediction tags
-    const padYTop = isMobile ? 26 : 32
+    const padYTop = isMobile ? 36 : 32
     const padYBottom = isMobile ? 34 : 38
     const plotWidth = Math.max(svgWidth - padLeft - padRight, 200)
     const plotHeight = Math.max(svgHeight - padYTop - padYBottom, 120)
+
+    // Auto-scroll horizontal chart canvas to current hour on mobile
+    useEffect(() => {
+        if (isMobile && chartScrollRef.current && isViewingToday && currentBangkokTime.hour >= 11) {
+            const fraction = (currentBangkokTime.hour - 11) / 12
+            const targetScroll = Math.max(0, fraction * (svgWidth - containerWidth) - 40)
+            chartScrollRef.current.scrollLeft = targetScroll
+        }
+    }, [isMobile, isViewingToday, currentBangkokTime.hour, svgWidth, containerWidth])
 
     const getX = (hour) => {
         const idx = hours.indexOf(hour)
@@ -1479,8 +1490,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
         return `M ${coords.join(' L ')}`
     }, [isViewingToday, dayMetrics, cappedHour, plotWidth, plotHeight, maxSalesVal])
 
-    // Thai Modern Colors
+    // Thai Modern Colors (Dieter Rams Warm Tinted OKLCH Palette)
     const colorInk = 'oklch(18% 0.012 28)'
+    const colorPaper = 'oklch(97% 0.008 28)'
     const colorPaper2 = 'oklch(94% 0.010 28)'
     const colorRule = 'oklch(85% 0.012 28)'
     const colorNeutral = 'oklch(55% 0.010 28)'
@@ -1907,7 +1919,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     )}
 
                     {/* Responsive Dual-Layer SVG Engine */}
-                    <div className="w-full overflow-x-auto no-scrollbar touch-pan-x" style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+                    <div 
+                        ref={chartScrollRef} 
+                        className="w-full overflow-x-auto no-scrollbar touch-pan-x" 
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                    >
                         <svg
                             width={svgWidth}
                             height={svgHeight}
@@ -1962,6 +1978,13 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 const endX = getX(dp.hours[dp.hours.length - 1]) + (plotWidth / (hours.length - 1)) * 0.45
                                 const bandWidth = Math.max(10, endX - startX)
                                 const isAlt = idx % 2 === 1
+                                const startHourStr = String(dp.rangeText || '').split(' - ')[0]
+                                const compactLabel = isMobile
+                                    ? (dp.id === 'lunch' ? `LUNCH (${startHourStr})`
+                                        : dp.id === 'afternoon' ? `AFTN (${startHourStr})`
+                                        : dp.id === 'dinner' ? `DINNER (${startHourStr})`
+                                        : `LATE (${startHourStr})`)
+                                    : `${dp.label.toUpperCase()} (${startHourStr})`
 
                                 return (
                                     <g key={dp.id}>
@@ -1976,12 +1999,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         <text
                                             x={startX + 6}
                                             y={padYTop - 8}
-                                            fontSize="9"
+                                            fontSize="8.5"
                                             fontFamily="monospace"
                                             fontWeight="bold"
                                             fill={colorMuted}
                                         >
-                                            {dp.label.toUpperCase()} ({String(dp.rangeText || '').split(' - ')[0]})
+                                            {compactLabel}
                                         </text>
                                         {idx > 0 && (
                                             <line
@@ -2043,15 +2066,16 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 )
                             })}
 
-                            {/* 3. Live Current Time Indicator Marker */}
+                            {/* 3. Live Current Time Indicator Marker (Dedicated top tier to prevent label collision) */}
                             {filterMode === 'day' && isViewingToday && currentBangkokTime.hour >= 11 && currentBangkokTime.hour <= 23 && (() => {
                                 const curFraction = (currentBangkokTime.hour - 11 + currentBangkokTime.minute / 60) / (hours.length - 1)
                                 const curX = padLeft + Math.max(0, Math.min(1, curFraction)) * plotWidth
+                                const nowPillY = padYTop - (isMobile ? 32 : 24)
                                 return (
                                     <g key="live-time-indicator">
                                         <line
                                             x1={curX}
-                                            y1={padYTop - 12}
+                                            y1={nowPillY + 13}
                                             x2={curX}
                                             y2={padYTop + plotHeight}
                                             stroke={colorAccent2}
@@ -2066,7 +2090,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                         <rect
                                             x={curX - 24}
-                                            y={padYTop - 22}
+                                            y={nowPillY}
                                             width="48"
                                             height="13"
                                             fill={colorAccent2}
@@ -2074,12 +2098,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                         <text
                                             x={curX}
-                                            y={padYTop - 12}
+                                            y={nowPillY + 9.5}
                                             textAnchor="middle"
                                             fontSize="8"
                                             fontFamily="monospace"
                                             fontWeight="bold"
-                                            fill="white"
+                                            fill={colorPaper}
                                         >
                                             NOW {currentBangkokTime.label}
                                         </text>
@@ -2304,12 +2328,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 }}
                                             />
 
-                                            {/* Ad Intent Beacon Pin if leads happened at this hour */}
+                                            {/* Ad Intent Beacon Pin if leads happened at this hour (Positioned inside column top to prevent overlap) */}
                                             {pt.adDirs > 0 && (
                                                 <g>
                                                     <rect
                                                         x={x - 11}
-                                                        y={padYTop - 7}
+                                                        y={padYTop + 4}
                                                         width="22"
                                                         height="11"
                                                         rx="1.5"
@@ -2317,9 +2341,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     />
                                                     <text
                                                         x={x}
-                                                        y={padYTop + 1}
+                                                        y={padYTop + 12}
                                                         textAnchor="middle"
-                                                        className="font-mono text-[7px] font-bold fill-white"
+                                                        fill={colorPaper}
+                                                        className="font-mono text-[7px] font-bold"
                                                     >
                                                         DIR {pt.adDirs}
                                                     </text>

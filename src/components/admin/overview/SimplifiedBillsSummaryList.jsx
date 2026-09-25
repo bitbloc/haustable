@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
 import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
+import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 
 /**
  * SimplifiedBillsSummaryList
@@ -431,45 +432,112 @@ export default function SimplifiedBillsSummaryList({
                         )}
 
                         {/* Order Items Table */}
-                        <div className="flex-1 overflow-y-auto py-3 divide-y divide-[oklch(88%_0.012_28)] text-xs">
-                            <div className="pb-2 flex justify-between font-bold text-[11px] text-[oklch(55%_0.010_28)]">
-                                <span>รายการอาหาร ({inspectingBill.order_items?.length || 0})</span>
-                                <span className="font-mono uppercase tracking-wider">ยอดเงิน</span>
-                            </div>
-
-                            {(!inspectingBill.order_items || inspectingBill.order_items.length === 0) ? (
-                                <div className="py-8 text-center text-[oklch(55%_0.010_28)]">
-                                    ไม่มีรายการอาหารในบิลนี้
-                                </div>
-                            ) : (
-                                inspectingBill.order_items.map((it, idx) => {
-                                    const itemName = it.custom_name || it.menu_items?.name || 'รายการอาหาร'
-                                    const price = Number(it.price_at_time || it.menu_items?.price || 0)
-                                    const qty = Number(it.quantity || 1)
-                                    const lineTotal = price * qty
-
-                                    return (
-                                        <div key={it.id || idx} className="py-2 flex items-start justify-between gap-3">
-                                            <div className="flex items-start gap-2">
-                                                <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums shrink-0">
-                                                    {qty}
+                        {(() => {
+                            const billRounds = groupOrderItemsIntoRounds(inspectingBill.order_items, inspectingBill.booking_time || inspectingBill.created_at)
+                            return (
+                                <div className="flex-1 overflow-y-auto py-3 divide-y divide-[oklch(88%_0.012_28)] text-xs">
+                                    <div className="pb-2 flex justify-between font-bold text-[11px] text-[oklch(55%_0.010_28)]">
+                                        <span>
+                                            รายการอาหาร ({inspectingBill.order_items?.length || 0})
+                                            {billRounds.hasAdditionalOrders && (
+                                                <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)] ml-1 font-bold">
+                                                    ({billRounds.totalRounds} รอบ · สั่งเพิ่มล่าสุด {billRounds.latestOrderTimeStr})
                                                 </span>
-                                                <div>
-                                                    <span className="font-sans font-bold text-xs text-[oklch(18%_0.012_28)] block">
-                                                        {itemName}
+                                            )}
+                                        </span>
+                                        <span className="font-mono uppercase tracking-wider">ยอดเงิน</span>
+                                    </div>
+
+                                    {(!inspectingBill.order_items || inspectingBill.order_items.length === 0) ? (
+                                        <div className="py-8 text-center text-[oklch(55%_0.010_28)]">
+                                            ไม่มีรายการอาหารในบิลนี้
+                                        </div>
+                                    ) : billRounds.hasAdditionalOrders ? (
+                                        billRounds.rounds.map(round => (
+                                            <div key={round.roundNumber} className="py-2.5 first:pt-0">
+                                                <div className={`p-1.5 rounded-xs border flex items-center justify-between font-mono text-xs font-bold mb-1.5 ${
+                                                    round.isAdditional 
+                                                        ? 'bg-[oklch(94%_0.015_28)] border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)]' 
+                                                        : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                                }`}>
+                                                    <span className="flex items-center gap-1.5">
+                                                        <span className={`px-1.5 py-0.2 rounded-xs text-[9px] uppercase font-mono font-bold ${
+                                                            round.isAdditional ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                                        }`}>
+                                                            {round.isInitial ? 'รอบ 1' : `รอบ ${round.roundNumber} (สั่งเพิ่ม)`}
+                                                        </span>
+                                                        <span>{round.timeStr} น.</span>
+                                                        {round.elapsedFromStartMinutes > 0 && (
+                                                            <span className="font-normal opacity-75 text-[10px]">
+                                                                (+{round.elapsedFromStartMinutes}น.)
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                    <span className="tabular-nums">
+                                                        {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
                                                     </span>
                                                 </div>
+                                                <div className="space-y-1 divide-y divide-[oklch(92%_0.010_28)] pl-1">
+                                                    {round.items.map((it, idx) => {
+                                                        const itemName = it.custom_name || it.menu_items?.name || 'รายการอาหาร'
+                                                        const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                                        const qty = Number(it.quantity || 1)
+                                                        const lineTotal = price * qty
+
+                                                        return (
+                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-start justify-between gap-3">
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums shrink-0">
+                                                                        {qty}
+                                                                    </span>
+                                                                    <div>
+                                                                        <span className="font-sans font-bold text-xs text-[oklch(18%_0.012_28)] block">
+                                                                            {itemName}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums text-xs">
+                                                                        ฿{lineTotal.toLocaleString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
                                             </div>
-                                            <div className="text-right shrink-0">
-                                                <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums text-xs">
-                                                    ฿{lineTotal.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
+                                        ))
+                                    ) : (
+                                        inspectingBill.order_items.map((it, idx) => {
+                                            const itemName = it.custom_name || it.menu_items?.name || 'รายการอาหาร'
+                                            const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                            const qty = Number(it.quantity || 1)
+                                            const lineTotal = price * qty
+
+                                            return (
+                                                <div key={it.id || idx} className="py-2 flex items-start justify-between gap-3">
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums shrink-0">
+                                                            {qty}
+                                                        </span>
+                                                        <div>
+                                                            <span className="font-sans font-bold text-xs text-[oklch(18%_0.012_28)] block">
+                                                                {itemName}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right shrink-0">
+                                                        <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums text-xs">
+                                                            ฿{lineTotal.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })
+                                    )}
+                                </div>
+                            )
+                        })()}
 
                         {/* Payment Slip Preview if present */}
                         {(inspectingBill.payment_slip_url || inspectingBill.slip_url) && (

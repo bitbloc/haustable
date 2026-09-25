@@ -115,6 +115,7 @@ export default function AdminDashboard() {
                         price_at_time,
                         selected_options,
                         custom_name,
+                        created_at,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -134,6 +135,7 @@ export default function AdminDashboard() {
                         price_at_time,
                         selected_options,
                         custom_name,
+                        created_at,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -153,6 +155,7 @@ export default function AdminDashboard() {
                         price_at_time,
                         selected_options,
                         custom_name,
+                        created_at,
                         menu_items ( name, price, category_id )
                     ),
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
@@ -739,31 +742,55 @@ export default function AdminDashboard() {
                     )
                 })()}
 
-                {/* MASTER COCKPIT MODE SWITCHER (Tabular Grid - Dieter Rams Zero-wrap) */}
+                {/* MASTER COCKPIT MODE SWITCHER (Tabular Grid - Dieter Rams Zero-wrap / Responsive 2-Tier Stack) */}
                 <div className="grid grid-cols-2 border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-0.5 rounded-xs gap-0.5 mb-5 text-xs sm:text-sm">
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('simplified')}
-                        className={`py-2 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none whitespace-nowrap ${
+                        className={`py-1.5 sm:py-2 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center select-none ${
                             overviewMode === 'simplified'
                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
-                        <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
-                        <span className="font-mono tracking-wide">LIVE NOW // <span className="font-sans font-medium">โต๊ะสดหน้าร้าน</span></span>
+                        {/* Mobile: 2-Tier Stacked Layout */}
+                        <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
+                            <span className="flex items-center gap-1 font-mono text-[9.5px] tracking-wider opacity-80 uppercase">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-40'}`} />
+                                LIVE NOW
+                            </span>
+                            <span className="font-sans font-medium text-[11.5px] mt-0.5">โต๊ะสดหน้าร้าน</span>
+                        </div>
+
+                        {/* Desktop: Single-Line Tabular Layout */}
+                        <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${overviewMode === 'simplified' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
+                            <span className="font-mono tracking-wide">LIVE NOW // <span className="font-sans font-medium">โต๊ะสดหน้าร้าน</span></span>
+                        </div>
                     </button>
                     <button
                         type="button"
                         onClick={() => handleSetOverviewMode('pro')}
-                        className={`py-2 px-3 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 select-none whitespace-nowrap ${
+                        className={`py-1.5 sm:py-2 px-2 sm:px-6 rounded-xs font-bold transition-all cursor-pointer flex items-center justify-center select-none ${
                             overviewMode === 'pro'
                                 ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] shadow-xs'
                                 : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)]'
                         }`}
                     >
-                        <span className={`w-2 h-2 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
-                        <span className="font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-medium">วิเคราะห์เชิงลึก</span></span>
+                        {/* Mobile: 2-Tier Stacked Layout */}
+                        <div className="flex sm:hidden flex-col items-center justify-center leading-tight py-0.5">
+                            <span className="flex items-center gap-1 font-mono text-[9.5px] tracking-wider opacity-80 uppercase">
+                                <span className={`w-1.5 h-1.5 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-40'}`} />
+                                PRO ANALYTICS
+                            </span>
+                            <span className="font-sans font-medium text-[11.5px] mt-0.5">วิเคราะห์เชิงลึก</span>
+                        </div>
+
+                        {/* Desktop: Single-Line Tabular Layout */}
+                        <div className="hidden sm:flex items-center justify-center gap-2 whitespace-nowrap">
+                            <span className={`w-2 h-2 rounded-xs shrink-0 ${overviewMode === 'pro' ? 'bg-[oklch(97%_0.008_28)]' : 'bg-current opacity-30'}`} />
+                            <span className="font-mono tracking-wide">PRO ANALYTICS // <span className="font-sans font-medium">วิเคราะห์เชิงลึก</span></span>
+                        </div>
                     </button>
                 </div>
 
