@@ -6,6 +6,8 @@ import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationM
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
+import { playSynthBellTing } from '../../../utils/audioHelper'
+
 
 /**
  * Isolated live duration display that updates itself without re-rendering the whole floor grid
@@ -88,6 +90,83 @@ export default function SimplifiedLiveOverview({
     const isParentDriven = parentTables.length > 0 || parentBookings.length > 0
     const tables = parentTables.length > 0 ? parentTables : internalTables
     const liveBookings = parentBookings.length > 0 ? parentBookings : internalBookings
+
+    // Snapshot tracker for triggering bell "Ting!" chime on new order or additional item orders
+    const prevOrderSnapshotRef = useRef({
+        isInitialized: false,
+        dateKey: selectedDate,
+        knownItemIds: new Set(),
+        totalItemQty: 0
+    })
+
+    // Reset baseline snapshot whenever selectedDate changes
+    useEffect(() => {
+        prevOrderSnapshotRef.current = {
+            isInitialized: false,
+            dateKey: selectedDate,
+            knownItemIds: new Set(),
+            totalItemQty: 0
+        }
+    }, [selectedDate])
+
+    // Watch liveBookings for new orders or additional item orders ("ติ๊ง!")
+    useEffect(() => {
+        if (!liveBookings || liveBookings.length === 0) return
+
+        const currentItemIds = new Set()
+        let currentTotalQty = 0
+
+        liveBookings.forEach(b => {
+            if (['cancelled', 'void'].includes(b.status)) return
+            const items = b.order_items || []
+            items.forEach(it => {
+                if (it?.id) currentItemIds.add(String(it.id))
+                currentTotalQty += Number(it?.quantity || 1)
+            })
+        })
+
+        const snapshot = prevOrderSnapshotRef.current
+
+        if (!snapshot.isInitialized) {
+            // First load snapshot: record baseline quietly without playing sound
+            prevOrderSnapshotRef.current = {
+                isInitialized: true,
+                dateKey: selectedDate,
+                knownItemIds: currentItemIds,
+                totalItemQty: currentTotalQty
+            }
+            return
+        }
+
+        // Check if new items were added (new item ID or overall quantity increase)
+        let hasNewOrderOrItems = false
+
+        for (const itemId of currentItemIds) {
+            if (!snapshot.knownItemIds.has(itemId)) {
+                hasNewOrderOrItems = true
+                break
+            }
+        }
+
+        if (!hasNewOrderOrItems && currentTotalQty > snapshot.totalItemQty) {
+            hasNewOrderOrItems = true
+        }
+
+        if (hasNewOrderOrItems) {
+            console.log('🔔 [Simplified Overview] New order / additional items detected! Triggering bell "Ting!"')
+            playSynthBellTing('simplified_overview_new_order', 500)
+            toast.info('[NEW ORDER] มีออเดอร์ใหม่ / สั่งอาหารเพิ่ม', { duration: 3000 })
+        }
+
+        // Update snapshot
+        prevOrderSnapshotRef.current = {
+            isInitialized: true,
+            dateKey: selectedDate,
+            knownItemIds: currentItemIds,
+            totalItemQty: currentTotalQty
+        }
+    }, [liveBookings, selectedDate])
+
 
     // Total guests across bookings for selected date
     const totalGuestsOnDate = useMemo(() => {
@@ -534,6 +613,21 @@ export default function SimplifiedLiveOverview({
                             </button>
                         </div>
 
+                        {/* Audio Test Bell Button */}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                playSynthBellTing('manual_test', 300)
+                                toast.success('[CHIME] เสียงกริ่ง "ติ๊ง!" พร้อมแจ้งเตือนออเดอร์ใหม่')
+                            }}
+                            className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[oklch(60%_0.15_28)] active:scale-95 text-[oklch(18%_0.012_28)] text-[11px] font-mono rounded-xs cursor-pointer flex items-center gap-1.5 transition-all"
+                            title="ทดสอบฟังเสียงกริ่งแจ้งเตือนออเดอร์ใหม่ (ติ๊ง!)"
+                            aria-label="ทดสอบฟังเสียงกริ่งแจ้งเตือนออเดอร์ใหม่ (ติ๊ง!)"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
+                            <span className="font-bold">ลองเสียง [ติ๊ง!]</span>
+                        </button>
+
                         {/* Fullscreen Button */}
                         <button
                             type="button"
@@ -542,6 +636,7 @@ export default function SimplifiedLiveOverview({
                         >
                             {isFullscreen ? '✕ EXIT' : '⛶ เต็มจอ'}
                         </button>
+
                     </div>
                 </div>
             </div>

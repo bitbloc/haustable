@@ -12,7 +12,8 @@ import {
     playStaffCallAlert,
     startStaffCallLoop,
     stopStaffCallLoop,
-    isStaffCallLooping
+    isStaffCallLooping,
+    playSynthBellTing
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -167,6 +168,32 @@ describe('Audio Engine & Notification Resilience', () => {
             vi.advanceTimersByTime(1300);
             const notibillResult = testPlayAlertSound(80, 1200, 'notibill');
             expect(notibillResult).toBe(true);
+        });
+
+        it('should trigger playSynthBellTing for new orders and throttle rapid duplicate bursts', () => {
+            setAudioMuted(false);
+            setAudioVolume(80);
+            vi.advanceTimersByTime(1000);
+
+            // First bell chime strike: should return true
+            const firstBell = playSynthBellTing('test_new_order_1', 500);
+            expect(firstBell).toBe(true);
+
+            // Immediate burst (100ms later): should be throttled (returns false)
+            vi.advanceTimersByTime(100);
+            const burstBell = playSynthBellTing('test_new_order_2', 500);
+            expect(burstBell).toBe(false);
+
+            // After throttle window passes (600ms later): should return true
+            vi.advanceTimersByTime(600);
+            const secondBell = playSynthBellTing('test_new_order_3', 500);
+            expect(secondBell).toBe(true);
+        });
+
+        it('should suppress playSynthBellTing when audio is muted', () => {
+            setAudioMuted(true);
+            const mutedBell = playSynthBellTing('test_muted_bell', 500);
+            expect(mutedBell).toBe(false);
         });
     });
 

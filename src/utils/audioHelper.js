@@ -653,6 +653,69 @@ export function playDoorbellChime() {
 }
 
 /**
+ * Play Small Bell "Ting!" Sound (ติ๊ง!)
+ * High-pitched, crisp crystal bell chime for simplified overview new orders and order additions.
+ * High-frequency dual strike (C7 = 2093Hz -> E7 = 2637Hz ring).
+ * 
+ * @param {string|null} eventKey - Deduplication identifier (optional)
+ * @param {number} throttleMs - Minimum interval between alerts (default: 500ms)
+ * @returns {boolean} - Whether audio playback was triggered
+ */
+export function playSynthBellTing(eventKey = null, throttleMs = 500) {
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) return false;
+
+    const now = Date.now();
+    if (now < lastAlertPlayedTime) {
+        lastAlertPlayedTime = 0;
+    }
+    if (now - lastAlertPlayedTime < throttleMs) {
+        return false;
+    }
+
+    if (eventKey) {
+        if (!checkEventDeduplication(eventKey, 1500)) return false;
+    }
+    lastAlertPlayedTime = now;
+
+    try {
+        const ctx = getSharedAudioContext();
+        if (ctx) {
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(() => {});
+            }
+
+            const nowTime = ctx.currentTime;
+            const masterOut = createMasterOutputChain(ctx, 3.2);
+
+            // High crystal bell "Ting!" - Fast attack strike
+            synthesizeBellNote(ctx, masterOut, 2093.00, nowTime, 0.28, 1.25);
+            synthesizeBellNote(ctx, masterOut, 2637.02, nowTime + 0.035, 0.55, 1.35);
+
+            return true;
+        }
+    } catch (err) {
+        console.warn('[AudioEngine] playSynthBellTing Web Audio error:', err);
+    }
+
+    // HTML5 Audio Fallback if Web Audio context is not supported or suspended
+    try {
+        const primed = getPrimedHtml5Audio('noti1');
+        const soundSrc = noti1SoundUrl || '/noti1.mp3';
+        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
+        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
+        const promise = audio.play();
+        if (promise && typeof promise.catch === 'function') {
+            promise.catch(() => {});
+        }
+        return true;
+    } catch (e) {
+        return true;
+    }
+}
+
+
+/**
  * Play Urgent Siren Tone (For critical staff call / table call)
  */
 export function playUrgentTone() {
