@@ -1,6 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo } from 'react'
-import { ChevronRight, ArrowDownLeft, ArrowUpRight, Lock, CheckCircle2, AlertTriangle, Clock, RefreshCw } from 'lucide-react'
 
 /**
  * Smart Category Classifier for Shift Petty Cash Adjustments
@@ -239,7 +238,7 @@ export default function DailyShiftsCashFlowWidget({
                         <div className="font-mono text-xs text-[oklch(55%_0.010_28)] mt-0.5">
                             {selectedDate} · มีทั้งหมด <strong className="text-[oklch(18%_0.012_28)]">{sortedShifts.length} กะ</strong>
                             {aggregatedMetrics.openShiftsCount > 0 && (
-                                <span className="ml-1.5 text-[oklch(45%_0.08_140)] font-bold">({aggregatedMetrics.openShiftsCount} กะกำลังเปิด 🟢)</span>
+                                <span className="ml-1.5 text-[oklch(45%_0.08_140)] font-bold">({aggregatedMetrics.openShiftsCount} กะกำลังเปิด [ACTIVE])</span>
                             )}
                         </div>
                     </div>
@@ -316,22 +315,22 @@ export default function DailyShiftsCashFlowWidget({
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-[oklch(18%_0.012_28)]">{currentViewData.title}</span>
                             <span className="text-[oklch(55%_0.010_28)]">·</span>
-                            <span className="text-[oklch(42%_0.010_28)] flex items-center gap-1">
-                                <Clock size={12} />
+                            <span className="text-[oklch(42%_0.010_28)] flex items-center gap-1.5">
+                                <span className="text-[10px] text-[oklch(55%_0.010_28)]">[HOURS]</span>
                                 <span>เปิด {currentViewData.openTime} → {currentViewData.closeTime}</span>
                             </span>
                         </div>
 
                         <div className="flex items-center gap-2">
                             {currentViewData.isOpen ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs font-bold text-[10px] bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)] border border-[oklch(80%_0.06_140)]">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
-                                    <span>กะกำลังทำงานอยู่ (ACTIVE 🟢)</span>
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-bold text-[10px] bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)] border border-[oklch(80%_0.06_140)]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
+                                    <span>กะกำลังทำงานอยู่ [ACTIVE]</span>
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs font-bold text-[10px] bg-[oklch(92%_0.012_28)] text-[oklch(35%_0.012_28)] border border-[oklch(82%_0.012_28)]">
-                                    <Lock size={10} />
-                                    <span>ปิดกะแล้ว (CLOSED 🔒)</span>
+                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-xs font-bold text-[10px] bg-[oklch(92%_0.012_28)] text-[oklch(35%_0.012_28)] border border-[oklch(82%_0.012_28)]">
+                                    <span className="text-[10px] font-mono">[CLOSED]</span>
+                                    <span>ปิดกะแล้ว</span>
                                 </span>
                             )}
                         </div>

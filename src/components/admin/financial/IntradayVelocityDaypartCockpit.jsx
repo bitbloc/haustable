@@ -1584,7 +1584,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         </h3>
                         {filterMode === 'day' && isViewingToday && (
                             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 font-bold border bg-[oklch(97%_0.008_28)] text-[oklch(45%_0.08_140)] border-[oklch(45%_0.08_140)]/40">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)] animate-pulse" />
+                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.08_140)]" />
                                 LIVE PACING ({currentBangkokTime.label} น.)
                             </span>
                         )}
@@ -1700,9 +1700,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             <div className="flex items-center justify-between text-[10px] font-mono font-bold text-[oklch(42%_0.010_28)]">
                                 <span>01 // CUMULATIVE SALES</span>
                                 {dayMetrics?.isDailyGoalExceeded ? (
-                                    <span className="text-[oklch(38%_0.14_142)] font-bold flex items-center gap-1 animate-pulse">
+                                    <span className="text-[oklch(38%_0.14_142)] font-bold flex items-center gap-1">
                                         <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_142)]" />
-                                        🎯 DAILY GOAL MET ({dayMetrics.pctOfTarget}%)
+                                        [DAILY GOAL MET ({dayMetrics.pctOfTarget}%)]
                                     </span>
                                 ) : dayMetrics?.pctOfTarget > 0 ? (
                                     <span className="text-[oklch(18%_0.012_28)] font-bold">{dayMetrics.pctOfTarget}% OF TARGET</span>
@@ -1869,7 +1869,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 {showPredict && (
                                                     <>
                                                         <div className="flex items-center gap-1.5">
-                                                            <span className="w-4 h-0.5 border-t-2 border-dashed border-[oklch(52%_0.16_28)] animate-pulse" />
+                                                            <span className="w-4 h-0.5 border-t-2 border-dashed border-[oklch(52%_0.16_28)]" />
                                                             <span className="text-[oklch(52%_0.16_28)] font-bold">
                                                                 เส้นพยากรณ์ลูกค้า (Forecast Pax)
                                                             </span>
@@ -1923,7 +1923,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                                         {/* 3. สัญลักษณ์ทะลุเป้าหมาย (GOAL EXCEEDED MARKER) */}
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[oklch(94%_0.03_142)] border border-[oklch(80%_0.08_142)] rounded-2xs" title="ช่วงเวลาที่ยอดขายหรือลูกค้าทำได้เกินเป้าหมาย (Goal Hit)">
-                                            <span className="w-2.5 h-2.5 bg-[oklch(50%_0.15_142)] rounded-2xs animate-pulse" />
+                                            <span className="w-2 h-2 bg-[oklch(50%_0.15_142)] rounded-2xs" />
                                             <span className="text-[oklch(35%_0.12_142)] font-bold">
                                                 ทะลุเป้า (Goal Hit)
                                             </span>
@@ -1946,8 +1946,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 }`}
                                 title="โหมดมินิมอล: ลดทอนเอฟเฟกต์ประมวลผลสูง สำหรับดูบนมือถือ/iPhone ลื่นไหล 60fps ไม่หน่วง ไม่ค้าง"
                             >
-                                <span className={`w-1.5 h-1.5 rounded-full ${minimalMode ? 'bg-white animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
-                                <span>{minimalMode ? '⚡ MINIMAL [ON]' : '⚡ MINIMAL [OFF]'}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${minimalMode ? 'bg-white' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                <span>{minimalMode ? '[MINIMAL: ON]' : '[MINIMAL: OFF]'}</span>
                             </button>
 
                             {filterMode === 'day' && !minimalMode && (
@@ -1960,7 +1960,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     }`}
                                     title="คลิกเพื่อเปิด/ปิดเส้นประพยากรณ์และกรอบความแปรผัน (Predict Layer Toggle)"
                                 >
-                                    <span className={`w-1.5 h-1.5 rounded-full ${showPredict ? 'bg-[oklch(52%_0.16_28)] animate-pulse' : 'bg-[oklch(55%_0.010_28)]'}`} />
+                                    <span className={`w-1.5 h-1.5 rounded-full ${showPredict ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(55%_0.010_28)]'}`} />
                                     <span>{showPredict ? 'เส้น PREDICT [ON]' : 'เส้น PREDICT [OFF]'}</span>
                                 </button>
                             )}
@@ -1974,7 +1974,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     {minimalMode && (
                         <div className="mb-3 px-3 py-1.5 bg-[oklch(95%_0.02_140)] border border-[oklch(85%_0.06_140)] rounded-xs flex items-center justify-between font-mono text-[10.5px] text-[oklch(28%_0.08_140)]">
                             <div className="flex items-center gap-1.5">
-                                <span className="font-bold">⚡ MINIMAL MOBILE MODE:</span>
+                                <span className="font-bold">MINIMAL MODE //</span>
                                 <span>แสดงผลแบบกระชับ ตัดเอฟเฟกต์ประมวลผลสูง ไม่ค้างบน iPhone</span>
                             </div>
                             <button
@@ -1987,11 +1987,17 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         </div>
                     )}
 
-                    {/* Responsive Dual-Layer SVG Engine */}
+                    {/* Responsive Dual-Layer SVG Engine (Hardware Accelerated Composite Layer for iPad) */}
                     <div 
                         ref={chartScrollRef} 
-                        className="w-full overflow-x-auto no-scrollbar touch-pan-x" 
-                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
+                        className="w-full overflow-x-auto no-scrollbar" 
+                        style={{ 
+                            WebkitOverflowScrolling: 'touch', 
+                            touchAction: 'pan-y',
+                            transform: 'translateZ(0)',
+                            WebkitTransform: 'translateZ(0)',
+                            contain: 'paint'
+                        }}
                         onTouchStart={() => setHoveredHour(null)}
                     >
                         <svg
@@ -2034,7 +2040,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     : `${dp.label.toUpperCase()} (${startHourStr})`
 
                                 return (
-                                    <g key={dp.id}>
+                                    <g key={dp.id} pointerEvents="none">
                                         <rect
                                             x={startX}
                                             y={padYTop}
@@ -2219,7 +2225,6 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 fill={isMonthGoalExceeded
                                                     ? (isHovered ? 'oklch(44% 0.17 142)' : 'oklch(50% 0.15 142)')
                                                     : (isHovered ? colorAccent : 'oklch(85% 0.012 28)')}
-                                                style={{ touchAction: 'manipulation' }}
                                                 className="transition-colors duration-150 cursor-pointer"
                                                 onMouseEnter={() => {
                                                     if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
@@ -2361,7 +2366,6 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 height={plotHeight}
                                                 fill="transparent"
                                                 pointerEvents="all"
-                                                style={{ touchAction: 'manipulation' }}
                                                 className="cursor-pointer select-none"
                                                 onMouseEnter={() => {
                                                     if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
@@ -2433,12 +2437,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         />
                                     )}
 
-                                    {/* Shaded Forecast Confidence Fan (Disabled in Minimal Mode for 60fps GPU smoothness) */}
+                                    {/* Shaded Forecast Confidence Fan (Single-pass solid blend, zero offscreen alpha buffer) */}
                                     {showPredict && !minimalMode && pathForecastFan && (
                                         <path
                                             d={pathForecastFan}
-                                            fill="oklch(52% 0.16 28)"
-                                            opacity="0.12"
+                                            fill="oklch(94% 0.02 28)"
+                                            pointerEvents="none"
                                         />
                                     )}
 
@@ -2669,7 +2673,6 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 setHoveredHour(null)
                                                 setDrilldownHour(prev => prev === h ? null : h)
                                             }}
-                                            style={{ touchAction: 'manipulation' }}
                                             className="cursor-pointer select-none"
                                         >
                                             <line
@@ -2749,7 +2752,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                     {/* Operational Helper Footnote */}
                     <div className="mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[10px] font-mono text-[oklch(42%_0.010_28)]">
-                        <span className="leading-tight">💡 คลิกที่แท่งชั่วโมงบนกราฟเพื่อเปิด Hourly Drill-Down Inspector (ดูบิล & เมนูยอดนิยม)</span>
+                        <span className="leading-tight"><strong className="text-[oklch(52%_0.16_28)]">INFO //</strong> คลิกที่แท่งชั่วโมงบนกราฟเพื่อเปิด Hourly Drill-Down Inspector (ดูบิล & เมนูยอดนิยม)</span>
                         {drilldownHour !== null && (
                             <button
                                 type="button"
@@ -2807,7 +2810,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     <div className="flex items-center gap-4 flex-wrap">
                                         {pt?.isGoalExceeded && (
                                             <span className="px-2 py-0.5 bg-[oklch(50%_0.15_142)] text-white font-bold text-[10px] rounded-xs flex items-center gap-1 shadow-xs animate-in fade-in duration-150">
-                                                <span>🎯 ทะลุเป้า</span>
+                                                <span>[GOAL HIT]</span>
                                                 {pt.goalDeltaPct > 0 && <span>+{pt.goalDeltaPct}%</span>}
                                             </span>
                                         )}
@@ -2860,7 +2863,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         {pt?.isFuture && pt?.isLifted && (
                                             <div>
                                                 <span className="text-[10px] text-[oklch(45%_0.08_140)] font-bold">
-                                                    ⚡ ได้รับแรงหนุน Ad Lift +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%
+                                                    AD LIFT +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%
                                                 </span>
                                             </div>
                                         )}
@@ -2910,7 +2913,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] font-bold truncate">HOURLY SALES</div>
                                         {drillHourData.isGoalExceeded && (
                                             <span className="px-1.5 py-0.2 bg-[oklch(50%_0.15_142)] text-white text-[8px] sm:text-[9px] font-bold rounded-xs shrink-0">
-                                                🎯 ทะลุเป้า +{drillHourData.goalDeltaPct}%
+                                                [GOAL HIT +{drillHourData.goalDeltaPct}%]
                                             </span>
                                         )}
                                     </div>
@@ -3076,7 +3079,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         <div className="flex items-center gap-1">
                                             {isGoalHit && (
                                                 <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-[oklch(50%_0.15_142)] text-white">
-                                                    🎯 ทะลุเป้า +{dp.goalDeltaPct}%
+                                                    [GOAL HIT +{dp.goalDeltaPct}%]
                                                 </span>
                                             )}
                                             <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 ${

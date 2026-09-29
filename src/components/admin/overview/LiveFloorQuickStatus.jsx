@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Lock, Clock, User, Phone, CheckCircle2, AlertTriangle, ArrowUpRight, RotateCcw, Timer } from 'lucide-react'
 
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'

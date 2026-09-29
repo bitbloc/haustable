@@ -1,6 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect } from 'react'
-import { Send, Megaphone, Trash2, CheckCircle2, RefreshCw } from 'lucide-react'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 
@@ -154,9 +153,9 @@ export default function OwnerPosBroadcastBar() {
             {/* Title */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[oklch(85%_0.012_28)] font-mono">
                 <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-[oklch(18%_0.012_28)] text-white rounded-xs">
-                        <Megaphone size={15} />
-                    </div>
+                    <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-[10px] font-bold rounded-2xs">
+                        [BROADCAST]
+                    </span>
                     <div>
                         <h3 className="text-xs md:text-sm font-black uppercase text-[oklch(18%_0.012_28)]">
                             OWNER DIRECT BROADCAST TO POS // ส่งคำสั่งด่วนถึงหน้าร้าน
@@ -170,7 +169,7 @@ export default function OwnerPosBroadcastBar() {
                 {activeBroadcast && (
                     <div className="flex items-center gap-2 font-mono text-[11px] self-start sm:self-auto">
                         <span className="px-2 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(35%_0.08_140)] border border-[oklch(85%_0.04_140)] rounded-xs font-bold flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)] animate-pulse" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(45%_0.14_140)]" />
                             <span>ACTIVE ON POS</span>
                         </span>
                         <button
@@ -219,10 +218,9 @@ export default function OwnerPosBroadcastBar() {
                 <button
                     onClick={() => handleSendBroadcast()}
                     disabled={sending || !message.trim()}
-                    className="w-full sm:w-auto px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-50 text-white rounded-lg font-black flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2 bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-50 text-white rounded-lg font-black flex items-center justify-center gap-1.5 shrink-0 transition-colors shadow-sm cursor-pointer"
                 >
-                    <Send size={13} />
-                    <span>{sending ? 'กำลังส่ง...' : 'SEND TO POS'}</span>
+                    <span>{sending ? 'กำลังส่ง...' : 'SEND TO POS ➔'}</span>
                 </button>
             </div>
 

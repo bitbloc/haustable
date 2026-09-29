@@ -397,5 +397,53 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         expect(activeDrill).toBe(null)
         expect(activeHover).toBe(null)
     })
+
+    it('enforces Hallmark Zero-Icon discipline and iPad GPU acceleration on IntradayVelocityDaypartCockpit source', async () => {
+        const fs = await import('fs')
+        const path = await import('path')
+
+        const cockpitPath = path.resolve(__dirname, '../../components/admin/financial/IntradayVelocityDaypartCockpit.jsx')
+        const source = fs.readFileSync(cockpitPath, 'utf8')
+
+        // 1. Zero decorative emojis (⚡, 🎯, 💡)
+        expect(source.includes('⚡')).toBe(false)
+        expect(source.includes('🎯')).toBe(false)
+        expect(source.includes('💡')).toBe(false)
+
+        // 2. Zero touchAction manipulation on SVG elements (eliminates gesture engine overhead on iPad)
+        expect(source.includes("touchAction: 'manipulation'")).toBe(false)
+
+        // 3. Hardware acceleration on scroll container
+        expect(source.includes("touchAction: 'pan-y'")).toBe(true)
+        expect(source.includes("contain: 'paint'")).toBe(true)
+        expect(source.includes("transform: 'translateZ(0)'")).toBe(true)
+
+        // 4. Solid single-pass fill for forecast fan (zero offscreen alpha buffer)
+        expect(source.includes('pathForecastFan')).toBe(true)
+        expect(source.includes('oklch(94% 0.02 28)')).toBe(true)
+    })
+
+    it('enforces Hallmark Zero-Icon discipline on AdminDashboard tab navigation', async () => {
+        const fs = await import('fs')
+        const path = await import('path')
+
+        const dashboardPath = path.resolve(__dirname, '../../AdminDashboard.jsx')
+        const source = fs.readFileSync(dashboardPath, 'utf8')
+
+        // 1. Tab navigation must use brutalist numbered codes
+        expect(source.includes("code: '01'")).toBe(true)
+        expect(source.includes("code: '02'")).toBe(true)
+        expect(source.includes("code: '03'")).toBe(true)
+
+        // 2. Tab items must not have icon properties
+        expect(source.includes('icon: Receipt')).toBe(false)
+        expect(source.includes('icon: Layers')).toBe(false)
+        expect(source.includes('icon: Inbox')).toBe(false)
+
+        // 3. Header controls use Hallmark monospace badges instead of Lucide icons
+        expect(source.includes('[Z-REPORT]')).toBe(true)
+        expect(source.includes('[REFRESH]')).toBe(true)
+        expect(source.includes('AUDIO //')).toBe(true)
+    })
 })
 

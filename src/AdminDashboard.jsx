@@ -1,7 +1,6 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
-import { RotateCcw, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
 import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, formatThaiTime } from './utils/timeUtils'
 import { toast } from 'sonner'
@@ -665,12 +664,12 @@ export default function AdminDashboard() {
                                 className={`px-2 py-1 rounded-xs border font-mono text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer ${
                                     soundMuted 
                                         ? 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(55%_0.010_28)]' 
-                                        : 'bg-[oklch(92%_0.02_28)] border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] animate-pulse'
+                                        : 'bg-[oklch(92%_0.02_28)] border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)]'
                                 }`}
                                 title={soundMuted ? 'เปิดเสียงแจ้งเตือน' : 'มีคำขอรอการตรวจสอบ'}
                             >
-                                {soundMuted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                                <span>{soundMuted ? 'MUTED' : 'ALERT'}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full ${soundMuted ? 'bg-[oklch(55%_0.010_28)]' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                                <span>{soundMuted ? 'AUDIO // OFF' : 'AUDIO // ON'}</span>
                             </button>
                         )}
 
@@ -678,12 +677,12 @@ export default function AdminDashboard() {
                         <button 
                             type="button"
                             onClick={() => setShowDailySummaryModal(true)}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-medium rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-xs font-mono font-medium rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                             title="Export สลิปสรุปยอดปิดวัน (Daily Z-Report Slip) เป็นไฟล์ภาพ PNG"
                         >
-                            <FileText size={13} />
+                            <span className="font-bold text-[10px] text-[oklch(52%_0.16_28)]">[Z-REPORT]</span>
                             <span className="font-sans">สลิปปิดวัน</span>
-                            <span className="hidden sm:inline font-mono text-[10px] text-[oklch(55%_0.010_28)]">(PNG)</span>
+                            <span className="hidden sm:inline text-[10px] text-[oklch(55%_0.010_28)]">(PNG)</span>
                         </button>
 
                         {/* Refresh */}
@@ -693,8 +692,7 @@ export default function AdminDashboard() {
                             disabled={loading}
                             className="px-2.5 py-1.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(28%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono text-xs font-bold uppercase rounded-xs flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                         >
-                            <RotateCcw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-                            <span className="hidden sm:inline">REFRESH</span>
+                            <span>{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
                         </button>
                     </div>
                 </div>
@@ -934,15 +932,14 @@ export default function AdminDashboard() {
                         {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}
                         <div className="flex gap-1 overflow-x-auto border-b border-[oklch(85%_0.012_28)] pt-4 font-mono text-xs no-scrollbar">
                             {[
-                                { key: 'bills', label: 'ALL BILLS', count: dailyBookings.length, icon: Receipt },
-                                { key: 'shifts', label: 'SHIFTS (กะเงินสด)', count: shifts.length, icon: Layers },
-                                { key: 'inbox', label: 'INBOX', count: pendingBookings.length, icon: Inbox },
-                                { key: 'schedule', label: 'SCHEDULE', count: scheduleBookings.length, icon: Clock },
-                                { key: 'dine_in', label: 'DINE-IN', count: dineInCount, icon: Utensils },
-                                { key: 'pickup', label: 'PICKUP', count: pickupCount, icon: ShoppingBag }
+                                { key: 'bills', code: '01', label: 'ALL BILLS', count: dailyBookings.length },
+                                { key: 'shifts', code: '02', label: 'SHIFTS (กะเงินสด)', count: shifts.length },
+                                { key: 'inbox', code: '03', label: 'INBOX', count: pendingBookings.length },
+                                { key: 'schedule', code: '04', label: 'SCHEDULE', count: scheduleBookings.length },
+                                { key: 'dine_in', code: '05', label: 'DINE-IN', count: dineInCount },
+                                { key: 'pickup', code: '06', label: 'PICKUP', count: pickupCount }
                             ].map((tab) => {
                                 const isActive = activeTab === tab.key
-                                const Icon = tab.icon
                                 return (
                                     <button
                                         key={tab.key}
@@ -953,7 +950,9 @@ export default function AdminDashboard() {
                                                 : 'border-transparent text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
                                         }`}
                                     >
-                                        <Icon size={14} className={isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'} />
+                                        <span className={`text-[10px] font-mono tracking-tighter ${isActive ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}`}>
+                                            {tab.code} //
+                                        </span>
                                         <span>{tab.label}</span>
                                         <span className={`px-1.5 py-0.2 rounded-xs text-[10px] tabular-nums font-mono ${
                                             isActive ? 'bg-[oklch(18%_0.012_28)] text-white' : 'bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)]'

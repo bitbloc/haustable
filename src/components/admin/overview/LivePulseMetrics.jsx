@@ -25,7 +25,7 @@ export default function LivePulseMetrics({
                     <span className="font-mono text-[10px] md:text-xs font-bold uppercase tracking-wider text-[oklch(42%_0.010_28)]">
                         TODAY'S REVENUE
                     </span>
-                    <span className={`w-2 h-2 rounded-full ${loading ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(45%_0.08_140)]'} animate-pulse`} />
+                    <span className={`w-2 h-2 rounded-full ${loading ? 'bg-[oklch(52%_0.16_28)]' : 'bg-[oklch(45%_0.08_140)]'}`} />
                 </div>
                 
                 <div className="my-2">
@@ -175,7 +175,7 @@ export default function LivePulseMetrics({
                     </span>
                     {loading ? (
                         <div className="flex items-center gap-2 text-[11px] text-[oklch(55%_0.010_28)]">
-                            <span className="inline-block w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)] animate-pulse" />
+                            <span className="inline-block w-2 h-2 rounded-full bg-[oklch(52%_0.16_28)]" />
                             <span>กำลังซิงค์ยอดเงิน...</span>
                         </div>
                     ) : (
