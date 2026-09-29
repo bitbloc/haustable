@@ -618,7 +618,6 @@ export default function AdminLayout() {
                             <span className="text-[10px] font-bold uppercase">
                                 {isCollapsed ? 'EXPAND MENU' : 'COLLAPSE'}
                             </span>
-                            <kbd className="text-[9px] bg-black/5 px-1 py-0.2 rounded-xs text-[var(--ram-ink-muted)]">^B</kbd>
                         </button>
 
                         <div className="flex items-center gap-1.5 text-[var(--ram-ink-muted)]">
