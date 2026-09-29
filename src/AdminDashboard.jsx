@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                     <div className="flex items-center gap-2 flex-wrap self-start md:self-auto">
                         {/* Quick Date Switcher */}
                         <div className="flex items-center gap-1 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs p-1 font-mono text-xs">
-                            <Calendar size={13} className="text-[oklch(42%_0.010_28)] ml-1 shrink-0" />
+                            <span className="text-[10px] font-mono font-bold text-[oklch(52%_0.16_28)] ml-1 shrink-0">[DATE]</span>
                             <input
                                 type="date"
                                 value={selectedDate}

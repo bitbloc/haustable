@@ -290,9 +290,9 @@ export default function DailyShiftsCashFlowWidget({
                             onClick={onRefreshShifts}
                             title="รีเฟรชข้อมูลกะล่าสุด"
                             disabled={loading}
-                            className="p-1.5 bg-white hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] transition-colors cursor-pointer ml-1"
+                            className="px-2 py-1 bg-white hover:bg-[oklch(92%_0.012_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-mono text-[10px] font-bold transition-colors cursor-pointer ml-1"
                         >
-                            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+                            <span>{loading ? '[SYNCING...]' : '[REFRESH]'}</span>
                         </button>
                     )}
                 </div>
@@ -438,13 +438,11 @@ export default function DailyShiftsCashFlowWidget({
                                 {currentViewData.isOpen ? (
                                     <span className="text-xs font-normal text-[oklch(55%_0.010_28)]">—</span>
                                 ) : Math.abs(currentViewData.difference) < 0.01 ? (
-                                    <span className="text-[oklch(35%_0.08_140)] flex items-center gap-1 text-sm md:text-base">
-                                        <CheckCircle2 size={14} />
+                                    <span className="text-[oklch(35%_0.08_140)] text-sm md:text-base font-bold">
                                         <span>ตรงยอดพอดี</span>
                                     </span>
                                 ) : (
-                                    <span className="text-[oklch(52%_0.16_28)] flex items-center gap-1 text-sm md:text-base">
-                                        <AlertTriangle size={14} />
+                                    <span className="text-[oklch(52%_0.16_28)] text-sm md:text-base font-bold">
                                         <span>{currentViewData.difference > 0 ? `+฿${currentViewData.difference.toLocaleString()}` : `-฿${Math.abs(currentViewData.difference).toLocaleString()}`}</span>
                                     </span>
                                 )}
@@ -500,7 +498,7 @@ export default function DailyShiftsCashFlowWidget({
                                     className="text-[11px] text-[oklch(52%_0.16_28)] hover:underline font-bold flex items-center gap-1 cursor-pointer"
                                 >
                                     <span>ดูรายงานกะฉบับเต็ม</span>
-                                    <ChevronRight size={13} />
+                                    <span>➔</span>
                                 </button>
                             )}
                         </div>
@@ -541,13 +539,11 @@ export default function DailyShiftsCashFlowWidget({
                                                         <td className="py-2.5 px-3">
                                                             {isIn ? (
                                                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-2xs font-mono text-[9px] font-bold uppercase bg-[oklch(92%_0.04_140)] text-[oklch(35%_0.08_140)] border border-[oklch(80%_0.06_140)]">
-                                                                    <ArrowDownLeft size={10} />
-                                                                    <span>เงินเข้า (IN)</span>
+                                                                    <span>↓ เงินเข้า (IN)</span>
                                                                 </span>
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-2xs font-mono text-[9px] font-bold uppercase bg-[oklch(92%_0.04_28)] text-[oklch(40%_0.14_28)] border border-[oklch(80%_0.08_28)]">
-                                                                    <ArrowUpRight size={10} />
-                                                                    <span>เงินออก (OUT)</span>
+                                                                    <span>↑ เงินออก (OUT)</span>
                                                                 </span>
                                                             )}
                                                         </td>

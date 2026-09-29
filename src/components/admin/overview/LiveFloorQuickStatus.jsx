@@ -265,7 +265,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                         to="/admin/tables" 
                         className="inline-flex items-center gap-1 font-mono text-xs font-bold uppercase tracking-wider text-[oklch(18%_0.012_28)] hover:text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] px-3 py-1.5 rounded-sm transition-colors"
                     >
-                        FULL FLOORPLAN <ArrowUpRight size={14} />
+                        FULL FLOORPLAN ➔
                     </Link>
                 </div>
             </div>
