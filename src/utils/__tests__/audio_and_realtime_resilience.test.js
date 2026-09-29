@@ -13,7 +13,8 @@ import {
     startStaffCallLoop,
     stopStaffCallLoop,
     isStaffCallLooping,
-    playSynthBellTing
+    playSynthBellTing,
+    playAdminOrderAlert
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -158,7 +159,7 @@ describe('Audio Engine & Notification Resilience', () => {
             expect(secondStaffCall).toBe(true);
         });
 
-        it('should support testPlayAlertSound for both noti1 and notibill sound types', () => {
+        it('should support testPlayAlertSound for noti1, notibill and notiadmin sound types', () => {
             setAudioMuted(false);
             setAudioVolume(80);
 
@@ -168,32 +169,36 @@ describe('Audio Engine & Notification Resilience', () => {
             vi.advanceTimersByTime(1300);
             const notibillResult = testPlayAlertSound(80, 1200, 'notibill');
             expect(notibillResult).toBe(true);
+
+            vi.advanceTimersByTime(1300);
+            const notiadminResult = testPlayAlertSound(80, 1200, 'notiadmin');
+            expect(notiadminResult).toBe(true);
         });
 
-        it('should trigger playSynthBellTing for new orders and throttle rapid duplicate bursts', () => {
+        it('should trigger playAdminOrderAlert (notiadmin.mp3) for new orders and throttle rapid duplicate bursts', () => {
             setAudioMuted(false);
             setAudioVolume(80);
             vi.advanceTimersByTime(1000);
 
-            // First bell chime strike: should return true
-            const firstBell = playSynthBellTing('test_new_order_1', 500);
-            expect(firstBell).toBe(true);
+            // First admin alert (notiadmin.mp3): should return true
+            const firstAlert = playAdminOrderAlert('test_new_order_1', 500);
+            expect(firstAlert).toBe(true);
 
             // Immediate burst (100ms later): should be throttled (returns false)
             vi.advanceTimersByTime(100);
-            const burstBell = playSynthBellTing('test_new_order_2', 500);
-            expect(burstBell).toBe(false);
+            const burstAlert = playAdminOrderAlert('test_new_order_2', 500);
+            expect(burstAlert).toBe(false);
 
             // After throttle window passes (600ms later): should return true
             vi.advanceTimersByTime(600);
-            const secondBell = playSynthBellTing('test_new_order_3', 500);
-            expect(secondBell).toBe(true);
+            const secondAlert = playAdminOrderAlert('test_new_order_3', 500);
+            expect(secondAlert).toBe(true);
         });
 
-        it('should suppress playSynthBellTing when audio is muted', () => {
+        it('should suppress playAdminOrderAlert when audio is muted', () => {
             setAudioMuted(true);
-            const mutedBell = playSynthBellTing('test_muted_bell', 500);
-            expect(mutedBell).toBe(false);
+            const mutedAlert = playAdminOrderAlert('test_muted_admin', 500);
+            expect(mutedAlert).toBe(false);
         });
     });
 

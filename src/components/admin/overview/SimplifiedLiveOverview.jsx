@@ -6,7 +6,8 @@ import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationM
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
-import { playSynthBellTing } from '../../../utils/audioHelper'
+import { playAdminOrderAlert } from '../../../utils/audioHelper'
+
 
 
 /**
@@ -153,8 +154,8 @@ export default function SimplifiedLiveOverview({
         }
 
         if (hasNewOrderOrItems) {
-            console.log('🔔 [Simplified Overview] New order / additional items detected! Triggering bell "Ting!"')
-            playSynthBellTing('simplified_overview_new_order', 500)
+            console.log('🔔 [Simplified Overview] New order / additional items detected! Triggering notiadmin.mp3')
+            playAdminOrderAlert('simplified_overview_new_order', 500)
             toast.info('[NEW ORDER] มีออเดอร์ใหม่ / สั่งอาหารเพิ่ม', { duration: 3000 })
         }
 
@@ -617,15 +618,15 @@ export default function SimplifiedLiveOverview({
                         <button
                             type="button"
                             onClick={() => {
-                                playSynthBellTing('manual_test', 300)
-                                toast.success('[CHIME] เสียงกริ่ง "ติ๊ง!" พร้อมแจ้งเตือนออเดอร์ใหม่')
+                                playAdminOrderAlert('manual_test', 300)
+                                toast.success('[ADMIN ALERT] เสียงเตือนออเดอร์ใหม่ (notiadmin.mp3)')
                             }}
                             className="px-2.5 py-1 border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] hover:bg-[oklch(92%_0.012_28)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[oklch(60%_0.15_28)] active:scale-95 text-[oklch(18%_0.012_28)] text-[11px] font-mono rounded-xs cursor-pointer flex items-center gap-1.5 transition-all"
-                            title="ทดสอบฟังเสียงกริ่งแจ้งเตือนออเดอร์ใหม่ (ติ๊ง!)"
-                            aria-label="ทดสอบฟังเสียงกริ่งแจ้งเตือนออเดอร์ใหม่ (ติ๊ง!)"
+                            title="ทดสอบฟังเสียงแจ้งเตือนออเดอร์ใหม่ (notiadmin.mp3)"
+                            aria-label="ทดสอบฟังเสียงแจ้งเตือนออเดอร์ใหม่ (notiadmin.mp3)"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
-                            <span className="font-bold">ลองเสียง [ติ๊ง!]</span>
+                            <span className="font-bold">ลองเสียง [NOTI]</span>
                         </button>
 
                         {/* Fullscreen Button */}

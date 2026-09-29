@@ -15,12 +15,15 @@
 
 import noti1SoundUrl from '../assets/noti1.mp3';
 import notibillSoundUrl from '../assets/notibill.mp3';
+import notiadminSoundUrl from '../assets/notiadmin.mp3';
 
 let sharedAudioContext = null;
 let noti1AudioBuffer = null;
 let notibillAudioBuffer = null;
+let notiadminAudioBuffer = null;
 let isPreloadingNoti1 = false;
 let isPreloadingNotibill = false;
+let isPreloadingNotiadmin = false;
 let lastAlertPlayedTime = 0;
 let isAudioEngineUnlocked = false;
 const eventDeduplicationMap = new Map(); // key -> timestamp
@@ -273,6 +276,15 @@ export async function preloadNotificationAudio() {
             isPreloadingNotibill = false;
         });
     }
+
+    if (!notiadminAudioBuffer && !isPreloadingNotiadmin) {
+        isPreloadingNotiadmin = true;
+        const urls = [notiadminSoundUrl, '/notiadmin.mp3', './notiadmin.mp3'].filter(Boolean);
+        loadAndDecodeBuffer(urls, 'notiadmin.mp3').then((buf) => {
+            if (buf) notiadminAudioBuffer = buf;
+            isPreloadingNotiadmin = false;
+        });
+    }
 }
 
 // Auto-trigger preload immediately upon script execution
@@ -307,8 +319,8 @@ export function unlockAudioEngine() {
         source.connect(ctx.destination);
         source.start(0);
 
-        // Preload noti1.mp3 & notibill.mp3 if not already in memory
-        if (!noti1AudioBuffer || !notibillAudioBuffer) {
+        // Preload noti1.mp3, notibill.mp3 & notiadmin.mp3 if not already in memory
+        if (!noti1AudioBuffer || !notibillAudioBuffer || !notiadminAudioBuffer) {
             preloadNotificationAudio();
         }
     } catch (e) {
@@ -432,6 +444,7 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
 
 let primedHtml5AudioNoti1 = null;
 let primedHtml5AudioNotibill = null;
+let primedHtml5AudioNotiadmin = null;
 
 function getPrimedHtml5Audio(soundType = 'noti1') {
     if (typeof window === 'undefined') return null;
@@ -444,6 +457,14 @@ function getPrimedHtml5Audio(soundType = 'noti1') {
                 primedHtml5AudioNotibill.load();
             }
             return primedHtml5AudioNotibill;
+        } else if (soundType === 'notiadmin') {
+            if (!primedHtml5AudioNotiadmin) {
+                const soundSrc = notiadminSoundUrl || '/notiadmin.mp3';
+                primedHtml5AudioNotiadmin = new Audio(soundSrc);
+                primedHtml5AudioNotiadmin.preload = 'auto';
+                primedHtml5AudioNotiadmin.load();
+            }
+            return primedHtml5AudioNotiadmin;
         } else {
             if (!primedHtml5AudioNoti1) {
                 const soundSrc = noti1SoundUrl || '/noti1.mp3';
@@ -653,15 +674,16 @@ export function playDoorbellChime() {
 }
 
 /**
- * Play Small Bell "Ting!" Sound (ติ๊ง!)
- * High-pitched, crisp crystal bell chime for simplified overview new orders and order additions.
- * High-frequency dual strike (C7 = 2093Hz -> E7 = 2637Hz ring).
+ * Dedicated Sound Alert for Back-Office Admin Overview (plays notiadmin.mp3)
+ * Plays /notiadmin.mp3 through the High-Gain Web Audio Mastering Chain with multi-level fallbacks.
+ * Used when a new order arrives or items are added in Simplified Live Overview.
  * 
  * @param {string|null} eventKey - Deduplication identifier (optional)
- * @param {number} throttleMs - Minimum interval between alerts (default: 500ms)
+ * @param {number} throttleMs - Minimum interval between alerts (default: 800ms)
+ * @param {number} boostLevel - Output gain multiplier (default: 3.2x)
  * @returns {boolean} - Whether audio playback was triggered
  */
-export function playSynthBellTing(eventKey = null, throttleMs = 500) {
+export function playAdminOrderAlert(eventKey = null, throttleMs = 800, boostLevel = 3.2) {
     const effectiveGain = getEffectiveGainFactor();
     if (effectiveGain <= 0) return false;
 
@@ -678,41 +700,43 @@ export function playSynthBellTing(eventKey = null, throttleMs = 500) {
     }
     lastAlertPlayedTime = now;
 
-    try {
-        const ctx = getSharedAudioContext();
-        if (ctx) {
-            if (ctx.state === 'suspended') {
-                ctx.resume().catch(() => {});
-            }
-
-            const nowTime = ctx.currentTime;
-            const masterOut = createMasterOutputChain(ctx, 3.2);
-
-            // High crystal bell "Ting!" - Fast attack strike
-            synthesizeBellNote(ctx, masterOut, 2093.00, nowTime, 0.28, 1.25);
-            synthesizeBellNote(ctx, masterOut, 2637.02, nowTime + 0.035, 0.55, 1.35);
-
-            return true;
-        }
-    } catch (err) {
-        console.warn('[AudioEngine] playSynthBellTing Web Audio error:', err);
+    // 1. Primary Playback: Decoded notiadmin.mp3 buffer through Web Audio
+    if (notiadminAudioBuffer) {
+        const played = playAudioBufferDirectly(notiadminAudioBuffer, boostLevel);
+        if (played) return true;
     }
 
-    // HTML5 Audio Fallback if Web Audio context is not supported or suspended
+    // If buffer is still loading, trigger preload
+    if (!notiadminAudioBuffer && !isPreloadingNotiadmin) {
+        preloadNotificationAudio();
+    }
+
+    // 2. Secondary Playback: HTML5 Audio with bundled notiadmin.mp3
     try {
-        const primed = getPrimedHtml5Audio('noti1');
-        const soundSrc = noti1SoundUrl || '/noti1.mp3';
+        const primed = getPrimedHtml5Audio('notiadmin');
+        const soundSrc = notiadminSoundUrl || '/notiadmin.mp3';
         const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
         const promise = audio.play();
-        if (promise && typeof promise.catch === 'function') {
-            promise.catch(() => {});
+        if (promise !== undefined && promise && typeof promise.catch === 'function') {
+            promise.catch((e) => {
+                console.warn('[AudioEngine] HTML5 Audio (notiadmin.mp3) play error:', e);
+            });
         }
         return true;
     } catch (e) {
+        console.warn('[AudioEngine] HTML5 Audio (notiadmin.mp3) error:', e);
         return true;
     }
 }
+
+/**
+ * Backward compatibility alias for Simplified Overview new order alert (now uses notiadmin.mp3)
+ */
+export function playSynthBellTing(eventKey = null, throttleMs = 800) {
+    return playAdminOrderAlert(eventKey, throttleMs, 3.2);
+}
+
 
 
 /**
@@ -850,7 +874,7 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
 
     const targetBuffer = soundType === 'notibill' 
         ? (notibillAudioBuffer || noti1AudioBuffer) 
-        : (noti1AudioBuffer || notibillAudioBuffer);
+        : (soundType === 'notiadmin' ? (notiadminAudioBuffer || noti1AudioBuffer) : (noti1AudioBuffer || notibillAudioBuffer));
 
     // Play buffer directly with custom gain and active node tracking
     if (targetBuffer) {
@@ -884,7 +908,7 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
         }
         const soundSrc = soundType === 'notibill' 
             ? (notibillSoundUrl || '/notibill.mp3') 
-            : (noti1SoundUrl || '/noti1.mp3');
+            : (soundType === 'notiadmin' ? (notiadminSoundUrl || '/notiadmin.mp3') : (noti1SoundUrl || '/noti1.mp3'));
         const audio = new Audio(soundSrc);
         audio.volume = Math.max(0, Math.min(1.0, factor));
         activeHtml5Audio = audio;
