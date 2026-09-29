@@ -207,9 +207,12 @@ export default function SimplifiedLiveOverview({
 
             if (b.status === 'seated') return true
             if (b.status === 'ready' && b.booking_type !== 'pickup') return true
-            const start = new Date(b.booking_time)
-            const endTime = b.end_time ? new Date(b.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000)
-            return now >= start && now < endTime
+            if (b.status === 'confirmed' || b.status === 'approved') {
+                const start = new Date(b.booking_time)
+                const endTime = b.end_time ? new Date(b.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000)
+                return now >= start && now < endTime
+            }
+            return false
         })
 
         if (currentBooking) {

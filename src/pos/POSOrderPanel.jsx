@@ -1088,7 +1088,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             )}
 
             {/* Call Staff Alert */}
-            {booking && booking.staff_remark?.includes('[CALL_STAFF]') && (
+            {((booking && booking.staff_remark?.includes('[CALL_STAFF]')) || (order?.table?.hasCallStaff)) && (
                 <div className="mx-3 mt-3 p-3 bg-yellow-50 border-2 border-yellow-400 rounded-xl flex flex-col gap-2 shrink-0 animate-pulse shadow-sm">
                     <div className="flex items-center gap-1.5 text-yellow-900 font-mono text-[9px] font-bold uppercase tracking-wider">
                         <Bell size={12} className="text-yellow-600" />
@@ -1097,32 +1097,39 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     <p className="text-[9px] text-yellow-950 font-medium">ลูกค้ากำลังเรียกขอความช่วยเหลือที่โต๊ะนี้</p>
                     <button 
                         onClick={async () => {
+                            const targetTableId = booking?.table_id || order?.table?.id;
                             // 1. Immediately stop loop sound for this table
-                            stopStaffCallLoop(booking.table_id || booking.id);
-
-                            // 2. Dispatch 0ms cleared event so floorplan table stops blinking yellow instantly
-                            if (booking.table_id) {
+                            if (targetTableId) {
+                                stopStaffCallLoop(targetTableId);
                                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { 
-                                    detail: { tableId: booking.table_id, bookingId: booking.id } 
+                                    detail: { tableId: targetTableId, bookingId: booking?.id } 
                                 }));
                             }
 
-                            // 3. Optimistically update local booking remark so UI updates in 0ms
-                            const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
-                            booking.staff_remark = newRemark;
-
-                            try {
-                                const { error } = await supabase
-                                    .from('bookings')
-                                    .update({ staff_remark: newRemark })
-                                    .eq('id', booking.id);
-                                    
-                                if (error) throw error;
-                                toast.success("เคลียร์แจ้งเตือนเรียบร้อยแล้ว");
-                            } catch (err) {
-                                console.error("Failed to clear staff call:", err);
-                                toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
+                            // 2. If table object exists, optimistically clear hasCallStaff
+                            if (order?.table) {
+                                order.table.hasCallStaff = false;
                             }
+
+                            // 3. Optimistically update local booking remark so UI updates in 0ms
+                            if (booking) {
+                                const newRemark = (booking.staff_remark || '').replace('[CALL_STAFF]', '').trim();
+                                booking.staff_remark = newRemark;
+
+                                try {
+                                    const { error } = await supabase
+                                        .from('bookings')
+                                        .update({ staff_remark: newRemark })
+                                        .eq('id', booking.id);
+                                        
+                                    if (error) throw error;
+                                } catch (err) {
+                                    console.error("Failed to clear staff call:", err);
+                                    toast.error("ไม่สามารถเคลียร์สถานะได้ในขณะนี้");
+                                    return;
+                                }
+                            }
+                            toast.success("เคลียร์แจ้งเตือนเรียบร้อยแล้ว");
                         }}
                         className="w-full bg-yellow-500 hover:bg-yellow-600 text-black py-1.5 rounded-lg font-bold text-[10px] transition-all flex items-center justify-center gap-1 cursor-pointer shadow-sm active:scale-98"
                     >

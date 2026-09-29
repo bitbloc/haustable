@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient'; // Keep supabase for mutations
 import { fetchAndSortMenu } from './utils/menuHelper';
+import { compressImageFile } from './utils/imageOptimizer';
 import { Plus, X, Star, HelpCircle, AlertTriangle } from 'lucide-react';
 import {
     DndContext,
@@ -235,9 +236,13 @@ export default function AdminMenu() {
 
             let imageUrl = editingItem?.image_url || '';
             if (imageFile) {
-                const fileName = `menu_${Date.now()}.${imageFile.name.split('.').pop()}`;
-                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, imageFile, {
-                    cacheControl: '15552000'
+                const compressedFile = await compressImageFile(imageFile, 1000, 1000, 0.82);
+                const fileExt = compressedFile.name ? compressedFile.name.split('.').pop() : 'webp';
+                const fileName = `menu_${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('public-assets').upload(fileName, compressedFile, {
+                    cacheControl: '31536000',
+                    contentType: compressedFile.type || 'image/webp',
+                    upsert: true
                 });
                 if (uploadError) throw uploadError;
                 const { data: { publicUrl } } = supabase.storage.from('public-assets').getPublicUrl(fileName);

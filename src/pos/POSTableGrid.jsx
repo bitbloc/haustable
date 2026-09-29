@@ -204,6 +204,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     return {
                         ...t,
                         status: status,
+                        hasCallStaff: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_STAFF]')),
+                        hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                         booking: booking || null,
                         upcomingReservation: upcomingRes || null,
                         isAdvanceReserved: Boolean(isUpcomingFar),
@@ -511,10 +513,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                     const bookingTimeMs = activeBooking?.booking_time ? new Date(activeBooking.booking_time).getTime() : 0;
                     const isRecentPendingBooking = activeBooking?.status === 'pending' && 
+                        (items.length > 0) &&
                         (now.getTime() - bookingTimeMs < 10 * 60 * 1000) && 
                         (bookingTimeMs > tableAckTime);
 
                     const hasNewOrder = isRecentPendingBooking || hasUnviewedRecentItems;
+
+                    // Compute live staff and bill calls from all active bookings on this table
+                    const tableHasCallStaff = tableBookings.some(b => (b.staff_remark || '').includes('[CALL_STAFF]'));
+                    const tableHasCallBill = tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]'));
 
                     // 2. Upcoming advance reservation (scheduled for later today, not yet seated)
                     const upcomingRes = tableBookings.find(b => {
@@ -544,6 +551,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         ...t,
                         status: status,
                         hasNewOrder: Boolean(hasNewOrder),
+                        hasCallStaff: Boolean(tableHasCallStaff || t.hasCallStaff),
+                        hasCallBill: Boolean(tableHasCallBill || t.hasCallBill),
                         booking: activeBooking || null,
                         upcomingReservation: upcomingRes || null,
                         isAdvanceReserved: Boolean(isUpcomingFar),
@@ -589,6 +598,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         return {
                             ...t,
                             status,
+                            hasCallStaff: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_STAFF]')),
+                            hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                             booking: booking || null,
                             upcomingReservation: upcomingRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
@@ -978,18 +989,19 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         if (hasCallStaff) {
             tableBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
             ledColor = 'bg-yellow-400 animate-ping';
-        }
-        if (hasCallBill) {
+        } else if (hasCallBill) {
             tableBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-pulse';
-        }
-        if (hasOrder) {
+        } else if (hasOrder) {
             tableBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-pulse';
         }
     } else if (hasCallStaff) {
         tableBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
         ledColor = 'bg-yellow-400 animate-ping';
+    } else if (hasCallBill) {
+        tableBgClass = 'animate-pos-blink-orange border-2';
+        ledColor = 'bg-[#FFAA00] animate-pulse';
     }
 
     return (
@@ -1169,18 +1181,19 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         if (hasCallStaff) {
             cellBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
             ledColor = 'bg-yellow-400 animate-ping';
-        }
-        if (hasCallBill) {
+        } else if (hasCallBill) {
             cellBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-pulse';
-        }
-        if (hasOrder) {
+        } else if (hasOrder) {
             cellBgClass = 'animate-pos-blink-red border-2';
             ledColor = 'bg-red-500 animate-pulse';
         }
     } else if (hasCallStaff) {
         cellBgClass = 'animate-pos-blink-yellow border-2 border-yellow-500 text-yellow-950 font-black shadow-md';
         ledColor = 'bg-yellow-400 animate-ping';
+    } else if (hasCallBill) {
+        cellBgClass = 'animate-pos-blink-orange border-2';
+        ledColor = 'bg-[#FFAA00] animate-pulse';
     }
 
     return (

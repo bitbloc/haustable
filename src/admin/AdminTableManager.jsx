@@ -64,9 +64,12 @@ export default function AdminTableManager({ defaultTab = 'live' }) {
 
             if (bookingsData && tablesData) {
                 bookingsData.forEach(b => {
+                    if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return
                     const bStart = new Date(b.booking_time)
                     const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
-                    const isCurrent = b.status === 'seated' || (b.status === 'ready' && b.booking_type !== 'pickup') || (now >= bStart && now < bEnd)
+                    const isCurrent = b.status === 'seated' || 
+                        (b.status === 'ready' && b.booking_type !== 'pickup') || 
+                        ((b.status === 'confirmed' || b.status === 'approved') && now >= bStart && now < bEnd)
 
                     if (isCurrent) {
                         occupiedCount++

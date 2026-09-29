@@ -8,21 +8,25 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const SUPABASE_STORAGE_HOST = 'lxfavbzmebqqsffgyyph.supabase.co';
 
 export const optimizeImageUrl = (url, width = 400) => {
-    if (!url) return null;
-    if (!url.startsWith('http')) return url;
-    
-    const cleanUrl = url.split('?')[0];
-    // Native Supabase Pro Transformation for internal menu items
-    if (cleanUrl.includes(`${SUPABASE_STORAGE_HOST}/storage/v1/object/public/`)) {
-        const transformed = cleanUrl.replace(
-            '/storage/v1/object/public/',
-            '/storage/v1/render/image/public/'
-        );
-        return `${transformed}?width=${width}&quality=80&format=webp&resize=contain`;
+    if (!url || typeof url !== 'string') return null;
+    const trimmed = url.trim();
+    if (
+        trimmed.startsWith('data:') ||
+        trimmed.startsWith('blob:') ||
+        trimmed.startsWith('/') ||
+        !trimmed.startsWith('http') ||
+        trimmed.includes('wsrv.nl') ||
+        trimmed.includes('images.weserv.nl')
+    ) {
+        return trimmed;
     }
-
-    // Fallback for external URLs
-    return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&output=webp&q=80`;
+    
+    try {
+        const cleanUrl = trimmed.split('?')[0];
+        return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=${width}&output=webp&q=80`;
+    } catch {
+        return trimmed;
+    }
 }
 
 export const invalidateMenuCache = () => {

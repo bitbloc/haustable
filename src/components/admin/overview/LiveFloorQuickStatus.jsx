@@ -154,11 +154,15 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
                 sortedTables.forEach(table => {
                     const tBookings = activeBookings.filter(b => b.table_id === table.id)
                     const isOcc = tBookings.some(b => {
+                        if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
                         if (b.status === 'seated') return true
                         if (b.status === 'ready' && b.booking_type !== 'pickup') return true
-                        const bStart = new Date(b.booking_time)
-                        const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
-                        return now >= bStart && now < bEnd
+                        if (b.status === 'confirmed' || b.status === 'approved') {
+                            const bStart = new Date(b.booking_time)
+                            const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
+                            return now >= bStart && now < bEnd
+                        }
+                        return false
                     })
                     if (isOcc) {
                         occupiedCount++
@@ -185,13 +189,17 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
 
         if (tableBookings.length === 0) return { status: 'free', booking: null }
 
-        // Current active booking (Seated / In-store Dining / Time Window)
+        // Current active booking (Seated / In-store Dining / Confirmed Time Window)
         const currentBooking = tableBookings.find(b => {
+            if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
             if (b.status === 'seated') return true
             if (b.status === 'ready' && b.booking_type !== 'pickup') return true
-            const start = new Date(b.booking_time)
-            const endTime = b.end_time ? new Date(b.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000)
-            return now >= start && now < endTime
+            if (b.status === 'confirmed' || b.status === 'approved') {
+                const start = new Date(b.booking_time)
+                const endTime = b.end_time ? new Date(b.end_time) : new Date(start.getTime() + 2 * 60 * 60 * 1000)
+                return now >= start && now < endTime
+            }
+            return false
         })
 
         if (currentBooking) {

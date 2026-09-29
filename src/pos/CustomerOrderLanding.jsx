@@ -764,30 +764,8 @@ export default function CustomerOrderLanding() {
         try {
             let currentBooking = activeBooking;
             
-            if (!currentBooking) {
-                const trackingToken = crypto.randomUUID();
-                const newBookingPayload = {
-                    table_id: effectiveNumericTableId,
-                    status: 'pending',
-                    booking_type: 'walk_in',
-                    booking_time: new Date().toISOString(),
-                    pax: paxCount || table?.capacity || 2,
-                    staff_remark: '[CALL_STAFF]',
-                    tracking_token: trackingToken,
-                    total_amount: 0
-                };
-
-                const { data: newBooking, error: createError } = await supabase
-                    .from('bookings')
-                    .insert(newBookingPayload)
-                    .select()
-                    .single();
-
-                if (createError) throw createError;
-                currentBooking = newBooking;
-                setActiveBooking(newBooking);
-                localStorage.setItem(`table_${tableId}_token`, trackingToken);
-            } else {
+            // If table already has an active session, update its staff_remark
+            if (currentBooking) {
                 let currentRemark = currentBooking.staff_remark || '';
                 let newRemark = currentRemark;
                 
@@ -809,10 +787,11 @@ export default function CustomerOrderLanding() {
             }
 
             // Instant Realtime Broadcast to POS (< 50ms)
+            // Works for both active tables and free tables requesting staff to open
             sendPOSBroadcast('call_staff', {
                 table_id: effectiveNumericTableId,
                 table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId}`,
-                booking_id: currentBooking?.id
+                booking_id: currentBooking?.id || null
             });
 
             toast.success('แจ้งเรียกพนักงานเรียบร้อยแล้ว กรุณารอสักครู่ครับ');

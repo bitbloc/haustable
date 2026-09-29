@@ -87,4 +87,68 @@ describe('Call Bill & Database Resilience Audit', () => {
         expect(orQuery).toContain('tracking_token.ilike.')
         expect(orQuery).toContain('pickup_contact_phone.ilike.')
     })
+
+    // 5. Call Staff Resilience & Back-Office Isolation (Fix for Table H3 issue)
+    describe('Call Staff Back-Office & POS Visual Resilience', () => {
+        const resolveHasCallStaff = (booking, dismissedIds = new Set()) => {
+            if (!booking) return false
+            const status = (booking.status || '').toLowerCase()
+            const isClosed = ['completed', 'paid', 'success', 'cancelled', 'void', 'no_show'].includes(status)
+            return Boolean(
+                booking.staff_remark &&
+                booking.staff_remark.includes('[CALL_STAFF]') &&
+                !isClosed &&
+                !dismissedIds.has(booking.id)
+            )
+        }
+
+        it('returns false for call staff when booking is voided, cancelled or completed', () => {
+            const voidBooking = { id: 'v1', status: 'void', staff_remark: '[CALL_STAFF]' }
+            const cancelledBooking = { id: 'c1', status: 'cancelled', staff_remark: '[CALL_STAFF]' }
+            const completedBooking = { id: 'f1', status: 'completed', staff_remark: '[CALL_STAFF]' }
+            const activeBooking = { id: 'a1', status: 'seated', staff_remark: '[CALL_STAFF]' }
+
+            expect(resolveHasCallStaff(voidBooking)).toBe(false)
+            expect(resolveHasCallStaff(cancelledBooking)).toBe(false)
+            expect(resolveHasCallStaff(completedBooking)).toBe(false)
+            expect(resolveHasCallStaff(activeBooking)).toBe(true)
+        })
+
+        it('suppresses new order alert if pending booking has 0 items (phantom call staff booking)', () => {
+            const isRecentPendingOrder = (booking) => {
+                const items = Array.isArray(booking.order_items) ? booking.order_items : []
+                return booking.status === 'pending' && items.length > 0
+            }
+
+            const phantomCallStaffBooking = {
+                id: 'phantom-1',
+                status: 'pending',
+                staff_remark: '[CALL_STAFF]',
+                order_items: []
+            }
+            const genuineOrderBooking = {
+                id: 'real-1',
+                status: 'pending',
+                staff_remark: 'Spicy level 2',
+                order_items: [{ name: 'Khao Soi', qty: 1 }]
+            }
+
+            expect(isRecentPendingOrder(phantomCallStaffBooking)).toBe(false)
+            expect(isRecentPendingOrder(genuineOrderBooking)).toBe(true)
+        })
+
+        it('preserves call staff visual styling over regular orders', () => {
+            const resolveTableVisualState = ({ hasCallStaff, hasCallBill, hasOrder }) => {
+                if (hasCallBill) return 'blink-emerald'
+                if (hasCallStaff) return 'blink-amber'
+                if (hasOrder) return 'blink-rose'
+                return 'normal'
+            }
+
+            // When table calls staff and also has orders, call staff alert must not be dropped
+            expect(resolveTableVisualState({ hasCallStaff: true, hasCallBill: false, hasOrder: true })).toBe('blink-amber')
+            expect(resolveTableVisualState({ hasCallStaff: false, hasCallBill: false, hasOrder: true })).toBe('blink-rose')
+            expect(resolveTableVisualState({ hasCallStaff: true, hasCallBill: true, hasOrder: false })).toBe('blink-emerald')
+        })
+    })
 })

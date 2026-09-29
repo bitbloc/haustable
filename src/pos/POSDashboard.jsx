@@ -1789,13 +1789,19 @@ export default function POSDashboard() {
                             }
                         }
 
-                        // 3. Cancellation Alert
-                        const cancelKey = `${bookingId}_CANCELLED`;
-                        if (newRow?.status === 'cancelled' && oldRow?.status !== 'cancelled') {
+                        // 3. Cancellation / Void / Checkout Closed Alert
+                        const isClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(newRow?.status);
+                        const wasClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(oldRow?.status);
+                        if (isClosed && !wasClosed) {
                             if (tableId) {
                                 stopStaffCallLoop(tableId || bookingId);
+                                window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId } }));
                                 window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId } }));
                             }
+                        }
+
+                        const cancelKey = `${bookingId}_CANCELLED`;
+                        if (newRow?.status === 'cancelled' && oldRow?.status !== 'cancelled') {
                             if (checkEventDeduplication(cancelKey, 8000)) {
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: 'CANCELLED · ยกเลิกการจอง',
@@ -2525,6 +2531,11 @@ export default function POSDashboard() {
 
             const newBooking = await createWalkIn(targetTable, paxNum, null, shortTurnRemark);
             if (newBooking) {
+                // Clear any pending staff call on this table immediately
+                if (targetTable?.id) {
+                    stopStaffCallLoop(targetTable.id);
+                    window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId: targetTable.id } }));
+                }
                 // 0ms Optimistic table update: table turns red immediately
                 window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
                     detail: { tableId: targetTable.id, booking: newBooking } 
@@ -2877,6 +2888,8 @@ export default function POSDashboard() {
             if (isConfirmed) {
                 // 0ms Optimistic UI update: Turn table free in POSTableGrid immediately
                 if (targetTableId) {
+                    stopStaffCallLoop(targetTableId);
+                    window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId: targetTableId } }));
                     window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
                 }
 
@@ -2968,6 +2981,8 @@ export default function POSDashboard() {
         } else {
             // Cart has unsaved items only or table session was still loading -> completely reset table state
             if (targetTableId) {
+                stopStaffCallLoop(targetTableId);
+                window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId: targetTableId } }));
                 window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
                 if (isOnline()) {
                     // Safety clean any unclosed bookings for this table in DB

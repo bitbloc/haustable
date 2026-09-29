@@ -5,16 +5,16 @@ import { exportAuditLogsToCsv } from '../auditLogger';
 
 describe('Supabase Pro Optimization Suite', () => {
 
-    describe('Image Transformations (Strict Internal Only)', () => {
-        it('transforms internal Supabase storage URLs to native /render/image/ with WebP', () => {
+    describe('Image Transformations (Supabase 100-Quota Protection)', () => {
+        it('routes internal Supabase storage URLs to wsrv.nl without touching /render/image/', () => {
             const rawUrl = `https://${SUPABASE_STORAGE_HOST}/storage/v1/object/public/menu/dish1.jpg`;
             const optimized = optimizeImageUrl(rawUrl, 400, 80);
 
-            expect(optimized).toContain(`https://${SUPABASE_STORAGE_HOST}/storage/v1/render/image/public/menu/dish1.jpg`);
-            expect(optimized).toContain('width=400');
-            expect(optimized).toContain('quality=80');
-            expect(optimized).toContain('format=webp');
-            expect(optimized).not.toContain('wsrv.nl');
+            expect(optimized).toContain('https://wsrv.nl/?url=');
+            expect(optimized).toContain('w=400');
+            expect(optimized).toContain('q=80');
+            expect(optimized).toContain('output=webp');
+            expect(optimized).not.toContain('/render/image/');
         });
 
         it('routes external URLs through wsrv.nl proxy without touching Supabase', () => {
@@ -24,6 +24,7 @@ describe('Supabase Pro Optimization Suite', () => {
             expect(optimized).toContain('https://wsrv.nl/?url=');
             expect(optimized).toContain('w=600');
             expect(optimized).toContain('output=webp');
+            expect(optimized).not.toContain('/render/image/');
         });
 
         it('supports forceExternal flag to preserve public ad bandwidth quota', () => {
@@ -34,13 +35,14 @@ describe('Supabase Pro Optimization Suite', () => {
             expect(forcedExternal).not.toContain('/render/image/');
         });
 
-        it('transforms menuHelper image URLs for internal items', () => {
+        it('transforms menuHelper image URLs via wsrv.nl without touching /render/image/', () => {
             const menuRaw = `https://${SUPABASE_STORAGE_HOST}/storage/v1/object/public/menu/coffee.png`;
             const optimized = optimizeMenuUrl(menuRaw, 300);
 
-            expect(optimized).toContain(`https://${SUPABASE_STORAGE_HOST}/storage/v1/render/image/public/menu/coffee.png`);
-            expect(optimized).toContain('width=300');
-            expect(optimized).toContain('format=webp');
+            expect(optimized).toContain('https://wsrv.nl/?url=');
+            expect(optimized).toContain('w=300');
+            expect(optimized).toContain('output=webp');
+            expect(optimized).not.toContain('/render/image/');
         });
     });
 

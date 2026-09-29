@@ -135,13 +135,17 @@ export default function TableManager({ isStaffView = false, onSelectTable: exter
             return { status: 'free', booking: null };
         }
 
-        // Active Seated Booking (Seated / Dine-in Ready / Time Window)
+        // Active Seated Booking (Seated / Dine-in Ready / Confirmed Time Window)
         const currentBooking = tableBookings.find(b => {
+            if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false;
             if (b.status === 'seated') return true;
             if (b.status === 'ready' && b.booking_type !== 'pickup') return true;
-            const bStart = new Date(b.booking_time);
-            const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000);
-            return now >= bStart && now < bEnd;
+            if (b.status === 'confirmed' || b.status === 'approved') {
+                const bStart = new Date(b.booking_time);
+                const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000);
+                return now >= bStart && now < bEnd;
+            }
+            return false;
         });
 
         if (currentBooking) {
