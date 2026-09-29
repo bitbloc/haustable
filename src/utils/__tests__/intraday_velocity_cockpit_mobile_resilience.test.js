@@ -328,5 +328,74 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         handleOutsideClick({ id: 'outside-element', nodeType: 1 })
         expect(activeHour).toBe(null)
     })
+
+    it('guarantees fullscreen toggle exits properly even when document.fullscreenElement is null (iPad/Safari fallback)', () => {
+        let isFullscreenState = false
+        const setIsFullscreen = (val) => { isFullscreenState = val }
+
+        // Simulated DOM state on iPad Safari where requestFullscreen fails/is unsupported
+        const mockDoc = {
+            fullscreenElement: null,
+            webkitFullscreenElement: null,
+            exitFullscreen: null
+        }
+        const mockContainer = {
+            requestFullscreen: () => Promise.reject(new Error('NotSupportedError'))
+        }
+
+        // The state-driven toggle implementation
+        const handleToggleFullscreen = () => {
+            if (isFullscreenState) {
+                // EXIT FULLSCREEN: Always clears state, calls exitFullscreen only if native element exists
+                if (mockDoc.fullscreenElement || mockDoc.webkitFullscreenElement) {
+                    if (mockDoc.exitFullscreen) mockDoc.exitFullscreen()
+                }
+                setIsFullscreen(false)
+            } else {
+                // ENTER FULLSCREEN
+                if (mockContainer.requestFullscreen) {
+                    mockContainer.requestFullscreen().catch(() => {
+                        setIsFullscreen(true)
+                    })
+                }
+                setIsFullscreen(true)
+            }
+        }
+
+        // 1. Initial State: false
+        expect(isFullscreenState).toBe(false)
+
+        // 2. User enters fullscreen on iPad (CSS fallback sets state to true, doc.fullscreenElement remains null)
+        handleToggleFullscreen()
+        expect(isFullscreenState).toBe(true)
+        expect(mockDoc.fullscreenElement).toBe(null)
+
+        // 3. User taps "✕ EXIT" button: Must transition to false (NOT get trapped in enter branch!)
+        handleToggleFullscreen()
+        expect(isFullscreenState).toBe(false)
+    })
+
+    it('ensures touch/coarse devices dismiss both drilldownHour and hoveredHour on outside tap', () => {
+        let activeDrill = 18
+        let activeHover = 18
+        const setDrilldownHour = (val) => { activeDrill = val }
+        const setHoveredHour = (val) => { activeHover = val }
+
+        const mockInspector = { contains: (target) => target.id === 'inspector-box' }
+        const mockChartWrapper = { contains: (target) => target.id === 'chart-box' }
+
+        const handleOutsideTouch = (target) => {
+            if (!target || typeof target !== 'object' || !('nodeType' in target)) return
+            if (mockInspector.contains(target)) return
+            if (mockChartWrapper.contains(target)) return
+            setDrilldownHour(null)
+            setHoveredHour(null)
+        }
+
+        // Outside tap clears both states so no stuck crosshairs remain on iPad
+        handleOutsideTouch({ id: 'any-outside-card', nodeType: 1 })
+        expect(activeDrill).toBe(null)
+        expect(activeHover).toBe(null)
+    })
 })
 

@@ -237,6 +237,15 @@ export default function IntradayVelocityDaypartCockpit({
     const chartScrollRef = useRef(null)
     const [containerWidth, setContainerWidth] = useState(800)
 
+    const isTouchDevice = useMemo(() => {
+        if (typeof window === 'undefined') return false
+        return (
+            (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+            /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+            (window.matchMedia && window.matchMedia('(pointer: coarse)').matches)
+        )
+    }, [])
+
     // Keyboard ESC and outside pointerdown dismiss for touch/mobile devices
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -249,9 +258,9 @@ export default function IntradayVelocityDaypartCockpit({
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
-    // Dismiss drilldown inspector on outside click / tap safely without freezing WebKit gesture engine
+    // Dismiss drilldown inspector and stuck hover on outside click / tap safely without freezing WebKit gesture engine
     useEffect(() => {
-        if (drilldownHour === null) return
+        if (drilldownHour === null && hoveredHour === null) return
         const handleOutsideClick = (e) => {
             try {
                 const target = e.target
@@ -259,21 +268,30 @@ export default function IntradayVelocityDaypartCockpit({
                 if (inspectorRef.current && inspectorRef.current.contains(target)) return
                 if (chartWrapperRef.current && chartWrapperRef.current.contains(target)) return
                 setDrilldownHour(null)
+                setHoveredHour(null)
             } catch (err) {
                 // Defensive fallback for iOS WebKit SVG node hit-testing
             }
         }
-        // Use 'click' with passive listener so touch scrolling, pinching and drag gestures are not hijacked on mobile
+        // Use 'click' and 'touchstart' with passive listener so touch scrolling, pinching and drag gestures are not hijacked on mobile
         document.addEventListener('click', handleOutsideClick, { passive: true })
-        return () => document.removeEventListener('click', handleOutsideClick)
-    }, [drilldownHour])
+        document.addEventListener('touchstart', handleOutsideClick, { passive: true })
+        return () => {
+            document.removeEventListener('click', handleOutsideClick)
+            document.removeEventListener('touchstart', handleOutsideClick)
+        }
+    }, [drilldownHour, hoveredHour])
 
     // Smooth scroll to drilldown inspector drawer on mobile / iPad when opened
     useEffect(() => {
         if (drilldownHour !== null && inspectorRef.current) {
             const timer = setTimeout(() => {
                 if (inspectorRef.current) {
-                    inspectorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                    const rect = inspectorRef.current.getBoundingClientRect()
+                    const isVisible = rect.top >= 0 && rect.bottom <= window.innerHeight
+                    if (!isVisible) {
+                        inspectorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                    }
                 }
             }, 60)
             return () => clearTimeout(timer)
@@ -329,7 +347,7 @@ export default function IntradayVelocityDaypartCockpit({
                         const w = entry.contentRect.width
                         if (w > 0) {
                             const rounded = Math.round(w)
-                            setContainerWidth(prev => (Math.abs(prev - rounded) > 4 ? rounded : prev))
+                            setContainerWidth(prev => (Math.abs(prev - rounded) > 8 ? rounded : prev))
                         }
                     }
                 })
@@ -1974,6 +1992,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         ref={chartScrollRef} 
                         className="w-full overflow-x-auto no-scrollbar touch-pan-x" 
                         style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
+                        onTouchStart={() => setHoveredHour(null)}
                     >
                         <svg
                             width={svgWidth}
@@ -1982,40 +2001,17 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                         >
                             <defs>
                                 <style>{`
-                                    @keyframes forecastStreamline {
-                                        from { stroke-dashoffset: 24; }
-                                        to { stroke-dashoffset: 0; }
-                                    }
-                                    .forecast-stream-line {
-                                        animation: forecastStreamline 2.2s linear infinite;
-                                    }
-                                    @keyframes goalGlowPulse {
-                                        0%, 100% {
-                                            opacity: 0.95;
-                                            transform: scaleY(1);
+                                    /* High-Performance Dieter Rams SVG Engine (Zero continuous transform repaints on iPad/WebKit) */
+                                    @media (hover: hover) and (pointer: fine) and (min-width: 1025px) {
+                                        @keyframes forecastStreamline {
+                                            from { stroke-dashoffset: 24; }
+                                            to { stroke-dashoffset: 0; }
                                         }
-                                        50% {
-                                            opacity: 1;
-                                            transform: scaleY(1.025);
+                                        .forecast-stream-line {
+                                            animation: forecastStreamline 2.5s linear infinite;
                                         }
                                     }
-                                    @keyframes goalBeaconBounce {
-                                        0%, 100% {
-                                            transform: translateY(0);
-                                        }
-                                        50% {
-                                            transform: translateY(-2px);
-                                        }
-                                    }
-                                    .goal-exceeded-bar {
-                                        animation: goalGlowPulse 2.4s ease-in-out infinite;
-                                        transform-origin: bottom;
-                                    }
-                                    .goal-beacon-badge {
-                                        animation: goalBeaconBounce 2s ease-in-out infinite;
-                                        transform-origin: center;
-                                    }
-                                    @media (max-width: 640px) {
+                                    @media (pointer: coarse), (max-width: 1024px), (prefers-reduced-motion: reduce) {
                                         .forecast-stream-line {
                                             animation: none !important;
                                         }
@@ -2226,17 +2222,18 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 style={{ touchAction: 'manipulation' }}
                                                 className="transition-colors duration-150 cursor-pointer"
                                                 onMouseEnter={() => {
-                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
                                                         setHoveredHour(pt.hour)
                                                     }
                                                 }}
                                                 onMouseLeave={() => {
-                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!isTouchDevice) {
                                                         setHoveredHour(null)
                                                     }
                                                 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation()
+                                                    setHoveredHour(null)
                                                     setDrilldownHour(prev => prev === pt.hour ? null : pt.hour)
                                                 }}
                                             />
@@ -2328,8 +2325,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                             r="4.5"
                                                             fill="none"
                                                             stroke="oklch(50% 0.15 142)"
-                                                            strokeWidth="1.5"
-                                                            style={{ animation: 'goalGlowPulse 2.4s ease-in-out infinite' }}
+                                                            strokeWidth="1.2"
+                                                            opacity="0.8"
+                                                            className="pointer-events-none"
                                                         />
                                                     )}
                                                     <circle
@@ -2366,17 +2364,18 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 style={{ touchAction: 'manipulation' }}
                                                 className="cursor-pointer select-none"
                                                 onMouseEnter={() => {
-                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!minimalMode && !isTouchDevice && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: fine)').matches) {
                                                         setHoveredHour(pt.hour)
                                                     }
                                                 }}
                                                 onMouseLeave={() => {
-                                                    if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
+                                                    if (!isTouchDevice) {
                                                         setHoveredHour(null)
                                                     }
                                                 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation()
+                                                    setHoveredHour(null)
                                                     setDrilldownHour(prev => prev === pt.hour ? null : pt.hour)
                                                 }}
                                             />
@@ -2667,6 +2666,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                             key={h}
                                             onClick={(e) => {
                                                 e.stopPropagation()
+                                                setHoveredHour(null)
                                                 setDrilldownHour(prev => prev === h ? null : h)
                                             }}
                                             style={{ touchAction: 'manipulation' }}
@@ -2763,7 +2763,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                     {/* Live Synchronized Tooltip Box */}
                     {hoveredHour !== null && (
-                        <div className="mt-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs flex flex-wrap items-center justify-between gap-3">
+                        <div className="mt-3 p-3 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs flex flex-wrap items-center justify-between gap-3 relative">
                             <div className="flex items-center gap-2">
                                 <span className="px-1.5 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold">
                                     {hoveredHour}:00 - {hoveredHour + 1}:00
@@ -2772,6 +2772,14 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     {DAYPARTS.find(d => d.hours.includes(hoveredHour))?.label || ''}
                                 </span>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setHoveredHour(null)}
+                                className="px-2 py-0.5 text-[10px] bg-[oklch(90%_0.010_28)] hover:bg-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold rounded-xs cursor-pointer ml-auto"
+                                title="ปิดการแสดงผลชั่วโมง"
+                            >
+                                ปิด ✕
+                            </button>
                             {filterMode === 'month' ? (
                                 <div className="flex items-center gap-4 flex-wrap">
                                     <div>

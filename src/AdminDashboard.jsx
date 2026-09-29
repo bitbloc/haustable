@@ -1,5 +1,5 @@
 /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { supabase } from './lib/supabaseClient'
 import { RotateCcw, Volume2, VolumeX, ShieldCheck, Inbox, Calendar, Receipt, Layers, LayoutGrid, Clock, ShoppingBag, Utensils, FileText, Download } from 'lucide-react'
 import PageTransition from './components/PageTransition'
@@ -65,6 +65,17 @@ export default function AdminDashboard() {
         }
     })
     const [floorOccupancy, setFloorOccupancy] = useState({ totalTables: 12, occupiedTables: 0, totalGuests: 0 })
+    const handleOccupancyChange = useCallback((newOcc) => {
+        setFloorOccupancy(prev => {
+            if (!newOcc) return prev
+            if (prev.totalTables === newOcc.totalTables &&
+                prev.occupiedTables === newOcc.occupiedTables &&
+                prev.totalGuests === newOcc.totalGuests) {
+                return prev
+            }
+            return newOcc
+        })
+    }, [])
     const [showDailySummaryModal, setShowDailySummaryModal] = useState(false)
     const [yesterdayRevenue, setYesterdayRevenue] = useState(0)
     const selectedDateRef = useRef(selectedDate)
@@ -917,7 +928,7 @@ export default function AdminDashboard() {
 
                         {/* 3. Interactive Live Floor & 1-Tap Table Block */}
                         <LiveFloorQuickStatus 
-                            onOccupancyChange={setFloorOccupancy}
+                            onOccupancyChange={handleOccupancyChange}
                         />
 
                         {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}

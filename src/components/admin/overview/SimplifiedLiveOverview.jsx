@@ -178,14 +178,37 @@ export default function SimplifiedLiveOverview({
         }
     }, [isParentDriven])
 
-    // Fullscreen change listener
+    // Fullscreen change & keyboard ESC listener with WebKit/iOS fallback
     useEffect(() => {
         const handleFullscreenChange = () => {
-            setIsFullscreen(Boolean(document.fullscreenElement))
+            const isNative = Boolean(document.fullscreenElement || document.webkitFullscreenElement)
+            if (!isNative && isFullscreen) {
+                // Native fullscreen was exited (e.g. user pressed Esc in browser)
+                setIsFullscreen(false)
+            }
+        }
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && isFullscreen) {
+                handleToggleFullscreen()
+            }
         }
         document.addEventListener('fullscreenchange', handleFullscreenChange)
-        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-    }, [])
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+        window.addEventListener('keydown', handleKeyDown)
+
+        if (isFullscreen) {
+            document.body.style.overflow = 'hidden'
+        } else {
+            document.body.style.overflow = ''
+        }
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange)
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+            window.removeEventListener('keydown', handleKeyDown)
+            document.body.style.overflow = ''
+        }
+    }, [isFullscreen])
 
     // Helper: Determine table state using centralized business logic
     const getTableState = (tableId) => {
@@ -329,23 +352,33 @@ export default function SimplifiedLiveOverview({
         return floorList
     }, [floorList, selectedFilter])
 
-    // Fullscreen Toggle with iOS fallback safety
+    // Fullscreen Toggle with state-driven exit & iOS fallback safety
     const handleToggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            if (containerRef.current?.requestFullscreen) {
-                containerRef.current.requestFullscreen().catch(err => {
-                    console.warn('Fullscreen request failed:', err)
-                    setIsFullscreen(true)
-                })
-            } else {
-                setIsFullscreen(true)
+        if (isFullscreen) {
+            // EXIT FULLSCREEN
+            const doc = document
+            if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+                if (doc.exitFullscreen) {
+                    doc.exitFullscreen().catch(() => {})
+                } else if (doc.webkitExitFullscreen) {
+                    doc.webkitExitFullscreen()
+                }
             }
+            setIsFullscreen(false)
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen().catch(() => setIsFullscreen(false))
-            } else {
-                setIsFullscreen(false)
+            // ENTER FULLSCREEN
+            const el = containerRef.current
+            if (el) {
+                if (el.requestFullscreen) {
+                    el.requestFullscreen().catch(() => {
+                        // iOS/Safari or permission denied: CSS fullscreen fallback
+                        setIsFullscreen(true)
+                    })
+                } else if (el.webkitRequestFullscreen) {
+                    el.webkitRequestFullscreen()
+                }
             }
+            setIsFullscreen(true)
         }
     }
 
@@ -384,6 +417,19 @@ export default function SimplifiedLiveOverview({
                 isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
             }`}
         >
+            {/* Dedicated Floating Exit Button when in Fullscreen Mode */}
+            {isFullscreen && (
+                <button
+                    type="button"
+                    onClick={handleToggleFullscreen}
+                    className="fixed top-4 right-4 z-50 px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold rounded-xs shadow-lg cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
+                    title="ออกจากโหมดเต็มจอ (ESC)"
+                >
+                    <span>✕ ออกจากโหมดเต็มจอ</span>
+                    <span className="opacity-60 text-[10px] hidden sm:inline">[ESC]</span>
+                </button>
+            )}
+
             {/* 1. Hero Pulse: 3-Second Executive Awareness Strip (Equal Weight Blocks) */}
             <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-4 sm:p-5 rounded-xs shadow-2xs">
                 {/* 3 Primary KPIs: Balanced visual weight */}
@@ -947,7 +993,7 @@ export default function SimplifiedLiveOverview({
                 return (
                     <div 
                         onClick={() => setInspectingTable(null)}
-                        className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
+                        className="fixed inset-0 bg-[oklch(18%_0.012_28)]/60 z-[60] flex items-center justify-center p-3 sm:p-4 backdrop-blur-2xs"
                     >
                         <div 
                             onClick={(e) => e.stopPropagation()}
