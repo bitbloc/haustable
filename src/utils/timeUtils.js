@@ -91,3 +91,24 @@ export const formatShortDuration = (minutes) => {
     return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`
 }
 
+/**
+ * Format relative elapsed time in natural Thai phrasing (e.g. "เมื่อสักครู่", "3 นาทีที่แล้ว", "1 ชม. 15 นาทีที่แล้ว")
+ * @param {string|Date} timeIso - ISO timestamp or Date
+ * @param {number|null} [currentTimeMs=null] - Optional current timestamp for deterministic testing
+ */
+export const formatThaiRelativeTime = (timeIso, currentTimeMs = null) => {
+    if (!timeIso) return ''
+    const start = new Date(timeIso).getTime()
+    const now = currentTimeMs ? new Date(currentTimeMs).getTime() : Date.now()
+    if (isNaN(start) || isNaN(now)) return ''
+    const diffMs = now - start
+    if (diffMs < 0) return 'เพิ่งสั่ง'
+    const mins = Math.floor(diffMs / (1000 * 60))
+    if (mins <= 0) return 'เมื่อสักครู่'
+    if (mins < 60) return `${mins} นาทีที่แล้ว`
+    const hrs = Math.floor(mins / 60)
+    const remainMins = mins % 60
+    return remainMins > 0 ? `${hrs} ชม. ${remainMins} น. ที่แล้ว` : `${hrs} ชม. ที่แล้ว`
+}
+
+

@@ -2,13 +2,27 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
-import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationMinutes, formatThaiDuration } from '../../../utils/timeUtils'
+import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationMinutes, formatThaiDuration, formatThaiRelativeTime } from '../../../utils/timeUtils'
 import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 import { playAdminOrderAlert } from '../../../utils/audioHelper'
 
+/**
+ * Isolated live relative time display that updates itself without re-rendering the whole floor grid
+ */
+function LiveRelativeTime({ timeIso, className = '' }) {
+    const [now, setNow] = useState(() => Date.now())
 
+    useEffect(() => {
+        if (!timeIso) return
+        const timer = setInterval(() => setNow(Date.now()), 15000)
+        return () => clearInterval(timer)
+    }, [timeIso])
+
+    const text = formatThaiRelativeTime(timeIso, now)
+    return <span className={className}>{text}</span>
+}
 
 /**
  * Isolated live duration display that updates itself without re-rendering the whole floor grid
@@ -57,12 +71,139 @@ function LiveDurationBadge({ startTime }) {
 }
 
 /**
+ * Typography and Grid Scale Presets for Simplified Overview
+ * Scaled across 4 distinct levels:
+ * - sm: เล็ก (High density 4-6 cols, compact typography)
+ * - md: กลาง (Regular/balanced 3-4 cols, standard readable typography)
+ * - lg: ใหญ่ (Large/spacious 2-3 cols, high legibility typography)
+ * - xl: Extra (Extra Large 1-2 cols, TV/Dashboard high-visibility typography)
+ */
+export const SIZE_CONFIGS = {
+    sm: {
+        id: 'sm',
+        label: 'เล็ก',
+        enLabel: 'Compact',
+        gridCols: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6',
+        gridGap: 'gap-2.5 sm:gap-3',
+        cardPadding: 'p-2.5 sm:p-3',
+        tableName: 'text-lg sm:text-xl font-bold',
+        paxTime: 'text-[11px]',
+        liveTag: 'text-[9px] px-1.5 py-0.5',
+        headerAmount: 'text-sm sm:text-base font-bold',
+        alertBox: 'text-xs py-1 px-2',
+        noteBox: 'text-[11px] py-0.5 px-2',
+        orderCountHeader: 'text-xs font-bold',
+        roundsBadge: 'text-[9px] px-1.5 py-0.5',
+        roundBanner: 'text-[10px] py-0.5 px-1.5',
+        itemQty: 'text-[11px] font-medium',
+        itemName: 'text-[11px]',
+        itemPrice: 'text-[11px]',
+        itemSpacing: 'space-y-1',
+        listMaxHeight: 'max-h-[130px]',
+        footerLabel: 'text-[11px] font-bold',
+        footerAmount: 'text-sm font-bold',
+        tableRowPadding: 'py-2 px-2.5',
+        tableHeading: 'text-[11px]',
+        tableNameList: 'text-sm font-bold',
+        tableAmountList: 'text-xs sm:text-sm font-bold',
+        tableActionBtn: 'px-2 py-0.5 text-[10px]'
+    },
+    md: {
+        id: 'md',
+        label: 'กลาง',
+        enLabel: 'Normal',
+        gridCols: 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4',
+        gridGap: 'gap-3.5 sm:gap-4',
+        cardPadding: 'p-3.5 sm:p-4',
+        tableName: 'text-xl sm:text-2xl font-bold',
+        paxTime: 'text-xs sm:text-sm',
+        liveTag: 'text-[10px] sm:text-[11px] px-2 py-0.5 font-bold',
+        headerAmount: 'text-base sm:text-lg font-bold',
+        alertBox: 'text-xs sm:text-sm py-1.5 px-2.5 font-semibold',
+        noteBox: 'text-xs py-1 px-2.5',
+        orderCountHeader: 'text-sm font-bold',
+        roundsBadge: 'text-[10px] px-2 py-0.5',
+        roundBanner: 'text-xs py-1 px-2',
+        itemQty: 'text-xs sm:text-sm font-bold',
+        itemName: 'text-xs sm:text-sm font-medium',
+        itemPrice: 'text-xs sm:text-sm font-semibold',
+        itemSpacing: 'space-y-1.5',
+        listMaxHeight: 'max-h-[175px]',
+        footerLabel: 'text-xs font-bold',
+        footerAmount: 'text-base sm:text-lg font-bold',
+        tableRowPadding: 'py-3 px-3',
+        tableHeading: 'text-xs',
+        tableNameList: 'text-base font-bold',
+        tableAmountList: 'text-sm sm:text-base font-bold',
+        tableActionBtn: 'px-2.5 py-1 text-[11px]'
+    },
+    lg: {
+        id: 'lg',
+        label: 'ใหญ่',
+        enLabel: 'Large',
+        gridCols: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3',
+        gridGap: 'gap-4 sm:gap-5',
+        cardPadding: 'p-4 sm:p-5',
+        tableName: 'text-2xl sm:text-3xl font-bold',
+        paxTime: 'text-sm sm:text-base',
+        liveTag: 'text-xs px-2.5 py-1 font-bold',
+        headerAmount: 'text-xl sm:text-2xl font-bold',
+        alertBox: 'text-sm sm:text-base py-2 px-3 font-bold',
+        noteBox: 'text-sm py-1.5 px-3',
+        orderCountHeader: 'text-base font-bold',
+        roundsBadge: 'text-xs px-2.5 py-0.5 font-bold',
+        roundBanner: 'text-sm py-1.5 px-2.5 font-semibold',
+        itemQty: 'text-sm sm:text-base font-bold',
+        itemName: 'text-sm sm:text-base font-medium',
+        itemPrice: 'text-sm sm:text-base font-semibold',
+        itemSpacing: 'space-y-2',
+        listMaxHeight: 'max-h-[240px]',
+        footerLabel: 'text-sm font-bold',
+        footerAmount: 'text-xl sm:text-2xl font-bold',
+        tableRowPadding: 'py-3.5 px-3.5',
+        tableHeading: 'text-xs sm:text-sm',
+        tableNameList: 'text-lg font-bold',
+        tableAmountList: 'text-base sm:text-lg font-bold',
+        tableActionBtn: 'px-3 py-1.5 text-xs'
+    },
+    xl: {
+        id: 'xl',
+        label: 'Extra',
+        enLabel: 'Extra Large',
+        gridCols: 'grid-cols-1 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2',
+        gridGap: 'gap-5 sm:gap-6',
+        cardPadding: 'p-5 sm:p-6',
+        tableName: 'text-3xl sm:text-4xl font-extrabold',
+        paxTime: 'text-base sm:text-lg font-medium',
+        liveTag: 'text-sm px-3 py-1 font-extrabold',
+        headerAmount: 'text-2xl sm:text-3xl font-extrabold',
+        alertBox: 'text-base sm:text-lg py-2.5 px-3.5 font-bold',
+        noteBox: 'text-base py-2 px-3.5',
+        orderCountHeader: 'text-lg sm:text-xl font-bold',
+        roundsBadge: 'text-sm px-3 py-1 font-bold',
+        roundBanner: 'text-base py-2 px-3 font-bold',
+        itemQty: 'text-base sm:text-lg font-extrabold',
+        itemName: 'text-base sm:text-lg font-semibold',
+        itemPrice: 'text-base sm:text-lg font-bold',
+        itemSpacing: 'space-y-2.5',
+        listMaxHeight: 'max-h-[340px]',
+        footerLabel: 'text-base font-bold',
+        footerAmount: 'text-2xl sm:text-3xl font-extrabold',
+        tableRowPadding: 'py-4 px-4',
+        tableHeading: 'text-sm sm:text-base',
+        tableNameList: 'text-xl font-extrabold',
+        tableAmountList: 'text-lg sm:text-xl font-extrabold',
+        tableActionBtn: 'px-3.5 py-2 text-sm font-bold'
+    }
+}
+
+/**
  * SimplifiedLiveOverview Component
  * Focused on instant situational awareness:
  * - Realtime floor status with isolated duration counters
- * - Mobile-friendly 3-item card preview + Modal checklist (Zero scroll hijacking)
- * - Restored 2+1 typography pairing (grotesque headers, readable neutral sans body, monospace outliers)
- * - Strict 4px/8px spacing grid and Thai Modern OKLCH aesthetics
+ * - Mobile-friendly card preview + Modal checklist (Zero scroll hijacking)
+ * - Flexible font and grid scaling: เล็ก (sm) - กลาง (md) - ใหญ่ (lg) - Extra (xl)
+ * - Restored 2+1 typography pairing and strict Thai Modern OKLCH aesthetics
  */
 export default function SimplifiedLiveOverview({ 
     tables: parentTables = [],
@@ -84,6 +225,44 @@ export default function SimplifiedLiveOverview({
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [actionLoading, setActionLoading] = useState(false)
     const containerRef = useRef(null)
+
+    // User preference for font & grid scaling (sm | md | lg | xl)
+    const [overviewSize, setOverviewSize] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_admin_overview_grid_size') || 'md'
+        } catch {
+            return 'md'
+        }
+    })
+
+    const handleSetOverviewSize = (newSize) => {
+        setOverviewSize(newSize)
+        try {
+            localStorage.setItem('onhaus_admin_overview_grid_size', newSize)
+        } catch (e) {
+            console.warn('Could not save overview size preference', e)
+        }
+    }
+
+    // Sort preference: 'table' (A-Z) | 'recent' (Newest order first)
+    const [sortBy, setSortBy] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_admin_overview_sort_order') || 'table'
+        } catch {
+            return 'table'
+        }
+    })
+
+    const handleSetSortBy = (newSort) => {
+        setSortBy(newSort)
+        try {
+            localStorage.setItem('onhaus_admin_overview_sort_order', newSort)
+        } catch (e) {
+            console.warn('Could not save sort order preference', e)
+        }
+    }
+
+    const cfg = useMemo(() => SIZE_CONFIGS[overviewSize] || SIZE_CONFIGS.md, [overviewSize])
 
     const isToday = !selectedDate || selectedDate === getThaiDate()
 
@@ -356,6 +535,11 @@ export default function SimplifiedLiveOverview({
             const startTime = booking?.booking_time || booking?.created_at
             const transfer = parseTableTransferInfo(booking)
             const orderRoundsInfo = groupOrderItemsIntoRounds(orderItems, startTime)
+
+            // Latest order timestamp across items, falling back to startTime for occupied table
+            const latestOrderIso = orderRoundsInfo?.latestOrderTime || (state.status === 'occupied' ? startTime : null)
+            const latestOrderTimeMs = latestOrderIso ? new Date(latestOrderIso).getTime() : 0
+            const latestOrderTimeStr = orderRoundsInfo?.latestOrderTimeStr || (latestOrderIso ? formatThaiTimeOnly(latestOrderIso) : '')
             
             const hasCallStaff = state.status === 'occupied' && Boolean(booking?.staff_remark?.includes('[CALL_STAFF]'))
             const hasCallBill = state.status === 'occupied' && Boolean(booking?.staff_remark?.includes('[CALL_BILL]'))
@@ -368,12 +552,28 @@ export default function SimplifiedLiveOverview({
                 orderRoundsInfo,
                 billTotal,
                 startTime,
+                latestOrderIso,
+                latestOrderTimeMs,
+                latestOrderTimeStr,
                 transfer,
                 hasCallStaff,
                 hasCallBill
             }
         })
     }, [tables, liveBookings, shifts, isShiftOpen, latestClosedShift])
+
+    // Maximum order timestamp across the floor among occupied tables
+    const maxOrderTimeAcrossFloorMs = useMemo(() => {
+        let maxMs = 0
+        floorList.forEach(item => {
+            if (item.state.status === 'occupied' && item.latestOrderTimeMs > 0) {
+                if (item.latestOrderTimeMs > maxMs) {
+                    maxMs = item.latestOrderTimeMs
+                }
+            }
+        })
+        return maxMs
+    }, [floorList])
 
     // Summary counts
     const counts = useMemo(() => {
@@ -423,14 +623,26 @@ export default function SimplifiedLiveOverview({
         return 'พร้อมรับออเดอร์แรก'
     }, [revenueToday, yesterdayRevenue])
 
-    // Filtered list
+    // Filtered & Sorted list
     const filteredFloor = useMemo(() => {
-        if (selectedFilter === 'occupied') return floorList.filter(i => i.state.status === 'occupied')
-        if (selectedFilter === 'calling') return floorList.filter(i => i.hasCallBill || i.hasCallStaff)
-        if (selectedFilter === 'upcoming') return floorList.filter(i => i.state.status === 'upcoming')
-        if (selectedFilter === 'free') return floorList.filter(i => i.state.status === 'free')
-        return floorList
-    }, [floorList, selectedFilter])
+        let list = floorList
+        if (selectedFilter === 'occupied') list = floorList.filter(i => i.state.status === 'occupied')
+        else if (selectedFilter === 'calling') list = floorList.filter(i => i.hasCallBill || i.hasCallStaff)
+        else if (selectedFilter === 'upcoming') list = floorList.filter(i => i.state.status === 'upcoming')
+        else if (selectedFilter === 'free') list = floorList.filter(i => i.state.status === 'free')
+
+        if (sortBy === 'recent') {
+            return list.slice().sort((a, b) => {
+                // Occupied tables with latest orders first
+                const timeA = (a.state.status === 'occupied' ? a.latestOrderTimeMs : 0) || 0
+                const timeB = (b.state.status === 'occupied' ? b.latestOrderTimeMs : 0) || 0
+                if (timeA !== timeB) return timeB - timeA
+                // Tie-breaker by natural table name
+                return (a.table.table_name || '').localeCompare(b.table.table_name || '', undefined, { numeric: true, sensitivity: 'base' })
+            })
+        }
+        return list
+    }, [floorList, selectedFilter, sortBy])
 
     // Fullscreen Toggle with state-driven exit & iOS fallback safety
     const handleToggleFullscreen = () => {
@@ -497,17 +709,68 @@ export default function SimplifiedLiveOverview({
                 isFullscreen ? 'fixed inset-0 z-50 bg-[oklch(97%_0.008_28)] p-4 md:p-6 overflow-y-auto' : ''
             }`}
         >
-            {/* Dedicated Floating Exit Button when in Fullscreen Mode */}
+            {/* Dedicated Floating Exit & Size Bar when in Fullscreen Mode */}
             {isFullscreen && (
-                <button
-                    type="button"
-                    onClick={handleToggleFullscreen}
-                    className="fixed top-4 right-4 z-50 px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold rounded-xs shadow-lg cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
-                    title="ออกจากโหมดเต็มจอ (ESC)"
-                >
-                    <span>✕ ออกจากโหมดเต็มจอ</span>
-                    <span className="opacity-60 text-[10px] hidden sm:inline">[ESC]</span>
-                </button>
+                <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+                    {/* Sort in Fullscreen */}
+                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
+                        <button
+                            type="button"
+                            onClick={() => handleSetSortBy('table')}
+                            className={`px-2 py-1 rounded-xs font-semibold text-xs cursor-pointer ${
+                                sortBy === 'table' ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold' : 'text-[oklch(55%_0.010_28)]'
+                            }`}
+                            title="เรียงตามเลขโต๊ะ"
+                        >
+                            เลขโต๊ะ
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleSetSortBy('recent')}
+                            className={`px-2 py-1 rounded-xs font-semibold text-xs cursor-pointer flex items-center gap-1 ${
+                                sortBy === 'recent' ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold' : 'text-[oklch(55%_0.010_28)]'
+                            }`}
+                            title="เรียงตามออเดอร์ล่าสุด"
+                        >
+                            <span className="w-1.5 h-1.5 rounded-full bg-[oklch(97%_0.008_28)] shrink-0" />
+                            <span>สั่งล่าสุด</span>
+                        </button>
+                    </div>
+
+                    {/* Size in Fullscreen */}
+                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
+                        <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden sm:inline">ขนาด:</span>
+                        {[
+                            { id: 'sm', label: 'เล็ก' },
+                            { id: 'md', label: 'กลาง' },
+                            { id: 'lg', label: 'ใหญ่' },
+                            { id: 'xl', label: 'Extra' }
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => handleSetOverviewSize(opt.id)}
+                                className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
+                                    overviewSize === opt.id
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title={`ปรับขนาด: ${opt.label}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={handleToggleFullscreen}
+                        className="px-3.5 py-2 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] hover:bg-[oklch(28%_0.012_28)] border border-[oklch(85%_0.012_28)] font-mono text-xs font-bold rounded-xs shadow-lg cursor-pointer flex items-center gap-1.5 transition-all active:scale-95"
+                        title="ออกจากโหมดเต็มจอ (ESC)"
+                    >
+                        <span>✕ ออกจากโหมดเต็มจอ</span>
+                        <span className="opacity-60 text-[10px] hidden sm:inline">[ESC]</span>
+                    </button>
+                </div>
             )}
 
             {/* 1. Hero Pulse: 3-Second Executive Awareness Strip (Equal Weight Blocks) */}
@@ -577,15 +840,81 @@ export default function SimplifiedLiveOverview({
                     </div>
                 </div>
 
-                {/* Sub-bar: Density Switcher & Fullscreen (Restrained and Aligned) */}
-                <div className="mt-4 pt-3 border-t border-[oklch(88%_0.012_28)] flex items-center justify-between flex-wrap gap-2 text-xs">
-                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)]">
+                {/* Sub-bar: Size Scaler, View Density Switcher & Fullscreen (Restrained and Aligned) */}
+                <div className="mt-4 pt-3 border-t border-[oklch(88%_0.012_28)] flex flex-col md:flex-row md:items-center justify-between gap-2.5 text-xs">
+                    <div className="flex items-center gap-2 font-mono text-[11px] text-[oklch(55%_0.010_28)] flex-wrap">
                         <span className="font-bold text-[oklch(18%_0.012_28)] uppercase">{!isToday ? 'FLOOR SNAPSHOT' : 'CURRENT ACTIVITY'}</span>
                         <span>//</span>
                         <span>{!isToday ? `ผังโต๊ะบันทึกย้อนหลัง (${counts.total} โต๊ะ)` : isShiftOpen ? `${counts.occupied} โต๊ะกำลังทาน` : 'กะปิดหน้าร้าน (0 โต๊ะกำลังทาน)'}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+                        {/* Sort Order Selector: เลขโต๊ะ | ออเดอร์ล่าสุด */}
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                เรียง:
+                            </span>
+                            <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSetSortBy('table')}
+                                    className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer ${
+                                        sortBy === 'table'
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                    }`}
+                                    title="เรียงตามเลขโต๊ะปกติ (A-Z)"
+                                >
+                                    เลขโต๊ะ
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSetSortBy('recent')}
+                                    className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                                        sortBy === 'recent'
+                                            ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                    }`}
+                                    title="เรียงโต๊ะที่สั่งล่าสุดขึ้นก่อน (เหมาะสำหรับตรวจออเดอร์ในร้านหลายโต๊ะ)"
+                                >
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[oklch(97%_0.008_28)] shrink-0" />
+                                    <span>ออเดอร์ล่าสุด</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Font & Grid Scale Selector: เล็ก - กลาง - ใหญ่ - Extra */}
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[11px] font-bold text-[oklch(42%_0.010_28)] uppercase tracking-wider">
+                                ขนาด:
+                            </span>
+                            <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                                {[
+                                    { id: 'sm', label: 'เล็ก', hint: 'Compact' },
+                                    { id: 'md', label: 'กลาง', hint: 'Normal' },
+                                    { id: 'lg', label: 'ใหญ่', hint: 'Large' },
+                                    { id: 'xl', label: 'Extra', hint: 'Extra Large / TV' }
+                                ].map(size => {
+                                    const isSelected = overviewSize === size.id
+                                    return (
+                                        <button
+                                            key={size.id}
+                                            type="button"
+                                            onClick={() => handleSetOverviewSize(size.id)}
+                                            className={`px-2 sm:px-2.5 py-1 rounded-xs font-semibold transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
+                                                    : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                            }`}
+                                            title={`ปรับขนาดฟอนต์และผัง: ${size.label} (${size.hint})`}
+                                        >
+                                            {size.label}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
                         {/* View Density Toggle */}
                         <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
                             <button
@@ -704,14 +1033,14 @@ export default function SimplifiedLiveOverview({
                 ------------------------------------------------------------- */
                 <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] rounded-sm overflow-hidden shadow-2xs">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs border-collapse font-sans">
+                        <table className="w-full text-left border-collapse font-sans">
                             <thead>
-                                <tr className="bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[11px] font-bold">
-                                    <th className="py-2.5 px-3 whitespace-nowrap">โต๊ะ / ความจุ</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap">เวลา / สถานะ</th>
-                                    <th className="py-2.5 px-3 whitespace-nowrap">รายการอาหารที่สั่ง</th>
-                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">ยอดรวมบิล</th>
-                                    <th className="py-2.5 px-3 text-right whitespace-nowrap">รายละเอียด</th>
+                                <tr className={`bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] font-bold ${cfg.tableHeading}`}>
+                                    <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>โต๊ะ / ความจุ</th>
+                                    <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>เวลา / สถานะ</th>
+                                    <th className={`${cfg.tableRowPadding} whitespace-nowrap`}>รายการอาหารที่สั่ง</th>
+                                    <th className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>ยอดรวมบิล</th>
+                                    <th className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>รายละเอียด</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[oklch(88%_0.012_28)]">
@@ -720,6 +1049,12 @@ export default function SimplifiedLiveOverview({
                                     const isUpcoming = item.state.status === 'upcoming'
                                     const isBlocked = item.state.status === 'blocked'
                                     const orderItems = item.orderItems
+
+                                    const isLatestOrderOnFloor = Boolean(
+                                        isOccupied &&
+                                        maxOrderTimeAcrossFloorMs > 0 &&
+                                        item.latestOrderTimeMs === maxOrderTimeAcrossFloorMs
+                                    )
 
                                     const itemPreviews = orderItems.map(it => `${it.quantity}x ${it.menu_items?.name || 'อาหาร'}`)
                                     const foodText = itemPreviews.length > 0 
@@ -731,53 +1066,62 @@ export default function SimplifiedLiveOverview({
                                             key={item.table.id}
                                             onClick={() => setInspectingTable(item)}
                                             className={`hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer select-none ${
-                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : ''
+                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isLatestOrderOnFloor ? 'bg-[oklch(96%_0.015_28)]' : ''
                                             }`}
                                         >
                                             {/* Table & Pax */}
-                                            <td className="py-3 px-3 whitespace-nowrap">
+                                            <td className={`${cfg.tableRowPadding} whitespace-nowrap`}>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-mono font-bold text-base text-[oklch(18%_0.012_28)]">
+                                                    <span className={`font-mono text-[oklch(18%_0.012_28)] ${cfg.tableNameList}`}>
                                                         {item.table.table_name}
                                                     </span>
-                                                    <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold">
+                                                    <span className={`font-mono bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
                                                         {item.table.capacity} Pax
                                                     </span>
+                                                    {isLatestOrderOnFloor && (
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider">
+                                                            LATEST
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </td>
 
                                             {/* Time / Status (Using isolated LiveDurationBadge) */}
-                                            <td className="py-3 px-3 whitespace-nowrap">
+                                            <td className={`${cfg.tableRowPadding} whitespace-nowrap`}>
                                                 <div className="flex items-center gap-2">
                                                     {isOccupied ? (
                                                         <>
                                                             <LiveDurationBadge startTime={item.startTime} />
-                                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)] hidden sm:inline tabular-nums">
+                                                            <span className={`font-mono text-[oklch(55%_0.010_28)] hidden sm:inline tabular-nums ${cfg.paxTime}`}>
                                                                 (เริ่ม {formatThaiTimeOnly(item.booking?.booking_time)})
                                                             </span>
-                                                            {item.orderRoundsInfo?.hasAdditionalOrders && (
-                                                                <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-xs tabular-nums" title={`สั่งเพิ่มล่าสุดเวลา ${item.orderRoundsInfo.latestOrderTimeStr} น.`}>
-                                                                    + สั่งเพิ่ม {item.orderRoundsInfo.latestOrderTimeStr}
+                                                            {item.latestOrderIso && (
+                                                                <span className={`font-mono font-bold ${
+                                                                    isLatestOrderOnFloor 
+                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
+                                                                        : 'bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]'
+                                                                } rounded-xs tabular-nums px-1.5 py-0.5 ${cfg.roundsBadge}`} title={`สั่งล่าสุดเวลา ${item.latestOrderTimeStr} น.`}>
+                                                                    สั่งล่าสุด {item.latestOrderTimeStr} (<LiveRelativeTime timeIso={item.latestOrderIso} />)
                                                                 </span>
                                                             )}
                                                         </>
                                                     ) : isUpcoming ? (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)]">
+                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(60%_0.15_60)] text-[oklch(18%_0.012_28)] ${cfg.roundsBadge}`}>
                                                             จองล่วงหน้า
                                                         </span>
                                                     ) : isBlocked ? (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)] font-mono">
+                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(18%_0.012_28)]/40 text-[oklch(97%_0.008_28)] font-mono ${cfg.roundsBadge}`}>
                                                             BLOCKED
                                                         </span>
                                                     ) : (
-                                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)]">
+                                                        <span className={`px-2 py-0.5 font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] ${cfg.roundsBadge}`}>
                                                             โต๊ะว่าง
                                                         </span>
                                                     )}
 
                                                     {/* Call Alert Badge */}
                                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-xs animate-pulse">
+                                                        <span className={`px-1.5 py-0.5 font-bold bg-[oklch(75%_0.18_65)] text-[oklch(18%_0.012_28)] rounded-xs animate-pulse ${cfg.roundsBadge}`}>
                                                             {item.hasCallBill ? 'เช็คบิล' : 'เรียกพนักงาน'}
                                                         </span>
                                                     )}
@@ -785,33 +1129,33 @@ export default function SimplifiedLiveOverview({
                                             </td>
 
                                             {/* Order Items Preview */}
-                                            <td className="py-3 px-3 max-w-[280px] truncate">
+                                            <td className={`${cfg.tableRowPadding} max-w-[280px] truncate`}>
                                                 {isOccupied ? (
                                                     <div className="flex items-center gap-1.5 truncate">
-                                                        <span className="font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
+                                                        <span className={`font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap ${cfg.paxTime}`}>
                                                             {orderItems.length} รายการ{item.orderRoundsInfo?.hasAdditionalOrders ? ` (${item.orderRoundsInfo.totalRounds} รอบ)` : ''}:
                                                         </span>
-                                                        <span className="text-xs text-[oklch(55%_0.010_28)] truncate">
+                                                        <span className={`text-[oklch(55%_0.010_28)] truncate ${cfg.paxTime}`}>
                                                             {foodText}
                                                         </span>
-                                                        <span className="text-[11px] text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline">
+                                                        <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
                                                             [ดูครบ]
                                                         </span>
                                                     </div>
                                                 ) : (
-                                                    <span className="text-[oklch(60%_0.010_28)] text-xs">-</span>
+                                                    <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>-</span>
                                                 )}
                                             </td>
 
                                             {/* Total Amount */}
-                                            <td className="py-3 px-3 text-right whitespace-nowrap">
-                                                <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                            <td className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>
+                                                <span className={`font-mono text-[oklch(18%_0.012_28)] tabular-nums ${cfg.tableAmountList}`}>
                                                     {isOccupied ? `฿${item.billTotal.toLocaleString()}` : '-'}
                                                 </span>
                                             </td>
 
                                             {/* Action */}
-                                            <td className="py-3 px-3 text-right whitespace-nowrap">
+                                            <td className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>
                                                 <div className="flex items-center justify-end">
                                                     {isOccupied && item.booking ? (
                                                         <button
@@ -820,14 +1164,14 @@ export default function SimplifiedLiveOverview({
                                                                 e.stopPropagation()
                                                                 setInspectingTable(item)
                                                             }}
-                                                            className="px-2.5 py-1 text-[11px] font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1"
+                                                            className={`font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1 ${cfg.tableActionBtn}`}
                                                             title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
                                                         >
                                                             <span>ดูบิลอาหาร</span>
                                                             <span>➔</span>
                                                         </button>
                                                     ) : (
-                                                        <span className="text-[11px] text-[oklch(60%_0.010_28)]">โต๊ะว่าง</span>
+                                                        <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>โต๊ะว่าง</span>
                                                     )}
                                                 </div>
                                             </td>
@@ -842,7 +1186,7 @@ export default function SimplifiedLiveOverview({
                 /* -------------------------------------------------------------
                    CARD VIEW: COMPLETE MENU CARDS (Zero Scroll-Hijacking on Mobile)
                 ------------------------------------------------------------- */
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 transition-all duration-200 font-sans">
+                <div className={`grid ${cfg.gridCols} ${cfg.gridGap} transition-all duration-200 font-sans`}>
                     {filteredFloor.map(item => {
                         const isOccupied = item.state.status === 'occupied'
                         const isUpcoming = item.state.status === 'upcoming'
@@ -850,14 +1194,25 @@ export default function SimplifiedLiveOverview({
                         const orderItems = item.orderItems
                         const guestCount = item.booking?.guest_count || item.table.capacity || 2
 
+                        const isLatestOrderOnFloor = Boolean(
+                            isOccupied && 
+                            maxOrderTimeAcrossFloorMs > 0 && 
+                            item.latestOrderTimeMs === maxOrderTimeAcrossFloorMs
+                        )
+
                         let borderStyle = 'border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
                         let bgStyle = 'bg-[oklch(97%_0.008_28)]'
 
                         if (isOccupied) {
                             // Red is STRICTLY reserved for action-required alerts (hasCallBill / hasCallStaff)
-                            borderStyle = (item.hasCallBill || item.hasCallStaff)
-                                ? 'border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]' 
-                                : 'border-[oklch(18%_0.012_28)]'
+                            if (item.hasCallBill || item.hasCallStaff) {
+                                borderStyle = 'border-[oklch(52%_0.16_28)] ring-1 ring-[oklch(52%_0.16_28)]'
+                            } else if (isLatestOrderOnFloor) {
+                                // Terracotta beacon border for the newest order on the floor
+                                borderStyle = 'border-[oklch(52%_0.16_28)] ring-2 ring-[oklch(52%_0.16_28)]/50'
+                            } else {
+                                borderStyle = 'border-[oklch(18%_0.012_28)]'
+                            }
                             bgStyle = 'bg-[oklch(97%_0.008_28)]'
                         } else if (isUpcoming) {
                             borderStyle = 'border-[oklch(85%_0.012_28)]'
@@ -871,28 +1226,46 @@ export default function SimplifiedLiveOverview({
                             <div
                                 key={item.table.id}
                                 onClick={() => setInspectingTable(item)}
-                                className={`p-3.5 rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs ${bgStyle} ${borderStyle}`}
+                                className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs ${bgStyle} ${borderStyle}`}
                             >
                                 {/* 1. Card Top: Table Name, Pax & Time vs Total & LIVE Tag */}
                                 <div>
+                                    {/* Top Floor Beacon for the Table with the latest order */}
+                                    {isLatestOrderOnFloor && (
+                                        <div className="mb-2 px-2.5 py-1 bg-[oklch(93%_0.025_28)] border-l-2 border-[oklch(52%_0.16_28)] text-[oklch(35%_0.16_28)] flex items-center justify-between rounded-xs">
+                                            <div className="flex items-center gap-1.5 font-mono text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0 animate-pulse" />
+                                                <span>LATEST // สั่งล่าสุดทั้งร้าน</span>
+                                            </div>
+                                            <div className="font-mono text-[10px] sm:text-[11px] font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                                {item.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={item.latestOrderIso} />)
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex items-start justify-between pb-2 border-b border-[oklch(88%_0.012_28)]">
                                         <div>
                                             <div className="flex items-baseline gap-2">
-                                                <span className="font-mono text-xl font-bold text-[oklch(18%_0.012_28)]">
+                                                <span className={`font-mono text-[oklch(18%_0.012_28)] ${cfg.tableName}`}>
                                                     {item.table.table_name}
                                                 </span>
                                             </div>
-                                            <div className="text-[11px] font-mono text-[oklch(55%_0.010_28)] mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                            <div className={`font-mono text-[oklch(55%_0.010_28)] mt-0.5 flex items-center gap-1.5 flex-wrap ${cfg.paxTime}`}>
                                                 {isOccupied ? (
                                                     <>
                                                         <span>{guestCount} pax · {formatThaiTimeOnly(item.booking?.booking_time)}</span>
-                                                        {item.orderRoundsInfo?.hasAdditionalOrders && (
+                                                        <LiveDurationBadge startTime={item.startTime} />
+                                                        {item.latestOrderIso && (
                                                             <span 
-                                                                className="px-1.5 py-0.2 bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold text-[9px] tabular-nums flex items-center gap-1"
-                                                                title={`สั่งเพิ่มล่าสุดเวลา ${item.orderRoundsInfo.latestOrderTimeStr} น.`}
+                                                                className={`rounded-xs font-bold tabular-nums flex items-center gap-1 ${
+                                                                    isLatestOrderOnFloor 
+                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5' 
+                                                                        : 'bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5'
+                                                                } ${cfg.roundsBadge}`}
+                                                                title={`สั่งล่าสุดเวลา ${item.latestOrderTimeStr} น.`}
                                                             >
-                                                                <span className="w-1 h-1 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />
-                                                                <span>+สั่งเพิ่ม {item.orderRoundsInfo.latestOrderTimeStr}</span>
+                                                                <span className={`w-1 h-1 rounded-full shrink-0 ${isLatestOrderOnFloor ? 'bg-[oklch(97%_0.008_28)]' : 'bg-[oklch(52%_0.16_28)]'}`} />
+                                                                <span>สั่งล่าสุด {item.latestOrderTimeStr} (<LiveRelativeTime timeIso={item.latestOrderIso} />)</span>
                                                             </span>
                                                         )}
                                                     </>
@@ -905,23 +1278,23 @@ export default function SimplifiedLiveOverview({
                                         <div className="text-right">
                                             {isOccupied ? (
                                                 <>
-                                                    <div className="font-mono text-base font-bold text-[oklch(18%_0.012_28)] tabular-nums">
+                                                    <div className={`font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums ${cfg.headerAmount}`}>
                                                         ฿{item.billTotal.toLocaleString()}
                                                     </div>
-                                                    <span className="inline-block mt-0.5 px-1.5 py-0.2 rounded-xs font-mono text-[9px] font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]">
+                                                    <span className={`inline-block mt-0.5 rounded-xs font-mono font-bold uppercase bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] ${cfg.liveTag}`}>
                                                         LIVE
                                                     </span>
                                                 </>
                                             ) : isUpcoming ? (
-                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono">
+                                                <span className={`inline-block font-bold rounded-xs bg-[oklch(92%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono ${cfg.liveTag}`}>
                                                     RESERVED
                                                 </span>
                                             ) : isBlocked ? (
-                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(88%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono">
+                                                <span className={`inline-block font-bold rounded-xs bg-[oklch(88%_0.010_28)] text-[oklch(42%_0.010_28)] uppercase font-mono ${cfg.liveTag}`}>
                                                     BLOCKED
                                                 </span>
                                             ) : (
-                                                <span className="inline-block px-1.5 py-0.5 text-[9px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] uppercase font-mono">
+                                                <span className={`inline-block font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] uppercase font-mono ${cfg.liveTag}`}>
                                                     FREE
                                                 </span>
                                             )}
@@ -930,7 +1303,7 @@ export default function SimplifiedLiveOverview({
 
                                     {/* Action Required: Call Staff / Bill Alert Badge (RED ONLY HERE) */}
                                     {(item.hasCallBill || item.hasCallStaff) && (
-                                        <div className="mt-2 px-2 py-1 bg-[oklch(92%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] text-xs font-bold rounded-xs flex items-center justify-between animate-pulse">
+                                        <div className={`mt-2 bg-[oklch(92%_0.02_28)] border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] font-bold rounded-xs flex items-center justify-between animate-pulse ${cfg.alertBox}`}>
                                             <span>[ALERT] {item.hasCallBill ? 'ขอเช็คบิล' : 'เรียกพนักงาน'}</span>
                                             <button
                                                 type="button"
@@ -944,99 +1317,113 @@ export default function SimplifiedLiveOverview({
 
                                     {/* Customer Note */}
                                     {item.booking?.customer_note && (
-                                        <div className="mt-2 px-2 py-0.5 bg-[oklch(92%_0.010_28)] rounded-xs text-[11px] text-[oklch(42%_0.010_28)] truncate">
+                                        <div className={`mt-2 bg-[oklch(92%_0.010_28)] rounded-xs text-[oklch(42%_0.010_28)] truncate ${cfg.noteBox}`}>
                                             โน้ต: "{item.booking.customer_note}"
                                         </div>
                                     )}
 
-                                    {/* 2. Menu Items Section: Prominent count, compact secondary items (~70-80% height) */}
+                                    {/* 2. Menu Items Section: Prominent count, compact secondary items */}
                                     {isOccupied ? (
                                         <div className="mt-2.5 pt-1.5">
-                                            <div className="flex items-center justify-between font-sans text-xs font-bold text-[oklch(18%_0.012_28)] mb-1.5">
+                                            <div className={`flex items-center justify-between font-sans font-bold text-[oklch(18%_0.012_28)] mb-1.5 ${cfg.orderCountHeader}`}>
                                                 <div className="flex items-center gap-1.5">
                                                     <span>{orderItems.length} รายการ</span>
                                                     {item.orderRoundsInfo?.hasAdditionalOrders && (
-                                                        <span className="font-mono text-[10px] font-bold text-[oklch(52%_0.16_28)] bg-[oklch(93%_0.02_28)] px-1.5 py-0.2 rounded-xs border border-[oklch(85%_0.012_28)]">
+                                                        <span className={`font-mono font-bold text-[oklch(52%_0.16_28)] bg-[oklch(93%_0.02_28)] rounded-xs border border-[oklch(85%_0.012_28)] ${cfg.roundsBadge}`}>
                                                             {item.orderRoundsInfo.totalRounds} รอบ
                                                         </span>
                                                     )}
                                                 </div>
                                                 {item.orderRoundsInfo?.hasAdditionalOrders && (
-                                                    <span className="font-mono text-[10px] text-[oklch(52%_0.16_28)] font-bold">
+                                                    <span className={`font-mono text-[oklch(52%_0.16_28)] font-bold ${cfg.paxTime}`}>
                                                         สั่งเพิ่มล่าสุด {item.orderRoundsInfo.latestOrderTimeStr}
                                                     </span>
                                                 )}
                                             </div>
 
                                             {orderItems.length === 0 ? (
-                                                <span className="text-xs text-[oklch(60%_0.010_28)] italic block py-2 text-center">
+                                                <span className={`text-[oklch(60%_0.010_28)] italic block py-2 text-center ${cfg.paxTime}`}>
                                                     ยังไม่มีรายการสั่งอาหาร
                                                 </span>
                                             ) : item.orderRoundsInfo?.hasAdditionalOrders ? (
-                                                <div className="max-h-[145px] overflow-y-auto space-y-2 pr-1 overscroll-contain text-xs divide-y divide-[oklch(88%_0.012_28)]">
-                                                    {item.orderRoundsInfo.rounds.map((round) => (
-                                                        <div key={round.roundNumber} className="pt-2 first:pt-0">
-                                                            {/* Round Sub-header with distinct Thai Modern terracotta accent on additional orders */}
-                                                            <div className={`flex items-center justify-between px-1.5 py-0.5 rounded-xs font-mono text-[10px] font-bold mb-1 ${
-                                                                round.isAdditional 
-                                                                    ? 'bg-[oklch(93%_0.02_28)] text-[oklch(40%_0.16_28)] border-l-2 border-[oklch(52%_0.16_28)]' 
-                                                                    : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-l-2 border-[oklch(75%_0.012_28)]'
-                                                            }`}>
-                                                                <span className="flex items-center gap-1">
-                                                                    <span>{round.isInitial ? `รอบ 1 · ${round.timeStr}` : `รอบ ${round.roundNumber} (สั่งเพิ่ม) · ${round.timeStr}`}</span>
-                                                                    {round.elapsedFromStartMinutes > 0 && (
-                                                                        <span className="font-normal opacity-75">(+{round.elapsedFromStartMinutes}น.)</span>
-                                                                    )}
-                                                                </span>
-                                                                <span className="tabular-nums">
-                                                                    {round.items.length} รายการ
-                                                                </span>
-                                                            </div>
-                                                            {/* Items inside this round */}
-                                                            <div className="space-y-1 divide-y divide-[oklch(92%_0.010_28)] pl-1">
-                                                                {round.items.map((it, idx) => {
-                                                                    const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
-                                                                    const price = Number(it.price_at_time || it.menu_items?.price || 0)
-                                                                    const lineTotal = price * Number(it.quantity || 1)
+                                                <div className={`${cfg.listMaxHeight} overflow-y-auto ${cfg.itemSpacing} pr-1 overscroll-contain divide-y divide-[oklch(88%_0.012_28)]`}>
+                                                    {item.orderRoundsInfo.rounds.map((round) => {
+                                                        const isNewestRound = round.roundNumber === item.orderRoundsInfo.totalRounds
+                                                        return (
+                                                            <div key={round.roundNumber} className="pt-2 first:pt-0">
+                                                                {/* Round Sub-header with distinct Thai Modern terracotta accent on newest round */}
+                                                                <div className={`flex items-center justify-between rounded-xs font-mono font-bold mb-1 ${cfg.roundBanner} ${
+                                                                    isNewestRound 
+                                                                        ? 'bg-[oklch(93%_0.025_28)] text-[oklch(35%_0.16_28)] border-l-2 border-[oklch(52%_0.16_28)]' 
+                                                                        : round.isAdditional
+                                                                            ? 'bg-[oklch(94%_0.015_28)] text-[oklch(40%_0.14_28)] border-l-2 border-[oklch(65%_0.10_28)]'
+                                                                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border-l-2 border-[oklch(75%_0.012_28)]'
+                                                                }`}>
+                                                                    <span className="flex items-center gap-1.5 flex-wrap">
+                                                                        {isNewestRound && item.orderRoundsInfo.totalRounds > 1 && (
+                                                                            <span className="px-1 py-0.2 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] text-[9px] font-bold">
+                                                                                ล่าสุด
+                                                                            </span>
+                                                                        )}
+                                                                        <span>{round.isInitial ? `รอบ 1 · ${round.timeStr}` : `รอบ ${round.roundNumber} (สั่งเพิ่ม) · ${round.timeStr}`}</span>
+                                                                        {round.timeIso && (
+                                                                            <span className="font-normal opacity-80 text-[10px] sm:text-[11px]">(<LiveRelativeTime timeIso={round.timeIso} />)</span>
+                                                                        )}
+                                                                    </span>
+                                                                    <span className="tabular-nums">
+                                                                        {round.items.length} รายการ
+                                                                    </span>
+                                                                </div>
+                                                                {/* Items inside this round */}
+                                                                <div className={`${cfg.itemSpacing} divide-y divide-[oklch(92%_0.010_28)] pl-1 ${
+                                                                    isNewestRound ? 'bg-[oklch(95%_0.012_28)]/50 rounded-xs p-1 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                                                }`}>
+                                                                    {round.items.map((it, idx) => {
+                                                                        const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
+                                                                        const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                                                        const lineTotal = price * Number(it.quantity || 1)
 
-                                                                    return (
-                                                                        <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[11px] text-[oklch(42%_0.010_28)]">
-                                                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
-                                                                                <span className="font-mono font-medium text-[oklch(55%_0.010_28)] tabular-nums shrink-0">
-                                                                                    {it.quantity}x
-                                                                                </span>
-                                                                                <span className="truncate">
-                                                                                    {itemName}
+                                                                        return (
+                                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[oklch(42%_0.010_28)]">
+                                                                                <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                                                                                    <span className={`font-mono text-[oklch(18%_0.012_28)] font-bold tabular-nums shrink-0 ${cfg.itemQty}`}>
+                                                                                        {it.quantity}x
+                                                                                    </span>
+                                                                                    <span className={`truncate font-medium text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
+                                                                                        {itemName}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span className={`font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0 ${cfg.itemPrice}`}>
+                                                                                    ฿{lineTotal.toLocaleString()}
                                                                                 </span>
                                                                             </div>
-                                                                            <span className="font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0">
-                                                                                ฿{lineTotal.toLocaleString()}
-                                                                            </span>
-                                                                        </div>
-                                                                    )
-                                                                })}
+                                                                        )
+                                                                    })}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    ))}
+                                                        )
+                                                    })}
                                                 </div>
                                             ) : (
-                                                <div className="max-h-[145px] overflow-y-auto space-y-1 pr-1 overscroll-contain divide-y divide-[oklch(92%_0.010_28)] text-xs">
+                                                <div className={`${cfg.listMaxHeight} overflow-y-auto ${cfg.itemSpacing} pr-1 overscroll-contain divide-y divide-[oklch(92%_0.010_28)] ${
+                                                    isLatestOrderOnFloor && orderItems.length > 0 ? 'bg-[oklch(95%_0.012_28)]/50 rounded-xs p-1 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                                }`}>
                                                     {orderItems.map((it, idx) => {
                                                         const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                         const lineTotal = price * Number(it.quantity || 1)
 
                                                         return (
-                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[11px] text-[oklch(42%_0.010_28)]">
+                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[oklch(42%_0.010_28)]">
                                                                 <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
-                                                                    <span className="font-mono font-medium text-[oklch(55%_0.010_28)] tabular-nums shrink-0">
+                                                                    <span className={`font-mono text-[oklch(18%_0.012_28)] font-bold tabular-nums shrink-0 ${cfg.itemQty}`}>
                                                                         {it.quantity}x
                                                                     </span>
-                                                                    <span className="truncate">
+                                                                    <span className={`truncate font-medium text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
                                                                         {itemName}
                                                                     </span>
                                                                 </div>
-                                                                <span className="font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0">
+                                                                <span className={`font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0 ${cfg.itemPrice}`}>
                                                                     ฿{lineTotal.toLocaleString()}
                                                                 </span>
                                                             </div>
@@ -1046,16 +1433,16 @@ export default function SimplifiedLiveOverview({
                                             )}
                                         </div>
                                     ) : isUpcoming ? (
-                                        <div className="mt-3 py-2 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center text-xs">
+                                        <div className={`mt-3 py-2 px-2 bg-[oklch(94%_0.010_28)] rounded-xs border border-dashed border-[oklch(85%_0.012_28)] text-center ${cfg.orderCountHeader}`}>
                                             <span className="font-bold text-[oklch(18%_0.012_28)] block">
                                                 จอง {formatThaiTimeOnly(item.booking?.booking_time)}
                                             </span>
-                                            <span className="text-[11px] text-[oklch(55%_0.010_28)] block">
+                                            <span className={`text-[oklch(55%_0.010_28)] block ${cfg.paxTime}`}>
                                                 {item.booking?.customer_name || 'ลูกค้า'} ({guestCount} ท่าน)
                                             </span>
                                         </div>
                                     ) : (
-                                        <div className="mt-3 py-2 text-center text-xs text-[oklch(60%_0.010_28)]">
+                                        <div className={`mt-3 py-2 text-center text-[oklch(60%_0.010_28)] ${cfg.orderCountHeader}`}>
                                             โต๊ะว่าง พร้อมเปิดบริการ
                                         </div>
                                     )}
@@ -1064,16 +1451,16 @@ export default function SimplifiedLiveOverview({
                                 {/* 3. Card Footer: Prominent TOTAL */}
                                 <div className="mt-2.5 pt-2 border-t border-[oklch(85%_0.012_28)] flex items-center justify-between text-xs">
                                     <div className="flex items-center gap-1.5">
-                                        <span className="font-mono font-bold text-[11px] tracking-wider text-[oklch(18%_0.012_28)]">
+                                        <span className={`font-mono tracking-wider text-[oklch(18%_0.012_28)] ${cfg.footerLabel}`}>
                                             TOTAL
                                         </span>
                                         {item.orderRoundsInfo?.hasAdditionalOrders && (
-                                            <span className="font-mono text-[10px] text-[oklch(55%_0.010_28)]">
+                                            <span className={`font-mono text-[oklch(55%_0.010_28)] ${cfg.paxTime}`}>
                                                 ({item.orderRoundsInfo.totalRounds} รอบ)
                                             </span>
                                         )}
                                     </div>
-                                    <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                    <span className={`font-mono text-[oklch(18%_0.012_28)] tabular-nums ${cfg.footerAmount}`}>
                                         {isOccupied ? `฿${item.billTotal.toLocaleString()}` : '-'}
                                     </span>
                                 </div>
@@ -1111,10 +1498,16 @@ export default function SimplifiedLiveOverview({
                                         <>
                                             เริ่มเปิดโต๊ะ: <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(inspectingTable.booking?.booking_time)}</span>
                                             {' '}• นั่งมาแล้ว <span className="font-semibold text-[oklch(52%_0.16_28)]"><LiveDuration startTime={inspectingTable.startTime} /></span>
+                                            {inspectingTable.latestOrderIso && (
+                                                <>
+                                                    {' '}• <span className="inline-flex items-center gap-1 font-semibold text-[oklch(52%_0.16_28)]">
+                                                        สั่งล่าสุดเมื่อ {inspectingTable.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={inspectingTable.latestOrderIso} />)
+                                                    </span>
+                                                </>
+                                            )}
                                             {inspectingRounds.hasAdditionalOrders && (
                                                 <>
-                                                    {' '}• สั่งอาหาร <span className="font-semibold text-[oklch(18%_0.012_28)]">{inspectingRounds.totalRounds} รอบ</span>
-                                                    {' '}(<span className="text-[oklch(52%_0.16_28)] font-semibold">สั่งเพิ่มล่าสุด {inspectingRounds.latestOrderTimeStr} น.</span>)
+                                                    {' '}• รวม <span className="font-semibold text-[oklch(18%_0.012_28)]">{inspectingRounds.totalRounds} รอบ</span>
                                                 </>
                                             )}
                                         </>
@@ -1151,34 +1544,45 @@ export default function SimplifiedLiveOverview({
                                     ยังไม่มีรายการอาหารสำหรับโต๊ะนี้
                                 </div>
                             ) : inspectingRounds.hasAdditionalOrders ? (
-                                inspectingRounds.rounds.map((round) => (
-                                    <div key={round.roundNumber} className="py-2.5 first:pt-0">
-                                        {/* Round Header Bar with distinct Thai Modern terracotta accent on additional orders */}
-                                        <div className={`p-2 rounded-xs border flex items-center justify-between font-mono text-xs font-bold mb-2 ${
-                                            round.isAdditional 
-                                                ? 'bg-[oklch(94%_0.015_28)] border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)]' 
-                                                : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
-                                        }`}>
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className={`px-1.5 py-0.5 rounded-xs text-[10px] uppercase font-mono font-bold ${
-                                                    round.isAdditional ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                }`}>
-                                                    {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งเพิ่ม)`}
-                                                </span>
-                                                <span>สั่งเมื่อ {round.timeStr} น.</span>
-                                                {round.elapsedFromStartMinutes > 0 && (
-                                                    <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)]">
-                                                        (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
+                                inspectingRounds.rounds.map((round) => {
+                                    const isNewestRound = round.roundNumber === inspectingRounds.totalRounds
+                                    return (
+                                        <div key={round.roundNumber} className="py-2.5 first:pt-0">
+                                            {/* Round Header Bar with distinct Thai Modern terracotta accent on newest round */}
+                                            <div className={`p-2 rounded-xs border flex items-center justify-between font-mono text-xs font-bold mb-2 ${
+                                                isNewestRound 
+                                                    ? 'bg-[oklch(93%_0.025_28)] border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)]' 
+                                                    : round.isAdditional 
+                                                        ? 'bg-[oklch(94%_0.015_28)] border-[oklch(75%_0.10_28)] text-[oklch(40%_0.14_28)]'
+                                                        : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
+                                            }`}>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className={`px-1.5 py-0.5 rounded-xs text-[10px] uppercase font-mono font-bold ${
+                                                        isNewestRound ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : round.isAdditional ? 'bg-[oklch(40%_0.14_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                                    }`}>
+                                                        {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งเพิ่ม)`}
                                                     </span>
-                                                )}
+                                                    <span>สั่งเมื่อ {round.timeStr} น.</span>
+                                                    {round.timeIso && (
+                                                        <span className="text-[11px] font-normal text-[oklch(52%_0.16_28)] font-semibold">
+                                                            (<LiveRelativeTime timeIso={round.timeIso} />)
+                                                        </span>
+                                                    )}
+                                                    {round.elapsedFromStartMinutes > 0 && (
+                                                        <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)]">
+                                                            (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <span className="tabular-nums">
+                                                    {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
+                                                </span>
                                             </div>
-                                            <span className="tabular-nums">
-                                                {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
-                                            </span>
-                                        </div>
 
-                                        {/* Items in this round */}
-                                        <div className="divide-y divide-[oklch(88%_0.012_28)] pl-1">
+                                            {/* Items in this round */}
+                                            <div className={`divide-y divide-[oklch(88%_0.012_28)] pl-1 ${
+                                                isNewestRound ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs p-1.5 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                            }`}>
                                             {round.items.map((item, idx) => {
                                                 const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
                                                 const price = Number(item.price_at_time || item.menu_items?.price || 0)
@@ -1219,9 +1623,10 @@ export default function SimplifiedLiveOverview({
                                                     </div>
                                                 )
                                             })}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))
+                                    )
+                                })
                             ) : (
                                 inspectingTable.orderItems.map((item, idx) => {
                                     const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
