@@ -217,8 +217,10 @@ export default function IntradayVelocityDaypartCockpit({
             const saved = localStorage.getItem('intraday_cockpit_minimal_mode')
             if (saved !== null) return JSON.parse(saved)
             if (typeof window !== 'undefined') {
-                const isTouchMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 640
-                return isTouchMobile
+                const isTouchDevice = (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0) ||
+                    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                    window.innerWidth < 640
+                return isTouchDevice
             }
             return false
         } catch {
@@ -247,18 +249,35 @@ export default function IntradayVelocityDaypartCockpit({
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
+    // Dismiss drilldown inspector on outside click / tap safely without freezing WebKit gesture engine
     useEffect(() => {
         if (drilldownHour === null) return
-        const handlePointerDownOutside = (e) => {
-            if (
-                inspectorRef.current && !inspectorRef.current.contains(e.target) &&
-                chartWrapperRef.current && !chartWrapperRef.current.contains(e.target)
-            ) {
+        const handleOutsideClick = (e) => {
+            try {
+                const target = e.target
+                if (!target || !(target instanceof Node)) return
+                if (inspectorRef.current && inspectorRef.current.contains(target)) return
+                if (chartWrapperRef.current && chartWrapperRef.current.contains(target)) return
                 setDrilldownHour(null)
+            } catch (err) {
+                // Defensive fallback for iOS WebKit SVG node hit-testing
             }
         }
-        document.addEventListener('pointerdown', handlePointerDownOutside)
-        return () => document.removeEventListener('pointerdown', handlePointerDownOutside)
+        // Use 'click' with passive listener so touch scrolling, pinching and drag gestures are not hijacked on mobile
+        document.addEventListener('click', handleOutsideClick, { passive: true })
+        return () => document.removeEventListener('click', handleOutsideClick)
+    }, [drilldownHour])
+
+    // Smooth scroll to drilldown inspector drawer on mobile / iPad when opened
+    useEffect(() => {
+        if (drilldownHour !== null && inspectorRef.current) {
+            const timer = setTimeout(() => {
+                if (inspectorRef.current) {
+                    inspectorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+                }
+            }, 60)
+            return () => clearTimeout(timer)
+        }
     }, [drilldownHour])
 
     const togglePredict = () => {
@@ -1954,7 +1973,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     <div 
                         ref={chartScrollRef} 
                         className="w-full overflow-x-auto no-scrollbar touch-pan-x" 
-                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                        style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x pan-y' }}
                     >
                         <svg
                             width={svgWidth}
@@ -2251,8 +2270,10 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     y={padYTop}
                                                     width={(plotWidth / (hours.length - 1)) * 0.96}
                                                     height={plotHeight}
-                                                    fill="oklch(52% 0.16 28 / 0.10)"
-                                                    stroke="oklch(52% 0.16 28 / 0.45)"
+                                                    fill={colorAccent}
+                                                    fillOpacity="0.12"
+                                                    stroke={colorAccent}
+                                                    strokeOpacity="0.5"
                                                     strokeWidth="1.2"
                                                     strokeDasharray="3 3"
                                                     className="pointer-events-none"
@@ -2340,9 +2361,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                 y={padYTop}
                                                 width={(plotWidth / (hours.length - 1)) * 0.96}
                                                 height={plotHeight}
-                                                fill="#000000"
-                                                opacity="0.0001"
-                                                style={{ pointerEvents: 'all', touchAction: 'manipulation' }}
+                                                fill="transparent"
+                                                pointerEvents="all"
+                                                style={{ touchAction: 'manipulation' }}
                                                 className="cursor-pointer select-none"
                                                 onMouseEnter={() => {
                                                     if (!minimalMode && typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(hover: hover)').matches) {
@@ -2874,7 +2895,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
                                 <div className={`p-2.5 sm:p-3 bg-[oklch(97%_0.008_28)] border min-w-0 ${
                                     drillHourData.isGoalExceeded
-                                        ? 'border-[oklch(50%_0.15_142)] bg-[oklch(50%_0.15_142)]/5'
+                                        ? 'border-[oklch(50%_0.15_142)] bg-[oklch(50%_0.15_142_/_0.06)]'
                                         : 'border-[oklch(85%_0.012_28)]'
                                 }`}>
                                     <div className="flex items-center justify-between gap-1">

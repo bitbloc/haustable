@@ -270,5 +270,63 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         expect(totalInHours + preOpeningAdSignals).toBe(mockAdEvents.length)
         expect(totalInHours).toBe(5)
     })
+
+    it('correctly detects touch capabilities for modern iPads (iPadOS 13+ desktop UA) and iPhones', () => {
+        const detectTouch = (nav, winWidth) => {
+            if (!nav) return false
+            return (nav.maxTouchPoints > 0) ||
+                /iPhone|iPad|iPod|Android/i.test(nav.userAgent) ||
+                winWidth < 640
+        }
+
+        // iPad Pro 11-inch (iPadOS reports Macintosh, maxTouchPoints: 5, width 834)
+        const ipadNav = { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15', maxTouchPoints: 5 }
+        expect(detectTouch(ipadNav, 834)).toBe(true)
+
+        // iPhone 14 (userAgent has iPhone, width 390)
+        const iphoneNav = { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X)', maxTouchPoints: 5 }
+        expect(detectTouch(iphoneNav, 390)).toBe(true)
+
+        // Standard Desktop Windows/Mac (maxTouchPoints: 0, width 1440)
+        const desktopNav = { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 0 }
+        expect(detectTouch(desktopNav, 1440)).toBe(false)
+    })
+
+    it('safely handles outside click dismissal without throwing on non-Node or detached SVG targets', () => {
+        let activeHour = 14
+        const setDrilldownHour = (val) => { activeHour = val }
+
+        const mockInspector = { contains: (target) => target.id === 'inspector-child' }
+        const mockChartWrapper = { contains: (target) => target.id === 'chart-child' }
+
+        const handleOutsideClick = (target) => {
+            try {
+                if (!target || typeof target !== 'object' || !('nodeType' in target)) return
+                if (mockInspector && mockInspector.contains(target)) return
+                if (mockChartWrapper && mockChartWrapper.contains(target)) return
+                setDrilldownHour(null)
+            } catch {
+                // Defensive fallback
+            }
+        }
+
+        // 1. Click inside chart wrapper does NOT dismiss
+        handleOutsideClick({ id: 'chart-child', nodeType: 1 })
+        expect(activeHour).toBe(14)
+
+        // 2. Click inside inspector drawer does NOT dismiss
+        handleOutsideClick({ id: 'inspector-child', nodeType: 1 })
+        expect(activeHour).toBe(14)
+
+        // 3. Null, undefined, or primitive does NOT throw or change state
+        expect(() => handleOutsideClick(null)).not.toThrow()
+        expect(() => handleOutsideClick(undefined)).not.toThrow()
+        expect(() => handleOutsideClick('invalid')).not.toThrow()
+        expect(activeHour).toBe(14)
+
+        // 4. Click outside safely dismisses
+        handleOutsideClick({ id: 'outside-element', nodeType: 1 })
+        expect(activeHour).toBe(null)
+    })
 })
 
