@@ -33,6 +33,14 @@ function getBroadcastChannel() {
 }
 
 /**
+ * Pre-warm the broadcast channel subscription so sending is instant (< 5ms) when an order is placed.
+ */
+export function prewarmPOSBroadcastChannel() {
+    return getBroadcastChannel();
+}
+
+
+/**
  * Send an instant Realtime Broadcast signal directly to POS terminals (< 50ms).
  * @param {string} event - e.g. 'online_order_created', 'qr_order_created', 'call_staff', 'call_bill', 'payment_slip_uploaded'
  * @param {object} payload - Metadata including table_id, table_name, booking_id

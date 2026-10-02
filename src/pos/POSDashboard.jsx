@@ -306,6 +306,7 @@ export default function POSDashboard() {
     const submittingOrderRef = useRef(false);
     const processingQrPrintRef = useRef(new Set());
     const autoPrintDebounceTimersRef = useRef(new Map());
+    const autoPrintTableNamesRef = useRef(new Map());
 
     const loadCrmMembers = async (searchQuery = '') => {
         setCrmLoading(true);
@@ -977,6 +978,7 @@ export default function POSDashboard() {
                 };
 
                 const displayTable = fullBooking.tables_layout?.table_name || tableNameHint;
+                const printKey = `print_${bookingId}`;
                 toast.custom((t) => renderPosToast(t, {
                     badge: 'KITCHEN PRINT · พิมพ์ใบครัวแล้ว',
                     title: `โต๊ะ ${displayTable} - พิมพ์ใบครัว ${unprintedItems.length} รายการ`,
@@ -987,8 +989,7 @@ export default function POSDashboard() {
                             if (data) handleSelectTable(data);
                         });
                     }
-                }), { duration: 8000 });
-                playQRAlertSound();
+                }), { id: printKey, duration: 6000 });
 
                 const printSuccess = await autoPrintQROrder(partialBooking);
                 if (printSuccess) {
@@ -1010,12 +1011,18 @@ export default function POSDashboard() {
 
     const scheduleAutoPrint = useCallback((bookingId, tableNameHint = 'TABLE', delay = 500) => {
         if (!bookingId) return;
+        const existingHint = autoPrintTableNamesRef.current.get(bookingId);
+        const resolvedHint = (tableNameHint && tableNameHint !== 'TABLE') ? tableNameHint : (existingHint || 'TABLE');
+        autoPrintTableNamesRef.current.set(bookingId, resolvedHint);
+
         if (autoPrintDebounceTimersRef.current.has(bookingId)) {
             clearTimeout(autoPrintDebounceTimersRef.current.get(bookingId));
         }
         const timer = setTimeout(() => {
             autoPrintDebounceTimersRef.current.delete(bookingId);
-            handleAutoPrintQROrder(bookingId, tableNameHint);
+            const hint = autoPrintTableNamesRef.current.get(bookingId) || resolvedHint;
+            autoPrintTableNamesRef.current.delete(bookingId);
+            handleAutoPrintQROrder(bookingId, hint);
         }, delay);
         autoPrintDebounceTimersRef.current.set(bookingId, timer);
     }, []);
@@ -1509,7 +1516,7 @@ export default function POSDashboard() {
                     const isGpsVerified = payload?.gps_verified !== false && !payload?.needs_approval;
                     const qrItemAlertKey = getCanonicalOrderAlertKey(bId) || getCanonicalTableAlertKey('table_order', tId);
 
-                    if (checkEventDeduplication(qrItemAlertKey, 5000)) {
+                    if (checkEventDeduplication(qrItemAlertKey, 6000)) {
                         console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}, isGpsVerified: ${isGpsVerified}`);
                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
 
@@ -1722,7 +1729,7 @@ export default function POSDashboard() {
                         }
 
                         if (newRow.status === 'pending' || sourceLower === 'qr' || remarkLower.includes('qr') || isOnlinePickup || isOnlineBooking || isLineman) {
-                            if (checkEventDeduplication(pendingOrderKey, 4500)) {
+                            if (checkEventDeduplication(pendingOrderKey, 6000)) {
                                 const toastBadge = isOnlinePickup ? 'PICKUP ONLINE · รับกลับ' : (isOnlineBooking ? 'ONLINE BOOKING · จองโต๊ะ' : 'NEW ORDER · อาหารเข้าใหม่');
                                 const toastTitle = isOnlinePickup 
                                     ? `ออเดอร์รับกลับ #${getShortBookingId(newRow)} ส่งเข้ามาแล้ว` 
@@ -1763,7 +1770,7 @@ export default function POSDashboard() {
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId } }));
                             }
-                            if (checkEventDeduplication(pendingOrderKey, 4500)) {
+                            if (checkEventDeduplication(pendingOrderKey, 6000)) {
                                 toast.custom((t) => renderPosToast(t, {
                                     badge: 'ADD ORDER · สั่งเพิ่ม',
                                     title: `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`,
@@ -1951,7 +1958,7 @@ export default function POSDashboard() {
                                     }
 
                                     const qrItemAlertKey = getCanonicalOrderAlertKey(bookingId);
-                                    if (checkEventDeduplication(qrItemAlertKey, 5000)) {
+                                    if (checkEventDeduplication(qrItemAlertKey, 6000)) {
                                         console.log(`🔊 [POS Alert] Verified incoming QR / Online order items for: ${bookingId}`);
                                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
 
@@ -1982,9 +1989,10 @@ export default function POSDashboard() {
                                         }), { id: qrItemAlertKey, duration: 10000 });
                                         pushNotifHistory('ORDER', isItemPickup ? 'Online Pickup' : 'QR Order', itemTitle, tId);
                                     }
-                                });
 
-                            scheduleAutoPrint(bookingId, 'TABLE', 600);
+                                    const resolvedPrintName = bData.tables_layout?.table_name || (bData.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : 'TABLE');
+                                    scheduleAutoPrint(bookingId, resolvedPrintName, 600);
+                                });
                         }
 
                         // If staff currently has this booking open on screen, auto-refresh the order items in real-time

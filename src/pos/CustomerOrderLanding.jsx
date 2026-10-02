@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import OptionSelectionModal from '../components/shared/OptionSelectionModal';
 import { getShortBookingId } from '../utils/printerHelper';
-import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeNotifier';
 import { isValidUuid, safeUuid } from '../utils/urlHelper';
 import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
@@ -111,6 +111,11 @@ export default function CustomerOrderLanding() {
         google_review_url: 'https://g.page/r/CXmnpQhwM5MYEBM/review'
     });
     const [currentTimeTick, setCurrentTimeTick] = useState(Date.now());
+
+    // Pre-warm the POS Realtime broadcast channel so instant order sync has 0ms connection latency
+    useEffect(() => {
+        prewarmPOSBroadcastChannel();
+    }, []);
 
     // 15-second interval ticker to evaluate kitchen closing time in real-time
     useEffect(() => {

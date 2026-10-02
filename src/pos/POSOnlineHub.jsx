@@ -180,10 +180,14 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const hasOnlineMarker = sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!b.payment_slip_url || isHausmade;
                     const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
                     
-                    // In-store walk-in orders must NEVER trigger persistent alerts or sound in Online Hub!
+                    // In-store walk-in orders & physical table QR orders must NEVER trigger persistent alerts or sound in Online Hub!
                     if (isExplicitInHouse) return;
 
-                    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman);
+                    // Physical dine-in table QR orders belong strictly to Table Grid / Floorplan, NEVER to Online Hub!
+                    const isTableQrOrder = Boolean(b.table_id) && (sourceLower === 'qr' || remarkLower.includes('qr') || b.booking_type === 'walk_in');
+                    if (isTableQrOrder) return;
+
+                    const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman);
                     const hasSlip = !!b.payment_slip_url;
                     const isOnlinePickup = (b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse;
                     
