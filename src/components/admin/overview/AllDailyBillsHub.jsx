@@ -33,7 +33,7 @@ import { formatThaiTimeOnly, getThaiDate, calculateDurationMinutes, formatThaiDu
 import { getShortBookingId } from '../../../utils/printerHelper'
 import { getBookingPaymentBreakdown } from '../../../pos/POSReportsPanel'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
-import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
+import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 
@@ -192,9 +192,10 @@ export default function AllDailyBillsHub({
     // Filter & Priority Search Logic
     const filteredBookings = useMemo(() => {
         return (bookings || []).filter(b => {
-            // Exclude internal floor blocks and empty ghost pickups
+            // Exclude internal floor blocks, empty ghost pickups, and duplicate ghost table sessions
             if (isInternalBlockBooking(b)) return false
             if (isGhostPickupBooking(b)) return false
+            if (isDuplicateGhostBooking(b, bookings)) return false
 
             const transfer = parseTableTransferInfo(b)
 
@@ -316,6 +317,7 @@ export default function AllDailyBillsHub({
         ;(bookings || []).forEach(b => {
             if (isInternalBlockBooking(b)) return
             if (isGhostPickupBooking(b)) return
+            if (isDuplicateGhostBooking(b, bookings)) return
 
             const transfer = parseTableTransferInfo(b)
             const amt = parseFloat(b.total_amount || b.total_price || 0)

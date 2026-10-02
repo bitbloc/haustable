@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '../../../lib/supabaseClient'
 import { toast } from 'sonner'
 import { getThaiDate, formatThaiTimeOnly, formatThaiDateOnly, calculateDurationMinutes, formatThaiDuration, formatThaiRelativeTime } from '../../../utils/timeUtils'
-import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
+import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 import { playAdminOrderAlert } from '../../../utils/audioHelper'
@@ -472,7 +472,7 @@ export default function SimplifiedLiveOverview({
     // Helper: Determine table state using centralized business logic
     const getTableState = (tableId) => {
         const now = new Date()
-        const tableBookings = liveBookings.filter(b => b.table_id === tableId && !isGhostPickupBooking(b))
+        const tableBookings = liveBookings.filter(b => b.table_id === tableId && !isGhostPickupBooking(b) && !isDuplicateGhostBooking(b, liveBookings))
 
         if (tableBookings.length === 0) return { status: 'free', booking: null }
 

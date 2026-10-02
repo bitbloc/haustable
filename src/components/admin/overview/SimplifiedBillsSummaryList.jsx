@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
-import { isGhostPickupBooking, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
+import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 
 /**
@@ -23,9 +23,9 @@ export default function SimplifiedBillsSummaryList({
     const [inspectingBill, setInspectingBill] = useState(null)
     const pageSize = 15
 
-    // Clean bookings: purge ghost pickups and maintenance blocks
+    // Clean bookings: purge ghost pickups, maintenance blocks, and duplicate ghost table sessions
     const validBookings = useMemo(() => {
-        return (bookings || []).filter(b => !isGhostPickupBooking(b) && !isInternalBlockBooking(b))
+        return (bookings || []).filter(b => !isGhostPickupBooking(b) && !isInternalBlockBooking(b) && !isDuplicateGhostBooking(b, bookings))
     }, [bookings])
 
     // Sort by most recent first

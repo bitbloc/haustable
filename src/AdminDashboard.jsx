@@ -26,7 +26,7 @@ import SlipModal from './components/shared/SlipModal'
 import ViewSlipModal from './components/shared/ViewSlipModal'
 import TaxInvoiceModal from './components/admin/tax/TaxInvoiceModal'
 import TaxInvoicePrintView from './components/admin/tax/TaxInvoicePrintView'
-import { isGhostPickupBooking, isInternalBlockBooking } from './utils/tableTransferHelper'
+import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from './utils/tableTransferHelper'
 
 export default function AdminDashboard() {
     const [tables, setTables] = useState([])
@@ -391,9 +391,10 @@ export default function AdminDashboard() {
     const dailyBookings = useMemo(() => {
         const isToday = selectedDate === getThaiDate()
         return bookings.filter(b => {
-            // Exclude internal floor blocks / maintenance holds and empty ghost pickups
+            // Exclude internal floor blocks / maintenance holds, empty ghost pickups, and duplicate ghost table sessions
             if (isInternalBlockBooking(b)) return false
             if (isGhostPickupBooking(b)) return false
+            if (isDuplicateGhostBooking(b, bookings)) return false
 
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
@@ -417,13 +418,14 @@ export default function AdminDashboard() {
 
     // 2. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
-        bookings.filter(b => b.status === 'pending' && !isGhostPickupBooking(b)).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
+        bookings.filter(b => b.status === 'pending' && !isGhostPickupBooking(b) && !isDuplicateGhostBooking(b, bookings)).sort((a, b) => new Date(a.booking_time) - new Date(b.booking_time))
         , [bookings])
 
     // 3. Schedule: Confirmed / Seated / Ready for selected date
     const scheduleBookings = useMemo(() => {
         return bookings.filter(b => {
             if (isGhostPickupBooking(b)) return false
+            if (isDuplicateGhostBooking(b, bookings)) return false
             const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
             const isDateMatch = bDate === selectedDate
             const isConfirmed = b.status === 'confirmed' || b.status === 'seated' || b.status === 'ready' || b.status === 'paid'

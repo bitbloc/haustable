@@ -2411,6 +2411,10 @@ export default function POSDashboard() {
     const [openTableModalData, setOpenTableModalData] = useState(null);
     const [openTablePaxInput, setOpenTablePaxInput] = useState('2');
     const [onlineReservationModalData, setOnlineReservationModalData] = useState(null);
+    const [isOpeningTable, setIsOpeningTable] = useState(false);
+    const openingTableRef = useRef(false);
+    const [isSeatingReservation, setIsSeatingReservation] = useState(false);
+    const seatingReservationRef = useRef(false);
 
     // Walk-in Pickup Modal State
     const [showPickupModal, setShowPickupModal] = useState(false);
@@ -2536,7 +2540,9 @@ export default function POSDashboard() {
     }, [getActiveBooking]);
 
     const handleSeatOnlineReservation = useCallback(async (table, reservation) => {
-        if (!reservation?.id) return;
+        if (!reservation?.id || isSeatingReservation || seatingReservationRef.current) return;
+        seatingReservationRef.current = true;
+        setIsSeatingReservation(true);
         const toastId = toast.loading(`กำลังเช็คอินลูกค้าโต๊ะ ${table.table_name}...`);
         try {
             let updatedBooking = reservation;
@@ -2589,11 +2595,14 @@ export default function POSDashboard() {
         } catch (err) {
             console.error('Failed to seat online reservation:', err);
             toast.error('เกิดข้อผิดพลาดในการเช็คอิน: ' + (err.message || err), { id: toastId });
+        } finally {
+            seatingReservationRef.current = false;
+            setIsSeatingReservation(false);
         }
-    }, [triggerDebouncedRefresh]);
+    }, [isSeatingReservation, triggerDebouncedRefresh]);
 
     const handleConfirmOpenTable = useCallback(async () => {
-        if (!openTableModalData?.table) return;
+        if (!openTableModalData?.table || isOpeningTable || openingTableRef.current) return;
         const targetTable = openTableModalData.table;
         const paxNum = parseInt(openTablePaxInput);
         if (!paxNum || paxNum <= 0) {
@@ -2601,6 +2610,8 @@ export default function POSDashboard() {
             return;
         }
 
+        openingTableRef.current = true;
+        setIsOpeningTable(true);
         const toastId = toast.loading(`กำลังเปิดโต๊ะ ${targetTable.table_name}...`);
         try {
             const upcomingRes = openTableModalData.upcomingReservation || null;
@@ -2646,8 +2657,11 @@ export default function POSDashboard() {
         } catch (err) {
             console.error('Failed to open table:', err);
             toast.error('เกิดข้อผิดพลาดในการเปิดโต๊ะ', { id: toastId });
+        } finally {
+            openingTableRef.current = false;
+            setIsOpeningTable(false);
         }
-    }, [createWalkIn, openTableModalData, openTablePaxInput, triggerDebouncedRefresh]);
+    }, [createWalkIn, isOpeningTable, openTableModalData, openTablePaxInput, triggerDebouncedRefresh]);
 
     const handleSelectPickupOrder = useCallback(async (booking) => {
         setAttachedMemberCrm(null); // Clear stale member profile immediately
@@ -4632,21 +4646,29 @@ export default function POSDashboard() {
                         <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper-2)] flex gap-3">
                             <button
                                 type="button"
+                                disabled={isOpeningTable}
                                 onClick={() => {
-                                    setOpenTableModalData(null);
+                                    if (!isOpeningTable) setOpenTableModalData(null);
                                 }}
-                                className="flex-1 min-h-[44px] bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-3 rounded-sm font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
+                                className="flex-1 min-h-[44px] bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] disabled:opacity-50 py-3 rounded-sm font-mono text-xs font-bold uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
                             >
                                 ยกเลิก (Cancel)
                             </button>
                             <button
                                 type="button"
+                                disabled={isOpeningTable}
                                 onClick={handleConfirmOpenTable}
-                                className="flex-1 min-h-[44px] bg-[var(--color-ink)] hover:bg-black text-[var(--color-paper)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
+                                className="flex-1 min-h-[44px] bg-[var(--color-ink)] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-[var(--color-paper)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
                             >
-                                {openTableModalData?.upcomingReservation && openTableModalData?.reservationDiffMins < 90
-                                    ? `เปิดโต๊ะ Walk-in (รอบด่วน ${openTableModalData.reservationDiffMins} นาที)`
-                                    : 'เปิดโต๊ะ (Open Table)'}
+                                {isOpeningTable ? (
+                                    <span className="flex items-center gap-2">
+                                        <RefreshCw size={14} className="animate-spin" /> กำลังเปิดโต๊ะ...
+                                    </span>
+                                ) : (
+                                    openTableModalData?.upcomingReservation && openTableModalData?.reservationDiffMins < 90
+                                        ? `เปิดโต๊ะ Walk-in (รอบด่วน ${openTableModalData.reservationDiffMins} นาที)`
+                                        : 'เปิดโต๊ะ (Open Table)'
+                                )}
                             </button>
                         </div>
                     </div>
@@ -4759,10 +4781,17 @@ export default function POSDashboard() {
                             {/* Primary Action: Seat Guest Now */}
                             <button
                                 type="button"
+                                disabled={isSeatingReservation}
                                 onClick={() => handleSeatOnlineReservation(onlineReservationModalData.table, onlineReservationModalData.reservation)}
-                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black text-[oklch(97%_0.008_28)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+                                className="w-full bg-[oklch(18%_0.012_28)] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed text-[oklch(97%_0.008_28)] py-3 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                             >
-                                เช็คอินลูกค้านั่งโต๊ะ (SEAT GUEST NOW)
+                                {isSeatingReservation ? (
+                                    <span className="flex items-center gap-2">
+                                        <RefreshCw size={14} className="animate-spin" /> กำลังเช็คอิน...
+                                    </span>
+                                ) : (
+                                    'เช็คอินลูกค้านั่งโต๊ะ (SEAT GUEST NOW)'
+                                )}
                             </button>
 
                             {/* Secondary Action: Walk-in with Notice */}

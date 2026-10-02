@@ -302,6 +302,50 @@ export function isGhostPickupBooking(booking) {
 }
 
 /**
+ * Checks if a booking is an empty duplicate ghost table session (0 items, 0 amount) 
+ * when another active dining session on the exact same table exists.
+ * This occurs if "เปิดโต๊ะ" was rapidly double-clicked in POS, generating two simultaneous
+ * seated walk-ins, one of which remained stranded with 0 items while the other received the order.
+ * @param {Object} booking
+ * @param {Array} allBookings
+ * @returns {boolean}
+ */
+export function isDuplicateGhostBooking(booking, allBookings = []) {
+    if (!booking || !booking.table_id) return false;
+    const isSeatedOrPending = ['seated', 'pending', 'confirmed'].includes(booking.status);
+    if (!isSeatedOrPending) return false;
+
+    const hasNoItems = !booking.order_items || booking.order_items.length === 0;
+    const hasNoAmount = parseFloat(booking.total_amount || booking.total_price || 0) === 0;
+    if (!hasNoItems || !hasNoAmount) return false;
+
+    if (!Array.isArray(allBookings) || allBookings.length === 0) return false;
+
+    const tableIdStr = String(booking.table_id);
+    const thisTime = new Date(booking.booking_time || booking.created_at || 0).getTime();
+
+    // Check if there is another booking for the same table that is also active
+    return allBookings.some(other => {
+        if (!other || other.id === booking.id) return false;
+        if (String(other.table_id) !== tableIdStr) return false;
+        if (!['seated', 'pending', 'confirmed'].includes(other.status)) return false;
+
+        const otherHasItems = other.order_items && other.order_items.length > 0;
+        const otherHasAmount = parseFloat(other.total_amount || other.total_price || 0) > 0;
+
+        // If the other booking has real ordered items or paid/payable amount, this empty one is a ghost duplicate
+        if (otherHasItems || otherHasAmount) return true;
+
+        // If both are 0 items / 0 amount, keep the newer one or break tie by ID
+        const otherTime = new Date(other.booking_time || other.created_at || 0).getTime();
+        if (otherTime > thisTime) return true;
+        if (otherTime === thisTime && String(other.id) > String(booking.id)) return true;
+
+        return false;
+    });
+}
+
+/**
  * Checks if a booking is an internal maintenance/floor block holding the table.
  * @param {Object} booking
  * @returns {boolean}
@@ -314,4 +358,12 @@ export function isInternalBlockBooking(booking) {
     const hasNoAmount = parseFloat(booking.total_amount || booking.total_price || 0) === 0;
     return Boolean(isBlockNote && hasNoItems && hasNoAmount);
 }
+
+/**
+ * Comprehensive check for any ghost, block, or duplicate records that should not appear in active bills
+ */
+export function isGhostOrDuplicateBooking(booking, allBookings = []) {
+    return isGhostPickupBooking(booking) || isInternalBlockBooking(booking) || isDuplicateGhostBooking(booking, allBookings);
+}
+
 

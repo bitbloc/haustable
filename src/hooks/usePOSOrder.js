@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue } from '../utils/offlineHelper';
@@ -57,6 +57,7 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
 
 export function usePOSOrder() {
     const [loading, setLoading] = useState(false);
+    const walkInInFlightPromisesRef = useRef(new Map());
 
     const getActiveBooking = useCallback(async (tableId) => {
         const now = new Date();
@@ -117,6 +118,13 @@ export function usePOSOrder() {
 
     const createWalkIn = async (table = null, customPax = null, userId = null, extraRemark = '') => {
         const tableId = table ? table.id : null;
+
+        // In-flight deduplication: prevent double-clicks/rapid concurrent calls from inserting duplicate rows
+        const dedupKey = tableId ? `walkin_table_${tableId}` : null;
+        if (dedupKey && walkInInFlightPromisesRef.current.has(dedupKey)) {
+            return await walkInInFlightPromisesRef.current.get(dedupKey);
+        }
+
         const capacity = customPax ? parseInt(customPax) : (table ? (table.capacity || 2) : 2);
         const now = new Date();
         const nowIso = now.toISOString();
@@ -124,47 +132,27 @@ export function usePOSOrder() {
         const endIso = new Date(now.getTime() + (durationHours * 60 * 60 * 1000)).toISOString();
         const staffRemark = `Walk-in Guest${extraRemark || ''}`;
 
-        if (!isOnline()) {
-            console.log('[Offline Mode] Creating offline walk-in session');
-            const tempId = `local_${Date.now()}`;
-            const mockBooking = {
-                id: tempId,
-                table_id: tableId,
-                status: 'seated',
-                booking_type: 'walk_in',
-                booking_time: nowIso,
-                end_time: endIso,
-                pax: capacity,
-                user_id: userId || null,
-                staff_remark: `${staffRemark} (Offline)`,
-                tables_layout: table || null
-            };
-
-            // Save to active bookings cache
-            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
-            bookings.push(mockBooking);
-            posCache.setBookings(bookings);
-
-            // Queue sync action
-            addToOfflineQueue('create_walkin', {
-                tableId: tableId,
-                tempBookingId: tempId,
-                pax: mockBooking.pax,
-                user_id: userId || null,
-                status: 'seated',
-                bookingTime: mockBooking.booking_time,
-                endTime: mockBooking.end_time,
-                staffRemark: mockBooking.staff_remark
-            });
-
-            toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return mockBooking;
+        // Existing active session guard: if this table was seated in the last 45 seconds with 0 items, reuse it
+        if (tableId) {
+            const cachedBookings = posCache.getBookings() || [];
+            const recentEmptySeated = cachedBookings.find(b => 
+                String(b.table_id) === String(tableId) &&
+                b.status === 'seated' &&
+                (!b.order_items || b.order_items.length === 0) &&
+                (now.getTime() - new Date(b.booking_time || b.created_at || now).getTime() < 45000)
+            );
+            if (recentEmptySeated) {
+                console.warn(`[createWalkIn] Reusing existing empty seated session for table ${tableId}:`, recentEmptySeated.id);
+                return recentEmptySeated;
+            }
         }
 
-        try {
-            const { data, error } = await supabase
-                .from('bookings')
-                .insert({
+        const executeCreate = async () => {
+            if (!isOnline()) {
+                console.log('[Offline Mode] Creating offline walk-in session');
+                const tempId = `local_${Date.now()}`;
+                const mockBooking = {
+                    id: tempId,
                     table_id: tableId,
                     status: 'seated',
                     booking_type: 'walk_in',
@@ -172,52 +160,101 @@ export function usePOSOrder() {
                     end_time: endIso,
                     pax: capacity,
                     user_id: userId || null,
-                    staff_remark: staffRemark
-                })
-                .select('*, tables_layout(*), profiles(*)')
-                .single();
+                    staff_remark: `${staffRemark} (Offline)`,
+                    tables_layout: table || null
+                };
 
-            if (error) throw error;
-            
-            // Cache locally
-            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
-            bookings.push(data);
-            posCache.setBookings(bookings);
+                // Save to active bookings cache
+                const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
+                bookings.push(mockBooking);
+                posCache.setBookings(bookings);
 
-            return data;
-        } catch (err) {
-            console.error('Failed to create walk-in online, fallback to offline queue:', err);
-            const tempId = `local_${Date.now()}`;
-            const mockBooking = {
-                id: tempId,
-                table_id: tableId,
-                status: 'seated',
-                booking_type: 'walk_in',
-                booking_time: nowIso,
-                end_time: endIso,
-                pax: capacity,
-                staff_remark: `${staffRemark} (Offline Fallback)`,
-                tables_layout: table || null
-            };
+                // Queue sync action
+                addToOfflineQueue('create_walkin', {
+                    tableId: tableId,
+                    tempBookingId: tempId,
+                    pax: mockBooking.pax,
+                    user_id: userId || null,
+                    status: 'seated',
+                    bookingTime: mockBooking.booking_time,
+                    endTime: mockBooking.end_time,
+                    staffRemark: mockBooking.staff_remark
+                });
 
-            const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
-            bookings.push(mockBooking);
-            posCache.setBookings(bookings);
+                toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
+                return mockBooking;
+            }
 
-            addToOfflineQueue('create_walkin', {
-                tableId: tableId,
-                tempBookingId: tempId,
-                pax: mockBooking.pax,
-                user_id: userId || null,
-                status: 'seated',
-                bookingTime: mockBooking.booking_time,
-                endTime: mockBooking.end_time,
-                staffRemark: mockBooking.staff_remark
-            });
+            try {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .insert({
+                        table_id: tableId,
+                        status: 'seated',
+                        booking_type: 'walk_in',
+                        booking_time: nowIso,
+                        end_time: endIso,
+                        pax: capacity,
+                        user_id: userId || null,
+                        staff_remark: staffRemark
+                    })
+                    .select('*, tables_layout(*), profiles(*)')
+                    .single();
 
-            toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
-            return mockBooking;
+                if (error) throw error;
+                
+                // Cache locally
+                const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
+                bookings.push(data);
+                posCache.setBookings(bookings);
+
+                return data;
+            } catch (err) {
+                console.error('Failed to create walk-in online, fallback to offline queue:', err);
+                const tempId = `local_${Date.now()}`;
+                const mockBooking = {
+                    id: tempId,
+                    table_id: tableId,
+                    status: 'seated',
+                    booking_type: 'walk_in',
+                    booking_time: nowIso,
+                    end_time: endIso,
+                    pax: capacity,
+                    staff_remark: `${staffRemark} (Offline Fallback)`,
+                    tables_layout: table || null
+                };
+
+                const bookings = posCache.getBookings().filter(b => tableId ? String(b.table_id) !== String(tableId) : true);
+                bookings.push(mockBooking);
+                posCache.setBookings(bookings);
+
+                addToOfflineQueue('create_walkin', {
+                    tableId: tableId,
+                    tempBookingId: tempId,
+                    pax: mockBooking.pax,
+                    user_id: userId || null,
+                    status: 'seated',
+                    bookingTime: mockBooking.booking_time,
+                    endTime: mockBooking.end_time,
+                    staffRemark: mockBooking.staff_remark
+                });
+
+                toast.info('เปิดโต๊ะเรียบร้อยแล้ว (โหมดออฟไลน์)');
+                return mockBooking;
+            }
+        };
+
+        if (dedupKey) {
+            const promise = executeCreate();
+            walkInInFlightPromisesRef.current.set(dedupKey, promise);
+            try {
+                return await promise;
+            } finally {
+                walkInInFlightPromisesRef.current.delete(dedupKey);
+            }
         }
+
+        return await executeCreate();
     };
 
     const updateGuestCount = async (bookingId, newPax) => {

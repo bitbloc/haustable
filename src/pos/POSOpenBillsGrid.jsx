@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
-import { parseTableTransferInfo, isGhostPickupBooking } from '../utils/tableTransferHelper';
+import { parseTableTransferInfo, isGhostPickupBooking, isDuplicateGhostBooking } from '../utils/tableTransferHelper';
 
 export function getOrderCategoryType(order) {
     if (!order) return 'direct';
@@ -127,10 +127,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         }
     }, [isActive, refreshKey]);
 
-    // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills)
+    // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills and duplicate ghost table sessions)
     const activeOrders = orders.filter(o => {
         if (o.status === 'completed' || o.status === 'void' || o.status === 'cancelled') return false;
-        return !isGhostPickupBooking(o);
+        return !isGhostPickupBooking(o) && !isDuplicateGhostBooking(o, orders);
     });
     
     // Categorize void vs merged
@@ -168,7 +168,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         const isVoid = order.status === 'void' || order.status === 'cancelled';
         const startMins = Math.max(0, Math.floor((Date.now() - new Date(order.booking_time).getTime()) / 60000));
         const isStale = startMins >= 2880;
-        const isGhost = isGhostPickupBooking(order);
+        const isGhost = isGhostPickupBooking(order) || isDuplicateGhostBooking(order, orders);
 
         // Status mode filter
         if (statusMode === 'active' && (isVoid || isGhost)) return false;

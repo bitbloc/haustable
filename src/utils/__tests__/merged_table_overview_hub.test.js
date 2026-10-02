@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseTableTransferInfo, isGhostPickupBooking } from '../tableTransferHelper';
+import { parseTableTransferInfo, isGhostPickupBooking, isDuplicateGhostBooking } from '../tableTransferHelper';
 
 describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Architecture', () => {
     const mockBookings = [
@@ -166,5 +166,75 @@ describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Arch
         const cleaned = testList.filter(b => !isGhostPickupBooking(b));
         expect(cleaned.length).toBe(2);
         expect(cleaned.map(b => b.booking_short_id)).toEqual(['C999', 'T111']);
+    });
+
+    it('should detect and filter out duplicate ghost seated table sessions (e.g. Table H3 #09DF vs #79F6)', () => {
+        // Real-world scenario from bug report:
+        // Cashier opens table H3 -> rapid double click creates two walk-ins 400ms apart
+        // #09DF is empty (0 items, 0 baht), #79F6 has 3 items (฿383)
+        const ghostSessionH3 = {
+            id: '4a5ae7a5-9784-4870-8efb-41fba452b9b3',
+            booking_short_id: '09DF',
+            status: 'seated',
+            booking_type: 'walk_in',
+            table_id: 'table-h3',
+            created_at: '2026-10-02T13:03:45.946Z',
+            total_amount: 0,
+            order_items: []
+        };
+        const activeSessionH3 = {
+            id: 'abba5c90-e9ca-417f-8884-ebcd526efcfe',
+            booking_short_id: '79F6',
+            status: 'seated',
+            booking_type: 'walk_in',
+            table_id: 'table-h3',
+            created_at: '2026-10-02T13:03:46.359Z',
+            total_amount: 383,
+            order_items: [
+                { name: 'คั่วกลิ้งผักแนม', quantity: 1, price: 169 },
+                { name: 'สวัสดีคุณเจมส์ Highball', quantity: 1, price: 199 },
+                { name: 'ข้าวสวย', quantity: 1, price: 15 }
+            ]
+        };
+        const otherActiveTableH4 = {
+            id: '7280debd-3b6c-436f-a918-5b29b279fb7d',
+            booking_short_id: 'FB7D',
+            status: 'seated',
+            booking_type: 'walk_in',
+            table_id: 'table-h4',
+            created_at: '2026-10-02T13:15:11.284Z',
+            total_amount: 514,
+            order_items: [{ name: 'Item', quantity: 1, price: 514 }]
+        };
+        // A single open table that was just seated legitimately and waiting for order
+        const legitimateEmptyTableH5 = {
+            id: 'sole-empty-table-h5',
+            booking_short_id: 'E555',
+            status: 'seated',
+            booking_type: 'walk_in',
+            table_id: 'table-h5',
+            created_at: '2026-10-02T13:20:00.000Z',
+            total_amount: 0,
+            order_items: []
+        };
+
+        const allBookings = [ghostSessionH3, activeSessionH3, otherActiveTableH4, legitimateEmptyTableH5];
+
+        // 1. Ghost session H3 is identified as duplicate because activeSessionH3 exists on table-h3
+        expect(isDuplicateGhostBooking(ghostSessionH3, allBookings)).toBe(true);
+
+        // 2. The active session with items is NOT marked as duplicate
+        expect(isDuplicateGhostBooking(activeSessionH3, allBookings)).toBe(false);
+
+        // 3. Other table H4 is NOT duplicate
+        expect(isDuplicateGhostBooking(otherActiveTableH4, allBookings)).toBe(false);
+
+        // 4. A single legitimately opened table (without another session on that table) is preserved
+        expect(isDuplicateGhostBooking(legitimateEmptyTableH5, allBookings)).toBe(false);
+
+        // 5. Cleaned list preserves only valid sessions
+        const cleaned = allBookings.filter(b => !isDuplicateGhostBooking(b, allBookings));
+        expect(cleaned.length).toBe(3);
+        expect(cleaned.map(b => b.booking_short_id)).toEqual(['79F6', 'FB7D', 'E555']);
     });
 });
