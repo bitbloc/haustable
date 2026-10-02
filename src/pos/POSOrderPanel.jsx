@@ -2427,12 +2427,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                         ฿
                                                     </span>
                                                     <input
-                                                        type="number"
+                                                        type="text"
+                                                        inputMode="none"
+                                                        readOnly
                                                         placeholder={`เช่น ${Math.ceil(ceilTotal / 100) * 100}`}
-                                                        value={cashReceivedInput}
-                                                        onChange={(e) => setCashReceivedInput(e.target.value)}
-                                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg pl-10 pr-4 py-2.5 text-2xl font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(52%_0.16_28)] h-12 placeholder:text-[oklch(70%_0.010_28)]"
-                                                        autoFocus
+                                                        value={cashReceivedInput ? Number(cashReceivedInput).toLocaleString() : ''}
+                                                        className="w-full bg-white border border-[oklch(85%_0.012_28)] rounded-lg pl-10 pr-4 py-2.5 text-2xl font-mono font-bold text-[oklch(18%_0.012_28)] outline-none focus:border-[oklch(52%_0.16_28)] h-12 placeholder:text-[oklch(70%_0.010_28)] text-right"
                                                     />
                                                 </div>
 
@@ -2448,7 +2448,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                 setCashReceivedInput(String(ceilTotal));
                                                                 setCashStep('change');
                                                             }}
-                                                            className="py-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white rounded-lg font-mono font-bold text-xs text-[oklch(52%_0.16_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
+                                                            className="py-2.5 bg-[oklch(97%_0.008_28)] border border-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white rounded-lg font-mono font-bold text-xs text-[oklch(52%_0.16_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                         >
                                                             <span className="text-[9px] uppercase tracking-wider opacity-80">EXACT</span>
                                                             <span>฿{ceilTotal.toLocaleString()}</span>
@@ -2462,7 +2462,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                     setCashReceivedInput(String(amt));
                                                                     setCashStep('change');
                                                                 }}
-                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
+                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                             >
                                                                 <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
                                                                 <span>฿{amt.toLocaleString()}</span>
@@ -2477,13 +2477,58 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                                     setCashReceivedInput(String(amt));
                                                                     setCashStep('change');
                                                                 }}
-                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5"
+                                                                className="py-2.5 bg-white border border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] rounded-lg font-mono font-bold text-xs text-[oklch(18%_0.012_28)] transition-colors cursor-pointer shadow-2xs active:scale-[0.98] flex flex-col items-center justify-center gap-0.5 touch-manipulation"
                                                             >
                                                                 <span className="text-[9px] text-[oklch(42%_0.010_28)] uppercase">NOTE</span>
                                                                 <span>฿{amt.toLocaleString()}</span>
                                                             </button>
                                                         ))}
                                                     </div>
+                                                </div>
+
+                                                {/* On-Screen Touch Numpad for Sunmi POS Desktop (Zero Soft-Keyboard Popup) */}
+                                                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                                                    {[
+                                                        ['7', '8', '9', '+100'],
+                                                        ['4', '5', '6', '+500'],
+                                                        ['1', '2', '3', '+1000'],
+                                                        ['C', '0', '00', 'DEL']
+                                                    ].flat().map(key => {
+                                                        const isAction = key === 'C' || key === 'DEL';
+                                                        const isAdd = key.startsWith('+');
+                                                        return (
+                                                            <button
+                                                                key={key}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (key === 'C') {
+                                                                        setCashReceivedInput('');
+                                                                    } else if (key === 'DEL') {
+                                                                        setCashReceivedInput(prev => prev.slice(0, -1));
+                                                                    } else if (isAdd) {
+                                                                        const addVal = parseInt(key.replace('+', ''), 10);
+                                                                        const cur = parseFloat(cashReceivedInput) || 0;
+                                                                        setCashReceivedInput(String(cur + addVal));
+                                                                    } else {
+                                                                        setCashReceivedInput(prev => {
+                                                                            if (!prev && key === '00') return '0';
+                                                                            if (prev === '0' && key !== '.') return key;
+                                                                            return prev + key;
+                                                                        });
+                                                                    }
+                                                                }}
+                                                                className={`py-3 rounded-lg font-mono font-bold text-sm transition-all duration-100 cursor-pointer shadow-2xs active:scale-95 touch-manipulation select-none flex items-center justify-center ${
+                                                                    isAction
+                                                                        ? 'bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(52%_0.16_28)] hover:text-white'
+                                                                        : isAdd
+                                                                        ? 'bg-[oklch(94%_0.010_28)] border border-[oklch(45%_0.08_140)] text-[oklch(45%_0.08_140)] hover:bg-[oklch(45%_0.08_140)] hover:text-white'
+                                                                        : 'bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:border-[oklch(18%_0.012_28)]'
+                                                                }`}
+                                                            >
+                                                                {key === 'DEL' ? '⌫' : key}
+                                                            </button>
+                                                        );
+                                                    })}
                                                 </div>
 
                                                 {/* Shortfall Alert */}

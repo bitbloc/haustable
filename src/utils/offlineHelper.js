@@ -13,8 +13,20 @@ const CACHE_KDS_LIVE = 'kds_cache_live_orders';
 const CACHE_KDS_SCHEDULE = 'kds_cache_schedule_orders';
 
 // Helper to check if network is available
+let _currentOnlineState = typeof navigator !== 'undefined' ? navigator.onLine : true;
+
 export function isOnline() {
-    return navigator.onLine;
+    return _currentOnlineState;
+}
+
+export function setNetworkStatus(status, reason = '') {
+    const prev = _currentOnlineState;
+    _currentOnlineState = Boolean(status);
+    if (typeof window !== 'undefined' && prev !== _currentOnlineState) {
+        window.dispatchEvent(new CustomEvent('pos-network-status-changed', {
+            detail: { isOnline: _currentOnlineState, wasOffline: !prev, reason }
+        }));
+    }
 }
 
 // 1. Get/Set offline queue
@@ -62,6 +74,76 @@ export function addToOfflineQueue(actionType, payload) {
     
     // Broadcast status to UI
     window.dispatchEvent(new Event('offline-queue-changed'));
+}
+
+// 1.1 Dead Letter Queue (DLQ) - Preserves failed actions permanently to eliminate financial data loss
+const OFFLINE_DLQ_KEY = 'pos_offline_dlq';
+
+export function getDeadLetterQueue() {
+    try {
+        return JSON.parse(localStorage.getItem(OFFLINE_DLQ_KEY)) || [];
+    } catch {
+        return [];
+    }
+}
+
+export function saveDeadLetterQueue(dlq) {
+    try {
+        localStorage.setItem(OFFLINE_DLQ_KEY, JSON.stringify(dlq));
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event('offline-dlq-changed'));
+        }
+    } catch (e) {
+        console.error('[Offline DLQ] Failed to save dead letter queue:', e);
+    }
+}
+
+export function addToDeadLetterQueue(action, failureReason = '') {
+    const dlq = getDeadLetterQueue();
+    const dlqEntry = {
+        ...action,
+        failedAt: new Date().toISOString(),
+        failureReason: String(failureReason || 'Exceeded retry limit')
+    };
+    dlq.push(dlqEntry);
+    saveDeadLetterQueue(dlq);
+    console.warn('[Offline DLQ] Preserved failed action into Dead Letter Queue:', dlqEntry);
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('offline-dlq-alert', { detail: dlqEntry }));
+        window.dispatchEvent(new Event('offline-dlq-changed'));
+    }
+}
+
+export function retryDeadLetterAction(actionId) {
+    const dlq = getDeadLetterQueue();
+    const targetIdx = dlq.findIndex(a => a.id === actionId);
+    if (targetIdx === -1) return false;
+    
+    const [actionToRetry] = dlq.splice(targetIdx, 1);
+    saveDeadLetterQueue(dlq);
+    
+    // Reset retryCount and re-insert into main offline queue
+    actionToRetry.retryCount = 0;
+    delete actionToRetry.failedAt;
+    delete actionToRetry.failureReason;
+    
+    const queue = getOfflineQueue();
+    queue.push(actionToRetry);
+    saveOfflineQueue(queue);
+    
+    toast.info(`🔄 ส่งรายการ (${actionToRetry.type}) กลับเข้าคิวเพื่อ Sync ใหม่`);
+    return true;
+}
+
+export function removeDeadLetterAction(actionId) {
+    const dlq = getDeadLetterQueue();
+    const updated = dlq.filter(a => a.id !== actionId);
+    saveDeadLetterQueue(updated);
+    return true;
+}
+
+export function clearDeadLetterQueue() {
+    saveDeadLetterQueue([]);
 }
 
 // 2. In-Memory Cache Layer (Eliminates repeated synchronous JSON.parse / localStorage reads)
@@ -142,6 +224,16 @@ export async function verifyConnection() {
     }
 }
 
+export async function checkRealConnectivity() {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setNetworkStatus(false, 'NAVIGATOR_OFFLINE');
+        return false;
+    }
+    const ok = await verifyConnection();
+    setNetworkStatus(ok, ok ? 'SERVER_VERIFIED' : 'SERVER_UNREACHABLE');
+    return ok;
+}
+
 export async function syncOfflineQueue(isManual = false) {
     if (isSyncing) return;
     if (!isOnline()) return;
@@ -169,9 +261,18 @@ export async function syncOfflineQueue(isManual = false) {
         idMapping = JSON.parse(localStorage.getItem('pos_offline_id_mapping')) || {};
     } catch (e) {}
     
+    // Topological sort: ensure walk-in / takeaway creation always processes before child actions
+    const sortedQueue = [...queue].sort((a, b) => {
+        const isCreateA = a.type === 'create_walkin' || a.type === 'create_pickup';
+        const isCreateB = b.type === 'create_walkin' || b.type === 'create_pickup';
+        if (isCreateA && !isCreateB) return -1;
+        if (!isCreateA && isCreateB) return 1;
+        return 0;
+    });
+
     const remainingQueue = [];
 
-    for (const action of queue) {
+    for (const action of sortedQueue) {
         try {
             console.log(`[Offline Sync] Processing: ${action.type}`, action.payload);
             
@@ -567,6 +668,32 @@ export async function syncOfflineQueue(isManual = false) {
                     .eq('id', bookingId);
                 if (error) throw error;
             }
+
+            else if (action.type === 'sync_shift') {
+                const shift = action.payload;
+                const corePayload = {
+                    id: String(shift.id),
+                    staff_name: String(shift.staffName || 'Staff'),
+                    opened_at: shift.openedAt ? new Date(shift.openedAt).toISOString() : new Date().toISOString(),
+                    closed_at: shift.closedAt ? new Date(shift.closedAt).toISOString() : null,
+                    opening_float: Number(shift.openingFloat) || 0,
+                    closed_cash: Number(shift.closedCash) || 0,
+                    expected_cash: Number(shift.expectedCash) || 0,
+                    difference: Number(shift.difference) || 0,
+                    status: String(shift.status || 'open'),
+                    transactions: Array.isArray(shift.transactions) ? shift.transactions : [],
+                    adjustments: Array.isArray(shift.adjustments) ? shift.adjustments : [],
+                    cash_sales: Number(shift.cashSales) || 0,
+                    qr_sales: Number(shift.qrSales) || 0,
+                    credit_sales: Number(shift.creditSales) || 0,
+                    total_sales: Number(shift.totalSales) || 0,
+                    total_in: Number(shift.totalIn) || 0,
+                    total_out: Number(shift.totalOut) || 0
+                };
+                const { error } = await supabase.from('pos_shifts').upsert(corePayload);
+                if (error) throw error;
+                console.log('[Offline Sync] Shift synced successfully to cloud:', shift.id);
+            }
             
         } catch (err) {
             console.error(`[Offline Sync] Failed to sync action (${action.type}):`, action, err);
@@ -576,6 +703,7 @@ export async function syncOfflineQueue(isManual = false) {
                 (err.message && (err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('network')));
             
             if (isNetworkErr) {
+                setNetworkStatus(false, 'SYNC_NETWORK_ERROR');
                 console.warn('[Offline Sync] Connection lost mid-sync. Aborting sync loop and preserving remaining queue items.');
                 toast.warning('⚠️ การเชื่อมต่อสัญญาณหลุดขณะ Sync ข้อมูล ถูกบันทึกไว้ในเครื่องรอเชื่อมต่ออีกครั้ง');
                 // Push current action and all un-processed actions back to remainingQueue
@@ -592,8 +720,9 @@ export async function syncOfflineQueue(isManual = false) {
             if (action.retryCount < 5) {
                 remainingQueue.push(action);
             } else {
-                console.warn(`[Offline Sync] Discarding unrecoverable offline action (${action.type}) after 5 retries:`, action);
-                toast.error(`Discarded sync action: ${action.type} after 5 retries.`);
+                console.warn(`[Offline Sync] Action (${action.type}) reached retry limit. Moving to Dead Letter Queue (Zero Data Loss):`, action);
+                addToDeadLetterQueue(action, err.message || 'Exceeded retry limit');
+                toast.error(`⚠️ รายการ (${action.type}) ถูกย้ายเข้าคิวตรวจสอบ (DLQ) กรุณาตรวจสอบในเมนูคิว`);
             }
         }
     }
@@ -614,17 +743,33 @@ export async function syncOfflineQueue(isManual = false) {
 
 // 4. Register online listener
 if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => {
-        console.log('[Network] Internet restored. Syncing queue...');
-        syncOfflineQueue();
+    window.addEventListener('online', async () => {
+        console.log('[Network] Internet restored. Verifying connectivity...');
+        const ok = await checkRealConnectivity();
+        if (ok) {
+            syncOfflineQueue();
+            window.dispatchEvent(new Event('pos-online-restored'));
+        }
+    });
+
+    window.addEventListener('offline', () => {
+        console.log('[Network] Internet lost event received.');
+        setNetworkStatus(false, 'OFFLINE_EVENT');
     });
 
     // Background interval check to auto-sync offline queue when internet connection drops/restores silently
-    setInterval(() => {
+    setInterval(async () => {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            setNetworkStatus(false, 'NAVIGATOR_OFFLINE');
+            return;
+        }
         const queue = getOfflineQueue();
-        if (queue.length > 0 && navigator.onLine) {
-            console.log('[Network] Background polling: offline queue has items. Syncing...');
-            syncOfflineQueue();
+        if (queue.length > 0) {
+            const ok = await checkRealConnectivity();
+            if (ok) {
+                console.log('[Network] Background polling: offline queue has items. Syncing...');
+                syncOfflineQueue();
+            }
         }
     }, 15000);
 }

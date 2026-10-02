@@ -445,5 +445,92 @@ describe('Intraday Velocity Cockpit Mobile & Date Resilience', () => {
         expect(source.includes('[REFRESH]')).toBe(true)
         expect(source.includes('AUDIO //')).toBe(true)
     })
+
+    it('correctly aggregates monthly hourly matrix and connects monthMetrics to the table', async () => {
+        const fs = await import('fs')
+        const path = await import('path')
+
+        const cockpitPath = path.resolve(__dirname, '../../components/admin/financial/IntradayVelocityDaypartCockpit.jsx')
+        const source = fs.readFileSync(cockpitPath, 'utf8')
+
+        // 1. Table must look up from monthMetrics.monthlyAvgHourly when filterMode is month
+        expect(source.includes("filterMode === 'month'")).toBe(true)
+        expect(source.includes("monthMetrics?.monthlyAvgHourly?.find(p => p.hour === h)")).toBe(true)
+
+        // 2. Drilldown inspector must support monthMetrics
+        expect(source.includes("const pointsList = filterMode === 'month' ? monthMetrics?.monthlyAvgHourly : dayMetrics?.points")).toBe(true)
+
+        // 3. Table tfoot must summarize monthGross and monthPax
+        expect(source.includes("monthMetrics?.monthGross")).toBe(true)
+        expect(source.includes("monthMetrics?.monthPax")).toBe(true)
+
+        // 4. Test calculation logic with mock month data
+        const hours = [11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+        const mockMonthOrders = [
+            { id: '1', booking_time: '2026-09-05T12:00:00+07:00', total_amount: 1200, pax: 4 },
+            { id: '2', booking_time: '2026-09-05T12:30:00+07:00', total_amount: 800, pax: 2 },
+            { id: '3', booking_time: '2026-09-12T12:15:00+07:00', total_amount: 2000, pax: 5 },
+            { id: '4', booking_time: '2026-09-12T19:00:00+07:00', total_amount: 5000, pax: 8 },
+        ]
+
+        const hSales = {}
+        const hPax = {}
+        const hBills = {}
+        hours.forEach(h => { hSales[h] = 0; hPax[h] = 0; hBills[h] = 0 })
+
+        mockMonthOrders.forEach(b => {
+            const h = getBangkokHour(b.booking_time)
+            if (hSales[h] !== undefined) {
+                hSales[h] += b.total_amount
+                hPax[h] += b.pax
+                hBills[h] += 1
+            }
+        })
+
+        // Active days count = 2 days (Sept 5 and Sept 12)
+        const activeDays = 2
+        let runningSales = 0
+        const monthlyAvgHourly = hours.map(h => {
+            const totalHourSales = hSales[h]
+            const totalHourPax = hPax[h]
+            const totalHourBills = hBills[h]
+            runningSales += totalHourSales
+            return {
+                hour: h,
+                totalSales: totalHourSales,
+                totalPax: totalHourPax,
+                totalBills: totalHourBills,
+                sale: totalHourSales,
+                pax: totalHourPax,
+                bills: totalHourBills,
+                avgSales: Math.round(totalHourSales / activeDays),
+                avgPax: Math.round((totalHourPax / activeDays) * 10) / 10,
+                avgBills: Math.round((totalHourBills / activeDays) * 10) / 10,
+                cumulativeSales: runningSales,
+                spendPerHead: totalHourPax > 0 ? Math.round(totalHourSales / totalHourPax) : 0
+            }
+        })
+
+        const pt12 = monthlyAvgHourly.find(p => p.hour === 12)
+        expect(pt12.totalSales).toBe(4000)
+        expect(pt12.totalPax).toBe(11)
+        expect(pt12.totalBills).toBe(3)
+        expect(pt12.avgSales).toBe(2000)
+        expect(pt12.avgPax).toBe(5.5)
+        expect(pt12.spendPerHead).toBe(364) // 4000 / 11
+
+        const pt19 = monthlyAvgHourly.find(p => p.hour === 19)
+        expect(pt19.totalSales).toBe(5000)
+        expect(pt19.totalPax).toBe(8)
+        expect(pt19.totalBills).toBe(1)
+        expect(pt19.avgSales).toBe(2500)
+        expect(pt19.avgPax).toBe(4)
+        expect(pt19.spendPerHead).toBe(625)
+
+        // Cumulative sales at hour 23 should equal grand total (9000)
+        const pt23 = monthlyAvgHourly.find(p => p.hour === 23)
+        expect(pt23.cumulativeSales).toBe(9000)
+    })
 })
+
 

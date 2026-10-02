@@ -6,16 +6,26 @@ import POSMenuGrid from './POSMenuGrid';
 import POSOrderPanel from './POSOrderPanel';
 import { usePOSOrder } from '../hooks/usePOSOrder';
 import { Toaster, toast } from 'sonner';
-import POSReportsPanel from './POSReportsPanel';
-import POSCRMPanel from './POSCRMPanel';
 import POSOpenBillsGrid from './POSOpenBillsGrid';
 import POSOfflineQueueDrawer from './POSOfflineQueueDrawer';
-import POSSplitPaymentModal from './POSSplitPaymentModal';
 import SlipModal from '../components/shared/SlipModal';
 import ViewSlipModal from '../components/shared/ViewSlipModal';
-import POSOnlineHub from './POSOnlineHub';
+
+// Code-split heavy sub-panels with React.lazy to reduce memory footprint on Sunmi D2s Plus (2GB RAM)
+const POSReportsPanel = React.lazy(() => import('./POSReportsPanel'));
+const POSCRMPanel = React.lazy(() => import('./POSCRMPanel'));
+const POSSplitPaymentModal = React.lazy(() => import('./POSSplitPaymentModal'));
+const POSOnlineHub = React.lazy(() => import('./POSOnlineHub'));
+
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown, recordShiftTransaction, fetchShiftBookings } from '../utils/shiftHelper';
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
+import { 
+    verifyPinOffline, 
+    saveOfflineStaffCredential, 
+    getOfflineStaffCount, 
+    syncStaffCredentialsOnline, 
+    getOfflineStaffList 
+} from '../utils/staffAuthHelper';
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
@@ -35,6 +45,9 @@ import {
     playDoorbellChime, 
     unlockAudioEngine,
     checkEventDeduplication,
+    getCanonicalOrderAlertKey,
+    getCanonicalTableAlertKey,
+    getCanonicalSlipAlertKey,
     playSystemAlertSound as playSystemAlertSoundUtil 
 } from '../utils/audioHelper';
 import { useWakeLock } from '../hooks/useWakeLock';
@@ -398,36 +411,45 @@ export default function POSDashboard() {
     }, [crmMembers, crmSearchTerm]);
 
     const loadStaff = async () => {
+        // 1. Immediately populate from local cache if available (instant offline readiness)
         try {
-            const { data: rpcStaff, error: rpcError } = await supabase.rpc('get_staff_list_safe');
-            if (!rpcError && rpcStaff && rpcStaff.length > 0) {
-                setStaffList(rpcStaff);
-                return;
+            const cached = getOfflineStaffList();
+            if (Array.isArray(cached) && cached.length > 0) {
+                setStaffList(cached);
             }
+        } catch (e) {}
 
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, display_name, role')
-                .in('role', ['staff', 'admin', 'manager', 'cashier', 'kitchen', 'owner']);
-            
-            if (!error && data && data.length > 0) {
-                setStaffList(data);
-            } else {
-                const DEFAULT_STAFF = [
-                    { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
-                    { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff' },
-                    { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin' }
-                ];
-                setStaffList(DEFAULT_STAFF);
+        // 2. If online, fetch fresh list from RPC and sync offline credentials
+        if (isOnline()) {
+            try {
+                const { data: rpcStaff, error: rpcError } = await supabase.rpc('get_staff_list_safe');
+                if (!rpcError && rpcStaff && rpcStaff.length > 0) {
+                    setStaffList(rpcStaff);
+                    localStorage.setItem('pos_cache_staff_list', JSON.stringify(rpcStaff));
+                    syncStaffCredentialsOnline();
+                    return;
+                }
+
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, role')
+                    .in('role', ['staff', 'admin', 'manager', 'cashier', 'kitchen', 'owner']);
+                
+                if (!error && data && data.length > 0) {
+                    setStaffList(data);
+                    localStorage.setItem('pos_cache_staff_list', JSON.stringify(data));
+                    syncStaffCredentialsOnline();
+                } else if (!staffList || staffList.length === 0) {
+                    const DEFAULT_STAFF = [
+                        { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
+                        { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff' },
+                        { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin' }
+                    ];
+                    setStaffList(DEFAULT_STAFF);
+                }
+            } catch (err) {
+                console.error("Failed to load staff profiles online:", err);
             }
-        } catch (err) {
-            console.error("Failed to load staff profiles:", err);
-            const DEFAULT_STAFF = [
-                { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
-                { id: 'default_2', display_name: 'แคชเชียร์ B (Cashier B)', role: 'staff' },
-                { id: 'default_3', display_name: 'ผู้จัดการ (Manager)', role: 'admin' }
-            ];
-            setStaffList(DEFAULT_STAFF);
         }
     };
 
@@ -477,6 +499,8 @@ export default function POSDashboard() {
         window.addEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
         window.addEventListener('pos-trigger-lock', handleTriggerLock);
         window.addEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
+        window.addEventListener('pos-staff-cache-updated', loadStaff);
+        window.addEventListener('pos-network-status-changed', loadStaff);
 
         return () => {
             subscription.unsubscribe();
@@ -485,6 +509,8 @@ export default function POSDashboard() {
             window.removeEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
             window.removeEventListener('pos-trigger-lock', handleTriggerLock);
             window.removeEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
+            window.removeEventListener('pos-staff-cache-updated', loadStaff);
+            window.removeEventListener('pos-network-status-changed', loadStaff);
         };
     }, []);
 
@@ -1289,8 +1315,8 @@ export default function POSDashboard() {
         const handleWmaOrderGlobal = (event) => {
             const b = event.detail?.booking;
             if (b) {
-                const eventKey = `wma_dashboard_${b.id || Date.now()}`;
-                if (checkEventDeduplication(eventKey, 4000)) {
+                const eventKey = getCanonicalOrderAlertKey(b.id) || `order_${b.short_id || Date.now()}`;
+                if (checkEventDeduplication(eventKey, 5000)) {
                     playOrderAlert(eventKey, 1200, 3.4);
                     toast.custom((t) => renderPosToast(t, {
                         badge: 'LINE MAN / WMA · ออเดอร์เข้าใหม่',
@@ -1481,9 +1507,9 @@ export default function POSDashboard() {
                     const tId = payload?.table_id;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
                     const isGpsVerified = payload?.gps_verified !== false && !payload?.needs_approval;
-                    const qrItemAlertKey = `order_items_${bId || tId}`;
+                    const qrItemAlertKey = getCanonicalOrderAlertKey(bId) || getCanonicalTableAlertKey('table_order', tId);
 
-                    if (checkEventDeduplication(qrItemAlertKey, 4500)) {
+                    if (checkEventDeduplication(qrItemAlertKey, 5000)) {
                         console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}, isGpsVerified: ${isGpsVerified}`);
                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
 
@@ -1519,9 +1545,6 @@ export default function POSDashboard() {
                             }), { id: qrItemAlertKey, duration: 10000 });
                             pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
                         }
-                    } else {
-                        // Still trigger single chime for simultaneous burst if cooldown hasn't sounded
-                        playOrderAlert(qrItemAlertKey, 1200, 3.4);
                     }
 
                     // Auto-print ONLY for verified GPS orders; unverified orders wait for staff approval!
@@ -1548,7 +1571,7 @@ export default function POSDashboard() {
                     const tId = payload?.table_id;
                     const bId = payload?.booking_id || tId;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callStaffKey = `${bId}_CALL_STAFF`;
+                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId);
 
                     if (checkEventDeduplication(callStaffKey, 5000)) {
                         toast.custom((t) => renderPosToast(t, {
@@ -1578,7 +1601,7 @@ export default function POSDashboard() {
                     const tId = payload?.table_id;
                     const bId = payload?.booking_id || tId;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callBillKey = `${bId}_CALL_BILL`;
+                    const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId);
 
                     if (checkEventDeduplication(callBillKey, 5000)) {
                         toast.custom((t) => renderPosToast(t, {
@@ -1610,9 +1633,9 @@ export default function POSDashboard() {
                     const custName = payload?.customer_name || 'ลูกค้าออนไลน์';
                     const isPickup = bType === 'pickup';
                     const label = isPickup ? `รับกลับ: ${custName}` : `จองโต๊ะ: ${custName}`;
-                    const eventKey = `online_order_${bId || Date.now()}`;
+                    const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
 
-                    if (checkEventDeduplication(eventKey, 4500)) {
+                    if (checkEventDeduplication(eventKey, 5000)) {
                         playOrderAlert(eventKey, 1200, 3.4);
                         toast.custom((t) => renderPosToast(t, {
                             badge: isPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : 'ONLINE BOOKING · จองโต๊ะ',
@@ -1625,8 +1648,6 @@ export default function POSDashboard() {
                         }), { id: eventKey, duration: 10000 });
                         pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
                         setShowPendingModal(true);
-                    } else {
-                        playOrderAlert(eventKey, 1200, 3.4);
                     }
 
                     checkPendingOrders();
@@ -1635,8 +1656,8 @@ export default function POSDashboard() {
                 .on('broadcast', { event: 'payment_slip_uploaded' }, async ({ payload }) => {
                     console.log('⚡ [Realtime POS] Instant broadcast payment_slip_uploaded received:', payload);
                     const bId = payload?.booking_id;
-                    const slipEventKey = `slip_upload_${bId || Date.now()}`;
-                    if (checkEventDeduplication(slipEventKey, 4500)) {
+                    const slipEventKey = getCanonicalSlipAlertKey(bId);
+                    if (checkEventDeduplication(slipEventKey, 5000)) {
                         playSlipAlert(slipEventKey);
                         toast.custom((t) => renderPosToast(t, {
                             badge: 'PAYMENT SLIP · มีสลิปใหม่รอตรวจ',
@@ -1685,10 +1706,10 @@ export default function POSDashboard() {
                     const isOnlineBooking = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online')) && !isExplicitInHouse;
                     const tableName = tableId ? (tablesMap[tableId] || `Table #${tableId}`) : (isOnlinePickup || isWalkInPickup ? 'รับกลับ (Pickup)' : 'Online Order');
 
-                    const callBillKey = `${bookingId}_CALL_BILL`;
-                    const callStaffKey = `${bookingId}_CALL_STAFF`;
-                    const pendingOrderKey = `${bookingId}_PENDING_ORDER`;
-                    const slipReceivedKey = `${bookingId}_SLIP_RECEIVED`;
+                    const callBillKey = getCanonicalTableAlertKey('call_bill', tableId, bookingId);
+                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tableId, bookingId);
+                    const pendingOrderKey = getCanonicalOrderAlertKey(bookingId);
+                    const slipReceivedKey = getCanonicalSlipAlertKey(bookingId);
 
                     if (eventType === 'INSERT') {
                         // In-store walk-in pickup or walk-in table created right here at POS: do not fire online toast or modal
@@ -1793,8 +1814,11 @@ export default function POSDashboard() {
                         const isClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(newRow?.status);
                         const wasClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(oldRow?.status);
                         if (isClosed && !wasClosed) {
+                            stopStaffCallLoop(tableId || bookingId);
+                            toast.dismiss(callStaffKey);
+                            toast.dismiss(callBillKey);
+                            toast.dismiss(pendingOrderKey);
                             if (tableId) {
-                                stopStaffCallLoop(tableId || bookingId);
                                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId } }));
                                 window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId } }));
                             }
@@ -1859,9 +1883,15 @@ export default function POSDashboard() {
                             }
                         } else if (oldRemark.includes('[CALL_STAFF]') && !newRemark.includes('[CALL_STAFF]')) {
                             stopStaffCallLoop(tableId || bookingId);
+                            toast.dismiss(callStaffKey);
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId } }));
                             }
+                        }
+
+                        // Call Bill Cleared check
+                        if (oldRemark.includes('[CALL_BILL]') && !newRemark.includes('[CALL_BILL]')) {
+                            toast.dismiss(callBillKey);
                         }
 
                         // 6. Payment Slip Alert (Strict diffing: only fire if new slip URL was uploaded)
@@ -1920,8 +1950,8 @@ export default function POSDashboard() {
                                         return;
                                     }
 
-                                    const qrItemAlertKey = `order_items_${bookingId}`;
-                                    if (checkEventDeduplication(qrItemAlertKey, 4500)) {
+                                    const qrItemAlertKey = getCanonicalOrderAlertKey(bookingId);
+                                    if (checkEventDeduplication(qrItemAlertKey, 5000)) {
                                         console.log(`🔊 [POS Alert] Verified incoming QR / Online order items for: ${bookingId}`);
                                         playOrderAlert(qrItemAlertKey, 1200, 3.4);
 
@@ -4046,28 +4076,50 @@ export default function POSDashboard() {
                             />
                         </div>
                         <div className={view === 'crm' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
-                            <POSCRMPanel 
-                                isActive={view === 'crm'}
-                                onAttachToOrder={(member) => {
-                                    handleSelectCrmCustomer(member);
-                                    setView('menu');
-                                }}
-                            />
+                            {view === 'crm' && (
+                                <React.Suspense fallback={
+                                    <div className="w-full h-full flex items-center justify-center bg-[var(--color-paper)] text-[var(--color-ink)] font-mono text-xs">
+                                        <span className="animate-pulse">LOADING CRM...</span>
+                                    </div>
+                                }>
+                                    <POSCRMPanel 
+                                        isActive={view === 'crm'}
+                                        onAttachToOrder={(member) => {
+                                            handleSelectCrmCustomer(member);
+                                            setView('menu');
+                                        }}
+                                    />
+                                </React.Suspense>
+                            )}
                         </div>
                         <div className={view === 'reports' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
-                            <POSReportsPanel isActive={view === 'reports'} refreshKey={refreshKey} />
+                            {view === 'reports' && (
+                                <React.Suspense fallback={
+                                    <div className="w-full h-full flex items-center justify-center bg-[var(--color-paper)] text-[var(--color-ink)] font-mono text-xs">
+                                        <span className="animate-pulse">LOADING REPORTS...</span>
+                                    </div>
+                                }>
+                                    <POSReportsPanel isActive={view === 'reports'} refreshKey={refreshKey} />
+                                </React.Suspense>
+                            )}
                         </div>
                         <div className={view === 'online_hub' ? 'h-full w-full pos-panel-layer' : 'hidden'}>
-                            <POSOnlineHub 
-                                isActive={view === 'online_hub'}
-                                activeShift={activeShift} 
-                                onOpenSlipModal={(booking, slipType) => {
-                                    openSlipOrSilentPrint(booking, slipType);
-                                }}
-                                onViewSlipImage={(url) => setViewSlipImageUrl(url)}
-                                onSelectOrder={handleSelectOpenBill}
-                                refreshKey={refreshKey}
-                            />
+                            <React.Suspense fallback={
+                                <div className="w-full h-full flex items-center justify-center bg-[var(--color-paper)] text-[var(--color-ink)] font-mono text-xs">
+                                    <span className="animate-pulse">LOADING ONLINE HUB...</span>
+                                </div>
+                            }>
+                                <POSOnlineHub 
+                                    isActive={view === 'online_hub'}
+                                    activeShift={activeShift} 
+                                    onOpenSlipModal={(booking, slipType) => {
+                                        openSlipOrSilentPrint(booking, slipType);
+                                    }}
+                                    onViewSlipImage={(url) => setViewSlipImageUrl(url)}
+                                    onSelectOrder={handleSelectOpenBill}
+                                    refreshKey={refreshKey}
+                                />
+                            </React.Suspense>
                         </div>
                     </div>
 
@@ -5062,68 +5114,135 @@ export default function POSDashboard() {
 
             {showSplitModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 font-sans select-none">
-                    <POSSplitPaymentModal 
-                        order={currentOrder}
-                        activeBooking={activeBooking}
-                        includeTax={splitIncludeTax}
-                        onClose={() => setShowSplitModal(false)}
-                        onConfirmSplit={handleExecuteSplitPayment}
-                        onPrintSplitQr={handlePrintSplitQr}
-                    />
+                    <React.Suspense fallback={
+                        <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] p-6 rounded-md font-mono text-xs text-[var(--color-ink)] flex items-center gap-2">
+                            <span className="animate-pulse">LOADING SPLIT PAYMENT...</span>
+                        </div>
+                    }>
+                        <POSSplitPaymentModal 
+                            order={currentOrder}
+                            activeBooking={activeBooking}
+                            includeTax={splitIncludeTax}
+                            onClose={() => setShowSplitModal(false)}
+                            onConfirmSplit={handleExecuteSplitPayment}
+                            onPrintSplitQr={handlePrintSplitQr}
+                        />
+                    </React.Suspense>
                 </div>
             )}
             {/* Open Shift / PIN Verification Overlay (Full Screen PIN Pad) */}
             {/* Always require PIN on fresh page load, even if shift exists */}
             {(!activeShift || !isPinVerified) && (
-                <div className="fixed inset-0 bg-[#ECECE9]/95 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-[var(--color-paper)]/95 z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md p-8 max-w-md w-full shadow-xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
                         {!showOpeningFloatModal ? (
                             /* Step 1: Enter PIN Code to Identify Staff */
                             <div className="flex flex-col gap-4">
                                 <div className="text-center">
-                                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center rounded-full bg-white shadow-sm border border-[#D1D1CD]">
+                                    <div className="w-16 h-16 mx-auto mb-2 flex items-center justify-center rounded-full bg-[var(--color-paper)] shadow-xs border border-[var(--color-rule)]">
                                         <img src="/logo.png" alt="In the Haus" className="w-10 h-10 object-contain" />
                                     </div>
-                                    <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">ระบบลงชื่อเข้าเวร POS</h2>
-                                    <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
+                                    <h2 className="text-lg font-bold font-sans tracking-tight text-[var(--color-ink)]">ระบบลงชื่อเข้าเวร POS</h2>
+                                    <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO LOGIN</p>
                                 </div>
+
+                                {/* Network Status & Offline Notice Card */}
+                                {!isOnline() ? (
+                                    <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-2.5 rounded-xs flex flex-col gap-1 text-left select-none">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse"></span>
+                                                โหมดออฟไลน์ (OFFLINE MODE)
+                                            </span>
+                                            <span className="text-[8px] font-mono uppercase bg-[var(--color-paper)] border border-[var(--color-rule)] px-1.5 py-0.5 text-[var(--color-muted)]">
+                                                OFFLINE PIN READY
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] font-mono text-[var(--color-neutral)] leading-tight">
+                                            {getOfflineStaffCount() > 0 
+                                                ? `ไม่มีสัญญาณอินเทอร์เน็ต สามารถใช้ PIN พนักงานที่เคยลงชื่อเข้าใช้บนเครื่องนี้ได้ตามปกติ (${getOfflineStaffCount()} คน)`
+                                                : 'ไม่มีสัญญาณอินเทอร์เน็ต (กรุณาต่อเน็ตครั้งแรกเพื่อบันทึกรหัส PIN ลงเครื่อง)'}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] px-2.5 py-1.5 rounded-xs flex items-center justify-between select-none">
+                                        <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-accent-2)] flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-2)]"></span>
+                                            ONLINE • เซิร์ฟเวอร์พร้อมใช้งาน
+                                        </span>
+                                        <span className="text-[8px] font-mono uppercase text-[var(--color-muted)]">
+                                            CLOUD SYNC ACTIVE
+                                        </span>
+                                    </div>
+                                )}
 
                                 <POSPinPad 
                                     onComplete={async (enteredPin, onError) => {
-                                        try {
-                                            const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
-                                            if (error) {
-                                                console.error("RPC verify_staff_pin_login error:", error);
-                                                toast.error(`ไม่สามารถตรวจสอบ PIN ได้: ${error.message || 'โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'}`);
+                                        let staff = null;
+                                        let isOfflineAuth = false;
+
+                                        if (isOnline()) {
+                                            try {
+                                                const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
+                                                if (!error && verifiedStaff && verifiedStaff.length > 0) {
+                                                    staff = verifiedStaff[0];
+                                                    // Proactively cache credential for offline use!
+                                                    await saveOfflineStaffCredential(staff, enteredPin);
+                                                } else if (error) {
+                                                    console.warn("RPC verify error, attempting offline fallback:", error);
+                                                    const offlineRes = await verifyPinOffline(enteredPin);
+                                                    if (offlineRes.success) {
+                                                        staff = offlineRes.staff;
+                                                        isOfflineAuth = true;
+                                                    }
+                                                }
+                                            } catch (e) {
+                                                console.warn("RPC verify network exception, checking offline credentials:", e);
+                                                const offlineRes = await verifyPinOffline(enteredPin);
+                                                if (offlineRes.success) {
+                                                    staff = offlineRes.staff;
+                                                    isOfflineAuth = true;
+                                                }
+                                            }
+                                        } else {
+                                            // Explicitly offline
+                                            const offlineRes = await verifyPinOffline(enteredPin);
+                                            if (offlineRes.success) {
+                                                staff = offlineRes.staff;
+                                                isOfflineAuth = true;
+                                            } else {
+                                                toast.error(offlineRes.message || 'รหัส PIN ไม่ถูกต้อง (โหมดออฟไลน์)');
                                                 onError();
                                                 return;
                                             }
-                                            if (verifiedStaff && verifiedStaff.length > 0) {
-                                                await handlePinLogin(verifiedStaff[0]);
-                                                return;
-                                            }
-                                        } catch (e) {
-                                            console.warn("RPC verify error:", e);
-                                            toast.error('การเชื่อมต่อไปยังเซิร์ฟเวอร์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต');
-                                            onError();
-                                            return;
                                         }
 
-                                        toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
-                                        onError();
+                                        if (staff) {
+                                            if (isOfflineAuth) {
+                                                toast.success(`[OFFLINE] เข้าสู่ระบบโหมดออฟไลน์: ${staff.display_name}`, {
+                                                    description: 'ข้อมูลบิลและการสั่งซื้อจะถูกบันทึกในเครื่อง และนำส่งคลาวด์อัตโนมัติเมื่อมีสัญญาณ'
+                                                });
+                                            } else {
+                                                toast.success(`เข้าสู่ระบบสำเร็จ: ${staff.display_name}`);
+                                            }
+                                            await handlePinLogin(staff);
+                                        } else {
+                                            toast.error('รหัส PIN ไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง');
+                                            onError();
+                                        }
                                     }}
                                 />
                             </div>
                         ) : (
                             /* Step 3: Enter Cash Float to Open Shift */
                             <div className="flex flex-col gap-5">
-                                <div className="text-center border-b border-[#D1D1CD] pb-4">
-                                    <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-2 border border-emerald-100 shadow-inner">
+                                <div className="text-center border-b border-[var(--color-rule)] pb-4">
+                                    <div className="w-10 h-10 bg-[var(--color-accent-2)]/10 text-[var(--color-accent-2)] rounded-full flex items-center justify-center mx-auto mb-2 border border-[var(--color-accent-2)]/20 shadow-xs">
                                         <Key size={20} />
                                     </div>
-                                    <h2 className="text-base font-bold text-[#1A1A1A]">ยืนยันรหัสถูกต้องเรียบร้อย</h2>
-                                    <p className="text-[10px] text-[#767673] font-mono leading-none mt-1 uppercase">Enter Cash Float for: {selectedStaffForLogin.display_name}</p>
+                                    <h2 className="text-base font-bold font-sans text-[var(--color-ink)]">ยืนยันรหัสถูกต้องเรียบร้อย</h2>
+                                    <p className="text-[10px] text-[var(--color-muted)] font-mono leading-none mt-1 uppercase">Enter Cash Float for: {selectedStaffForLogin.display_name}</p>
                                 </div>
 
                                 <form 
@@ -5140,11 +5259,11 @@ export default function POSDashboard() {
                                     className="flex flex-col gap-4"
                                 >
                                     <div>
-                                        <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                        <label className="block text-[10px] font-mono font-bold tracking-widest text-[var(--color-muted)] uppercase mb-1.5">
                                             ระบุเงินทอนเริ่มต้นในลิ้นชัก (Opening Float)
                                         </label>
                                         <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[#767673] font-bold">฿</span>
+                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[var(--color-muted)] font-bold">฿</span>
                                             <input
                                                 type="number"
                                                 required
@@ -5152,7 +5271,7 @@ export default function POSDashboard() {
                                                 step="any"
                                                 value={openShiftForm.openingFloat}
                                                 onChange={(e) => setOpenShiftForm(prev => ({ ...prev, openingFloat: e.target.value }))}
-                                                className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                                className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/15 transition-all text-[var(--color-ink)] shadow-xs"
                                             />
                                         </div>
                                     </div>
@@ -5164,15 +5283,15 @@ export default function POSDashboard() {
                                                 setShowOpeningFloatModal(false);
                                                 setPinInput('');
                                             }}
-                                            className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#ECECE9] text-[#1A1A1A] py-3 px-4 rounded-xl font-bold text-xs uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                            className="flex-1 min-h-[40px] bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] py-2.5 px-4 rounded-md font-bold text-xs uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
                                         >
                                             ย้อนหลัง (Back)
                                         </button>
                                         <button
                                             type="submit"
-                                            className="flex-1 bg-[var(--color-accent)] hover:opacity-90 text-white py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide shadow-md active:scale-98 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                            className="flex-1 min-h-[40px] bg-[var(--color-accent)] hover:opacity-90 text-[var(--color-paper)] py-2.5 px-4 rounded-md font-bold text-xs uppercase tracking-wide shadow-xs active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
                                         >
-                                            <LogIn size={12} />
+                                            <LogIn size={14} />
                                             <span>เปิดรอบขาย (Start)</span>
                                         </button>
                                     </div>
@@ -5519,19 +5638,19 @@ export default function POSDashboard() {
 
             {/* Petty Cash Adjustment Modal (เบิกจ่ายระหว่างวัน เข้า-ออก) */}
             {showCashAdjustmentModal && activeShift && (
-                <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between border-b border-[#D1D1CD] pb-3">
+                <div className="fixed inset-0 bg-[var(--color-ink)]/60 z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md p-6 max-w-md w-full shadow-2xl flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
                             <div>
-                                <h3 className="text-base font-bold font-sans text-[#1A1A1A]">บันทึกรายการเบิกจ่ายเงินสด</h3>
-                                <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase">Petty Cash Deposit / Withdrawal</p>
+                                <h3 className="text-base font-bold font-sans text-[var(--color-ink)]">บันทึกรายการเบิกจ่ายเงินสด</h3>
+                                <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5 uppercase">Petty Cash Deposit / Withdrawal</p>
                             </div>
                             <button
                                 onClick={() => {
                                     setShowCashAdjustmentModal(false);
                                     setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
                                 }}
-                                className="text-[#767673] hover:text-[#1A1A1A] text-xl font-bold font-mono p-1"
+                                className="text-[var(--color-muted)] hover:text-[var(--color-ink)] text-xl font-bold font-mono p-1"
                             >
                                 ×
                             </button>
@@ -5540,17 +5659,17 @@ export default function POSDashboard() {
                         <form onSubmit={handleCashAdjustmentSubmit} className="flex flex-col gap-4">
                             {/* Adjustment Type Selection */}
                             <div>
-                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[var(--color-muted)] uppercase mb-1.5">
                                     ประเภทรายการ (Transaction Type)
                                 </label>
                                 <div className="flex gap-2">
                                     <button
                                         type="button"
                                         onClick={() => setCashAdjustmentForm(prev => ({ ...prev, type: 'out' }))}
-                                        className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                        className={`flex-1 min-h-[40px] py-2.5 px-4 rounded-md font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 touch-manipulation ${
                                             cashAdjustmentForm.type === 'out'
-                                            ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
-                                            : 'bg-white border-[#D1D1CD] hover:bg-[#ECECE9] text-[#767673]'
+                                            ? 'bg-[var(--color-accent)]/10 border-[var(--color-accent)]/30 text-[var(--color-accent)] shadow-xs'
+                                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-muted)]'
                                         }`}
                                     >
                                         <Minus size={12} />
@@ -5559,10 +5678,10 @@ export default function POSDashboard() {
                                     <button
                                         type="button"
                                         onClick={() => setCashAdjustmentForm(prev => ({ ...prev, type: 'in' }))}
-                                        className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                                        className={`flex-1 min-h-[40px] py-2.5 px-4 rounded-md font-bold text-xs uppercase tracking-wide border transition-all cursor-pointer flex items-center justify-center gap-1.5 touch-manipulation ${
                                             cashAdjustmentForm.type === 'in'
-                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
-                                            : 'bg-white border-[#D1D1CD] hover:bg-[#ECECE9] text-[#767673]'
+                                            ? 'bg-[var(--color-accent-2)]/10 border-[var(--color-accent-2)]/30 text-[var(--color-accent-2)] shadow-xs'
+                                            : 'bg-[var(--color-paper)] border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-muted)]'
                                         }`}
                                     >
                                         <Plus size={12} />
@@ -5573,11 +5692,11 @@ export default function POSDashboard() {
 
                             {/* Amount Input */}
                             <div>
-                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[var(--color-muted)] uppercase mb-1.5">
                                     จำนวนเงินสด (Cash Amount)
                                 </label>
                                 <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[#767673] font-bold">฿</span>
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-mono text-[var(--color-muted)] font-bold">฿</span>
                                     <input
                                         type="number"
                                         required
@@ -5586,14 +5705,14 @@ export default function POSDashboard() {
                                         placeholder="0.00"
                                         value={cashAdjustmentForm.amount}
                                         onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, amount: e.target.value }))}
-                                        className="w-full bg-white border border-[#D1D1CD] rounded-xl pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] shadow-inner"
+                                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md pl-9 pr-4 py-3 text-base font-mono font-bold focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/15 transition-all text-[var(--color-ink)] shadow-xs"
                                     />
                                 </div>
                             </div>
 
                             {/* Notes Input */}
                             <div>
-                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[#767673] uppercase mb-1.5">
+                                <label className="block text-[10px] font-mono font-bold tracking-widest text-[var(--color-muted)] uppercase mb-1.5">
                                     รายละเอียด / เหตุผล (Details & Reason)
                                 </label>
                                 <input
@@ -5602,7 +5721,7 @@ export default function POSDashboard() {
                                     placeholder="เช่น ซื้อน้ำแข็ง, ทอนเงินเพิ่ม, จ่ายผู้ผลิต"
                                     value={cashAdjustmentForm.note}
                                     onChange={(e) => setCashAdjustmentForm(prev => ({ ...prev, note: e.target.value }))}
-                                    className="w-full bg-white border border-[#D1D1CD] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#ff0000] focus:ring-2 focus:ring-[#ff0000]/15 transition-all text-[#1A1A1A] font-bold shadow-inner"
+                                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-md px-4 py-3 text-sm focus:outline-none focus:border-[var(--color-accent)] focus:ring-2 focus:ring-[var(--color-accent)]/15 transition-all text-[var(--color-ink)] font-bold shadow-xs"
                                 />
                             </div>
 
@@ -5614,13 +5733,13 @@ export default function POSDashboard() {
                                         setShowCashAdjustmentModal(false);
                                         setCashAdjustmentForm({ amount: '', note: '', type: 'out' });
                                     }}
-                                    className="flex-1 bg-white border border-[#D1D1CD] hover:bg-[#ECECE9] text-[#1A1A1A] py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-sm active:scale-98"
+                                    className="flex-1 min-h-[40px] bg-[var(--color-paper)] border border-[var(--color-rule)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] py-2.5 rounded-md font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
                                 >
                                     ยกเลิก
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 bg-[#ff0000] hover:bg-[#c00000] text-white py-3.5 rounded-xl font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-md active:scale-98"
+                                    className="flex-1 min-h-[40px] bg-[var(--color-accent)] hover:opacity-90 text-[var(--color-paper)] py-2.5 rounded-md font-bold text-xs tracking-wider uppercase transition-all cursor-pointer shadow-xs active:scale-98 touch-manipulation"
                                 >
                                     บันทึกรายการ
                                 </button>
@@ -5632,38 +5751,76 @@ export default function POSDashboard() {
 
             {/* Lock Screen Overlay (Full Screen PIN Pad / Staff Grid) */}
             {isLocked && activeShift && (
-                <div className="fixed inset-0 bg-[#ECECE9]/95 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[#F5F5F2] border border-[#D1D1CD] rounded-2xl p-8 max-w-md w-full shadow-2xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-[var(--color-paper)]/95 z-50 flex items-center justify-center p-4">
+                    <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-md p-8 max-w-md w-full shadow-xl flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-200">
                         
                         {/* Enter PIN Code to Unlock */}
                         <div className="flex flex-col gap-4">
                             <div className="text-center">
-                                <div className="w-14 h-14 bg-[#ff0000]/10 text-[#ff0000] rounded-full flex items-center justify-center mx-auto mb-3 border border-[#ff0000]/20 shadow-inner">
+                                <div className="w-14 h-14 bg-[var(--color-accent)]/10 text-[var(--color-accent)] rounded-full flex items-center justify-center mx-auto mb-3 border border-[var(--color-accent)]/20 shadow-xs">
                                     <Lock size={28} />
                                 </div>
-                                <h2 className="text-lg font-bold font-sans tracking-tight text-[#1A1A1A]">POS หน้าจอถูกล็อค</h2>
-                                <p className="text-[10px] text-[#767673] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO UNLOCK</p>
+                                <h2 className="text-lg font-bold font-sans tracking-tight text-[var(--color-ink)]">POS หน้าจอถูกล็อค</h2>
+                                <p className="text-[10px] text-[var(--color-muted)] font-mono mt-0.5 uppercase tracking-wider">ENTER PIN TO UNLOCK</p>
                             </div>
+
+                            {/* Network & Offline Status Banner */}
+                            {!isOnline() ? (
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper-2)] p-2.5 rounded-xs flex flex-col gap-1 text-left select-none">
+                                    <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse"></span>
+                                        ปลดล็อคโหมดออฟไลน์ (OFFLINE UNLOCK)
+                                    </span>
+                                    <p className="text-[10px] font-mono text-[var(--color-neutral)] leading-tight">
+                                        ไม่มีสัญญาณอินเทอร์เน็ต สามารถใช้ PIN พนักงานที่เคยลงชื่อเข้าใช้เพื่อปลดล็อคได้ทันที
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="border border-[var(--color-rule)] bg-[var(--color-paper)] px-2.5 py-1.5 rounded-xs flex items-center justify-between select-none">
+                                    <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-accent-2)] flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-2)]"></span>
+                                        ONLINE READY
+                                    </span>
+                                </div>
+                            )}
 
                             <POSPinPad 
                                 onComplete={async (enteredPin, onError) => {
                                     let staff = null;
-                                    try {
-                                        const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
-                                        if (error) {
-                                            console.error("RPC unlock verify error:", error);
-                                            toast.error(`ไม่สามารถตรวจสอบ PIN ได้: ${error.message || 'โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต'}`);
+                                    let isOfflineAuth = false;
+
+                                    if (isOnline()) {
+                                        try {
+                                            const { data: verifiedStaff, error } = await supabase.rpc('verify_staff_pin_login', { p_pin: enteredPin });
+                                            if (!error && verifiedStaff && verifiedStaff.length > 0) {
+                                                staff = verifiedStaff[0];
+                                                await saveOfflineStaffCredential(staff, enteredPin);
+                                            } else if (error) {
+                                                console.warn("RPC unlock verify error, attempting offline fallback:", error);
+                                                const offlineRes = await verifyPinOffline(enteredPin);
+                                                if (offlineRes.success) {
+                                                    staff = offlineRes.staff;
+                                                    isOfflineAuth = true;
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.warn("RPC unlock network exception, checking offline credentials:", e);
+                                            const offlineRes = await verifyPinOffline(enteredPin);
+                                            if (offlineRes.success) {
+                                                staff = offlineRes.staff;
+                                                isOfflineAuth = true;
+                                            }
+                                        }
+                                    } else {
+                                        const offlineRes = await verifyPinOffline(enteredPin);
+                                        if (offlineRes.success) {
+                                            staff = offlineRes.staff;
+                                            isOfflineAuth = true;
+                                        } else {
+                                            toast.error(offlineRes.message || 'รหัส PIN ไม่ถูกต้อง (โหมดออฟไลน์)');
                                             onError();
                                             return;
                                         }
-                                        if (verifiedStaff && verifiedStaff.length > 0) {
-                                            staff = verifiedStaff[0];
-                                        }
-                                    } catch (e) {
-                                        console.warn("RPC unlock verify error:", e);
-                                        toast.error('การเชื่อมต่อไปยังเซิร์ฟเวอร์ขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต');
-                                        onError();
-                                        return;
                                     }
 
                                     if (staff) {
@@ -5676,9 +5833,9 @@ export default function POSDashboard() {
                                             setActiveShift(updatedShift);
                                             syncShiftToCloud(updatedShift);
                                             window.dispatchEvent(new Event('pos-shift-changed'));
-                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name}`);
+                                            toast.success(`เปลี่ยนเป็นพนักงาน: ${staff.display_name} ${isOfflineAuth ? '(ออฟไลน์)' : ''}`);
                                         } else {
-                                            toast.success('ปลดล็อคหน้าจอสำเร็จ');
+                                            toast.success(`ปลดล็อคหน้าจอสำเร็จ ${isOfflineAuth ? '(โหมดออฟไลน์)' : ''}`);
                                         }
                                         unlockScreen();
                                         setIsPinVerified(true);

@@ -1059,7 +1059,24 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
 
         const totalItemsCount = itemsToRender.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
 
+        // Explicit Ticket Header Banner per Rule 3 (Full header ticket with table name, queue #, order time, staff name)
+        const kitchenTicketTitle = activeTab === 'bar' 
+            ? 'BAR ORDER' 
+            : (activeTab === 'other' ? 'OTHER ORDER' : 'KITCHEN ORDER');
+        const kitchenTicketSub = activeTab === 'bar' 
+            ? '(ใบสั่งบาร์เครื่องดื่ม)' 
+            : (activeTab === 'other' ? '(ใบสั่งแผนกอื่น)' : '(ใบสั่งในห้องครัว)');
+
         encoder.align('center')
+               .line(doubleDivider)
+               .bold(true)
+               .size(1, 1)
+               .line(kitchenTicketTitle)
+               .size(0, 0)
+               .bold(true)
+               .line(kitchenTicketSub)
+               .bold(false)
+               .line(doubleDivider)
                .bold(true)
                .size(1, 1)
                .line(tableDisplayTitle)
@@ -1067,6 +1084,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                .line(divider)
                .align('left')
                .bold(true)
+               .line(`คิว: #${queueNo}`)
                .line(`บริการ: ${serviceType}`)
                .line(`พนักงานรับ: ${staffName ? staffName.toUpperCase() : 'SYSTEM'}`);
 
@@ -2896,6 +2914,23 @@ export async function printToSunmiBuiltIn(rawData, logoUrl = null, qrUrl = null)
             reject(err);
         });
     });
+}
+
+/**
+ * Triggers the cash drawer connected via RJ11 to open (No Sale / manual drawer release).
+ * Sends standard ESC/POS drawer kick pulse via Sunmi Built-In print queue.
+ */
+export async function openCashDrawer() {
+    try {
+        const encoder = new EscPosEncoder(false);
+        encoder.initialize().kickDrawer();
+        const rawBytes = encoder.encode();
+        const res = await printToSunmiBuiltIn(rawBytes);
+        return Boolean(res);
+    } catch (err) {
+        console.error("Failed to kick cash drawer:", err);
+        return false;
+    }
 }
 
 /**

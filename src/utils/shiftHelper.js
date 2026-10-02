@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { addToOfflineQueue } from './offlineHelper';
 
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
@@ -273,12 +274,14 @@ export async function syncShiftToCloud(shift) {
             .upsert(corePayload);
 
         if (error) {
-            console.warn('[Shift Sync] Supabase upsert error:', error.message || error);
+            console.warn('[Shift Sync] Supabase upsert error, queueing offline:', error.message || error);
+            addToOfflineQueue('sync_shift', shift);
         } else {
             console.log('[Shift Sync] Shift synced successfully to cloud:', shift.id);
         }
     } catch (err) {
-        console.error('[Shift Sync] Cloud sync error:', err);
+        console.error('[Shift Sync] Cloud sync error, queueing offline:', err);
+        addToOfflineQueue('sync_shift', shift);
     }
 }
 

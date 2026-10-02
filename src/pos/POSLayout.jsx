@@ -14,7 +14,10 @@ import {
 import { isOnline, getOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper';
 import { getCurrentShift } from '../utils/shiftHelper';
 import { supabase } from '../lib/supabaseClient';
+import { openCashDrawer } from '../utils/printerHelper';
+import { toast } from 'sonner';
 import POSVolumeControl from './POSVolumeControl';
+import POSNetworkStatusBanner from './POSNetworkStatusBanner';
 
 const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, selectedTable, onBack, onlinePendingCount = 0 }) {
     const [online, setOnline] = useState(isOnline());
@@ -46,6 +49,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
 
         window.addEventListener('online', handleStatus);
         window.addEventListener('offline', handleStatus);
+        window.addEventListener('pos-network-status-changed', handleStatus);
         window.addEventListener('offline-queue-changed', handleQueue);
         window.addEventListener('pos-shift-changed', handleShift);
 
@@ -100,6 +104,7 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
         return () => {
             window.removeEventListener('online', handleStatus);
             window.removeEventListener('offline', handleStatus);
+            window.removeEventListener('pos-network-status-changed', handleStatus);
             window.removeEventListener('offline-queue-changed', handleQueue);
             window.removeEventListener('pos-shift-changed', handleShift);
             subscription.unsubscribe();
@@ -198,6 +203,9 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                     </div>
                 )}
 
+                {/* Global Network Status Banner (Rams Minimalist / Brutalist Grid) */}
+                <POSNetworkStatusBanner />
+
                 {/* Header Sub-bar */}
                 <header className="h-16 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between px-6 shrink-0">
                     <div className="flex items-center gap-4">
@@ -221,30 +229,30 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                     </div>
 
                     <div className="flex items-center gap-3">
-                        {/* Offline Sync Status Badge */}
+                        {/* Offline Sync Status Badge (Zero-Icon / Typography Enclosure) */}
                         {!online ? (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
-                                className="min-h-[38px] flex items-center gap-1.5 bg-red-50 hover:bg-red-100 border border-red-300 text-red-800 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md shadow-xs animate-pulse cursor-pointer transition-all active:scale-95 touch-manipulation"
+                                className="min-h-[38px] flex items-center gap-2 bg-[var(--color-paper-2)] hover:bg-[var(--color-paper)] border border-[var(--color-accent)] text-[var(--color-accent)] font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xs shadow-xs cursor-pointer transition-all active:scale-95 touch-manipulation"
                             >
-                                <span className="w-2 h-2 rounded-full bg-red-600"></span>
-                                <span>🔴 ออฟไลน์ (ค้าง {queueLength} รายการ)</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse"></span>
+                                <span>OFFLINE (ค้าง {queueLength} รายการ)</span>
                             </button>
                         ) : (Number(queueLength) || 0) > 0 ? (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
-                                className="min-h-[38px] flex items-center gap-1.5 bg-amber-50 border border-amber-300 text-amber-900 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md hover:bg-amber-100 cursor-pointer active:scale-95 transition-all shadow-xs touch-manipulation"
+                                className="min-h-[38px] flex items-center gap-2 bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xs hover:bg-[var(--color-paper)] cursor-pointer active:scale-95 transition-all shadow-xs touch-manipulation"
                             >
-                                <span className="w-2 h-2 rounded-full bg-amber-600 animate-ping"></span>
-                                <span>🟠 รอซิงค์ออนไลน์ ({queueLength} รายการ)</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-ping"></span>
+                                <span>SYNC PENDING ({queueLength})</span>
                             </button>
                         ) : (
                             <button
                                 onClick={() => window.dispatchEvent(new Event('pos-trigger-offline-drawer'))}
-                                className="min-h-[38px] flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-md shadow-xs cursor-pointer transition-all active:scale-95 touch-manipulation"
+                                className="min-h-[38px] flex items-center gap-2 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xs shadow-xs cursor-pointer transition-all active:scale-95 touch-manipulation"
                             >
-                                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                                <span>🟢 ออนไลน์เรียบร้อย</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-2)]"></span>
+                                <span>ONLINE READY</span>
                             </button>
                         )}
 
@@ -284,6 +292,23 @@ const POSLayout = memo(function POSLayout({ children, activeView, onViewChange, 
                                 </button>
                             </div>
                         )}
+
+                        {/* Manual Cash Drawer Kick Button (No Sale) */}
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const ok = await openCashDrawer();
+                                if (ok) {
+                                    toast.success('🔓 เปิดลิ้นชักเก็บเงินเรียบร้อย');
+                                } else {
+                                    toast.error('ไม่สามารถเปิดลิ้นชักได้ กรุณาตรวจสอบสายเชื่อมต่อ RJ11');
+                                }
+                            }}
+                            title="เปิดลิ้นชักเก็บเงิน (No Sale)"
+                            className="min-h-[38px] flex items-center gap-1.5 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] font-mono text-[9px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xs shadow-xs cursor-pointer transition-all active:scale-95 touch-manipulation"
+                        >
+                            <span>เปิดลิ้นชัก</span>
+                        </button>
 
                         {/* Sub-Branding */}
                         <span className="text-xs font-mono font-bold tracking-widest text-[var(--color-neutral)] uppercase select-none hidden md:inline">

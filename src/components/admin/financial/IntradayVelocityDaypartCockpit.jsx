@@ -919,34 +919,6 @@ export default function IntradayVelocityDaypartCockpit({
         }
     }, [filterMode, validOrders, hours, totalSeats, adEvents, isViewingToday, currentBangkokTime, isWeekend, historicalBaseline])
 
-    // Memoize Drill-down Data for Selected Hour
-    const { drillHourData, drillHourOrders, drillTopItems } = useMemo(() => {
-        if (drilldownHour === null || !dayMetrics?.points) {
-            return { drillHourData: null, drillHourOrders: [], drillTopItems: [] }
-        }
-        const pt = dayMetrics.points.find(p => p.hour === drilldownHour)
-        const orders = (validOrders || []).filter(b => {
-            const t = b.booking_time || b.created_at
-            return getBangkokHour(t) === drilldownHour
-        })
-
-        const itemMap = {}
-        orders.forEach(b => {
-            const items = Array.isArray(b.order_items) ? b.order_items : []
-            items.forEach(it => {
-                const name = it.name || it.item_name || it.menu_items?.name_th || it.menu_items?.name || 'รายการทั่วไป'
-                const qty = Number(it.quantity || 1)
-                const price = Number(it.price_at_time ?? it.menu_items?.price ?? 0)
-                if (!itemMap[name]) itemMap[name] = { name, qty: 0, total: 0 }
-                itemMap[name].qty += qty
-                itemMap[name].total += price * qty
-            })
-        })
-        const topItems = Object.values(itemMap).sort((a, b) => b.total - a.total).slice(0, 4)
-
-        return { drillHourData: pt, drillHourOrders: orders, drillTopItems: topItems }
-    }, [drilldownHour, dayMetrics, validOrders])
-
     // =========================================================================
     // 4. MONTH MODE COMPUTATION
     // =========================================================================
@@ -966,7 +938,8 @@ export default function IntradayVelocityDaypartCockpit({
 
             const hSales = {}
             const hPax = {}
-            hours.forEach(h => { hSales[h] = 0; hPax[h] = 0 })
+            const hBills = {}
+            hours.forEach(h => { hSales[h] = 0; hPax[h] = 0; hBills[h] = 0 })
 
             dateMap[dateStr] = {
                 date: dateStr,
@@ -977,7 +950,8 @@ export default function IntradayVelocityDaypartCockpit({
                 pax: 0,
                 bills: 0,
                 hourlySales: hSales,
-                hourlyPax: hPax
+                hourlyPax: hPax,
+                hourlyBills: hBills
             }
         }
 
@@ -1013,6 +987,7 @@ export default function IntradayVelocityDaypartCockpit({
             if (dateMap[dateStr].hourlySales[h] !== undefined) {
                 dateMap[dateStr].hourlySales[h] += billAmt
                 dateMap[dateStr].hourlyPax[h] += pax
+                dateMap[dateStr].hourlyBills[h] = (dateMap[dateStr].hourlyBills[h] || 0) + 1
             }
         })
 
@@ -1021,20 +996,35 @@ export default function IntradayVelocityDaypartCockpit({
         const activeDaysCount = Math.max(1, daysWithSales.length)
 
         // Average Hourly Profile
+        let runningMonthSales = 0
+        let runningMonthPax = 0
         const monthlyAvgHourly = hours.map(h => {
             const totalHourSales = daysList.reduce((sum, d) => sum + (d.hourlySales[h] || 0), 0)
             const totalHourPax = daysList.reduce((sum, d) => sum + (d.hourlyPax[h] || 0), 0)
+            const totalHourBills = daysList.reduce((sum, d) => sum + (d.hourlyBills?.[h] || 0), 0)
             const avgSales = Math.round(totalHourSales / activeDaysCount)
             const avgPax = Math.round((totalHourPax / activeDaysCount) * 10) / 10
+            const avgBills = Math.round((totalHourBills / activeDaysCount) * 10) / 10
+            runningMonthSales += totalHourSales
+            runningMonthPax += totalHourPax
+
             return {
                 hour: h,
                 label: `${h}.00`,
                 totalSales: totalHourSales,
                 totalPax: totalHourPax,
+                totalBills: totalHourBills,
                 avgSales,
                 avgPax,
+                avgBills,
+                sale: totalHourSales,
+                pax: totalHourPax,
+                bills: totalHourBills,
                 spendPerHead: totalHourPax > 0 ? Math.round(totalHourSales / totalHourPax) : 0,
-                occupancyPct: Math.round((avgPax / totalSeats) * 100)
+                occupancyPct: Math.round((avgPax / totalSeats) * 100),
+                seatOccupancyPct: Math.round((avgPax / totalSeats) * 100),
+                cumulativeSales: runningMonthSales,
+                cumulativePax: runningMonthPax
             }
         })
 
@@ -1081,9 +1071,11 @@ export default function IntradayVelocityDaypartCockpit({
         const monthlyDayparts = DAYPARTS.map(dp => {
             let dpSales = 0
             let dpPax = 0
+            let dpBills = 0
             dp.hours.forEach(h => {
                 dpSales += daysList.reduce((sum, d) => sum + (d.hourlySales[h] || 0), 0)
                 dpPax += daysList.reduce((sum, d) => sum + (d.hourlyPax[h] || 0), 0)
+                dpBills += daysList.reduce((sum, d) => sum + (d.hourlyBills?.[h] || 0), 0)
             })
 
             const pct = monthGross > 0 ? Math.round((dpSales / monthGross) * 1000) / 10 : 0
@@ -1095,6 +1087,7 @@ export default function IntradayVelocityDaypartCockpit({
                 ...dp,
                 sales: dpSales,
                 pax: dpPax,
+                bills: dpBills,
                 percent: pct,
                 spendPerHead: sph,
                 hourlyVelocity
@@ -1126,6 +1119,35 @@ export default function IntradayVelocityDaypartCockpit({
             breakEvenHour: breakEvenPoint ? `${breakEvenPoint.hour}.00 น.` : 'เกิน 23.00 น.'
         }
     }, [filterMode, validOrders, hours, totalSeats, totalExpenses, selectedMonth, todayBangkok])
+
+    // Memoize Drill-down Data for Selected Hour (Supports both Day and Month modes)
+    const { drillHourData, drillHourOrders, drillTopItems } = useMemo(() => {
+        const pointsList = filterMode === 'month' ? monthMetrics?.monthlyAvgHourly : dayMetrics?.points
+        if (drilldownHour === null || !pointsList) {
+            return { drillHourData: null, drillHourOrders: [], drillTopItems: [] }
+        }
+        const pt = pointsList.find(p => p.hour === drilldownHour)
+        const orders = (validOrders || []).filter(b => {
+            const t = b.booking_time || b.created_at
+            return getBangkokHour(t) === drilldownHour
+        })
+
+        const itemMap = {}
+        orders.forEach(b => {
+            const items = Array.isArray(b.order_items) ? b.order_items : []
+            items.forEach(it => {
+                const name = it.name || it.item_name || it.menu_items?.name_th || it.menu_items?.name || 'รายการทั่วไป'
+                const qty = Number(it.quantity || 1)
+                const price = Number(it.price_at_time ?? it.menu_items?.price ?? 0)
+                if (!itemMap[name]) itemMap[name] = { name, qty: 0, total: 0 }
+                itemMap[name].qty += qty
+                itemMap[name].total += price * qty
+            })
+        })
+        const topItems = Object.values(itemMap).sort((a, b) => b.total - a.total).slice(0, 4)
+
+        return { drillHourData: pt, drillHourOrders: orders, drillTopItems: topItems }
+    }, [drilldownHour, filterMode, dayMetrics, monthMetrics, validOrders])
 
     // =========================================================================
     // 5. ON-DEMAND AI BRIEFING GENERATION
@@ -2874,7 +2896,7 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                     )}
 
                     {/* Hourly Drill-Down Inspector Drawer (Zero Page Transition & Mobile Enclosure) */}
-                    {filterMode === 'day' && drilldownHour !== null && drillHourData && (
+                    {drilldownHour !== null && drillHourData && (
                         <div
                             ref={inspectorRef}
                             className="mt-4 p-3.5 sm:p-5 bg-[oklch(94%_0.010_28)] border-2 border-[oklch(18%_0.012_28)] font-mono text-xs space-y-3.5 w-full max-w-full overflow-hidden animate-in fade-in duration-200"
@@ -2890,7 +2912,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     </span>
                                     <span className="text-[oklch(85%_0.012_28)] hidden sm:inline">|</span>
                                     <span className="text-[10px] sm:text-xs text-[oklch(42%_0.010_28)] break-words">
-                                        {drillHourData.isFuture ? 'ช่วงเวลาคาดการณ์ล่วงหน้า (FORECAST INTERVAL)' : (drillHourData.sale > 0 ? 'บันทึกยอดขายจริงแล้ว (RECORDED)' : 'ไม่มีรายการคำสั่งซื้อ')}
+                                        {drillHourData.isFuture
+                                            ? 'ช่วงเวลาคาดการณ์ล่วงหน้า (FORECAST INTERVAL)'
+                                            : (drillHourData.sale > 0
+                                                ? (filterMode === 'month' ? 'ยอดขายสะสมทั้งเดือน (MONTHLY TOTAL)' : 'บันทึกยอดขายจริงแล้ว (RECORDED)')
+                                                : 'ไม่มีรายการคำสั่งซื้อ')}
                                     </span>
                                 </div>
                                 <button
@@ -2924,7 +2950,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     </div>
                                     <div className="text-[9px] sm:text-[10px] text-[oklch(42%_0.010_28)] mt-1 truncate flex items-center justify-between gap-1">
                                         <span>สะสม: ฿{(drillHourData.cumulativeSales || 0).toLocaleString()}</span>
-                                        <span>เป้า: ฿{(drillHourData.targetSales || 0).toLocaleString()}</span>
+                                        {filterMode === 'month' ? (
+                                            <span>เฉลี่ย: ฿{(drillHourData.avgSales || 0).toLocaleString()}/วัน</span>
+                                        ) : (
+                                            <span>เป้า: ฿{(drillHourData.targetSales || 0).toLocaleString()}</span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2937,7 +2967,9 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         {drillHourData.isFuture && drillHourData.isLifted ? (
                                             <span>สถิติเดิม: ~{drillHourData.baselinePax} Pax <span className="text-[oklch(45%_0.08_140)] font-bold">(หนุน Ad Lift +{Math.round((dayMetrics?.adLiftPct || 0) * 100)}%)</span></span>
                                         ) : (
-                                            `สถิติเดิม: ~${drillHourData.baselinePax} Pax`
+                                            filterMode === 'month'
+                                                ? `สถิติเฉลี่ย: ~${drillHourData.avgPax || 0} Pax/วัน`
+                                                : `สถิติเดิม: ~${drillHourData.baselinePax} Pax`
                                         )}
                                     </div>
                                 </div>
@@ -3143,12 +3175,12 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
                     {/* Hourly Daypart Performance Matrix Table */}
                     <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] overflow-hidden">
-                        <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between">
+                        <div className="p-3 bg-[oklch(94%_0.010_28)] border-b border-[oklch(85%_0.012_28)] flex items-center justify-between flex-wrap gap-2">
                             <span className="font-mono text-xs font-bold text-[oklch(18%_0.012_28)] uppercase tracking-wider">
-                                HOURLY PERFORMANCE MATRIX // แจกแจงรายชั่วโมง 11:00 - 23:00
+                                HOURLY PERFORMANCE MATRIX // {filterMode === 'month' ? `แจกแจงรายชั่วโมงสะสมประจำเดือน ${selectedMonth || todayBangkok.slice(0, 7)}` : 'แจกแจงรายชั่วโมง 11:00 - 23:00'}
                             </span>
                             <span className="font-mono text-[11px] text-[oklch(42%_0.010_28)]">
-                                13 กรอบเวลาปฏิบัติการ
+                                {filterMode === 'month' ? `${monthMetrics?.activeDaysCount || 0} วันทำการ · 13 กรอบเวลาปฏิบัติการ` : '13 กรอบเวลาปฏิบัติการ'}
                             </span>
                         </div>
 
@@ -3158,8 +3190,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                     <tr>
                                         <th className="p-2.5">ชั่วโมง (Hour)</th>
                                         <th className="p-2.5">ช่วงเวลา (Daypart)</th>
-                                        <th className="p-2.5 text-right">ลูกค้าจริง / คาดการณ์</th>
-                                        <th className="p-2.5 text-right">ยอดขาย (฿)</th>
+                                        <th className="p-2.5 text-right">{filterMode === 'month' ? 'ลูกค้าจริง (รวม / เฉลี่ยวัน)' : 'ลูกค้าจริง / คาดการณ์'}</th>
+                                        <th className="p-2.5 text-right">{filterMode === 'month' ? 'ยอดขายรวม (฿)' : 'ยอดขาย (฿)'}</th>
                                         <th className="p-2.5 text-right">ยอดสะสม (฿)</th>
                                         <th className="p-2.5 text-right">เฉลี่ย/หัว (฿)</th>
                                         <th className="p-2.5 text-right">จำนวนบิล</th>
@@ -3168,9 +3200,11 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                 </thead>
                                 <tbody className="divide-y divide-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)]">
                                     {hours.map((h) => {
-                                        const pt = dayMetrics?.points.find(p => p.hour === h)
+                                        const pt = filterMode === 'month'
+                                            ? monthMetrics?.monthlyAvgHourly?.find(p => p.hour === h)
+                                            : dayMetrics?.points?.find(p => p.hour === h)
                                         const dp = DAYPARTS.find(d => d.hours.includes(h))
-                                        const isCurrentHour = isViewingToday && currentBangkokTime.hour === h
+                                        const isCurrentHour = filterMode === 'day' && isViewingToday && currentBangkokTime.hour === h
                                         const isGoal = filterMode === 'day' && !!pt?.isGoalExceeded
 
                                         return (
@@ -3201,20 +3235,38 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     {dp?.label}
                                                 </td>
                                                 <td className="p-2.5 text-right">
-                                                    <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                                        {pt?.isFuture ? `~${pt?.forecast}` : (pt?.pax || 0)}
-                                                    </span>
-                                                    <span className="text-[oklch(42%_0.010_28)] ml-1">
-                                                        / สถิติ ~{pt?.baselinePax || 0}
-                                                    </span>
+                                                    {filterMode === 'month' ? (
+                                                        <>
+                                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                                {(pt?.pax || 0).toLocaleString()} ท่าน
+                                                            </span>
+                                                            <span className="text-[oklch(42%_0.010_28)] ml-1 text-[10px]">
+                                                                / เฉลี่ย ~{pt?.avgPax || 0}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                                {pt?.isFuture ? `~${pt?.forecast}` : (pt?.pax || 0)}
+                                                            </span>
+                                                            <span className="text-[oklch(42%_0.010_28)] ml-1">
+                                                                / สถิติ ~{pt?.baselinePax || 0}
+                                                            </span>
+                                                        </>
+                                                    )}
                                                 </td>
                                                 <td className={`p-2.5 text-right font-bold ${
                                                     isGoal ? 'text-[oklch(44%_0.17_142)]' : 'text-[oklch(18%_0.012_28)]'
                                                 }`}>
-                                                    ฿{(pt?.sale || 0).toLocaleString()}
+                                                    <span>฿{(pt?.sale || 0).toLocaleString()}</span>
                                                     {isGoal && pt?.goalDeltaPct > 0 && (
                                                         <span className="text-[9px] ml-1 text-[oklch(50%_0.15_142)]">
                                                             (+{pt.goalDeltaPct}%)
+                                                        </span>
+                                                    )}
+                                                    {filterMode === 'month' && (pt?.avgSales || 0) > 0 && (
+                                                        <span className="text-[10px] font-normal text-[oklch(42%_0.010_28)] ml-1 font-sans">
+                                                            (~฿{pt.avgSales.toLocaleString()}/วัน)
                                                         </span>
                                                     )}
                                                 </td>
@@ -3222,10 +3274,21 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                                     ฿{(pt?.cumulativeSales || 0).toLocaleString()}
                                                 </td>
                                                 <td className="p-2.5 text-right text-[oklch(45%_0.08_140)]">
-                                                    ฿{pt?.spendPerHead || 0}
+                                                    ฿{(pt?.spendPerHead || 0).toLocaleString()}
                                                 </td>
                                                 <td className="p-2.5 text-right text-[oklch(42%_0.010_28)]">
-                                                    {pt?.bills || 0} บิล
+                                                    {filterMode === 'month' ? (
+                                                        <>
+                                                            <span>{(pt?.bills || 0).toLocaleString()} บิล</span>
+                                                            {(pt?.avgBills || 0) > 0 && (
+                                                                <span className="text-[10px] ml-1 text-[oklch(55%_0.010_28)]">
+                                                                    (~{pt.avgBills}/ว.)
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        `${pt?.bills || 0} บิล`
+                                                    )}
                                                 </td>
                                                 <td className="p-2.5 text-right">
                                                     <span className={`px-1.5 py-0.5 text-[10px] font-bold ${
@@ -3240,6 +3303,50 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                                         )
                                     })}
                                 </tbody>
+                                <tfoot className="bg-[oklch(94%_0.010_28)] border-t-2 border-[oklch(85%_0.012_28)] font-bold text-[oklch(18%_0.012_28)]">
+                                    <tr>
+                                        <td className="p-2.5 uppercase tracking-wider">
+                                            {filterMode === 'month' ? 'ยอดรวมทั้งเดือน' : 'ยอดรวมทั้งวัน'}
+                                        </td>
+                                        <td className="p-2.5 text-[oklch(42%_0.010_28)]">
+                                            4 ช่วงเวลา
+                                        </td>
+                                        <td className="p-2.5 text-right">
+                                            {filterMode === 'month' ? (
+                                                <>
+                                                    <span>{(monthMetrics?.monthPax || 0).toLocaleString()} ท่าน</span>
+                                                    <span className="text-[oklch(42%_0.010_28)] ml-1 text-[10px] font-normal">
+                                                        / เฉลี่ย ~{monthMetrics ? Math.round(monthMetrics.monthPax / monthMetrics.activeDaysCount) : 0}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                `${dayMetrics?.totalGuests || 0} ท่าน`
+                                            )}
+                                        </td>
+                                        <td className="p-2.5 text-right text-[oklch(52%_0.16_28)]">
+                                            ฿{(filterMode === 'month' ? (monthMetrics?.monthGross || 0) : (dayMetrics?.totalGross || 0)).toLocaleString()}
+                                        </td>
+                                        <td className="p-2.5 text-right">
+                                            ฿{(filterMode === 'month' ? (monthMetrics?.monthGross || 0) : (dayMetrics?.totalGross || 0)).toLocaleString()}
+                                        </td>
+                                        <td className="p-2.5 text-right text-[oklch(45%_0.08_140)]">
+                                            ฿{(() => {
+                                                if (filterMode === 'month') {
+                                                    return monthMetrics?.monthPax > 0 ? Math.round(monthMetrics.monthGross / monthMetrics.monthPax).toLocaleString() : '0'
+                                                }
+                                                return dayMetrics?.totalGuests > 0 ? Math.round(dayMetrics.totalGross / dayMetrics.totalGuests).toLocaleString() : '0'
+                                            })()}
+                                        </td>
+                                        <td className="p-2.5 text-right text-[oklch(42%_0.010_28)]">
+                                            {(filterMode === 'month' ? (monthMetrics?.monthBills || 0) : (dayMetrics?.points?.reduce((sum, p) => sum + (p.bills || 0), 0) || 0)).toLocaleString()} บิล
+                                        </td>
+                                        <td className="p-2.5 text-right text-[oklch(42%_0.010_28)]">
+                                            {filterMode === 'month'
+                                                ? `${Math.round(((monthMetrics?.monthPax || 0) / (Math.max(1, monthMetrics?.activeDaysCount || 1) * totalSeats * hours.length)) * 100)}%`
+                                                : '—'}
+                                        </td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>

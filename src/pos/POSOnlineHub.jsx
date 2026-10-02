@@ -22,7 +22,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
-import { playOrderAlert, playSystemAlertSound, checkEventDeduplication } from '../utils/audioHelper';
+import { 
+    playOrderAlert, 
+    playSystemAlertSound, 
+    checkEventDeduplication,
+    getCanonicalOrderAlertKey,
+    getCanonicalSlipAlertKey
+} from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import POSVolumeControl from './POSVolumeControl';
@@ -41,7 +47,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const alertIntervalRef = useRef(null);
 
     const playAlert = (eventKey = null) => {
-        playOrderAlert(eventKey, 1200, 3.4);
+        const didPlay = playOrderAlert(eventKey, 1200, 3.4);
+        if (!didPlay) return; // Deduplicated or throttled, do not start duplicate loop
+
         if (alertIntervalRef.current) {
             clearInterval(alertIntervalRef.current);
             alertIntervalRef.current = null;
@@ -138,8 +146,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 { event: 'online_order_created' },
                 async ({ payload }) => {
                     const bId = payload?.booking_id;
-                    const eventKey = `online_hub_broadcast_${bId || Date.now()}`;
-                    if (checkEventDeduplication(eventKey, 4500)) {
+                    const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
+                    if (checkEventDeduplication(eventKey, 5000)) {
                         if (payload) {
                             setPersistentAlert({
                                 id: bId,
@@ -180,8 +188,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     const isOnlinePickup = (b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse;
                     
                     if (isOnlineSource || hasSlip || isOnlinePickup || isLineman || isHausmade) {
-                        const eventKey = `online_hub_insert_${b.id}`;
-                        if (checkEventDeduplication(eventKey, 4500)) {
+                        const eventKey = getCanonicalOrderAlertKey(b.id);
+                        if (checkEventDeduplication(eventKey, 5000)) {
                             setPersistentAlert(b);
                             playAlert(eventKey);
                         }
@@ -214,8 +222,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                     // Only trigger alert for NEW payment slip upload
                     if (updated.payment_slip_url && updated.payment_slip_url !== payload.old?.payment_slip_url) {
-                        const eventKey = `online_hub_slip_${updated.id}`;
-                        if (checkEventDeduplication(eventKey, 4500)) {
+                        const eventKey = getCanonicalSlipAlertKey(updated.id);
+                        if (checkEventDeduplication(eventKey, 5000)) {
                             setPersistentAlert(updated);
                             playAlert(eventKey);
                         }
@@ -257,8 +265,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             if (isActive) fetchOnlineData();
             const b = event.detail?.booking;
             if (b) {
-                const eventKey = `online_hub_wma_${b.id || Date.now()}`;
-                if (checkEventDeduplication(eventKey, 4000)) {
+                const eventKey = getCanonicalOrderAlertKey(b.id) || `order_${Date.now()}`;
+                if (checkEventDeduplication(eventKey, 5000)) {
                     setPersistentAlert(b);
                     playAlert(eventKey);
                 }

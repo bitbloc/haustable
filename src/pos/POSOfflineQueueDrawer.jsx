@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { X, RefreshCw, Trash2, Database, AlertCircle, CheckCircle2, Clock, Layers } from 'lucide-react';
-import { getOfflineQueue, saveOfflineQueue, syncOfflineQueue, isOnline } from '../utils/offlineHelper';
+import { 
+    getOfflineQueue, 
+    saveOfflineQueue, 
+    syncOfflineQueue, 
+    isOnline,
+    getDeadLetterQueue,
+    retryDeadLetterAction,
+    removeDeadLetterAction,
+    clearDeadLetterQueue
+} from '../utils/offlineHelper';
 import { toast } from 'sonner';
 
 export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
     const [queue, setQueue] = useState([]);
+    const [dlq, setDlq] = useState([]);
     const [isSyncing, setIsSyncing] = useState(false);
 
     const refreshQueue = () => {
         setQueue(getOfflineQueue());
+        setDlq(getDeadLetterQueue());
     };
 
     useEffect(() => {
@@ -16,8 +27,10 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
             refreshQueue();
         }
         window.addEventListener('offline-queue-changed', refreshQueue);
+        window.addEventListener('offline-dlq-changed', refreshQueue);
         return () => {
             window.removeEventListener('offline-queue-changed', refreshQueue);
+            window.removeEventListener('offline-dlq-changed', refreshQueue);
         };
     }, [isOpen]);
 
@@ -125,8 +138,70 @@ export default function POSOfflineQueueDrawer({ isOpen, onClose }) {
                 </div>
 
                 {/* Queue Item List */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                    {queue.length === 0 ? (
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    {/* Dead Letter Queue (DLQ) Section */}
+                    {dlq.length > 0 && (
+                        <div className="bg-[oklch(94%_0.010_28)] border-2 border-[oklch(52%_0.16_28)] rounded-xl p-3.5 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-[oklch(52%_0.16_28)]">
+                                    <AlertCircle size={16} />
+                                    <span className="text-xs font-mono font-bold uppercase tracking-wider">
+                                        DLQ · ค้างตรวจสอบ ({dlq.length} รายการ)
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (window.confirm('คุณต้องการล้างรายการติดปัญหา (DLQ) ทั้งหมดใช่หรือไม่?')) {
+                                            clearDeadLetterQueue();
+                                            refreshQueue();
+                                        }
+                                    }}
+                                    className="text-[9px] font-mono text-[oklch(52%_0.16_28)] hover:underline uppercase tracking-wider cursor-pointer"
+                                >
+                                    CLEAR DLQ
+                                </button>
+                            </div>
+                            <p className="text-[10px] text-[oklch(42%_0.010_28)] font-sans">
+                                รายการเหล่านี้ติดปัญหาขัดข้องขณะส่งข้อมูล ข้อมูลยังคงถูกเก็บรักษาไว้ในเครื่องและไม่สูญหาย กดลองใหม่เพื่อส่งอีกครั้ง
+                            </p>
+                            <div className="space-y-2">
+                                {dlq.map((dlqItem, idx) => (
+                                    <div key={dlqItem.id || idx} className="bg-white border border-[oklch(52%_0.16_28)]/30 rounded-lg p-2.5 flex flex-col gap-1.5 text-xs font-mono">
+                                        <div className="flex items-center justify-between">
+                                            <span className="font-bold text-[oklch(52%_0.16_28)] uppercase text-[10px]">
+                                                {dlqItem.type}
+                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        retryDeadLetterAction(dlqItem.id);
+                                                        refreshQueue();
+                                                    }}
+                                                    className="px-2 py-0.5 bg-[oklch(52%_0.16_28)] text-white text-[9px] font-bold uppercase rounded cursor-pointer hover:opacity-90"
+                                                >
+                                                    RETRY / ลองใหม่
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        removeDeadLetterAction(dlqItem.id);
+                                                        refreshQueue();
+                                                    }}
+                                                    className="text-gray-400 hover:text-red-600 p-0.5 cursor-pointer"
+                                                >
+                                                    <Trash2 size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="text-[10px] text-[oklch(52%_0.16_28)] truncate font-mono">
+                                            สาเหตุ: {dlqItem.failureReason || 'ไม่ทราบสาเหตุ'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {queue.length === 0 && dlq.length === 0 ? (
                         <div className="h-full flex flex-col items-center justify-center text-center p-8">
                             <CheckCircle2 size={40} className="text-emerald-500 mb-3 opacity-80" strokeWidth={1.5} />
                             <p className="text-xs font-mono font-bold uppercase tracking-widest text-[oklch(18%_0.012_28)]">

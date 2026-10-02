@@ -136,10 +136,10 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
             <div className="p-2 bg-[oklch(97%_0.008_28)] flex items-center gap-1.5 overflow-x-auto no-scrollbar font-mono text-xs border-b border-[oklch(85%_0.012_28)]">
                 {[
                     { id: 'all', label: 'ทั้งหมด [ALL]', count: scatterItems.length },
-                    { id: 'stars', label: '🌟 STARS (ดาวเด่น)', count: scatterItems.filter(i => i.quadrant === 'stars').length },
-                    { id: 'plowhorses', label: '🐴 PLOWHORSES (เน้นปริมาณ)', count: scatterItems.filter(i => i.quadrant === 'plowhorses').length },
-                    { id: 'puzzles', label: '❓ PUZZLES (กำไรต่อจานสูง)', count: scatterItems.filter(i => i.quadrant === 'puzzles').length },
-                    { id: 'dogs', label: '🐕 DOGS (รอทบทวน)', count: scatterItems.filter(i => i.quadrant === 'dogs').length },
+                    { id: 'stars', label: '[STARS] เมนูดาวเด่น', count: scatterItems.filter(i => i.quadrant === 'stars').length },
+                    { id: 'plowhorses', label: '[PLOWHORSES] เน้นปริมาณขาย', count: scatterItems.filter(i => i.quadrant === 'plowhorses').length },
+                    { id: 'puzzles', label: '[PUZZLES] กำไรต่อจานสูง', count: scatterItems.filter(i => i.quadrant === 'puzzles').length },
+                    { id: 'dogs', label: '[DOGS] รอทบทวนเมนู', count: scatterItems.filter(i => i.quadrant === 'dogs').length },
                 ].map(tab => (
                     <button
                         key={tab.id}
@@ -179,7 +179,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             textAnchor="end"
                             className="font-mono text-[10px] font-bold fill-[oklch(52%_0.16_28)] uppercase"
                         >
-                            🌟 STARS (ยอดขายสูง / ราคาสูง)
+                            [STARS] (ยอดขายสูง / ราคาสูง)
                         </text>
 
                         {/* Top-Left: PUZZLES */}
@@ -197,7 +197,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             textAnchor="start"
                             className="font-mono text-[10px] font-bold fill-[oklch(35%_0.06_250)] uppercase"
                         >
-                            ❓ PUZZLES (ยอดขายน้อย / ราคาสูง)
+                            [PUZZLES] (ยอดขายน้อย / ราคาสูง)
                         </text>
 
                         {/* Bottom-Right: PLOWHORSES */}
@@ -215,7 +215,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             textAnchor="end"
                             className="font-mono text-[10px] font-bold fill-[oklch(45%_0.08_140)] uppercase"
                         >
-                            🐴 PLOWHORSES (ยอดขายสูง / ราคาประหยัด)
+                            [PLOWHORSES] (ยอดขายสูง / ราคาประหยัด)
                         </text>
 
                         {/* Bottom-Left: DOGS */}
@@ -233,7 +233,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             textAnchor="start"
                             className="font-mono text-[10px] font-bold fill-[oklch(55%_0.010_28)] uppercase"
                         >
-                            🐕 DOGS (ยอดขายน้อย / ราคาต่ำ)
+                            [DOGS] (ยอดขายน้อย / ราคาต่ำ)
                         </text>
 
                         {/* Quadrant Dividing Crosshairs */}
@@ -302,7 +302,7 @@ export default function InteractiveBcgScatter({ topMenuData = [], menuMatrix = [
                             textAnchor="middle"
                             className="font-mono text-[10px] font-bold fill-[oklch(18%_0.012_28)] uppercase"
                         >
-                            ยอดขายเชิงปริมาณ (UNITS SOLD) ➔
+                            ยอดขายเชิงปริมาณ (UNITS SOLD) -&gt;
                         </text>
 
                         {/* Data Bubbles */}

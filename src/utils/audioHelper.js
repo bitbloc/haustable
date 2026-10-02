@@ -480,6 +480,23 @@ function getPrimedHtml5Audio(soundType = 'noti1') {
 }
 
 /**
+ * Canonical event key generator for unified deduplication across POS Broadcasts, Webhooks & Postgres Changes
+ */
+export function getCanonicalOrderAlertKey(bookingId) {
+    if (!bookingId) return null;
+    return `order_${bookingId}`;
+}
+
+export function getCanonicalTableAlertKey(type, tableId, bookingId = null) {
+    const id = tableId || bookingId || 'unknown';
+    return `${type}_${id}`;
+}
+
+export function getCanonicalSlipAlertKey(bookingId) {
+    return `slip_${bookingId || 'unknown'}`;
+}
+
+/**
  * Check and record event deduplication key within a cooldown window.
  * Returns true if this event is NEW (not seen within cooldownMs), false if it's a duplicate.
  */
@@ -802,12 +819,18 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
     if (now - lastAlertPlayedTime < throttleMs) {
         return false;
     }
-    lastAlertPlayedTime = now;
 
-    // Record deduplication timestamp for event key if supplied
+    // Deduplication check: suppress identical event keys if triggered within 4000ms cooldown window
+    // (Allows immediate same-tick caller checkEventDeduplication within 100ms)
     if (eventKey) {
+        const lastEventTime = eventDeduplicationMap.get(eventKey);
+        if (lastEventTime && (now - lastEventTime > 100) && (now - lastEventTime < 4000)) {
+            return false;
+        }
         eventDeduplicationMap.set(eventKey, now);
     }
+
+    lastAlertPlayedTime = now;
 
     // 2. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
     if (noti1AudioBuffer) {
@@ -946,12 +969,18 @@ export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLeve
     if (now - lastAlertPlayedTime < throttleMs) {
         return false;
     }
-    lastAlertPlayedTime = now;
 
-    // Record deduplication timestamp for event key if supplied
+    // Deduplication check: suppress identical event keys if triggered within 4000ms cooldown window
+    // (Allows immediate same-tick caller checkEventDeduplication within 100ms)
     if (eventKey) {
+        const lastEventTime = eventDeduplicationMap.get(eventKey);
+        if (lastEventTime && (now - lastEventTime > 100) && (now - lastEventTime < 4000)) {
+            return false;
+        }
         eventDeduplicationMap.set(eventKey, now);
     }
+
+    lastAlertPlayedTime = now;
 
     // 2. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
     if (notibillAudioBuffer) {

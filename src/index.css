@@ -131,6 +131,7 @@ button, a, select, input, textarea, [role="button"] {
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -153,6 +154,25 @@ button, a, select, input, textarea, [role="button"] {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Dieter Rams Minimalist Financial Ribbon Scrollbar */
+.financial-nav-scrollbar::-webkit-scrollbar {
+  height: 4px;
+}
+.financial-nav-scrollbar::-webkit-scrollbar-track {
+  background: oklch(94% 0.010 28);
+}
+.financial-nav-scrollbar::-webkit-scrollbar-thumb {
+  background: oklch(80% 0.012 28);
+  border-radius: 0px;
+}
+.financial-nav-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: oklch(52% 0.16 28);
+}
+.financial-nav-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(80% 0.012 28) oklch(94% 0.010 28);
 }
 
 @keyframes fade-in {

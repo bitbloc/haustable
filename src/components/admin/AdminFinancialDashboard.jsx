@@ -83,6 +83,96 @@ export default function AdminFinancialDashboard() {
         yearly: '5400000'
     })
 
+    // Horizontal Tab Navigation Scroll States & Drag Refs (Desktop Ergonomics)
+    const navScrollRef = useRef(null)
+    const [canScrollNavLeft, setCanScrollNavLeft] = useState(false)
+    const [canScrollNavRight, setCanScrollNavRight] = useState(false)
+    const [isNavDragging, setIsNavDragging] = useState(false)
+    const navDragStartX = useRef(0)
+    const navScrollStartX = useRef(0)
+    const hasNavDragged = useRef(false)
+
+    // Quick Date / Month Steppers
+    const stepDate = (deltaDays) => {
+        try {
+            const [y, m, d] = (selectedDate || '').split('-').map(Number)
+            if (!y || !m || !d) return
+            const dt = new Date(y, m - 1, d)
+            dt.setDate(dt.getDate() + deltaDays)
+            const newY = dt.getFullYear()
+            const newM = String(dt.getMonth() + 1).padStart(2, '0')
+            const newD = String(dt.getDate()).padStart(2, '0')
+            setSelectedDate(`${newY}-${newM}-${newD}`)
+        } catch (e) {
+            console.error('Error stepping date:', e)
+        }
+    }
+
+    const stepMonth = (deltaMonths) => {
+        try {
+            const [yStr, mStr] = (selectedMonth || '').split('-')
+            let y = parseInt(yStr, 10)
+            let m = parseInt(mStr, 10)
+            if (isNaN(y) || isNaN(m)) return
+            m += deltaMonths
+            if (m < 1) {
+                m = 12
+                y -= 1
+            } else if (m > 12) {
+                m = 1
+                y += 1
+            }
+            setSelectedMonth(`${y}-${String(m).padStart(2, '0')}`)
+        } catch (e) {
+            console.error('Error stepping month:', e)
+        }
+    }
+
+    const checkNavScroll = useCallback(() => {
+        const el = navScrollRef.current
+        if (!el) return
+        const atStart = el.scrollLeft <= 4
+        const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 4
+        setCanScrollNavLeft(!atStart)
+        setCanScrollNavRight(!atEnd)
+    }, [])
+
+    const handleNavScroll = (direction) => {
+        const el = navScrollRef.current
+        if (!el) return
+        const distance = 260
+        el.scrollBy({
+            left: direction === 'left' ? -distance : distance,
+            behavior: 'smooth'
+        })
+        setTimeout(checkNavScroll, 280)
+    }
+
+    const handleNavMouseDown = (e) => {
+        if (e.button !== 0) return
+        setIsNavDragging(true)
+        hasNavDragged.current = false
+        navDragStartX.current = e.pageX - navScrollRef.current.offsetLeft
+        navScrollStartX.current = navScrollRef.current.scrollLeft
+    }
+
+    const handleNavMouseMove = (e) => {
+        if (!isNavDragging || !navScrollRef.current) return
+        e.preventDefault()
+        const x = e.pageX - navScrollRef.current.offsetLeft
+        const walk = (x - navDragStartX.current) * 1.2
+        if (Math.abs(walk) > 4) {
+            hasNavDragged.current = true
+        }
+        navScrollRef.current.scrollLeft = navScrollStartX.current - walk
+        checkNavScroll()
+    }
+
+    const handleNavMouseUpOrLeave = () => {
+        setIsNavDragging(false)
+        checkNavScroll()
+    }
+
     // Context-Aware Growth Metrics
     const [comparisonMetrics, setComparisonMetrics] = useState({
         salesGrowthPct: 0,
@@ -890,6 +980,43 @@ export default function AdminFinancialDashboard() {
         }
     }, [fetchRealFinancialData])
 
+    // Setup Navigation Strip Wheel Scroll Conversion (Desktop Mouse-Wheel Ergonomics)
+    useEffect(() => {
+        const el = navScrollRef.current
+        if (!el) return
+        checkNavScroll()
+
+        const handleWheel = (e) => {
+            // When mouse wheels over the navigation bar, convert vertical delta to horizontal scroll
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX) || e.deltaX !== 0) {
+                const delta = e.deltaY !== 0 ? e.deltaY : e.deltaX
+                el.scrollLeft += delta * 0.9
+                e.preventDefault()
+                checkNavScroll()
+            }
+        }
+
+        el.addEventListener('wheel', handleWheel, { passive: false })
+        window.addEventListener('resize', checkNavScroll)
+
+        return () => {
+            el.removeEventListener('wheel', handleWheel)
+            window.removeEventListener('resize', checkNavScroll)
+        }
+    }, [checkNavScroll])
+
+    // Auto-scroll active tab into view when activeTab changes
+    useEffect(() => {
+        const el = navScrollRef.current
+        if (!el) return
+        const activeBtn = el.querySelector(`[data-tab-id="${activeTab}"]`)
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+        }
+        const timer = setTimeout(checkNavScroll, 280)
+        return () => clearTimeout(timer)
+    }, [activeTab, checkNavScroll])
+
     const getTimeRangeLabel = () => {
         if (filterMode === 'day') return `ประจำวันที่ ${selectedDate}`
         if (filterMode === 'month') return `ประจำเดือน ${selectedMonth}`
@@ -1159,44 +1286,101 @@ export default function AdminFinancialDashboard() {
 
                         {/* Date Inputs & Quick Presets */}
                         {filterMode === 'day' && (
-                            <input
-                                type="date"
-                                value={selectedDate}
-                                onChange={(e) => setSelectedDate(e.target.value)}
-                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
-                            />
+                            <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                                <button
+                                    type="button"
+                                    onClick={() => stepDate(-1)}
+                                    title="วันก่อนหน้า (D-1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ◀ ]
+                                </button>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => stepDate(1)}
+                                    title="วันถัดไป (D+1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ▶ ]
+                                </button>
+                            </div>
                         )}
 
                         {filterMode === 'month' && (
-                            <input
-                                type="month"
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)]"
-                            />
+                            <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                                <button
+                                    type="button"
+                                    onClick={() => stepMonth(-1)}
+                                    title="เดือนก่อนหน้า (M-1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ◀ ]
+                                </button>
+                                <input
+                                    type="month"
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => stepMonth(1)}
+                                    title="เดือนถัดไป (M+1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ▶ ]
+                                </button>
+                            </div>
                         )}
 
                         {filterMode === 'year' && (
-                            <select
-                                value={selectedYear}
-                                onChange={(e) => setSelectedYear(e.target.value)}
-                                className="px-3 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none focus:border-[oklch(52%_0.16_28)] cursor-pointer"
-                            >
-                                <option value="2026">ปี 2026</option>
-                                <option value="2025">ปี 2025</option>
-                                <option value="2024">ปี 2024</option>
-                            </select>
+                            <div className="inline-flex items-stretch border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)]">
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedYear(prev => String(parseInt(prev, 10) - 1))}
+                                    title="ปีก่อนหน้า (Y-1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-r border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ◀ ]
+                                </button>
+                                <select
+                                    value={selectedYear}
+                                    onChange={(e) => setSelectedYear(e.target.value)}
+                                    className="px-3 py-1.5 bg-transparent text-[oklch(18%_0.012_28)] font-mono font-bold focus:outline-none cursor-pointer"
+                                >
+                                    <option value="2027">ปี 2027</option>
+                                    <option value="2026">ปี 2026</option>
+                                    <option value="2025">ปี 2025</option>
+                                    <option value="2024">ปี 2024</option>
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedYear(prev => String(parseInt(prev, 10) + 1))}
+                                    title="ปีถัดไป (Y+1)"
+                                    className="px-2.5 py-1.5 font-mono font-bold text-xs text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] border-l border-[oklch(85%_0.012_28)] transition-colors cursor-pointer"
+                                >
+                                    [ ▶ ]
+                                </button>
+                            </div>
                         )}
 
                         <button
+                            type="button"
                             onClick={() => { setFilterMode('day'); setSelectedDate(getThaiDate()); }}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px]"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px] cursor-pointer"
                         >
                             วันนี้
                         </button>
                         <button
+                            type="button"
                             onClick={() => { setFilterMode('month'); setSelectedMonth(getCurrentBangkokMonth()); }}
-                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px]"
+                            className="px-2.5 py-1.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] font-bold text-[11px] cursor-pointer"
                         >
                             เดือนนี้
                         </button>
@@ -1288,30 +1472,92 @@ export default function AdminFinancialDashboard() {
                 }}
             />
 
-            {/* 3. Segmented Tabular Navigation Strip */}
-            <div className="border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] overflow-x-auto no-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs">
-                {[
-                    { id: 'master', label: 'ภาพรวม [MASTER COCKPIT]' },
-                    { id: 'velocity_daypart', label: 'ความเร็วและช่วงเวลา [VELOCITY & DAYPART]' },
-                    { id: 'ledger', label: `สมุดบัญชีธุรกรรม [LEDGER: ${rawTransactionsData.length}]` },
-                    { id: 'summary', label: 'สรุปยอดและกระทบยอด [RECONCILIATION]' },
-                    { id: 'heatmap', label: 'สถิติช่วงเวลา [HEATMAP 7x12]' },
-                    { id: 'top_menu', label: 'อันดับเมนูขายดี [MENU RANKING]' },
-                    { id: 'crm', label: 'สมาชิกและลูกค้าประจำ [CRM SHARE]' },
-                    { id: 'casual', label: 'วิเคราะห์เชิงลึก [OPERATIONAL INSIGHTS]' },
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-4 py-3 whitespace-nowrap font-bold transition-colors min-h-[42px] ${
-                            activeTab === tab.id
-                                ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
-                        }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
+            {/* 3. Segmented Tabular Navigation Strip (Dieter Rams Desktop Horizontal Scrolling & Paging) */}
+            <div className="relative border border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex items-stretch">
+                {/* Desktop Left Scroll Stepper Button */}
+                <button
+                    type="button"
+                    onClick={() => handleNavScroll('left')}
+                    disabled={!canScrollNavLeft}
+                    aria-label="เลื่อนแท็บไปทางซ้าย"
+                    title="เลื่อนแท็บไปทางซ้าย [SCROLL LEFT]"
+                    className={`flex-none px-3.5 flex items-center justify-center font-mono text-xs font-bold border-r border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
+                        canScrollNavLeft
+                            ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer active:scale-95'
+                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(70%_0.010_28)] opacity-40 cursor-not-allowed'
+                    }`}
+                >
+                    [ ◀ ]
+                </button>
+
+                {/* Left Fade Hint */}
+                {canScrollNavLeft && (
+                    <div className="absolute left-10 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-r from-[oklch(18%_0.012_28)]/10 to-transparent z-10" />
+                )}
+
+                {/* Scrollable Tabs Viewport */}
+                <div
+                    ref={navScrollRef}
+                    onScroll={checkNavScroll}
+                    onMouseDown={handleNavMouseDown}
+                    onMouseMove={handleNavMouseMove}
+                    onMouseUp={handleNavMouseUpOrLeave}
+                    onMouseLeave={handleNavMouseUpOrLeave}
+                    className={`flex-1 overflow-x-auto financial-nav-scrollbar flex divide-x divide-[oklch(85%_0.012_28)] font-mono text-xs ${
+                        isNavDragging ? 'cursor-grabbing select-none' : 'cursor-grab'
+                    }`}
+                >
+                    {[
+                        { id: 'master', label: 'ภาพรวม [MASTER COCKPIT]' },
+                        { id: 'velocity_daypart', label: 'ความเร็วและช่วงเวลา [VELOCITY & DAYPART]' },
+                        { id: 'ledger', label: `สมุดบัญชีธุรกรรม [LEDGER: ${rawTransactionsData.length}]` },
+                        { id: 'summary', label: 'สรุปยอดและกระทบยอด [RECONCILIATION]' },
+                        { id: 'heatmap', label: 'สถิติช่วงเวลา [HEATMAP 7x12]' },
+                        { id: 'top_menu', label: 'อันดับเมนูขายดี [MENU RANKING]' },
+                        { id: 'crm', label: 'สมาชิกและลูกค้าประจำ [CRM SHARE]' },
+                        { id: 'casual', label: 'วิเคราะห์เชิงลึก [OPERATIONAL INSIGHTS]' },
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            data-tab-id={tab.id}
+                            onClick={(e) => {
+                                if (hasNavDragged.current) {
+                                    e.preventDefault()
+                                    return
+                                }
+                                setActiveTab(tab.id)
+                            }}
+                            className={`flex-none px-4 py-3 whitespace-nowrap font-bold transition-colors min-h-[42px] select-none ${
+                                activeTab === tab.id
+                                    ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                    : 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)]'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Right Fade Hint */}
+                {canScrollNavRight && (
+                    <div className="absolute right-10 top-0 bottom-0 w-6 pointer-events-none bg-gradient-to-l from-[oklch(18%_0.012_28)]/10 to-transparent z-10" />
+                )}
+
+                {/* Desktop Right Scroll Stepper Button */}
+                <button
+                    type="button"
+                    onClick={() => handleNavScroll('right')}
+                    disabled={!canScrollNavRight}
+                    aria-label="เลื่อนแท็บไปทางขวา"
+                    title="เลื่อนแท็บไปทางขวา [SCROLL RIGHT]"
+                    className={`flex-none px-3.5 flex items-center justify-center font-mono text-xs font-bold border-l border-[oklch(85%_0.012_28)] transition-all min-h-[42px] select-none ${
+                        canScrollNavRight
+                            ? 'bg-[oklch(97%_0.008_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)] cursor-pointer active:scale-95'
+                            : 'bg-[oklch(94%_0.010_28)] text-[oklch(70%_0.010_28)] opacity-40 cursor-not-allowed'
+                    }`}
+                >
+                    [ ▶ ]
+                </button>
             </div>
 
             {/* 4. Sub-Components Render Viewport */}

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { 
     checkEventDeduplication, 
+    getCanonicalOrderAlertKey,
+    getCanonicalTableAlertKey,
+    getCanonicalSlipAlertKey,
     getAudioVolume, 
     setAudioVolume, 
     isAudioMuted, 
@@ -62,6 +65,60 @@ describe('Audio Engine & Notification Resilience', () => {
         it('should handle null or empty event keys gracefully', () => {
             expect(checkEventDeduplication(null)).toBe(true);
             expect(checkEventDeduplication('')).toBe(true);
+        });
+
+        it('should generate consistent canonical alert keys', () => {
+            expect(getCanonicalOrderAlertKey('booking_999')).toBe('order_booking_999');
+            expect(getCanonicalOrderAlertKey(null)).toBe(null);
+            expect(getCanonicalTableAlertKey('call_staff', 'table_5', 'booking_999')).toBe('call_staff_table_5');
+            expect(getCanonicalTableAlertKey('call_bill', null, 'booking_999')).toBe('call_bill_booking_999');
+            expect(getCanonicalSlipAlertKey('booking_999')).toBe('slip_booking_999');
+        });
+
+        it('should eliminate duplicate notifications across broadcast, bookings INSERT, and order_items INSERT using canonical keys', () => {
+            const bookingId = 'order_seamless_uuid_777';
+            const canonicalKey = getCanonicalOrderAlertKey(bookingId);
+
+            // 1. Instant broadcast arrives first
+            const broadcastAllowed = checkEventDeduplication(canonicalKey, 5000);
+            expect(broadcastAllowed).toBe(true);
+
+            // 2. 80ms later: Supabase postgres_changes bookings INSERT arrives
+            vi.advanceTimersByTime(80);
+            const bookingInsertAllowed = checkEventDeduplication(canonicalKey, 5000);
+            expect(bookingInsertAllowed).toBe(false);
+
+            // 3. 120ms later: Supabase postgres_changes order_items INSERT arrives (e.g. 3 items in cart)
+            vi.advanceTimersByTime(40);
+            const item1Allowed = checkEventDeduplication(canonicalKey, 5000);
+            const item2Allowed = checkEventDeduplication(canonicalKey, 5000);
+            const item3Allowed = checkEventDeduplication(canonicalKey, 5000);
+            expect(item1Allowed).toBe(false);
+            expect(item2Allowed).toBe(false);
+            expect(item3Allowed).toBe(false);
+
+            // 4. POS Online Hub fast-path event arrives
+            const onlineHubAllowed = checkEventDeduplication(canonicalKey, 5000);
+            expect(onlineHubAllowed).toBe(false);
+        });
+
+        it('should prevent playOrderAlert from sounding duplicates for the same event key within cooldown', () => {
+            setAudioMuted(false);
+            setAudioVolume(80);
+
+            const eventKey = 'order_dedup_sound_test';
+            const firstSound = playOrderAlert(eventKey, 1000, 3.2);
+            expect(firstSound).toBe(true);
+
+            // 1500ms later (> 1000ms throttle, but within 4000ms deduplication cooldown)
+            vi.advanceTimersByTime(1500);
+            const duplicateSound = playOrderAlert(eventKey, 1000, 3.2);
+            expect(duplicateSound).toBe(false);
+
+            // Different order after throttle should play cleanly
+            vi.advanceTimersByTime(1100);
+            const differentOrderSound = playOrderAlert('order_different_999', 1000, 3.2);
+            expect(differentOrderSound).toBe(true);
         });
     });
 
