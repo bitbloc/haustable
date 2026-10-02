@@ -10,7 +10,7 @@ import {
     ZoomOut,
     Maximize,
     LayoutGrid,
-    Map,
+    Map as MapIcon,
     Search,
     RefreshCw,
     ArrowRightLeft,
@@ -774,7 +774,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                 : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                         } ${hasPendingOrders ? 'animate-pulse bg-amber-100 text-amber-900 border border-amber-300 font-bold shadow-xs' : ''}`}
                     >
-                        <Map size={14} /> FLOORPLAN
+                        <MapIcon size={14} /> FLOORPLAN
                     </button>
                     <button 
                         type="button"
@@ -864,7 +864,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                                         >
                                             {!floorplanUrl && (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest opacity-40 select-none">
-                                                    <Map size={36} className="mb-2 text-[var(--color-neutral)]" />
+                                                    <MapIcon size={36} className="mb-2 text-[var(--color-neutral)]" />
                                                     <span>NO FLOORPLAN SCHEMATIC</span>
                                                 </div>
                                             )}
