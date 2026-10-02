@@ -989,9 +989,9 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
     const rotation = table.rotation || 0;
     
     const isOccupied = table.status === 'occupied';
-    const isPending = table.status === 'pending';
+    const isPending = table.status === 'pending' || table.booking?.status === 'pending';
     const isReserved = table.status === 'reserved';
-    const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
+    const isWaitingApproval = isPending && ((table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED') || table.status === 'pending' || table.booking?.status === 'pending');
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = Boolean(table.hasCallStaff || table.booking?.staff_remark?.includes('[CALL_STAFF]'));
     const hasCallBill = Boolean(table.hasCallBill || table.booking?.staff_remark?.includes('[CALL_BILL]'));
@@ -1057,7 +1057,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
                     )}
                     {isWaitingApproval && (
                         <span className="bg-amber-400 text-black text-[7px] font-mono font-bold px-1 py-0.5 rounded leading-none animate-pulse">
-                            รออนุมัติ
+                            {(table.booking?.staff_remark || '').includes('GPS_UNVERIFIED') ? 'รออนุมัติ GPS' : 'รออนุมัติ'}
                         </span>
                     )}
                     {table.upcomingConflict && (
@@ -1187,10 +1187,10 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
 
 const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) {
     const isOccupied = table.status === 'occupied';
-    const isPending = table.status === 'pending';
+    const isPending = table.status === 'pending' || table.booking?.status === 'pending';
     const isReserved = table.status === 'reserved';
     const isAdvanceReserved = table.isAdvanceReserved && !isOccupied && !isPending;
-    const isWaitingApproval = isPending || (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED');
+    const isWaitingApproval = isPending && ((table.booking?.staff_remark || '').includes('WAITING_APPROVAL') || (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED') || table.status === 'pending' || table.booking?.status === 'pending');
     
     const hasOrder = Boolean(table.hasNewOrder);
     const hasCallStaff = Boolean(table.hasCallStaff || table.booking?.staff_remark?.includes('[CALL_STAFF]'));
@@ -1246,7 +1246,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                      )}
                      {isWaitingApproval && (
                          <span className="bg-amber-400 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase animate-pulse">
-                             รออนุมัติ GPS
+                             {(table.booking?.staff_remark || '').includes('GPS_UNVERIFIED') ? 'รออนุมัติ GPS' : 'รออนุมัติ'}
                          </span>
                      )}
                      {table.upcomingConflict && (

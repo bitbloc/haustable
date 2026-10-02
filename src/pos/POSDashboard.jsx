@@ -1528,6 +1528,7 @@ export default function POSDashboard() {
                                 subtitle: `มี ${payload?.items_count || 1} รายการ · แตะเพื่อเปิดดูโต๊ะและอนุมัติ`,
                                 dot: 'terracotta',
                                 onClick: () => {
+                                    toast.dismiss(qrItemAlertKey);
                                     if (tId) {
                                         supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                             if (data) handleSelectTable(data);
@@ -1543,6 +1544,7 @@ export default function POSDashboard() {
                                 subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
                                 dot: 'emerald',
                                 onClick: () => {
+                                    toast.dismiss(qrItemAlertKey);
                                     if (tId) {
                                         supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                             if (data) handleSelectTable(data);
@@ -2451,11 +2453,18 @@ export default function POSDashboard() {
                 stored[table.id] = Date.now();
                 localStorage.setItem('pos_ack_table_times', JSON.stringify(stored));
                 window.dispatchEvent(new CustomEvent('pos_table_acknowledged', { detail: { tableId: table.id } }));
+                const tableAlertKey = getCanonicalTableAlertKey('table_order', table.id);
+                if (tableAlertKey) toast.dismiss(tableAlertKey);
             } catch (e) {}
         }
         
         // 3. Fetch active booking for this specific table
         const booking = await getActiveBooking(table.id);
+
+        if (booking?.id) {
+            const orderAlertKey = getCanonicalOrderAlertKey(booking.id);
+            if (orderAlertKey) toast.dismiss(orderAlertKey);
+        }
 
         // Guard against out-of-order race conditions if cashier rapidly tapped different tables
         if (currentReqId !== tableSelectRequestIdRef.current) return;
@@ -4266,6 +4275,17 @@ export default function POSDashboard() {
                                                 window.AndroidCfdBridge.sendCfdEvent(JSON.stringify(cfdConfirmedDetail));
                                             }
                                         } catch (e) {}
+
+                                        const bId = finalBooking?.id;
+                                        const tId = selectedTable?.id || finalBooking?.table_id;
+                                        if (bId) {
+                                            const orderAlertKey = getCanonicalOrderAlertKey(bId);
+                                            if (orderAlertKey) toast.dismiss(orderAlertKey);
+                                        }
+                                        if (tId) {
+                                            const tableAlertKey = getCanonicalTableAlertKey('table_order', tId);
+                                            if (tableAlertKey) toast.dismiss(tableAlertKey);
+                                        }
 
                                         checkPendingOrders();
                                         }

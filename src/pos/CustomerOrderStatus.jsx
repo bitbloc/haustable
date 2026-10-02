@@ -319,7 +319,7 @@ export default function CustomerOrderStatus() {
         );
     }
 
-    const isWaitingStaffApproval = booking.status === 'pending' || (booking.staff_remark || '').includes('WAITING_APPROVAL');
+    const isWaitingStaffApproval = booking.status === 'pending';
 
     const steps = isWaitingStaffApproval ? [
         { key: 'sent', label: 'ส่งออเดอร์แล้ว', desc: 'รายการอาหารถูกส่งเข้าสู่ระบบ POS หน้าร้านแล้ว', time: booking.booking_time },

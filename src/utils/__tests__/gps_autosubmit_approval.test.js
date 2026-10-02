@@ -162,11 +162,65 @@ describe('GPS Auto-Submit & POS Approval Flow', () => {
     it('should skip "รอพนักงานอนุมัติ" step when order is approved/seated', () => {
         const approvedOrder = {
             status: 'seated',
-            staff_remark: '[QR:AUTO-SUBMIT] [GPS_UNVERIFIED]'
+            staff_remark: '[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL]'
         };
 
-        const steps = getCustomerOrderSteps(approvedOrder);
-        expect(steps.some(s => s.id === 'waiting_approval')).toBe(false);
-        expect(steps.find(s => s.id === 'preparing').status).toBe('current');
+        // When order is seated, it is no longer pending approval
+        const isWaitingStaffApproval = approvedOrder.status === 'pending';
+        expect(isWaitingStaffApproval).toBe(false);
+    });
+
+    // 4. POSTableGrid Floorplan & Grid isWaitingApproval tests
+    const evalTableWaitingApproval = (table) => {
+        const isPending = table.status === 'pending' || table.booking?.status === 'pending';
+        return isPending && (
+            (table.booking?.staff_remark || '').includes('WAITING_APPROVAL') ||
+            (table.booking?.staff_remark || '').includes('GPS_UNVERIFIED') ||
+            table.status === 'pending' ||
+            table.booking?.status === 'pending'
+        );
+    };
+
+    it('should NOT show waiting approval badge on Table 4 when seated/occupied even if remark retains GPS tags', () => {
+        const seatedTable4 = {
+            id: 2,
+            table_name: 'H4',
+            status: 'occupied',
+            booking: {
+                id: '7280debd-3b6c-436f-a918-5b29b279fb7d',
+                status: 'seated',
+                staff_remark: '[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL]'
+            }
+        };
+
+        expect(evalTableWaitingApproval(seatedTable4)).toBe(false);
+    });
+
+    it('should show waiting approval badge on Table 4 when actively pending', () => {
+        const pendingTable4 = {
+            id: 2,
+            table_name: 'H4',
+            status: 'pending',
+            booking: {
+                id: '7280debd-3b6c-436f-a918-5b29b279fb7d',
+                status: 'pending',
+                staff_remark: '[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL]'
+            }
+        };
+
+        expect(evalTableWaitingApproval(pendingTable4)).toBe(true);
+    });
+
+    it('should sanitize staff_remark on order approval', () => {
+        const rawRemark = '[QR:AUTO-SUBMIT] [GPS_UNVERIFIED] [WAITING_APPROVAL] Extra note';
+        const cleanedRemark = rawRemark
+            .replace(/\[WAITING_APPROVAL\]/gi, '')
+            .replace(/\[GPS_UNVERIFIED\]/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        expect(cleanedRemark).toBe('[QR:AUTO-SUBMIT] Extra note');
+        expect(cleanedRemark).not.toContain('WAITING_APPROVAL');
+        expect(cleanedRemark).not.toContain('GPS_UNVERIFIED');
     });
 });

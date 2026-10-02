@@ -97,6 +97,17 @@ export function usePOSOrder() {
             const data = seatedBooking || validCandidates.find(b => b.status === 'pending') || validCandidates[0] || null;
 
             if (data) {
+                // Self-healing: if booking is already seated, strip any lingering GPS approval markers
+                if (data.status === 'seated' && ((data.staff_remark || '').includes('WAITING_APPROVAL') || (data.staff_remark || '').includes('GPS_UNVERIFIED'))) {
+                    const cleaned = (data.staff_remark || '')
+                        .replace(/\[WAITING_APPROVAL\]/gi, '')
+                        .replace(/\[GPS_UNVERIFIED\]/gi, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    data.staff_remark = cleaned;
+                    supabase.from('bookings').update({ staff_remark: cleaned }).eq('id', data.id).then(() => {});
+                }
+
                 // Update local bookings cache
                 const currentBookings = posCache.getBookings().filter(b => String(b.table_id) !== String(tableId));
                 currentBookings.push(data);
@@ -876,30 +887,74 @@ export function usePOSOrder() {
 
     const acceptOrder = async (bookingId) => {
         setLoading(true);
+        const cleanRemark = (str = '') => (str || '')
+            .replace(/\[WAITING_APPROVAL\]/gi, '')
+            .replace(/\[GPS_UNVERIFIED\]/gi, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
         if (!isOnline() || (typeof bookingId === 'string' && bookingId.startsWith('local_'))) {
             console.log('[Offline Mode] Accepting order offline');
             const bookings = posCache.getBookings();
-            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
+            let targetTableId = null;
+            const updated = bookings.map(b => {
+                if (b.id !== bookingId) return b;
+                targetTableId = b.table_id;
+                return { ...b, status: 'seated', staff_remark: cleanRemark(b.staff_remark) };
+            });
             posCache.setBookings(updated);
+            if (targetTableId) {
+                window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                    detail: { 
+                        tableId: targetTableId, 
+                        booking: { id: bookingId, table_id: targetTableId, status: 'seated', staff_remark: cleanRemark(bookings.find(b => b.id === bookingId)?.staff_remark) } 
+                    } 
+                }));
+            }
             setLoading(false);
             toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว (ออฟไลน์)');
             return true;
         }
 
         try {
+            const { data: currentB } = await supabase
+                .from('bookings')
+                .select('id, table_id, staff_remark')
+                .eq('id', bookingId)
+                .maybeSingle();
+
+            const cleanedRemark = cleanRemark(currentB?.staff_remark);
+
             const { error } = await supabase
                 .from('bookings')
-                .update({ status: 'seated' })
+                .update({ 
+                    status: 'seated',
+                    staff_remark: cleanedRemark
+                })
                 .eq('id', bookingId);
             setLoading(false);
             if (error) throw error;
             
+            const bookings = posCache.getBookings();
+            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated', staff_remark: cleanedRemark } : b);
+            posCache.setBookings(updated);
+
+            const targetTableId = currentB?.table_id;
+            if (targetTableId) {
+                window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                    detail: { 
+                        tableId: targetTableId, 
+                        booking: { id: bookingId, table_id: targetTableId, status: 'seated', staff_remark: cleanedRemark } 
+                    } 
+                }));
+            }
+
             toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว');
             return true;
         } catch (err) {
             console.error('Failed to accept order online:', err);
             const bookings = posCache.getBookings();
-            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated' } : b);
+            const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated', staff_remark: cleanRemark(b.staff_remark) } : b);
             posCache.setBookings(updated);
             setLoading(false);
             toast.success('อนุมัติออเดอร์เรียบร้อยแล้ว (ออฟไลน์สำรอง)');
