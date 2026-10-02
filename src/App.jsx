@@ -126,8 +126,8 @@ function App() {
     <div className="app-container">
       <Toaster 
         position="top-center" 
-        maxToasts={3} 
-        visibleToasts={3} 
+        maxToasts={2} 
+        visibleToasts={2} 
         closeButton 
         toastOptions={{
           className: 'font-sans border border-[oklch(85%_0.012_28)] shadow-xs rounded-xl text-[oklch(18%_0.012_28)] bg-[oklch(97%_0.008_28)]',

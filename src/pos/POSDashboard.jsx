@@ -978,7 +978,7 @@ export default function POSDashboard() {
                 };
 
                 const displayTable = fullBooking.tables_layout?.table_name || tableNameHint;
-                const printKey = `print_${bookingId}`;
+                const printKey = getCanonicalOrderAlertKey(bookingId) || `order_${bookingId}`;
                 toast.custom((t) => renderPosToast(t, {
                     badge: 'KITCHEN PRINT · พิมพ์ใบครัวแล้ว',
                     title: `โต๊ะ ${displayTable} - พิมพ์ใบครัว ${unprintedItems.length} รายการ`,
@@ -1576,9 +1576,24 @@ export default function POSDashboard() {
                 .on('broadcast', { event: 'call_staff' }, async ({ payload }) => {
                     console.log('⚡ [Realtime POS] Instant broadcast call_staff received:', payload);
                     const tId = payload?.table_id;
-                    const bId = payload?.booking_id || tId;
+                    const bId = payload?.booking_id;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId);
+                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId || tId);
+
+                    // Suppress staff call if the associated booking was voided or closed
+                    if (bId) {
+                        try {
+                            const { data: bCheck } = await supabase
+                                .from('bookings')
+                                .select('id, status')
+                                .eq('id', bId)
+                                .maybeSingle();
+                            if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
+                                console.warn(`[Realtime POS] Suppressed call_staff from voided/closed booking: ${bId}`);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
 
                     if (checkEventDeduplication(callStaffKey, 5000)) {
                         toast.custom((t) => renderPosToast(t, {
@@ -1606,9 +1621,24 @@ export default function POSDashboard() {
                 .on('broadcast', { event: 'call_bill' }, async ({ payload }) => {
                     console.log('⚡ [Realtime POS] Instant broadcast call_bill received:', payload);
                     const tId = payload?.table_id;
-                    const bId = payload?.booking_id || tId;
+                    const bId = payload?.booking_id;
                     const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId);
+                    const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId || tId);
+
+                    // Suppress bill call if the associated booking was voided or closed
+                    if (bId) {
+                        try {
+                            const { data: bCheck } = await supabase
+                                .from('bookings')
+                                .select('id, status')
+                                .eq('id', bId)
+                                .maybeSingle();
+                            if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
+                                console.warn(`[Realtime POS] Suppressed call_bill from voided/closed booking: ${bId}`);
+                                return;
+                            }
+                        } catch (e) {}
+                    }
 
                     if (checkEventDeduplication(callBillKey, 5000)) {
                         toast.custom((t) => renderPosToast(t, {
@@ -4057,6 +4087,8 @@ export default function POSDashboard() {
                                 onNewWalkInPickup={handleNewWalkInPickup}
                                 hasPendingOrders={hasPendingOrders} 
                                 refreshKey={refreshKey}
+                                activeTableId={selectedTable?.id}
+                                activeBooking={activeBooking}
                                 onOpenNotifDrawer={() => {
                                     setShowNotifDrawer(true);
                                     setUnreadNotifCount(0);

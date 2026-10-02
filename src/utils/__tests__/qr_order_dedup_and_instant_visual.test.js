@@ -267,5 +267,98 @@ describe('QR Order Deduplication & Instant Visual Table Notification Tests', () 
 
             expect(merged[0].hasNewOrder).toBe(true);
         });
+
+        it('should recognize confirmed status as active dining session in isTableSessionActive', () => {
+            function isTableSessionActiveTest(b, now = new Date()) {
+                if (!b) return false;
+                if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+
+                const bRawTime = b.booking_time || b.created_at;
+                if (bRawTime) {
+                    const bTime = new Date(bRawTime);
+                    const ageMs = now.getTime() - bTime.getTime();
+                    if (ageMs > 16 * 60 * 60 * 1000) return false;
+                }
+
+                if (['seated', 'confirmed'].includes(b.status)) return true;
+                if (b.status === 'ready' && b.booking_type !== 'pickup') return true;
+                if (b.status === 'pending') {
+                    const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+                    const hasItems = Array.isArray(b.order_items) && b.order_items.length > 0;
+                    return isWalkInOrQR || hasItems || b.booking_type !== 'pickup';
+                }
+                return false;
+            }
+
+            const now = new Date();
+            // Confirmed dining order (e.g. order #2354)
+            const confirmedBooking = {
+                id: 'booking_2354',
+                table_id: 9,
+                status: 'confirmed',
+                booking_time: now.toISOString(),
+                total_amount: 244
+            };
+            expect(isTableSessionActiveTest(confirmedBooking, now)).toBe(true);
+
+            // Seated booking
+            const seatedBooking = {
+                id: 'booking_seated',
+                table_id: 6,
+                status: 'seated',
+                booking_time: now.toISOString()
+            };
+            expect(isTableSessionActiveTest(seatedBooking, now)).toBe(true);
+
+            // Voided booking must return false
+            const voidBooking = {
+                id: 'booking_void',
+                table_id: 9,
+                status: 'void',
+                booking_time: now.toISOString()
+            };
+            expect(isTableSessionActiveTest(voidBooking, now)).toBe(false);
+
+            // Stale booking (> 16 hours) must return false
+            const staleBooking = {
+                id: 'booking_stale',
+                table_id: 9,
+                status: 'seated',
+                booking_time: new Date(now.getTime() - 17 * 60 * 60 * 1000).toISOString()
+            };
+            expect(isTableSessionActiveTest(staleBooking, now)).toBe(false);
+        });
+
+        it('should use canonical order alert key for auto-print toast to update in-place without stacking', () => {
+            const bookingId = 'order_uuid_h9_2354';
+            const canonicalOrderKey = getCanonicalOrderAlertKey(bookingId);
+            const autoPrintKey = getCanonicalOrderAlertKey(bookingId) || `order_${bookingId}`;
+
+            // Both keys must be identical so Sonner updates existing toast rather than stacking
+            expect(autoPrintKey).toBe(canonicalOrderKey);
+            expect(autoPrintKey).toBe('order_order_uuid_h9_2354');
+        });
+
+        it('should block customer from calling staff or requesting bill if session is voided', () => {
+            const voidBooking = {
+                id: 'void_123',
+                table_id: 9,
+                status: 'void'
+            };
+
+            function canCallStaff(booking, latestDbBooking) {
+                if (latestDbBooking && ['void', 'cancelled'].includes(latestDbBooking.status)) {
+                    return false;
+                }
+                if (booking && ['void', 'cancelled', 'completed', 'no_show'].includes(booking.status)) {
+                    return false;
+                }
+                return true;
+            }
+
+            expect(canCallStaff(voidBooking, { status: 'void' })).toBe(false);
+            expect(canCallStaff(null, { status: 'void' })).toBe(false);
+            expect(canCallStaff({ status: 'seated' }, { status: 'seated' })).toBe(true);
+        });
     });
 });

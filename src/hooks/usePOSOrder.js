@@ -14,14 +14,12 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
     if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
 
     // Safety age limit: session cannot exceed 16 hours
-    if (b.booking_time) {
-        const bTime = new Date(b.booking_time);
+    const bRawTime = b.booking_time || b.created_at;
+    if (bRawTime) {
+        const bTime = new Date(bRawTime);
         const ageMs = now.getTime() - bTime.getTime();
         if (ageMs > 16 * 60 * 60 * 1000) return false;
     }
-
-    const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-    const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
 
     // If there is no active shift and the booking belongs to a closed shift, it is not an active dining session
     try {
@@ -40,12 +38,20 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
         }
     } catch (e) {}
 
-    if (b.status === 'seated') {
-        // Seated booking must be today or at most 12 hours old
-        return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
+    // 1. Actively seated or confirmed in-store session
+    if (['seated', 'confirmed'].includes(b.status)) {
+        return true;
     }
-    if (isToday && b.status === 'ready' && b.booking_type !== 'pickup') return true;
-    if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
+    // 2. Kitchen ready items
+    if (b.status === 'ready' && b.booking_type !== 'pickup') {
+        return true;
+    }
+    // 3. Pending session with items or walk-in/qr
+    if (b.status === 'pending') {
+        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+        const hasItems = Array.isArray(b.order_items) && b.order_items.length > 0;
+        return isWalkInOrQR || hasItems || b.booking_type !== 'pickup';
+    }
     return false;
 }
 

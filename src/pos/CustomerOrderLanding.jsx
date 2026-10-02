@@ -325,8 +325,18 @@ export default function CustomerOrderLanding() {
                 schema: 'public',
                 table: 'bookings',
                 filter: `table_id=eq.${table.id}`
-            }, () => {
-                refreshActiveBooking(table.id);
+            }, (payload) => {
+                const b = payload?.new;
+                if (b && ['void', 'cancelled', 'completed', 'no_show'].includes(b.status)) {
+                    setActiveBooking(null);
+                    if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                    if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
+                    if (b.status === 'void') {
+                        toast.info('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+                    }
+                } else {
+                    refreshActiveBooking(table.id);
+                }
             })
             .on('postgres_changes', {
                 event: '*',
@@ -767,10 +777,37 @@ export default function CustomerOrderLanding() {
 
         setCallingStaff(true);
         try {
+            // Guard against calling staff on a voided or cancelled table/session
+            const { data: latestBooking } = await supabase
+                .from('bookings')
+                .select('id, status, staff_remark, created_at, booking_time')
+                .eq('table_id', effectiveNumericTableId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (latestBooking && ['void', 'cancelled'].includes(latestBooking.status)) {
+                setActiveBooking(null);
+                if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
+                toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว กรุณาสแกน QR Code หรือสั่งรายการใหม่เพื่อเปิดรอบครับ');
+                setCallingStaff(false);
+                return;
+            }
+
             let currentBooking = activeBooking;
             
             // If table already has an active session, update its staff_remark
             if (currentBooking) {
+                if (['void', 'cancelled', 'completed', 'no_show'].includes(currentBooking.status)) {
+                    setActiveBooking(null);
+                    if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+                    if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
+                    toast.error('บิลของโต๊ะนี้ถูกยกเลิกแล้ว กรุณาสแกน QR Code เพื่อเริ่มสั่งใหม่ครับ');
+                    setCallingStaff(false);
+                    return;
+                }
+
                 let currentRemark = currentBooking.staff_remark || '';
                 let newRemark = currentRemark;
                 
@@ -809,8 +846,35 @@ export default function CustomerOrderLanding() {
     };
 
     const handleRequestBill = async () => {
-        if (!activeBooking || requestingBill) return;
         const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
+        if (!effectiveNumericTableId || requestingBill) return;
+
+        // Guard against requesting bill on a voided session
+        if (activeBooking && ['void', 'cancelled', 'completed', 'no_show'].includes(activeBooking.status)) {
+            setActiveBooking(null);
+            if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+            if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
+            toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+            return;
+        }
+
+        const { data: latestBooking } = await supabase
+            .from('bookings')
+            .select('id, status')
+            .eq('table_id', effectiveNumericTableId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (latestBooking && ['void', 'cancelled'].includes(latestBooking.status)) {
+            setActiveBooking(null);
+            if (tableId) localStorage.removeItem(`table_${tableId}_token`);
+            if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
+            toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+            return;
+        }
+
+        if (!activeBooking) return;
         setRequestingBill(true);
         try {
             const currentRemark = activeBooking.staff_remark || '';

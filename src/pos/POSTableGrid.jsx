@@ -77,14 +77,12 @@ function isTableSessionActive(b, startOfToday, endOfToday, now) {
     if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
 
     // Safety age limit: session cannot exceed 16 hours
-    if (b.booking_time) {
-        const bTime = new Date(b.booking_time);
+    const bRawTime = b.booking_time || b.created_at;
+    if (bRawTime) {
+        const bTime = new Date(bRawTime);
         const ageMs = now.getTime() - bTime.getTime();
         if (ageMs > 16 * 60 * 60 * 1000) return false;
     }
-
-    const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-    const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
 
     // If there is no active shift and the booking belongs to a closed shift, it is not an active dining session
     try {
@@ -103,16 +101,24 @@ function isTableSessionActive(b, startOfToday, endOfToday, now) {
         }
     } catch (e) {}
 
-    if (b.status === 'seated') {
-        // Seated booking must be today or at most 12 hours old
-        return isToday || (b.booking_time && (now.getTime() - new Date(b.booking_time).getTime() < 12 * 60 * 60 * 1000));
+    // 1. Actively seated or confirmed in-store session
+    if (['seated', 'confirmed'].includes(b.status)) {
+        return true;
     }
-    if (isToday && b.status === 'ready' && b.booking_type !== 'pickup') return true;
-    if (isToday && b.status === 'pending' && isWalkInOrQR) return true;
+    // 2. Kitchen ready items
+    if (b.status === 'ready' && b.booking_type !== 'pickup') {
+        return true;
+    }
+    // 3. Pending session with items or walk-in/qr
+    if (b.status === 'pending') {
+        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+        const hasItems = Array.isArray(b.order_items) && b.order_items.length > 0;
+        return isWalkInOrQR || hasItems || b.booking_type !== 'pickup';
+    }
     return false;
 }
 
-const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount }) {
+const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount, activeTableId = null, activeBooking = null }) {
     const [tables, setTables] = useState([]);
     const [loading, setLoading] = useState(true);
     const [floorplanUrl, setFloorplanUrl] = useState(null);
@@ -339,8 +345,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // Realtime Table & Order Items Sync (< 50ms instant floorplan updates)
-        const tablesSyncSub = supabase.channel('pos-table-grid-sync')
+        // Realtime Table & Order Items Sync (< 50ms instant floorplan updates via canonical channel)
+        const tablesSyncSub = supabase.channel('pos-realtime-notifications')
             .on('broadcast', { event: 'qr_order_created' }, ({ payload }) => {
                 const tableId = payload?.table_id;
                 if (tableId) {
@@ -363,6 +369,18 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             }
                         };
                     }));
+                }
+            })
+            .on('broadcast', { event: 'call_staff' }, ({ payload }) => {
+                const tableId = payload?.table_id;
+                if (tableId) {
+                    setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasCallStaff: true } : t));
+                }
+            })
+            .on('broadcast', { event: 'call_bill' }, ({ payload }) => {
+                const tableId = payload?.table_id;
+                if (tableId) {
+                    setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasCallBill: true } : t));
                 }
             })
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => {
@@ -547,10 +565,12 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const tableBookings = currentBookings.filter(b => String(b.table_id) === String(t.id) && ['pending', 'seated', 'confirmed', 'ready'].includes(b.status));
 
                         // 1. Actively occupying in-store dining booking (strictly validated against stale/past-day sessions)
-                        const activeBooking = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
+                        const isCurrentPosTable = Boolean(activeTableId && (String(t.id) === String(activeTableId)) && activeBooking);
+                        const activeBookingCandidate = tableBookings.find(b => isTableSessionActive(b, startOfToday, endOfToday, now));
+                        const activeBookingToUse = isCurrentPosTable ? activeBooking : activeBookingCandidate;
 
                         // Check for unacknowledged new order items on this table (within last 5 min and after table ack)
-                        const items = activeBooking?.order_items || [];
+                        const items = activeBookingToUse?.order_items || [];
                         const tableAckTime = ackTableTimesRef.current[t.id] || ackTableTimesRef.current[String(t.id)] || 0;
 
                         const hasUnviewedRecentItems = items.some(i => {
@@ -561,8 +581,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             return isRecent && isAfterAck;
                         });
 
-                        const bookingTimeMs = activeBooking?.booking_time ? new Date(activeBooking.booking_time).getTime() : 0;
-                        const isRecentPendingBooking = activeBooking?.status === 'pending' && 
+                        const bookingTimeMs = activeBookingToUse?.booking_time ? new Date(activeBookingToUse.booking_time).getTime() : 0;
+                        const isRecentPendingBooking = activeBookingToUse?.status === 'pending' && 
                             (items.length > 0) &&
                             (now.getTime() - bookingTimeMs < 10 * 60 * 1000) && 
                             (bookingTimeMs > tableAckTime);
@@ -575,7 +595,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
 
                         // 2. Upcoming advance reservation (scheduled for later today, not yet seated)
                         const upcomingRes = tableBookings.find(b => {
-                            if (b.id === activeBooking?.id) return false;
+                            if (b.id === activeBookingToUse?.id) return false;
                             if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
                             const bTime = new Date(b.booking_time);
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
@@ -587,15 +607,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const isUpcomingFar = upcomingRes && diffMins > 45;
 
                         let status = 'free';
-                        if (activeBooking) {
-                            status = activeBooking.status === 'pending' ? 'pending' : 'occupied';
+                        if (activeBookingToUse) {
+                            status = activeBookingToUse.status === 'pending' ? 'pending' : 'occupied';
                         } else if (isUpcomingImminent) {
                             status = 'reserved';
                         } else {
                             status = 'free';
                         }
 
-                        const hasRealConflict = Boolean(activeBooking && upcomingRes && diffMins <= 60);
+                        const hasRealConflict = Boolean(activeBookingToUse && upcomingRes && diffMins <= 60);
                         const prevTable = prevMap.get(String(t.id));
                         const isOptimisticOrderActive = Boolean(prevTable?.hasNewOrder && (now.getTime() - tableAckTime > 0));
 
@@ -605,7 +625,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             hasNewOrder: Boolean(hasNewOrder || isOptimisticOrderActive),
                             hasCallStaff: Boolean(tableHasCallStaff || t.hasCallStaff || prevTable?.hasCallStaff),
                             hasCallBill: Boolean(tableHasCallBill || t.hasCallBill || prevTable?.hasCallBill),
-                            booking: activeBooking || prevTable?.booking || null,
+                            booking: activeBookingToUse || prevTable?.booking || null,
                             upcomingReservation: upcomingRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
                             reservationDiffMins: diffMins,
