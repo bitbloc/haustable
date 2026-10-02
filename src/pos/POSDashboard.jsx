@@ -1564,10 +1564,24 @@ export default function POSDashboard() {
                         refreshActiveBookingItems(bId);
                     }
 
-                    // 0ms Optimistic table update
+                    // 0ms Optimistic table update (< 50ms instant floorplan reaction)
                     if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId: tId } }));
-                        window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId } }));
+                        if (isGpsVerified) {
+                            window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                                detail: { 
+                                    tableId: tId, 
+                                    booking: { id: bId, table_id: tId, status: 'seated', staff_remark: '[QR]' } 
+                                } 
+                            }));
+                        } else {
+                            window.dispatchEvent(new CustomEvent('pos_table_pending', { 
+                                detail: { 
+                                    tableId: tId, 
+                                    booking: { id: bId, table_id: tId, status: 'pending', staff_remark: '[WAITING_APPROVAL] [GPS_UNVERIFIED]' } 
+                                } 
+                            }));
+                        }
+                        window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId, bookingId: bId } }));
                     }
 
                     checkPendingOrders();

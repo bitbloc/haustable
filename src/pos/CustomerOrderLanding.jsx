@@ -131,6 +131,11 @@ export default function CustomerOrderLanding() {
         currentMemberIdRef.current = memberProfile?.id || null;
     }, [memberProfile?.id]);
 
+    // Pre-warm POS Realtime broadcast channel immediately on page mount (< 5ms instant order transmission)
+    useEffect(() => {
+        prewarmPOSBroadcastChannel();
+    }, []);
+
     // Fetch Tier details dynamically when memberProfile changes
     useEffect(() => {
         if (!memberProfile?.id) {

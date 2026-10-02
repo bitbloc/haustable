@@ -320,20 +320,63 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         };
         const handleTableNewOrder = (e) => {
             const tableId = e.detail?.tableId;
+            const bookingId = e.detail?.bookingId;
             if (tableId) {
-                setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { 
-                    ...t, 
-                    status: t.status === 'free' ? 'occupied' : t.status,
-                    hasNewOrder: true 
-                } : t));
+                setTables(prev => prev.map(t => {
+                    if (String(t.id) !== String(tableId)) return t;
+                    return { 
+                        ...t, 
+                        status: t.status === 'free' ? 'occupied' : t.status,
+                        hasNewOrder: true,
+                        booking: t.booking || {
+                            id: bookingId || `optimistic_${tableId}`,
+                            table_id: tableId,
+                            status: 'seated',
+                            staff_remark: '[QR]'
+                        }
+                    };
+                }));
             }
         };
+
+        // Instant cross-component & BroadcastChannel sync (dispatched by realtimeNotifier in 0ms)
+        const handlePosSyncEvent = (e) => {
+            const { event, payload } = e.detail || {};
+            if (event === 'qr_order_created' && payload?.table_id) {
+                const tableId = payload.table_id;
+                const isApprovalNeeded = Boolean(payload?.needs_approval);
+                setTables(prev => prev.map(t => {
+                    if (String(t.id) !== String(tableId)) return t;
+                    return {
+                        ...t,
+                        status: isApprovalNeeded ? 'pending' : 'occupied',
+                        hasNewOrder: true,
+                        booking: t.booking ? {
+                            ...t.booking,
+                            status: isApprovalNeeded ? 'pending' : 'seated',
+                            staff_remark: isApprovalNeeded ? '[WAITING_APPROVAL] [GPS_UNVERIFIED]' : (t.booking.staff_remark || '[QR]')
+                        } : {
+                            id: payload?.booking_id || `optimistic_${tableId}`,
+                            table_id: tableId,
+                            status: isApprovalNeeded ? 'pending' : 'seated',
+                            staff_remark: isApprovalNeeded ? '[WAITING_APPROVAL] [GPS_UNVERIFIED]' : '[QR]'
+                        }
+                    };
+                }));
+            } else if (event === 'call_staff' && payload?.table_id) {
+                setTables(prev => prev.map(t => String(t.id) === String(payload.table_id) ? { ...t, hasCallStaff: true } : t));
+            } else if (event === 'call_bill' && payload?.table_id) {
+                setTables(prev => prev.map(t => String(t.id) === String(payload.table_id) ? { ...t, hasCallBill: true } : t));
+            }
+        };
+
         window.addEventListener('pos_table_occupied', handleTableOccupied);
         window.addEventListener('pos_table_pending', handleTablePending);
         window.addEventListener('pos_table_call_staff', handleTableCallStaff);
         window.addEventListener('pos_staff_call_cleared', handleStaffCallCleared);
         window.addEventListener('pos_table_call_bill', handleTableCallBill);
         window.addEventListener('pos_table_new_order', handleTableNewOrder);
+        window.addEventListener('pos_sync_event', handlePosSyncEvent);
 
         const settingsSub = supabase.channel('pos-app-settings')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => {
@@ -345,99 +388,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // Realtime Table & Order Items Sync (< 50ms instant floorplan updates via canonical channel)
-        const tablesSyncSub = supabase.channel('pos-realtime-notifications')
-            .on('broadcast', { event: 'qr_order_created' }, ({ payload }) => {
-                const tableId = payload?.table_id;
-                if (tableId) {
-                    const isApprovalNeeded = Boolean(payload?.needs_approval);
-                    setTables(prev => prev.map(t => {
-                        if (String(t.id) !== String(tableId)) return t;
-                        return {
-                            ...t,
-                            status: isApprovalNeeded ? 'pending' : 'occupied',
-                            hasNewOrder: true,
-                            booking: t.booking ? {
-                                ...t.booking,
-                                status: isApprovalNeeded ? 'pending' : 'seated',
-                                staff_remark: isApprovalNeeded ? '[WAITING_APPROVAL] [GPS_UNVERIFIED]' : (t.booking.staff_remark || '[QR]')
-                            } : {
-                                id: payload?.booking_id || `optimistic_${tableId}`,
-                                table_id: tableId,
-                                status: isApprovalNeeded ? 'pending' : 'seated',
-                                staff_remark: isApprovalNeeded ? '[WAITING_APPROVAL] [GPS_UNVERIFIED]' : '[QR]'
-                            }
-                        };
-                    }));
-                }
-            })
-            .on('broadcast', { event: 'call_staff' }, ({ payload }) => {
-                const tableId = payload?.table_id;
-                if (tableId) {
-                    setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasCallStaff: true } : t));
-                }
-            })
-            .on('broadcast', { event: 'call_bill' }, ({ payload }) => {
-                const tableId = payload?.table_id;
-                if (tableId) {
-                    setTables(prev => prev.map(t => String(t.id) === String(tableId) ? { ...t, hasCallBill: true } : t));
-                }
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, () => {
-                fetchTables();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
-                const b = payload?.new;
-                const tableId = b?.table_id;
-                if (tableId) {
-                    const status = b.status;
-                    const isClosed = ['completed', 'cancelled', 'void', 'no_show'].includes(status);
-                    const hasCallStaff = (b.staff_remark || '').includes('[CALL_STAFF]');
-                    const hasCallBill = (b.staff_remark || '').includes('[CALL_BILL]');
-                    const isQr = (b.source || '').toLowerCase() === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-                    setTables(prev => prev.map(t => {
-                        if (String(t.id) !== String(tableId)) return t;
-                        if (isClosed) {
-                            return { ...t, status: 'free', booking: null, hasNewOrder: false, hasCallStaff: false, hasCallBill: false };
-                        }
-                        const newStatus = status === 'pending' ? 'pending' : (['seated', 'ready', 'confirmed'].includes(status) ? 'occupied' : t.status);
-                        return {
-                            ...t,
-                            status: newStatus,
-                            hasCallStaff,
-                            hasCallBill,
-                            hasNewOrder: status === 'pending' || isQr || t.hasNewOrder,
-                            booking: t.booking ? { ...t.booking, ...b } : b
-                        };
-                    }));
-                }
-                fetchTables();
-            })
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'order_items' }, (payload) => {
-                const bId = payload?.new?.booking_id;
-                if (bId) {
-                    setTables(prev => prev.map(t => {
-                        if (t.booking?.id === bId) {
-                            return {
-                                ...t,
-                                status: t.status === 'free' ? 'occupied' : t.status,
-                                hasNewOrder: true
-                            };
-                        }
-                        return t;
-                    }));
-                }
-                fetchTables();
-            })
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'order_items' }, () => {
-                fetchTables();
-            })
-            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'order_items' }, () => {
-                fetchTables();
-            })
-            .subscribe();
-
-        // 60-second background heartbeat fallback (Realtime master channel handles instant updates)
+        // 60-second background heartbeat fallback (POSDashboard master channel handles instant updates)
         const pollInterval = setInterval(() => {
             if (document.visibilityState === 'visible') {
                 fetchTables();
@@ -460,8 +411,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
             window.removeEventListener('pos_staff_call_cleared', handleStaffCallCleared);
             window.removeEventListener('pos_table_call_bill', handleTableCallBill);
             window.removeEventListener('pos_table_new_order', handleTableNewOrder);
+            window.removeEventListener('pos_sync_event', handlePosSyncEvent);
             supabase.removeChannel(settingsSub);
-            supabase.removeChannel(tablesSyncSub);
             clearInterval(pollInterval);
             if (fetchTimeoutRef.current) {
                 clearTimeout(fetchTimeoutRef.current);
@@ -724,8 +675,8 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
         <div className="h-full flex flex-col bg-[var(--color-paper)] overflow-hidden select-none font-sans text-[var(--color-ink)]">
             <style>{`
                 @keyframes pos-blink-red {
-                    0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
-                    50% { border-color: var(--color-accent); background-color: var(--color-accent); color: var(--color-paper); }
+                    0%, 100% { border-color: var(--color-accent); background-color: var(--color-accent); color: #ffffff; }
+                    50% { border-color: #ef4444; background-color: #dc2626; color: #ffffff; }
                 }
                 @keyframes pos-blink-orange {
                     0%, 100% { border-color: var(--color-rule); background-color: var(--color-paper-2); color: var(--color-ink); }
@@ -1064,7 +1015,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
             tableBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-pulse';
         } else if (hasOrder) {
-            tableBgClass = 'animate-pos-blink-red border-2';
+            tableBgClass = 'bg-[var(--color-accent)] animate-pos-blink-red border-2 border-red-500 text-white shadow-sm';
             ledColor = 'bg-red-500 animate-pulse';
         }
     } else if (hasCallStaff) {
@@ -1074,7 +1025,7 @@ const FloorplanTableButton = memo(function FloorplanTableButton({ table, onSelec
         tableBgClass = 'animate-pos-blink-orange border-2';
         ledColor = 'bg-[#FFAA00] animate-pulse';
     } else if (hasOrder) {
-        tableBgClass = 'animate-pos-blink-red border-2';
+        tableBgClass = 'bg-[var(--color-accent)] animate-pos-blink-red border-2 border-red-500 text-white shadow-sm';
         ledColor = 'bg-red-500 animate-pulse';
     }
 
@@ -1264,7 +1215,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
             cellBgClass = 'animate-pos-blink-orange border-2';
             ledColor = 'bg-[#FFAA00] animate-pulse';
         } else if (hasOrder) {
-            cellBgClass = 'animate-pos-blink-red border-2';
+            cellBgClass = 'bg-[var(--color-accent)] animate-pos-blink-red border-2 border-red-500 text-white shadow-xs';
             ledColor = 'bg-red-500 animate-pulse';
         }
     } else if (hasCallStaff) {
@@ -1274,7 +1225,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
         cellBgClass = 'animate-pos-blink-orange border-2';
         ledColor = 'bg-[#FFAA00] animate-pulse';
     } else if (hasOrder) {
-        cellBgClass = 'animate-pos-blink-red border-2';
+        cellBgClass = 'bg-[var(--color-accent)] animate-pos-blink-red border-2 border-red-500 text-white shadow-xs';
         ledColor = 'bg-red-500 animate-pulse';
     }
 
