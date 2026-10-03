@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { generateScoreHash } from './game/scenes/GameOverScene';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+import { LogIn } from 'lucide-react';
 
 const SHOP_LAT = 17.39008981227407;
 const SHOP_LNG = 104.79292770946343;

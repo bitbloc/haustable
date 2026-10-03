@@ -51,7 +51,7 @@ import {
     playSystemAlertSound as playSystemAlertSoundUtil 
 } from '../utils/audioHelper';
 import { useWakeLock } from '../hooks/useWakeLock';
-import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 
 const DEFAULT_BAR_CATS = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
