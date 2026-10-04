@@ -1271,6 +1271,7 @@ export default function POSDashboard() {
             if (document.visibilityState === 'visible') {
                 console.log('⚡ [POS Lifecycle] App foregrounded. Synchronizing data & audio...');
                 unlockAudioEngine();
+                prewarmPOSBroadcastChannel();
                 runSafetyHeartbeat();
                 triggerDebouncedRefresh();
             }
@@ -1279,6 +1280,7 @@ export default function POSDashboard() {
         const handleOnlineStatus = () => {
             console.log('⚡ [POS Network] Network restored online. Synchronizing...');
             unlockAudioEngine();
+            prewarmPOSBroadcastChannel();
             runSafetyHeartbeat();
             triggerDebouncedRefresh();
         };
@@ -1842,6 +1844,30 @@ export default function POSDashboard() {
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_table_occupied', { detail: { tableId } }));
                             }
+
+                            // QR order addition to an already seated table
+                            const isNewQrRemark = newRemark.includes('[QR]') && !oldRemark.includes('[QR]');
+                            const totalIncreased = (Number(newRow?.total_amount) || 0) > (Number(oldRow?.total_amount) || 0);
+                            const isNotCurrentPosStaffEdit = activeBookingRef.current?.id !== bookingId;
+                            if ((isNewQrRemark || (totalIncreased && newRemark.includes('[QR]'))) && isNotCurrentPosStaffEdit) {
+                                if (checkEventDeduplication(pendingOrderKey, 6000)) {
+                                    toast.custom((t) => renderPosToast(t, {
+                                        badge: 'QR ORDER · สั่งเพิ่ม',
+                                        title: `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติมผ่าน QR`,
+                                        subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                        dot: 'emerald',
+                                        onClick: () => {
+                                            if (tableId) {
+                                                supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                                    if (data) handleSelectTable(data);
+                                                });
+                                            }
+                                        }
+                                    }), { id: pendingOrderKey, duration: 10000 });
+                                    pushNotifHistory('ADD_ORDER', 'Add Order (QR)', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติมผ่าน QR`, tableId);
+                                    playOrderAlert(pendingOrderKey, 1200, 3.4);
+                                }
+                            }
                         }
 
                         // 2. Call Bill Alert (Strict diffing: only fire if newly added)
@@ -1997,7 +2023,8 @@ export default function POSDashboard() {
                                     
                                     const sourceLower = (bData.source || '').toLowerCase();
                                     const remarkLower = (bData.staff_remark || '').toLowerCase();
-                                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr walk-in') || remarkLower.includes('qr order') || remarkLower.includes('[qr]');
+                                    const isRemoteKitchenItem = (payload.new?.destination === 'kitchen' || payload.new?.destination === 'bar') && !isCurrentPosBooking;
+                                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr') || isRemoteKitchenItem;
                                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
                                     const hasOnlineMarker = isQr || sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url;
                                     const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');

@@ -82,8 +82,8 @@ public class MainActivity extends BridgeActivity {
     private void initNativeAudio() {
         try {
             AudioAttributes audioAttributes = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                 .build();
 
             soundPool = new SoundPool.Builder()
@@ -117,6 +117,15 @@ public class MainActivity extends BridgeActivity {
                 return true; // Muted
             }
 
+            try {
+                AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                if (am != null) {
+                    int curMusicVol = am.getStreamVolume(AudioManager.STREAM_MUSIC);
+                    int maxMusicVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                    Log.i("MainActivity", "🔊 [NativeAudio] Android STREAM_MUSIC volume: " + curMusicVol + "/" + maxMusicVol);
+                }
+            } catch (Exception ignored) {}
+
             int targetSoundId = 0;
             int fallbackResId = 0;
 
@@ -131,7 +140,7 @@ public class MainActivity extends BridgeActivity {
                 fallbackResId = R.raw.noti1;
             }
 
-            // 1. Primary: SoundPool for 0ms ultra-low latency hardware audio
+            // 1. Primary: SoundPool for 0ms ultra-low latency hardware audio through STREAM_MUSIC
             if (soundPool != null && targetSoundId > 0 && loadedSounds.contains(targetSoundId)) {
                 int streamId = soundPool.play(targetSoundId, vol, vol, 1, 0, 1.0f);
                 if (streamId != 0) {
@@ -140,10 +149,11 @@ public class MainActivity extends BridgeActivity {
                 }
             }
 
-            // 2. Secondary: Direct MediaPlayer fallback
+            // 2. Secondary: Direct MediaPlayer fallback through STREAM_MUSIC
             if (fallbackResId != 0) {
                 final MediaPlayer mp = MediaPlayer.create(this, fallbackResId);
                 if (mp != null) {
+                    mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
                     mp.setVolume(vol, vol);
                     mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                         @Override

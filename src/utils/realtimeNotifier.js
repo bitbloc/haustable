@@ -3,6 +3,34 @@ import { supabase } from '../lib/supabaseClient';
 const broadcastListeners = new Set();
 let posBroadcastChannel = null;
 let posChannelSubPromise = null;
+let broadcastReconnectTimer = null;
+const broadcastDispatchHistory = new Map(); // deduplicate dual wildcard + explicit deliveries
+
+function dispatchBroadcastEvent(event, payload) {
+    if (!event) return;
+    const now = Date.now();
+    // Unique deduplication token per broadcast message
+    const dedupToken = `${event}_${payload?.booking_id || ''}_${payload?.table_id || ''}_${payload?.timestamp || ''}`;
+    const lastSeen = broadcastDispatchHistory.get(dedupToken);
+    if (lastSeen && (now - lastSeen < 1500)) {
+        return; // Suppress duplicate same-event dispatch within 1.5s
+    }
+    broadcastDispatchHistory.set(dedupToken, now);
+    if (broadcastDispatchHistory.size > 100) {
+        for (const [k, t] of broadcastDispatchHistory.entries()) {
+            if (now - t > 10000) broadcastDispatchHistory.delete(k);
+        }
+    }
+
+    console.log(`⚡ [RealtimeNotifier] Broadcast dispatched [${event}]:`, payload);
+    broadcastListeners.forEach(listener => {
+        try {
+            listener({ event, payload });
+        } catch (err) {
+            console.error('[RealtimeNotifier] Error in broadcast listener:', err);
+        }
+    });
+}
 
 function getBroadcastChannel() {
     if (!posBroadcastChannel) {
@@ -12,15 +40,25 @@ function getBroadcastChannel() {
             }
         });
 
-        // Listen for all incoming broadcasts on the shared topic and fan out to registered listeners
+        // 1. Wildcard listener for all broadcast events
         posBroadcastChannel.on('broadcast', { event: '*' }, ({ event, payload }) => {
-            console.log(`⚡ [RealtimeNotifier] Broadcast received [${event}]:`, payload);
-            broadcastListeners.forEach(listener => {
-                try {
-                    listener({ event, payload });
-                } catch (err) {
-                    console.error('[RealtimeNotifier] Error in broadcast listener:', err);
-                }
+            dispatchBroadcastEvent(event, payload);
+        });
+
+        // 2. Explicit event listeners (ensures legacy Phoenix sockets match without relying solely on wildcard filter)
+        const explicitEvents = [
+            'qr_order_created',
+            'call_staff',
+            'call_bill',
+            'online_order_created',
+            'payment_slip_uploaded',
+            'table_moved',
+            'bills_merged',
+            'online_order_status_updated'
+        ];
+        explicitEvents.forEach(evt => {
+            posBroadcastChannel.on('broadcast', { event: evt }, ({ payload }) => {
+                dispatchBroadcastEvent(evt, payload);
             });
         });
 
@@ -29,18 +67,49 @@ function getBroadcastChannel() {
             posBroadcastChannel.subscribe((status) => {
                 if (status === 'SUBSCRIBED') {
                     clearTimeout(timer);
+                    if (broadcastReconnectTimer) {
+                        clearTimeout(broadcastReconnectTimer);
+                        broadcastReconnectTimer = null;
+                    }
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-                    console.warn(`[RealtimeNotifier] Channel status: ${status}, resetting broadcaster reference.`);
+                    console.warn(`[RealtimeNotifier] Channel status: ${status}, scheduling auto-reconnect...`);
+                    try {
+                        if (posBroadcastChannel) supabase.removeChannel(posBroadcastChannel);
+                    } catch (e) {}
                     posBroadcastChannel = null;
                     posChannelSubPromise = null;
                     clearTimeout(timer);
                     resolve();
+
+                    // Automatic reconnect loop for active POS terminals
+                    if (broadcastListeners.size > 0 && !broadcastReconnectTimer) {
+                        broadcastReconnectTimer = setTimeout(() => {
+                            broadcastReconnectTimer = null;
+                            console.log('⚡ [RealtimeNotifier] Auto-reconnecting broadcast channel...');
+                            getBroadcastChannel();
+                        }, 2500);
+                    }
                 }
             });
         });
     }
     return { channel: posBroadcastChannel, promise: posChannelSubPromise };
+}
+
+// Lifecycle watcher: revive channel whenever Android WebView is foregrounded or network reconnects
+if (typeof window !== 'undefined') {
+    const handleRevive = () => {
+        if (document.visibilityState === 'visible' && broadcastListeners.size > 0) {
+            if (!posBroadcastChannel || posBroadcastChannel.state !== 'joined') {
+                console.log('⚡ [RealtimeNotifier] Foreground/online triggered broadcast channel re-verification');
+                getBroadcastChannel();
+            }
+        }
+    };
+    document.addEventListener('visibilitychange', handleRevive);
+    window.addEventListener('online', handleRevive);
+    window.addEventListener('focus', handleRevive);
 }
 
 /**

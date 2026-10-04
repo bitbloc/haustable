@@ -1256,17 +1256,6 @@ export default function CustomerOrderLanding() {
                     currentBooking = newBooking;
                 }
 
-                const dbItemsToInsert = itemsToInsert.map(item => ({
-                    ...item,
-                    booking_id: currentBooking.id
-                }));
-
-                const { error: itemsError } = await supabase
-                    .from('order_items')
-                    .insert(dbItemsToInsert);
-
-                if (itemsError) throw itemsError;
-
                 let updatedRemark = currentBooking.staff_remark || 'QR Walk-in Guest';
                 if (!isGeofenceVerified) {
                     if (!updatedRemark.includes('GPS_UNVERIFIED')) {
@@ -1279,6 +1268,39 @@ export default function CustomerOrderLanding() {
                     updatedRemark += ` [NOTE: ${tableRemarkInput.trim()}]`;
                 }
 
+                const initialTotal = Number(currentBooking.total_amount || currentBooking.total_price || 0);
+                const estimatedTotal = initialTotal + cartSubtotal;
+
+                const updateData = {
+                    status: targetStatus,
+                    total_amount: estimatedTotal,
+                    staff_remark: updatedRemark
+                };
+                if (memberProfile?.id && !currentBooking.user_id) {
+                    updateData.user_id = memberProfile.id;
+                }
+
+                // 1. Update booking FIRST with [QR] remark so POS Postgres Realtime identifies it as QR order immediately
+                const { error: bookingUpdateError } = await supabase
+                    .from('bookings')
+                    .update(updateData)
+                    .eq('id', currentBooking.id);
+
+                if (bookingUpdateError) throw bookingUpdateError;
+
+                // 2. Insert order items (now guaranteed to match QR booking in DB)
+                const dbItemsToInsert = itemsToInsert.map(item => ({
+                    ...item,
+                    booking_id: currentBooking.id
+                }));
+
+                const { error: itemsError } = await supabase
+                    .from('order_items')
+                    .insert(dbItemsToInsert);
+
+                if (itemsError) throw itemsError;
+
+                // 3. Re-calculate exact total from order_items
                 const { data: allBookingItems } = await supabase
                     .from('order_items')
                     .select('price_at_time, quantity')
@@ -1286,23 +1308,14 @@ export default function CustomerOrderLanding() {
 
                 const recalculatedTotal = (allBookingItems && allBookingItems.length > 0)
                     ? allBookingItems.reduce((sum, i) => sum + ((Number(i.price_at_time) || 0) * (Number(i.quantity) || 1)), 0)
-                    : cartSubtotal;
+                    : estimatedTotal;
 
-                const updateData = {
-                    status: targetStatus,
-                    total_amount: recalculatedTotal,
-                    staff_remark: updatedRemark
-                };
-                if (memberProfile?.id && !currentBooking.user_id) {
-                    updateData.user_id = memberProfile.id;
+                if (recalculatedTotal !== estimatedTotal) {
+                    await supabase
+                        .from('bookings')
+                        .update({ total_amount: recalculatedTotal })
+                        .eq('id', currentBooking.id);
                 }
-
-                const { error: bookingUpdateError } = await supabase
-                    .from('bookings')
-                    .update(updateData)
-                    .eq('id', currentBooking.id);
-
-                if (bookingUpdateError) throw bookingUpdateError;
 
                 finalBookingId = currentBooking.id;
                 finalTrackingToken = currentBooking.tracking_token;
