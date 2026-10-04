@@ -109,6 +109,16 @@ export function setAudioVolume(volumePercent) {
         localStorage.setItem(STORAGE_KEY_VOLUME, String(clamped));
     } catch (e) {}
 
+    // Synchronize native Android device volume if running inside APK
+    try {
+        if (typeof window !== 'undefined') {
+            const bridge = window.AndroidPosBridge || window.AndroidCfdBridge;
+            if (bridge && typeof bridge.setDeviceVolume === 'function') {
+                bridge.setDeviceVolume(clamped / 100);
+            }
+        }
+    } catch (e) {}
+
     if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('pos-audio-volume-changed', {
             detail: {
@@ -136,6 +146,17 @@ export function setAudioMuted(muted) {
     cachedMuted = boolMuted;
     try {
         localStorage.setItem(STORAGE_KEY_MUTED, String(boolMuted));
+    } catch (e) {}
+
+    // Synchronize native Android device volume if running inside APK
+    try {
+        if (typeof window !== 'undefined') {
+            const bridge = window.AndroidPosBridge || window.AndroidCfdBridge;
+            if (bridge && typeof bridge.setDeviceVolume === 'function') {
+                const target = boolMuted ? 0 : (getAudioVolume() / 100);
+                bridge.setDeviceVolume(target);
+            }
+        }
     } catch (e) {}
 
     if (typeof window !== 'undefined') {
@@ -265,15 +286,29 @@ async function loadAndDecodeBuffer(urlsToTry, soundLabel) {
 export function tryPlayNativeSound(soundType = 'noti1', factor = null) {
     if (typeof window === 'undefined') return false;
     const bridge = window.AndroidPosBridge || window.AndroidCfdBridge;
-    if (!bridge || typeof bridge.playAlertSound !== 'function') return false;
+    if (!bridge) return false;
 
     try {
         const effectiveGain = factor !== null ? factor : getEffectiveGainFactor();
         if (effectiveGain <= 0) return true; // Handled as muted
-        const played = bridge.playAlertSound(soundType, effectiveGain);
-        if (played) {
-            console.log(`🔊 [AudioEngine] Native AndroidPosBridge played sound: ${soundType} (vol=${effectiveGain})`);
-            return true;
+        const numericVol = Number(effectiveGain);
+
+        // 1. Unambiguous method to guarantee no reflection or overload bugs in WebView
+        if (typeof bridge.playAlertSoundWithVolume === 'function') {
+            const played = bridge.playAlertSoundWithVolume(soundType, numericVol);
+            if (played) {
+                console.log(`🔊 [AudioEngine] Native playAlertSoundWithVolume: ${soundType} (vol=${numericVol})`);
+                return true;
+            }
+        }
+
+        // 2. Standard bridge method (matches playAlertSound(String, double))
+        if (typeof bridge.playAlertSound === 'function') {
+            const played = bridge.playAlertSound(soundType, numericVol);
+            if (played) {
+                console.log(`🔊 [AudioEngine] Native playAlertSound: ${soundType} (vol=${numericVol})`);
+                return true;
+            }
         }
     } catch (e) {
         console.warn('[AudioEngine] AndroidPosBridge.playAlertSound error:', e);
@@ -458,9 +493,10 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
         compressor.attack.setValueAtTime(0.002, now);
         compressor.release.setValueAtTime(0.06, now);
 
-        // 5. High-Output Make-up Gain (Scaled with volume)
+        // 5. High-Output Make-up Gain (Scaled with logarithmic audio taper)
         const masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(boostFactor * effectiveGain, now);
+        const taperedGain = Math.pow(effectiveGain, 1.8);
+        masterGain.gain.setValueAtTime(boostFactor * taperedGain, now);
 
         // 6. Soft Waveshaper Saturation (prevents harsh digital clipping)
         if (!softDistortionCurve) {
@@ -509,10 +545,11 @@ export function playHtml5AudioDirectly(soundType = 'noti1', gain = 1.0) {
             html5AudioPool[soundType] = audio;
         }
 
+        const taperedGain = Math.max(0, Math.min(1.0, Math.pow(gain, 1.8)));
         try {
             audio.pause();
             audio.currentTime = 0;
-            audio.volume = Math.max(0, Math.min(1.0, gain));
+            audio.volume = taperedGain;
         } catch (e) {}
 
         const promise = audio.play();
@@ -522,7 +559,7 @@ export function playHtml5AudioDirectly(soundType = 'noti1', gain = 1.0) {
                 // Fallback attempt with a fresh instance
                 try {
                     const freshAudio = new Audio(soundUrl);
-                    freshAudio.volume = Math.max(0, Math.min(1.0, gain));
+                    freshAudio.volume = taperedGain;
                     freshAudio.play().catch(() => {});
                 } catch (e2) {}
             });
@@ -601,9 +638,9 @@ let activeHtml5Audio = null;
  * Play decoded AudioBuffer cleanly with amplification directly to speakers.
  * Returns true only if Web Audio context is active and playback was successfully scheduled.
  */
-function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
+function playAudioBufferDirectly(buffer, boostFactor = 2.2, customGain = null) {
     try {
-        const effectiveGain = getEffectiveGainFactor();
+        const effectiveGain = customGain !== null ? customGain : getEffectiveGainFactor();
         if (effectiveGain <= 0) return true; // Silent/Muted, early exit cleanly
 
         const ctx = getSharedAudioContext(true);
@@ -623,7 +660,8 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
                 const source = ctx.createBufferSource();
                 source.buffer = buffer;
                 const gainNode = ctx.createGain();
-                gainNode.gain.setValueAtTime(boostFactor * effectiveGain, ctx.currentTime);
+                const taperedGain = Math.pow(effectiveGain, 1.8);
+                gainNode.gain.setValueAtTime(boostFactor * taperedGain, ctx.currentTime);
                 source.connect(gainNode);
                 gainNode.connect(ctx.destination);
 
@@ -997,7 +1035,7 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
 
     // 2. Play buffer directly with custom gain and active node tracking
     if (targetBuffer) {
-        const played = playAudioBufferDirectly(targetBuffer, 3.2);
+        const played = playAudioBufferDirectly(targetBuffer, 3.2, factor);
         if (played) return true;
     }
 

@@ -186,6 +186,12 @@ export const POSVolumeControl = memo(function POSVolumeControl({ className = '',
                             step="5"
                             value={volume}
                             onChange={handleVolumeSlider}
+                            onPointerUp={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (val > 0) {
+                                    testPlayAlertSound(val, 800);
+                                }
+                            }}
                             className="w-full h-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)] focus:outline-none"
                             style={{
                                 accentColor: 'oklch(52% 0.16 28)'

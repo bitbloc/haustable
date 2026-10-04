@@ -114,15 +114,28 @@ public class MainActivity extends BridgeActivity {
         try {
             float vol = Math.max(0.0f, Math.min(1.0f, volume));
             if (vol <= 0.001f) {
-                return true; // Muted
+                return true; // Muted cleanly
             }
+
+            // Audio Taper: Logarithmic human hearing curve (v^1.8)
+            // 30% -> 0.11 (gentle/soft), 60% -> 0.40 (medium), 100% -> 1.00 (maximum loudness)
+            float audioTaperVol = (float) Math.pow(vol, 1.8);
 
             try {
                 AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
                 if (am != null) {
                     int curMusicVol = am.getStreamVolume(AudioManager.STREAM_MUSIC);
                     int maxMusicVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
-                    Log.i("MainActivity", "🔊 [NativeAudio] Android STREAM_MUSIC volume: " + curMusicVol + "/" + maxMusicVol);
+                    Log.i("MainActivity", "🔊 [NativeAudio] STREAM_MUSIC=" + curMusicVol + "/" + maxMusicVol +
+                            " reqVol=" + vol + " taperVol=" + audioTaperVol + " type=" + soundType);
+
+                    // If system stream volume is 0 or muted while user requests audible sound,
+                    // restore stream to a safe audible level (80% of max) so sound can exit speaker.
+                    if (curMusicVol <= 0 && vol > 0.01f) {
+                        int safeVol = Math.max(1, (int) Math.round(maxMusicVol * 0.8f));
+                        am.setStreamVolume(AudioManager.STREAM_MUSIC, safeVol, 0);
+                        Log.i("MainActivity", "🔊 [NativeAudio] Auto-unmuted STREAM_MUSIC to " + safeVol + "/" + maxMusicVol);
+                    }
                 }
             } catch (Exception ignored) {}
 
@@ -142,9 +155,9 @@ public class MainActivity extends BridgeActivity {
 
             // 1. Primary: SoundPool for 0ms ultra-low latency hardware audio through STREAM_MUSIC
             if (soundPool != null && targetSoundId > 0 && loadedSounds.contains(targetSoundId)) {
-                int streamId = soundPool.play(targetSoundId, vol, vol, 1, 0, 1.0f);
+                int streamId = soundPool.play(targetSoundId, audioTaperVol, audioTaperVol, 1, 0, 1.0f);
                 if (streamId != 0) {
-                    Log.i("MainActivity", "🔊 [NativeAudio] SoundPool played: " + soundType + " streamId: " + streamId);
+                    Log.i("MainActivity", "🔊 [NativeAudio] SoundPool played: " + soundType + " streamId: " + streamId + " vol=" + audioTaperVol);
                     return true;
                 }
             }
@@ -154,7 +167,7 @@ public class MainActivity extends BridgeActivity {
                 final MediaPlayer mp = MediaPlayer.create(this, fallbackResId);
                 if (mp != null) {
                     mp.setAudioStreamType(AudioManager.STREAM_MUSIC);
-                    mp.setVolume(vol, vol);
+                    mp.setVolume(audioTaperVol, audioTaperVol);
                     mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                         @Override
                         public void onCompletion(MediaPlayer player) {
@@ -164,7 +177,7 @@ public class MainActivity extends BridgeActivity {
                         }
                     });
                     mp.start();
-                    Log.i("MainActivity", "🔊 [NativeAudio] MediaPlayer fallback played: " + soundType);
+                    Log.i("MainActivity", "🔊 [NativeAudio] MediaPlayer fallback played: " + soundType + " vol=" + audioTaperVol);
                     return true;
                 }
             }
@@ -172,6 +185,34 @@ public class MainActivity extends BridgeActivity {
             Log.w("MainActivity", "playNativeAlertSound error: " + e.getMessage());
         }
         return false;
+    }
+
+    public synchronized boolean setNativeDeviceVolume(float ratio) {
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                int maxVol = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                int target = Math.max(0, Math.min(maxVol, Math.round(ratio * maxVol)));
+                am.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0);
+                Log.i("MainActivity", "🔊 [NativeAudio] Set STREAM_MUSIC device volume: " + target + "/" + maxVol + " (" + (int)(ratio * 100) + "%)");
+                return true;
+            }
+        } catch (Exception e) {
+            Log.w("MainActivity", "Failed to set native device volume: " + e.getMessage());
+        }
+        return false;
+    }
+
+    public synchronized double getNativeDeviceVolume() {
+        try {
+            AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            if (am != null) {
+                int cur = am.getStreamVolume(AudioManager.STREAM_MUSIC);
+                int max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                return max > 0 ? ((double) cur / (double) max) : 1.0;
+            }
+        } catch (Exception ignored) {}
+        return 1.0;
     }
 
     public class AndroidCfdBridge {
@@ -215,13 +256,23 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
-        public boolean playAlertSound(String soundType, float volume) {
-            return playNativeAlertSound(soundType, volume);
+        public boolean playAlertSoundWithVolume(String soundType, double volume) {
+            return playNativeAlertSound(soundType, (float) volume);
         }
 
         @JavascriptInterface
-        public boolean playAlertSound(String soundType) {
-            return playNativeAlertSound(soundType, 1.0f);
+        public boolean playAlertSound(String soundType, double volume) {
+            return playNativeAlertSound(soundType, (float) volume);
+        }
+
+        @JavascriptInterface
+        public boolean setDeviceVolume(double volume) {
+            return setNativeDeviceVolume((float) volume);
+        }
+
+        @JavascriptInterface
+        public double getDeviceVolume() {
+            return getNativeDeviceVolume();
         }
 
         @JavascriptInterface

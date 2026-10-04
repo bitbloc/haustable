@@ -599,6 +599,12 @@ export default function HardwarePrintersTab({
                                 setAudioVolumeState(val);
                                 setAudioVolume(val);
                             }}
+                            onPointerUp={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (val > 0) {
+                                    testPlayAlertSound(val, 800);
+                                }
+                            }}
                             className="w-full h-2.5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-lg appearance-none cursor-pointer accent-[var(--color-accent)]"
                         />
                         <div className="flex justify-between text-[9px] font-mono text-[var(--color-muted)]">
