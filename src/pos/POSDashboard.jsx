@@ -141,6 +141,7 @@ export default function POSDashboard() {
     const [selectedTable, setSelectedTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
     const activeBookingRef = useRef(activeBooking);
+    activeBookingRef.current = activeBooking;
     const tableSelectRequestIdRef = useRef(0);
     useEffect(() => {
         activeBookingRef.current = activeBooking;
@@ -150,6 +151,11 @@ export default function POSDashboard() {
         items: [],
         note: ''
     });
+    const currentOrderRef = useRef(currentOrder);
+    currentOrderRef.current = currentOrder;
+
+    // Track booking IDs submitted locally by staff on POS to suppress incoming order sound alerts
+    const localStaffSubmittedBookingsRef = useRef(new Map()); // bookingId -> timestamp
 
     const [activeStaff, setActiveStaff] = useState(() => {
         try {
@@ -1772,8 +1778,15 @@ export default function POSDashboard() {
                     const slipReceivedKey = getCanonicalSlipAlertKey(bookingId);
 
                     if (eventType === 'INSERT') {
+                        const bIdStr = String(bookingId);
+                        const lastLocalSubmission = localStaffSubmittedBookingsRef.current.get(bIdStr);
+                        const isLocalStaffSubmission = Boolean(
+                            submittingOrderRef.current || 
+                            (lastLocalSubmission && (Date.now() - lastLocalSubmission < 30000))
+                        );
+
                         // In-store walk-in pickup or walk-in table created right here at POS: do not fire online toast or modal
-                        if (isWalkInPickup || isExplicitInHouse) {
+                        if (isLocalStaffSubmission || isWalkInPickup || isExplicitInHouse) {
                             return;
                         }
 
@@ -1848,7 +1861,7 @@ export default function POSDashboard() {
                             // QR order addition to an already seated table
                             const isNewQrRemark = newRemark.includes('[QR]') && !oldRemark.includes('[QR]');
                             const totalIncreased = (Number(newRow?.total_amount) || 0) > (Number(oldRow?.total_amount) || 0);
-                            const isNotCurrentPosStaffEdit = activeBookingRef.current?.id !== bookingId;
+                            const isNotCurrentPosStaffEdit = activeBookingRef.current?.id !== bookingId && !localStaffSubmittedBookingsRef.current.has(String(bookingId));
                             if ((isNewQrRemark || (totalIncreased && newRemark.includes('[QR]'))) && isNotCurrentPosStaffEdit) {
                                 if (checkEventDeduplication(pendingOrderKey, 6000)) {
                                     toast.custom((t) => renderPosToast(t, {
@@ -2010,6 +2023,28 @@ export default function POSDashboard() {
                     const bookingId = payload.new?.booking_id || payload.old?.booking_id;
                     if (bookingId) {
                         if (payload.eventType === 'INSERT') {
+                            // 1. If this booking was submitted locally by staff on this POS terminal, STRICTLY SUPPRESS ALL ALERTS & SOUNDS
+                            const bIdStr = String(bookingId);
+                            const lastLocalSubmission = localStaffSubmittedBookingsRef.current.get(bIdStr);
+                            const isLocalStaffSubmission = Boolean(
+                                submittingOrderRef.current || 
+                                (lastLocalSubmission && (Date.now() - lastLocalSubmission < 30000))
+                            );
+
+                            if (isLocalStaffSubmission) {
+                                console.log(`🔇 [POS Alert] Suppressed alert sound for staff-sent kitchen items: ${bookingId}`);
+                                // Still refresh order items on screen without playing sound
+                                if (activeBookingRef.current?.id === bookingId) {
+                                    if (window.activeBookingSyncDebounceTimer) {
+                                        clearTimeout(window.activeBookingSyncDebounceTimer);
+                                    }
+                                    window.activeBookingSyncDebounceTimer = setTimeout(() => {
+                                        refreshActiveBookingItems(bookingId);
+                                    }, 500);
+                                }
+                                return;
+                            }
+
                             // If staff is currently editing or viewing this booking right on this POS terminal, do not alert
                             const isCurrentPosBooking = activeBookingRef.current?.id === bookingId;
 
@@ -2023,15 +2058,16 @@ export default function POSDashboard() {
                                     
                                     const sourceLower = (bData.source || '').toLowerCase();
                                     const remarkLower = (bData.staff_remark || '').toLowerCase();
-                                    const isRemoteKitchenItem = (payload.new?.destination === 'kitchen' || payload.new?.destination === 'bar') && !isCurrentPosBooking;
-                                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr') || isRemoteKitchenItem;
+                                    
+                                    // A true customer QR or Online order MUST have explicit QR / online markers
+                                    const isQr = sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('[qr]');
                                     const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
                                     const hasOnlineMarker = isQr || sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url;
                                     const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
                                     const isWalkInPickup = bData.booking_type === 'pickup' && isExplicitInHouse;
 
-                                    // Strictly suppress notifications and audio for cashier-entered in-store actions or inactive states
-                                    if (isExplicitInHouse || isWalkInPickup || (!isQr && isCurrentPosBooking) || bData.status === 'completed' || bData.status === 'cancelled') {
+                                    // Strictly suppress notifications and audio for cashier-entered in-store actions, current screen viewing, or inactive states
+                                    if (isExplicitInHouse || isWalkInPickup || isCurrentPosBooking || bData.status === 'completed' || bData.status === 'cancelled' || bData.status === 'void') {
                                         return;
                                     }
 
@@ -2132,6 +2168,7 @@ export default function POSDashboard() {
         let lockedBookingId = activeBooking?.id || null;
         if (lockedBookingId) {
             processingQrPrintRef.current.add(lockedBookingId);
+            localStaffSubmittedBookingsRef.current.set(String(lockedBookingId), Date.now());
         }
         try {
             if (currentOrder.items.length === 0 && !activeBooking) {
@@ -2154,9 +2191,12 @@ export default function POSDashboard() {
                 currentBooking = newBooking;
                 lockedBookingId = bookingId;
                 processingQrPrintRef.current.add(bookingId);
+                localStaffSubmittedBookingsRef.current.set(String(bookingId), Date.now());
+                activeBookingRef.current = newBooking;
             } else {
                 lockedBookingId = bookingId;
                 processingQrPrintRef.current.add(bookingId);
+                localStaffSubmittedBookingsRef.current.set(String(bookingId), Date.now());
             }
 
             // Attach CRM member if attached in local draft state
@@ -2178,6 +2218,7 @@ export default function POSDashboard() {
                 } else if (typeof result === 'string') {
                     bookingId = result;
                 }
+                localStaffSubmittedBookingsRef.current.set(String(bookingId), Date.now());
             }
 
             // Track newly inserted items in QR tracker immediately so realtime listener doesn't double print
@@ -2351,6 +2392,7 @@ export default function POSDashboard() {
             submittingOrderRef.current = false;
             setIsSubmittingOrder(false);
             if (lockedBookingId) {
+                localStaffSubmittedBookingsRef.current.set(String(lockedBookingId), Date.now());
                 setTimeout(() => {
                     processingQrPrintRef.current.delete(lockedBookingId);
                 }, 3500);
@@ -2921,38 +2963,38 @@ export default function POSDashboard() {
     const qtyDebounceTimersRef = useRef({});
 
     const handleUpdateQuantity = useCallback((itemId, delta) => {
-        let currentTargetItem = null;
-        let nextQty = 0;
+        // Synchronously find targetItem from currentOrderRef to prevent React 18 async updater closure bugs
+        const targetItem = currentOrderRef.current?.items?.find(i => i.id === itemId);
+        if (!targetItem) return;
 
+        const isReward = targetItem.is_reward || !!targetItem.claim_code || (targetItem.name || '').includes('แลกสิทธิ');
+        if (isReward && delta > 0) {
+            toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+            return;
+        }
+
+        const currentQty = Number(targetItem.quantity) || 1;
+        const nextQty = Math.max(0, currentQty + delta);
+
+        // 1. Instant optimistic update to currentOrder
         setCurrentOrder(prev => {
-            const targetItem = prev.items.find(i => i.id === itemId);
-            if (!targetItem) return prev;
-
-            const isReward = targetItem.is_reward || !!targetItem.claim_code || (targetItem.name || '').includes('แลกสิทธิ');
-            if (isReward && delta > 0) {
-                toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
-                return prev;
-            }
-
-            const newQty = Math.max(0, targetItem.quantity + delta);
-            currentTargetItem = targetItem;
-            nextQty = newQty;
+            const updatedItems = (prev?.items || []).map(item => {
+                if (item.id === itemId) {
+                    return { ...item, quantity: nextQty };
+                }
+                return item;
+            }).filter(item => item.quantity > 0);
 
             return {
                 ...prev,
-                items: prev.items.map(item => {
-                    if (item.id === itemId) {
-                        return { ...item, quantity: newQty };
-                    }
-                    return item;
-                }).filter(item => item.quantity > 0)
+                items: updatedItems
             };
         });
 
-        // Perform asynchronous DB sync outside the state updater function with debouncing
-        if (currentTargetItem && currentTargetItem.db_id) {
-            const currentBookingId = activeBookingRef.current?.id;
-            const cleanDbId = String(currentTargetItem.db_id).replace(/^db_/, '');
+        // 2. Perform DB sync and activeBooking sync if item exists in database
+        if (targetItem.db_id) {
+            const currentBookingId = activeBookingRef.current?.id || activeBooking?.id;
+            const cleanDbId = String(targetItem.db_id).replace(/^db_/, '');
 
             // Instant optimistic update to activeBooking in memory
             setActiveBooking(prev => {
@@ -2964,7 +3006,9 @@ export default function POSDashboard() {
                     updatedOrderItems = prev.order_items.map(i => String(i.id).replace(/^db_/, '') === cleanDbId ? { ...i, quantity: nextQty } : i);
                 }
                 const newTotal = updatedOrderItems.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
-                return { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
+                const updatedBooking = { ...prev, order_items: updatedOrderItems, total_amount: newTotal };
+                if (activeBookingRef) activeBookingRef.current = updatedBooking;
+                return updatedBooking;
             });
 
             if (qtyDebounceTimersRef.current[cleanDbId]) {
@@ -2974,14 +3018,17 @@ export default function POSDashboard() {
             if (nextQty === 0) {
                 deleteOrderItem(cleanDbId, currentBookingId);
                 delete qtyDebounceTimersRef.current[cleanDbId];
+                toast.success(`ลบรายการ "${targetItem.name || 'เมนู'}" เรียบร้อยแล้ว`);
             } else {
                 qtyDebounceTimersRef.current[cleanDbId] = setTimeout(() => {
                     updateOrderItemDbQty(cleanDbId, nextQty, currentBookingId);
                     delete qtyDebounceTimersRef.current[cleanDbId];
                 }, 300);
             }
+        } else if (nextQty === 0) {
+            toast.info(`ลบรายการร่าง "${targetItem.name || 'เมนู'}" ออกแล้ว`);
         }
-    }, [deleteOrderItem, updateOrderItemDbQty]);
+    }, [deleteOrderItem, updateOrderItemDbQty, activeBooking]);
 
     const handleUpdateItemNote = useCallback((itemId, note) => {
         setCurrentOrder(prev => ({

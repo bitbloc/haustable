@@ -2882,54 +2882,71 @@ const OrderItemRow = React.memo(function OrderItemRow({ item, onUpdateQuantity, 
                     </div>
                 )}
                 
-                <div className="flex items-center gap-2.5 mt-1">
-                    <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
-                    
-                    {/* Only allow adding notes to new (unsubmitted) items */}
-                    {!item.db_id && (
-                        <button 
-                            onClick={() => {
-                                const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
-                                if (note !== null && onUpdateItemNote) {
-                                    onUpdateItemNote(item.id, note.trim());
-                                }
-                            }}
-                            className="text-xs bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded-md cursor-pointer transition-colors font-mono font-medium touch-manipulation"
+                    <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-[oklch(52%_0.16_28)] font-mono font-bold">฿{item.price}</p>
+                        
+                        {/* Only allow adding notes to new (unsubmitted) items */}
+                        {!item.db_id && (
+                            <button 
+                                type="button"
+                                onClick={() => {
+                                    const note = prompt(`ระบุหมายเหตุสำหรับ: ${item.name} (Optional)`, item.item_note || "");
+                                    if (note !== null && onUpdateItemNote) {
+                                        onUpdateItemNote(item.id, note.trim());
+                                    }
+                                }}
+                                className="text-xs bg-white border border-[#D1D1CD] text-[#767673] hover:text-[#1A1A1A] px-2 py-0.5 rounded-md cursor-pointer transition-colors font-mono font-medium touch-manipulation"
+                            >
+                                + Note
+                            </button>
+                        )}
+
+                        {/* Quick remove button */}
+                        <button
+                            type="button"
+                            onClick={() => onUpdateQuantity(item.id, -item.quantity)}
+                            className="text-[11px] text-[#767673] hover:text-red-600 hover:bg-red-50/80 border border-transparent hover:border-red-200 px-1.5 py-0.5 rounded transition-all font-mono font-medium cursor-pointer touch-manipulation flex items-center gap-1 active:scale-95"
+                            title="ลบรายการนี้ออกทั้งหมด"
                         >
-                            + Note
+                            <Trash2 size={11} className="text-red-500" />
+                            <span>ลบ</span>
                         </button>
-                    )}
+                    </div>
+                </div>
+
+                <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
+                    <button 
+                        type="button"
+                        onClick={() => onUpdateQuantity(item.id, -1)}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] active:scale-95 transition-all shadow-xs cursor-pointer touch-manipulation ${
+                            item.quantity === 1 ? 'text-red-600 hover:bg-red-50 hover:border-red-200 border border-transparent' : 'text-[#1A1A1A]'
+                        }`}
+                        title={item.quantity === 1 ? "ลบรายการนี้ออก" : "ลดจำนวนลง 1"}
+                    >
+                        {item.quantity === 1 ? <Trash2 size={14} className="text-red-600" /> : <Minus size={14} />}
+                    </button>
+                    <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
+                    <button 
+                        type="button"
+                        disabled={isRewardItem}
+                        onClick={() => {
+                            if (isRewardItem) {
+                                toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
+                                return;
+                            }
+                            onUpdateQuantity(item.id, 1);
+                        }}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white text-[#1A1A1A] transition-transform shadow-xs cursor-pointer touch-manipulation ${
+                            isRewardItem ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#F5F5F2] active:scale-95'
+                        }`}
+                        title={isRewardItem ? "รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้" : "เพิ่มจำนวน"}
+                    >
+                        <Plus size={14} />
+                    </button>
                 </div>
             </div>
-
-            <div className="flex items-center bg-[#E0E0DC] border border-[#B0B0AC] rounded-xl p-1 gap-1 shrink-0">
-                <button 
-                    onClick={() => onUpdateQuantity(item.id, -1)}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center bg-white hover:bg-[#F5F5F2] text-[#1A1A1A] active:scale-95 transition-transform shadow-xs cursor-pointer touch-manipulation"
-                >
-                    <Minus size={14} />
-                </button>
-                <span className="w-8 text-center font-mono font-bold text-base text-[#1A1A1A] select-none">{item.quantity}</span>
-                <button 
-                    disabled={isRewardItem}
-                    onClick={() => {
-                        if (isRewardItem) {
-                            toast.error("รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้ครับ");
-                            return;
-                        }
-                        onUpdateQuantity(item.id, 1);
-                    }}
-                    className={`w-9 h-9 rounded-lg flex items-center justify-center bg-white text-[#1A1A1A] transition-transform shadow-xs cursor-pointer touch-manipulation ${
-                        isRewardItem ? 'opacity-40 cursor-not-allowed' : 'hover:bg-[#F5F5F2] active:scale-95'
-                    }`}
-                    title={isRewardItem ? "รายการแลกสิทธิไม่สามารถเพิ่มจำนวนได้" : "เพิ่มจำนวน"}
-                >
-                    <Plus size={14} />
-                </button>
-            </div>
-        </div>
-    );
-});
+        );
+    });
 
 function UtensilsIcon({ size = 24, strokeWidth = 2 }) {
     return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>;

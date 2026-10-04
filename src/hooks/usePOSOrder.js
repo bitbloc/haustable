@@ -1060,6 +1060,16 @@ export function usePOSOrder() {
                     booking.total_amount = booking.order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
                     posCache.setBookings(bookings);
                 }
+                // Also update localStorage pos_cache_active_bookings
+                try {
+                    const localActive = JSON.parse(localStorage.getItem('pos_cache_active_bookings') || '[]');
+                    const bIdx = localActive.findIndex(b => b.id === bookingId);
+                    if (bIdx !== -1 && localActive[bIdx].order_items) {
+                        localActive[bIdx].order_items = localActive[bIdx].order_items.filter(i => String(i.id).replace(/^db_/, '') !== cleanId);
+                        localActive[bIdx].total_amount = localActive[bIdx].order_items.reduce((s, i) => s + ((Number(i.price_at_time || i.price) || 0) * (Number(i.quantity) || 1)), 0);
+                        localStorage.setItem('pos_cache_active_bookings', JSON.stringify(localActive));
+                    }
+                } catch (e) {}
             }
             return true;
         } catch (err) {
