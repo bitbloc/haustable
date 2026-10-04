@@ -195,9 +195,14 @@ export function getSharedAudioContext(shouldResume = false) {
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return null;
         if (!sharedAudioContext || sharedAudioContext.state === 'closed') {
-            sharedAudioContext = new AudioContextClass({
-                latencyHint: 'interactive'
-            });
+            try {
+                sharedAudioContext = new AudioContextClass({
+                    latencyHint: 'interactive'
+                });
+            } catch (e) {
+                // Fallback for older Android WebViews that reject options parameter
+                sharedAudioContext = new AudioContextClass();
+            }
         }
         if (shouldResume && sharedAudioContext.state === 'suspended') {
             sharedAudioContext.resume().catch(() => {});
@@ -254,14 +259,44 @@ async function loadAndDecodeBuffer(urlsToTry, soundLabel) {
 }
 
 /**
- * Preload and decode noti1.mp3 and notibill.mp3 into memory for instant, non-blocking playback on Android APK
+ * Attempt native Android audio playback via AndroidPosBridge or AndroidCfdBridge.
+ * Bypasses all WebView lifecycle, suspension, and autoplay constraints with 0ms latency.
+ */
+export function tryPlayNativeSound(soundType = 'noti1', factor = null) {
+    if (typeof window === 'undefined') return false;
+    const bridge = window.AndroidPosBridge || window.AndroidCfdBridge;
+    if (!bridge || typeof bridge.playAlertSound !== 'function') return false;
+
+    try {
+        const effectiveGain = factor !== null ? factor : getEffectiveGainFactor();
+        if (effectiveGain <= 0) return true; // Handled as muted
+        const played = bridge.playAlertSound(soundType, effectiveGain);
+        if (played) {
+            console.log(`🔊 [AudioEngine] Native AndroidPosBridge played sound: ${soundType} (vol=${effectiveGain})`);
+            return true;
+        }
+    } catch (e) {
+        console.warn('[AudioEngine] AndroidPosBridge.playAlertSound error:', e);
+    }
+    return false;
+}
+
+/**
+ * Preload and decode noti1.mp3, notibill.mp3 & notiadmin.mp3 into memory for instant, non-blocking playback on Android APK
  */
 export async function preloadNotificationAudio() {
     if (typeof window === 'undefined') return;
 
+    const origin = (typeof window !== 'undefined' && window.location) ? window.location.origin : '';
+
     if (!noti1AudioBuffer && !isPreloadingNoti1) {
         isPreloadingNoti1 = true;
-        const urls = [noti1SoundUrl, '/noti1.mp3', './noti1.mp3'].filter(Boolean);
+        const urls = [
+            noti1SoundUrl, 
+            '/noti1.mp3', 
+            './noti1.mp3', 
+            origin ? `${origin}/noti1.mp3` : null
+        ].filter(Boolean);
         loadAndDecodeBuffer(urls, 'noti1.mp3').then((buf) => {
             if (buf) noti1AudioBuffer = buf;
             isPreloadingNoti1 = false;
@@ -270,7 +305,12 @@ export async function preloadNotificationAudio() {
 
     if (!notibillAudioBuffer && !isPreloadingNotibill) {
         isPreloadingNotibill = true;
-        const urls = [notibillSoundUrl, '/notibill.mp3', './notibill.mp3'].filter(Boolean);
+        const urls = [
+            notibillSoundUrl, 
+            '/notibill.mp3', 
+            './notibill.mp3', 
+            origin ? `${origin}/notibill.mp3` : null
+        ].filter(Boolean);
         loadAndDecodeBuffer(urls, 'notibill.mp3').then((buf) => {
             if (buf) notibillAudioBuffer = buf;
             isPreloadingNotibill = false;
@@ -279,7 +319,12 @@ export async function preloadNotificationAudio() {
 
     if (!notiadminAudioBuffer && !isPreloadingNotiadmin) {
         isPreloadingNotiadmin = true;
-        const urls = [notiadminSoundUrl, '/notiadmin.mp3', './notiadmin.mp3'].filter(Boolean);
+        const urls = [
+            notiadminSoundUrl, 
+            '/notiadmin.mp3', 
+            './notiadmin.mp3', 
+            origin ? `${origin}/notiadmin.mp3` : null
+        ].filter(Boolean);
         loadAndDecodeBuffer(urls, 'notiadmin.mp3').then((buf) => {
             if (buf) notiadminAudioBuffer = buf;
             isPreloadingNotiadmin = false;
@@ -301,7 +346,7 @@ if (typeof window !== 'undefined') {
 export function unlockAudioEngine() {
     if (typeof window === 'undefined') return;
     try {
-        const ctx = getSharedAudioContext();
+        const ctx = getSharedAudioContext(true);
         if (!ctx) return;
 
         if (ctx.state === 'suspended') {
@@ -335,30 +380,27 @@ export function isAudioUnlocked() {
 }
 
 /**
- * Universal auto-unlocker on first user interaction for Android APK & Mobile Browsers
+ * Universal auto-unlocker on user interactions for Android APK & Mobile Browsers.
+ * Remains continuously active across the session so subsequent idle suspensions are seamlessly revived.
  */
 export function initAudioUnlocker() {
     if (typeof window === 'undefined') return;
 
     const handleUnlockEvent = () => {
         unlockAudioEngine();
-        window.removeEventListener('pointerdown', handleUnlockEvent);
-        window.removeEventListener('touchstart', handleUnlockEvent);
-        window.removeEventListener('keydown', handleUnlockEvent);
-        window.removeEventListener('click', handleUnlockEvent);
-        window.removeEventListener('mousedown', handleUnlockEvent);
     };
 
-    window.addEventListener('pointerdown', handleUnlockEvent, { once: true, passive: true });
-    window.addEventListener('touchstart', handleUnlockEvent, { once: true, passive: true });
-    window.addEventListener('keydown', handleUnlockEvent, { once: true, passive: true });
-    window.addEventListener('click', handleUnlockEvent, { once: true, passive: true });
-    window.addEventListener('mousedown', handleUnlockEvent, { once: true, passive: true });
+    // Continuous unlock on interactions throughout the POS session
+    window.addEventListener('pointerdown', handleUnlockEvent, { passive: true });
+    window.addEventListener('touchstart', handleUnlockEvent, { passive: true });
+    window.addEventListener('keydown', handleUnlockEvent, { passive: true });
+    window.addEventListener('click', handleUnlockEvent, { passive: true });
 
     // Android APK & PWA Lifecycle Watcher: Resume audio context when returning to foreground
     const handleVisibilityChange = () => {
         if (document.visibilityState === 'visible') {
-            const ctx = getSharedAudioContext();
+            unlockAudioEngine();
+            const ctx = getSharedAudioContext(true);
             if (ctx && ctx.state === 'suspended') {
                 ctx.resume().catch(() => {});
             }
@@ -442,38 +484,70 @@ function createMasterOutputChain(ctx, boostFactor = 3.2) {
     }
 }
 
-let primedHtml5AudioNoti1 = null;
-let primedHtml5AudioNotibill = null;
-let primedHtml5AudioNotiadmin = null;
+const html5AudioPool = {
+    noti1: null,
+    notibill: null,
+    notiadmin: null
+};
+
+export function playHtml5AudioDirectly(soundType = 'noti1', gain = 1.0) {
+    if (typeof window === 'undefined') return false;
+    try {
+        let soundUrl;
+        if (soundType === 'notibill') {
+            soundUrl = notibillSoundUrl || '/notibill.mp3';
+        } else if (soundType === 'notiadmin') {
+            soundUrl = notiadminSoundUrl || '/notiadmin.mp3';
+        } else {
+            soundUrl = noti1SoundUrl || '/noti1.mp3';
+        }
+
+        let audio = html5AudioPool[soundType];
+        if (!audio) {
+            audio = new Audio(soundUrl);
+            audio.preload = 'auto';
+            html5AudioPool[soundType] = audio;
+        }
+
+        try {
+            audio.pause();
+            audio.currentTime = 0;
+            audio.volume = Math.max(0, Math.min(1.0, gain));
+        } catch (e) {}
+
+        const promise = audio.play();
+        if (promise && typeof promise.catch === 'function') {
+            promise.catch((err) => {
+                console.warn(`[AudioEngine] HTML5 Audio play error for ${soundType}:`, err);
+                // Fallback attempt with a fresh instance
+                try {
+                    const freshAudio = new Audio(soundUrl);
+                    freshAudio.volume = Math.max(0, Math.min(1.0, gain));
+                    freshAudio.play().catch(() => {});
+                } catch (e2) {}
+            });
+        }
+        return true;
+    } catch (e) {
+        console.warn(`[AudioEngine] playHtml5AudioDirectly exception for ${soundType}:`, e);
+        return false;
+    }
+}
 
 function getPrimedHtml5Audio(soundType = 'noti1') {
     if (typeof window === 'undefined') return null;
     try {
-        if (soundType === 'notibill') {
-            if (!primedHtml5AudioNotibill) {
-                const soundSrc = notibillSoundUrl || '/notibill.mp3';
-                primedHtml5AudioNotibill = new Audio(soundSrc);
-                primedHtml5AudioNotibill.preload = 'auto';
-                primedHtml5AudioNotibill.load();
-            }
-            return primedHtml5AudioNotibill;
-        } else if (soundType === 'notiadmin') {
-            if (!primedHtml5AudioNotiadmin) {
-                const soundSrc = notiadminSoundUrl || '/notiadmin.mp3';
-                primedHtml5AudioNotiadmin = new Audio(soundSrc);
-                primedHtml5AudioNotiadmin.preload = 'auto';
-                primedHtml5AudioNotiadmin.load();
-            }
-            return primedHtml5AudioNotiadmin;
-        } else {
-            if (!primedHtml5AudioNoti1) {
-                const soundSrc = noti1SoundUrl || '/noti1.mp3';
-                primedHtml5AudioNoti1 = new Audio(soundSrc);
-                primedHtml5AudioNoti1.preload = 'auto';
-                primedHtml5AudioNoti1.load();
-            }
-            return primedHtml5AudioNoti1;
+        let audio = html5AudioPool[soundType];
+        if (!audio) {
+            const soundSrc = soundType === 'notibill' 
+                ? (notibillSoundUrl || '/notibill.mp3') 
+                : (soundType === 'notiadmin' ? (notiadminSoundUrl || '/notiadmin.mp3') : (noti1SoundUrl || '/noti1.mp3'));
+            audio = new Audio(soundSrc);
+            audio.preload = 'auto';
+            audio.load();
+            html5AudioPool[soundType] = audio;
         }
+        return audio;
     } catch (e) {
         return null;
     }
@@ -532,40 +606,50 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2) {
         const effectiveGain = getEffectiveGainFactor();
         if (effectiveGain <= 0) return true; // Silent/Muted, early exit cleanly
 
-        const ctx = getSharedAudioContext();
+        const ctx = getSharedAudioContext(true);
         if (!ctx) return false;
 
-        if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
-            // Return false so HTML5 Audio fallback fires synchronously without delay
-            return false;
-        }
-
-        // Stop any previously playing audio buffer source so sounds NEVER layer/overlap
-        if (activeAudioBufferSource) {
+        const scheduleBufferPlay = () => {
             try {
-                activeAudioBufferSource.stop();
-                activeAudioBufferSource.disconnect();
-            } catch (e) {}
-            activeAudioBufferSource = null;
-        }
+                // Stop any previously playing audio buffer source so sounds NEVER layer/overlap
+                if (activeAudioBufferSource) {
+                    try {
+                        activeAudioBufferSource.stop();
+                        activeAudioBufferSource.disconnect();
+                    } catch (e) {}
+                    activeAudioBufferSource = null;
+                }
 
-        const source = ctx.createBufferSource();
-        source.buffer = buffer;
-        const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(boostFactor * effectiveGain, ctx.currentTime);
-        source.connect(gainNode);
-        gainNode.connect(ctx.destination);
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                const gainNode = ctx.createGain();
+                gainNode.gain.setValueAtTime(boostFactor * effectiveGain, ctx.currentTime);
+                source.connect(gainNode);
+                gainNode.connect(ctx.destination);
 
-        activeAudioBufferSource = source;
-        source.onended = () => {
-            if (activeAudioBufferSource === source) {
-                activeAudioBufferSource = null;
+                activeAudioBufferSource = source;
+                source.onended = () => {
+                    if (activeAudioBufferSource === source) {
+                        activeAudioBufferSource = null;
+                    }
+                };
+
+                source.start(0);
+                return true;
+            } catch (err) {
+                console.warn('[AudioEngine] scheduleBufferPlay failed:', err);
+                return false;
             }
         };
 
-        source.start(0);
-        return true;
+        if (ctx.state === 'suspended') {
+            ctx.resume().then(() => {
+                scheduleBufferPlay();
+            }).catch(() => {});
+            return scheduleBufferPlay();
+        }
+
+        return scheduleBufferPlay();
     } catch (err) {
         console.warn('[AudioEngine] playAudioBufferDirectly failed:', err);
         return false;
@@ -642,26 +726,38 @@ function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel
  * 4-Note Ascending Arpeggio + Climax Ring (E6 -> G#6 -> B6 -> E7)
  */
 export function playSynthChime() {
-    if (getEffectiveGainFactor() <= 0) return;
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) return;
     try {
-        const ctx = getSharedAudioContext();
+        const ctx = getSharedAudioContext(true);
         if (!ctx) return;
+
+        const scheduleChime = () => {
+            try {
+                const now = ctx.currentTime;
+                const masterOut = createMasterOutputChain(ctx, 3.5);
+
+                // Burst 1: Rapid 4-Note Ascending Arpeggio into High Climax Strike
+                synthesizeBellNote(ctx, masterOut, 1318.51, now, 0.25, 1.1);         // E6
+                synthesizeBellNote(ctx, masterOut, 1661.22, now + 0.11, 0.25, 1.15); // G#6
+                synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.22, 0.30, 1.25); // B6
+                synthesizeBellNote(ctx, masterOut, 2637.02, now + 0.34, 0.60, 1.40); // E7 (Climax Ring)
+
+                // Burst 2: Rapid Confirmation Ring (B6 -> E7 double strike)
+                synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.52, 0.22, 1.15); // B6
+                synthesizeBellNote(ctx, masterOut, 2637.02, now + 0.64, 0.75, 1.45); // E7 (Sustained Ring)
+            } catch (err) {
+                console.warn('[AudioEngine] scheduleChime error:', err);
+            }
+        };
+
         if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
+            ctx.resume().then(() => {
+                scheduleChime();
+            }).catch(() => {});
+        } else {
+            scheduleChime();
         }
-
-        const now = ctx.currentTime;
-        const masterOut = createMasterOutputChain(ctx, 3.5);
-
-        // Burst 1: Rapid 4-Note Ascending Arpeggio into High Climax Strike
-        synthesizeBellNote(ctx, masterOut, 1318.51, now, 0.25, 1.1);         // E6
-        synthesizeBellNote(ctx, masterOut, 1661.22, now + 0.11, 0.25, 1.15); // G#6
-        synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.22, 0.30, 1.25); // B6
-        synthesizeBellNote(ctx, masterOut, 2637.02, now + 0.34, 0.60, 1.40); // E7 (Climax Ring)
-
-        // Burst 2: Rapid Confirmation Ring (B6 -> E7 double strike)
-        synthesizeBellNote(ctx, masterOut, 1975.53, now + 0.52, 0.22, 1.15); // B6
-        synthesizeBellNote(ctx, masterOut, 2637.02, now + 0.64, 0.75, 1.45); // E7 (Sustained Ring)
     } catch (err) {
         console.warn('[AudioEngine] playSynthChime error:', err);
     }
@@ -671,20 +767,32 @@ export function playSynthChime() {
  * Play Doorbell Chime (Ding-Dong: G6 -> E6 -> C6) for customer arrivals / walk-ins
  */
 export function playDoorbellChime() {
-    if (getEffectiveGainFactor() <= 0) return;
+    const effectiveGain = getEffectiveGainFactor();
+    if (effectiveGain <= 0) return;
     try {
-        const ctx = getSharedAudioContext();
+        const ctx = getSharedAudioContext(true);
         if (!ctx) return;
+
+        const scheduleDoorbell = () => {
+            try {
+                const now = ctx.currentTime;
+                const masterOut = createMasterOutputChain(ctx, 3.2);
+
+                synthesizeBellNote(ctx, masterOut, 1568.00, now, 0.40, 1.2);        // G6 (Ding)
+                synthesizeBellNote(ctx, masterOut, 1318.51, now + 0.18, 0.45, 1.25); // E6 (Dong)
+                synthesizeBellNote(ctx, masterOut, 1046.50, now + 0.38, 0.85, 1.35); // C6 (Dang)
+            } catch (err) {
+                console.warn('[AudioEngine] scheduleDoorbell error:', err);
+            }
+        };
+
         if (ctx.state === 'suspended') {
-            ctx.resume().catch(() => {});
+            ctx.resume().then(() => {
+                scheduleDoorbell();
+            }).catch(() => {});
+        } else {
+            scheduleDoorbell();
         }
-
-        const now = ctx.currentTime;
-        const masterOut = createMasterOutputChain(ctx, 3.2);
-
-        synthesizeBellNote(ctx, masterOut, 1568.00, now, 0.40, 1.2);        // G6 (Ding)
-        synthesizeBellNote(ctx, masterOut, 1318.51, now + 0.18, 0.45, 1.25); // E6 (Dong)
-        synthesizeBellNote(ctx, masterOut, 1046.50, now + 0.38, 0.85, 1.35); // C6 (Dang)
     } catch (err) {
         console.warn('[AudioEngine] playDoorbellChime error:', err);
     }
@@ -717,7 +825,12 @@ export function playAdminOrderAlert(eventKey = null, throttleMs = 800, boostLeve
     }
     lastAlertPlayedTime = now;
 
-    // 1. Primary Playback: Decoded notiadmin.mp3 buffer through Web Audio
+    // 1. Native Android Hardware Audio (APK priority with 0ms latency)
+    if (tryPlayNativeSound('notiadmin', effectiveGain)) {
+        return true;
+    }
+
+    // 2. Primary Playback: Decoded notiadmin.mp3 buffer through Web Audio
     if (notiadminAudioBuffer) {
         const played = playAudioBufferDirectly(notiadminAudioBuffer, boostLevel);
         if (played) return true;
@@ -728,23 +841,8 @@ export function playAdminOrderAlert(eventKey = null, throttleMs = 800, boostLeve
         preloadNotificationAudio();
     }
 
-    // 2. Secondary Playback: HTML5 Audio with bundled notiadmin.mp3
-    try {
-        const primed = getPrimedHtml5Audio('notiadmin');
-        const soundSrc = notiadminSoundUrl || '/notiadmin.mp3';
-        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
-        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
-        const promise = audio.play();
-        if (promise !== undefined && promise && typeof promise.catch === 'function') {
-            promise.catch((e) => {
-                console.warn('[AudioEngine] HTML5 Audio (notiadmin.mp3) play error:', e);
-            });
-        }
-        return true;
-    } catch (e) {
-        console.warn('[AudioEngine] HTML5 Audio (notiadmin.mp3) error:', e);
-        return true;
-    }
+    // 3. Secondary Playback: Direct HTML5 Audio with bundled notiadmin.mp3
+    return playHtml5AudioDirectly('notiadmin', effectiveGain);
 }
 
 /**
@@ -832,7 +930,12 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
 
     lastAlertPlayedTime = now;
 
-    // 2. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
+    // 2. Native Android Hardware Audio (APK priority with 0ms latency)
+    if (tryPlayNativeSound('noti1', effectiveGain)) {
+        return true;
+    }
+
+    // 3. Primary Playback: Decoded noti1.mp3 buffer through High-Gain Web Audio
     if (noti1AudioBuffer) {
         const played = playAudioBufferDirectly(noti1AudioBuffer, boostLevel);
         if (played) return true;
@@ -843,25 +946,13 @@ export function playOrderAlert(eventKey = null, throttleMs = 1200, boostLevel = 
         preloadNotificationAudio();
     }
 
-    // 3. Secondary Playback: HTML5 Audio with bundled noti1.mp3
-    try {
-        const primed = getPrimedHtml5Audio();
-        const soundSrc = noti1SoundUrl || '/noti1.mp3';
-        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
-        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
-        const promise = audio.play();
-        if (promise !== undefined) {
-            promise.catch((e) => {
-                console.warn('[AudioEngine] HTML5 Audio play prevented, falling back to synth chime:', e);
-                playSynthChime();
-            });
-        }
-        return true;
-    } catch (e) {
-        console.warn('[AudioEngine] HTML5 Audio error, falling back to synth chime:', e);
-        playSynthChime();
-        return true;
-    }
+    // 4. Secondary Playback: Direct HTML5 Audio with bundled noti1.mp3
+    const html5Played = playHtml5AudioDirectly('noti1', effectiveGain);
+    if (html5Played) return true;
+
+    // 5. Ultimate Fallback: Synthesized Bell Chime
+    playSynthChime();
+    return true;
 }
 
 let lastTestAlertPlayedTime = 0;
@@ -895,21 +986,29 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
         return true;
     }
 
+    // 1. Native Android Hardware Audio
+    if (tryPlayNativeSound(soundType, factor)) {
+        return true;
+    }
+
     const targetBuffer = soundType === 'notibill' 
         ? (notibillAudioBuffer || noti1AudioBuffer) 
         : (soundType === 'notiadmin' ? (notiadminAudioBuffer || noti1AudioBuffer) : (noti1AudioBuffer || notibillAudioBuffer));
 
-    // Play buffer directly with custom gain and active node tracking
+    // 2. Play buffer directly with custom gain and active node tracking
     if (targetBuffer) {
         const played = playAudioBufferDirectly(targetBuffer, 3.2);
         if (played) return true;
     }
 
-    // Fallback chime
+    // 3. Direct HTML5 audio fallback
+    const html5Played = playHtml5AudioDirectly(soundType, factor);
+    if (html5Played) return true;
+
+    // 4. Fallback chime
     try {
-        const ctx = getSharedAudioContext();
+        const ctx = getSharedAudioContext(true);
         if (ctx) {
-            if (ctx.state === 'suspended') ctx.resume().catch(() => {});
             const nowTime = ctx.currentTime;
             const masterOut = createMasterOutputChain(ctx, 3.2 * factor);
             synthesizeBellNote(ctx, masterOut, 1568.00, nowTime, 0.25, 1.2 * factor);
@@ -920,29 +1019,7 @@ export function testPlayAlertSound(previewVol = null, throttleMs = 1200, soundTy
         console.warn('[AudioEngine] testPlayAlertSound chime fallback error:', e);
     }
 
-    // HTML5 fallback
-    try {
-        if (activeHtml5Audio) {
-            try {
-                activeHtml5Audio.pause();
-                activeHtml5Audio.currentTime = 0;
-            } catch (e) {}
-                activeHtml5Audio = null;
-        }
-        const soundSrc = soundType === 'notibill' 
-            ? (notibillSoundUrl || '/notibill.mp3') 
-            : (soundType === 'notiadmin' ? (notiadminSoundUrl || '/notiadmin.mp3') : (noti1SoundUrl || '/noti1.mp3'));
-        const audio = new Audio(soundSrc);
-        audio.volume = Math.max(0, Math.min(1.0, factor));
-        activeHtml5Audio = audio;
-        const promise = typeof audio.play === 'function' ? audio.play() : null;
-        if (promise && typeof promise.catch === 'function') {
-            promise.catch(() => {});
-        }
-        return true;
-    } catch (e) {
-        return true;
-    }
+    return true;
 }
 
 /**
@@ -982,7 +1059,12 @@ export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLeve
 
     lastAlertPlayedTime = now;
 
-    // 2. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
+    // 2. Native Android Hardware Audio (APK priority with 0ms latency)
+    if (tryPlayNativeSound('notibill', effectiveGain)) {
+        return true;
+    }
+
+    // 3. Primary Playback: Decoded notibill.mp3 buffer through High-Gain Web Audio
     if (notibillAudioBuffer) {
         const played = playAudioBufferDirectly(notibillAudioBuffer, boostLevel);
         if (played) return true;
@@ -993,25 +1075,13 @@ export function playBillSoundAlert(eventKey = null, throttleMs = 1000, boostLeve
         preloadNotificationAudio();
     }
 
-    // 3. Secondary Playback: HTML5 Audio with bundled notibill.mp3
-    try {
-        const primed = getPrimedHtml5Audio('notibill');
-        const soundSrc = notibillSoundUrl || '/notibill.mp3';
-        const audio = primed ? primed.cloneNode() : new Audio(soundSrc);
-        audio.volume = Math.max(0, Math.min(1.0, effectiveGain));
-        const promise = audio.play();
-        if (promise !== undefined) {
-            promise.catch((e) => {
-                console.warn('[AudioEngine] HTML5 Audio (notibill.mp3) play prevented, falling back to synth chime:', e);
-                playSynthChime();
-            });
-        }
-        return true;
-    } catch (e) {
-        console.warn('[AudioEngine] HTML5 Audio (notibill.mp3) error, falling back to synth chime:', e);
-        playSynthChime();
-        return true;
-    }
+    // 4. Secondary Playback: Direct HTML5 Audio with bundled notibill.mp3
+    const html5Played = playHtml5AudioDirectly('notibill', effectiveGain);
+    if (html5Played) return true;
+
+    // 5. Ultimate Fallback: Synthesized Bell Chime
+    playSynthChime();
+    return true;
 }
 
 /**

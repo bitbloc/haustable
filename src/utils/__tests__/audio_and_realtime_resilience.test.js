@@ -17,7 +17,8 @@ import {
     stopStaffCallLoop,
     isStaffCallLooping,
     playSynthBellTing,
-    playAdminOrderAlert
+    playAdminOrderAlert,
+    tryPlayNativeSound
 } from '../audioHelper';
 
 describe('Audio Engine & Notification Resilience', () => {
@@ -451,6 +452,102 @@ describe('Audio Engine & Notification Resilience', () => {
 
             const resolvedClass = hasCallStaff ? 'animate-pos-blink-yellow' : (isOccupied ? 'bg-[var(--color-accent)]' : 'bg-free');
             expect(resolvedClass).toBe('bg-[var(--color-accent)]');
+        });
+    });
+
+    describe('Native Android APK Audio Bridge (Direct Hardware Playback)', () => {
+        let originalBridge;
+
+        beforeEach(() => {
+            originalBridge = window.AndroidPosBridge;
+        });
+
+        afterEach(() => {
+            window.AndroidPosBridge = originalBridge;
+            delete window.AndroidCfdBridge;
+        });
+
+        it('should route sound playback through window.AndroidPosBridge when running in APK', () => {
+            const playAlertSoundMock = vi.fn().mockReturnValue(true);
+            window.AndroidPosBridge = {
+                playAlertSound: playAlertSoundMock
+            };
+
+            setAudioVolume(90);
+            setAudioMuted(false);
+
+            // 1. Order Alert
+            const orderPlayed = playOrderAlert('native_test_order_1', 100);
+            expect(orderPlayed).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledWith('noti1', 0.9);
+
+            // 2. Bill Alert (advance timer to clear global burst throttle)
+            vi.advanceTimersByTime(1200);
+            playAlertSoundMock.mockClear();
+            const billPlayed = playBillAlert('native_test_bill_1');
+            expect(billPlayed).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledWith('notibill', 0.9);
+
+            // 3. Admin Overview Alert
+            vi.advanceTimersByTime(1200);
+            playAlertSoundMock.mockClear();
+            const adminPlayed = playAdminOrderAlert('native_test_admin_1', 100);
+            expect(adminPlayed).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledWith('notiadmin', 0.9);
+
+            // 4. Test Play Alert Sound
+            vi.advanceTimersByTime(1200);
+            playAlertSoundMock.mockClear();
+            const testPlayed = testPlayAlertSound(50, 100, 'noti1');
+            expect(testPlayed).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledWith('noti1', 0.5);
+        });
+
+        it('should fallback to AndroidCfdBridge if AndroidPosBridge is not present', () => {
+            delete window.AndroidPosBridge;
+            const playAlertSoundMock = vi.fn().mockReturnValue(true);
+            window.AndroidCfdBridge = {
+                playAlertSound: playAlertSoundMock
+            };
+
+            setAudioVolume(80);
+            setAudioMuted(false);
+
+            const played = tryPlayNativeSound('noti1', 0.8);
+            expect(played).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledWith('noti1', 0.8);
+        });
+
+        it('should handle native bridge returning false by gracefully falling back', () => {
+            window.AndroidPosBridge = {
+                playAlertSound: vi.fn().mockReturnValue(false)
+            };
+
+            const nativeResult = tryPlayNativeSound('noti1', 0.8);
+            expect(nativeResult).toBe(false);
+        });
+
+        it('should handle bridge throwing error without crashing', () => {
+            window.AndroidPosBridge = {
+                playAlertSound: vi.fn().mockImplementation(() => {
+                    throw new Error('Native IPC failure');
+                })
+            };
+
+            expect(() => tryPlayNativeSound('noti1', 0.8)).not.toThrow();
+            expect(tryPlayNativeSound('noti1', 0.8)).toBe(false);
+        });
+
+        it('should honor mute state even when native bridge is active', () => {
+            const playAlertSoundMock = vi.fn();
+            window.AndroidPosBridge = {
+                playAlertSound: playAlertSoundMock
+            };
+
+            setAudioMuted(true);
+            const nativeResult = tryPlayNativeSound('noti1', 0);
+            expect(nativeResult).toBe(true); // Handled as muted cleanly
+            expect(playAlertSoundMock).not.toHaveBeenCalled();
         });
     });
 });

@@ -5,7 +5,10 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
+import android.media.AudioAttributes;
 import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -28,6 +31,9 @@ import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class MainActivity extends BridgeActivity {
     
@@ -35,6 +41,12 @@ public class MainActivity extends BridgeActivity {
     private DisplayManager.DisplayListener displayListener;
     private ServerSocket wmaServerSocket;
     private Thread wmaServerThread;
+
+    private SoundPool soundPool;
+    private int soundNoti1 = 0;
+    private int soundNotibill = 0;
+    private int soundNotiadmin = 0;
+    private final Set<Integer> loadedSounds = Collections.synchronizedSet(new HashSet<Integer>());
 
     private static MainActivity instance;
 
@@ -65,6 +77,91 @@ public class MainActivity extends BridgeActivity {
         } catch (Exception e) {
             Log.e("MainActivity", "Secondary display initialization error", e);
         }
+    }
+
+    private void initNativeAudio() {
+        try {
+            AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build();
+
+            soundPool = new SoundPool.Builder()
+                .setMaxStreams(6)
+                .setAudioAttributes(audioAttributes)
+                .build();
+
+            soundPool.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+                @Override
+                public void onLoadComplete(SoundPool sp, int sampleId, int status) {
+                    if (status == 0) {
+                        loadedSounds.add(sampleId);
+                        Log.i("MainActivity", "🔊 [NativeAudio] SoundPool sample ready: " + sampleId);
+                    }
+                }
+            });
+
+            soundNoti1 = soundPool.load(this, R.raw.noti1, 1);
+            soundNotibill = soundPool.load(this, R.raw.notibill, 1);
+            soundNotiadmin = soundPool.load(this, R.raw.notiadmin, 1);
+            Log.i("MainActivity", "🔊 [NativeAudio] SoundPool preloaded: noti1=" + soundNoti1 + ", notibill=" + soundNotibill + ", notiadmin=" + soundNotiadmin);
+        } catch (Exception e) {
+            Log.e("MainActivity", "Failed to initialize SoundPool", e);
+        }
+    }
+
+    public synchronized boolean playNativeAlertSound(String soundType, float volume) {
+        try {
+            float vol = Math.max(0.0f, Math.min(1.0f, volume));
+            if (vol <= 0.001f) {
+                return true; // Muted
+            }
+
+            int targetSoundId = 0;
+            int fallbackResId = 0;
+
+            if ("notibill".equalsIgnoreCase(soundType) || "call_staff".equalsIgnoreCase(soundType) || "call_bill".equalsIgnoreCase(soundType)) {
+                targetSoundId = soundNotibill;
+                fallbackResId = R.raw.notibill;
+            } else if ("notiadmin".equalsIgnoreCase(soundType)) {
+                targetSoundId = soundNotiadmin;
+                fallbackResId = R.raw.notiadmin;
+            } else {
+                targetSoundId = soundNoti1;
+                fallbackResId = R.raw.noti1;
+            }
+
+            // 1. Primary: SoundPool for 0ms ultra-low latency hardware audio
+            if (soundPool != null && targetSoundId > 0 && loadedSounds.contains(targetSoundId)) {
+                int streamId = soundPool.play(targetSoundId, vol, vol, 1, 0, 1.0f);
+                if (streamId != 0) {
+                    Log.i("MainActivity", "🔊 [NativeAudio] SoundPool played: " + soundType + " streamId: " + streamId);
+                    return true;
+                }
+            }
+
+            // 2. Secondary: Direct MediaPlayer fallback
+            if (fallbackResId != 0) {
+                final MediaPlayer mp = MediaPlayer.create(this, fallbackResId);
+                if (mp != null) {
+                    mp.setVolume(vol, vol);
+                    mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                        @Override
+                        public void onCompletion(MediaPlayer player) {
+                            try {
+                                player.release();
+                            } catch (Exception ignored) {}
+                        }
+                    });
+                    mp.start();
+                    Log.i("MainActivity", "🔊 [NativeAudio] MediaPlayer fallback played: " + soundType);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            Log.w("MainActivity", "playNativeAlertSound error: " + e.getMessage());
+        }
+        return false;
     }
 
     public class AndroidCfdBridge {
@@ -106,6 +203,21 @@ public class MainActivity extends BridgeActivity {
         public boolean isSecondaryDisplayConnected() {
             return presentation != null && presentation.isShowing();
         }
+
+        @JavascriptInterface
+        public boolean playAlertSound(String soundType, float volume) {
+            return playNativeAlertSound(soundType, volume);
+        }
+
+        @JavascriptInterface
+        public boolean playAlertSound(String soundType) {
+            return playNativeAlertSound(soundType, 1.0f);
+        }
+
+        @JavascriptInterface
+        public boolean isNativeAudioAvailable() {
+            return true;
+        }
     }
 
     // Alias for compatibility
@@ -139,6 +251,7 @@ public class MainActivity extends BridgeActivity {
         
         try {
             setVolumeControlStream(AudioManager.STREAM_MUSIC);
+            initNativeAudio();
             getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             getWindow().setFlags(
                 android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
@@ -387,6 +500,10 @@ public class MainActivity extends BridgeActivity {
             if (wmaServerThread != null) {
                 wmaServerThread.interrupt();
                 wmaServerThread = null;
+            }
+            if (soundPool != null) {
+                soundPool.release();
+                soundPool = null;
             }
         } catch (Exception ignored) {}
         super.onDestroy();
