@@ -366,4 +366,59 @@ export function isGhostOrDuplicateBooking(booking, allBookings = []) {
     return isGhostPickupBooking(booking) || isInternalBlockBooking(booking) || isDuplicateGhostBooking(booking, allBookings);
 }
 
+/**
+ * Determines whether a booking is an actively occupying in-store dining session.
+ * @param {Object} b - Booking record
+ * @param {string} [startOfToday] - ISO string for start of today
+ * @param {string} [endOfToday] - ISO string for end of today
+ * @param {Date} [now] - Current Date object
+ * @returns {boolean}
+ */
+export function isTableSessionActive(b, startOfToday, endOfToday, now = new Date()) {
+    if (!b) return false;
+    if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
+
+    // Safety age limit: session cannot exceed 16 hours
+    const bRawTime = b.booking_time || b.created_at;
+    if (bRawTime) {
+        const bTime = new Date(bRawTime);
+        const ageMs = now.getTime() - bTime.getTime();
+        if (ageMs > 16 * 60 * 60 * 1000) return false;
+    }
+
+    // If there is no active shift and the booking belongs to a closed shift, it is not an active dining session
+    try {
+        const activeShiftStr = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_current_shift') : null;
+        if (!activeShiftStr) {
+            const historyStr = typeof localStorage !== 'undefined' ? localStorage.getItem('pos_shift_history') : null;
+            if (historyStr) {
+                const history = JSON.parse(historyStr);
+                const latestClosed = Array.isArray(history) && history.length > 0 ? history[0] : null;
+                if (latestClosed?.closedAt) {
+                    const bTime = new Date(b.booking_time || b.created_at).getTime();
+                    const closedTime = new Date(latestClosed.closedAt).getTime();
+                    if (bTime <= closedTime) return false;
+                }
+            }
+        }
+    } catch (e) {}
+
+    // 1. Actively seated or confirmed in-store session
+    if (['seated', 'confirmed'].includes(b.status)) {
+        return true;
+    }
+    // 2. Kitchen ready items
+    if (b.status === 'ready' && b.booking_type !== 'pickup') {
+        return true;
+    }
+    // 3. Pending session with items or walk-in/qr
+    if (b.status === 'pending') {
+        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
+        const hasItems = Array.isArray(b.order_items) && b.order_items.length > 0;
+        return isWalkInOrQR || hasItems || b.booking_type !== 'pickup';
+    }
+    return false;
+}
+
+
 

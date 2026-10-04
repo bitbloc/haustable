@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
 import { playOrderAlert } from './utils/audioHelper'
+import { subscribePOSBroadcast } from './utils/realtimeNotifier'
 
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
@@ -300,13 +301,10 @@ export default function AdminDashboard() {
             })
 
         // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms)
-        const notifyChannel = supabase
-            .channel('pos-realtime-notifications')
-            .on('broadcast', { event: '*' }, (payload) => {
-                console.log('⚡ [Admin Realtime] POS broadcast received:', payload?.event)
-                debouncedFetchData()
-            })
-            .subscribe()
+        const unsubscribePosBroadcast = subscribePOSBroadcast(({ event, payload }) => {
+            console.log('⚡ [Admin Realtime] POS broadcast received:', event);
+            debouncedFetchData();
+        });
 
         // 3. Local BroadcastChannel for same-origin tabs (< 5ms)
         const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
@@ -346,7 +344,7 @@ export default function AdminDashboard() {
             if (debounceTimer) clearTimeout(debounceTimer)
             clearInterval(autoPollTimer)
             supabase.removeChannel(tableChannel)
-            supabase.removeChannel(notifyChannel)
+            unsubscribePosBroadcast()
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('pos-shift-changed', handleShiftChanged)
@@ -494,6 +492,7 @@ export default function AdminDashboard() {
             playOrderAlert('admin_pending_orders', 800, 3.2)
             if (!alertIntervalRef.current) {
                 alertIntervalRef.current = setInterval(() => {
+                    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
                     playOrderAlert('admin_pending_orders', 1000, 3.2)
                 }, 12000)
             }

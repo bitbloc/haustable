@@ -29,10 +29,10 @@ import {
 import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
-import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark } from '../utils/tableTransferHelper';
+import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
-import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast } from '../utils/realtimeNotifier';
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
@@ -215,6 +215,7 @@ export default function POSDashboard() {
         return true;
     });
     const [availableTables, setAvailableTables] = useState([]);
+    const [availableMergeTables, setAvailableMergeTables] = useState([]);
 
     const [hasPendingOrders, setHasPendingOrders] = useState(false);
     const prevHasPendingOrdersRef = useRef(false);
@@ -1499,7 +1500,229 @@ export default function POSDashboard() {
         };
         loadTablesMap();
 
-        const setupMasterChannel = () => {
+        const handleIncomingBroadcast = async ({ event, payload }) => {
+            if (event === 'qr_order_created') {
+                console.log('⚡ [Realtime POS] Instant broadcast qr_order_created received:', payload);
+                const bId = payload?.booking_id;
+                const tId = payload?.table_id;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const isGpsVerified = payload?.gps_verified !== false && !payload?.needs_approval;
+                const qrItemAlertKey = getCanonicalOrderAlertKey(bId) || getCanonicalTableAlertKey('table_order', tId);
+
+                if (checkEventDeduplication(qrItemAlertKey, 6000)) {
+                    console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}, isGpsVerified: ${isGpsVerified}`);
+                    playOrderAlert(qrItemAlertKey, 1200, 3.4);
+
+                    if (!isGpsVerified) {
+                        // GPS UNVERIFIED -> Requires staff approval before kitchen ticket is printed!
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'GPS UNVERIFIED · รอพนักงานอนุมัติ',
+                            title: `โต๊ะ ${tName} ส่งออเดอร์ (GPS ไม่ผ่าน - รออนุมัติ)`,
+                            subtitle: `มี ${payload?.items_count || 1} รายการ · แตะเพื่อเปิดดูโต๊ะและอนุมัติ`,
+                            dot: 'terracotta',
+                            onClick: () => {
+                                toast.dismiss(qrItemAlertKey);
+                                if (tId) {
+                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        }), { id: qrItemAlertKey, duration: 15000 });
+                        pushNotifHistory('ORDER', 'QR Order (Needs Approval)', `โต๊ะ ${tName} สั่งอาหาร (GPS ไม่ผ่าน - รออนุมัติ)`, tId);
+                    } else {
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'QR ORDER · ออเดอร์เข้าใหม่',
+                            title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
+                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                            dot: 'emerald',
+                            onClick: () => {
+                                toast.dismiss(qrItemAlertKey);
+                                if (tId) {
+                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        }), { id: qrItemAlertKey, duration: 10000 });
+                        pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
+                    }
+                }
+
+                // Auto-print ONLY for verified GPS orders; unverified orders wait for staff approval!
+                if (bId && isGpsVerified) {
+                    scheduleAutoPrint(bId, tName, 400);
+                }
+
+                // If currently viewing this table, sync order items immediately
+                if (activeBookingRef.current?.id === bId) {
+                    refreshActiveBookingItems(bId);
+                }
+
+                // 0ms Optimistic table update (< 50ms instant floorplan reaction)
+                if (tId) {
+                    if (isGpsVerified) {
+                        window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
+                            detail: { 
+                                tableId: tId, 
+                                booking: { id: bId, table_id: tId, status: 'seated', staff_remark: '[QR]' } 
+                            } 
+                        }));
+                    } else {
+                        window.dispatchEvent(new CustomEvent('pos_table_pending', { 
+                            detail: { 
+                                tableId: tId, 
+                                booking: { id: bId, table_id: tId, status: 'pending', staff_remark: '[WAITING_APPROVAL] [GPS_UNVERIFIED]' } 
+                            } 
+                        }));
+                    }
+                    window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId, bookingId: bId } }));
+                }
+
+                checkPendingOrders();
+                triggerDebouncedRefresh();
+            } else if (event === 'call_staff') {
+                console.log('⚡ [Realtime POS] Instant broadcast call_staff received:', payload);
+                const tId = payload?.table_id;
+                const bId = payload?.booking_id;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId || tId);
+
+                // Suppress staff call if the associated booking was voided or closed
+                if (bId) {
+                    try {
+                        const { data: bCheck } = await supabase
+                            .from('bookings')
+                            .select('id, status')
+                            .eq('id', bId)
+                            .maybeSingle();
+                        if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
+                            console.warn(`[Realtime POS] Suppressed call_staff from voided/closed booking: ${bId}`);
+                            return;
+                        }
+                    } catch (e) {}
+                }
+
+                if (checkEventDeduplication(callStaffKey, 5000)) {
+                    toast.custom((t) => renderPosToast(t, {
+                        badge: 'CALL STAFF · เรียกพนักงาน',
+                        title: `โต๊ะ ${tName} เรียกพนักงาน`,
+                        subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                        dot: 'terracotta',
+                        onClick: () => {
+                            if (tId) {
+                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                    if (data) handleSelectTable(data);
+                                });
+                            }
+                        }
+                    }), { id: callStaffKey, duration: 10000 });
+                    pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
+                    startStaffCallLoop(tId || bId);
+                }
+                if (tId) {
+                    window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId: tId } }));
+                }
+                checkPendingOrders();
+                triggerDebouncedRefresh();
+            } else if (event === 'call_bill') {
+                console.log('⚡ [Realtime POS] Instant broadcast call_bill received:', payload);
+                const tId = payload?.table_id;
+                const bId = payload?.booking_id;
+                const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
+                const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId || tId);
+
+                // Suppress bill call if the associated booking was voided or closed
+                if (bId) {
+                    try {
+                        const { data: bCheck } = await supabase
+                            .from('bookings')
+                            .select('id, status')
+                            .eq('id', bId)
+                            .maybeSingle();
+                        if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
+                            console.warn(`[Realtime POS] Suppressed call_bill from voided/closed booking: ${bId}`);
+                            return;
+                        }
+                    } catch (e) {}
+                }
+
+                if (checkEventDeduplication(callBillKey, 5000)) {
+                    toast.custom((t) => renderPosToast(t, {
+                        badge: 'CALL BILL · เรียกเช็คบิล',
+                        title: `โต๊ะ ${tName} เรียกเช็คบิล`,
+                        subtitle: 'แตะเพื่อเปิดดูและเตรียมบิล',
+                        dot: 'terracotta',
+                        onClick: () => {
+                            if (tId) {
+                                supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
+                                    if (data) handleSelectTable(data);
+                                });
+                            }
+                        }
+                    }), { id: callBillKey, duration: 10000 });
+                    pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
+                    playBillAlert(callBillKey);
+                }
+                if (tId) {
+                    window.dispatchEvent(new CustomEvent('pos_table_call_bill', { detail: { tableId: tId } }));
+                }
+                checkPendingOrders();
+                triggerDebouncedRefresh();
+            } else if (event === 'online_order_created') {
+                console.log('⚡ [Realtime POS] Instant broadcast online_order_created received:', payload);
+                const bId = payload?.booking_id;
+                const bType = payload?.booking_type || 'order';
+                const custName = payload?.customer_name || 'ลูกค้าออนไลน์';
+                const isPickup = bType === 'pickup';
+                const label = isPickup ? `รับกลับ: ${custName}` : `จองโต๊ะ: ${custName}`;
+                const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
+
+                if (checkEventDeduplication(eventKey, 5000)) {
+                    playOrderAlert(eventKey, 1200, 3.4);
+                    toast.custom((t) => renderPosToast(t, {
+                        badge: isPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : 'ONLINE BOOKING · จองโต๊ะ',
+                        title: `${label} เข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`,
+                        subtitle: 'แตะเพื่อเปิดดูใน Online Hub',
+                        dot: 'terracotta',
+                        onClick: () => {
+                            setView('online_hub');
+                        }
+                    }), { id: eventKey, duration: 10000 });
+                    pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
+                    setShowPendingModal(true);
+                }
+
+                checkPendingOrders();
+                triggerDebouncedRefresh();
+            } else if (event === 'payment_slip_uploaded') {
+                console.log('⚡ [Realtime POS] Instant broadcast payment_slip_uploaded received:', payload);
+                const bId = payload?.booking_id;
+                const slipEventKey = getCanonicalSlipAlertKey(bId);
+                if (checkEventDeduplication(slipEventKey, 5000)) {
+                    playSlipAlert(slipEventKey);
+                    toast.custom((t) => renderPosToast(t, {
+                        badge: 'PAYMENT SLIP · มีสลิปใหม่รอตรวจ',
+                        title: `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`,
+                        subtitle: 'แตะเพื่อเปิดตรวจสลิปใน Online Hub',
+                        dot: 'emerald',
+                        onClick: () => {
+                            setView('online_hub');
+                        }
+                    }), { id: slipEventKey, duration: 10000 });
+                    pushNotifHistory('SLIP', 'Payment Uploaded', `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
+                    setShowPendingModal(true);
+                }
+                checkPendingOrders();
+                triggerDebouncedRefresh();
+            } else if (event === 'table_moved' || event === 'bills_merged') {
+                triggerDebouncedRefresh();
+            }
+        };
+
+        const unsubscribeBroadcast = subscribePOSBroadcast(handleIncomingBroadcast);
+
+        const setupMasterDbChannel = () => {
             if (isUnmounted) return;
             if (activeChannel) {
                 try {
@@ -1507,226 +1730,8 @@ export default function POSDashboard() {
                 } catch (e) {}
             }
 
-            const notifyChannel = supabase.channel('pos-realtime-notifications')
-                .on('broadcast', { event: 'qr_order_created' }, async ({ payload }) => {
-                    console.log('⚡ [Realtime POS] Instant broadcast qr_order_created received:', payload);
-                    const bId = payload?.booking_id;
-                    const tId = payload?.table_id;
-                    const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const isGpsVerified = payload?.gps_verified !== false && !payload?.needs_approval;
-                    const qrItemAlertKey = getCanonicalOrderAlertKey(bId) || getCanonicalTableAlertKey('table_order', tId);
-
-                    if (checkEventDeduplication(qrItemAlertKey, 6000)) {
-                        console.log(`🔊 [POS Alert] Instant chime for QR order: ${bId}, isGpsVerified: ${isGpsVerified}`);
-                        playOrderAlert(qrItemAlertKey, 1200, 3.4);
-
-                        if (!isGpsVerified) {
-                            // GPS UNVERIFIED -> Requires staff approval before kitchen ticket is printed!
-                            toast.custom((t) => renderPosToast(t, {
-                                badge: 'GPS UNVERIFIED · รอพนักงานอนุมัติ',
-                                title: `โต๊ะ ${tName} ส่งออเดอร์ (GPS ไม่ผ่าน - รออนุมัติ)`,
-                                subtitle: `มี ${payload?.items_count || 1} รายการ · แตะเพื่อเปิดดูโต๊ะและอนุมัติ`,
-                                dot: 'terracotta',
-                                onClick: () => {
-                                    toast.dismiss(qrItemAlertKey);
-                                    if (tId) {
-                                        supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            }), { id: qrItemAlertKey, duration: 15000 });
-                            pushNotifHistory('ORDER', 'QR Order (Needs Approval)', `โต๊ะ ${tName} สั่งอาหาร (GPS ไม่ผ่าน - รออนุมัติ)`, tId);
-                        } else {
-                            toast.custom((t) => renderPosToast(t, {
-                                badge: 'QR ORDER · ออเดอร์เข้าใหม่',
-                                title: `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
-                                subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
-                                dot: 'emerald',
-                                onClick: () => {
-                                    toast.dismiss(qrItemAlertKey);
-                                    if (tId) {
-                                        supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
-                                        });
-                                    }
-                                }
-                            }), { id: qrItemAlertKey, duration: 10000 });
-                            pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, tId);
-                        }
-                    }
-
-                    // Auto-print ONLY for verified GPS orders; unverified orders wait for staff approval!
-                    if (bId && isGpsVerified) {
-                        scheduleAutoPrint(bId, tName, 400);
-                    }
-
-                    // If currently viewing this table, sync order items immediately
-                    if (activeBookingRef.current?.id === bId) {
-                        refreshActiveBookingItems(bId);
-                    }
-
-                    // 0ms Optimistic table update (< 50ms instant floorplan reaction)
-                    if (tId) {
-                        if (isGpsVerified) {
-                            window.dispatchEvent(new CustomEvent('pos_table_occupied', { 
-                                detail: { 
-                                    tableId: tId, 
-                                    booking: { id: bId, table_id: tId, status: 'seated', staff_remark: '[QR]' } 
-                                } 
-                            }));
-                        } else {
-                            window.dispatchEvent(new CustomEvent('pos_table_pending', { 
-                                detail: { 
-                                    tableId: tId, 
-                                    booking: { id: bId, table_id: tId, status: 'pending', staff_remark: '[WAITING_APPROVAL] [GPS_UNVERIFIED]' } 
-                                } 
-                            }));
-                        }
-                        window.dispatchEvent(new CustomEvent('pos_table_new_order', { detail: { tableId: tId, bookingId: bId } }));
-                    }
-
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                })
-                .on('broadcast', { event: 'call_staff' }, async ({ payload }) => {
-                    console.log('⚡ [Realtime POS] Instant broadcast call_staff received:', payload);
-                    const tId = payload?.table_id;
-                    const bId = payload?.booking_id;
-                    const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId || tId);
-
-                    // Suppress staff call if the associated booking was voided or closed
-                    if (bId) {
-                        try {
-                            const { data: bCheck } = await supabase
-                                .from('bookings')
-                                .select('id, status')
-                                .eq('id', bId)
-                                .maybeSingle();
-                            if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
-                                console.warn(`[Realtime POS] Suppressed call_staff from voided/closed booking: ${bId}`);
-                                return;
-                            }
-                        } catch (e) {}
-                    }
-
-                    if (checkEventDeduplication(callStaffKey, 5000)) {
-                        toast.custom((t) => renderPosToast(t, {
-                            badge: 'CALL STAFF · เรียกพนักงาน',
-                            title: `โต๊ะ ${tName} เรียกพนักงาน`,
-                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
-                            dot: 'terracotta',
-                            onClick: () => {
-                                if (tId) {
-                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
-                                }
-                            }
-                        }), { id: callStaffKey, duration: 10000 });
-                        pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tId);
-                        startStaffCallLoop(tId || bId);
-                    }
-                    if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId: tId } }));
-                    }
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                })
-                .on('broadcast', { event: 'call_bill' }, async ({ payload }) => {
-                    console.log('⚡ [Realtime POS] Instant broadcast call_bill received:', payload);
-                    const tId = payload?.table_id;
-                    const bId = payload?.booking_id;
-                    const tName = payload?.table_name || (tId ? tablesMap[tId] : null) || `โต๊ะ #${tId || ''}`;
-                    const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId || tId);
-
-                    // Suppress bill call if the associated booking was voided or closed
-                    if (bId) {
-                        try {
-                            const { data: bCheck } = await supabase
-                                .from('bookings')
-                                .select('id, status')
-                                .eq('id', bId)
-                                .maybeSingle();
-                            if (bCheck && ['void', 'cancelled', 'completed', 'no_show'].includes(bCheck.status)) {
-                                console.warn(`[Realtime POS] Suppressed call_bill from voided/closed booking: ${bId}`);
-                                return;
-                            }
-                        } catch (e) {}
-                    }
-
-                    if (checkEventDeduplication(callBillKey, 5000)) {
-                        toast.custom((t) => renderPosToast(t, {
-                            badge: 'CALL BILL · เรียกเช็คบิล',
-                            title: `โต๊ะ ${tName} เรียกเช็คบิล`,
-                            subtitle: 'แตะเพื่อเปิดดูและเตรียมบิล',
-                            dot: 'terracotta',
-                            onClick: () => {
-                                if (tId) {
-                                    supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
-                                    });
-                                }
-                            }
-                        }), { id: callBillKey, duration: 10000 });
-                        pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tId);
-                        playBillAlert(callBillKey);
-                    }
-                    if (tId) {
-                        window.dispatchEvent(new CustomEvent('pos_table_call_bill', { detail: { tableId: tId } }));
-                    }
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                })
-                .on('broadcast', { event: 'online_order_created' }, async ({ payload }) => {
-                    console.log('⚡ [Realtime POS] Instant broadcast online_order_created received:', payload);
-                    const bId = payload?.booking_id;
-                    const bType = payload?.booking_type || 'order';
-                    const custName = payload?.customer_name || 'ลูกค้าออนไลน์';
-                    const isPickup = bType === 'pickup';
-                    const label = isPickup ? `รับกลับ: ${custName}` : `จองโต๊ะ: ${custName}`;
-                    const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
-
-                    if (checkEventDeduplication(eventKey, 5000)) {
-                        playOrderAlert(eventKey, 1200, 3.4);
-                        toast.custom((t) => renderPosToast(t, {
-                            badge: isPickup ? 'ONLINE PICKUP · สั่งรับกลับ' : 'ONLINE BOOKING · จองโต๊ะ',
-                            title: `${label} เข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`,
-                            subtitle: 'แตะเพื่อเปิดดูใน Online Hub',
-                            dot: 'terracotta',
-                            onClick: () => {
-                                setView('online_hub');
-                            }
-                        }), { id: eventKey, duration: 10000 });
-                        pushNotifHistory('ONLINE_ORDER', isPickup ? 'Online Pickup' : 'Online Booking', `${label} ส่งเข้ามาใหม่ (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
-                        setShowPendingModal(true);
-                    }
-
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                })
-                .on('broadcast', { event: 'payment_slip_uploaded' }, async ({ payload }) => {
-                    console.log('⚡ [Realtime POS] Instant broadcast payment_slip_uploaded received:', payload);
-                    const bId = payload?.booking_id;
-                    const slipEventKey = getCanonicalSlipAlertKey(bId);
-                    if (checkEventDeduplication(slipEventKey, 5000)) {
-                        playSlipAlert(slipEventKey);
-                        toast.custom((t) => renderPosToast(t, {
-                            badge: 'PAYMENT SLIP · มีสลิปใหม่รอตรวจ',
-                            title: `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`,
-                            subtitle: 'แตะเพื่อเปิดตรวจสลิปใน Online Hub',
-                            dot: 'emerald',
-                            onClick: () => {
-                                setView('online_hub');
-                            }
-                        }), { id: slipEventKey, duration: 10000 });
-                        pushNotifHistory('SLIP', 'Payment Uploaded', `มีสลิปโอนเงินแนบเข้ามา (฿${(payload?.total_amount || 0).toLocaleString()})`, null);
-                        setShowPendingModal(true);
-                    }
-                    checkPendingOrders();
-                    triggerDebouncedRefresh();
-                })
+            const dbChannelName = `pos-master-db-${Date.now()}`;
+            const notifyChannel = supabase.channel(dbChannelName)
                 .on('postgres_changes', { 
                     event: '*', 
                     schema: 'public', 
@@ -2066,12 +2071,12 @@ export default function POSDashboard() {
                 })
                 .subscribe((status, err) => {
                     if (status === 'SUBSCRIBED') {
-                        console.log('⚡ [Realtime POS] Master notification channel connected.');
+                        console.log('⚡ [Realtime POS] Master database channel connected.');
                     } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED' || err) {
                         console.warn(`[Realtime POS] Channel status: ${status}. Scheduling auto-reconnect...`, err || '');
                         if (reconnectTimer) clearTimeout(reconnectTimer);
                         reconnectTimer = setTimeout(() => {
-                            setupMasterChannel();
+                            setupMasterDbChannel();
                         }, 2500);
                     }
                 });
@@ -2079,10 +2084,11 @@ export default function POSDashboard() {
             activeChannel = notifyChannel;
         };
 
-        setupMasterChannel();
+        setupMasterDbChannel();
 
         return () => {
             isUnmounted = true;
+            unsubscribeBroadcast();
             if (reconnectTimer) clearTimeout(reconnectTimer);
             if (activeChannel) {
                 try {
@@ -3486,39 +3492,91 @@ export default function POSDashboard() {
     };
 
     const handleOpenMoveModal = async () => {
-        if (!selectedTable || !activeBooking) return;
-        try {
-            const { data: allTables } = await supabase.from('tables_layout').select('*').order('table_name');
-            const today = new Date().toISOString().split('T')[0];
-            const { data: activeBookings } = await supabase
-                .from('bookings')
-                .select('*')
-                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00+07:00`);
+        let table = selectedTable;
+        let booking = activeBooking;
+        if (!table && booking?.table_id) {
+            const cachedTables = posCache.getTables() || [];
+            table = cachedTables.find(t => String(t.id) === String(booking.table_id)) || booking.tables_layout;
+        }
+        if (!booking && table?.id) {
+            const cachedBookings = posCache.getBookings() || [];
+            booking = cachedBookings.find(b => String(b.table_id) === String(table.id) && ['pending', 'confirmed', 'seated', 'ready'].includes(b.status));
+        }
 
-            const occupiedTableIds = (activeBookings || []).map(b => String(b.table_id));
-            const free = (allTables || []).filter(t => !occupiedTableIds.includes(String(t.id)));
-            setAvailableTables(free);
-            setShowMoveModal(true);
-        } catch (err) {
-            console.error("Failed to load tables for move, fallback to cache:", err);
+        if (!table || !booking) {
+            toast.error("กรุณาเลือกโต๊ะก่อนดำเนินการย้ายโต๊ะ");
+            return;
+        }
+
+        const now = new Date();
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
+        // 1. Instant optimistic load from posCache (<10ms)
+        const cachedTables = posCache.getTables() || [];
+        const cachedBookings = posCache.getBookings() || [];
+
+        const computeFreeTables = (tList, bList) => {
+            const occupiedTableIds = new Set();
+            (bList || []).forEach(b => {
+                if (!b || !b.table_id) return;
+                if (isTableSessionActive(b, startOfToday, endOfToday, now)) {
+                    occupiedTableIds.add(String(b.table_id));
+                }
+            });
+
+            return (tList || []).filter(t => 
+                String(t.id) !== String(table.id) && !occupiedTableIds.has(String(t.id))
+            );
+        };
+
+        const cachedFree = computeFreeTables(cachedTables, cachedBookings);
+        setAvailableTables(cachedFree);
+        setShowMoveModal(true);
+
+        // 2. Background fresh re-sync if online (with 5s timeout guard)
+        if (isOnline()) {
             try {
-                const cachedTables = posCache.getTables() || [];
-                const cachedBookings = posCache.getBookings() || [];
-                const occupiedIds = cachedBookings
-                    .filter(b => !['completed', 'void', 'cancelled', 'no_show'].includes(b.status))
-                    .map(b => String(b.table_id));
-                const free = cachedTables.filter(t => !occupiedIds.includes(String(t.id)));
-                setAvailableTables(free);
-                setShowMoveModal(true);
-            } catch (e) {
-                toast.error("ไม่สามารถดึงข้อมูลโต๊ะได้ในขณะนี้");
+                const startOfYesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0, 0).toISOString();
+                const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 23, 59, 59, 999).toISOString();
+
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Fetch timeout (5s)')), 5000)
+                );
+
+                const queryPromise = Promise.all([
+                    supabase.from('tables_layout').select('*').order('table_name'),
+                    supabase.from('bookings')
+                        .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at)')
+                        .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                        .gte('booking_time', startOfYesterday)
+                        .lte('booking_time', endOfTomorrow)
+                        .order('booking_time', { ascending: false })
+                ]);
+
+                const [{ data: allTables, error: tErr }, { data: activeBookings, error: bErr }] = await Promise.race([queryPromise, timeoutPromise]);
+                if (tErr) throw tErr;
+                if (bErr) throw bErr;
+
+                if (Array.isArray(allTables) && allTables.length > 0) {
+                    posCache.setTables(allTables);
+                }
+                if (Array.isArray(activeBookings)) {
+                    const freshFree = computeFreeTables(allTables || cachedTables, activeBookings);
+                    setAvailableTables(freshFree);
+                }
+            } catch (err) {
+                console.warn('[POS Move] Background fetch error or timeout, retaining cached data:', err);
+                if (cachedFree.length === 0 && (!cachedTables || cachedTables.length === 0)) {
+                    toast.error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ในขณะนี้");
+                }
             }
         }
     };
 
     const handleExecuteMoveTable = async (targetTable) => {
-        if (!activeBooking || !selectedTable) return;
+        if (!activeBooking || !selectedTable || !targetTable?.id) return;
         const toastId = toast.loading(`กำลังย้ายจากโต๊ะ ${selectedTable.table_name} ไปโต๊ะ ${targetTable.table_name}...`);
         const updatedRemark = formatMoveRemark(activeBooking.staff_remark, selectedTable.table_name, targetTable.table_name);
         
@@ -3559,7 +3617,13 @@ export default function POSDashboard() {
         });
         posCache.setBookings(updatedCacheList);
 
-        if (!isOnline()) {
+        // Optimistically clear the old source table
+        window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: selectedTable.id } }));
+        sendPOSBroadcast('table_moved', { fromTableId: selectedTable.id, toTableId: targetTable.id, bookingId: activeBooking.id });
+
+        const isLocalBooking = String(activeBooking.id).startsWith('local_');
+
+        if (!isOnline() || isLocalBooking) {
             addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id, staff_remark: updatedRemark });
             toast.success(`⚠️ ออฟไลน์: ย้ายโต๊ะสำเร็จ! ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
             setShowMoveModal(false);
@@ -3609,63 +3673,119 @@ export default function POSDashboard() {
             setRefreshKey(prev => prev + 1);
             triggerDebouncedRefresh();
         } catch (err) {
-            console.error("Move table failed:", err);
-            toast.error("ย้ายโต๊ะไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+            console.error("Move table online failed, falling back to offline queue:", err);
+            addToOfflineQueue('move_table', { bookingId: activeBooking.id, tableId: targetTable.id, staff_remark: updatedRemark });
+            toast.success(`⚠️ บันทึกออฟไลน์: ย้ายโต๊ะสำเร็จ! ไปที่โต๊ะ ${targetTable.table_name}`, { id: toastId });
+            setShowMoveModal(false);
+            setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
         }
     };
 
     const handleOpenMergeModal = async () => {
-        if (!selectedTable || !activeBooking) return;
-        try {
-            const { data: allTables } = await supabase.from('tables_layout').select('*').order('table_name');
-            const today = new Date().toISOString().split('T')[0];
-            const { data: activeBookings } = await supabase
-                .from('bookings')
-                .select('*')
-                .in('status', ['pending', 'confirmed', 'seated', 'ready'])
-                .gte('booking_time', `${today}T00:00:00+07:00`);
+        let table = selectedTable;
+        let booking = activeBooking;
+        if (!table && booking?.table_id) {
+            const cachedTables = posCache.getTables() || [];
+            table = cachedTables.find(t => String(t.id) === String(booking.table_id)) || booking.tables_layout;
+        }
+        if (!booking && table?.id) {
+            const cachedBookings = posCache.getBookings() || [];
+            booking = cachedBookings.find(b => String(b.table_id) === String(table.id) && ['pending', 'confirmed', 'seated', 'ready'].includes(b.status));
+        }
 
+        if (!table || !booking) {
+            toast.error("กรุณาเลือกโต๊ะที่มีออเดอร์ก่อนรวมบิล");
+            return;
+        }
+
+        const now = new Date();
+        const today = new Date();
+        const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+        const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+
+        // 1. Instant optimistic load from posCache (<10ms)
+        const cachedTables = posCache.getTables() || [];
+        const cachedBookings = posCache.getBookings() || [];
+
+        const computeMergeable = (tList, bList) => {
             const activeBookingMap = {};
-            (activeBookings || []).forEach(b => {
-                activeBookingMap[String(b.table_id)] = b;
+            const sortedBookings = [...(bList || [])].sort((a, b) => new Date(b.booking_time || b.created_at || 0) - new Date(a.booking_time || a.created_at || 0));
+            sortedBookings.forEach(b => {
+                if (!b || !b.table_id) return;
+                const tId = String(b.table_id);
+                if (tId === String(table.id)) return;
+                if (!activeBookingMap[tId] && isTableSessionActive(b, startOfToday, endOfToday, now)) {
+                    activeBookingMap[tId] = b;
+                }
             });
 
-            const mergeable = (allTables || [])
-                .filter(t => String(t.id) !== String(selectedTable.id) && activeBookingMap[String(t.id)])
+            return (tList || [])
+                .filter(t => String(t.id) !== String(table.id) && activeBookingMap[String(t.id)])
                 .map(t => ({
                     ...t,
                     booking: activeBookingMap[String(t.id)]
                 }));
+        };
 
-            setAvailableMergeTables(mergeable);
-            setShowMergeModal(true);
-        } catch (err) {
-            console.error("Failed to load tables for merge, fallback to cache:", err);
+        const cachedMergeable = computeMergeable(cachedTables, cachedBookings);
+        setAvailableMergeTables(cachedMergeable);
+        setShowMergeModal(true);
+
+        // 2. Background fresh re-sync if online (with 5s timeout guard)
+        if (isOnline()) {
             try {
-                const cachedTables = posCache.getTables() || [];
-                const cachedBookings = posCache.getBookings() || [];
-                const activeMap = {};
-                cachedBookings.forEach(b => {
-                    if (['pending', 'confirmed', 'seated', 'ready'].includes(b.status)) {
-                        activeMap[String(b.table_id)] = b;
-                    }
-                });
-                const mergeable = cachedTables
-                    .filter(t => String(t.id) !== String(selectedTable.id) && activeMap[String(t.id)])
-                    .map(t => ({
-                        ...t,
-                        booking: activeMap[String(t.id)]
-                    }));
-                setAvailableMergeTables(mergeable);
-                setShowMergeModal(true);
-            } catch (e) {
-                toast.error("ไม่สามารถดึงข้อมูลโต๊ะได้ในขณะนี้");
+                const startOfYesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 0, 0, 0, 0).toISOString();
+                const endOfTomorrow = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 2, 23, 59, 59, 999).toISOString();
+
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Fetch timeout (5s)')), 5000)
+                );
+
+                const queryPromise = Promise.all([
+                    supabase.from('tables_layout').select('*').order('table_name'),
+                    supabase.from('bookings')
+                        .select('id, table_id, status, booking_time, booking_type, pax, staff_remark, pickup_contact_name, customer_name, customer_note, total_amount, profiles(display_name, nickname, phone_number), order_items(id, status, is_checked, created_at, price_at_time, quantity, menu_items(name, price, is_available))')
+                        .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                        .gte('booking_time', startOfYesterday)
+                        .lte('booking_time', endOfTomorrow)
+                        .order('booking_time', { ascending: false })
+                ]);
+
+                const [{ data: allTables, error: tErr }, { data: activeBookings, error: bErr }] = await Promise.race([queryPromise, timeoutPromise]);
+                if (tErr) throw tErr;
+                if (bErr) throw bErr;
+
+                if (Array.isArray(allTables) && allTables.length > 0) {
+                    posCache.setTables(allTables);
+                }
+                if (Array.isArray(activeBookings)) {
+                    const existingCached = posCache.getBookings() || [];
+                    const mergedBookings = activeBookings.map(nb => {
+                        const existing = existingCached.find(eb => eb.id === nb.id);
+                        if (existing?.order_items && existing.order_items.length > 0 && existing.order_items[0].menu_items) {
+                            const richMap = new Map(existing.order_items.map(oi => [oi.id, oi]));
+                            const preservedItems = (nb.order_items || []).map(shallow => richMap.get(shallow.id) || shallow);
+                            return { ...existing, ...nb, order_items: preservedItems };
+                        }
+                        return nb;
+                    });
+                    posCache.setBookings(mergedBookings);
+
+                    const freshMergeable = computeMergeable(allTables || cachedTables, mergedBookings);
+                    setAvailableMergeTables(freshMergeable);
+                }
+            } catch (err) {
+                console.warn('[POS Merge] Background fetch error or timeout, retaining cached data:', err);
+                if (cachedMergeable.length === 0 && (!cachedTables || cachedTables.length === 0)) {
+                    toast.error("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ในขณะนี้");
+                }
             }
         }
     };
 
     const handleExecuteMergeBill = async (targetTable) => {
-        if (!activeBooking || !selectedTable || !targetTable.booking) return;
+        if (!activeBooking || !selectedTable || !targetTable?.booking) return;
         const targetBooking = targetTable.booking;
         
         const isConfirmed = window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการรวมบิลจากโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}?\nรายการอาหารทั้งหมดจะถูกย้าย และโต๊ะ ${selectedTable.table_name} จะว่างลง`);
@@ -3673,7 +3793,8 @@ export default function POSDashboard() {
 
         const toastId = toast.loading(`กำลังรวมบิลโต๊ะ ${selectedTable.table_name} เข้ากับโต๊ะ ${targetTable.table_name}...`);
 
-        const sourceOriginalTotal = parseFloat(activeBooking.total_amount || activeBooking.total_price || 0);
+        const sourceItemsSum = (activeBooking.order_items || []).reduce((sum, item) => sum + (parseFloat(item.price_at_time || item.price || 0) * (item.quantity || 1)), 0);
+        const sourceOriginalTotal = parseFloat(activeBooking.total_amount || activeBooking.total_price || 0) || sourceItemsSum;
         const targetShortId = getShortBookingId(targetBooking);
         const sourceShortId = getShortBookingId(activeBooking);
         const sourceRemark = formatMergeSourceRemark(targetTable.table_name, targetShortId, sourceOriginalTotal);
@@ -3682,40 +3803,46 @@ export default function POSDashboard() {
         // CRM Dominance Logic: Select the customer/member with higher points/CRM tier ("เลือกคนที่คะแนนเยอะกว่าเสมอ")
         const dominantCrm = resolveDominantCrmMember(activeBooking, targetBooking, attachedMemberCrm, null);
 
-        if (!isOnline()) {
-            const cachedBookings = posCache.getBookings() || [];
-            let updatedTargetInCache = null;
-            const updatedBookings = cachedBookings.map(b => {
-                if (b.id === targetBooking.id) {
-                    const sourceItems = activeBooking.order_items || [];
-                    const targetItems = b.order_items || [];
-                    const mergedItems = [...targetItems, ...sourceItems.map(item => ({ ...item, booking_id: targetBooking.id }))];
-                    const newTotal = (parseFloat(b.total_amount || 0) + sourceOriginalTotal);
-                    const updatedTarget = { 
-                        ...b, 
-                        order_items: mergedItems, 
-                        staff_remark: targetUpdatedRemark, 
-                        total_amount: newTotal 
-                    };
-                    if (dominantCrm.wasSourceChosen && dominantCrm.dominantMember) {
-                        updatedTarget.user_id = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
-                        updatedTarget.profiles = dominantCrm.dominantMember;
-                        if (dominantCrm.dominantMember.display_name) {
-                            updatedTarget.pickup_contact_name = dominantCrm.dominantMember.display_name;
-                        }
-                        if (dominantCrm.dominantMember.phone_number) {
-                            updatedTarget.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
-                        }
-                    }
-                    return updatedTarget;
-                }
-                if (b.id === activeBooking.id) {
-                    return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
-                }
-                return b;
-            });
-            
-            posCache.setBookings(updatedBookings);
+        const cachedBookings = posCache.getBookings() || [];
+        const sourceItems = activeBooking.order_items || [];
+        const targetItems = targetBooking.order_items || [];
+        const mergedItems = [...targetItems, ...sourceItems.map(item => ({ ...item, booking_id: targetBooking.id }))];
+        const newTotal = (parseFloat(targetBooking.total_amount || 0) + sourceOriginalTotal);
+
+        let updatedTarget = { 
+            ...targetBooking, 
+            order_items: mergedItems, 
+            staff_remark: targetUpdatedRemark, 
+            total_amount: newTotal 
+        };
+        if (dominantCrm.wasSourceChosen && dominantCrm.dominantMember) {
+            updatedTarget.user_id = dominantCrm.dominantMember.id || dominantCrm.dominantMember.user_id;
+            updatedTarget.profiles = dominantCrm.dominantMember;
+            if (dominantCrm.dominantMember.display_name) {
+                updatedTarget.pickup_contact_name = dominantCrm.dominantMember.display_name;
+            }
+            if (dominantCrm.dominantMember.phone_number) {
+                updatedTarget.pickup_contact_phone = dominantCrm.dominantMember.phone_number;
+            }
+        }
+
+        const updatedBookings = cachedBookings.map(b => {
+            if (b.id === targetBooking.id) return updatedTarget;
+            if (b.id === activeBooking.id) {
+                return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
+            }
+            return b;
+        });
+        posCache.setBookings(updatedBookings);
+
+        // Optimistically clear the old source table
+        window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: selectedTable.id } }));
+        sendPOSBroadcast('bills_merged', { fromTableId: selectedTable.id, toTableId: targetBooking.table_id, sourceBookingId: activeBooking.id, targetBookingId: targetBooking.id });
+
+        const isLocalSource = String(activeBooking.id).startsWith('local_');
+        const isLocalTarget = String(targetBooking.id).startsWith('local_');
+
+        if (!isOnline() || isLocalSource || isLocalTarget) {
             addToOfflineQueue('merge_bills', { 
                 sourceBookingId: activeBooking.id, 
                 targetBookingId: targetBooking.id,
@@ -3725,17 +3852,14 @@ export default function POSDashboard() {
                 dominantMember: dominantCrm.wasSourceChosen ? dominantCrm.dominantMember : null
             });
             
-            const targetInCache = updatedBookings.find(b => b.id === targetBooking.id);
-            if (targetInCache) {
-                setActiveBooking(targetInCache);
-                if (activeBookingRef) activeBookingRef.current = targetInCache;
-                const mergedItems = (targetInCache.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
-                setCurrentOrder({
-                    items: mergedItems,
-                    customer: targetInCache.profiles?.display_name || targetInCache.pickup_contact_name || targetInCache.customer_name || `Table ${targetTable.table_name}`,
-                    table: targetTable
-                });
-            }
+            setActiveBooking(updatedTarget);
+            if (activeBookingRef) activeBookingRef.current = updatedTarget;
+            const mergedCartItems = (updatedTarget.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+            setCurrentOrder({
+                items: mergedCartItems,
+                customer: updatedTarget.profiles?.display_name || updatedTarget.pickup_contact_name || updatedTarget.customer_name || `Table ${targetTable.table_name}`,
+                table: targetTable
+            });
             setSelectedTable(targetTable);
             if (targetTable?.id) localStorage.setItem('pos_active_table_id', targetTable.id);
 
@@ -3771,10 +3895,9 @@ export default function POSDashboard() {
             if (voidErr) throw voidErr;
 
             // 3. Update target booking remark, total amount & dominant CRM member
-            const newTargetTotal = parseFloat(targetBooking.total_amount || 0) + sourceOriginalTotal;
             const targetUpdatePayload = {
                 staff_remark: targetUpdatedRemark,
-                total_amount: newTargetTotal
+                total_amount: newTotal
             };
 
             if (dominantCrm.wasSourceChosen && dominantCrm.dominantMember) {
@@ -3811,16 +3934,11 @@ export default function POSDashboard() {
             }
 
             if (!finalTargetBooking) {
-                finalTargetBooking = {
-                    ...targetBooking,
-                    staff_remark: targetUpdatedRemark,
-                    total_amount: newTargetTotal
-                };
+                finalTargetBooking = updatedTarget;
             }
 
             // 5. Update posCache (both voided source and updated target)
-            const cachedBookings = posCache.getBookings() || [];
-            const syncedCache = cachedBookings.map(b => {
+            const freshCache = (posCache.getBookings() || []).map(b => {
                 if (b.id === activeBooking.id) {
                     return { ...b, status: 'void', staff_remark: sourceRemark, total_amount: 0, order_items: [] };
                 }
@@ -3829,7 +3947,7 @@ export default function POSDashboard() {
                 }
                 return b;
             });
-            posCache.setBookings(syncedCache);
+            posCache.setBookings(freshCache);
 
             // 6. Seamlessly switch POS active view to target table
             setActiveBooking(finalTargetBooking);
@@ -3862,7 +3980,7 @@ export default function POSDashboard() {
                     source_table_name: selectedTable?.table_name,
                     target_table_name: targetTable?.table_name,
                     source_total: sourceOriginalTotal,
-                    new_target_total: newTargetTotal
+                    new_target_total: newTotal
                 }
             });
 
@@ -3870,8 +3988,31 @@ export default function POSDashboard() {
             setRefreshKey(prev => prev + 1);
             triggerDebouncedRefresh();
         } catch (err) {
-            console.error("Merge bills failed:", err);
-            toast.error("รวมบิลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง", { id: toastId });
+            console.error("Merge bills online failed, falling back to offline queue:", err);
+            addToOfflineQueue('merge_bills', { 
+                sourceBookingId: activeBooking.id, 
+                targetBookingId: targetBooking.id,
+                sourceRemark,
+                targetRemark: targetUpdatedRemark,
+                sourceOriginalTotal,
+                dominantMember: dominantCrm.wasSourceChosen ? dominantCrm.dominantMember : null
+            });
+            
+            setActiveBooking(updatedTarget);
+            if (activeBookingRef) activeBookingRef.current = updatedTarget;
+            const mergedCartItems = (updatedTarget.order_items || []).map(formatDbOrderItemToCart).filter(Boolean);
+            setCurrentOrder({
+                items: mergedCartItems,
+                customer: updatedTarget.profiles?.display_name || updatedTarget.pickup_contact_name || updatedTarget.customer_name || `Table ${targetTable.table_name}`,
+                table: targetTable
+            });
+            setSelectedTable(targetTable);
+            if (targetTable?.id) localStorage.setItem('pos_active_table_id', targetTable.id);
+
+            toast.success(`⚠️ บันทึกออฟไลน์: รวมบิลสำเร็จ! ระบบจะทำการซิงค์เมื่อออนไลน์`, { id: toastId });
+            setShowMergeModal(false);
+            setRefreshKey(prev => prev + 1);
+            triggerDebouncedRefresh();
         }
     };
 
@@ -5174,12 +5315,13 @@ export default function POSDashboard() {
                         </div>
                         
                         <div className="max-h-64 overflow-y-auto space-y-1.5 pr-1">
-                            {availableTables.length === 0 ? (
+                            {availableMergeTables.length === 0 ? (
                                 <p className="text-[10px] text-center text-[#767673] py-8 uppercase font-mono tracking-wider">ไม่มีโต๊ะอื่นที่เปิดออเดอร์อยู่</p>
                             ) : (
-                                availableTables.map(t => {
+                                availableMergeTables.map(t => {
                                     const shortId = getShortBookingId(t.booking);
-                                    const targetAmt = parseFloat(t.booking?.total_amount || t.booking?.total_price || 0);
+                                    const itemsSum = (t.booking?.order_items || []).reduce((sum, item) => sum + (parseFloat(item.price_at_time || item.price || 0) * (item.quantity || 1)), 0);
+                                    const targetAmt = parseFloat(t.booking?.total_amount || t.booking?.total_price || 0) || itemsSum;
                                     const memberName = t.booking?.profiles?.display_name || t.booking?.pickup_contact_name || t.booking?.customer_name || '';
                                     return (
                                         <button
@@ -5190,13 +5332,13 @@ export default function POSDashboard() {
                                             <div className="flex flex-col items-start gap-0.5 text-left">
                                                 <div className="flex items-center gap-1.5">
                                                     <span>โต๊ะ {t.table_name}</span>
-                                                    <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">({shortId})</span>
+                                                    {shortId ? <span className="text-[10px] font-mono text-[oklch(55%_0.010_28)]">({shortId})</span> : null}
                                                 </div>
-                                                {memberName && (
+                                                {memberName ? (
                                                     <span className="text-[10px] font-normal text-[oklch(42%_0.010_28)]">
                                                         ลูกค้า: {memberName}
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="font-mono text-xs text-[oklch(18%_0.012_28)]">

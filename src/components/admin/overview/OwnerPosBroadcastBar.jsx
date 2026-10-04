@@ -73,22 +73,24 @@ export default function OwnerPosBroadcastBar() {
             // 1. Broadcast via Realtime Channel with connection handshake
             const channel = supabase.channel('pos-broadcast-live', { config: { broadcast: { ack: true } } })
             try {
-                await new Promise((resolve) => {
-                    const timer = setTimeout(resolve, 1500)
-                    channel.subscribe((status) => {
-                        if (status === 'SUBSCRIBED') {
-                            clearTimeout(timer)
-                            resolve()
-                        }
+                if (channel.state !== 'joined') {
+                    await new Promise((resolve) => {
+                        const timer = setTimeout(resolve, 1500)
+                        channel.subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                clearTimeout(timer)
+                                resolve()
+                            }
+                        })
                     })
-                })
+                }
                 await channel.send({
                     type: 'broadcast',
                     event: 'owner-announcement',
                     payload
                 })
-            } finally {
-                supabase.removeChannel(channel)
+            } catch (broadcastErr) {
+                console.warn('Realtime broadcast notice:', broadcastErr)
             }
 
             // 2. Persist in app_settings
@@ -123,22 +125,24 @@ export default function OwnerPosBroadcastBar() {
             // Broadcast clear event with connection handshake
             const channel = supabase.channel('pos-broadcast-live', { config: { broadcast: { ack: true } } })
             try {
-                await new Promise((resolve) => {
-                    const timer = setTimeout(resolve, 1500)
-                    channel.subscribe((status) => {
-                        if (status === 'SUBSCRIBED') {
-                            clearTimeout(timer)
-                            resolve()
-                        }
+                if (channel.state !== 'joined') {
+                    await new Promise((resolve) => {
+                        const timer = setTimeout(resolve, 1500)
+                        channel.subscribe((status) => {
+                            if (status === 'SUBSCRIBED') {
+                                clearTimeout(timer)
+                                resolve()
+                            }
+                        })
                     })
-                })
+                }
                 await channel.send({
                     type: 'broadcast',
                     event: 'owner-announcement-clear',
                     payload: {}
                 })
-            } finally {
-                supabase.removeChannel(channel)
+            } catch (broadcastErr) {
+                console.warn('Realtime broadcast clear notice:', broadcastErr)
             }
 
             setActiveBroadcast(null)

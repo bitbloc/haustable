@@ -24,7 +24,8 @@ import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
 import { safeTimestampUrl, safeCssUrl } from '../utils/urlHelper';
 import { posCache } from '../utils/offlineHelper';
-import { parseTableTransferInfo } from '../utils/tableTransferHelper';
+import { parseTableTransferInfo, isTableSessionActive } from '../utils/tableTransferHelper';
+export { isTableSessionActive };
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
 
 export const getReservationDiffMins = (bookingTime, now = new Date()) => {
@@ -68,55 +69,6 @@ const formatUpcomingResTime = (timeStr) => {
     }
 };
 
-/**
- * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
- * Strictly isolates seated dining sessions from unseated advance reservations.
- */
-function isTableSessionActive(b, startOfToday, endOfToday, now) {
-    if (!b) return false;
-    if (['completed', 'void', 'cancelled', 'no_show'].includes(b.status)) return false;
-
-    // Safety age limit: session cannot exceed 16 hours
-    const bRawTime = b.booking_time || b.created_at;
-    if (bRawTime) {
-        const bTime = new Date(bRawTime);
-        const ageMs = now.getTime() - bTime.getTime();
-        if (ageMs > 16 * 60 * 60 * 1000) return false;
-    }
-
-    // If there is no active shift and the booking belongs to a closed shift, it is not an active dining session
-    try {
-        const activeShiftStr = localStorage.getItem('pos_current_shift');
-        if (!activeShiftStr) {
-            const historyStr = localStorage.getItem('pos_shift_history');
-            if (historyStr) {
-                const history = JSON.parse(historyStr);
-                const latestClosed = Array.isArray(history) && history.length > 0 ? history[0] : null;
-                if (latestClosed?.closedAt) {
-                    const bTime = new Date(b.booking_time || b.created_at).getTime();
-                    const closedTime = new Date(latestClosed.closedAt).getTime();
-                    if (bTime <= closedTime) return false;
-                }
-            }
-        }
-    } catch (e) {}
-
-    // 1. Actively seated or confirmed in-store session
-    if (['seated', 'confirmed'].includes(b.status)) {
-        return true;
-    }
-    // 2. Kitchen ready items
-    if (b.status === 'ready' && b.booking_type !== 'pickup') {
-        return true;
-    }
-    // 3. Pending session with items or walk-in/qr
-    if (b.status === 'pending') {
-        const isWalkInOrQR = b.booking_type === 'walk_in' || b.booking_type === 'qr' || (b.staff_remark || '').toLowerCase().includes('qr');
-        const hasItems = Array.isArray(b.order_items) && b.order_items.length > 0;
-        return isWalkInOrQR || hasItems || b.booking_type !== 'pickup';
-    }
-    return false;
-}
 
 const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPickup, hasPendingOrders, refreshKey, onOpenNotifDrawer, unreadNotifCount, activeTableId = null, activeBooking = null }) {
     const [tables, setTables] = useState([]);

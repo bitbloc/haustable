@@ -30,7 +30,7 @@ import {
     getCanonicalSlipAlertKey
 } from '../utils/audioHelper';
 import { simulateWmaOrder } from '../utils/wmaNativeBridge';
-import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast } from '../utils/realtimeNotifier';
 import POSVolumeControl from './POSVolumeControl';
 
 export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipImage, onSelectOrder, refreshKey, isActive = true }) {
@@ -140,30 +140,39 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             fetchOnlineData();
         }
 
-        const channel = supabase.channel('pos-realtime-notifications-hub')
-            .on(
-                'broadcast',
-                { event: 'online_order_created' },
-                async ({ payload }) => {
-                    const bId = payload?.booking_id;
-                    const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
-                    if (checkEventDeduplication(eventKey, 5000)) {
-                        if (payload) {
-                            setPersistentAlert({
-                                id: bId,
-                                booking_type: payload.booking_type || 'pickup',
-                                customer_name: payload.customer_name,
-                                pickup_contact_name: payload.customer_name,
-                                total_amount: payload.total_amount,
-                                payment_slip_url: payload.has_slip ? 'slip' : null,
-                                tracking_token: payload.tracking_token
-                            });
-                        }
-                        playAlert(eventKey);
+        const handleIncomingBroadcast = async ({ event, payload }) => {
+            if (event === 'online_order_created') {
+                const bId = payload?.booking_id;
+                const eventKey = getCanonicalOrderAlertKey(bId) || `order_${Date.now()}`;
+                if (checkEventDeduplication(eventKey, 5000)) {
+                    if (payload) {
+                        setPersistentAlert({
+                            id: bId,
+                            booking_type: payload.booking_type || 'pickup',
+                            customer_name: payload.customer_name,
+                            pickup_contact_name: payload.customer_name,
+                            total_amount: payload.total_amount,
+                            payment_slip_url: payload.has_slip ? 'slip' : null,
+                            tracking_token: payload.tracking_token
+                        });
                     }
-                    if (isActive) fetchOnlineData();
+                    playAlert(eventKey);
                 }
-            )
+                if (isActive) fetchOnlineData();
+            } else if (event === 'payment_slip_uploaded') {
+                const bId = payload?.booking_id;
+                const slipEventKey = getCanonicalSlipAlertKey(bId);
+                if (checkEventDeduplication(slipEventKey, 5000)) {
+                    playAlert(slipEventKey);
+                }
+                if (isActive) fetchOnlineData();
+            }
+        };
+
+        const unsubscribeBroadcast = subscribePOSBroadcast(handleIncomingBroadcast);
+
+        const channelName = `pos-online-hub-db-${Math.random().toString(36).slice(2, 8)}`;
+        const dbChannel = supabase.channel(channelName)
             .on(
                 'postgres_changes',
                 {
@@ -259,7 +268,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             stopAlert();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('online', fetchOnlineData);
-            supabase.removeChannel(channel);
+            unsubscribeBroadcast();
+            supabase.removeChannel(dbChannel);
         };
     }, [isActive]);
 

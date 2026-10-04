@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
+import { subscribePOSBroadcast } from '../../../utils/realtimeNotifier'
 
 export default function LiveFloorQuickStatus({ onOccupancyChange }) {
     const [tables, setTables] = useState([])
@@ -51,10 +52,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             })
 
         // Direct POS broadcast channel (cross-device < 50ms)
-        const notifyChannel = supabase
-            .channel('pos-realtime-notifications')
-            .on('broadcast', { event: '*' }, debouncedFetch)
-            .subscribe()
+        const unsubscribePosBroadcast = subscribePOSBroadcast(() => debouncedFetch())
 
         // Local 0ms BroadcastChannel synchronization with POS
         const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
@@ -90,7 +88,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             if (debounceTimer) clearTimeout(debounceTimer)
             clearInterval(autoPollTimer)
             supabase.removeChannel(channel)
-            supabase.removeChannel(notifyChannel)
+            unsubscribePosBroadcast()
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('storage', handleStorageSync)

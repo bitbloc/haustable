@@ -11,6 +11,7 @@ import {
     Phone
 } from 'lucide-react';
 import { getThaiDate } from '../utils/timeUtils';
+import { subscribePOSBroadcast } from '../utils/realtimeNotifier';
 
 export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refreshKey }) {
     const [orders, setOrders] = useState([]);
@@ -21,21 +22,24 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
     useEffect(() => {
         fetchOrders();
 
-        const channel = supabase.channel('pos-pickup-grid-sync')
+        const unsubscribeBroadcast = subscribePOSBroadcast(({ event, payload }) => {
+            if (event === 'online_order_created' && payload?.booking_type === 'pickup') {
+                fetchOrders();
+            }
+        });
+
+        const channelName = `pos-pickup-grid-db-${Math.random().toString(36).slice(2, 8)}`;
+        const channel = supabase.channel(channelName)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, (payload) => {
                 const b = payload.new || payload.old;
                 if (b?.booking_type === 'pickup' || b?.order_type === 'hausmade_pickup') {
                     fetchOrders();
                 }
             })
-            .on('broadcast', { event: 'online_order_created' }, (payload) => {
-                if (payload.payload?.booking_type === 'pickup') {
-                    fetchOrders();
-                }
-            })
             .subscribe();
 
         return () => {
+            unsubscribeBroadcast();
             supabase.removeChannel(channel);
         };
     }, []);

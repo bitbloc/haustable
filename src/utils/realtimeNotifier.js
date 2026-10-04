@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 
+const broadcastListeners = new Set();
 let posBroadcastChannel = null;
 let posChannelSubPromise = null;
 
@@ -10,6 +11,19 @@ function getBroadcastChannel() {
                 broadcast: { ack: true }
             }
         });
+
+        // Listen for all incoming broadcasts on the shared topic and fan out to registered listeners
+        posBroadcastChannel.on('broadcast', { event: '*' }, ({ event, payload }) => {
+            console.log(`⚡ [RealtimeNotifier] Broadcast received [${event}]:`, payload);
+            broadcastListeners.forEach(listener => {
+                try {
+                    listener({ event, payload });
+                } catch (err) {
+                    console.error('[RealtimeNotifier] Error in broadcast listener:', err);
+                }
+            });
+        });
+
         posChannelSubPromise = new Promise((resolve) => {
             const timer = setTimeout(resolve, 2000);
             posBroadcastChannel.subscribe((status) => {
@@ -18,9 +32,6 @@ function getBroadcastChannel() {
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                     console.warn(`[RealtimeNotifier] Channel status: ${status}, resetting broadcaster reference.`);
-                    // Do NOT call supabase.removeChannel(posBroadcastChannel) here because
-                    // 'pos-realtime-notifications' is shared with POSDashboard.jsx and LiveFloorQuickStatus.jsx listeners.
-                    // Removing it from Supabase registry would unilaterally tear down active POS listeners.
                     posBroadcastChannel = null;
                     posChannelSubPromise = null;
                     clearTimeout(timer);
@@ -33,12 +44,28 @@ function getBroadcastChannel() {
 }
 
 /**
+ * Register a listener for POS Realtime Broadcast events.
+ * Multiple components can subscribe safely without creating duplicate WebSocket channels
+ * and without tearing down the shared channel when unmounting.
+ * @param {Function} callback - ({ event, payload }) => void
+ * @returns {Function} unsubscribe function to remove listener
+ */
+export function subscribePOSBroadcast(callback) {
+    if (typeof callback !== 'function') return () => {};
+    broadcastListeners.add(callback);
+    getBroadcastChannel(); // Ensure channel is pre-warmed & subscribed
+
+    return () => {
+        broadcastListeners.delete(callback);
+    };
+}
+
+/**
  * Pre-warm the broadcast channel subscription so sending is instant (< 5ms) when an order is placed.
  */
 export function prewarmPOSBroadcastChannel() {
     return getBroadcastChannel();
 }
-
 
 /**
  * Send an instant Realtime Broadcast signal directly to POS terminals (< 50ms).
@@ -52,6 +79,15 @@ export async function sendPOSBroadcast(event, payload = {}) {
             ...payload,
             timestamp: Date.now()
         };
+
+        // Instantly notify local in-memory listeners (< 0.1ms)
+        broadcastListeners.forEach(listener => {
+            try {
+                listener({ event, payload: fullPayload });
+            } catch (err) {
+                console.error('[RealtimeNotifier] Local broadcast listener error:', err);
+            }
+        });
 
         if (promise) {
             await promise;

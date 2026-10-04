@@ -121,7 +121,12 @@ export default function StepTableSelection() {
             supabase.removeChannel(presenceChannel)
             channelRef.current = null
         }
-    }, [date, time, sessionId]) 
+    }, [sessionId])
+
+    // Re-fetch availability when date or time changes without reconnecting WebSocket
+    useEffect(() => {
+        refreshAvailability()
+    }, [date, time]) 
 
     // Update Presence with 400ms Debounce & 5-minute Auto-Release Timer
     useEffect(() => {

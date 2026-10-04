@@ -759,6 +759,7 @@ if (typeof window !== 'undefined') {
 
     // Background interval check to auto-sync offline queue when internet connection drops/restores silently
     setInterval(async () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             setNetworkStatus(false, 'NAVIGATOR_OFFLINE');
             return;
