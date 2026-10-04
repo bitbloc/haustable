@@ -7,6 +7,7 @@ import { parseTableTransferInfo, isGhostPickupBooking, isInternalBlockBooking, i
 import { formatOrderItemOptions } from '../../../utils/menuHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 import { playAdminOrderAlert } from '../../../utils/audioHelper'
+import OnlineAdvanceOrdersHub from './OnlineAdvanceOrdersHub'
 
 /**
  * Isolated live relative time display that updates itself without re-rendering the whole floor grid
@@ -568,13 +569,16 @@ function OverviewTableCard({
 export default function SimplifiedLiveOverview({ 
     tables: parentTables = [],
     bookings: parentBookings = [], 
+    omniOnlineBookings = [],
     revenueToday = 0, 
     yesterdayRevenue = 0,
     shifts = [], 
     selectedDate = getThaiDate(),
     loading = false, 
     onRefresh,
-    onOpenProMode 
+    onOpenProMode,
+    onViewSlip,
+    onUpdateStatus
 }) {
     const [internalTables, setInternalTables] = useState([])
     const [internalBookings, setInternalBookings] = useState([])
@@ -630,6 +634,22 @@ export default function SimplifiedLiveOverview({
     const isParentDriven = parentTables.length > 0 || parentBookings.length > 0
     const tables = parentTables.length > 0 ? parentTables : internalTables
     const liveBookings = parentBookings.length > 0 ? parentBookings : internalBookings
+
+    // Omni-Date Online & Advance Orders Feed
+    const onlineOrdersFeed = useMemo(() => {
+        if (omniOnlineBookings && omniOnlineBookings.length > 0) return omniOnlineBookings
+        return (liveBookings || []).filter(b => {
+            if (!b) return false
+            const st = (b.status || '').toLowerCase()
+            if (['cancelled', 'void', 'completed', 'paid', 'success'].includes(st)) return false
+            const sourceLower = (b.source || '').toLowerCase()
+            const remarkLower = (b.staff_remark || '').toLowerCase()
+            const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman')
+            const isPickup = b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway')
+            const isOnline = sourceLower === 'online' || sourceLower === 'line' || Boolean(b.payment_slip_url)
+            return isLineman || isPickup || isOnline
+        })
+    }, [omniOnlineBookings, liveBookings])
 
     // Snapshot tracker for triggering bell "Ting!" chime on new order or additional item orders
     const prevOrderSnapshotRef = useRef({
@@ -1330,6 +1350,35 @@ export default function SimplifiedLiveOverview({
                     </div>
                 </div>
             </div>
+
+            {/* 1.5 Omni-Date Online & Advance Orders Hub (Any date online bookings & pickups) */}
+            <OnlineAdvanceOrdersHub 
+                bookings={onlineOrdersFeed}
+                onViewSlip={onViewSlip}
+                onInspectBill={(order) => {
+                    const orderItems = order.order_items || []
+                    const startTime = order.booking_time || order.created_at
+                    const billTotal = orderItems.length > 0 
+                        ? orderItems.reduce((sum, it) => sum + (Number(it.price_at_time || it.menu_items?.price || 0) * Number(it.quantity || 1)), 0)
+                        : Number(order.total_amount || 0)
+                    const roundsInfo = groupOrderItemsIntoRounds(orderItems, startTime)
+                    setInspectingTable({
+                        table: order.tables_layout || { table_name: order.booking_type === 'pickup' ? 'PICKUP' : 'ONLINE' },
+                        state: { status: order.status },
+                        booking: order,
+                        orderItems,
+                        orderRoundsInfo: roundsInfo,
+                        billTotal,
+                        startTime,
+                        transfer: { isTransferred: false },
+                        hasCallStaff: false,
+                        hasCallBill: false
+                    })
+                }}
+                onUpdateStatus={onUpdateStatus}
+                onOpenProMode={onOpenProMode}
+                loading={isDataLoading}
+            />
 
             {/* 2. Rapid Filter Chips (4px/8px scale, Thai font-sans, monospace counts) */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 text-xs font-sans">

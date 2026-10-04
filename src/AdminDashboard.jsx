@@ -21,6 +21,7 @@ import OwnerPosBroadcastBar from './components/admin/overview/OwnerPosBroadcastB
 import DailySummarySlipModal from './components/admin/overview/DailySummarySlipModal'
 import SimplifiedLiveOverview from './components/admin/overview/SimplifiedLiveOverview'
 import SimplifiedBillsSummaryList from './components/admin/overview/SimplifiedBillsSummaryList'
+import OnlineAdvanceOrdersHub from './components/admin/overview/OnlineAdvanceOrdersHub'
 import InboxSection from './components/admin/InboxSection'
 import ScheduleSection from './components/admin/ScheduleSection'
 import SlipModal from './components/shared/SlipModal'
@@ -172,7 +173,7 @@ export default function AdminDashboard() {
                     profiles ( id, display_name, nickname, phone_number, current_tier ),
                     tables_layout ( table_name )
                 `)
-                .in('status', ['seated', 'confirmed', 'ready'])
+                .in('status', ['seated', 'confirmed', 'ready', 'preparing'])
                 .order('booking_time', { ascending: false })
 
             // 4. Fetch Shifts for queryDate
@@ -413,6 +414,31 @@ export default function AdminDashboard() {
             return new Date(b.booking_time || b.created_at) - new Date(a.booking_time || a.created_at)
         })
     }, [bookings, selectedDate, isShiftOpen])
+
+    // 1.5 Omni-Date Active Online Bookings & Pickups (No matter what day, must show up!)
+    const omniOnlineBookings = useMemo(() => {
+        const today = getThaiDate()
+        return bookings.filter(b => {
+            if (isInternalBlockBooking(b)) return false
+            if (isGhostPickupBooking(b)) return false
+            if (isDuplicateGhostBooking(b, bookings)) return false
+            const st = (b.status || '').toLowerCase()
+            if (['cancelled', 'void', 'completed', 'paid', 'success'].includes(st)) return false
+
+            const sourceLower = (b.source || '').toLowerCase()
+            const remarkLower = (b.staff_remark || '').toLowerCase()
+            const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman') || (b.customer_name || '').toLowerCase().includes('line man')
+            const isPickup = b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup' || remarkLower.includes('pickup') || remarkLower.includes('takeaway') || remarkLower.includes('รับกลับ')
+            const isShop = b.booking_type === 'shop' || b.booking_type === 'hausmade_shipping'
+            const isOnlineBooking = (sourceLower === 'online' || sourceLower === 'line' || Number(b.deposit_amount || 0) > 0 || Boolean(b.payment_slip_url)) && b.booking_type !== 'walk_in'
+            
+            // Advance booking for today or future dates that is not an in-store seated session
+            const bDate = new Date(b.booking_time || b.created_at).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+            const isAdvance = bDate >= today && st !== 'seated'
+
+            return isLineman || isPickup || isShop || isOnlineBooking || isAdvance
+        })
+    }, [bookings])
 
     // 2. Inbox: Pending (ALL dates)
     const pendingBookings = useMemo(() =>
@@ -811,6 +837,7 @@ export default function AdminDashboard() {
                         <SimplifiedLiveOverview 
                             tables={tables}
                             bookings={dailyBookings}
+                            omniOnlineBookings={omniOnlineBookings}
                             revenueToday={revenueToday}
                             yesterdayRevenue={yesterdayRevenue}
                             shifts={shifts}
@@ -818,27 +845,9 @@ export default function AdminDashboard() {
                             loading={loading}
                             onRefresh={() => fetchData(true, selectedDate)}
                             onOpenProMode={() => handleSetOverviewMode('pro')}
+                            onViewSlip={setViewSlipUrl}
+                            onUpdateStatus={updateStatus}
                         />
-
-                        {/* 1.2 Incoming Online Booking Alert if pending */}
-                        {pendingBookings.length > 0 && (
-                            <div className="p-3 bg-[oklch(95%_0.02_65)] border border-[oklch(75%_0.18_65)] rounded-sm flex items-center justify-between font-mono text-xs text-[oklch(18%_0.012_28)]">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-[oklch(75%_0.18_65)] animate-ping" />
-                                    <span className="font-bold">[INBOX PENDING] มีคำขอจองโต๊ะใหม่ {pendingBookings.length} รายการใน Inbox</span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleSetOverviewMode('pro')
-                                        setActiveTab('inbox')
-                                    }}
-                                    className="px-2.5 py-1 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[11px] font-bold rounded-xs cursor-pointer hover:bg-[oklch(28%_0.012_28)]"
-                                >
-                                    ตรวจสอบรายการจอง ➔
-                                </button>
-                            </div>
-                        )}
 
                         {/* 1.5 Backoffice Simplified Daily Bills Summary List */}
                         <SimplifiedBillsSummaryList 
@@ -881,6 +890,16 @@ export default function AdminDashboard() {
                     </div>
                 ) : (
                     <div className="space-y-6 mb-6">
+                        {/* 0. Omni-Date Online & Advance Orders Hub (Any date online bookings & pickups) */}
+                        <OnlineAdvanceOrdersHub 
+                            bookings={omniOnlineBookings}
+                            onViewSlip={setViewSlipUrl}
+                            onInspectBill={(order) => handlePrint(order, 'bill')}
+                            onUpdateStatus={updateStatus}
+                            onOpenProMode={() => setActiveTab('inbox')}
+                            loading={loading}
+                        />
+
                         {/* 1. Live Pulse KPI Strip & Payment Breakdown */}
                         <LivePulseMetrics 
                             revenueToday={revenueToday}
