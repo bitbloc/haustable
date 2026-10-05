@@ -214,7 +214,6 @@ function OverviewTableCard({
     onInspect,
     onDismissAlert,
     isLatestOrderOnFloor = false,
-    motionMode = 'pulse',
     hasRecentAlert = false
 }) {
     const isOccupied = item.state.status === 'occupied'
@@ -233,45 +232,46 @@ function OverviewTableCard({
         return () => clearInterval(timer)
     }, [isOccupied, item.latestOrderTimeMs])
 
-    // Urgency calculation:
-    // <= 10m: Urgent (Terracotta accent bar 4-5px + highlighted table name)
-    // 10-15m: Cooling down (Warm muted accent bar)
-    // > 15m: Calm dining (Normal hairline border, neutral)
-    const urgency = useMemo(() => {
-        if (!isOccupied || !item.latestOrderTimeMs) return 'calm'
-        const diffMins = (now - item.latestOrderTimeMs) / 60000
-        if (diffMins <= 10) return 'urgent'
-        if (diffMins <= 15) return 'cooling'
-        return 'calm'
+    // Urgency calculation based on elapsed minutes from latest order:
+    // <= 10m: Fresh incoming order / new round (Quiet Pulse with animate-rams-breath)
+    // 10-15m: Cooling down (Warm muted accent bar, completely still)
+    // > 15m: Calm dining (Normal hairline border, neutral, completely still)
+    const orderDiffMins = useMemo(() => {
+        if (!isOccupied || !item.latestOrderTimeMs) return null
+        return (now - item.latestOrderTimeMs) / 60000
     }, [isOccupied, item.latestOrderTimeMs, now])
 
-    const isNewOrder = Boolean(isOccupied && (isLatestOrderOnFloor || urgency === 'urgent' || hasRecentAlert))
+    const isFreshOrder = Boolean(
+        isOccupied && (
+            (orderDiffMins !== null && orderDiffMins >= 0 && orderDiffMins <= 10) ||
+            hasRecentAlert
+        )
+    )
+
+    const urgency = useMemo(() => {
+        if (!isOccupied || orderDiffMins === null) return 'calm'
+        if (orderDiffMins <= 10) return 'urgent'
+        if (orderDiffMins <= 15) return 'cooling'
+        return 'calm'
+    }, [isOccupied, orderDiffMins])
 
     let borderClass = 'border-[oklch(85%_0.012_28)]'
     let bgClass = 'bg-[oklch(97%_0.008_28)]'
     let leftAccentClass = 'border-l-[oklch(85%_0.012_28)]'
-    let motionTopClass = ''
 
     if (isOccupied) {
         if (item.hasCallBill || item.hasCallStaff) {
             borderClass = 'border-[oklch(52%_0.16_28)]'
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-pulse'
-        } else if (isNewOrder) {
-            if (motionMode === 'pulse') {
-                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-rams-breath'
-            } else if (motionMode === 'badge') {
-                borderClass = 'border-[oklch(52%_0.16_28)]'
-                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
-            } else if (motionMode === 'ripple') {
-                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
-                motionTopClass = 'rams-card-shimmer-top'
-            } else {
-                // 'none': zero animation
-                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
-            }
+        } else if (isFreshOrder) {
+            // First 10 minutes: Quiet sinusoidal breath on left terracotta accent bar
+            borderClass = 'border-[oklch(85%_0.012_28)]'
+            leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-rams-breath'
         } else if (urgency === 'cooling') {
+            // 10-15m: Still, warm muted accent
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(75%_0.14_45)]'
         } else {
+            // > 15m: Still, normal calm border
             leftAccentClass = 'border-l border-l-[oklch(85%_0.012_28)]'
         }
     } else if (isUpcoming) {
@@ -289,7 +289,7 @@ function OverviewTableCard({
     return (
         <div
             onClick={() => onInspect(item)}
-            className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs hover:border-[oklch(18%_0.012_28)] ${bgClass} ${borderClass} ${leftAccentClass} ${motionTopClass}`}
+            className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs hover:border-[oklch(18%_0.012_28)] ${bgClass} ${borderClass} ${leftAccentClass}`}
         >
             {/* 1. Header (Magazine Editorial Hierarchy) */}
             <div>
@@ -307,24 +307,10 @@ function OverviewTableCard({
                                     ย้ายโต๊ะ
                                 </span>
                             )}
-                            {isNewOrder && (
-                                motionMode === 'badge' ? (
-                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-bold shadow-2xs whitespace-nowrap">
-                                        ● NEW ORDER
-                                    </span>
-                                ) : motionMode === 'pulse' ? (
-                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-breath whitespace-nowrap">
-                                        ● NEW
-                                    </span>
-                                ) : motionMode === 'ripple' ? (
-                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] tracking-wider uppercase whitespace-nowrap">
-                                        NEW
-                                    </span>
-                                ) : (
-                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase whitespace-nowrap">
-                                        NEW
-                                    </span>
-                                )
+                            {isFreshOrder && (
+                                <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-breath whitespace-nowrap shadow-2xs">
+                                    ● NEW
+                                </span>
                             )}
                         </div>
                         <div className={`font-mono text-[oklch(55%_0.010_28)] mt-0.5 flex items-center gap-1.5 flex-wrap ${cfg.paxTime}`}>
@@ -354,13 +340,11 @@ function OverviewTableCard({
                                 </div>
                                 <div className="flex items-center justify-end gap-1 mt-0.5 font-mono text-[10px] sm:text-[11px] tabular-nums">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                        isNewOrder && motionMode === 'pulse'
+                                        isFreshOrder
                                             ? 'bg-[oklch(52%_0.16_28)] animate-rams-breath'
-                                            : isNewOrder
-                                                ? 'bg-[oklch(52%_0.16_28)]'
-                                                : urgency === 'cooling'
-                                                    ? 'bg-[oklch(75%_0.14_45)]'
-                                                    : 'bg-[oklch(55%_0.010_28)]'
+                                            : urgency === 'cooling'
+                                                ? 'bg-[oklch(75%_0.14_45)]'
+                                                : 'bg-[oklch(55%_0.010_28)]'
                                     }`} />
                                     <span className={urgency === 'urgent' ? 'font-bold text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}>
                                         <LiveRelativeTime timeIso={item.latestOrderIso} />
@@ -478,8 +462,10 @@ function OverviewTableCard({
                                                         {round.isInitial ? `รอบ 1 · ${round.timeStr}` : `รอบ ${round.roundNumber} · ${round.timeStr}`}
                                                     </span>
                                                     {isNewest && (
-                                                        <span className="font-bold text-[oklch(52%_0.16_28)] text-[10px]">
-                                                            (ล่าสุด)
+                                                        <span className={`font-bold text-[10px] ${
+                                                            isFreshOrder ? 'text-[oklch(52%_0.16_28)] animate-rams-breath' : 'text-[oklch(55%_0.010_28)]'
+                                                        }`}>
+                                                            {isFreshOrder ? '(● สั่งใหม่)' : '(ล่าสุด)'}
                                                         </span>
                                                     )}
                                                 </div>
@@ -662,31 +648,6 @@ export default function SimplifiedLiveOverview({
         } catch (e) {
             console.warn('Could not save sort order preference', e)
         }
-    }
-
-    // Motion preference for new incoming orders: 'pulse' (Quiet Pulse / ชีพจรนิ่ง) | 'badge' (Bold Badge / ป้ายเด่น) | 'ripple' (Minimal Ripple / คลื่นบาง) | 'none' (Still / ปิดโมชั่น)
-    const [newOrderMotion, setNewOrderMotion] = useState(() => {
-        try {
-            return localStorage.getItem('onhaus_new_order_motion') || 'pulse'
-        } catch {
-            return 'pulse'
-        }
-    })
-
-    const handleSetNewOrderMotion = (mode) => {
-        setNewOrderMotion(mode)
-        try {
-            localStorage.setItem('onhaus_new_order_motion', mode)
-        } catch (e) {
-            console.warn('Could not save motion preference', e)
-        }
-        const motionLabels = {
-            pulse: 'ชีพจรนิ่ง (Quiet Pulse)',
-            badge: 'ป้ายเด่น (Bold Badge)',
-            ripple: 'คลื่นบาง (Minimal Ripple)',
-            none: 'ปิดโมชั่น (Still Mode)'
-        }
-        toast.success(`ตั้งค่าโมชั่นออเดอร์ใหม่: ${motionLabels[mode] || mode}`, { duration: 1800 })
     }
 
     // Live session set of table IDs that recently received an order or additional items
@@ -1206,31 +1167,6 @@ export default function SimplifiedLiveOverview({
                         </button>
                     </div>
 
-                    {/* Motion in Fullscreen */}
-                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
-                        <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden sm:inline">โมชั่น:</span>
-                        {[
-                            { id: 'pulse', label: 'ชีพจรนิ่ง', hint: 'Quiet Pulse' },
-                            { id: 'badge', label: 'ป้ายเด่น', hint: 'Bold Badge' },
-                            { id: 'ripple', label: 'คลื่นบาง', hint: 'Minimal Ripple' },
-                            { id: 'none', label: 'ปิด', hint: 'Still' }
-                        ].map((opt) => (
-                            <button
-                                key={opt.id}
-                                type="button"
-                                onClick={() => handleSetNewOrderMotion(opt.id)}
-                                className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
-                                    newOrderMotion === opt.id
-                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
-                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
-                                }`}
-                                title={`ตัวเลือกโมชั่นออเดอร์ใหม่: ${opt.hint}`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                    </div>
-
                     {/* Size in Fullscreen */}
                     <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
                         <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden sm:inline">ขนาด:</span>
@@ -1437,33 +1373,6 @@ export default function SimplifiedLiveOverview({
                             </button>
                         </div>
 
-                        {/* Minimal Motion Selector for New Orders (Quiet & Bold) */}
-                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
-                            <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden xl:inline">
-                                โมชั่น:
-                            </span>
-                            {[
-                                { id: 'pulse', label: 'ชีพจรนิ่ง', hint: 'Quiet Pulse (นิ่งสุขุม)' },
-                                { id: 'badge', label: 'ป้ายเด่น', hint: 'Bold Badge (เด่นชัด มั่นคง)' },
-                                { id: 'ripple', label: 'คลื่นบาง', hint: 'Minimal Ripple (คลื่นแสงบาง)' },
-                                { id: 'none', label: 'ปิด', hint: 'Still (ปิดโมชั่น)' }
-                            ].map((opt) => (
-                                <button
-                                    key={opt.id}
-                                    type="button"
-                                    onClick={() => handleSetNewOrderMotion(opt.id)}
-                                    className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
-                                        newOrderMotion === opt.id
-                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
-                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
-                                    }`}
-                                    title={`ตัวเลือกโมชั่นออเดอร์มาใหม่: ${opt.hint}`}
-                                >
-                                    {opt.label}
-                                </button>
-                            ))}
-                        </div>
-
                         {/* Audio Test Bell Button */}
                         <button
                             type="button"
@@ -1600,11 +1509,10 @@ export default function SimplifiedLiveOverview({
                                     const isBlocked = item.state.status === 'blocked'
                                     const orderItems = item.orderItems
 
-                                    const isLatestOrderOnFloor = Boolean(
-                                        isOccupied &&
-                                        maxOrderTimeAcrossFloorMs > 0 &&
-                                        item.latestOrderTimeMs === maxOrderTimeAcrossFloorMs
-                                    )
+                                    const rowOrderDiffMins = (isOccupied && item.latestOrderTimeMs)
+                                        ? (Date.now() - item.latestOrderTimeMs) / 60000
+                                        : null
+                                    const isRowFresh = rowOrderDiffMins !== null && rowOrderDiffMins >= 0 && rowOrderDiffMins <= 10
 
                                     const itemPreviews = orderItems.map(it => `${it.quantity}x ${it.menu_items?.name || 'อาหาร'}`)
                                     const foodText = itemPreviews.length > 0 
@@ -1616,7 +1524,7 @@ export default function SimplifiedLiveOverview({
                                             key={item.table.id}
                                             onClick={() => setInspectingTable(item)}
                                             className={`hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer select-none ${
-                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isLatestOrderOnFloor ? 'bg-[oklch(96%_0.015_28)]' : ''
+                                                item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isRowFresh ? 'bg-[oklch(95%_0.02_28)]' : ''
                                             }`}
                                         >
                                             {/* Table & Pax */}
@@ -1628,24 +1536,10 @@ export default function SimplifiedLiveOverview({
                                                     <span className={`font-mono bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
                                                         {item.table.capacity} Pax
                                                     </span>
-                                                    {isLatestOrderOnFloor && (
-                                                        newOrderMotion === 'badge' ? (
-                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-bold shadow-2xs whitespace-nowrap">
-                                                                ● LATEST ORDER
-                                                            </span>
-                                                        ) : newOrderMotion === 'pulse' ? (
-                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-breath whitespace-nowrap">
-                                                                ● LATEST
-                                                            </span>
-                                                        ) : newOrderMotion === 'ripple' ? (
-                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] font-mono font-bold text-[10px] uppercase tracking-wider whitespace-nowrap">
-                                                                LATEST
-                                                            </span>
-                                                        ) : (
-                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider whitespace-nowrap">
-                                                                LATEST
-                                                            </span>
-                                                        )
+                                                    {isRowFresh && (
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
+                                                            ● NEW
+                                                        </span>
                                                     )}
                                                 </div>
                                             </td>
@@ -1661,8 +1555,8 @@ export default function SimplifiedLiveOverview({
                                                             </span>
                                                             {item.latestOrderIso && (
                                                                 <span className={`font-mono font-bold ${
-                                                                    isLatestOrderOnFloor 
-                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' 
+                                                                    isRowFresh 
+                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] animate-rams-breath' 
                                                                         : 'bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]'
                                                                 } rounded-xs tabular-nums px-1.5 py-0.5 ${cfg.roundsBadge}`} title={`สั่งล่าสุดเวลา ${item.latestOrderTimeStr} น.`}>
                                                                     สั่งล่าสุด {item.latestOrderTimeStr} (<LiveRelativeTime timeIso={item.latestOrderIso} />)
@@ -1763,7 +1657,6 @@ export default function SimplifiedLiveOverview({
                                 maxOrderTimeAcrossFloorMs > 0 &&
                                 item.latestOrderTimeMs === maxOrderTimeAcrossFloorMs
                             )}
-                            motionMode={newOrderMotion}
                             hasRecentAlert={recentAlertTableIds.has(item.table.id)}
                         />
                     ))}
@@ -1798,13 +1691,18 @@ export default function SimplifiedLiveOverview({
                                         <>
                                             เริ่มเปิดโต๊ะ: <span className="font-mono font-semibold text-[oklch(18%_0.012_28)]">{formatThaiTimeOnly(inspectingTable.booking?.booking_time)}</span>
                                             {' '}• นั่งมาแล้ว <span className="font-semibold text-[oklch(52%_0.16_28)]"><LiveDuration startTime={inspectingTable.startTime} /></span>
-                                            {inspectingTable.latestOrderIso && (
-                                                <>
-                                                    {' '}• <span className="inline-flex items-center gap-1 font-semibold text-[oklch(52%_0.16_28)]">
-                                                        สั่งล่าสุดเมื่อ {inspectingTable.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={inspectingTable.latestOrderIso} />)
-                                                    </span>
-                                                </>
-                                            )}
+                                            {inspectingTable.latestOrderIso && (() => {
+                                                const latestDiffMins = (Date.now() - new Date(inspectingTable.latestOrderIso).getTime()) / 60000
+                                                const isModalOrderFresh = latestDiffMins >= 0 && latestDiffMins <= 10
+                                                return (
+                                                    <>
+                                                        {' '}• <span className={`inline-flex items-center gap-1 font-semibold ${isModalOrderFresh ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>
+                                                            {isModalOrderFresh && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-rams-breath shrink-0" />}
+                                                            สั่งล่าสุดเมื่อ {inspectingTable.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={inspectingTable.latestOrderIso} />)
+                                                        </span>
+                                                    </>
+                                                )
+                                            })()}
                                             {inspectingRounds.hasAdditionalOrders && (
                                                 <>
                                                     {' '}• รวม <span className="font-semibold text-[oklch(18%_0.012_28)]">{inspectingRounds.totalRounds} รอบ</span>
@@ -1845,12 +1743,14 @@ export default function SimplifiedLiveOverview({
                                 </div>
                             ) : inspectingRounds.hasAdditionalOrders ? (
                                 inspectingRounds.rounds.map((round) => {
-                                    const isNewestRound = round.roundNumber === inspectingRounds.totalRounds
+                                    const roundTimeMs = round.timeIso ? new Date(round.timeIso).getTime() : 0
+                                    const roundDiffMins = roundTimeMs > 0 ? (Date.now() - roundTimeMs) / 60000 : 999
+                                    const isFreshRound = roundDiffMins >= 0 && roundDiffMins <= 10
                                     return (
                                         <div key={round.roundNumber} className="py-2.5 first:pt-0">
-                                            {/* Round Header Bar with distinct Thai Modern terracotta accent on newest round */}
+                                            {/* Round Header Bar with distinct Thai Modern terracotta accent on fresh round */}
                                             <div className={`p-2 rounded-xs border flex items-center justify-between font-mono text-xs font-bold mb-2 ${
-                                                isNewestRound 
+                                                isFreshRound 
                                                     ? 'bg-[oklch(93%_0.025_28)] border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)]' 
                                                     : round.isAdditional 
                                                         ? 'bg-[oklch(94%_0.015_28)] border-[oklch(75%_0.10_28)] text-[oklch(40%_0.14_28)]'
@@ -1858,13 +1758,18 @@ export default function SimplifiedLiveOverview({
                                             }`}>
                                                 <div className="flex items-center gap-2 flex-wrap">
                                                     <span className={`px-1.5 py-0.5 rounded-xs text-[10px] uppercase font-mono font-bold ${
-                                                        isNewestRound ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : round.isAdditional ? 'bg-[oklch(40%_0.14_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
+                                                        isFreshRound ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : round.isAdditional ? 'bg-[oklch(40%_0.14_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
                                                     }`}>
                                                         {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งเพิ่ม)`}
                                                     </span>
+                                                    {isFreshRound && (
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[9px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
+                                                            ● เพิ่งสั่งใหม่ (&lt; 10 นาที)
+                                                        </span>
+                                                    )}
                                                     <span>สั่งเมื่อ {round.timeStr} น.</span>
                                                     {round.timeIso && (
-                                                        <span className="text-[11px] font-normal text-[oklch(52%_0.16_28)] font-semibold">
+                                                        <span className={`text-[11px] font-normal ${isFreshRound ? 'text-[oklch(52%_0.16_28)] font-semibold' : 'text-[oklch(55%_0.010_28)]'}`}>
                                                             (<LiveRelativeTime timeIso={round.timeIso} />)
                                                         </span>
                                                     )}
@@ -1881,7 +1786,7 @@ export default function SimplifiedLiveOverview({
 
                                             {/* Items in this round */}
                                             <div className={`divide-y divide-[oklch(88%_0.012_28)] pl-1 ${
-                                                isNewestRound ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs p-1.5 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                                isFreshRound ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs p-1.5 border-l-2 border-[oklch(52%_0.16_28)] animate-rams-breath' : ''
                                             }`}>
                                             {round.items.map((item, idx) => {
                                                 const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
@@ -1933,17 +1838,28 @@ export default function SimplifiedLiveOverview({
                                     const price = Number(item.price_at_time || item.menu_items?.price || 0)
                                     const lineTotal = price * Number(item.quantity || 1)
                                     const optList = formatOrderItemOptions(item.selected_options)
+                                    const itemCreatedMs = item.created_at ? new Date(item.created_at).getTime() : 0
+                                    const isItemFresh = itemCreatedMs > 0 && ((Date.now() - itemCreatedMs) / 60000 <= 10)
 
                                     return (
-                                        <div key={item.id || idx} className="py-2.5 flex items-start justify-between gap-3">
+                                        <div key={item.id || idx} className={`py-2.5 flex items-start justify-between gap-3 ${
+                                            isItemFresh ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs px-2 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                        }`}>
                                             <div className="flex items-start gap-2.5">
                                                 <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0">
                                                     {item.quantity}
                                                 </span>
                                                 <div>
-                                                    <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal block">
-                                                        {itemName}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal">
+                                                            {itemName}
+                                                        </span>
+                                                        {isItemFresh && (
+                                                            <span className="px-1.5 py-0.2 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[9px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
+                                                                ● เพิ่งสั่งใหม่
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     {optList.length > 0 && (
                                                         <div className="text-xs text-[oklch(52%_0.16_28)] space-y-0.5 mt-1">
                                                             {optList.map((optStr, optIdx) => (
