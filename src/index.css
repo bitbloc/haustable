@@ -479,3 +479,33 @@ input[type="range"]::-moz-range-thumb {
 .animate-rams-strip-pulse {
   animation: rams-strip-beacon 1.8s ease-in-out infinite;
 }
+
+/* Dieter Rams Organic Heartbeat Pulse (สีแดงชีพจรนุ่มนวล มีชีวิตชีวา แต่ไม่ลายตา) */
+@keyframes rams-heartbeat {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  14% {
+    transform: scale(1.35);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px oklch(52% 0.16 28 / 0.5));
+  }
+  28% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  42% {
+    transform: scale(1.2);
+    opacity: 1;
+    filter: drop-shadow(0 0 2px oklch(52% 0.16 28 / 0.35));
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-rams-heartbeat {
+  animation: rams-heartbeat 1.6s ease-in-out infinite;
+}
