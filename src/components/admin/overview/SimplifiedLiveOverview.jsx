@@ -264,9 +264,9 @@ function OverviewTableCard({
             borderClass = 'border-[oklch(52%_0.16_28)]'
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-pulse'
         } else if (isFreshOrder) {
-            // First 10 minutes: Quiet sinusoidal breath on left terracotta accent bar
+            // First 10 minutes: Beacon pulse strictly on the left terracotta strip, text and card remain 100% solid
             borderClass = 'border-[oklch(85%_0.012_28)]'
-            leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-rams-breath'
+            leftAccentClass = 'border-l-4 sm:border-l-[6px] border-l-[oklch(52%_0.16_28)] animate-rams-strip-pulse'
         } else if (urgency === 'cooling') {
             // 10-15m: Still, warm muted accent
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(75%_0.14_45)]'
@@ -308,8 +308,8 @@ function OverviewTableCard({
                                 </span>
                             )}
                             {isFreshOrder && (
-                                <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-breath whitespace-nowrap shadow-2xs">
-                                    ● NEW
+                                <span className="font-mono text-[9px] sm:text-[10px] font-black px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase whitespace-nowrap shadow-2xs">
+                                    ● มีออเดอร์ใหม่
                                 </span>
                             )}
                         </div>
@@ -341,7 +341,7 @@ function OverviewTableCard({
                                 <div className="flex items-center justify-end gap-1 mt-0.5 font-mono text-[10px] sm:text-[11px] tabular-nums">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                                         isFreshOrder
-                                            ? 'bg-[oklch(52%_0.16_28)] animate-rams-breath'
+                                            ? 'bg-[oklch(52%_0.16_28)]'
                                             : urgency === 'cooling'
                                                 ? 'bg-[oklch(75%_0.14_45)]'
                                                 : 'bg-[oklch(55%_0.010_28)]'
@@ -396,29 +396,58 @@ function OverviewTableCard({
                                 ยังไม่มีรายการสั่งอาหาร
                             </div>
                         ) : reversedRounds.length === 1 ? (
-                            // Single round: Clean flat list without round clutter
-                            <div className={`${cfg.listMaxHeight} overflow-y-auto ${cfg.itemSpacing} pr-1 overscroll-contain divide-y divide-[oklch(92%_0.010_28)]`}>
-                                {reversedRounds[0].items.map((it, idx) => {
-                                    const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
-                                    const price = Number(it.price_at_time || it.menu_items?.price || 0)
-                                    const lineTotal = price * Number(it.quantity || 1)
-                                    return (
-                                        <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[oklch(42%_0.010_28)]">
-                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
-                                                <span className={`font-mono text-[oklch(18%_0.012_28)] font-bold tabular-nums shrink-0 ${cfg.itemQty}`}>
-                                                    {it.quantity}×
-                                                </span>
-                                                <span className={`truncate font-medium text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
-                                                    {itemName}
-                                                </span>
+                            // Single round: Check if table order was placed within 10 minutes
+                            (() => {
+                                const singleRound = reversedRounds[0]
+                                const rTimeMs = singleRound.timeIso ? new Date(singleRound.timeIso).getTime() : 0
+                                const isSingleRoundFresh = isFreshOrder && (rTimeMs > 0 ? (now - rTimeMs) / 60000 <= 10 : true)
+
+                                return (
+                                    <div className={`${cfg.listMaxHeight} overflow-y-auto ${cfg.itemSpacing} pr-1 overscroll-contain`}>
+                                        <div className={isSingleRoundFresh ? 'p-2 sm:p-2.5 rounded-xs bg-[oklch(94%_0.022_28)] border-2 border-[oklch(52%_0.16_28)] shadow-2xs space-y-1.5' : 'divide-y divide-[oklch(92%_0.010_28)]'}>
+                                            {isSingleRoundFresh && (
+                                                <div className="flex items-center justify-between pb-1 border-b border-[oklch(84%_0.025_28)] font-mono text-xs">
+                                                    <span className="font-bold text-[oklch(38%_0.14_28)] uppercase flex items-center gap-1.5">
+                                                        <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] rounded-2xs font-black text-[10px]">
+                                                            ● สั่งใหม่
+                                                        </span>
+                                                        <span>{singleRound.timeStr || formatThaiTimeOnly(item.booking?.booking_time)} น.</span>
+                                                    </span>
+                                                    <span className="font-bold text-[oklch(45%_0.12_28)] tabular-nums text-[10px]">
+                                                        {singleRound.items.length} รายการ
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <div className={`${cfg.itemSpacing} ${isSingleRoundFresh ? 'divide-y divide-[oklch(88%_0.02_28)]' : ''}`}>
+                                                {singleRound.items.map((it, idx) => {
+                                                    const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
+                                                    const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                                    const lineTotal = price * Number(it.quantity || 1)
+                                                    return (
+                                                        <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                                                                <span className={`font-mono tabular-nums shrink-0 ${
+                                                                    isSingleRoundFresh 
+                                                                        ? 'text-[oklch(97%_0.008_28)] bg-[oklch(18%_0.012_28)] font-black px-1 rounded-2xs text-[11px]' 
+                                                                        : `text-[oklch(18%_0.012_28)] font-bold ${cfg.itemQty}`
+                                                                }`}>
+                                                                    {it.quantity}×
+                                                                </span>
+                                                                <span className={`truncate font-medium ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(18%_0.012_28)]'} ${cfg.itemName}`}>
+                                                                    {itemName}
+                                                                </span>
+                                                            </div>
+                                                            <span className={`font-mono tabular-nums shrink-0 ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(42%_0.010_28)]'} ${cfg.itemPrice}`}>
+                                                                ฿{lineTotal.toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                })}
                                             </div>
-                                            <span className={`font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0 ${cfg.itemPrice}`}>
-                                                ฿{lineTotal.toLocaleString()}
-                                            </span>
                                         </div>
-                                    )
-                                })}
-                            </div>
+                                    </div>
+                                )
+                            })()
                         ) : (
                             // Multiple rounds: Micro-Timeline with Newest at Top
                             <div className={`${cfg.listMaxHeight} overflow-y-auto space-y-2 pr-1 overscroll-contain`}>
@@ -428,7 +457,6 @@ function OverviewTableCard({
 
                                     // If older round (index >= 2) and collapsed: show compact toggle row
                                     if (isOlderRound && !expandedOlderRounds) {
-                                        // Only show the toggle button once on the first older round
                                         if (rIdx === 2) {
                                             const totalOlderItems = reversedRounds.slice(2).reduce((sum, r) => sum + r.items.length, 0)
                                             const olderRoundsCount = reversedRounds.length - 2
@@ -453,19 +481,64 @@ function OverviewTableCard({
                                         return null
                                     }
 
-                                    return (
-                                        <div key={round.roundNumber} className="space-y-1">
-                                            {/* Micro-Timeline Header: Single hairline separation, no inner box */}
-                                            <div className="flex items-center justify-between font-mono text-[11px] pt-1 border-t border-[oklch(88%_0.012_28)] first:border-t-0 first:pt-0">
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className={isNewest ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(55%_0.010_28)] font-medium'}>
-                                                        {round.isInitial ? `รอบ 1 · ${round.timeStr}` : `รอบ ${round.roundNumber} · ${round.timeStr}`}
+                                    const roundTimeMs = round.timeIso ? new Date(round.timeIso).getTime() : 0
+                                    const isThisRoundFresh = isFreshOrder && ((isNewest && isFreshOrder) || (roundTimeMs > 0 && ((now - roundTimeMs) / 60000 <= 10)))
+
+                                    if (isThisRoundFresh) {
+                                        // ACTIVE FRESH ROUND: Enclosed in prominent highlighted container
+                                        return (
+                                            <div key={round.roundNumber} className="p-2 sm:p-2.5 rounded-xs bg-[oklch(94%_0.022_28)] border-2 border-[oklch(52%_0.16_28)] shadow-2xs space-y-1.5">
+                                                <div className="flex items-center justify-between pb-1 border-b border-[oklch(84%_0.025_28)] font-mono text-xs">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-black text-[10px] uppercase tracking-wider">
+                                                            ● รอบ {round.roundNumber} (สั่งใหม่)
+                                                        </span>
+                                                        <span className="font-bold text-[oklch(38%_0.14_28)] text-[11px]">
+                                                            {round.timeStr} น.
+                                                        </span>
+                                                    </div>
+                                                    <span className="font-bold text-[oklch(45%_0.12_28)] tabular-nums text-[10px]">
+                                                        {round.items.length} รายการ
                                                     </span>
-                                                    {isNewest && (
-                                                        <span className={`font-bold text-[10px] ${
-                                                            isFreshOrder ? 'text-[oklch(52%_0.16_28)] animate-rams-breath' : 'text-[oklch(55%_0.010_28)]'
-                                                        }`}>
-                                                            {isFreshOrder ? '(● สั่งใหม่)' : '(ล่าสุด)'}
+                                                </div>
+
+                                                <div className={`${cfg.itemSpacing} divide-y divide-[oklch(88%_0.02_28)]`}>
+                                                    {round.items.map((it, idx) => {
+                                                        const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
+                                                        const price = Number(it.price_at_time || it.menu_items?.price || 0)
+                                                        const lineTotal = price * Number(it.quantity || 1)
+                                                        return (
+                                                            <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2">
+                                                                <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+                                                                    <span className="font-mono text-[oklch(97%_0.008_28)] bg-[oklch(18%_0.012_28)] font-black tabular-nums shrink-0 px-1 py-0.2 rounded-2xs text-[11px]">
+                                                                        {it.quantity}×
+                                                                    </span>
+                                                                    <span className={`truncate font-bold text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
+                                                                        {itemName}
+                                                                    </span>
+                                                                </div>
+                                                                <span className={`font-mono font-bold tabular-nums text-[oklch(18%_0.012_28)] shrink-0 ${cfg.itemPrice}`}>
+                                                                    ฿{lineTotal.toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )
+                                    }
+
+                                    // PAST COMPLETED ROUND: Settled subdued styling
+                                    return (
+                                        <div key={round.roundNumber} className={`space-y-1 ${isFreshOrder ? 'opacity-70 hover:opacity-100 transition-opacity' : ''}`}>
+                                            <div className="flex items-center justify-between font-mono text-[11px] pt-1.5 border-t border-[oklch(88%_0.012_28)] first:border-t-0 first:pt-0">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <span className="font-medium text-[oklch(45%_0.010_28)]">
+                                                        {round.isInitial ? `รอบ 1 (เปิดโต๊ะ)` : `รอบ ${round.roundNumber}`} · {round.timeStr} น.
+                                                    </span>
+                                                    {isFreshOrder && (
+                                                        <span className="text-[10px] text-[oklch(55%_0.010_28)]">
+                                                            (สั่งก่อนหน้า)
                                                         </span>
                                                     )}
                                                 </div>
@@ -474,23 +547,22 @@ function OverviewTableCard({
                                                 </span>
                                             </div>
 
-                                            {/* Round items list */}
                                             <div className={`${cfg.itemSpacing} divide-y divide-[oklch(92%_0.010_28)] pl-1`}>
                                                 {round.items.map((it, idx) => {
                                                     const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                     const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                     const lineTotal = price * Number(it.quantity || 1)
                                                     return (
-                                                        <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2 text-[oklch(42%_0.010_28)]">
+                                                        <div key={it.id || idx} className="pt-0.5 first:pt-0 flex items-center justify-between gap-2 text-[oklch(50%_0.010_28)]">
                                                             <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
-                                                                <span className={`font-mono text-[oklch(18%_0.012_28)] font-bold tabular-nums shrink-0 ${cfg.itemQty}`}>
+                                                                <span className="font-mono text-[oklch(45%_0.010_28)] font-semibold tabular-nums shrink-0 text-[11px]">
                                                                     {it.quantity}×
                                                                 </span>
-                                                                <span className={`truncate font-medium text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
+                                                                <span className={`truncate text-[oklch(40%_0.010_28)] ${cfg.itemName}`}>
                                                                     {itemName}
                                                                 </span>
                                                             </div>
-                                                            <span className={`font-mono tabular-nums text-[oklch(42%_0.010_28)] shrink-0 ${cfg.itemPrice}`}>
+                                                            <span className="font-mono tabular-nums text-[oklch(50%_0.010_28)] shrink-0 text-[11px]">
                                                                 ฿{lineTotal.toLocaleString()}
                                                             </span>
                                                         </div>
@@ -1514,6 +1586,12 @@ export default function SimplifiedLiveOverview({
                                         : null
                                     const isRowFresh = rowOrderDiffMins !== null && rowOrderDiffMins >= 0 && rowOrderDiffMins <= 10
 
+                                    const rounds = item.orderRoundsInfo?.rounds || []
+                                    const latestRound = rounds.length > 0 ? rounds[rounds.length - 1] : null
+                                    const isMultiRound = rounds.length > 1
+                                    const latestRoundItems = latestRound ? latestRound.items : []
+                                    const previousRoundsItemsCount = isMultiRound ? orderItems.length - latestRoundItems.length : 0
+
                                     const itemPreviews = orderItems.map(it => `${it.quantity}x ${it.menu_items?.name || 'อาหาร'}`)
                                     const foodText = itemPreviews.length > 0 
                                         ? itemPreviews.slice(0, 3).join(', ') + (itemPreviews.length > 3 ? ` (+${itemPreviews.length - 3})` : '')
@@ -1528,17 +1606,19 @@ export default function SimplifiedLiveOverview({
                                             }`}
                                         >
                                             {/* Table & Pax */}
-                                            <td className={`${cfg.tableRowPadding} whitespace-nowrap`}>
+                                            <td className={`${cfg.tableRowPadding} whitespace-nowrap ${
+                                                isRowFresh ? 'border-l-4 sm:border-l-[6px] border-l-[oklch(52%_0.16_28)] animate-rams-strip-pulse' : 'border-l-4 sm:border-l-[6px] border-l-transparent'
+                                            }`}>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`font-mono text-[oklch(18%_0.012_28)] ${cfg.tableNameList}`}>
+                                                    <span className={`font-mono ${isRowFresh ? 'font-black text-[oklch(52%_0.16_28)]' : 'text-[oklch(18%_0.012_28)]'} ${cfg.tableNameList}`}>
                                                         {item.table.table_name}
                                                     </span>
                                                     <span className={`font-mono bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
                                                         {item.table.capacity} Pax
                                                     </span>
                                                     {isRowFresh && (
-                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
-                                                            ● NEW
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-black text-[10px] uppercase tracking-wider whitespace-nowrap shadow-2xs">
+                                                            ● สั่งใหม่
                                                         </span>
                                                     )}
                                                 </div>
@@ -1556,7 +1636,7 @@ export default function SimplifiedLiveOverview({
                                                             {item.latestOrderIso && (
                                                                 <span className={`font-mono font-bold ${
                                                                     isRowFresh 
-                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] animate-rams-breath' 
+                                                                        ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] shadow-2xs' 
                                                                         : 'bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)]'
                                                                 } rounded-xs tabular-nums px-1.5 py-0.5 ${cfg.roundsBadge}`} title={`สั่งล่าสุดเวลา ${item.latestOrderTimeStr} น.`}>
                                                                     สั่งล่าสุด {item.latestOrderTimeStr} (<LiveRelativeTime timeIso={item.latestOrderIso} />)
@@ -1587,19 +1667,38 @@ export default function SimplifiedLiveOverview({
                                             </td>
 
                                             {/* Order Items Preview */}
-                                            <td className={`${cfg.tableRowPadding} max-w-[280px] truncate`}>
+                                            <td className={`${cfg.tableRowPadding} max-w-[320px] truncate`}>
                                                 {isOccupied ? (
-                                                    <div className="flex items-center gap-1.5 truncate">
-                                                        <span className={`font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap ${cfg.paxTime}`}>
-                                                            {orderItems.length} รายการ{item.orderRoundsInfo?.hasAdditionalOrders ? ` (${item.orderRoundsInfo.totalRounds} รอบ)` : ''}:
-                                                        </span>
-                                                        <span className={`text-[oklch(55%_0.010_28)] truncate ${cfg.paxTime}`}>
-                                                            {foodText}
-                                                        </span>
-                                                        <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
-                                                            [ดูครบ]
-                                                        </span>
-                                                    </div>
+                                                    isRowFresh && isMultiRound && latestRound ? (
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-black rounded-2xs text-[10px] uppercase tracking-wider whitespace-nowrap shrink-0 shadow-2xs">
+                                                                ● รอบ {latestRound.roundNumber} สั่งใหม่
+                                                            </span>
+                                                            <span className={`font-bold text-[oklch(18%_0.012_28)] truncate ${cfg.paxTime}`}>
+                                                                {latestRoundItems.map(it => `${it.quantity}x ${it.custom_name || it.menu_items?.name || 'อาหาร'}`).join(', ')}
+                                                            </span>
+                                                            {previousRoundsItemsCount > 0 && (
+                                                                <span className="text-[oklch(55%_0.010_28)] font-normal whitespace-nowrap text-[11px]">
+                                                                    (+ก่อนหน้า {previousRoundsItemsCount} รายการ)
+                                                                </span>
+                                                            )}
+                                                            <span className="text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline text-[11px]">
+                                                                [ดูบิล]
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 truncate">
+                                                            <span className={`font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap ${cfg.paxTime}`}>
+                                                                {orderItems.length} รายการ{item.orderRoundsInfo?.hasAdditionalOrders ? ` (${item.orderRoundsInfo.totalRounds} รอบ)` : ''}:
+                                                            </span>
+                                                            <span className={`text-[oklch(55%_0.010_28)] truncate ${cfg.paxTime}`}>
+                                                                {foodText}
+                                                            </span>
+                                                            <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
+                                                                [ดูครบ]
+                                                            </span>
+                                                        </div>
+                                                    )
                                                 ) : (
                                                     <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>-</span>
                                                 )}
@@ -1697,7 +1796,7 @@ export default function SimplifiedLiveOverview({
                                                 return (
                                                     <>
                                                         {' '}• <span className={`inline-flex items-center gap-1 font-semibold ${isModalOrderFresh ? 'text-[oklch(52%_0.16_28)]' : 'text-[oklch(42%_0.010_28)]'}`}>
-                                                            {isModalOrderFresh && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] animate-rams-breath shrink-0" />}
+                                                            {isModalOrderFresh && <span className="w-1.5 h-1.5 rounded-full bg-[oklch(52%_0.16_28)] shrink-0" />}
                                                             สั่งล่าสุดเมื่อ {inspectingTable.latestOrderTimeStr} น. (<LiveRelativeTime timeIso={inspectingTable.latestOrderIso} />)
                                                         </span>
                                                     </>
@@ -1742,96 +1841,162 @@ export default function SimplifiedLiveOverview({
                                     ยังไม่มีรายการอาหารสำหรับโต๊ะนี้
                                 </div>
                             ) : inspectingRounds.hasAdditionalOrders ? (
-                                inspectingRounds.rounds.map((round) => {
-                                    const roundTimeMs = round.timeIso ? new Date(round.timeIso).getTime() : 0
-                                    const roundDiffMins = roundTimeMs > 0 ? (Date.now() - roundTimeMs) / 60000 : 999
-                                    const isFreshRound = roundDiffMins >= 0 && roundDiffMins <= 10
-                                    return (
-                                        <div key={round.roundNumber} className="py-2.5 first:pt-0">
-                                            {/* Round Header Bar with distinct Thai Modern terracotta accent on fresh round */}
-                                            <div className={`p-2 rounded-xs border flex items-center justify-between font-mono text-xs font-bold mb-2 ${
-                                                isFreshRound 
-                                                    ? 'bg-[oklch(93%_0.025_28)] border-[oklch(52%_0.16_28)] text-[oklch(35%_0.14_28)]' 
-                                                    : round.isAdditional 
-                                                        ? 'bg-[oklch(94%_0.015_28)] border-[oklch(75%_0.10_28)] text-[oklch(40%_0.14_28)]'
-                                                        : 'bg-[oklch(94%_0.010_28)] border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)]'
-                                            }`}>
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`px-1.5 py-0.5 rounded-xs text-[10px] uppercase font-mono font-bold ${
-                                                        isFreshRound ? 'bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)]' : round.isAdditional ? 'bg-[oklch(40%_0.14_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]'
-                                                    }`}>
-                                                        {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งเพิ่ม)`}
-                                                    </span>
-                                                    {isFreshRound && (
-                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[9px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
-                                                            ● เพิ่งสั่งใหม่ (&lt; 10 นาที)
-                                                        </span>
-                                                    )}
-                                                    <span>สั่งเมื่อ {round.timeStr} น.</span>
-                                                    {round.timeIso && (
-                                                        <span className={`text-[11px] font-normal ${isFreshRound ? 'text-[oklch(52%_0.16_28)] font-semibold' : 'text-[oklch(55%_0.010_28)]'}`}>
-                                                            (<LiveRelativeTime timeIso={round.timeIso} />)
-                                                        </span>
-                                                    )}
-                                                    {round.elapsedFromStartMinutes > 0 && (
-                                                        <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)]">
-                                                            (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <span className="tabular-nums">
-                                                    {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
-                                                </span>
-                                            </div>
+                                (() => {
+                                    const hasAnyFreshRound = inspectingRounds.rounds.some(r => {
+                                        const rTimeMs = r.timeIso ? new Date(r.timeIso).getTime() : 0
+                                        return rTimeMs > 0 && ((Date.now() - rTimeMs) / 60000 <= 10)
+                                    })
 
-                                            {/* Items in this round */}
-                                            <div className={`divide-y divide-[oklch(88%_0.012_28)] pl-1 ${
-                                                isFreshRound ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs p-1.5 border-l-2 border-[oklch(52%_0.16_28)] animate-rams-breath' : ''
-                                            }`}>
-                                            {round.items.map((item, idx) => {
-                                                const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
-                                                const price = Number(item.price_at_time || item.menu_items?.price || 0)
-                                                const lineTotal = price * Number(item.quantity || 1)
-                                                const optList = formatOrderItemOptions(item.selected_options)
+                                    return inspectingRounds.rounds.map((round) => {
+                                        const roundTimeMs = round.timeIso ? new Date(round.timeIso).getTime() : 0
+                                        const roundDiffMins = roundTimeMs > 0 ? (Date.now() - roundTimeMs) / 60000 : 999
+                                        const isFreshRound = roundDiffMins >= 0 && roundDiffMins <= 10
 
-                                                return (
-                                                    <div key={item.id || idx} className="py-2 flex items-start justify-between gap-3">
-                                                        <div className="flex items-start gap-2.5">
-                                                            <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0">
-                                                                {item.quantity}
+                                        if (isFreshRound) {
+                                            // ACTIVE FRESH ROUND: High contrast Fresh Order Box
+                                            return (
+                                                <div key={round.roundNumber} className="my-3 p-3 rounded-xs bg-[oklch(94%_0.022_28)] border-2 border-[oklch(52%_0.16_28)] shadow-2xs space-y-2">
+                                                    <div className="flex items-center justify-between font-mono text-xs pb-1.5 border-b border-[oklch(84%_0.025_28)]">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className="px-2 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-black text-[10px] uppercase tracking-wider shadow-2xs">
+                                                                ● รอบที่ {round.roundNumber} (สั่งใหม่ล่าสุด)
                                                             </span>
-                                                            <div>
-                                                                <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal block">
-                                                                    {itemName}
+                                                            <span className="font-bold text-[oklch(38%_0.14_28)]">
+                                                                สั่งเมื่อ {round.timeStr} น.
+                                                            </span>
+                                                            {round.timeIso && (
+                                                                <span className="text-[11px] font-semibold text-[oklch(52%_0.16_28)]">
+                                                                    (<LiveRelativeTime timeIso={round.timeIso} />)
                                                                 </span>
-                                                                {optList.length > 0 && (
-                                                                    <div className="text-xs text-[oklch(52%_0.16_28)] space-y-0.5 mt-1">
-                                                                        {optList.map((optStr, optIdx) => (
-                                                                            <span key={optIdx} className="block font-medium">
-                                                                                • {optStr}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right shrink-0">
-                                                            <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums text-sm">
-                                                                ฿{lineTotal.toLocaleString()}
-                                                            </span>
-                                                            {item.quantity > 1 && (
-                                                                <span className="block font-mono text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
-                                                                    (@ ฿{price.toLocaleString()})
+                                                            )}
+                                                            {round.elapsedFromStartMinutes > 0 && (
+                                                                <span className="text-[11px] font-normal text-[oklch(42%_0.010_28)]">
+                                                                    (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
                                                                 </span>
                                                             )}
                                                         </div>
+                                                        <span className="font-bold text-[oklch(45%_0.12_28)] tabular-nums text-[11px]">
+                                                            {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
+                                                        </span>
                                                     </div>
-                                                )
-                                            })}
+
+                                                    <div className="divide-y divide-[oklch(88%_0.02_28)]">
+                                                        {round.items.map((item, idx) => {
+                                                            const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
+                                                            const price = Number(item.price_at_time || item.menu_items?.price || 0)
+                                                            const lineTotal = price * Number(item.quantity || 1)
+                                                            const optList = formatOrderItemOptions(item.selected_options)
+
+                                                            return (
+                                                                <div key={item.id || idx} className="py-2 first:pt-0 flex items-start justify-between gap-3">
+                                                                    <div className="flex items-start gap-2.5">
+                                                                        <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-black rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0">
+                                                                            {item.quantity}
+                                                                        </span>
+                                                                        <div>
+                                                                            <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal block">
+                                                                                {itemName}
+                                                                            </span>
+                                                                            {optList.length > 0 && (
+                                                                                <div className="text-xs text-[oklch(52%_0.16_28)] space-y-0.5 mt-1 font-semibold">
+                                                                                    {optList.map((optStr, optIdx) => (
+                                                                                        <span key={optIdx} className="block">
+                                                                                            • {optStr}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right shrink-0">
+                                                                        <span className="font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums text-sm">
+                                                                            ฿{lineTotal.toLocaleString()}
+                                                                        </span>
+                                                                        {item.quantity > 1 && (
+                                                                            <span className="block font-mono text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
+                                                                                (@ ฿{price.toLocaleString()})
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )
+                                        }
+
+                                        // PAST COMPLETED ROUND: Settled subdued styling
+                                        return (
+                                            <div key={round.roundNumber} className={`py-2.5 first:pt-0 ${hasAnyFreshRound ? 'opacity-70 hover:opacity-100 transition-opacity' : ''}`}>
+                                                <div className="p-2 rounded-xs border border-[oklch(88%_0.012_28)] bg-[oklch(95%_0.010_28)] flex items-center justify-between font-mono text-xs mb-2 text-[oklch(45%_0.010_28)]">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(88%_0.012_28)] text-[oklch(35%_0.010_28)] text-[10px] font-bold font-mono">
+                                                            {round.isInitial ? 'รอบที่ 1 (เปิดโต๊ะ)' : `รอบที่ ${round.roundNumber} (สั่งก่อนหน้า)`}
+                                                        </span>
+                                                        <span>สั่งเมื่อ {round.timeStr} น.</span>
+                                                        {round.timeIso && (
+                                                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                                (<LiveRelativeTime timeIso={round.timeIso} />)
+                                                            </span>
+                                                        )}
+                                                        {round.elapsedFromStartMinutes > 0 && (
+                                                            <span className="text-[11px] text-[oklch(55%_0.010_28)]">
+                                                                (+{round.elapsedFromStartMinutes} นาทีหลังเปิดโต๊ะ)
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="tabular-nums text-[oklch(50%_0.010_28)]">
+                                                        {round.items.length} รายการ · ฿{round.totalAmount.toLocaleString()}
+                                                    </span>
+                                                </div>
+
+                                                <div className="divide-y divide-[oklch(90%_0.010_28)] pl-1">
+                                                    {round.items.map((item, idx) => {
+                                                        const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
+                                                        const price = Number(item.price_at_time || item.menu_items?.price || 0)
+                                                        const lineTotal = price * Number(item.quantity || 1)
+                                                        const optList = formatOrderItemOptions(item.selected_options)
+
+                                                        return (
+                                                            <div key={item.id || idx} className="py-2 flex items-start justify-between gap-3 text-[oklch(45%_0.010_28)]">
+                                                                <div className="flex items-start gap-2.5">
+                                                                    <span className="w-5 h-5 flex items-center justify-center bg-[oklch(85%_0.012_28)] text-[oklch(25%_0.012_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0">
+                                                                        {item.quantity}
+                                                                    </span>
+                                                                    <div>
+                                                                        <span className="font-sans font-medium text-sm text-[oklch(35%_0.012_28)] leading-normal block">
+                                                                            {itemName}
+                                                                        </span>
+                                                                        {optList.length > 0 && (
+                                                                            <div className="text-xs text-[oklch(55%_0.010_28)] space-y-0.5 mt-1">
+                                                                                {optList.map((optStr, optIdx) => (
+                                                                                    <span key={optIdx} className="block">
+                                                                                        • {optStr}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <span className="font-mono tabular-nums text-sm text-[oklch(45%_0.010_28)]">
+                                                                        ฿{lineTotal.toLocaleString()}
+                                                                    </span>
+                                                                    {item.quantity > 1 && (
+                                                                        <span className="block font-mono text-[10px] text-[oklch(55%_0.010_28)] tabular-nums">
+                                                                            (@ ฿{price.toLocaleString()})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )
-                                })
+                                        )
+                                    })
+                                })()
                             ) : (
                                 inspectingTable.orderItems.map((item, idx) => {
                                     const itemName = item.custom_name || item.menu_items?.name || 'รายการอาหาร'
@@ -1843,20 +2008,22 @@ export default function SimplifiedLiveOverview({
 
                                     return (
                                         <div key={item.id || idx} className={`py-2.5 flex items-start justify-between gap-3 ${
-                                            isItemFresh ? 'bg-[oklch(95%_0.012_28)]/60 rounded-xs px-2 border-l-2 border-[oklch(52%_0.16_28)]' : ''
+                                            isItemFresh ? 'bg-[oklch(94%_0.022_28)] rounded-xs p-2.5 border-2 border-[oklch(52%_0.16_28)] shadow-2xs my-1' : ''
                                         }`}>
                                             <div className="flex items-start gap-2.5">
-                                                <span className="w-5 h-5 flex items-center justify-center bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-mono font-bold rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0">
+                                                <span className={`w-5 h-5 flex items-center justify-center font-mono font-black rounded-xs text-[11px] tabular-nums mt-0.5 shrink-0 ${
+                                                    isItemFresh ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)]' : 'bg-[oklch(88%_0.012_28)] text-[oklch(18%_0.012_28)] font-bold'
+                                                }`}>
                                                     {item.quantity}
                                                 </span>
                                                 <div>
                                                     <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span className="font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal">
+                                                        <span className={`font-sans font-bold text-sm text-[oklch(18%_0.012_28)] leading-normal ${isItemFresh ? 'font-black' : ''}`}>
                                                             {itemName}
                                                         </span>
                                                         {isItemFresh && (
-                                                            <span className="px-1.5 py-0.2 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[9px] uppercase tracking-wider animate-rams-breath whitespace-nowrap shadow-2xs">
-                                                                ● เพิ่งสั่งใหม่
+                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-black text-[9px] uppercase tracking-wider whitespace-nowrap shadow-2xs">
+                                                                ● สั่งใหม่
                                                             </span>
                                                         )}
                                                     </div>
