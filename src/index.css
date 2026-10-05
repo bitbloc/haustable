@@ -442,3 +442,68 @@ input[type="range"]::-moz-range-thumb {
 .font-pixel {
   font-family: 'Pixelify Sans', 'Space Mono', monospace;
 }
+
+/* ==========================================================================
+   Dieter Rams Minimal Motion Styles (Quiet & Bold for Incoming Orders)
+   ========================================================================== */
+
+/* 1. Quiet Beacon Breath: Slow 2.4s rhythmic pulse, elegant and calm */
+@keyframes rams-beacon-breath {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 0px transparent);
+  }
+  50% {
+    opacity: 0.38;
+    filter: drop-shadow(0 0 3px oklch(52% 0.16 28 / 0.4));
+  }
+}
+
+.animate-rams-breath {
+  animation: rams-beacon-breath 2.4s ease-in-out infinite;
+}
+
+/* 2. Bold Confident Micro-Entrance */
+@keyframes rams-bold-reveal {
+  0% {
+    opacity: 0.75;
+    transform: translateY(-2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-rams-bold {
+  animation: rams-bold-reveal 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 3. Minimal Ripple Sweep: Whisper-quiet 2px hairline edge gradient */
+@keyframes rams-quiet-sweep {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+.rams-card-shimmer-top {
+  position: relative;
+  overflow: hidden;
+}
+
+.rams-card-shimmer-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent 0%, oklch(52% 0.16 28 / 0.8) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: rams-quiet-sweep 3.2s ease-in-out infinite;
+  z-index: 10;
+  pointer-events: none;
+}

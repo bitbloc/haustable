@@ -212,7 +212,10 @@ function OverviewTableCard({
     item,
     cfg,
     onInspect,
-    onDismissAlert
+    onDismissAlert,
+    isLatestOrderOnFloor = false,
+    motionMode = 'pulse',
+    hasRecentAlert = false
 }) {
     const isOccupied = item.state.status === 'occupied'
     const isUpcoming = item.state.status === 'upcoming'
@@ -242,16 +245,30 @@ function OverviewTableCard({
         return 'calm'
     }, [isOccupied, item.latestOrderTimeMs, now])
 
+    const isNewOrder = Boolean(isOccupied && (isLatestOrderOnFloor || urgency === 'urgent' || hasRecentAlert))
+
     let borderClass = 'border-[oklch(85%_0.012_28)]'
     let bgClass = 'bg-[oklch(97%_0.008_28)]'
     let leftAccentClass = 'border-l-[oklch(85%_0.012_28)]'
+    let motionTopClass = ''
 
     if (isOccupied) {
         if (item.hasCallBill || item.hasCallStaff) {
             borderClass = 'border-[oklch(52%_0.16_28)]'
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-pulse'
-        } else if (urgency === 'urgent') {
-            leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
+        } else if (isNewOrder) {
+            if (motionMode === 'pulse') {
+                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)] animate-rams-breath'
+            } else if (motionMode === 'badge') {
+                borderClass = 'border-[oklch(52%_0.16_28)]'
+                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
+            } else if (motionMode === 'ripple') {
+                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
+                motionTopClass = 'rams-card-shimmer-top'
+            } else {
+                // 'none': zero animation
+                leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(52%_0.16_28)]'
+            }
         } else if (urgency === 'cooling') {
             leftAccentClass = 'border-l-4 sm:border-l-[5px] border-l-[oklch(75%_0.14_45)]'
         } else {
@@ -272,14 +289,14 @@ function OverviewTableCard({
     return (
         <div
             onClick={() => onInspect(item)}
-            className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs hover:border-[oklch(18%_0.012_28)] ${bgClass} ${borderClass} ${leftAccentClass}`}
+            className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs hover:border-[oklch(18%_0.012_28)] ${bgClass} ${borderClass} ${leftAccentClass} ${motionTopClass}`}
         >
             {/* 1. Header (Magazine Editorial Hierarchy) */}
             <div>
                 <div className="flex items-start justify-between pb-2 border-b border-[oklch(88%_0.012_28)]">
                     {/* Left Column: Table Context */}
                     <div>
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-baseline gap-2 flex-wrap">
                             <span className={`font-mono ${cfg.tableName} ${
                                 urgency === 'urgent' ? 'text-[oklch(52%_0.16_28)] font-black' : 'text-[oklch(18%_0.012_28)] font-bold'
                             }`}>
@@ -289,6 +306,25 @@ function OverviewTableCard({
                                 <span className="font-mono text-[10px] px-1 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs">
                                     ย้ายโต๊ะ
                                 </span>
+                            )}
+                            {isNewOrder && (
+                                motionMode === 'badge' ? (
+                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-bold shadow-2xs whitespace-nowrap">
+                                        ● NEW ORDER
+                                    </span>
+                                ) : motionMode === 'pulse' ? (
+                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase animate-rams-breath whitespace-nowrap">
+                                        ● NEW
+                                    </span>
+                                ) : motionMode === 'ripple' ? (
+                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] tracking-wider uppercase whitespace-nowrap">
+                                        NEW
+                                    </span>
+                                ) : (
+                                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] tracking-wider uppercase whitespace-nowrap">
+                                        NEW
+                                    </span>
+                                )
                             )}
                         </div>
                         <div className={`font-mono text-[oklch(55%_0.010_28)] mt-0.5 flex items-center gap-1.5 flex-wrap ${cfg.paxTime}`}>
@@ -318,11 +354,13 @@ function OverviewTableCard({
                                 </div>
                                 <div className="flex items-center justify-end gap-1 mt-0.5 font-mono text-[10px] sm:text-[11px] tabular-nums">
                                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                        urgency === 'urgent'
-                                            ? 'bg-[oklch(52%_0.16_28)] animate-pulse'
-                                            : urgency === 'cooling'
-                                                ? 'bg-[oklch(75%_0.14_45)]'
-                                                : 'bg-[oklch(55%_0.010_28)]'
+                                        isNewOrder && motionMode === 'pulse'
+                                            ? 'bg-[oklch(52%_0.16_28)] animate-rams-breath'
+                                            : isNewOrder
+                                                ? 'bg-[oklch(52%_0.16_28)]'
+                                                : urgency === 'cooling'
+                                                    ? 'bg-[oklch(75%_0.14_45)]'
+                                                    : 'bg-[oklch(55%_0.010_28)]'
                                     }`} />
                                     <span className={urgency === 'urgent' ? 'font-bold text-[oklch(52%_0.16_28)]' : 'text-[oklch(55%_0.010_28)]'}>
                                         <LiveRelativeTime timeIso={item.latestOrderIso} />
@@ -626,6 +664,34 @@ export default function SimplifiedLiveOverview({
         }
     }
 
+    // Motion preference for new incoming orders: 'pulse' (Quiet Pulse / ชีพจรนิ่ง) | 'badge' (Bold Badge / ป้ายเด่น) | 'ripple' (Minimal Ripple / คลื่นบาง) | 'none' (Still / ปิดโมชั่น)
+    const [newOrderMotion, setNewOrderMotion] = useState(() => {
+        try {
+            return localStorage.getItem('onhaus_new_order_motion') || 'pulse'
+        } catch {
+            return 'pulse'
+        }
+    })
+
+    const handleSetNewOrderMotion = (mode) => {
+        setNewOrderMotion(mode)
+        try {
+            localStorage.setItem('onhaus_new_order_motion', mode)
+        } catch (e) {
+            console.warn('Could not save motion preference', e)
+        }
+        const motionLabels = {
+            pulse: 'ชีพจรนิ่ง (Quiet Pulse)',
+            badge: 'ป้ายเด่น (Bold Badge)',
+            ripple: 'คลื่นบาง (Minimal Ripple)',
+            none: 'ปิดโมชั่น (Still Mode)'
+        }
+        toast.success(`ตั้งค่าโมชั่นออเดอร์ใหม่: ${motionLabels[mode] || mode}`, { duration: 1800 })
+    }
+
+    // Live session set of table IDs that recently received an order or additional items
+    const [recentAlertTableIds, setRecentAlertTableIds] = useState(() => new Set())
+
     const cfg = useMemo(() => SIZE_CONFIGS[overviewSize] || SIZE_CONFIGS.md, [overviewSize])
 
     const isToday = !selectedDate || selectedDate === getThaiDate()
@@ -716,6 +782,29 @@ export default function SimplifiedLiveOverview({
             console.log('🔔 [Simplified Overview] New order / additional items detected! Triggering notiadmin.mp3')
             playAdminOrderAlert('simplified_overview_new_order', 500)
             toast.info('[NEW ORDER] มีออเดอร์ใหม่ / สั่งอาหารเพิ่ม', { duration: 3000 })
+
+            // Track table IDs that received new items
+            const newTableIds = new Set()
+            liveBookings.forEach(b => {
+                if (['cancelled', 'void'].includes(b.status)) return
+                const items = b.order_items || []
+                for (const it of items) {
+                    if (it?.id && !snapshot.knownItemIds.has(String(it.id))) {
+                        if (b.table_id) newTableIds.add(b.table_id)
+                        break
+                    }
+                }
+            })
+            if (newTableIds.size > 0) {
+                setRecentAlertTableIds(prev => new Set([...prev, ...newTableIds]))
+                setTimeout(() => {
+                    setRecentAlertTableIds(prev => {
+                        const next = new Set(prev)
+                        newTableIds.forEach(id => next.delete(id))
+                        return next
+                    })
+                }, 180000)
+            }
         }
 
         // Update snapshot
@@ -1117,6 +1206,31 @@ export default function SimplifiedLiveOverview({
                         </button>
                     </div>
 
+                    {/* Motion in Fullscreen */}
+                    <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
+                        <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden sm:inline">โมชั่น:</span>
+                        {[
+                            { id: 'pulse', label: 'ชีพจรนิ่ง', hint: 'Quiet Pulse' },
+                            { id: 'badge', label: 'ป้ายเด่น', hint: 'Bold Badge' },
+                            { id: 'ripple', label: 'คลื่นบาง', hint: 'Minimal Ripple' },
+                            { id: 'none', label: 'ปิด', hint: 'Still' }
+                        ].map((opt) => (
+                            <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => handleSetNewOrderMotion(opt.id)}
+                                className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
+                                    newOrderMotion === opt.id
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold'
+                                        : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]'
+                                }`}
+                                title={`ตัวเลือกโมชั่นออเดอร์ใหม่: ${opt.hint}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Size in Fullscreen */}
                     <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans shadow-lg">
                         <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden sm:inline">ขนาด:</span>
@@ -1323,6 +1437,33 @@ export default function SimplifiedLiveOverview({
                             </button>
                         </div>
 
+                        {/* Minimal Motion Selector for New Orders (Quiet & Bold) */}
+                        <div className="flex items-center border border-[oklch(85%_0.012_28)] bg-[oklch(97%_0.008_28)] p-0.5 rounded-xs text-[11px] font-sans">
+                            <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] px-1.5 font-bold uppercase hidden xl:inline">
+                                โมชั่น:
+                            </span>
+                            {[
+                                { id: 'pulse', label: 'ชีพจรนิ่ง', hint: 'Quiet Pulse (นิ่งสุขุม)' },
+                                { id: 'badge', label: 'ป้ายเด่น', hint: 'Bold Badge (เด่นชัด มั่นคง)' },
+                                { id: 'ripple', label: 'คลื่นบาง', hint: 'Minimal Ripple (คลื่นแสงบาง)' },
+                                { id: 'none', label: 'ปิด', hint: 'Still (ปิดโมชั่น)' }
+                            ].map((opt) => (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    onClick={() => handleSetNewOrderMotion(opt.id)}
+                                    className={`px-2 py-1 rounded-xs font-semibold text-xs transition-all cursor-pointer ${
+                                        newOrderMotion === opt.id
+                                            ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-2xs'
+                                            : 'text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
+                                    }`}
+                                    title={`ตัวเลือกโมชั่นออเดอร์มาใหม่: ${opt.hint}`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+
                         {/* Audio Test Bell Button */}
                         <button
                             type="button"
@@ -1488,9 +1629,23 @@ export default function SimplifiedLiveOverview({
                                                         {item.table.capacity} Pax
                                                     </span>
                                                     {isLatestOrderOnFloor && (
-                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider">
-                                                            LATEST
-                                                        </span>
+                                                        newOrderMotion === 'badge' ? (
+                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-bold shadow-2xs whitespace-nowrap">
+                                                                ● LATEST ORDER
+                                                            </span>
+                                                        ) : newOrderMotion === 'pulse' ? (
+                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider animate-rams-breath whitespace-nowrap">
+                                                                ● LATEST
+                                                            </span>
+                                                        ) : newOrderMotion === 'ripple' ? (
+                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(93%_0.02_28)] text-[oklch(52%_0.16_28)] border border-[oklch(85%_0.012_28)] font-mono font-bold text-[10px] uppercase tracking-wider whitespace-nowrap">
+                                                                LATEST
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-bold text-[10px] uppercase tracking-wider whitespace-nowrap">
+                                                                LATEST
+                                                            </span>
+                                                        )
                                                     )}
                                                 </div>
                                             </td>
@@ -1603,6 +1758,13 @@ export default function SimplifiedLiveOverview({
                             cfg={cfg}
                             onInspect={setInspectingTable}
                             onDismissAlert={handleDismissAlert}
+                            isLatestOrderOnFloor={Boolean(
+                                item.state.status === 'occupied' &&
+                                maxOrderTimeAcrossFloorMs > 0 &&
+                                item.latestOrderTimeMs === maxOrderTimeAcrossFloorMs
+                            )}
+                            motionMode={newOrderMotion}
+                            hasRecentAlert={recentAlertTableIds.has(item.table.id)}
                         />
                     ))}
                 </div>

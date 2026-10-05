@@ -39,17 +39,25 @@ export default function AdminDashboard() {
     const [activeTab, setActiveTab] = useState('bills') // bills, shifts, inbox, schedule, floor, dine_in, pickup
     const [selectedDate, setSelectedDate] = useState(getThaiDate())
     const [overviewMode, setOverviewMode] = useState(() => {
-        try {
-            return localStorage.getItem('onhaus_admin_overview_mode') || 'simplified'
-        } catch {
-            return 'simplified'
+        // Always default to 'simplified' (LIVE NOW // โต๊ะสดหน้าร้าน) on initial landing
+        if (typeof window !== 'undefined') {
+            try {
+                // Clear any legacy persistent 'pro' from localStorage so LIVE NOW is always the default landing
+                localStorage.removeItem('onhaus_admin_overview_mode')
+                const params = new URLSearchParams(window.location.search)
+                const urlMode = params.get('mode')
+                if (urlMode === 'pro' || urlMode === 'simplified') return urlMode
+                const sessionMode = sessionStorage.getItem('onhaus_admin_overview_mode')
+                if (sessionMode === 'pro' || sessionMode === 'simplified') return sessionMode
+            } catch {}
         }
+        return 'simplified' // Default: LIVE NOW
     })
 
     const handleSetOverviewMode = (mode) => {
         setOverviewMode(mode)
         try {
-            localStorage.setItem('onhaus_admin_overview_mode', mode)
+            sessionStorage.setItem('onhaus_admin_overview_mode', mode)
         } catch {}
     }
 

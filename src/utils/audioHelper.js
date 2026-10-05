@@ -193,18 +193,8 @@ export function getEffectiveGainFactor() {
 }
 
 /**
- * Generate soft-clipping saturation curve to maximize SPL without digital harshness
+ * Audio mastering curve constants: removed harsh distortion overdrive
  */
-function makeSoftDistortionCurve(amount = 12, samples = 4096) {
-    const curve = new Float32Array(samples);
-    const deg = Math.PI / 180;
-    for (let i = 0; i < samples; ++i) {
-        const x = (i * 2) / samples - 1;
-        curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
-    }
-    return curve;
-}
-
 let softDistortionCurve = null;
 
 /**
@@ -456,63 +446,63 @@ if (typeof window !== 'undefined') {
 }
 
 /**
- * Master High-Gain Mastering Chain for POS, Sunmi & Mobile Hardware:
- * Source -> High-Pass (220Hz) -> Presence EQ (2.8kHz +5.0dB) -> Dynamics Compressor -> Make-up Gain -> WaveShaper -> Destination
- * Scaled dynamically with effective volume setting.
+ * Master Output Chain for POS, Sunmi & Mobile Hardware:
+ * Source -> High-Pass (180Hz) -> Gentle Presence EQ -> Transparent Dynamics Compressor -> Master Gain -> Brickwall Limiter -> Destination
+ * Guarantees pristine, warm audio reproduction without DAC clipping or distortion ("เสียงไม่แตก นุ่มนวล ชัดเจน").
  */
-function createMasterOutputChain(ctx, boostFactor = 3.2) {
+function createMasterOutputChain(ctx, boostFactor = 1.0) {
     try {
         const now = ctx.currentTime;
         const effectiveGain = getEffectiveGainFactor();
 
-        // 1. High-Pass Filter (220Hz) - Cut low frequency energy that drains speaker wattage & causes distortion
+        // 1. High-Pass Filter (180Hz) - Smooth low-frequency cut to eliminate sub-bass DC pops without sounding thin
         const hpFilter = ctx.createBiquadFilter();
         hpFilter.type = 'highpass';
-        hpFilter.frequency.setValueAtTime(220, now);
+        hpFilter.frequency.setValueAtTime(180, now);
         hpFilter.Q.setValueAtTime(0.7, now);
 
-        // 2. Presence Peaking EQ (2800Hz, +5.0dB) - Maximum human ear sensitivity zone
+        // 2. Gentle Presence Peaking EQ (2400Hz, +1.5dB) - Natural pleasant vocal/chime clarity
         const presenceFilter = ctx.createBiquadFilter();
         presenceFilter.type = 'peaking';
-        presenceFilter.frequency.setValueAtTime(2800, now);
-        presenceFilter.Q.setValueAtTime(1.1, now);
-        presenceFilter.gain.setValueAtTime(5.0, now);
+        presenceFilter.frequency.setValueAtTime(2400, now);
+        presenceFilter.Q.setValueAtTime(1.0, now);
+        presenceFilter.gain.setValueAtTime(1.5, now);
 
-        // 3. High-End Air Filter (4800Hz, +2.5dB) - Crispness
+        // 3. Gentle Air Filter (4500Hz, +1.0dB) - Crispness without piercing harshness
         const airFilter = ctx.createBiquadFilter();
         airFilter.type = 'peaking';
-        airFilter.frequency.setValueAtTime(4800, now);
-        airFilter.Q.setValueAtTime(1.0, now);
-        airFilter.gain.setValueAtTime(2.5, now);
+        airFilter.frequency.setValueAtTime(4500, now);
+        airFilter.Q.setValueAtTime(0.8, now);
+        airFilter.gain.setValueAtTime(1.0, now);
 
-        // 4. Fast Dynamics Limiter / Compressor (Punches RMS volume)
+        // 4. Dynamics Limiter / Compressor - Transparent RMS evening with zero distortion
         const compressor = ctx.createDynamicsCompressor();
-        compressor.threshold.setValueAtTime(-14, now);
-        compressor.knee.setValueAtTime(3, now);
-        compressor.ratio.setValueAtTime(8, now);
-        compressor.attack.setValueAtTime(0.002, now);
-        compressor.release.setValueAtTime(0.06, now);
+        compressor.threshold.setValueAtTime(-6.0, now);
+        compressor.knee.setValueAtTime(4.0, now);
+        compressor.ratio.setValueAtTime(4.0, now);
+        compressor.attack.setValueAtTime(0.005, now);
+        compressor.release.setValueAtTime(0.08, now);
 
-        // 5. High-Output Make-up Gain (Scaled with logarithmic audio taper)
+        // 5. Clean Master Gain (Calibrated to safe unclipped level <= 1.0)
         const masterGain = ctx.createGain();
-        const taperedGain = Math.pow(effectiveGain, 1.8);
-        masterGain.gain.setValueAtTime(boostFactor * taperedGain, now);
+        const safeGain = Math.max(0, Math.min(1.0, effectiveGain * 0.95));
+        masterGain.gain.setValueAtTime(safeGain, now);
 
-        // 6. Soft Waveshaper Saturation (prevents harsh digital clipping)
-        if (!softDistortionCurve) {
-            softDistortionCurve = makeSoftDistortionCurve(10);
-        }
-        const shaper = ctx.createWaveShaper();
-        shaper.curve = softDistortionCurve;
-        shaper.oversample = '2x';
+        // 6. Fast Safety Brickwall Limiter before DAC (Guarantees zero digital clipping)
+        const brickwall = ctx.createDynamicsCompressor();
+        brickwall.threshold.setValueAtTime(-0.5, now);
+        brickwall.knee.setValueAtTime(2.0, now);
+        brickwall.ratio.setValueAtTime(20.0, now);
+        brickwall.attack.setValueAtTime(0.001, now);
+        brickwall.release.setValueAtTime(0.05, now);
 
-        // Connect chain
+        // Connect chain cleanly without distortion overdrive
         hpFilter.connect(presenceFilter);
         presenceFilter.connect(airFilter);
         airFilter.connect(compressor);
         compressor.connect(masterGain);
-        masterGain.connect(shaper);
-        shaper.connect(ctx.destination);
+        masterGain.connect(brickwall);
+        brickwall.connect(ctx.destination);
 
         return hpFilter;
     } catch (e) {
@@ -545,11 +535,12 @@ export function playHtml5AudioDirectly(soundType = 'noti1', gain = 1.0) {
             html5AudioPool[soundType] = audio;
         }
 
-        const taperedGain = Math.max(0, Math.min(1.0, Math.pow(gain, 1.8)));
+        // Clean, linear safe volume scaling between 0.0 and 1.0
+        const cleanVolume = Math.max(0, Math.min(1.0, Number(gain) || 0));
         try {
             audio.pause();
             audio.currentTime = 0;
-            audio.volume = taperedGain;
+            audio.volume = cleanVolume;
         } catch (e) {}
 
         const promise = audio.play();
@@ -559,7 +550,7 @@ export function playHtml5AudioDirectly(soundType = 'noti1', gain = 1.0) {
                 // Fallback attempt with a fresh instance
                 try {
                     const freshAudio = new Audio(soundUrl);
-                    freshAudio.volume = taperedGain;
+                    freshAudio.volume = cleanVolume;
                     freshAudio.play().catch(() => {});
                 } catch (e2) {}
             });
@@ -635,10 +626,10 @@ let activeAudioBufferSource = null;
 let activeHtml5Audio = null;
 
 /**
- * Play decoded AudioBuffer cleanly with amplification directly to speakers.
- * Returns true only if Web Audio context is active and playback was successfully scheduled.
+ * Play decoded AudioBuffer smoothly and clearly through safety limiter.
+ * Guarantees zero DAC clipping and silky-smooth transient reproduction.
  */
-function playAudioBufferDirectly(buffer, boostFactor = 2.2, customGain = null) {
+function playAudioBufferDirectly(buffer, boostFactor = 1.0, customGain = null) {
     try {
         const effectiveGain = customGain !== null ? customGain : getEffectiveGainFactor();
         if (effectiveGain <= 0) return true; // Silent/Muted, early exit cleanly
@@ -659,11 +650,23 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2, customGain = null) {
 
                 const source = ctx.createBufferSource();
                 source.buffer = buffer;
+
+                // Calibrated gain stage: scale cleanly with effective volume within 0.0 - 1.0 range
                 const gainNode = ctx.createGain();
-                const taperedGain = Math.pow(effectiveGain, 1.8);
-                gainNode.gain.setValueAtTime(boostFactor * taperedGain, ctx.currentTime);
+                const safeGain = Math.max(0, Math.min(1.0, effectiveGain));
+                gainNode.gain.setValueAtTime(safeGain, ctx.currentTime);
+
+                // Fast brickwall safety limiter to eliminate any audio clipping or crackle
+                const limiter = ctx.createDynamicsCompressor();
+                limiter.threshold.setValueAtTime(-0.5, ctx.currentTime);
+                limiter.knee.setValueAtTime(2.0, ctx.currentTime);
+                limiter.ratio.setValueAtTime(20.0, ctx.currentTime);
+                limiter.attack.setValueAtTime(0.001, ctx.currentTime);
+                limiter.release.setValueAtTime(0.06, ctx.currentTime);
+
                 source.connect(gainNode);
-                gainNode.connect(ctx.destination);
+                gainNode.connect(limiter);
+                limiter.connect(ctx.destination);
 
                 activeAudioBufferSource = source;
                 source.onended = () => {
@@ -695,33 +698,33 @@ function playAudioBufferDirectly(buffer, boostFactor = 2.2, customGain = null) {
 }
 
 /**
- * Helper to synthesize an acoustic bell note with transient strike + multi-harmonic body
+ * Helper to synthesize an acoustic bell note with smooth harmonic body and zero digital clipping
  */
 function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel = 1.0) {
     const effectiveGain = getEffectiveGainFactor();
     if (effectiveGain <= 0) return;
 
-    // 1. Fundamental Warm Body (Triangle Wave)
+    // 1. Fundamental Warm Body (Triangle Wave - warm, round acoustic character)
     const oscBody = ctx.createOscillator();
     const gainBody = ctx.createGain();
     oscBody.type = 'triangle';
     oscBody.frequency.setValueAtTime(freq, startTime);
     gainBody.gain.setValueAtTime(0, startTime);
-    gainBody.gain.linearRampToValueAtTime(gainLevel * 0.95, startTime + 0.010);
-    gainBody.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    gainBody.gain.linearRampToValueAtTime(gainLevel * 0.45, startTime + 0.012);
+    gainBody.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
     oscBody.connect(gainBody);
     gainBody.connect(masterOut);
     oscBody.start(startTime);
     oscBody.stop(startTime + duration);
 
-    // 2. High Piercing Harmonic Shimmer (Sine Wave at 2nd Harmonic 2x freq)
+    // 2. High Harmonic Shimmer (Sine Wave at 2nd Harmonic 2x freq - soft bell gloss)
     const oscHarmonic = ctx.createOscillator();
     const gainHarmonic = ctx.createGain();
     oscHarmonic.type = 'sine';
     oscHarmonic.frequency.setValueAtTime(freq * 2, startTime);
     gainHarmonic.gain.setValueAtTime(0, startTime);
-    gainHarmonic.gain.linearRampToValueAtTime(gainLevel * 0.65, startTime + 0.008);
-    gainHarmonic.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.85);
+    gainHarmonic.gain.linearRampToValueAtTime(gainLevel * 0.22, startTime + 0.010);
+    gainHarmonic.gain.exponentialRampToValueAtTime(0.0001, startTime + duration * 0.85);
     oscHarmonic.connect(gainHarmonic);
     gainHarmonic.connect(masterOut);
     oscHarmonic.start(startTime);
@@ -733,30 +736,30 @@ function synthesizeBellNote(ctx, masterOut, freq, startTime, duration, gainLevel
     oscOvertone.type = 'sine';
     oscOvertone.frequency.setValueAtTime(freq * 2.76, startTime);
     gainOvertone.gain.setValueAtTime(0, startTime);
-    gainOvertone.gain.linearRampToValueAtTime(gainLevel * 0.40, startTime + 0.006);
-    gainOvertone.gain.exponentialRampToValueAtTime(0.001, startTime + duration * 0.60);
+    gainOvertone.gain.linearRampToValueAtTime(gainLevel * 0.12, startTime + 0.008);
+    gainOvertone.gain.exponentialRampToValueAtTime(0.0001, startTime + duration * 0.60);
     oscOvertone.connect(gainOvertone);
     gainOvertone.connect(masterOut);
     oscOvertone.start(startTime);
     oscOvertone.stop(startTime + duration * 0.60);
 
-    // 4. Transient Crisp Attack (Filtered high-attack snap)
+    // 4. Transient Soft Attack Strike (gentle sine strike instead of harsh square distortion)
     const oscSnap = ctx.createOscillator();
     const filterSnap = ctx.createBiquadFilter();
     const gainSnap = ctx.createGain();
-    oscSnap.type = 'square';
+    oscSnap.type = 'sine';
     oscSnap.frequency.setValueAtTime(freq * 0.5, startTime);
     filterSnap.type = 'bandpass';
-    filterSnap.frequency.setValueAtTime(3200, startTime);
-    filterSnap.Q.setValueAtTime(2.0, startTime);
+    filterSnap.frequency.setValueAtTime(2600, startTime);
+    filterSnap.Q.setValueAtTime(1.5, startTime);
     gainSnap.gain.setValueAtTime(0, startTime);
-    gainSnap.gain.linearRampToValueAtTime(gainLevel * 0.45, startTime + 0.004);
-    gainSnap.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06);
+    gainSnap.gain.linearRampToValueAtTime(gainLevel * 0.08, startTime + 0.006);
+    gainSnap.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.05);
     oscSnap.connect(filterSnap);
     filterSnap.connect(gainSnap);
     gainSnap.connect(masterOut);
     oscSnap.start(startTime);
-    oscSnap.stop(startTime + 0.06);
+    oscSnap.stop(startTime + 0.05);
 }
 
 /**
