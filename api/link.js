@@ -514,24 +514,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <!-- 2. Real Food Dishes & Signatures -->
-            ${foodVibeItems.length > 0 ? `
-            <div class="section-header" style="background:var(--color-paper-warm);">
-                <span class="section-title">FOOD & SIGNATURE DISHES</span>
-                <span class="badge">จริตจัด รสชัดเต็ม</span>
-            </div>
-            <div class="gallery-grid">
-                ${foodVibeItems.map(item => `
-                <div class="gallery-item" onclick="openLightbox('${optImg(item.image_url, 900)}')">
-                    <img src="${optImg(item.image_url, 300, 75)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" width="200" height="200">
-                    <div class="gallery-caption">
-                        <span class="caption-name">${escapeHtml(item.name)}</span>
-                        <span class="caption-price">฿${escapeHtml(item.price)}</span>
-                    </div>
-                </div>`).join('')}
-            </div>` : ''}
-
-            <!-- 3. Customer Dining Moments & Experiences -->
+            <!-- 2. Customer Dining Moments & Experiences -->
             ${diningCheckins.length > 0 ? `
             <div class="section-header">
                 <span class="section-title">DINING MOMENTS</span>

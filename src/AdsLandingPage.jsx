@@ -779,44 +779,6 @@ export default function AdsLandingPage() {
                             </div>
                         )}
 
-                        {/* Food & Drink Signature Highlights */}
-                        {menuItems.filter(i => i.image_url && Number(i.price) >= 80 && !['น้ำเปล่า', 'น้ำแข็ง', 'โซดา', 'โออิชิ', 'โค้ก'].some(k => (i.name || '').toLowerCase().includes(k))).length > 0 && (
-                            <div className="border-b border-[var(--color-hallmark-rule)]">
-                                <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
-                                    <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                        FOOD & SIGNATURE DISHES
-                                    </h3>
-                                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] uppercase">
-                                        จริตจัด รสชัดเต็ม
-                                    </span>
-                                </div>
-                                
-                                <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
-                                    {menuItems.filter(i => i.image_url && Number(i.price) >= 80 && !['น้ำเปล่า', 'น้ำแข็ง', 'โซดา', 'โออิชิ', 'โค้ก'].some(k => (i.name || '').toLowerCase().includes(k))).slice(0, 10).map((item, i) => (
-                                        <div
-                                            key={i}
-                                            onClick={() => {
-                                                trackAtmosphereClick('/link');
-                                                setSelectedLightbox({ type: 'food', item });
-                                            }}
-                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer aspect-square overflow-hidden group flex relative"
-                                        >
-                                            <img 
-                                                src={optimizeImageUrl(item.image_url, 400)} 
-                                                alt={item.name} 
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
-                                                loading="lazy"
-                                                decoding="async"
-                                            />
-                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-5 flex items-end justify-between pointer-events-none">
-                                                <span className="text-white text-xs font-bold truncate max-w-[70%] drop-shadow">{item.name}</span>
-                                                <span className="font-mono text-[11px] text-[#fed7aa] font-bold drop-shadow">฿{item.price}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
 
                         {/* Customer Live Dining Moments */}
                         {(() => {
