@@ -216,7 +216,7 @@ function generateStandaloneLandingHtml(data) {
         .item-row:hover { background: var(--color-paper-warm); }
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: 13px; font-weight: bold; color: var(--color-ink); }
-        .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.3; }
+        .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .item-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
         .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-warm); }
 
@@ -238,10 +238,13 @@ function generateStandaloneLandingHtml(data) {
         .tags-wrap { padding: 16px 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-bottom: 1px solid var(--color-rule); }
         .tag-pill { padding: 4px 10px; background: var(--color-paper-warm); border: 1px solid var(--color-rule); font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); border-radius: 2px; }
 
-        footer { padding: 24px 16px 88px 16px; text-align: center; font-size: 10px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .footer-seo { width: 100%; margin: 16px 0 8px 0; padding-top: 14px; border-top: 1px solid var(--color-rule); font-family: var(--font-body); font-size: 10px; line-height: 1.65; color: var(--color-seo-text); text-align: left; }
-        .footer-seo p { margin: 0 0 8px 0; }
-        .footer-seo p:last-child { margin-bottom: 0; }
+        footer { padding: 28px 20px 88px 20px; text-align: center; font-size: 9px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 8px; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
+        .footer-brand { font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-ink); }
+        .footer-sub { font-family: var(--font-body); font-size: 10px; color: var(--color-ink-muted); letter-spacing: 0.05em; }
+        .footer-rule { width: 32px; height: 1px; background: var(--color-rule); margin: 4px 0; }
+        .footer-seo { max-width: 420px; margin: 4px auto; font-family: var(--font-body); font-size: 8.5px; line-height: 1.75; color: var(--color-seo-text); text-align: center; letter-spacing: 0.01em; }
+        .footer-seo p { margin: 0; }
+        .footer-copy { font-size: 8px; letter-spacing: 0.15em; color: var(--color-ink-muted); margin-top: 2px; }
 
         .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
         .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px; font-family: var(--font-mono); font-size: 9px; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 2px; text-align: center; }
@@ -511,14 +514,14 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Footer -->
         <footer>
-            <div style="font-weight:bold;letter-spacing:0.2em;">// ${shopName}</div>
-            <div>จริตจัด รสชัดเจน · Real Southern Taste</div>
+            <div class="footer-brand">// ${shopName}</div>
+            <div class="footer-sub">จริตจัด รสชัดเจน · Real Southern Taste</div>
+            <div class="footer-rule"></div>
             <div class="footer-seo">
-                <p>ในบ้าน นครพนม ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่กำลังมองหาร้านน่านั่งในนครพนม เรามีทั้งอาหารรสชัด กาแฟ และเครื่องดื่ม ให้คุณแวะมาได้ตั้งแต่มื้อกลางวันจนถึงค่ำ เหมาะสำหรับคนที่กำลังค้นหา ร้านเด็ดนครพนม, ร้านอาหารริมโขงใกล้ฉัน, ร้านอาหารริมแม่น้ำโขง นครพนม, รวมถึง คาเฟ่ นครพนม, นครพนม คาเฟ่ และ ร้านกาแฟ นครพนม</p>
-                <p>ที่นี่ไม่ใช่แค่ร้านอาหารหรือคาเฟ่ แต่เป็นพื้นที่เล็ก ๆ ริมโขงที่อยากให้คุณเข้ามากิน ดื่ม นั่งคุย ทำงาน หรือใช้เวลาแบบสบาย ๆ ในแบบของตัวเอง</p>
-                <p>ในบ้าน จริตจัด รสชัดเจน ที่นี่นครพนม</p>
+                <p>ในบ้าน นครพนม · ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่มองหาร้านน่านั่งในนครพนม · อาหารรสชัด กาแฟ และเครื่องดื่ม มื้อกลางวันถึงมื้อค่ำ · ร้านเด็ดนครพนม · ร้านอาหารริมโขงใกล้ฉัน · คาเฟ่ นครพนม · ร้านกาแฟ นครพนม · จริตจัด รสชัดเจน ที่นี่นครพนม</p>
             </div>
-            <div>© ${new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</div>
+            <div class="footer-rule"></div>
+            <div class="footer-copy">© ${new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</div>
         </footer>
 
         <!-- Sticky Contact Bar -->
