@@ -779,46 +779,89 @@ export default function AdsLandingPage() {
                             </div>
                         )}
 
-                        {/* Customer Live Check-in Photos */}
-                        {customerCheckins.length > 0 && (
+                        {/* Food & Drink Signature Highlights */}
+                        {menuItems.filter(i => i.image_url && Number(i.price) >= 80 && !['น้ำเปล่า', 'น้ำแข็ง', 'โซดา', 'โออิชิ', 'โค้ก'].some(k => (i.name || '').toLowerCase().includes(k))).length > 0 && (
                             <div className="border-b border-[var(--color-hallmark-rule)]">
                                 <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
                                     <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
-                                        CUSTOMER MOMENTS
+                                        FOOD & SIGNATURE DISHES
                                     </h3>
-                                    <span className="font-mono text-[10px] text-white bg-[var(--color-brand)] px-2 py-0.5 font-bold uppercase tracking-wider">
-                                        LIVE
+                                    <span className="text-[9px] font-mono font-bold px-2 py-0.5 bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] uppercase">
+                                        จริตจัด รสชัดเต็ม
                                     </span>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
-                                    {customerCheckins.map((checkin, i) => (
+                                    {menuItems.filter(i => i.image_url && Number(i.price) >= 80 && !['น้ำเปล่า', 'น้ำแข็ง', 'โซดา', 'โออิชิ', 'โค้ก'].some(k => (i.name || '').toLowerCase().includes(k))).slice(0, 10).map((item, i) => (
                                         <div
                                             key={i}
                                             onClick={() => {
                                                 trackAtmosphereClick('/link');
-                                                setSelectedLightbox({ type: 'checkin', item: checkin });
+                                                setSelectedLightbox({ type: 'food', item });
                                             }}
-                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group aspect-square overflow-hidden flex"
+                                            className="bg-[var(--color-hallmark-paper)] cursor-pointer aspect-square overflow-hidden group flex relative"
                                         >
                                             <img 
-                                                src={optimizeImageUrl(checkin.image_url, 400)} 
-                                                alt={`Checkin ${i + 1}`} 
+                                                src={optimizeImageUrl(item.image_url, 400)} 
+                                                alt={item.name} 
                                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                                                 loading="lazy"
                                                 decoding="async"
                                             />
-                                            {/* Minimal source indicator */}
-                                            <div className="absolute top-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                {checkin.source === 'instagram' && <span className="bg-pink-500 text-white font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">IG</span>}
-                                                {checkin.source === 'facebook' && <span className="bg-blue-600 text-white font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">FB</span>}
-                                                {checkin.source === 'google' && <span className="bg-[#E9F344] text-black font-mono text-[8px] font-bold px-1 py-0.5 tracking-wider">GMAPS</span>}
+                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-5 flex items-end justify-between pointer-events-none">
+                                                <span className="text-white text-xs font-bold truncate max-w-[70%] drop-shadow">{item.name}</span>
+                                                <span className="font-mono text-[11px] text-[#fed7aa] font-bold drop-shadow">฿{item.price}</span>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
+
+                        {/* Customer Live Dining Moments */}
+                        {(() => {
+                            const foodKw = ['อาหาร', 'ข้าว', 'dinner', 'กิน', 'อร่อย', 'จาน', 'มื้อ', 'แกง', '🥩', '🍽️', '🍛', '🍲', '☕', '🍺', '🥘', 'คั่วกลิ้ง', 'เซต'];
+                            const diningOnly = customerCheckins.filter(c => foodKw.some(kw => (c.text || '').toLowerCase().includes(kw)));
+                            const list = diningOnly.length > 0 ? diningOnly.slice(0, 8) : customerCheckins.slice(0, 6);
+                            if (list.length === 0) return null;
+                            return (
+                                <div className="border-b border-[var(--color-hallmark-rule)]">
+                                    <div className="flex items-center justify-between p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">
+                                        <h3 className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-hallmark-ink)]">
+                                            DINING MOMENTS
+                                        </h3>
+                                        <span className="font-mono text-[10px] text-white bg-[#10B981] px-2 py-0.5 font-bold uppercase tracking-wider">
+                                            REAL EXPERIENCES
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 divide-x divide-y divide-[var(--color-hallmark-rule)]">
+                                        {list.map((checkin, i) => (
+                                            <div
+                                                key={i}
+                                                onClick={() => {
+                                                    trackAtmosphereClick('/link');
+                                                    setSelectedLightbox({ type: 'checkin', item: checkin });
+                                                }}
+                                                className="bg-[var(--color-hallmark-paper)] cursor-pointer relative group aspect-square overflow-hidden flex"
+                                            >
+                                                <img 
+                                                    src={optimizeImageUrl(checkin.image_url, 400)} 
+                                                    alt={`Dining Moment ${i + 1}`} 
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
+                                                {checkin.text && (
+                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-5 pointer-events-none">
+                                                        <p className="text-white text-[10px] line-clamp-2 leading-tight drop-shadow">{checkin.text}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 )}
 

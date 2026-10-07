@@ -5,6 +5,5 @@ Disallow: /staff/
 Disallow: /pos/
 
 Sitemap: https://haustable.vercel.app/sitemap.xml
-Agentmap: https://haustable.vercel.app/.well-known/ai-catalog.json
-Agentmap: https://haustable.vercel.app/.well-known/ard.json
+
 

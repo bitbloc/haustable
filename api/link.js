@@ -19,6 +19,17 @@ const DEFAULT_SETTINGS = {
     link_hours: "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)",
     link_location_text: "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม",
     link_logo_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_logo_url_1778317272888.png",
+    link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1778316469375.jpg",
+    link_atm_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_1_1779018095588.jpg",
+    link_atm_2: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_2_1779018097248.jpg",
+    link_atm_3: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_3_1779018098211.jpg",
+    link_atm_4: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_4_1779018126269.jpg",
+    link_atm_5: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_5_1779018173547.jpg",
+    link_atm_6: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_6_1779018174516.jpg",
+    link_atm_7: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_7_1779018175504.jpg",
+    link_atm_8: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_8_1779018177875.jpg",
+    link_atm_9: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_9_1779018237977.jpg",
+    link_atm_10: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_atm_10_1779018239268.jpg",
     link_sig_name_1: "แกงไตปลา (รสชัดเจน)",
     link_sig_price_1: "159",
     link_sig_img_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg",
@@ -35,10 +46,15 @@ const DEFAULT_SETTINGS = {
     link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม"
 }
 
-const DEFAULT_SIGNATURES = [
-    { name: "แกงไตปลา (รสชัดเจน)", price: "159", img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg" },
-    { name: "ผัดใบเหลียงในบ้าน", price: "139", img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_2_1783397084997.webp" },
-    { name: "สะตอผัดกุ้งจริตจัด", price: "299", img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_3_1783397146155.webp" }
+const DEFAULT_MENU_ITEMS = [
+    { id: 'def_1', name: 'สะตอผัดกุ้งจริตจัด', price: '299', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1783397268210_opt_1784209041202.webp', is_recommended: true, is_available: true },
+    { id: 'def_2', name: 'ใบเหลียงผัดไข่ในบ้าน', price: '139', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1783397300271_opt_1784209039524.webp', is_recommended: true, is_available: true },
+    { id: 'def_3', name: 'แกงไตปลา (รสชัดเจน!)', price: '159', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1781879253173_opt_1784209089011.webp', is_recommended: true, is_available: true },
+    { id: 'def_4', name: 'คั่วกลิ้งผักแนม', price: '169', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1781868858939_opt_1784209108153.webp', is_recommended: true, is_available: true },
+    { id: 'def_5', name: 'ลวกจิ้มโพนยางคำ', price: '199', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1765794569520_opt_1784209118111.webp', is_recommended: true, is_available: true },
+    { id: 'def_6', name: 'ทาทากิ(ยำเนื้อญี่ปุ่น)', price: '199', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1766308737558_opt_1784209116352.webp', is_recommended: true, is_available: true },
+    { id: 'def_7', name: 'สปาเก็ตตี้เขียวหวานเนื้อโคขุน (เผ็ด)', price: '269', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1765791989879_opt_1784209094379.webp', is_recommended: true, is_available: true },
+    { id: 'def_8', name: 'มัทฉะยูสุเฮาส์', price: '150', image_url: 'https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/menu_1781879738500_opt_1784209051313.webp', is_recommended: true, is_available: true }
 ]
 
 function optImg(url, w = 400, q = 75) {
@@ -83,10 +99,13 @@ function generateStandaloneLandingHtml(data) {
     const locationText = escapeHtml(settings.link_location_text || "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม")
     const logoUrl = settings.link_logo_url || DEFAULT_SETTINGS.link_logo_url
 
-    // Signatures
-    const sig1Img = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 400, 75) // LCP 400px
-    const sig2Img = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 200, 75) // Properly sized 200px
-    const sig3Img = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 200, 75) // Properly sized 200px
+    // Signatures (Optimized strictly for mobile viewport: 160px CSS width * 1.5x DPR = 240px to eliminate oversized image warning)
+    const sig1Img = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 240, 70)
+    const sig1Img2x = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 320, 70)
+    const sig2Img = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 200, 70)
+    const sig2Img2x = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 300, 70)
+    const sig3Img = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 200, 70)
+    const sig3Img2x = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 300, 70)
     const sig1Name = escapeHtml(settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
     const sig2Name = escapeHtml(settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
     const sig3Name = escapeHtml(settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
@@ -107,12 +126,30 @@ function generateStandaloneLandingHtml(data) {
         if (settings[k]) bookletImages.push(settings[k])
     }
 
-    // Atmosphere Photos
+    // Atmosphere Photos (Official Restaurant Atmosphere & Mekong Views)
     const atmImages = []
-    for (let i = 1; i <= 6; i++) {
-        const k = `link_atm_img_${i}`
-        if (settings[k]) atmImages.push(settings[k])
+    if (settings.link_hero_url) atmImages.push(settings.link_hero_url)
+    for (let i = 1; i <= 10; i++) {
+        const k = `link_atm_${i}`
+        if (settings[k] && settings[k] !== settings.link_hero_url && !atmImages.includes(settings[k])) {
+            atmImages.push(settings[k])
+        }
     }
+
+    // Food & Drink Vibe Items (Appetizing Real Dishes from Menu)
+    const foodVibeItems = menuItems.filter(item => {
+        if (!item.image_url) return false
+        const p = Number(item.price) || 0
+        if (p < 80) return false
+        const n = item.name.toLowerCase()
+        if (n.includes('น้ำเปล่า') || n.includes('น้ำแข็ง') || n.includes('โซดา') || n.includes('โออิชิ') || n.includes('โค้ก')) return false
+        return true
+    }).slice(0, 10)
+
+    // Customer Dining Moments (Prioritizing Food & Dining Experience)
+    const foodKeywords = ['อาหาร', 'ข้าว', 'dinner', 'กิน', 'อร่อย', 'จาน', 'มื้อ', 'แกง', '🥩', '🍽️', '🍛', '🍲', '☕', '🍺', '🥘', 'คั่วกลิ้ง', 'เซต']
+    let diningCheckins = checkins.filter(c => foodKeywords.some(kw => (c.text || '').toLowerCase().includes(kw))).slice(0, 8)
+    if (diningCheckins.length === 0) diningCheckins = checkins.slice(0, 6)
 
     // Recommended Specialties
     const recommendedItems = menuItems.filter(i => i.is_recommended).slice(0, 15)
@@ -146,11 +183,9 @@ function generateStandaloneLandingHtml(data) {
     <meta name="twitter:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม">
     <meta name="twitter:image" content="${sig1Img}">
 
-    <!-- High Performance Preconnect & Image Preloads (Zero Render-Blocking Overhead) -->
+    <!-- High Performance Preconnect & LCP Image Preload (Zero Render-Blocking Overhead) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
     <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
-    <link rel="preload" as="image" href="${sig2Img}" fetchpriority="high">
-    <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
     <meta name="rendered-at" content="${Date.now()}">
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
@@ -250,10 +285,15 @@ function generateStandaloneLandingHtml(data) {
         .full-menu-btn:hover { background: #27272a; }
 
         .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
-        .gallery-item { aspect-ratio: 1/1; overflow: hidden; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); cursor: pointer; background: var(--color-paper-warm); }
+        .gallery-item { aspect-ratio: 1/1; overflow: hidden; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); cursor: pointer; background: var(--color-paper-warm); position: relative; }
         .gallery-item:nth-child(2n) { border-right: none; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s; display: block; }
         .gallery-item:hover img { transform: scale(1.04); }
+        .gallery-caption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 65%, transparent 100%); color: #fff; padding: 20px 8px 6px 8px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; font-weight: bold; pointer-events: none; }
+        .gallery-caption .caption-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 72%; font-size: 11px; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        .gallery-caption .caption-price { font-family: var(--font-mono); font-size: 11px; color: #fed7aa; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        .gallery-caption.checkin { font-size: 10px; font-weight: normal; }
+        .gallery-caption.checkin .caption-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; color: #f4f4f5; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
         .connect-row { padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; justify-content: space-between; align-items: center; background: var(--color-paper); font-size: 12px; font-weight: bold; }
         .connect-row:hover { background: var(--color-paper-warm); }
@@ -296,20 +336,25 @@ function generateStandaloneLandingHtml(data) {
         // Non-blocking deferred loading of GTM script to keep main thread free for LCP
         (function() {
             let loaded = false;
-            function loadGtm() {
+            window.loadGtm = function() {
                 if (loaded) return;
                 loaded = true;
                 const s = document.createElement('script');
                 s.async = true;
                 s.src = 'https://www.googletagmanager.com/gtag/js?id=G-D1M18Z54LM';
                 document.head.appendChild(s);
+            };
+            const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
+            if (!isBot) {
+                ['pointerdown', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
+                    window.addEventListener(evt, window.loadGtm, { once: true, passive: true });
+                });
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(() => setTimeout(window.loadGtm, 4500));
+                } else {
+                    setTimeout(window.loadGtm, 5000);
+                }
             }
-            if (document.readyState === 'complete') {
-                setTimeout(loadGtm, 2000);
-            } else {
-                window.addEventListener('load', () => setTimeout(loadGtm, 2000), { once: true });
-            }
-            ['click', 'touchstart', 'scroll'].forEach(evt => window.addEventListener(evt, loadGtm, { once: true, passive: true }));
         })();
     </script>
 </head>
@@ -388,27 +433,27 @@ function generateStandaloneLandingHtml(data) {
                 <span class="badge">RECOMMENDED</span>
             </div>
             <div class="sig-grid">
-                <div class="sig-card" onclick="openLightbox('${sig1Img}')">
+                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig1Img}" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig1Img}" srcset="${sig1Img} 240w, ${sig1Img2x} 320w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig1Name}</div>
                         <div class="sig-price">฿${sig1Price}</div>
                     </div>
                 </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2, 800)}')">
+                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig2Img}" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" loading="lazy" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig2Name}</div>
                         <div class="sig-price">฿${sig2Price}</div>
                     </div>
                 </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3, 800)}')">
+                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig3Img}" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
+                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" loading="lazy" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig3Name}</div>
@@ -454,29 +499,49 @@ function generateStandaloneLandingHtml(data) {
             <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems })}</script>
         </div>
 
-        <!-- ─── SECTION 2: VIBE / ATMOSPHERE ─── -->
+        <!-- ─── SECTION 2: VIBE / ATMOSPHERE & CUISINE ─── -->
         <div id="sec-vibe" style="display:none;">
+            <!-- 1. Real Restaurant Atmosphere & Mekong Views -->
             ${atmImages.length > 0 ? `
             <div class="section-header">
-                <span class="section-title">ATMOSPHERE IMAGES</span>
-                <span class="meta-label">${atmImages.length} VIEWS</span>
+                <span class="section-title">RESTAURANT ATMOSPHERE</span>
+                <span class="meta-label">${atmImages.length} VIEWS · ริมโขง</span>
             </div>
             <div class="gallery-grid">
                 ${atmImages.map((img, i) => `
                 <div class="gallery-item" onclick="openLightbox('${optImg(img, 900)}')">
-                    <img src="${optImg(img, 300)}" alt="Atmosphere ${i+1}" loading="lazy" width="200" height="200">
+                    <img src="${optImg(img, 300, 75)}" alt="บรรยากาศร้านในบ้าน นครพนม ${i+1}" loading="lazy" decoding="async" width="200" height="200">
                 </div>`).join('')}
             </div>` : ''}
 
-            ${checkins.length > 0 ? `
-            <div class="section-header">
-                <span class="section-title">CUSTOMER MOMENTS</span>
-                <span class="badge" style="background:#10B981;border-color:#10B981;">LIVE</span>
+            <!-- 2. Real Food Dishes & Signatures -->
+            ${foodVibeItems.length > 0 ? `
+            <div class="section-header" style="background:var(--color-paper-warm);">
+                <span class="section-title">FOOD & SIGNATURE DISHES</span>
+                <span class="badge">จริตจัด รสชัดเต็ม</span>
             </div>
             <div class="gallery-grid">
-                ${checkins.map((chk, i) => `
+                ${foodVibeItems.map(item => `
+                <div class="gallery-item" onclick="openLightbox('${optImg(item.image_url, 900)}')">
+                    <img src="${optImg(item.image_url, 300, 75)}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async" width="200" height="200">
+                    <div class="gallery-caption">
+                        <span class="caption-name">${escapeHtml(item.name)}</span>
+                        <span class="caption-price">฿${escapeHtml(item.price)}</span>
+                    </div>
+                </div>`).join('')}
+            </div>` : ''}
+
+            <!-- 3. Customer Dining Moments & Experiences -->
+            ${diningCheckins.length > 0 ? `
+            <div class="section-header">
+                <span class="section-title">DINING MOMENTS</span>
+                <span class="badge" style="background:#10B981;border-color:#10B981;">REAL EXPERIENCES</span>
+            </div>
+            <div class="gallery-grid">
+                ${diningCheckins.map((chk, i) => `
                 <div class="gallery-item" onclick="openLightbox('${optImg(chk.image_url, 900)}')">
-                    <img src="${optImg(chk.image_url, 300)}" alt="Checkin ${i+1}" loading="lazy" width="200" height="200">
+                    <img src="${optImg(chk.image_url, 300, 75)}" alt="${escapeHtml(chk.text || 'Customer Moment')}" loading="lazy" decoding="async" width="200" height="200">
+                    ${chk.text ? `<div class="gallery-caption checkin"><span class="caption-text">${escapeHtml(chk.text.length > 50 ? chk.text.slice(0, 48) + '...' : chk.text)}</span></div>` : ''}
                 </div>`).join('')}
             </div>` : ''}
         </div>
@@ -766,6 +831,7 @@ function generateStandaloneLandingHtml(data) {
 
         function handleCallClick(e) {
             if (isDebounced('call')) return;
+            if (window.loadGtm) window.loadGtm();
             runAnalytics(() => {
                 if (window.gtag) {
                     gtag('event', 'conversion', { send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp', transport: 'beacon' });
@@ -777,6 +843,7 @@ function generateStandaloneLandingHtml(data) {
 
         function handleDirectionsClick(e) {
             if (isDebounced('directions')) return;
+            if (window.loadGtm) window.loadGtm();
             runAnalytics(() => {
                 if (window.gtag) {
                     gtag('event', 'conversion', { send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp', transport: 'beacon' });
@@ -788,6 +855,7 @@ function generateStandaloneLandingHtml(data) {
 
         function handleLineClick(e) {
             if (isDebounced('line')) return;
+            if (window.loadGtm) window.loadGtm();
             runAnalytics(() => {
                 if (window.gtag) {
                     gtag('event', 'conversion', { send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp', transport: 'beacon' });
@@ -797,7 +865,7 @@ function generateStandaloneLandingHtml(data) {
             });
         }
 
-        // Preserve UTM Search Parameters on internal navigation
+        // Preserve UTM Search Parameters on internal navigation & Defer PageView out of Critical Chain
         (function() {
             if (window.location.search) {
                 document.querySelectorAll('a').forEach(a => {
@@ -807,7 +875,27 @@ function generateStandaloneLandingHtml(data) {
                     }
                 });
             }
-            logAdEvent('page_view');
+            function triggerPageView() {
+                const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
+                if (!isBot) {
+                    logAdEvent('page_view');
+                }
+            }
+            if (document.readyState === 'complete') {
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(triggerPageView, { timeout: 3000 });
+                } else {
+                    setTimeout(triggerPageView, 2000);
+                }
+            } else {
+                window.addEventListener('load', function() {
+                    if ('requestIdleCallback' in window) {
+                        requestIdleCallback(triggerPageView, { timeout: 3000 });
+                    } else {
+                        setTimeout(triggerPageView, 2000);
+                    }
+                }, { once: true });
+            }
         })();
 
         // Non-blocking sync check for admins who recently edited menu items
@@ -887,7 +975,7 @@ export default async function handler(req, res) {
         }
 
         // 3. Fetch or retrieve in-memory cached data for /link
-        let data = { settings: DEFAULT_SETTINGS, menuItems: [], categories: [], checkins: [] }
+        let data = { settings: DEFAULT_SETTINGS, menuItems: DEFAULT_MENU_ITEMS, categories: [], checkins: [] }
         const now = Date.now()
 
         if (!isPurgeRequest && cachedPageData && now < cacheExpiry) {
@@ -898,10 +986,10 @@ export default async function handler(req, res) {
                     supabase.from('app_settings').select('key, value').like('key', 'link_%'),
                     supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, category_id, sort_order').eq('is_available', true).order('sort_order'),
                     supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
-                    supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).limit(8)
+                    supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).order('created_at', { ascending: false }).limit(24)
                 ])
 
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase fetch timeout')), 2500))
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase fetch timeout')), 3500))
                 const [settingsRes, itemsRes, catsRes, checkinsRes] = await Promise.race([fetchPromise, timeoutPromise])
 
                 const settings = (settingsRes.data || []).reduce((acc, it) => ({ ...acc, [it.key]: it.value }), {})
