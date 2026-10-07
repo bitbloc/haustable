@@ -357,7 +357,7 @@ function generateStandaloneLandingHtml(data) {
                 <span class="badge">RECOMMENDED</span>
             </div>
             <div class="sig-grid">
-                <div class="sig-card" onclick="openLightbox('${sig1Img}', '${sig1Name}')">
+                <div class="sig-card" onclick="openLightbox('${sig1Img}')">
                     <div class="sig-img-wrap">
                         <img src="${sig1Img}" alt="${sig1Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
@@ -366,7 +366,7 @@ function generateStandaloneLandingHtml(data) {
                         <div class="sig-price">฿${sig1Price}</div>
                     </div>
                 </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2, 800)}', '${sig2Name}')">
+                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
                         <img src="${sig2Img}" alt="${sig2Name}" loading="lazy" decoding="async" width="160" height="160">
                     </div>
@@ -375,7 +375,7 @@ function generateStandaloneLandingHtml(data) {
                         <div class="sig-price">฿${sig2Price}</div>
                     </div>
                 </div>
-                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3, 800)}', '${sig3Name}')">
+                <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
                         <img src="${sig3Img}" alt="${sig3Name}" loading="lazy" decoding="async" width="160" height="160">
                     </div>
@@ -407,7 +407,7 @@ function generateStandaloneLandingHtml(data) {
             </div>
             <div>
                 ${recommendedItems.map(item => `
-                <div class="item-row" onclick="openLightbox('${optImg(item.image_url || sig1Img, 800)}', '${escapeHtml(item.name)}')">
+                <div class="item-row"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
                     <div class="item-info">
                         <div class="item-name">${escapeHtml(item.name)}</div>
                         ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ''}
@@ -432,7 +432,7 @@ function generateStandaloneLandingHtml(data) {
             </div>
             <div class="gallery-grid">
                 ${atmImages.map((img, i) => `
-                <div class="gallery-item" onclick="openLightbox('${optImg(img, 900)}', 'Atmosphere ${i+1}')">
+                <div class="gallery-item" onclick="openLightbox('${optImg(img, 900)}')">
                     <img src="${optImg(img, 300)}" alt="Atmosphere ${i+1}" loading="lazy" width="200" height="200">
                 </div>`).join('')}
             </div>` : ''}
@@ -444,7 +444,7 @@ function generateStandaloneLandingHtml(data) {
             </div>
             <div class="gallery-grid">
                 ${checkins.map((chk, i) => `
-                <div class="gallery-item" onclick="openLightbox('${optImg(chk.image_url, 900)}', '${escapeHtml(chk.text || 'Customer Moment')}')">
+                <div class="gallery-item" onclick="openLightbox('${optImg(chk.image_url, 900)}')">
                     <img src="${optImg(chk.image_url, 300)}" alt="Checkin ${i+1}" loading="lazy" width="200" height="200">
                 </div>`).join('')}
             </div>` : ''}
@@ -584,7 +584,8 @@ function generateStandaloneLandingHtml(data) {
                             cItems.forEach(item => {
                                 const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=120&q=75&output=webp" alt="' + item.name + '" class="item-thumb" loading="lazy" width="56" height="56">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
-                                html += '<div class="item-row" onclick="openLightbox(\'' + bigImg + '\', \'' + item.name + '\')"><div class="item-info"><div class="item-name">' + item.name + '</div>' + (item.description ? '<div class="item-desc">' + item.description + '</div>' : '') + '<div class="item-price">฿' + item.price + '</div></div>' + thumb + '</div>';
+                                const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)" style="cursor:pointer;"' : '';
+                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + item.name + '</div>' + (item.description ? '<div class="item-desc">' + item.description + '</div>' : '') + '<div class="item-price">฿' + item.price + '</div></div>' + thumb + '</div>';
                             });
                             html += '</div>';
                         });
@@ -601,7 +602,8 @@ function generateStandaloneLandingHtml(data) {
         }
 
         // ─── LIGHTBOX ───
-        function openLightbox(url, title) {
+        function openLightbox(url) {
+            if (!url) return;
             const m = document.getElementById('lightbox-modal');
             const img = document.getElementById('lightbox-img');
             img.src = url;
