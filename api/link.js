@@ -716,30 +716,43 @@ function generateStandaloneLandingHtml(data) {
             } catch(e) { return {}; }
         }
 
-        function logAdEvent(action) {
+        function logAdEvent(eventName) {
             try {
                 const utms = getUtmParams();
-                const payload = {
-                    action,
-                    page_path: '/link',
-                    timestamp: new Date().toISOString(),
-                    user_agent: navigator.userAgent,
-                    ...utms
-                };
-                // Fire to Supabase via sendBeacon or keepalive fetch
-                const url = '${supabaseUrl}/rest/v1/ad_events';
-                const body = JSON.stringify(payload);
-                if (navigator.sendBeacon) {
-                    const blob = new Blob([body], { type: 'application/json' });
-                    navigator.sendBeacon(url + '?apikey=${supabaseKey}', blob);
-                } else {
-                    fetch(url, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'apikey': '${supabaseKey}', 'Authorization': 'Bearer ${supabaseKey}' },
-                        body,
-                        keepalive: true
-                    }).catch(() => {});
+                let sessionId = sessionStorage.getItem('haus_ad_sid');
+                if (!sessionId) {
+                    sessionId = 's_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+                    sessionStorage.setItem('haus_ad_sid', sessionId);
                 }
+                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+                const payload = {
+                    event_name: eventName,
+                    session_id: sessionId,
+                    page_path: window.location.pathname || '/link',
+                    device_type: isMobile ? 'mobile' : 'desktop',
+                    utm_source: utms.utm_source || null,
+                    utm_medium: utms.utm_medium || null,
+                    utm_campaign: utms.utm_campaign || null,
+                    utm_content: utms.utm_content || null,
+                    metadata: {
+                        user_agent: navigator.userAgent,
+                        referrer: document.referrer || null
+                    }
+                };
+                const url = '${supabaseUrl}/rest/v1/ad_events';
+                fetch(url, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    keepalive: true,
+                    headers: {
+                        'apikey': '${supabaseKey}',
+                        'Authorization': 'Bearer ${supabaseKey}',
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify(payload)
+                }).catch(function() {});
             } catch(e) {}
         }
 
