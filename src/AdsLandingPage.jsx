@@ -992,13 +992,21 @@ export default function AdsLandingPage() {
             </div>
 
             {/* ─── FOOTER ─── */}
-            <footer className="bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] py-8 w-full mt-auto pb-24 border-t border-[var(--color-hallmark-rule)]">
+            <footer className="bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink-muted)] py-8 w-full mt-auto pb-28 border-t border-[var(--color-hallmark-rule)]">
                 <div className="max-w-lg mx-auto px-5 flex flex-col items-center gap-3">
                     <p className="font-mono text-[9px] font-bold tracking-[0.25em] text-[var(--color-hallmark-ink)] uppercase">
                         // {shopName}
                     </p>
                     <div className="h-px w-8 bg-[var(--color-hallmark-rule)]" />
                     <p className="font-[var(--font-body)] text-[9px] tracking-wider uppercase text-neutral-400">จริตจัด รสชัดเจน · Bold Attitude, Clear Taste</p>
+                    
+                    {/* SEO Information (Subtle / Minimalist Dieter Rams) */}
+                    <div className="w-full mt-2 pt-3 border-t border-[var(--color-hallmark-rule)] text-left font-[var(--font-body)] text-[10px] leading-relaxed text-neutral-400/90 space-y-2">
+                        <p>ในบ้าน นครพนม ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่กำลังมองหาร้านน่านั่งในนครพนม เรามีทั้งอาหารรสชัด กาแฟ และเครื่องดื่ม ให้คุณแวะมาได้ตั้งแต่มื้อกลางวันจนถึงค่ำ เหมาะสำหรับคนที่กำลังค้นหา ร้านเด็ดนครพนม, ร้านอาหารริมโขงใกล้ฉัน, ร้านอาหารริมแม่น้ำโขง นครพนม, รวมถึง คาเฟ่ นครพนม, นครพนม คาเฟ่ และ ร้านกาแฟ นครพนม</p>
+                        <p>ที่นี่ไม่ใช่แค่ร้านอาหารหรือคาเฟ่ แต่เป็นพื้นที่เล็ก ๆ ริมโขงที่อยากให้คุณเข้ามากิน ดื่ม นั่งคุย ทำงาน หรือใช้เวลาแบบสบาย ๆ ในแบบของตัวเอง</p>
+                        <p>ในบ้าน จริตจัด รสชัดเจน ที่นี่นครพนม</p>
+                    </div>
+
                     <p className="font-mono text-[8px] text-neutral-400 mt-1 uppercase tracking-widest">© {new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</p>
                 </div>
             </footer>
