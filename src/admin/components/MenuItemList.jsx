@@ -666,6 +666,17 @@ export default function MenuItemList() {
         }))
     }
 
+    // --- Silent Cache Purge for /link Landing Engine ---
+    const notifyMenuChange = () => {
+        try {
+            localStorage.setItem('menu_last_modified', String(Date.now()))
+            localStorage.removeItem('cache_ads_items')
+            localStorage.removeItem('cache_ads_settings')
+            localStorage.removeItem('cache_ads_cats')
+            fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' }).catch(() => {})
+        } catch (e) {}
+    }
+
     // --- Fast Inline Toggles (Silent Success) ---
     const handleToggleStock = async (e, item) => {
         if (e && e.stopPropagation) e.stopPropagation()
@@ -680,6 +691,7 @@ export default function MenuItemList() {
                 reason: `เปลี่ยนสถานะเมนู: ${item.name} (${newValue ? 'เปิดขาย' : 'ปิดการขาย / หมด'})`,
                 metadata: { item_id: item.id, name: item.name, is_available: newValue }
             });
+            notifyMenuChange();
         } catch (err) {
             console.error('Toggle stock error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !newValue } : i))
@@ -700,6 +712,7 @@ export default function MenuItemList() {
                 reason: `เปลี่ยนสถานะรับกลับบ้าน (Pick-up): ${item.name} (${newValue ? 'เปิดรับ' : 'ปิดรับ'})`,
                 metadata: { item_id: item.id, name: item.name, is_pickup_available: newValue }
             });
+            notifyMenuChange();
         } catch (err) {
             console.error('Toggle pickup error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: !newValue } : i))
@@ -805,6 +818,7 @@ export default function MenuItemList() {
                                         reason: `ย้ายเมนูเข้า Archived (ซ่อน): ${name}`,
                                         metadata: { item_id: id, name }
                                     });
+                                    notifyMenuChange();
                                     setMenuItems(prev => prev.filter(i => i.id !== id))
                                     setIsModalOpen(false)
                                     toast.success('ย้ายเมนูไปที่ Archived เรียบร้อย')
@@ -819,6 +833,7 @@ export default function MenuItemList() {
                         reason: `ลบเมนูอาหาร: ${name}`,
                         metadata: { item_id: id, name }
                     });
+                    notifyMenuChange();
                     setMenuItems(prev => prev.filter(i => i.id !== id))
                     setIsModalOpen(false)
                     toast.success('ลบเมนูเรียบร้อย')
@@ -1011,6 +1026,7 @@ export default function MenuItemList() {
                 }
             }
 
+            notifyMenuChange();
             toast.success(editingItem ? 'อัปเดตเมนูสำเร็จ' : 'สร้างเมนูใหม่สำเร็จ')
             setIsModalOpen(false)
             fetchData()
@@ -1052,6 +1068,7 @@ export default function MenuItemList() {
 
             const { error } = await supabase.from('menu_items').upsert(updates, { onConflict: 'id' })
             if (error) throw error
+            notifyMenuChange();
             // Silent success - header indicator already shows status
         } catch (err) {
             console.error('Reorder error:', err)

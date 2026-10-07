@@ -268,6 +268,14 @@ export default function AdminMenu() {
                 await supabase.from('menu_items').insert({ ...payload, sort_order: maxSort + 1 });
             }
 
+            try {
+                localStorage.setItem('menu_last_modified', String(Date.now()));
+                localStorage.removeItem('cache_ads_items');
+                localStorage.removeItem('cache_ads_settings');
+                localStorage.removeItem('cache_ads_cats');
+                fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' }).catch(() => {});
+            } catch (e) {}
+
             setIsModalOpen(false);
             fetchMenu();
             resetForm();
@@ -279,6 +287,11 @@ export default function AdminMenu() {
     const handleDelete = async (id) => {
         if (!confirm('ยืนยันลบเมนูนี้?')) return;
         await supabase.from('menu_items').delete().eq('id', id);
+        try {
+            localStorage.setItem('menu_last_modified', String(Date.now()));
+            localStorage.removeItem('cache_ads_items');
+            fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' }).catch(() => {});
+        } catch (e) {}
         fetchMenu();
     };
     

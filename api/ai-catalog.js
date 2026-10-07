@@ -1,15 +1,16 @@
 const AI_CATALOG_DATA = {
-  "$schema": "https://agenticresourcediscovery.org/schemas/v1/ai-catalog.json",
   "specVersion": "1.0",
   "host": {
     "displayName": "IN THE HAUS | ร้านในบ้าน นครพนม",
-    "identifier": "https://haustable.vercel.app"
+    "identifier": "https://haustable.vercel.app",
+    "documentationUrl": "https://haustable.vercel.app/qa",
+    "logoUrl": "https://haustable.vercel.app/logo.png"
   },
   "entries": [
     {
-      "identifier": "urn:ai:haustable.vercel.app:resource:restaurant-menu",
+      "identifier": "urn:air:haustable:restaurant:menu",
       "displayName": "In the haus Menu & Signature Dishes",
-      "type": "text/html",
+      "type": "application/agent-card+json",
       "url": "https://haustable.vercel.app/link",
       "description": "Catalog of authentic Southern Thai cuisine, drinks, coffee, and signature dishes at IN THE HAUS Nakhon Phanom.",
       "representativeQueries": [
@@ -20,9 +21,9 @@ const AI_CATALOG_DATA = {
       ]
     },
     {
-      "identifier": "urn:ai:haustable.vercel.app:resource:table-booking",
+      "identifier": "urn:air:haustable:restaurant:table-booking",
       "displayName": "Table Reservation Service",
-      "type": "text/html",
+      "type": "application/agent-card+json",
       "url": "https://haustable.vercel.app/booking",
       "description": "Online real-time table reservation and seating booking system for IN THE HAUS.",
       "representativeQueries": [
@@ -32,9 +33,9 @@ const AI_CATALOG_DATA = {
       ]
     },
     {
-      "identifier": "urn:ai:haustable.vercel.app:resource:online-pickup",
+      "identifier": "urn:air:haustable:restaurant:online-pickup",
       "displayName": "Online Pickup Order Service",
-      "type": "text/html",
+      "type": "application/agent-card+json",
       "url": "https://haustable.vercel.app/pickup",
       "description": "Storefront takeout and online food ordering system for pickup at IN THE HAUS.",
       "representativeQueries": [
@@ -44,9 +45,9 @@ const AI_CATALOG_DATA = {
       ]
     },
     {
-      "identifier": "urn:ai:haustable.vercel.app:resource:restaurant-qa",
+      "identifier": "urn:air:haustable:restaurant:restaurant-qa",
       "displayName": "Restaurant Information, Location & FAQ",
-      "type": "text/html",
+      "type": "application/agent-card+json",
       "url": "https://haustable.vercel.app/qa",
       "description": "Frequently asked questions, location directions along Mekong river, parking details, and opening hours for IN THE HAUS.",
       "representativeQueries": [

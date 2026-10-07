@@ -10,7 +10,7 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 // In-memory cache for all page data (Settings, Menu Items, Categories, Checkins)
 let cachedPageData = null
 let cacheExpiry = 0
-const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes in-memory
+const CACHE_TTL_MS = 30 * 1000 // 30 seconds in-memory for instant freshness
 
 const DEFAULT_SETTINGS = {
     link_shop_name: "In the haus | ร้านในบ้าน นครพนม",
@@ -55,6 +55,19 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;')
+}
+
+function formatDescriptionHtml(desc) {
+    if (!desc) return ''
+    const lines = String(desc).trim().split('\n')
+    return lines.map(line => {
+        const trimmed = line.trim()
+        if (!trimmed) return ''
+        if (/^(cocktail|coctail|mocktail)\s*\+\s*\d+/i.test(trimmed) || /^\+\s*\d+/.test(trimmed)) {
+            return `<span class="modifier-tag">${escapeHtml(trimmed)}</span>`
+        }
+        return `<span>${escapeHtml(trimmed)}</span>`
+    }).filter(Boolean).join('<br>')
 }
 
 function generateStandaloneLandingHtml(data) {
@@ -138,6 +151,7 @@ function generateStandaloneLandingHtml(data) {
     <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
     <link rel="preload" as="image" href="${sig2Img}" fetchpriority="high">
     <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
+    <meta name="rendered-at" content="${Date.now()}">
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
@@ -227,7 +241,8 @@ function generateStandaloneLandingHtml(data) {
         .item-row:hover { background: var(--color-paper-warm); }
         .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: 13px; font-weight: bold; color: var(--color-ink); }
-        .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .modifier-tag { display: inline-block; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--color-ink); background: var(--color-paper-warm); border: 1px solid var(--color-rule); padding: 1px 6px; border-radius: 2px; margin-bottom: 2px; letter-spacing: 0.04em; vertical-align: middle; }
         .item-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
         .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-warm); }
 
@@ -426,7 +441,7 @@ function generateStandaloneLandingHtml(data) {
                 <div class="item-row"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
                     <div class="item-info">
                         <div class="item-name">${escapeHtml(item.name)}</div>
-                        ${item.description ? `<div class="item-desc">${escapeHtml(item.description)}</div>` : ''}
+                        ${item.description ? `<div class="item-desc">${formatDescriptionHtml(item.description)}</div>` : ''}
                         <div class="item-price">฿${escapeHtml(item.price)}</div>
                     </div>
                     ${item.image_url ? `<img src="${optImg(item.image_url, 120)}" alt="${escapeHtml(item.name)}" class="item-thumb" loading="lazy" width="56" height="56">` : ''}
@@ -586,6 +601,32 @@ function generateStandaloneLandingHtml(data) {
         }
 
         // ─── FULL MENU ACCORDION (ON-DEMAND INSTANT EXPANSION) ───
+        function escapeClientHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatClientDescription(desc) {
+            if (!desc) return '';
+            var lines = String(desc).trim().split('\n');
+            var html = '';
+            lines.forEach(function(l) {
+                var t = l.trim();
+                if (!t) return;
+                if (/^(cocktail|coctail|mocktail)\s*\+\s*\d+/i.test(t) || /^\+\s*\d+/.test(t)) {
+                    html += '<span class="modifier-tag">' + escapeClientHtml(t) + '</span><br>';
+                } else {
+                    html += '<span>' + escapeClientHtml(t) + '</span><br>';
+                }
+            });
+            return html.replace(/(<br>)+$/, '');
+        }
+
         function toggleFullMenu() {
             const content = document.getElementById('full-menu-content');
             const btn = document.getElementById('btn-full-menu');
@@ -597,12 +638,13 @@ function generateStandaloneLandingHtml(data) {
                         raw.categories.forEach(cat => {
                             const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
                             if (cItems.length === 0) return;
-                            html += '<div class="section-header" style="background:#e5e5e0;"><span class="section-title">' + cat.name + '</span><span class="meta-label">' + cItems.length + ' ITEMS</span></div><div>';
+                            html += '<div class="section-header" style="background:#e5e5e0;"><span class="section-title">' + escapeClientHtml(cat.name) + '</span><span class="meta-label">' + cItems.length + ' ITEMS</span></div><div>';
                             cItems.forEach(item => {
-                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=120&q=75&output=webp" alt="' + item.name + '" class="item-thumb" loading="lazy" width="56" height="56">' : '';
+                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=120&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="56" height="56">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
                                 const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)" style="cursor:pointer;"' : '';
-                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + item.name + '</div>' + (item.description ? '<div class="item-desc">' + item.description + '</div>' : '') + '<div class="item-price">฿' + item.price + '</div></div>' + thumb + '</div>';
+                                const descHtml = item.description ? '<div class="item-desc">' + formatClientDescription(item.description) + '</div>' : '';
+                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + '</div>' + descHtml + '<div class="item-price">฿' + escapeClientHtml(item.price) + '</div></div>' + thumb + '</div>';
                             });
                             html += '</div>';
                         });
@@ -752,6 +794,35 @@ function generateStandaloneLandingHtml(data) {
             }
             logAdEvent('page_view');
         })();
+
+        // Non-blocking sync check for admins who recently edited menu items
+        (function() {
+            try {
+                const lastMod = parseInt(localStorage.getItem('menu_last_modified') || '0', 10);
+                const renderedMeta = document.querySelector('meta[name="rendered-at"]');
+                const renderedAt = renderedMeta ? parseInt(renderedMeta.getAttribute('content') || '0', 10) : 0;
+                if (lastMod && renderedAt && lastMod > renderedAt) {
+                    fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' })
+                        .then(r => r.text())
+                        .then(newHtml => {
+                            const match = newHtml.match(/<script id="full-menu-data" type="application\/json">([\s\S]*?)<\/script>/);
+                            if (match && match[1]) {
+                                const script = document.getElementById('full-menu-data');
+                                if (script) {
+                                    script.textContent = match[1];
+                                    const content = document.getElementById('full-menu-content');
+                                    if (content && content.style.display !== 'none') {
+                                        content.innerHTML = '';
+                                        toggleFullMenu();
+                                        toggleFullMenu();
+                                    }
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                }
+            } catch(e) {}
+        })();
     </script>
 </body>
 </html>`
@@ -762,6 +833,16 @@ export default async function handler(req, res) {
         const parsedUrl = new URL(req.url || '/', 'https://haustable.vercel.app')
         let pathname = parsedUrl.pathname
         if (pathname === '/api/link') pathname = '/link'
+
+        // Check for cache purge / refresh request
+        const isPurgeRequest = parsedUrl.searchParams.has('purge') || 
+                               parsedUrl.searchParams.has('refresh') || 
+                               req.headers['x-purge'] === 'true'
+
+        if (isPurgeRequest) {
+            cachedPageData = null
+            cacheExpiry = 0
+        }
 
         // 1. If requesting AI catalog directly, serve JSON
         if (pathname.includes('ai-catalog') || pathname.includes('ard.json')) {
@@ -784,11 +865,11 @@ export default async function handler(req, res) {
             return res.status(200).send(html)
         }
 
-        // 2. Fetch or retrieve in-memory cached data for /link
+        // 3. Fetch or retrieve in-memory cached data for /link
         let data = { settings: DEFAULT_SETTINGS, menuItems: [], categories: [], checkins: [] }
         const now = Date.now()
 
-        if (cachedPageData && now < cacheExpiry) {
+        if (!isPurgeRequest && cachedPageData && now < cacheExpiry) {
             data = cachedPageData
         } else {
             try {
@@ -817,14 +898,20 @@ export default async function handler(req, res) {
             }
         }
 
-        // 3. Generate Autonomous High-Performance Standalone HTML
+        // 4. Generate Autonomous High-Performance Standalone HTML
         const html = generateStandaloneLandingHtml(data)
 
-        // 4. Edge CDN Caching:
-        // - Edge CDN caches for 24 hours (s-maxage=86400)
-        // - stale-while-revalidate serves instantly in ~30ms while revalidating asynchronously
+        // 5. Edge CDN Caching Strategy:
+        // - Sub-30ms instant TTFB via Vercel Edge Cache with SWR (stale-while-revalidate=86400)
+        // - 60 seconds edge TTL (s-maxage=60) so menu updates automatically reflect quickly worldwide
+        // - max-age=0 for client browsers so mobile users never get trapped in local disk cache
+        // - Bypass completely on ?purge=1 or ?refresh=1
         res.setHeader('Content-Type', 'text/html; charset=utf-8')
-        res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=86400, stale-while-revalidate=604800')
+        if (isPurgeRequest) {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate')
+        } else {
+            res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=86400')
+        }
         return res.status(200).send(html)
 
     } catch (err) {

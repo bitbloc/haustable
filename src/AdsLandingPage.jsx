@@ -1169,6 +1169,31 @@ export default function AdsLandingPage() {
 // Menu List Item Component (Tabular Version with Strict 1:1 Aspect-Square Images)
 function MenuListItem({ item, index, onImageClick }) {
     const isRecommended = item.is_recommended === true;
+
+    const renderDescription = (desc) => {
+        if (!desc) return null;
+        const lines = String(desc).trim().split('\n');
+        return lines.map((line, idx) => {
+            const trimmed = line.trim();
+            if (!trimmed) return null;
+            if (/^(cocktail|coctail|mocktail)\s*\+\s*\d+/i.test(trimmed) || /^\+\s*\d+/.test(trimmed)) {
+                return (
+                    <span 
+                        key={idx} 
+                        className="inline-block font-mono text-[9px] font-bold text-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-paper-dark)] border border-[var(--color-hallmark-rule)] px-1.5 py-0.5 rounded-2xs mb-1 tracking-wider mr-1.5 align-middle"
+                    >
+                        {trimmed}
+                    </span>
+                );
+            }
+            return (
+                <span key={idx} className="block">
+                    {trimmed}
+                </span>
+            );
+        });
+    };
+
     return (
         <div className="flex items-stretch min-h-[64px] border-b border-[var(--color-hallmark-rule)] last:border-0 group bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors">
             {/* Title & Description Cell */}
@@ -1184,9 +1209,9 @@ function MenuListItem({ item, index, onImageClick }) {
                     )}
                 </div>
                 {item.description && (
-                    <p className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-2 leading-relaxed">
-                        {item.description}
-                    </p>
+                    <div className="text-[var(--color-hallmark-ink-muted)] text-[10px] mt-1 line-clamp-4 leading-relaxed">
+                        {renderDescription(item.description)}
+                    </div>
                 )}
             </div>
             
