@@ -598,8 +598,8 @@ export default function AdsLandingPage() {
                                                     src={optimizeImageUrl(dish.img, 400)} 
                                                     alt={dish.name} 
                                                     className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" 
-                                                    fetchPriority={i === 0 ? "high" : "auto"}
-                                                    loading={i === 0 ? "eager" : "lazy"}
+                                                    fetchPriority="high"
+                                                    loading="eager"
                                                     decoding="async"
                                                     width="160"
                                                     height="160"
@@ -1001,7 +1001,7 @@ export default function AdsLandingPage() {
                     <p className="font-[var(--font-body)] text-[9px] tracking-wider uppercase text-neutral-400">จริตจัด รสชัดเจน · Bold Attitude, Clear Taste</p>
                     
                     {/* SEO Information (Subtle / Minimalist Dieter Rams) */}
-                    <div className="w-full mt-2 pt-3 border-t border-[var(--color-hallmark-rule)] text-left font-[var(--font-body)] text-[10px] leading-relaxed text-neutral-400/90 space-y-2">
+                    <div className="w-full mt-2 pt-3 border-t border-[var(--color-hallmark-rule)] text-left font-[var(--font-body)] text-[10px] leading-relaxed text-neutral-600 space-y-2">
                         <p>ในบ้าน นครพนม ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่กำลังมองหาร้านน่านั่งในนครพนม เรามีทั้งอาหารรสชัด กาแฟ และเครื่องดื่ม ให้คุณแวะมาได้ตั้งแต่มื้อกลางวันจนถึงค่ำ เหมาะสำหรับคนที่กำลังค้นหา ร้านเด็ดนครพนม, ร้านอาหารริมโขงใกล้ฉัน, ร้านอาหารริมแม่น้ำโขง นครพนม, รวมถึง คาเฟ่ นครพนม, นครพนม คาเฟ่ และ ร้านกาแฟ นครพนม</p>
                         <p>ที่นี่ไม่ใช่แค่ร้านอาหารหรือคาเฟ่ แต่เป็นพื้นที่เล็ก ๆ ริมโขงที่อยากให้คุณเข้ามากิน ดื่ม นั่งคุย ทำงาน หรือใช้เวลาแบบสบาย ๆ ในแบบของตัวเอง</p>
                         <p>ในบ้าน จริตจัด รสชัดเจน ที่นี่นครพนม</p>
@@ -1018,7 +1018,7 @@ export default function AdsLandingPage() {
                     target="_blank" 
                     rel="noopener noreferrer"
                     onClick={handleLineClick}
-                    className="flex-1 bg-[var(--color-brand)] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
+                    className="flex-1 bg-[#00873e] text-white hover:opacity-90 rounded-sm py-2.5 px-2 flex items-center justify-center gap-1.5 text-[9px] font-mono font-bold tracking-wider uppercase transition-colors cursor-pointer"
                 >
                     <MessageCircle size={12} /> LINE CHAT
                 </a>

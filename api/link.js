@@ -133,33 +133,32 @@ function generateStandaloneLandingHtml(data) {
     <meta name="twitter:description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม">
     <meta name="twitter:image" content="${sig1Img}">
 
-    <!-- High Performance Preconnect & Preloads (Zero Render-Blocking Overhead) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- High Performance Preconnect & Image Preloads (Zero Render-Blocking Overhead) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
     <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
-    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'">
-    <noscript>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Space+Mono:wght@400;700&display=swap">
-    </noscript>
+    <link rel="preload" as="image" href="${sig2Img}" fetchpriority="high">
+    <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
 
     <!-- Dieter Rams + Thai Modern OKLCH Pure Inline CSS (Zero Render-Blocking CSS) -->
     <style>
+        /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
         :root {
             --color-paper: oklch(97% 0.008 28);
             --color-paper-dark: oklch(12% 0.008 28);
             --color-paper-warm: oklch(94% 0.010 28);
             --color-rule: oklch(85% 0.012 28);
             --color-ink: oklch(18% 0.012 28);
-            --color-ink-muted: oklch(50% 0.008 28);
+            --color-ink-muted: oklch(42% 0.010 28);
+            --color-seo-text: oklch(34% 0.010 28);
             --color-brand: #DFFF00;
             --color-accent: oklch(52% 0.16 28);
-            --font-display: 'Instrument Serif', Georgia, serif;
-            --font-body: 'IBM Plex Sans Thai', system-ui, -apple-system, sans-serif;
-            --font-mono: 'Space Mono', ui-monospace, Menlo, monospace;
+            --color-line-bg: #00873e;
+            --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+            --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
+            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { overflow-x: clip; }
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper); }
         body { font-family: var(--font-body); background: var(--color-paper); color: var(--color-ink); line-height: 1.4; -webkit-font-smoothing: antialiased; }
         a { color: inherit; text-decoration: none; }
@@ -170,19 +169,19 @@ function generateStandaloneLandingHtml(data) {
         .marquee { background: #E9F344; color: var(--color-ink); border-bottom: 1px solid var(--color-rule); padding: 6px 12px; font-family: var(--font-mono); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-cell { display: flex; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--color-rule); }
         .logo-box { width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
-        .shop-title { font-family: var(--font-display); font-size: 24px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1; color: var(--color-ink); }
-        .shop-sub { font-family: var(--font-mono); font-size: 10px; font-weight: bold; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink-muted); margin-top: 6px; }
+        .shop-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.15; color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; }
+        .shop-sub { font-family: var(--font-mono); font-size: 10px; font-weight: bold; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink-muted); margin-top: 4px; }
 
-        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--color-rule); font-size: 10px; }
+        .meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); font-size: 10px; }
         .meta-item { padding: 12px; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); display: flex; flex-direction: column; gap: 4px; }
         .meta-item:nth-child(2) { border-right: none; }
         .meta-item.full { grid-column: span 2; border-right: none; border-bottom: none; }
         .meta-label { font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); font-weight: bold; letter-spacing: 0.08em; }
         .meta-val { font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-        .dot-green { width: 8px; height: 8px; background: #10B981; border: 1px solid var(--color-rule); display: inline-block; }
+        .dot-green { width: 8px; height: 8px; background: #10B981; border: 1px solid var(--color-rule); display: inline-block; flex-shrink: 0; }
 
         .live-stream { background: var(--color-ink); color: var(--color-paper); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-rule); font-size: 12px; font-weight: bold; }
-        .quick-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--color-rule); }
+        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
         .quick-btn { padding: 14px 16px; background: var(--color-paper); border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
         .quick-btn:last-child { border-right: none; }
         .quick-btn:hover { background: var(--color-paper-warm); }
@@ -190,7 +189,7 @@ function generateStandaloneLandingHtml(data) {
         .quick-title { font-size: 13px; font-weight: bold; color: var(--color-ink); }
         .quick-sub { font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); margin-top: 2px; }
 
-        .tab-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: 30; }
+        .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: 30; }
         .tab-btn { padding: 14px 8px; font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.1em; text-align: center; border-right: 1px solid var(--color-rule); color: var(--color-ink-muted); background: transparent; }
         .tab-btn:last-child { border-right: none; }
         .tab-btn.active { background: var(--color-ink); color: var(--color-paper); }
@@ -200,13 +199,13 @@ function generateStandaloneLandingHtml(data) {
         .section-title { font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
         .badge { font-family: var(--font-mono); font-size: 9px; font-weight: bold; padding: 2px 6px; background: var(--color-ink); color: var(--color-paper); border: 1px solid var(--color-ink); }
 
-        .sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border-bottom: 1px solid var(--color-rule); }
-        .sig-card { border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; background: var(--color-paper); cursor: pointer; }
+        .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .sig-card { border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; height: 100%; background: var(--color-paper); cursor: pointer; }
         .sig-card:last-child { border-right: none; }
-        .sig-img-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: #eee; border-bottom: 1px solid var(--color-rule); }
-        .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s ease; }
+        .sig-img-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: var(--color-paper-warm); border-bottom: 1px solid var(--color-rule); contain: paint layout; }
+        .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s ease; }
         .sig-card:hover .sig-img-wrap img { transform: scale(1.04); }
-        .sig-body { padding: 10px; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1; gap: 6px; }
+        .sig-body { padding: 10px; display: flex; flex-direction: column; justify-content: space-between; flex: 1; gap: 6px; }
         .sig-name { font-size: 12px; font-weight: bold; line-height: 1.25; color: var(--color-ink); }
         .sig-price { font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: var(--color-ink-muted); }
 
@@ -215,38 +214,38 @@ function generateStandaloneLandingHtml(data) {
 
         .item-row { display: flex; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--color-rule); background: var(--color-paper); gap: 12px; align-items: flex-start; cursor: pointer; }
         .item-row:hover { background: var(--color-paper-warm); }
-        .item-info { flex: 1; }
+        .item-info { flex: 1; min-width: 0; }
         .item-name { font-size: 13px; font-weight: bold; color: var(--color-ink); }
         .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.3; }
         .item-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
-        .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: #f0f0f0; }
+        .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-warm); }
 
         .full-menu-btn { width: 100%; padding: 16px; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.12em; text-align: center; text-transform: uppercase; border-bottom: 1px solid var(--color-rule); display: block; }
         .full-menu-btn:hover { background: #27272a; }
 
-        .gallery-grid { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--color-rule); }
-        .gallery-item { aspect-ratio: 1/1; overflow: hidden; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); cursor: pointer; background: #eee; }
+        .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .gallery-item { aspect-ratio: 1/1; overflow: hidden; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); cursor: pointer; background: var(--color-paper-warm); }
         .gallery-item:nth-child(2n) { border-right: none; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s; }
         .gallery-item:hover img { transform: scale(1.04); }
 
         .connect-row { padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; justify-content: space-between; align-items: center; background: var(--color-paper); font-size: 12px; font-weight: bold; }
         .connect-row:hover { background: var(--color-paper-warm); }
-        .connect-row.line { background: #06C755; color: #fff; }
-        .connect-row.line:hover { background: #05b34c; }
+        .connect-row.line { background: var(--color-line-bg); color: #fff; }
+        .connect-row.line:hover { background: #007335; }
         .connect-row.lineman { background: var(--color-ink); color: var(--color-paper); }
 
         .tags-wrap { padding: 16px 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-bottom: 1px solid var(--color-rule); }
         .tag-pill { padding: 4px 10px; background: var(--color-paper-warm); border: 1px solid var(--color-rule); font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); border-radius: 2px; }
 
         footer { padding: 24px 16px 88px 16px; text-align: center; font-size: 10px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 6px; }
-        .footer-seo { width: 100%; margin: 16px 0 8px 0; padding-top: 14px; border-top: 1px solid var(--color-rule); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 10px; line-height: 1.65; color: var(--color-ink-muted); opacity: 0.85; text-align: left; }
+        .footer-seo { width: 100%; margin: 16px 0 8px 0; padding-top: 14px; border-top: 1px solid var(--color-rule); font-family: var(--font-body); font-size: 10px; line-height: 1.65; color: var(--color-seo-text); text-align: left; }
         .footer-seo p { margin: 0 0 8px 0; }
         .footer-seo p:last-child { margin-bottom: 0; }
 
-        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
+        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
         .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px; font-family: var(--font-mono); font-size: 9px; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 2px; text-align: center; }
-        .sticky-btn.line { background: #06C755; color: #fff; }
+        .sticky-btn.line { background: var(--color-line-bg); color: #ffffff; font-weight: 800; }
         .sticky-btn.map { background: var(--color-paper-warm); border: 1px solid var(--color-rule); color: var(--color-ink); }
         .sticky-btn.call { background: var(--color-ink); color: var(--color-paper); }
 
@@ -256,7 +255,7 @@ function generateStandaloneLandingHtml(data) {
         .modal-close { position: absolute; top: 16px; right: 16px; color: #fff; font-family: var(--font-mono); font-size: 18px; padding: 8px 12px; background: rgba(0,0,0,0.6); border: 1px solid #666; border-radius: 4px; }
     </style>
 
-    <!-- Immediate Google Tag Queue (Zero Event Loss, Non-blocking Async Dispatch) -->
+    <!-- Immediate Google Tag Queue (Zero Event Loss, Non-blocking Deferred Execution) -->
     <script>
         window.dataLayer = window.dataLayer || [];
         function gtag(){window.dataLayer.push(arguments);}
@@ -265,7 +264,7 @@ function generateStandaloneLandingHtml(data) {
         gtag('config', 'AW-11227095880');
         gtag('config', 'G-D1M18Z54LM', { send_page_view: true });
 
-        // Non-blocking deferred loading of GTM script
+        // Non-blocking deferred loading of GTM script to keep main thread free for LCP
         (function() {
             let loaded = false;
             function loadGtm() {
@@ -276,10 +275,10 @@ function generateStandaloneLandingHtml(data) {
                 s.src = 'https://www.googletagmanager.com/gtag/js?id=G-D1M18Z54LM';
                 document.head.appendChild(s);
             }
-            if ('requestIdleCallback' in window) {
-                requestIdleCallback(loadGtm, { timeout: 2500 });
+            if (document.readyState === 'complete') {
+                setTimeout(loadGtm, 2000);
             } else {
-                setTimeout(loadGtm, 1000);
+                window.addEventListener('load', () => setTimeout(loadGtm, 2000), { once: true });
             }
             ['click', 'touchstart', 'scroll'].forEach(evt => window.addEventListener(evt, loadGtm, { once: true, passive: true }));
         })();
@@ -298,6 +297,9 @@ function generateStandaloneLandingHtml(data) {
                 <p class="shop-sub">${shopNameTh}</p>
             </div>
         </header>
+
+        <!-- Main Content Landmark -->
+        <main id="main">
 
         <!-- Tabular Metadata Grid -->
         <div class="meta-grid">
@@ -368,7 +370,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig2Img}" alt="${sig2Name}" loading="lazy" decoding="async" width="160" height="160">
+                        <img src="${sig2Img}" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig2Name}</div>
@@ -377,7 +379,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig3Img}" alt="${sig3Name}" loading="lazy" decoding="async" width="160" height="160">
+                        <img src="${sig3Img}" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig3Name}</div>
@@ -505,6 +507,7 @@ function generateStandaloneLandingHtml(data) {
         <div class="tags-wrap">
             ${tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}
         </div>
+        </main>
 
         <!-- Footer -->
         <footer>
