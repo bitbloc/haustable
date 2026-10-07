@@ -39,6 +39,18 @@
     ],
     "rewrites": [
         {
+            "source": "/.well-known/ai-catalog.json",
+            "destination": "/api/ai-catalog"
+        },
+        {
+            "source": "/.well-known/ard.json",
+            "destination": "/api/ai-catalog"
+        },
+        {
+            "source": "/ai-catalog.json",
+            "destination": "/api/ai-catalog"
+        },
+        {
             "source": "/",
             "destination": "/api/link"
         },

@@ -763,7 +763,19 @@ export default async function handler(req, res) {
         let pathname = parsedUrl.pathname
         if (pathname === '/api/link') pathname = '/link'
 
-        // 1. If requesting Customer Home ('/') or other SPA routes, serve standard dist/index.html
+        // 1. If requesting AI catalog directly, serve JSON
+        if (pathname.includes('ai-catalog') || pathname.includes('ard.json')) {
+            const catalogPath = path.join(process.cwd(), 'public', '.well-known', 'ai-catalog.json')
+            if (fs.existsSync(catalogPath)) {
+                const catalogJson = fs.readFileSync(catalogPath, 'utf8')
+                res.setHeader('Content-Type', 'application/json; charset=utf-8')
+                res.setHeader('Access-Control-Allow-Origin', '*')
+                res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800')
+                return res.status(200).send(catalogJson)
+            }
+        }
+
+        // 2. If requesting Customer Home ('/') or other SPA routes, serve standard dist/index.html
         if (pathname === '/') {
             const indexPath = path.join(process.cwd(), 'dist', 'index.html')
             const html = fs.readFileSync(indexPath, 'utf8')
