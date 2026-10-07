@@ -4593,18 +4593,55 @@ export default function POSDashboard() {
                                     }
                                 }
                             }}
-                            onUpdateCustomerProfile={async () => {
+                            onUpdateCustomerProfile={async (updatedProfile) => {
+                                if (updatedProfile) {
+                                    setAttachedMemberCrm(prev => {
+                                        if (prev && (prev.id === updatedProfile.id || prev.user_id === updatedProfile.id)) {
+                                            return { ...prev, ...updatedProfile };
+                                        }
+                                        return prev;
+                                    });
+                                }
                                 if (activeBooking) {
+                                    if (activeBooking.id && updatedProfile && (activeBooking.user_id === updatedProfile.id || !activeBooking.user_id)) {
+                                        try {
+                                            await supabase.from('bookings').update({
+                                                pickup_contact_name: updatedProfile.display_name,
+                                                customer_name: updatedProfile.display_name,
+                                                pickup_contact_phone: updatedProfile.phone_number
+                                            }).eq('id', activeBooking.id);
+                                        } catch (err) {
+                                            console.warn("Could not sync booking contact name:", err);
+                                        }
+                                    }
+
                                     if (selectedTable?.id) {
                                         const updatedBooking = await getActiveBooking(selectedTable.id);
-                                        setActiveBooking(updatedBooking);
-                                    } else {
+                                        if (updatedBooking) {
+                                            setActiveBooking(updatedBooking);
+                                            if (updatedBooking.profiles) {
+                                                setAttachedMemberCrm(prev => prev ? { ...prev, ...updatedBooking.profiles } : updatedBooking.profiles);
+                                            }
+                                        }
+                                    } else if (activeBooking.id && !String(activeBooking.id).startsWith('local_')) {
                                         const { data } = await supabase
                                             .from('bookings')
                                             .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                                             .eq('id', activeBooking.id)
                                             .maybeSingle();
-                                        if (data) setActiveBooking(data);
+                                        if (data) {
+                                            setActiveBooking(data);
+                                            if (data.profiles) {
+                                                setAttachedMemberCrm(prev => prev ? { ...prev, ...data.profiles } : data.profiles);
+                                            }
+                                        }
+                                    } else if (updatedProfile) {
+                                        setActiveBooking(prev => prev ? {
+                                            ...prev,
+                                            customer_name: updatedProfile.display_name,
+                                            pickup_contact_name: updatedProfile.display_name,
+                                            profiles: { ...(prev.profiles || {}), ...updatedProfile }
+                                        } : prev);
                                     }
                                 }
                             }}

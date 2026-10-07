@@ -91,11 +91,13 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     const [editDisplayName, setEditDisplayName] = React.useState('');
     const [editNickname, setEditNickname] = React.useState('');
     const [editPhone, setEditPhone] = React.useState('');
+    const [isSavingProfile, setIsSavingProfile] = React.useState(false);
     const [isMenuDrawerOpen, setIsMenuDrawerOpen] = React.useState(false);
     const [storePromptpayId, setStorePromptpayId] = React.useState('0614232455');
     const [storePromptpayName, setStorePromptpayName] = React.useState('ธัญญธร ศรีวิเศษ');
 
     const startEditingProfile = (profile) => {
+        if (!profile) return;
         setEditingProfile(profile);
         setEditDisplayName(profile.display_name || '');
         setEditNickname(profile.nickname || '');
@@ -104,32 +106,65 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const handleSaveProfile = async () => {
         if (!editingProfile) return;
+        const cleanDisplayName = editDisplayName.trim();
+        const cleanNickname = editNickname.trim();
+        const cleanPhone = editPhone.trim();
+
+        if (!cleanDisplayName) {
+            toast.error("กรุณาระบุชื่อลูกค้า (Customer Name is required)");
+            return;
+        }
+
         setIsSavingProfile(true);
         try {
+            // Check if phone number is already registered to another member
+            if (cleanPhone) {
+                const normalizedCleanPhone = cleanPhone.replace(/\D/g, '');
+                if (normalizedCleanPhone.length >= 9) {
+                    const { data: dupPhone } = await supabase
+                        .from('profiles')
+                        .select('id, display_name')
+                        .eq('phone_number', normalizedCleanPhone)
+                        .neq('id', editingProfile.id)
+                        .maybeSingle();
+
+                    if (dupPhone) {
+                        toast.error(`เบอร์ ${cleanPhone} ถูกใช้งานแล้วโดยสมาชิก "${dupPhone.display_name}"`);
+                        setIsSavingProfile(false);
+                        return;
+                    }
+                }
+            }
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    display_name: editDisplayName,
-                    nickname: editNickname,
-                    phone_number: editPhone
+                    display_name: cleanDisplayName,
+                    nickname: cleanNickname,
+                    phone_number: cleanPhone
                 })
                 .eq('id', editingProfile.id);
             
             if (error) throw error;
             
-            toast.success("Updated customer profile successfully");
+            toast.success("บันทึกการแก้ไขข้อมูลลูกค้าเรียบร้อยแล้ว");
             setEditingProfile(null);
             
             // Reload crm registry to reflect updates
-            await loadCrmMembers();
+            await loadCrmMembers(crmSearchTerm);
             
-            // Trigger callback to dashboard to update active booking
+            // Trigger callback to dashboard to update active booking and attached CRM
             if (onUpdateCustomerProfile) {
-                await onUpdateCustomerProfile();
+                await onUpdateCustomerProfile({
+                    id: editingProfile.id,
+                    display_name: cleanDisplayName,
+                    nickname: cleanNickname,
+                    phone_number: cleanPhone
+                });
             }
         } catch (err) {
             console.error("Error updating profile:", err);
-            toast.error("Failed to update profile: " + err.message);
+            toast.error("ไม่สามารถบันทึกข้อมูลลูกค้าได้: " + (err.message || err));
         } finally {
             setIsSavingProfile(false);
         }
@@ -289,9 +324,12 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
 
     const filteredCrmMembers = React.useMemo(() => {
         if (!crmSearchTerm) return crmMembers.slice(0, 50);
-        const term = crmSearchTerm.toLowerCase();
+        const term = crmSearchTerm.toLowerCase().trim();
+        const cleanTerm = term.replace(/[\s-]/g, '');
         return crmMembers.filter(m => {
+            const mPhone = (m.phone_number || m.phone || '').replace(/[\s-]/g, '').toLowerCase();
             return (m.display_name || '').toLowerCase().includes(term) ||
+                   (cleanTerm && mPhone && mPhone.includes(cleanTerm)) ||
                    (m.phone_number || '').toLowerCase().includes(term) ||
                    (m.phone || '').toLowerCase().includes(term) ||
                    (m.nickname || '').toLowerCase().includes(term) ||
@@ -1206,6 +1244,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         · 📞 {currentMemberProfile.phone_number}
                                     </span>
                                 )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        startEditingProfile(currentMemberProfile);
+                                        setActiveModal('crm');
+                                    }}
+                                    className="p-1 hover:bg-[#EAEAE7] text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] rounded transition-colors cursor-pointer shrink-0"
+                                    title="Edit customer details / แก้ไขข้อมูลลูกค้า"
+                                >
+                                    <Edit size={11} />
+                                </button>
                             </div>
                             <button
                                 type="button"
@@ -1303,13 +1352,17 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     </div>
                 ) : (
                     <div className="flex items-center justify-between py-0.5">
-                        <div className="flex items-center gap-2">
-                            <UserPlus size={14} className="text-[#767673]" />
-                            <span className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider">No Customer Attached</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <UserPlus size={14} className="text-[#767673] shrink-0" />
+                            <span className="text-xs font-mono font-bold text-[#767673] uppercase tracking-wider truncate">
+                                {booking?.pickup_contact_name && !['walk-in guest', 'walk-in pick-up', 'walk-in customer', 'walk-in'].includes(booking.pickup_contact_name.toLowerCase())
+                                    ? booking.pickup_contact_name
+                                    : 'No Customer Attached'}
+                            </span>
                         </div>
                         <button
                             onClick={() => setActiveModal('crm')}
-                            className="text-xs font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 touch-manipulation"
+                            className="text-xs font-mono font-bold bg-white hover:bg-[#F5F5F2] border border-[#D1D1CD] text-[#1A1A1A] px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs active:scale-95 touch-manipulation shrink-0"
                         >
                             + ผูก CRM
                         </button>
@@ -1662,13 +1715,15 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                         {/* Display Name Input */}
                                         <div className="space-y-1.5">
                                             <label className="block text-xs font-mono font-bold text-[var(--color-muted)] uppercase">
-                                                Customer Name / ชื่อลูกค้า
+                                                Customer Name / ชื่อลูกค้า <span className="text-red-500">*</span>
                                             </label>
                                             <input 
                                                 type="text"
                                                 value={editDisplayName}
                                                 onChange={(e) => setEditDisplayName(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProfile(); } }}
                                                 className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
+                                                autoFocus
                                             />
                                         </div>
 
@@ -1682,6 +1737,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. 0812345678"
                                                 value={editPhone}
                                                 onChange={(e) => setEditPhone(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProfile(); } }}
                                                 className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
@@ -1696,6 +1752,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                                 placeholder="e.g. พี่เอก"
                                                 value={editNickname}
                                                 onChange={(e) => setEditNickname(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSaveProfile(); } }}
                                                 className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-xl px-3.5 py-3 text-sm font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] h-11"
                                             />
                                         </div>
