@@ -11,6 +11,7 @@ import AdsLandingPage from './AdsLandingPage'
 const PublicLayout = lazy(() => import('./components/layout/PublicLayout'))
 const AdminLayout = lazy(() => import('./components/AdminLayout'))
 const RequireAuthLayout = lazy(() => import('./components/layout/RequireAuthLayout'))
+const StaffAuthLayout = lazy(() => import('./components/layout/StaffAuthLayout'))
 
 // Immediate conditional prefetch for staff POS terminal to maintain 0ms startup without bloat on customer pages
 if (typeof window !== 'undefined') {
