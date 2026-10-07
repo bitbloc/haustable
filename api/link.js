@@ -24,11 +24,11 @@ export default async function handler(req, res) {
             settings = cachedSettings;
         } else {
             try {
-                // Fetch strictly the 2 needed OG keys using exact index match instead of unindexed LIKE wildcard
+                // Fetch all link_* settings with 2.5s timeout for full client pre-hydration
                 const fetchPromise = supabase
                     .from('app_settings')
                     .select('key, value')
-                    .in('key', ['link_og_description', 'link_og_image_url']);
+                    .like('key', 'link_%');
                 
                 const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Query timeout')), 2500));
                 
@@ -50,14 +50,16 @@ export default async function handler(req, res) {
         const title = "ร้านในบ้าน นครพนม | อาหารใต้รสชัด ริมโขง | จริตจัด รสชัดเจน"
         const description = settings.link_og_description || DEFAULT_OG_DESCRIPTION;
         
-        // 3. Resolve OG Image URL:
+        // 3. Resolve OG Image URL & LCP Hero/Signature image:
         let imageUrl = settings.link_og_image_url || DEFAULT_OG_IMAGE;
+        const sig1 = settings.link_sig_img_1 || "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg";
+        const lcpImageUrl = `https://wsrv.nl/?url=${encodeURIComponent(sig1.split('?')[0])}&w=400&q=75&output=webp`;
 
         // 4. Read the production index.html file
         const indexPath = path.join(process.cwd(), 'dist', 'index.html')
         let html = fs.readFileSync(indexPath, 'utf8')
 
-        // 5. Build dynamic Open Graph header tags
+        // 5. Build dynamic Open Graph header tags & High-Performance Preload Links
         const parsedUrl = new URL(req.url || '/', 'https://haustable.vercel.app')
         let pathname = parsedUrl.pathname
         if (pathname === '/api/link') {
@@ -81,6 +83,11 @@ export default async function handler(req, res) {
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:image" content="${imageUrl}" />
+
+    <!-- Core Web Vitals LCP Preload & Instant Pre-hydration -->
+    <link rel="preconnect" href="https://wsrv.nl" crossorigin>
+    <link rel="preload" as="image" href="${lcpImageUrl}" fetchpriority="high">
+    <script>window.__PRELOADED_ADS_SETTINGS__ = ${JSON.stringify(settings)};</script>
         `
 
         // Replace the tags wrapped in the start/end comments in index.html

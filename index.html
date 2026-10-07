@@ -31,12 +31,17 @@
     <meta name="twitter:image" content="https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_og_image_url_1781846569771.jpg" />
     <!-- DYNAMIC_OG_TAGS_END -->
     
-    <!-- Fast & Optimized Google Fonts (Dieter Rams + Thai Modern 2+1 Font System + Pixelify Sans) -->
+    <!-- Fast & Optimized Google Fonts (Non-blocking Asynchronous Preload) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" crossorigin="anonymous">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" media="print" onload="this.media='all'" crossorigin="anonymous">
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Instrument+Serif:ital,wght@0,400;1,400&family=Pixelify+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" crossorigin="anonymous">
+    </noscript>
+    <link rel="preconnect" href="https://wsrv.nl" crossorigin>
     
-    <!-- Dynamic & Non-blocking External SDKs (Safe for Native APK & Offline Mode) -->
+    <!-- Dynamic & Non-blocking External Analytics SDKs (Safe for Native APK, Offline Mode & High CWV) -->
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){window.dataLayer.push(arguments);}
@@ -45,21 +50,46 @@
       (function() {
         const isNative = window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:';
         if (!isNative) {
-          // 1. Load LINE LIFF SDK on Web/Customer Browser only
-          const liffScript = document.createElement('script');
-          liffScript.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
-          liffScript.async = true;
-          document.head.appendChild(liffScript);
-
-          // 2. Load Google Tag / Google Ads & GA4 for web analytics
-          const gtagScript = document.createElement('script');
-          gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=AW-11227095880";
-          gtagScript.async = true;
-          document.head.appendChild(gtagScript);
-
+          // Initialize immediate queue configurations so events are never lost
           gtag('js', new Date());
           gtag('config', 'AW-11227095880');
           gtag('config', 'G-D1M18Z54LM', { send_page_view: true });
+
+          // Non-blocking deferred loading of Google Tag script
+          let gtmLoaded = false;
+          const loadGtm = function() {
+            if (gtmLoaded) return;
+            gtmLoaded = true;
+            const gtagScript = document.createElement('script');
+            gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=AW-11227095880";
+            gtagScript.async = true;
+            document.head.appendChild(gtagScript);
+          };
+
+          // On user interaction (click, touch, scroll), load GTM immediately
+          const events = ['click', 'touchstart', 'scroll', 'keydown'];
+          const triggerGtm = function() {
+            loadGtm();
+            events.forEach(function(e) { window.removeEventListener(e, triggerGtm, { passive: true }); });
+          };
+          events.forEach(function(e) { window.addEventListener(e, triggerGtm, { passive: true, once: true }); });
+
+          // Otherwise, schedule load when main thread is idle after paint
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(loadGtm, { timeout: 1500 });
+          } else {
+            setTimeout(loadGtm, 1200);
+          }
+
+          // LIFF SDK: Load only when needed (skip on /link or /pos unless inside LINE app)
+          const isLinkOrPos = window.location.pathname.startsWith('/link') || window.location.pathname.startsWith('/pos');
+          const isLineBrowser = /Line/i.test(navigator.userAgent);
+          if (!isLinkOrPos || isLineBrowser) {
+            const liffScript = document.createElement('script');
+            liffScript.src = "https://static.line-scdn.net/liff/edge/2/sdk.js";
+            liffScript.async = true;
+            document.head.appendChild(liffScript);
+          }
         }
       })();
     </script>

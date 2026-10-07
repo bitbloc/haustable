@@ -8,14 +8,22 @@ import StaffAuthLayout from './components/layout/StaffAuthLayout'
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner'
 
-// Eagerly load instant startup pages for POS & Login
-import POSDashboard from './pos/POSDashboard'
-import LoginPage from './LoginPage'
-import Home from './Home'
 import RequireAuthLayout from './components/layout/RequireAuthLayout'
 import ErrorBoundary from './components/staff/ErrorBoundary'
 
-// Lazy load non-critical and heavy sub-pages for maximum launch speed
+// Immediate conditional prefetch for staff POS terminal to maintain 0ms startup without bloat on customer pages
+if (typeof window !== 'undefined') {
+  const isStaffOrPOS = window.location.pathname.startsWith('/pos') || window.location.pathname.startsWith('/staff') || Capacitor.isNativePlatform();
+  if (isStaffOrPOS) {
+    import('./pos/POSDashboard');
+    import('./LoginPage');
+  }
+}
+
+// Lazy load pages for maximum launch speed and optimal mobile bundle
+const POSDashboard = lazy(() => import('./pos/POSDashboard'))
+const LoginPage = lazy(() => import('./LoginPage'))
+const Home = lazy(() => import('./Home'))
 const QnAPage = lazy(() => import('./QnAPage'))
 const BookingPage = lazy(() => import('./BookingPage'))
 const PickupPage = lazy(() => import('./PickupPage'))

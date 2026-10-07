@@ -1,8 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, Navigation, Phone, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, RefreshCw, Compass, Instagram, Facebook, Star } from 'lucide-react';
-import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { supabase } from './lib/supabaseClient';
 import { Analytics } from '@vercel/analytics/react';
 import {
@@ -17,8 +15,55 @@ import {
     logAdEvent
 } from './utils/analyticsHelper';
 
+// Lazy load heavy zoom/pan booklet modal to keep initial landing page bundle ultra-light
+const AdsBookletModal = lazy(() => import('./components/ads/AdsBookletModal'));
 
 const FALLBACK_HERO = "https://images.unsplash.com/photo-1559314809-0d155014e29e?q=80&w=800&auto=format&fit=crop";
+
+const DEFAULT_ADS_SETTINGS = {
+    link_shop_name: "In the haus | ร้านในบ้าน นครพนม",
+    link_shop_name_th: "ในบ้าน",
+    link_subtitle: "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste",
+    link_hours: "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)",
+    link_location_text: "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม",
+    link_logo_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_logo_url_1778317272888.png",
+    link_hero_url: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_hero_url_1778316469375.jpg",
+    link_sig_name_1: "แกงไตปลา (รสชัดเจน)",
+    link_sig_price_1: "159",
+    link_sig_img_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg",
+    link_sig_name_2: "ผัดใบเหลียงในบ้าน",
+    link_sig_price_2: "139",
+    link_sig_img_2: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_2_1783397084997.webp",
+    link_sig_name_3: "สะตอผัดกุ้งจริตจัด",
+    link_sig_price_3: "299",
+    link_sig_img_3: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_3_1783397146155.webp",
+    link_menu_1: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_1_1778316424194.png",
+    link_menu_2: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_2_1778316425996.png",
+    link_menu_3: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_3_1778316427461.png",
+    link_menu_4: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_4_1778318025648.png",
+    link_menu_5: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_5_1778318730153.png",
+    link_menu_6: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_6_1779017067242.jpg",
+    link_menu_7: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_menu_7_1781592343754.webp",
+    link_menu_promo_slots: "5,7"
+};
+
+const DEFAULT_SIGNATURES = [
+    {
+        name: "แกงไตปลา (รสชัดเจน)",
+        price: "159",
+        img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_1_1778318077216.jpg"
+    },
+    {
+        name: "ผัดใบเหลียงในบ้าน",
+        price: "139",
+        img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_2_1783397084997.webp"
+    },
+    {
+        name: "สะตอผัดกุ้งจริตจัด",
+        price: "299",
+        img: "https://lxfavbzmebqqsffgyyph.supabase.co/storage/v1/object/public/public-assets/link/link_sig_img_3_1783397146155.webp"
+    }
+];
 
 // IMPORTANT: Preserved wsrv.nl external proxy for public AdsLandingPage (/link)
 // Public viral/ad traffic can be unpredictable in volume. Keeping external proxy prevents consuming Supabase Pro transformation/egress quotas.
@@ -59,7 +104,21 @@ const preloadImageWithTimeout = (url, timeoutMs = 2500) => {
 };
 
 export default function AdsLandingPage() {
-    const [settings, setSettings] = useState({});
+    // Instant Hydration from window.__PRELOADED_ADS_SETTINGS__ or localStorage or DEFAULT_ADS_SETTINGS
+    const getInitialSettings = () => {
+        if (typeof window !== 'undefined' && window.__PRELOADED_ADS_SETTINGS__ && Object.keys(window.__PRELOADED_ADS_SETTINGS__).length > 0) {
+            return window.__PRELOADED_ADS_SETTINGS__;
+        }
+        try {
+            const cached = JSON.parse(localStorage.getItem('cache_ads_settings') || 'null');
+            if (cached && Array.isArray(cached)) {
+                return cached.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+            }
+        } catch (e) {}
+        return DEFAULT_ADS_SETTINGS;
+    };
+
+    const [settings, setSettings] = useState(getInitialSettings);
     const [menuImages, setMenuImages] = useState([]);
     const [promoMenuImages, setPromoMenuImages] = useState([]);
     const [regularMenuImages, setRegularMenuImages] = useState([]);
@@ -67,9 +126,9 @@ export default function AdsLandingPage() {
     const [menuItems, setMenuItems] = useState([]);
     const [menuCategories, setMenuCategories] = useState([]);
     const [atmImages, setAtmImages] = useState([]);
-    const [signatures, setSignatures] = useState([]);
+    const [signatures, setSignatures] = useState(DEFAULT_SIGNATURES);
     const [customerCheckins, setCustomerCheckins] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false); // Instant paint in 0ms! Zero blocking spinner
     const [selectedLightbox, setSelectedLightbox] = useState(null);
     const [activeMenuIndex, setActiveMenuIndex] = useState(0);
     const [menuImageLoading, setMenuImageLoading] = useState(true);
@@ -78,7 +137,9 @@ export default function AdsLandingPage() {
 
     const processSettings = (settingsData) => {
         if (!settingsData) return;
-        const map = settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {});
+        const map = Array.isArray(settingsData)
+            ? settingsData.reduce((acc, item) => ({ ...acc, [item.key]: item.value }), {})
+            : settingsData;
         setSettings(map);
 
         // Load Menu Images (Booklet)
@@ -198,9 +259,8 @@ export default function AdsLandingPage() {
         }
     };
 
-    const fetchData = async (silent = false) => {
-        // Instant Hydration from localStorage to render immediately in 0ms without waiting for Supabase
-        let hasCachedData = false;
+    const fetchData = async () => {
+        // Hydrate from localStorage if available to enrich items immediately
         try {
             const cachedSettings = JSON.parse(localStorage.getItem('cache_ads_settings') || 'null');
             const cachedItems = JSON.parse(localStorage.getItem('cache_ads_items') || 'null');
@@ -208,14 +268,9 @@ export default function AdsLandingPage() {
             if (cachedSettings) processSettings(cachedSettings);
             if (cachedItems) processMenuItems(cachedItems);
             if (cachedCats) setMenuCategories(cachedCats);
-            if (cachedSettings && cachedItems) {
-                hasCachedData = true;
-                setLoading(false);
-            }
         } catch (e) {}
 
-        if (!silent && !hasCachedData) setLoading(true);
-
+        // Non-blocking background fetch from Supabase
         try {
             const [settingsRes, itemsRes, catsRes, checkinsRes] = await Promise.all([
                 supabase.from('app_settings').select('key, value').like('key', 'link_%'),
@@ -238,63 +293,33 @@ export default function AdsLandingPage() {
             }
             if (checkinsRes.data) setCustomerCheckins(checkinsRes.data);
         } catch (err) {
-            console.warn('[AdsLandingPage] Failed to load fresh data, fallback cache preserved:', err);
-        } finally {
-            setLoading(false);
+            console.warn('[AdsLandingPage] Background sync note:', err);
         }
     };
 
     useEffect(() => {
-        fetchData();
+        // Schedule background data refresh during idle time to avoid blocking initial paint
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => fetchData(), { timeout: 1500 });
+        } else {
+            setTimeout(fetchData, 300);
+        }
         logAdEvent('page_view');
-
-        // ─── REALTIME CHANNEL FOR ADS LANDING PAGE ───
-        let debounceTimer = null;
-        const triggerDebounced = (fn) => {
-            if (debounceTimer) clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                fn();
-            }, 250);
-        };
-
-        const channel = supabase.channel('ads_landing_page_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
-                const key = payload.new?.key || payload.old?.key;
-                if (!key || key.startsWith('link_')) {
-                    triggerDebounced(fetchSettingsOnly);
-                }
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, () => {
-                triggerDebounced(fetchMenuItemsOnly);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_categories' }, () => {
-                triggerDebounced(fetchCategoriesOnly);
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'haus_checkins' }, () => {
-                triggerDebounced(fetchCheckinsOnly);
-            })
-            .subscribe((status, err) => {
-                if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || err) {
-                    console.warn(`[Ads Realtime] Channel status: ${status}`, err || '');
-                }
-            });
 
         // Foreground wake-up & online reconnect listeners (critical for Mobile Ad Click traffic)
         const handleWakeup = () => {
             if (document.visibilityState === 'visible') {
-                fetchData(true);
+                fetchData();
             }
         };
         const handleOnline = () => {
-            fetchData(true);
+            fetchData();
         };
 
         document.addEventListener('visibilitychange', handleWakeup);
         window.addEventListener('online', handleOnline);
 
         return () => {
-            if (debounceTimer) clearTimeout(debounceTimer);
-            supabase.removeChannel(channel);
             document.removeEventListener('visibilitychange', handleWakeup);
             window.removeEventListener('online', handleOnline);
         };
@@ -392,14 +417,6 @@ export default function AdsLandingPage() {
 
     // Filter only recommended items for the initial presentation (10-15 items)
     const featuredMenuItems = menuItems.filter(item => item.is_recommended).slice(0, 15);
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-[var(--color-hallmark-paper)] flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-neutral-800 border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
-    }
 
     /* Hallmark · component: AdsLandingPage · genre: modern-minimal · theme: custom · vibe: "Dieter Rams industrial modern slab"
      * states: default · hover · focus · active
@@ -581,8 +598,11 @@ export default function AdsLandingPage() {
                                                     src={optimizeImageUrl(dish.img, 400)} 
                                                     alt={dish.name} 
                                                     className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" 
-                                                    fetchPriority="high"
+                                                    fetchPriority={i === 0 ? "high" : "auto"}
+                                                    loading={i === 0 ? "eager" : "lazy"}
                                                     decoding="async"
+                                                    width="160"
+                                                    height="160"
                                                 />
                                             </div>
                                             <div className="p-3 flex-grow flex flex-col justify-between gap-2">
@@ -630,40 +650,32 @@ export default function AdsLandingPage() {
                         )}
 
                         {/* Full Menu Accordion Content */}
-                        <AnimatePresence>
-                            {showAllMenu && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    transition={{ duration: 0.25, ease: 'easeOut' }}
-                                    className="w-full overflow-hidden border-b border-[var(--color-hallmark-rule)]"
-                                >
-                                    {menuCategories.map((category) => {
-                                        const categoryItems = menuItems.filter(item => item.category_id === category.id);
-                                        if (categoryItems.length === 0) return null;
+                        {showAllMenu && (
+                            <div className="w-full overflow-hidden border-b border-[var(--color-hallmark-rule)] animate-fade-in transition-all duration-300">
+                                {menuCategories.map((category) => {
+                                    const categoryItems = menuItems.filter(item => item.category_id === category.id);
+                                    if (categoryItems.length === 0) return null;
 
-                                        return (
-                                            <div key={category.id} className="border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] animate-fade-in first:border-t-0">
-                                                <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex justify-between items-center">
-                                                    <span className="font-mono text-xs font-bold tracking-widest text-[var(--color-hallmark-ink)] uppercase">
-                                                        {category.name}
-                                                    </span>
-                                                    <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
-                                                        {categoryItems.length} ITEMS
-                                                    </span>
-                                                </div>
-                                                <div className="divide-y divide-[var(--color-hallmark-rule)]">
-                                                    {categoryItems.map((item, idx) => (
-                                                        <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
-                                                    ))}
-                                                </div>
+                                    return (
+                                        <div key={category.id} className="border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)] animate-fade-in first:border-t-0">
+                                            <div className="p-3 border-b border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex justify-between items-center">
+                                                <span className="font-mono text-xs font-bold tracking-widest text-[var(--color-hallmark-ink)] uppercase">
+                                                    {category.name}
+                                                </span>
+                                                <span className="font-mono text-[10px] text-[var(--color-hallmark-ink-muted)]">
+                                                    {categoryItems.length} ITEMS
+                                                </span>
                                             </div>
-                                        );
-                                    })}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                            <div className="divide-y divide-[var(--color-hallmark-rule)]">
+                                                {categoryItems.map((item, idx) => (
+                                                    <MenuListItem key={item.id} item={item} index={idx} onImageClick={(url) => setSelectedLightbox({ type: 'menu', url })} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {/* Original Booklet Menu trigger */}
                         {(promoMenuImages.length > 0 || regularMenuImages.length > 0) && (
@@ -1021,238 +1033,116 @@ export default function AdsLandingPage() {
             </div>
 
             {/* ─── LIGHTBOX MODAL ─── */}
-            <AnimatePresence>
-                {selectedLightbox && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 cursor-pointer select-none overflow-y-auto"
+            {selectedLightbox && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 p-4 cursor-pointer select-none overflow-y-auto animate-fade-in"
+                    onClick={() => setSelectedLightbox(null)}
+                >
+                    <button
                         onClick={() => setSelectedLightbox(null)}
+                        className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 transition-colors rounded-sm flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-sm font-mono font-bold z-50"
                     >
-                        <button
-                            onClick={() => setSelectedLightbox(null)}
-                            className="absolute top-4 right-4 w-9 h-9 bg-white/10 hover:bg-white/20 transition-colors rounded-sm flex items-center justify-center text-white backdrop-blur-md cursor-pointer text-sm font-mono font-bold z-50"
-                        >
-                            [X]
-                        </button>
+                        [X]
+                    </button>
 
-                        {selectedLightbox.type === 'booklet_slider' ? (
-                            <div 
-                                className="w-full max-w-lg bg-[var(--color-hallmark-paper)] rounded-sm p-4 border border-[var(--color-hallmark-ink)] flex flex-col items-center z-40 relative my-8" 
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex justify-between items-center w-full mb-3 pb-2 border-b border-[var(--color-hallmark-rule)]">
-                                    <span className="font-mono text-[10px] font-bold text-[var(--color-hallmark-ink-muted)]">
-                                        // ORIGINAL MENU BOOKLET
-                                    </span>
-                                    <button 
-                                        onClick={() => setSelectedLightbox(null)}
-                                        className="text-[10px] font-mono font-bold hover:text-[var(--color-brand)] cursor-pointer text-[var(--color-hallmark-ink)]"
-                                    >
-                                        [ CLOSE ]
-                                    </button>
-                                </div>
-
-                                {/* Tab Switcher inside Modal */}
-                                <div className="flex border border-[var(--color-hallmark-rule)] rounded-sm mb-3 w-full text-[10px] font-mono overflow-hidden">
-                                    {regularMenuImages.length > 0 && (
-                                        <button
-                                            onClick={() => {
-                                                setActiveTab('regular');
-                                                setActiveMenuIndex(0);
-                                                setMenuImageLoading(true);
-                                            }}
-                                            className={`flex-1 py-2 text-center transition-all cursor-pointer font-bold border-r border-[var(--color-hallmark-rule)] last:border-r-0 ${activeTab === 'regular' ? 'bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)]' : 'text-[var(--color-hallmark-ink-muted)] bg-transparent'}`}
-                                        >
-                                            MAIN MENU
-                                        </button>
-                                    )}
-                                    {promoMenuImages.length > 0 && (
-                                        <button
-                                            onClick={() => {
-                                                setActiveTab('promo');
-                                                setActiveMenuIndex(0);
-                                                setMenuImageLoading(true);
-                                            }}
-                                            className={`flex-1 py-2 text-center transition-all cursor-pointer font-bold border-r border-[var(--color-hallmark-rule)] last:border-r-0 ${activeTab === 'promo' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-hallmark-ink-muted)] bg-transparent'}`}
-                                        >
-                                            PROMOTIONS
-                                        </button>
-                                    )}
-                                </div>
-
-                                {/* Slider Component */}
-                                {(() => {
-                                    const currentImages = activeTab === 'promo' ? promoMenuImages : regularMenuImages;
-                                    if (currentImages.length === 0) return null;
-                                    const activeUrl = currentImages[activeMenuIndex];
-
-                                    return (
-                                        <div className="w-full flex flex-col items-center">
-                                            <TransformWrapper
-                                                key={`${activeTab}-${activeMenuIndex}-${activeUrl}`}
-                                                initialScale={1}
-                                                minScale={1}
-                                                maxScale={4}
-                                                centerOnInit={true}
-                                            >
-                                                {({ zoomIn, zoomOut, resetTransform }) => (
-                                                    <div className="w-full flex flex-col items-center">
-                                                        <div className="flex items-center justify-between w-full mb-3 px-1 text-neutral-600 bg-[var(--color-hallmark-paper-dark)] p-1.5 rounded-sm border border-[var(--color-hallmark-rule)]">
-                                                            <div className="flex items-center gap-1">
-                                                                <button type="button" onClick={() => zoomIn()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><ZoomIn size={12} /></button>
-                                                                <button type="button" onClick={() => zoomOut()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><ZoomOut size={12} /></button>
-                                                                <button type="button" onClick={() => resetTransform()} className="w-7 h-7 rounded-sm flex items-center justify-center hover:bg-[var(--color-hallmark-paper)] text-neutral-800 transition-all cursor-pointer border border-[var(--color-hallmark-rule)] bg-transparent"><RefreshCw size={10} /></button>
-                                                            </div>
-                                                            <span className="text-[10px] font-bold text-[var(--color-hallmark-ink)] font-mono px-2">
-                                                                PAGE {activeMenuIndex + 1} / {currentImages.length}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="relative w-full aspect-[4/5] rounded-sm overflow-hidden border border-[var(--color-hallmark-rule)] bg-neutral-50 cursor-grab active:cursor-grabbing">
-                                                            {menuImageLoading && (
-                                                                <div className="absolute inset-0 bg-neutral-100 flex items-center justify-center">
-                                                                    <div className="w-5 h-5 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
-                                                                </div>
-                                                            )}
-                                                            <TransformComponent wrapperClass="w-full h-full" contentClass="w-full h-full flex items-center justify-center">
-                                                                  <img
-                                                                      src={optimizeImageUrl(activeUrl, 900)}
-                                                                      alt={`Menu Page ${activeMenuIndex + 1}`}
-                                                                      onLoad={() => setMenuImageLoading(false)}
-                                                                      className={`w-full h-full object-contain transition-opacity duration-300 ${menuImageLoading ? 'opacity-0' : 'opacity-100'}`}
-                                                                  />
-                                                            </TransformComponent>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </TransformWrapper>
-
-                                            {/* Navigation Controls */}
-                                            <div className="flex items-center justify-between w-full mt-4">
-                                                <button
-                                                    disabled={activeMenuIndex === 0}
-                                                    onClick={() => {
-                                                        setActiveMenuIndex(prev => Math.max(0, prev - 1));
-                                                        setMenuImageLoading(true);
-                                                    }}
-                                                    className="w-8 h-8 rounded-sm border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100/50 active:scale-95 transition-all cursor-pointer bg-transparent"
-                                                >
-                                                    <ChevronLeft size={16} />
-                                                </button>
-                                                
-                                                <div className="flex gap-1 overflow-x-auto max-w-[180px] no-scrollbar py-1">
-                                                    {currentImages.map((_, i) => (
-                                                        <button
-                                                            key={i}
-                                                            onClick={() => {
-                                                                setActiveMenuIndex(i);
-                                                                setMenuImageLoading(true);
-                                                            }}
-                                                            className={`w-1.5 h-1.5 rounded-full transition-all flex-shrink-0 ${activeMenuIndex === i ? 'bg-[var(--color-brand)] scale-110' : 'bg-[var(--color-hallmark-rule)] opacity-40 hover:opacity-100'}`}
-                                                        />
-                                                    ))}
-                                                </div>
-
-                                                <button
-                                                    disabled={activeMenuIndex === currentImages.length - 1}
-                                                    onClick={() => {
-                                                        setActiveMenuIndex(prev => Math.min(currentImages.length - 1, prev + 1));
-                                                        setMenuImageLoading(true);
-                                                    }}
-                                                    className="w-8 h-8 rounded-sm border border-[var(--color-hallmark-rule)] flex items-center justify-center text-[var(--color-hallmark-ink-muted)] disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100/50 active:scale-95 transition-all cursor-pointer bg-transparent"
-                                                >
-                                                    <ChevronRight size={16} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
+                    {selectedLightbox.type === 'booklet_slider' ? (
+                        <Suspense fallback={
+                            <div className="w-full max-w-lg bg-[var(--color-hallmark-paper)] rounded-sm p-8 flex items-center justify-center">
+                                <div className="w-6 h-6 border-2 border-neutral-800 border-t-transparent rounded-full animate-spin" />
                             </div>
-                        ) : selectedLightbox.type === 'checkin' ? (
-                            <div 
-                                className="w-full max-w-sm bg-[var(--color-hallmark-paper)] rounded-sm p-4 border border-[var(--color-hallmark-ink)] flex flex-col z-40 relative my-8 text-[var(--color-hallmark-ink)] cursor-default select-text" 
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex justify-between items-center w-full mb-3 pb-2 border-b border-[var(--color-hallmark-rule)]">
-                                    <span className="font-mono text-[9px] font-bold text-[var(--color-brand)] uppercase tracking-wider">
-                                        // CUSTOMER CHECK-IN
-                                    </span>
-                                    <button 
-                                        onClick={() => setSelectedLightbox(null)}
-                                        className="text-[9px] font-mono font-bold hover:text-[var(--color-brand)] cursor-pointer text-[var(--color-hallmark-ink)] bg-transparent border-0 outline-none"
-                                    >
-                                        [ CLOSE ]
-                                    </button>
-                                </div>
-
-                                {/* Header with customer name and platform */}
-                                <div className="flex items-center justify-between gap-3 mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-[10px] text-white font-mono font-bold">
-                                            {selectedLightbox.item.user_name?.slice(0, 1).toUpperCase() || 'C'}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-xs font-bold font-mono tracking-tight leading-none">
-                                                {selectedLightbox.item.user_name || 'Customer'}
-                                            </span>
-                                            {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username) && (
-                                                <span className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-none mt-0.5">
-                                                    {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username).startsWith('@') ? (selectedLightbox.item.user_handle || selectedLightbox.item.user_username) : `@${selectedLightbox.item.user_handle || selectedLightbox.item.user_username}`}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-sm border border-[var(--color-hallmark-rule)]">
-                                        {selectedLightbox.item.source === 'instagram' && <Instagram size={10} className="text-[#E1306C]" />}
-                                        {selectedLightbox.item.source === 'facebook' && <Facebook size={10} className="text-[#1877F2]" />}
-                                        {selectedLightbox.item.source === 'google' && <Star size={10} className="text-[#F4B400] fill-[#F4B400]" />}
-                                        <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-neutral-600">
-                                            {selectedLightbox.item.source}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Main image */}
-                                <div className="relative w-full aspect-[4/5] rounded-sm overflow-hidden border border-[var(--color-hallmark-rule)] bg-black mb-3">
-                                    <img 
-                                        src={optimizeImageUrl(selectedLightbox.item.image_url, 600)} 
-                                        alt="Customer Check-in" 
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-
-                                {/* Review content */}
-                                {selectedLightbox.item.text && (
-                                    <p className="text-[11px] text-[var(--color-hallmark-ink)] leading-relaxed italic border-l-2 border-[var(--color-brand)] pl-2 mb-4 font-medium font-[var(--font-body)]">
-                                        "{selectedLightbox.item.text}"
-                                    </p>
-                                )}
-
-                                {/* Check-in Wall CTA */}
-                                <a 
-                                    href="/link/hauscheckin"
-                                    className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[11px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
-                                >
-                                    <Compass size={13} />
-                                    <span>เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)</span>
-                                </a>
-                            </div>
-                        ) : (
-                            <motion.img
-                                initial={{ scale: 0.95 }}
-                                animate={{ scale: 1 }}
-                                exit={{ scale: 0.95 }}
-                                src={optimizeImageUrl(selectedLightbox.url, 1200)}
-                                alt="Zoomed View"
-                                className="max-w-full max-h-[85vh] object-contain rounded-sm border border-[var(--color-hallmark-rule)] bg-black"
-                                onClick={(e) => e.stopPropagation()}
+                        }>
+                            <AdsBookletModal
+                                activeTab={activeTab}
+                                setActiveTab={setActiveTab}
+                                activeMenuIndex={activeMenuIndex}
+                                setActiveMenuIndex={setActiveMenuIndex}
+                                regularMenuImages={regularMenuImages}
+                                promoMenuImages={promoMenuImages}
+                                menuImageLoading={menuImageLoading}
+                                setMenuImageLoading={setMenuImageLoading}
+                                optimizeImageUrl={optimizeImageUrl}
+                                onClose={() => setSelectedLightbox(null)}
                             />
-                        )}
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        </Suspense>
+                    ) : selectedLightbox.type === 'checkin' ? (
+                        <div 
+                            className="w-full max-w-sm bg-[var(--color-hallmark-paper)] rounded-sm p-4 border border-[var(--color-hallmark-ink)] flex flex-col z-40 relative my-8 text-[var(--color-hallmark-ink)] cursor-default select-text" 
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex justify-between items-center w-full mb-3 pb-2 border-b border-[var(--color-hallmark-rule)]">
+                                <span className="font-mono text-[9px] font-bold text-[var(--color-brand)] uppercase tracking-wider">
+                                    // CUSTOMER CHECK-IN
+                                </span>
+                                <button 
+                                    onClick={() => setSelectedLightbox(null)}
+                                    className="text-[9px] font-mono font-bold hover:text-[var(--color-brand)] cursor-pointer text-[var(--color-hallmark-ink)] bg-transparent border-0 outline-none"
+                                >
+                                    [ CLOSE ]
+                                </button>
+                            </div>
+
+                            {/* Header with customer name and platform */}
+                            <div className="flex items-center justify-between gap-3 mb-3">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-[10px] text-white font-mono font-bold">
+                                        {selectedLightbox.item.user_name?.slice(0, 1).toUpperCase() || 'C'}
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-xs font-bold font-mono tracking-tight leading-none">
+                                            {selectedLightbox.item.user_name || 'Customer'}
+                                        </span>
+                                        {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username) && (
+                                            <span className="text-[9px] text-[var(--color-hallmark-ink-muted)] leading-none mt-0.5">
+                                                {(selectedLightbox.item.user_handle || selectedLightbox.item.user_username).startsWith('@') ? (selectedLightbox.item.user_handle || selectedLightbox.item.user_username) : `@${selectedLightbox.item.user_handle || selectedLightbox.item.user_username}`}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1 bg-neutral-100 px-2 py-0.5 rounded-sm border border-[var(--color-hallmark-rule)]">
+                                    {selectedLightbox.item.source === 'instagram' && <Instagram size={10} className="text-[#E1306C]" />}
+                                    {selectedLightbox.item.source === 'facebook' && <Facebook size={10} className="text-[#1877F2]" />}
+                                    {selectedLightbox.item.source === 'google' && <Star size={10} className="text-[#F4B400] fill-[#F4B400]" />}
+                                    <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-neutral-600">
+                                        {selectedLightbox.item.source}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Main image */}
+                            <div className="relative w-full aspect-[4/5] rounded-sm overflow-hidden border border-[var(--color-hallmark-rule)] bg-black mb-3">
+                                <img 
+                                    src={optimizeImageUrl(selectedLightbox.item.image_url, 600)} 
+                                    alt="Customer Check-in" 
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+
+                            {/* Review content */}
+                            {selectedLightbox.item.text && (
+                                <p className="text-[11px] text-[var(--color-hallmark-ink)] leading-relaxed italic border-l-2 border-[var(--color-brand)] pl-2 mb-4 font-medium font-[var(--font-body)]">
+                                    "{selectedLightbox.item.text}"
+                                </p>
+                            )}
+
+                            {/* Check-in Wall CTA */}
+                            <a 
+                                href="/link/hauscheckin"
+                                className="w-full bg-[var(--color-brand)] text-white border border-[var(--color-hallmark-rule)] rounded-sm py-2.5 flex items-center justify-center gap-1.5 font-mono text-[11px] font-extrabold tracking-wider uppercase hover:opacity-90 transition-all cursor-pointer mt-2 text-center"
+                            >
+                                <Compass size={13} />
+                                <span>เข้าสู่บอร์ดเช็กอินแบบลากซูม (ชมรูปเพิ่ม)</span>
+                            </a>
+                        </div>
+                    ) : (
+                        <img
+                            src={optimizeImageUrl(selectedLightbox.url, 1200)}
+                            alt="Zoomed View"
+                            className="max-w-full max-h-[85vh] object-contain rounded-sm border border-[var(--color-hallmark-rule)] bg-black animate-fade-in"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    )}
+                </div>
+            )}
 
             {/* ─── VERCEL ANALYTICS ─── */}
             <Analytics />
