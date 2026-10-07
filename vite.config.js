@@ -41,8 +41,14 @@ export default defineConfig({
             if (id.includes('lucide-react')) {
               return 'vendor-icons';
             }
-            if (id.includes('framer-motion') || id.includes('react-zoom-pan-pinch') || id.includes('sonner')) {
+            if (id.includes('sonner')) {
+              return 'vendor-toast';
+            }
+            if (id.includes('framer-motion') || id.includes('react-zoom-pan-pinch')) {
               return 'vendor-ui';
+            }
+            if (id.includes('opentype')) {
+              return 'vendor-opentype';
             }
             if (id.includes('html2canvas') || id.includes('html-to-image') || id.includes('canvas-confetti')) {
               return 'vendor-canvas';

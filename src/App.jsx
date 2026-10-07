@@ -2,14 +2,15 @@ import { useState, useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Outlet, Navigate, useNavigate } from 'react-router-dom'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from './lib/supabaseClient'
-import PublicLayout from './components/layout/PublicLayout'
-import AdminLayout from './components/AdminLayout'
-import StaffAuthLayout from './components/layout/StaffAuthLayout'
 import { BookingProvider } from './context/BookingContext'
 import { Toaster } from 'sonner'
-
-import RequireAuthLayout from './components/layout/RequireAuthLayout'
 import ErrorBoundary from './components/staff/ErrorBoundary'
+import AdsLandingPage from './AdsLandingPage'
+
+// Lazy load layouts to prevent admin framer-motion from leaking into entry bundle
+const PublicLayout = lazy(() => import('./components/layout/PublicLayout'))
+const AdminLayout = lazy(() => import('./components/AdminLayout'))
+const RequireAuthLayout = lazy(() => import('./components/layout/RequireAuthLayout'))
 
 // Immediate conditional prefetch for staff POS terminal to maintain 0ms startup without bloat on customer pages
 if (typeof window !== 'undefined') {
@@ -27,7 +28,6 @@ const Home = lazy(() => import('./Home'))
 const QnAPage = lazy(() => import('./QnAPage'))
 const BookingPage = lazy(() => import('./BookingPage'))
 const PickupPage = lazy(() => import('./PickupPage'))
-const AdsLandingPage = lazy(() => import('./AdsLandingPage'))
 const AdminDashboard = lazy(() => import('./AdminDashboard'))
 const AdminFinancialDashboard = lazy(() => import('./components/admin/AdminFinancialDashboard'))
 const AdminTaxHub = lazy(() => import('./components/admin/tax/AdminTaxHub'))
