@@ -613,12 +613,14 @@ function generateStandaloneLandingHtml(data) {
 
         function formatClientDescription(desc) {
             if (!desc) return '';
-            var lines = String(desc).trim().split('\n');
+            var lines = String(desc).trim().split('\\n');
             var html = '';
+            var modRegex = /^(cocktail|coctail|mocktail)\\s*\\+\\s*\\d+/i;
+            var plusRegex = /^\\+\\s*\\d+/;
             lines.forEach(function(l) {
                 var t = l.trim();
                 if (!t) return;
-                if (/^(cocktail|coctail|mocktail)\s*\+\s*\d+/i.test(t) || /^\+\s*\d+/.test(t)) {
+                if (modRegex.test(t) || plusRegex.test(t)) {
                     html += '<span class="modifier-tag">' + escapeClientHtml(t) + '</span><br>';
                 } else {
                     html += '<span>' + escapeClientHtml(t) + '</span><br>';
@@ -805,16 +807,22 @@ function generateStandaloneLandingHtml(data) {
                     fetch('/api/link?purge=1&t=' + Date.now(), { cache: 'no-store' })
                         .then(r => r.text())
                         .then(newHtml => {
-                            const match = newHtml.match(/<script id="full-menu-data" type="application\/json">([\s\S]*?)<\/script>/);
-                            if (match && match[1]) {
-                                const script = document.getElementById('full-menu-data');
-                                if (script) {
-                                    script.textContent = match[1];
-                                    const content = document.getElementById('full-menu-content');
-                                    if (content && content.style.display !== 'none') {
-                                        content.innerHTML = '';
-                                        toggleFullMenu();
-                                        toggleFullMenu();
+                            const startTag = '<script id="full-menu-data" type="application/json">';
+                            const endTag = '</' + 'script>';
+                            const sIdx = newHtml.indexOf(startTag);
+                            if (sIdx !== -1) {
+                                const eIdx = newHtml.indexOf(endTag, sIdx);
+                                if (eIdx !== -1) {
+                                    const jsonText = newHtml.substring(sIdx + startTag.length, eIdx);
+                                    const script = document.getElementById('full-menu-data');
+                                    if (script) {
+                                        script.textContent = jsonText;
+                                        const content = document.getElementById('full-menu-content');
+                                        if (content && content.style.display !== 'none') {
+                                            content.innerHTML = '';
+                                            toggleFullMenu();
+                                            toggleFullMenu();
+                                        }
                                     }
                                 }
                             }
