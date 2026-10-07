@@ -1,0 +1,59 @@
+{
+  "$schema": "https://agenticresourcediscovery.org/schemas/v1/ai-catalog.json",
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "IN THE HAUS | ร้านในบ้าน นครพนม",
+    "identifier": "https://haustable.vercel.app"
+  },
+  "entries": [
+    {
+      "identifier": "urn:ai:haustable.vercel.app:resource:restaurant-menu",
+      "displayName": "In the haus Menu & Signature Dishes",
+      "type": "text/html",
+      "url": "https://haustable.vercel.app/link",
+      "description": "Catalog of authentic Southern Thai cuisine, drinks, coffee, and signature dishes at IN THE HAUS Nakhon Phanom.",
+      "representativeQueries": [
+        "เมนูร้านในบ้าน นครพนม",
+        "ร้านอาหารริมโขง นครพนม เมนู",
+        "อาหารใต้รสจัด นครพนม",
+        "in the haus nakhon phanom menu"
+      ]
+    },
+    {
+      "identifier": "urn:ai:haustable.vercel.app:resource:table-booking",
+      "displayName": "Table Reservation Service",
+      "type": "text/html",
+      "url": "https://haustable.vercel.app/booking",
+      "description": "Online real-time table reservation and seating booking system for IN THE HAUS.",
+      "representativeQueries": [
+        "จองโต๊ะร้านในบ้าน",
+        "จองโต๊ะร้านอาหารริมโขง นครพนม",
+        "book table at in the haus nakhon phanom"
+      ]
+    },
+    {
+      "identifier": "urn:ai:haustable.vercel.app:resource:online-pickup",
+      "displayName": "Online Pickup Order Service",
+      "type": "text/html",
+      "url": "https://haustable.vercel.app/pickup",
+      "description": "Storefront takeout and online food ordering system for pickup at IN THE HAUS.",
+      "representativeQueries": [
+        "สั่งอาหารรับหน้าร้าน ในบ้าน",
+        "สั่งอาหารล่วงหน้า นครพนม",
+        "online pickup order in the haus"
+      ]
+    },
+    {
+      "identifier": "urn:ai:haustable.vercel.app:resource:restaurant-qa",
+      "displayName": "Restaurant Information, Location & FAQ",
+      "type": "text/html",
+      "url": "https://haustable.vercel.app/qa",
+      "description": "Frequently asked questions, location directions along Mekong river, parking details, and opening hours for IN THE HAUS.",
+      "representativeQueries": [
+        "ร้านในบ้านเปิดกี่โมง",
+        "ที่จอดรถร้านในบ้าน นครพนม",
+        "in the haus nakhon phanom directions"
+      ]
+    }
+  ]
+}

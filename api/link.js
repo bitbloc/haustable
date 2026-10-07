@@ -139,6 +139,10 @@ function generateStandaloneLandingHtml(data) {
     <link rel="preload" as="image" href="${sig2Img}" fetchpriority="high">
     <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
 
+    <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
+    <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
+    <link rel="ard" href="/.well-known/ard.json" type="application/json">
+
     <!-- Dieter Rams + Thai Modern OKLCH Pure Inline CSS (Zero Render-Blocking CSS) -->
     <style>
         /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
@@ -163,6 +167,13 @@ function generateStandaloneLandingHtml(data) {
         body { font-family: var(--font-body); background: var(--color-paper); color: var(--color-ink); line-height: 1.4; -webkit-font-smoothing: antialiased; }
         a { color: inherit; text-decoration: none; }
         button { font-family: inherit; cursor: pointer; border: none; background: none; }
+        a, button, .tab-btn, .quick-btn, .connect-row, .item-row, .sig-card, .gallery-item {
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        button:active, a:active {
+            opacity: 0.88;
+        }
         img { display: block; max-width: 100%; height: auto; }
 
         .container { width: 100%; max-width: 580px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 80px; }
@@ -688,31 +699,45 @@ function generateStandaloneLandingHtml(data) {
             } catch(e) {}
         }
 
+        function runAnalytics(fn) {
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(fn, { timeout: 300 });
+            } else {
+                setTimeout(fn, 0);
+            }
+        }
+
         function handleCallClick(e) {
             if (isDebounced('call')) return;
-            if (window.gtag) {
-                gtag('event', 'conversion', { send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp', transport: 'beacon' });
-                gtag('event', 'click_call', { event_category: 'contact', event_label: '098-528-4217', page_path: '/link' });
-            }
-            logAdEvent('call');
+            runAnalytics(() => {
+                if (window.gtag) {
+                    gtag('event', 'conversion', { send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp', transport: 'beacon' });
+                    gtag('event', 'click_call', { event_category: 'contact', event_label: '098-528-4217', page_path: '/link' });
+                }
+                logAdEvent('call');
+            });
         }
 
         function handleDirectionsClick(e) {
             if (isDebounced('directions')) return;
-            if (window.gtag) {
-                gtag('event', 'conversion', { send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp', transport: 'beacon' });
-                gtag('event', 'click_directions', { event_category: 'contact', page_path: '/link' });
-            }
-            logAdEvent('directions');
+            runAnalytics(() => {
+                if (window.gtag) {
+                    gtag('event', 'conversion', { send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp', transport: 'beacon' });
+                    gtag('event', 'click_directions', { event_category: 'contact', page_path: '/link' });
+                }
+                logAdEvent('directions');
+            });
         }
 
         function handleLineClick(e) {
             if (isDebounced('line')) return;
-            if (window.gtag) {
-                gtag('event', 'conversion', { send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp', transport: 'beacon' });
-                gtag('event', 'click_line', { event_category: 'contact', page_path: '/link' });
-            }
-            logAdEvent('line');
+            runAnalytics(() => {
+                if (window.gtag) {
+                    gtag('event', 'conversion', { send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp', transport: 'beacon' });
+                    gtag('event', 'click_line', { event_category: 'contact', page_path: '/link' });
+                }
+                logAdEvent('line');
+            });
         }
 
         // Preserve UTM Search Parameters on internal navigation

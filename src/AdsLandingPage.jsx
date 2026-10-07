@@ -423,7 +423,7 @@ export default function AdsLandingPage() {
      * contrast: pass (APCA / WCAG compliant)
      */
     return (
-        <div className="ads-landing-page w-full min-h-screen flex flex-col bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] overflow-x-hidden font-[var(--font-body)] relative pb-safe">
+        <div className="ads-landing-page w-full min-h-screen flex flex-col bg-[var(--color-hallmark-paper)] text-[var(--color-hallmark-ink)] overflow-x-hidden font-[var(--font-body)] relative pb-safe touch-manipulation">
             
             <div className="w-full max-w-xl mx-auto relative z-10 flex-grow flex flex-col border-x border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper)]">
                 
