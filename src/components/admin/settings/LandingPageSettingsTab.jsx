@@ -399,6 +399,81 @@ export default function LandingPageSettingsTab({
                 />
             </div>
 
+            {/* Contact & Navigation Links (Float Bar & Social) */}
+            <div className="space-y-4 border-t border-[var(--color-rule)] pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
+                        Contact & Direction Links (ลิงก์นำทาง & ช่องทางติดต่อ)
+                    </h3>
+                    <span className="text-[10px] font-mono text-[var(--color-neutral)]">
+                        ลิงก์สำหรับปุ่ม Float Bar และหน้าเชื่อมต่อ
+                    </span>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            Google Maps / นำทาง (Directions URL)
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.link_url_4 || ''}
+                            onChange={(e) => {
+                                handleSave('link_url_4', e.target.value);
+                                handleSave('contact_map_url', e.target.value);
+                            }}
+                            placeholder="https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        />
+                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                            ลิงก์ปุ่ม DIRECTIONS บน Float Bar และหน้าแรก (ซิงก์กับ Contact Map)
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            LINE Official Account URL
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.link_url_1 || ''}
+                            onChange={(e) => handleSave('link_url_1', e.target.value)}
+                            placeholder="https://lin.ee/EuzwG7c"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        />
+                        <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                            ลิงก์ปุ่ม LINE CHAT บน Float Bar
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            Instagram URL
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.link_url_2 || ''}
+                            onChange={(e) => handleSave('link_url_2', e.target.value)}
+                            placeholder="https://www.instagram.com/inthehausth/"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            Facebook Page URL
+                        </label>
+                        <input
+                            type="text"
+                            value={settings.link_url_3 || ''}
+                            onChange={(e) => handleSave('link_url_3', e.target.value)}
+                            placeholder="https://www.facebook.com/inthehausth/"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        />
+                    </div>
+                </div>
+            </div>
+
             {/* Menu Images Manager (10 Slots) */}
             <div className="space-y-4 border-t border-[var(--color-rule)] pt-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">

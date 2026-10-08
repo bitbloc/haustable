@@ -56,6 +56,7 @@ export default function GeneralBookingSettingsTab({
             await handleSave('policy_pickup', settings.policy_pickup || '');
             await handleSave('contact_phone', settings.contact_phone || '');
             await handleSave('contact_map_url', settings.contact_map_url || '');
+            await handleSave('link_url_4', settings.contact_map_url || '');
             toast.success('บันทึกการตั้งค่าข้อความและเงื่อนไขเรียบร้อย');
         } catch (err) {
             toast.error('เกิดข้อผิดพลาดในการบันทึก: ' + (err.message || err));
@@ -394,8 +395,11 @@ export default function GeneralBookingSettingsTab({
                         <input
                             type="text"
                             value={settings.contact_map_url || ''}
-                            onChange={(e) => handleSave('contact_map_url', e.target.value)}
-                            placeholder="https://maps.google.com/..."
+                            onChange={(e) => {
+                                handleSave('contact_map_url', e.target.value);
+                                handleSave('link_url_4', e.target.value);
+                            }}
+                            placeholder="https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7"
                             className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>

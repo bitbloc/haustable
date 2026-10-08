@@ -226,25 +226,25 @@ export default function IntradayVelocityChart({ bookings = [], selectedDate, loa
             const h = getBangkokHour(e.created_at)
             const ev = e.event_name || ''
             if (ev === 'page_view') totalPageviews++
-            else if (ev === 'click_directions' || ev === 'find_location') {
+            else if (ev === 'click_directions' || ev === 'find_location' || ev === 'directions') {
                 totalDirections++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 3.0
-            } else if (ev === 'click_phone' || ev === 'contact') {
+            } else if (ev === 'click_phone' || ev === 'contact' || ev === 'call') {
                 totalPhone++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.5
-            } else if (ev === 'click_line' || ev === 'generate_lead') {
+            } else if (ev === 'click_line' || ev === 'generate_lead' || ev === 'line') {
                 totalLine++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.0
-            } else if (ev === 'click_booking_link') {
+            } else if (ev === 'click_booking_link' || ev === 'booking') {
                 totalBooking++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 2.0
-            } else if (ev === 'click_pickup_link') {
+            } else if (ev === 'click_pickup_link' || ev === 'pickup') {
                 totalPickup++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 1.5
-            } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu') {
+            } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu' || ev === 'menu' || ev === 'booklet') {
                 totalMenu++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 0.6
-            } else if (ev === 'view_atmosphere') {
+            } else if (ev === 'view_atmosphere' || ev === 'vibe' || ev === 'vibe_gallery') {
                 totalVibe++
                 if (hourlyWeighted[h] !== undefined) hourlyWeighted[h] += 0.4
             }

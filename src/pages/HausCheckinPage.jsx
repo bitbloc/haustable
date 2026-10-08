@@ -73,7 +73,7 @@ const SOCIAL_MOCK_DATA = [
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: 'Yesterday',
-        url: 'https://maps.google.com'
+        url: 'https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7'
     },
     {
         id: 3,
@@ -104,7 +104,7 @@ const SOCIAL_MOCK_DATA = [
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '4 days ago',
-        url: 'https://maps.google.com'
+        url: 'https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7'
     },
     {
         id: 6,
@@ -135,7 +135,7 @@ const SOCIAL_MOCK_DATA = [
         rating: 5,
         location: 'IN THE HAUS ในบ้าน นครพนม',
         date: '2 weeks ago',
-        url: 'https://maps.google.com'
+        url: 'https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7'
     }
 ]
 

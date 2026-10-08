@@ -38,7 +38,7 @@ const FONT_TTF_URLS = {
  * Universal safe opentype parser function
  */
 function parseOpentypeFont(buffer) {
-    const parse = opentypeModule.parse || opentypeModule.default?.parse || opentypeModule.default
+    const parse = opentypeModule.parse || opentypeModule._parse
     if (typeof parse !== 'function') {
         throw new Error('opentype parse function is unavailable')
     }

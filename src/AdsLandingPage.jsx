@@ -336,12 +336,13 @@ export default function AdsLandingPage() {
     const defaultLineUrl = "https://lin.ee/EuzwG7c";
     const defaultIgUrl = "https://www.instagram.com/inthehausth/";
     const defaultFbUrl = "https://www.facebook.com/inthehausth/";
-    const defaultMapUrl = "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9";
+    const defaultMapUrl = "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7";
 
     const lineUrl = (settings.link_url_1 && settings.link_url_1 !== 'https://lin.ee/xyz') ? settings.link_url_1 : defaultLineUrl;
     const igUrl = (settings.link_url_2 && settings.link_url_2 !== 'https://instagram.com' && settings.link_url_2 !== 'https://www.instagram.com' && settings.link_url_2 !== 'https://www.instagram.com/inthehaus.th/') ? settings.link_url_2 : defaultIgUrl;
     const fbUrl = (settings.link_url_3 && settings.link_url_3 !== 'https://facebook.com' && settings.link_url_3 !== 'https://www.facebook.com') ? settings.link_url_3 : defaultFbUrl;
-    const mapUrl = (settings.link_url_4 && settings.link_url_4 !== 'https://maps.google.com') ? settings.link_url_4 : defaultMapUrl;
+    const rawMapUrl = settings.link_url_4 || settings.contact_map_url || defaultMapUrl;
+    const mapUrl = (rawMapUrl && !rawMapUrl.includes('3qjFz8N7cK6R4g969') && rawMapUrl !== 'https://maps.google.com') ? rawMapUrl : defaultMapUrl;
 
     const navigate = useNavigate();
 

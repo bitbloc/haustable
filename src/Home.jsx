@@ -73,10 +73,11 @@ export default function Home({ session }) {
         trackLineClick('/');
     };
 
-    const defaultMapUrl = "https://maps.app.goo.gl/TfTD3xATqRCrQmiF9"
-    const mapUrl = (settings?.link_url_4 && settings?.link_url_4 !== 'https://maps.google.com') 
-        ? settings.link_url_4 
-        : defaultMapUrl
+    const defaultMapUrl = "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7";
+    const rawMapUrl = settings?.link_url_4 || settings?.contact_map_url || defaultMapUrl;
+    const mapUrl = (rawMapUrl && !rawMapUrl.includes('3qjFz8N7cK6R4g969') && rawMapUrl !== 'https://maps.google.com') 
+        ? rawMapUrl 
+        : defaultMapUrl;
 
     const faqItems = [
         {

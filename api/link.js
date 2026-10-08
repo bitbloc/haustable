@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS = {
     link_url_1: "https://lin.ee/EuzwG7c",
     link_url_2: "https://www.instagram.com/inthehausth/",
     link_url_3: "https://www.facebook.com/inthehausth/",
-    link_url_4: "https://maps.app.goo.gl/3qjFz8N7cK6R4g969",
+    link_url_4: "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7",
     link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม"
 }
 
@@ -117,7 +117,12 @@ function generateStandaloneLandingHtml(data) {
     const lineUrl = escapeHtml(settings.link_url_1 || DEFAULT_SETTINGS.link_url_1)
     const igUrl = escapeHtml(settings.link_url_2 || DEFAULT_SETTINGS.link_url_2)
     const fbUrl = escapeHtml(settings.link_url_3 || DEFAULT_SETTINGS.link_url_3)
-    const mapUrl = escapeHtml(settings.link_map_url || settings.link_url_4 || DEFAULT_SETTINGS.link_url_4)
+    const rawMapUrl = settings.link_url_4 || settings.link_map_url || settings.contact_map_url || DEFAULT_SETTINGS.link_url_4
+    const mapUrl = escapeHtml(
+        (rawMapUrl && !rawMapUrl.includes('3qjFz8N7cK6R4g969') && rawMapUrl !== 'https://maps.google.com') 
+            ? rawMapUrl 
+            : DEFAULT_SETTINGS.link_url_4
+    )
 
     // Booklet Pages
     const bookletImages = []
@@ -333,7 +338,7 @@ function generateStandaloneLandingHtml(data) {
         gtag('config', 'AW-11227095880');
         gtag('config', 'G-D1M18Z54LM', { send_page_view: true });
 
-        // Non-blocking deferred loading of GTM script to keep main thread free for LCP
+        // Non-blocking deferred loading of Google Ads Tag script to keep main thread free for LCP
         (function() {
             let loaded = false;
             window.loadGtm = function() {
@@ -341,18 +346,18 @@ function generateStandaloneLandingHtml(data) {
                 loaded = true;
                 const s = document.createElement('script');
                 s.async = true;
-                s.src = 'https://www.googletagmanager.com/gtag/js?id=G-D1M18Z54LM';
+                s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-11227095880';
                 document.head.appendChild(s);
             };
             const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
             if (!isBot) {
-                ['pointerdown', 'touchstart', 'scroll', 'keydown'].forEach(evt => {
+                ['pointerdown', 'touchstart', 'scroll', 'keydown', 'click'].forEach(evt => {
                     window.addEventListener(evt, window.loadGtm, { once: true, passive: true });
                 });
                 if ('requestIdleCallback' in window) {
-                    requestIdleCallback(() => setTimeout(window.loadGtm, 4500));
+                    requestIdleCallback(() => setTimeout(window.loadGtm, 1500));
                 } else {
-                    setTimeout(window.loadGtm, 5000);
+                    setTimeout(window.loadGtm, 1200);
                 }
             }
         })();
@@ -402,14 +407,14 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Quick Actions: Reservation & Pickup -->
         <div class="quick-grid">
-            <a href="/booking" class="quick-btn" id="btn-quick-booking">
+            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="logAdEvent('click_booking_link')">
                 <div class="quick-tag"><span>// RESERVATION</span><span>➔</span></div>
                 <div>
                     <div class="quick-title">จองโต๊ะล่วงหน้า</div>
                     <div class="quick-sub">BOOK A TABLE</div>
                 </div>
             </a>
-            <a href="/pickup" class="quick-btn" id="btn-quick-pickup">
+            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="logAdEvent('click_pickup_link')">
                 <div class="quick-tag"><span>// SELF-PICKUP</span><span>➔</span></div>
                 <div>
                     <div class="quick-title">สั่งอาหารรับหน้าร้าน</div>
@@ -558,7 +563,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="section-header" style="margin-top:16px;">
                 <span class="section-title">DELIVERY SERVICE</span>
             </div>
-            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="connect-row lineman">
+            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="connect-row lineman" onclick="logAdEvent('click_pickup_link')">
                 <span>ORDER DIRECT ON LINEMAN</span>
                 <span style="font-family:var(--font-mono);">➔</span>
             </a>
@@ -704,6 +709,7 @@ function generateStandaloneLandingHtml(data) {
                 content.style.display = 'block';
                 btn.innerText = '[-] CLOSE FULL MENU';
                 if (window.gtag) gtag('event', 'view_full_menu', { event_category: 'engagement', page_path: '/link' });
+                logAdEvent('view_full_menu');
             } else {
                 content.style.display = 'none';
                 btn.innerText = '[+] VIEW FULL MENU (${menuItems.length} ITEMS)';
@@ -717,6 +723,7 @@ function generateStandaloneLandingHtml(data) {
             const img = document.getElementById('lightbox-img');
             img.src = url;
             m.classList.add('open');
+            logAdEvent('view_atmosphere');
         }
         function closeLightbox() {
             document.getElementById('lightbox-modal').classList.remove('open');
@@ -727,6 +734,7 @@ function generateStandaloneLandingHtml(data) {
             if (bookletPages.length === 0) return;
             document.getElementById('booklet-modal').classList.add('open');
             if (window.gtag) gtag('event', 'click_booklet', { event_category: 'engagement', page_path: '/link' });
+            logAdEvent('view_booklet_menu');
         }
         function closeBooklet(e) {
             if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
@@ -815,37 +823,82 @@ function generateStandaloneLandingHtml(data) {
         function handleCallClick(e) {
             if (isDebounced('call')) return;
             if (window.loadGtm) window.loadGtm();
-            runAnalytics(() => {
-                if (window.gtag) {
-                    gtag('event', 'conversion', { send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp', transport: 'beacon' });
-                    gtag('event', 'click_call', { event_category: 'contact', event_label: '098-528-4217', page_path: '/link' });
-                }
-                logAdEvent('call');
-            });
+            if (typeof window.gtag === 'function') {
+                gtag('event', 'conversion', {
+                    send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp',
+                    value: 1.0,
+                    currency: 'THB',
+                    transport_type: 'beacon'
+                });
+                gtag('event', 'contact', {
+                    method: 'phone',
+                    event_category: 'engagement',
+                    event_label: '098-528-4217',
+                    phone_number: '098-528-4217',
+                    transport_type: 'beacon',
+                    page_location: '/link'
+                });
+                gtag('event', 'click_call', {
+                    event_category: 'contact',
+                    event_label: '098-528-4217',
+                    transport_type: 'beacon',
+                    page_path: '/link'
+                });
+            }
+            logAdEvent('contact');
         }
 
         function handleDirectionsClick(e) {
             if (isDebounced('directions')) return;
             if (window.loadGtm) window.loadGtm();
-            runAnalytics(() => {
-                if (window.gtag) {
-                    gtag('event', 'conversion', { send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp', transport: 'beacon' });
-                    gtag('event', 'click_directions', { event_category: 'contact', page_path: '/link' });
-                }
-                logAdEvent('directions');
-            });
+            if (typeof window.gtag === 'function') {
+                gtag('event', 'conversion', {
+                    send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp',
+                    value: 1.0,
+                    currency: 'THB',
+                    transport_type: 'beacon'
+                });
+                gtag('event', 'find_location', {
+                    event_category: 'engagement',
+                    event_label: 'google_maps_directions',
+                    target_destination: 'Google Maps',
+                    transport_type: 'beacon',
+                    page_location: '/link'
+                });
+                gtag('event', 'click_directions', {
+                    event_category: 'contact',
+                    transport_type: 'beacon',
+                    page_path: '/link'
+                });
+            }
+            logAdEvent('find_location');
         }
 
         function handleLineClick(e) {
             if (isDebounced('line')) return;
             if (window.loadGtm) window.loadGtm();
-            runAnalytics(() => {
-                if (window.gtag) {
-                    gtag('event', 'conversion', { send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp', transport: 'beacon' });
-                    gtag('event', 'click_line', { event_category: 'contact', page_path: '/link' });
-                }
-                logAdEvent('line');
-            });
+            if (typeof window.gtag === 'function') {
+                gtag('event', 'conversion', {
+                    send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp',
+                    value: 1.0,
+                    currency: 'THB',
+                    transport_type: 'beacon'
+                });
+                gtag('event', 'generate_lead', {
+                    method: 'line_oa',
+                    event_category: 'engagement',
+                    event_label: 'line_official',
+                    target_destination: 'LINE OA',
+                    transport_type: 'beacon',
+                    page_location: '/link'
+                });
+                gtag('event', 'click_line', {
+                    event_category: 'contact',
+                    transport_type: 'beacon',
+                    page_path: '/link'
+                });
+            }
+            logAdEvent('generate_lead');
         }
 
         // Preserve UTM Search Parameters on internal navigation & Defer PageView out of Critical Chain
@@ -966,7 +1019,7 @@ export default async function handler(req, res) {
         } else {
             try {
                 const fetchPromise = Promise.all([
-                    supabase.from('app_settings').select('key, value').like('key', 'link_%'),
+                    supabase.from('app_settings').select('key, value').or('key.like.link_%,key.eq.contact_map_url'),
                     supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, category_id, sort_order').eq('is_available', true).order('sort_order'),
                     supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
                     supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).order('created_at', { ascending: false }).limit(24)

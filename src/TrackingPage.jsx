@@ -487,7 +487,7 @@ export default function TrackingPage() {
           {/* 6. Contact & Map Direct Cells */}
           <div className="grid grid-cols-2 gap-3 font-mono text-xs">
                  <a 
-                    href={settings.contact_map_url || "https://maps.google.com/?q=In+The+Haus"} 
+                    href={(settings.contact_map_url && !settings.contact_map_url.includes('3qjFz8N7cK6R4g969')) ? settings.contact_map_url : "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7"} 
                     target="_blank" rel="noreferrer"
                     className="bg-[var(--color-paper-2)] p-4 border border-[var(--color-rule)] hover:border-[var(--color-ink)] flex flex-col items-center justify-center gap-2 transition-colors text-center shadow-2xs"
                  >

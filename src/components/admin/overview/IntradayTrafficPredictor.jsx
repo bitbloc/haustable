@@ -277,31 +277,31 @@ export default function IntradayTrafficPredictor({
                 totalAdPageviews++
                 adSourcesMap[source].visits++
                 if (hourlyAdPageviews[h] !== undefined) hourlyAdPageviews[h]++
-            } else if (ev === 'click_directions' || ev === 'find_location') {
+            } else if (ev === 'click_directions' || ev === 'find_location' || ev === 'directions') {
                 totalAdDirections++
                 adSourcesMap[source].directions++
                 if (hourlyAdDirections[h] !== undefined) hourlyAdDirections[h]++
-            } else if (ev === 'click_line' || ev === 'generate_lead') {
+            } else if (ev === 'click_line' || ev === 'generate_lead' || ev === 'line') {
                 totalAdLine++
                 adSourcesMap[source].contacts++
                 if (hourlyAdLineClicks[h] !== undefined) hourlyAdLineClicks[h]++
-            } else if (ev === 'click_phone' || ev === 'contact') {
+            } else if (ev === 'click_phone' || ev === 'contact' || ev === 'call') {
                 totalAdPhone++
                 adSourcesMap[source].contacts++
                 if (hourlyAdPhoneClicks[h] !== undefined) hourlyAdPhoneClicks[h]++
-            } else if (ev === 'click_booking_link') {
+            } else if (ev === 'click_booking_link' || ev === 'booking') {
                 totalAdBooking++
                 adSourcesMap[source].bookings++
                 if (hourlyAdBookingClicks[h] !== undefined) hourlyAdBookingClicks[h]++
-            } else if (ev === 'click_pickup_link') {
+            } else if (ev === 'click_pickup_link' || ev === 'pickup') {
                 totalAdPickup++
                 adSourcesMap[source].pickups++
                 if (hourlyAdPickupClicks[h] !== undefined) hourlyAdPickupClicks[h]++
-            } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu') {
+            } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu' || ev === 'menu' || ev === 'booklet') {
                 totalAdMenu++
                 adSourcesMap[source].menus++
                 if (hourlyAdMenuClicks[h] !== undefined) hourlyAdMenuClicks[h]++
-            } else if (ev === 'view_atmosphere') {
+            } else if (ev === 'view_atmosphere' || ev === 'vibe' || ev === 'vibe_gallery') {
                 totalAdVibe++
                 adSourcesMap[source].vibes++
                 if (hourlyAdVibeClicks[h] !== undefined) hourlyAdVibeClicks[h]++

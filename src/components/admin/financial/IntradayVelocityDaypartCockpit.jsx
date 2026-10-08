@@ -660,8 +660,8 @@ export default function IntradayVelocityDaypartCockpit({
         let preOpeningAdSignals = 0
         adEvents.forEach(e => {
             const h = getBangkokHour(e.created_at)
-            const isDir = ['click_directions', 'find_location'].includes(e.event_name)
-            const isInq = ['click_phone', 'contact', 'click_line', 'generate_lead', 'click_booking_link', 'click_pickup_link'].includes(e.event_name)
+            const isDir = ['click_directions', 'find_location', 'directions'].includes(e.event_name)
+            const isInq = ['click_phone', 'contact', 'call', 'click_line', 'generate_lead', 'line', 'click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(e.event_name)
             const isHighIntent = isDir || isInq
 
             if (isHighIntent) {
@@ -851,7 +851,7 @@ export default function IntradayVelocityDaypartCockpit({
 
         // Ad Intent Leads
         const adHighIntent = adEvents.filter(e =>
-            ['click_directions', 'find_location', 'click_phone', 'contact', 'click_line', 'generate_lead', 'click_booking_link', 'click_pickup_link'].includes(e.event_name)
+            ['click_directions', 'find_location', 'directions', 'click_phone', 'contact', 'call', 'click_line', 'generate_lead', 'line', 'click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(e.event_name)
         ).length
 
         // Realistic Projected Closing Sales
@@ -878,9 +878,9 @@ export default function IntradayVelocityDaypartCockpit({
             ? 0
             : (latestExpected > 0 ? Math.round(((totalGross - latestExpected) / latestExpected) * 1000) / 10 : 0)
 
-        const adDirs = adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length
-        const adCalls = adEvents.filter(e => ['click_phone', 'contact'].includes(e.event_name)).length
-        const adBookings = adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'generate_lead', 'click_line'].includes(e.event_name)).length
+        const adDirs = adEvents.filter(e => ['click_directions', 'find_location', 'directions'].includes(e.event_name)).length
+        const adCalls = adEvents.filter(e => ['click_phone', 'contact', 'call'].includes(e.event_name)).length
+        const adBookings = adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'booking', 'pickup', 'generate_lead', 'click_line', 'line'].includes(e.event_name)).length
 
         const goalExceededHoursCount = points.filter(p => p.isGoalExceeded).length
         const isDailyGoalExceeded = totalGross >= defaultTarget && totalGross > 0
@@ -1165,10 +1165,10 @@ export default function IntradayVelocityDaypartCockpit({
             }
 
             // Extract detailed Ad & Search Intent intelligence
-            const adMapsCount = adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length
-            const adContactCount = adEvents.filter(e => ['click_phone', 'contact', 'click_line'].includes(e.event_name)).length
-            const adBookingCount = adEvents.filter(e => ['click_booking_link', 'click_pickup_link'].includes(e.event_name)).length
-            const adMenuCount = adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe'].includes(e.event_name)).length
+            const adMapsCount = adEvents.filter(e => ['click_directions', 'find_location', 'directions'].includes(e.event_name)).length
+            const adContactCount = adEvents.filter(e => ['click_phone', 'contact', 'call', 'click_line', 'generate_lead', 'line'].includes(e.event_name)).length
+            const adBookingCount = adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(e.event_name)).length
+            const adMenuCount = adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe', 'view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open'].includes(e.event_name)).length
             const adTotalEvents = adEvents.length
             
             const adSourceMap = {}
@@ -3428,25 +3428,25 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
                             <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
                                 <span className="text-[10px] text-[oklch(42%_0.010_28)] block">ขอเส้นทาง (MAPS)</span>
                                 <span className="text-base font-bold text-[oklch(18%_0.012_28)]">
-                                    {adEvents.filter(e => ['click_directions', 'find_location'].includes(e.event_name)).length}
+                                    {adEvents.filter(e => ['click_directions', 'find_location', 'directions'].includes(e.event_name)).length}
                                 </span>
                             </div>
                             <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
                                 <span className="text-[10px] text-[oklch(42%_0.010_28)] block">โทร / LINE</span>
                                 <span className="text-base font-bold text-[oklch(18%_0.012_28)]">
-                                    {adEvents.filter(e => ['click_phone', 'contact', 'click_line'].includes(e.event_name)).length}
+                                    {adEvents.filter(e => ['click_phone', 'contact', 'call', 'click_line', 'generate_lead', 'line'].includes(e.event_name)).length}
                                 </span>
                             </div>
                             <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
                                 <span className="text-[10px] text-[oklch(42%_0.010_28)] block">จองโต๊ะ / สั่งกลับ</span>
                                 <span className="text-base font-bold text-[oklch(45%_0.08_140)]">
-                                    {adEvents.filter(e => ['click_booking_link', 'click_pickup_link'].includes(e.event_name)).length}
+                                    {adEvents.filter(e => ['click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(e.event_name)).length}
                                 </span>
                             </div>
                             <div className="p-2.5 bg-[oklch(94%_0.010_28)] border border-[oklch(85%_0.012_28)]">
                                 <span className="text-[10px] text-[oklch(42%_0.010_28)] block">สำรวจเมนู / บรรยากาศ</span>
                                 <span className="text-base font-bold text-[oklch(52%_0.16_28)]">
-                                    {adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe'].includes(e.event_name)).length}
+                                    {adEvents.filter(e => ['view_menu', 'explore_menu', 'view_vibe', 'view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open'].includes(e.event_name)).length}
                                 </span>
                             </div>
                         </div>

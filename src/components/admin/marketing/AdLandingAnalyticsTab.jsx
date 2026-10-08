@@ -32,6 +32,19 @@ export default function AdLandingAnalyticsTab() {
 
     useEffect(() => {
         fetchAdAnalytics()
+
+        // Realtime sync for live ad interaction radar
+        const channelName = `ad-analytics-radar-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
+        const channel = supabase
+            .channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ad_events' }, () => {
+                fetchAdAnalytics()
+            })
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [timeRange])
 
     const fetchAdAnalytics = async () => {
@@ -74,34 +87,34 @@ export default function AdLandingAnalyticsTab() {
 
         // 2. Direct Travel & Call (Immediate Walk-in Intent)
         const mapClicks = isLive 
-            ? events.filter(e => e.event_name === 'find_location' || e.event_name === 'click_directions').length 
+            ? events.filter(e => ['find_location', 'click_directions', 'directions'].includes(e.event_name)).length 
             : 215
         const phoneClicks = isLive 
-            ? events.filter(e => e.event_name === 'contact' || e.event_name === 'click_phone').length 
+            ? events.filter(e => ['contact', 'click_phone', 'call'].includes(e.event_name)).length 
             : 64
 
         // 3. Direct Contact & Messaging
         const lineClicks = isLive 
-            ? events.filter(e => e.event_name === 'generate_lead' || e.event_name === 'click_line').length 
+            ? events.filter(e => ['generate_lead', 'click_line', 'line'].includes(e.event_name)).length 
             : 184
 
         // 4. Direct Online Services & Transactions (Table Booking & Self-Pickup)
         const bookingClicks = isLive 
-            ? events.filter(e => e.event_name === 'click_booking_link').length 
+            ? events.filter(e => ['click_booking_link', 'booking'].includes(e.event_name)).length 
             : 98
         const pickupClicks = isLive 
-            ? events.filter(e => e.event_name === 'click_pickup_link').length 
+            ? events.filter(e => ['click_pickup_link', 'pickup'].includes(e.event_name)).length 
             : 42
 
         // 5. Deep Exploration (Full Menu, Classic Booklet, Atmosphere / Vibe)
         const fullMenuViews = isLive
-            ? events.filter(e => e.event_name === 'view_full_menu').length
+            ? events.filter(e => ['view_full_menu', 'full_menu', 'explore_menu'].includes(e.event_name)).length
             : 312
         const bookletViews = isLive 
-            ? events.filter(e => e.event_name === 'view_booklet_menu' || e.event_name === 'lightbox_open').length 
+            ? events.filter(e => ['view_booklet_menu', 'lightbox_open', 'click_booklet', 'booklet'].includes(e.event_name)).length 
             : 218
         const atmosphereViews = isLive
-            ? events.filter(e => e.event_name === 'view_atmosphere').length
+            ? events.filter(e => ['view_atmosphere', 'atmosphere', 'view_vibe'].includes(e.event_name)).length
             : 175
 
         // Aggregates
@@ -166,16 +179,16 @@ export default function AdLandingAnalyticsTab() {
                 }
                 const ev = e.event_name || ''
                 if (ev === 'page_view') sourceMap[s].visits++
-                else if (ev === 'find_location' || ev === 'click_directions') {
+                else if (['find_location', 'click_directions', 'directions'].includes(ev)) {
                     sourceMap[s].directions++
                     sourceMap[s].conversions++
-                } else if (ev === 'generate_lead' || ev === 'click_line' || ev === 'contact' || ev === 'click_phone') {
+                } else if (['generate_lead', 'click_line', 'line', 'contact', 'click_phone', 'call'].includes(ev)) {
                     sourceMap[s].contacts++
                     sourceMap[s].conversions++
-                } else if (ev === 'click_booking_link' || ev === 'click_pickup_link') {
+                } else if (['click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(ev)) {
                     sourceMap[s].orders++
                     sourceMap[s].conversions++
-                } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu' || ev === 'view_atmosphere' || ev === 'lightbox_open') {
+                } else if (['view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open', 'view_vibe', 'explore_menu'].includes(ev)) {
                     sourceMap[s].explores++
                     sourceMap[s].conversions++
                 }

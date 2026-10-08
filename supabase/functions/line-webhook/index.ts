@@ -3294,25 +3294,25 @@ Deno.serve(async (req) => {
               const h = new Date(eDate.getTime() + (7 * 3600 * 1000)).getUTCHours()
               const ev = e.event_name || ''
 
-              if (ev === 'click_directions' || ev === 'find_location') {
+              if (ev === 'click_directions' || ev === 'find_location' || ev === 'directions') {
                 totalAdDirections++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 3.0
-              } else if (ev === 'click_phone' || ev === 'contact') {
+              } else if (ev === 'click_phone' || ev === 'contact' || ev === 'call') {
                 totalAdPhone++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.5
-              } else if (ev === 'click_line' || ev === 'generate_lead') {
+              } else if (ev === 'click_line' || ev === 'generate_lead' || ev === 'line') {
                 totalAdLine++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.0
-              } else if (ev === 'click_booking_link') {
+              } else if (ev === 'click_booking_link' || ev === 'booking') {
                 totalAdBooking++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 2.0
-              } else if (ev === 'click_pickup_link') {
+              } else if (ev === 'click_pickup_link' || ev === 'pickup') {
                 totalAdPickup++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 1.5
-              } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu') {
+              } else if (ev === 'view_full_menu' || ev === 'view_booklet_menu' || ev === 'menu' || ev === 'booklet') {
                 totalAdMenu++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 0.6
-              } else if (ev === 'view_atmosphere') {
+              } else if (ev === 'view_atmosphere' || ev === 'vibe' || ev === 'vibe_gallery') {
                 totalAdVibe++
                 if (hourlyAdLeads[h] !== undefined) hourlyAdLeads[h] += 0.4
               }
