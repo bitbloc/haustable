@@ -223,8 +223,6 @@ function OverviewTableCard({
     const guestCount = item.booking?.guest_count || item.table.capacity || 2
     const roundsInfo = item.orderRoundsInfo
     const hasMoreThan15Items = orderItems.length > 15
-
-    const [expandedOlderRounds, setExpandedOlderRounds] = useState(false)
     const [now, setNow] = useState(() => Date.now())
 
     useEffect(() => {
@@ -473,33 +471,6 @@ function OverviewTableCard({
                             <div className={`${cfg.listMaxHeight} overflow-y-auto space-y-2.5 pr-1 overscroll-contain`}>
                                 {reversedRounds.map((round, rIdx) => {
                                     const isNewest = rIdx === 0
-                                    const isOlderRound = rIdx >= 2
-
-                                    // If older round (index >= 2) and collapsed: show compact toggle row
-                                    if (isOlderRound && !expandedOlderRounds) {
-                                        if (rIdx === 2) {
-                                            const totalOlderItems = reversedRounds.slice(2).reduce((sum, r) => sum + r.items.length, 0)
-                                            const olderRoundsCount = reversedRounds.length - 2
-                                            const olderRoundLabel = olderRoundsCount === 1 
-                                                ? `+ รอบ 1 (${reversedRounds[2].timeStr}) · ${reversedRounds[2].items.length} รายการ`
-                                                : `+ รอบก่อนหน้า (${olderRoundsCount} รอบ · ${totalOlderItems} รายการ)`
-                                            return (
-                                                <button
-                                                    key="older-rounds-toggle"
-                                                    type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        setExpandedOlderRounds(true)
-                                                    }}
-                                                    className="w-full py-1 px-2 border border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center justify-between cursor-pointer transition-colors"
-                                                >
-                                                    <span>{olderRoundLabel}</span>
-                                                    <span className="underline font-bold text-[10px]">คลิกคลี่</span>
-                                                </button>
-                                            )
-                                        }
-                                        return null
-                                    }
 
                                     // ONLY the newest round (rIdx === 0) is considered fresh when isFreshOrder is true!
                                     const roundTimeMs = round.timeIso ? new Date(round.timeIso).getTime() : 0
@@ -616,21 +587,6 @@ function OverviewTableCard({
                                         </div>
                                     )
                                 })}
-
-                                {expandedOlderRounds && reversedRounds.length > 2 && (
-                                    <div className="pt-1 text-center">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                setExpandedOlderRounds(false)
-                                            }}
-                                            className="text-[10px] font-mono text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)] underline cursor-pointer"
-                                        >
-                                            - ซ่อนรอบเก่า
-                                        </button>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>
