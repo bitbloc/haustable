@@ -134,9 +134,11 @@ export function useTrackingLogic(token) {
   }, [token])
 
   const currentStatusRef = useRef(data?.status)
+  const currentBookingIdRef = useRef(data?.id)
   useEffect(() => {
     currentStatusRef.current = data?.status
-  }, [data?.status])
+    currentBookingIdRef.current = data?.id
+  }, [data?.id, data?.status])
 
   // Realtime Broadcast Room + Postgres Changes Subscription + Polling Fallback
   useEffect(() => {
@@ -173,8 +175,11 @@ export function useTrackingLogic(token) {
         event: '*',
         schema: 'public',
         table: 'order_items'
-      }, () => {
-        fetchTrackingInfo()
+      }, (payload) => {
+        const bId = payload.new?.booking_id || payload.old?.booking_id
+        if (!bId || !currentBookingIdRef.current || String(bId) === String(currentBookingIdRef.current)) {
+          fetchTrackingInfo()
+        }
       })
       let isRealtimeSubscribed = false
       channel
@@ -187,10 +192,14 @@ export function useTrackingLogic(token) {
         }
       })
 
-    // 2. Active Tab Focus / Visibility Listener (Instant sync on resume)
+    // 2. Active Tab Focus / Visibility Listener (Instant sync on resume, debounced)
+    let visibilityDebounceTimer = null
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        fetchTrackingInfo()
+        if (visibilityDebounceTimer) clearTimeout(visibilityDebounceTimer)
+        visibilityDebounceTimer = setTimeout(() => {
+          fetchTrackingInfo()
+        }, 300)
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -216,6 +225,7 @@ export function useTrackingLogic(token) {
     }, 15000)
 
     return () => {
+      if (visibilityDebounceTimer) clearTimeout(visibilityDebounceTimer)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('focus', handleVisibilityChange)
       supabase.removeChannel(channel)

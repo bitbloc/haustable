@@ -76,24 +76,30 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             fetchFloorData(true)
         }, 30000)
 
-        // Refetch immediately when tab/window regains focus
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') fetchFloorData(true)
+        // Refetch when tab/window regains focus (with 500ms debounce)
+        let focusDebounceTimer = null
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === 'visible') {
+                if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
+                focusDebounceTimer = setTimeout(() => {
+                    fetchFloorData(true)
+                }, 500)
+            }
         }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        const handleWindowFocus = () => fetchFloorData(true)
-        window.addEventListener('focus', handleWindowFocus)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+        window.addEventListener('focus', handleVisibilityOrFocus)
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
+            if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
             clearInterval(autoPollTimer)
             supabase.removeChannel(channel)
             unsubscribePosBroadcast()
             if (posSyncChannel) posSyncChannel.close()
             window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('storage', handleStorageSync)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-            window.removeEventListener('focus', handleWindowFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
         }
     }, [])
 

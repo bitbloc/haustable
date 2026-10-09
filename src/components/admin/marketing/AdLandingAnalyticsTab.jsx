@@ -33,16 +33,23 @@ export default function AdLandingAnalyticsTab() {
     useEffect(() => {
         fetchAdAnalytics()
 
-        // Realtime sync for live ad interaction radar
+        let debounceTimer = null
+        const debouncedFetch = () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
+            debounceTimer = setTimeout(() => {
+                fetchAdAnalytics()
+            }, 5000)
+        }
+
+        // Realtime sync for live ad interaction radar (throttled to max 1 request per 5s)
         const channelName = `ad-analytics-radar-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
         const channel = supabase
             .channel(channelName)
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ad_events' }, () => {
-                fetchAdAnalytics()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ad_events' }, debouncedFetch)
             .subscribe()
 
         return () => {
+            if (debounceTimer) clearTimeout(debounceTimer)
             supabase.removeChannel(channel)
         }
     }, [timeRange])

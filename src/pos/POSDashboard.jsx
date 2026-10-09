@@ -1084,7 +1084,20 @@ export default function POSDashboard() {
         }
     };
 
-    const checkPendingOrders = async () => {
+    const pendingCheckDebounceRef = useRef(null);
+    const isCheckingPendingRef = useRef(false);
+
+    const checkPendingOrders = useCallback(async (immediate = false) => {
+        if (!immediate) {
+            if (pendingCheckDebounceRef.current) clearTimeout(pendingCheckDebounceRef.current);
+            pendingCheckDebounceRef.current = setTimeout(() => {
+                checkPendingOrders(true);
+            }, 300);
+            return;
+        }
+
+        if (isCheckingPendingRef.current) return;
+        isCheckingPendingRef.current = true;
         try {
             const today = new Date();
             const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
@@ -1101,6 +1114,7 @@ export default function POSDashboard() {
                     order_items (id, quantity, price_at_time, custom_name, menu_items (name))
                 `)
                 .in('status', ['pending', 'confirmed'])
+                .or(`status.eq.pending,payment_slip_url.not.is.null,staff_remark.ilike.%[CALL_STAFF]%`)
                 .or(`booking_time.gte.${startOfToday},created_at.gte.${startOfToday}`)
                 .order('booking_time', { ascending: false });
             
@@ -1167,8 +1181,10 @@ export default function POSDashboard() {
             }
         } catch (err) {
             console.error("Check pending orders failed:", err);
+        } finally {
+            isCheckingPendingRef.current = false;
         }
-    };
+    }, []);
 
     const isCheckingUnprintedRef = useRef(false);
 
@@ -1244,7 +1260,7 @@ export default function POSDashboard() {
             isHeartbeatRunningRef.current = true;
             try {
                 await Promise.allSettled([
-                    checkPendingOrders(),
+                    checkPendingOrders(true),
                     checkUnprintedQrOrders()
                 ]);
             } catch (e) {
@@ -1263,10 +1279,10 @@ export default function POSDashboard() {
             heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
         };
 
-        // Foreground active: every 15s. Background / folded screen: every 30s (guarantees auto-print continues!)
+        // Foreground active: every 45s (WebSocket handles instant push). Background / folded screen: every 30s (guarantees auto-print continues!)
         const updateHeartbeatMode = () => {
             const isVisible = document.visibilityState === 'visible';
-            startHeartbeat(isVisible ? 15000 : 30000);
+            startHeartbeat(isVisible ? 45000 : 30000);
         };
 
         updateHeartbeatMode();

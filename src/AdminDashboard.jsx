@@ -339,18 +339,22 @@ export default function AdminDashboard() {
             fetchData(true, selectedDateRef.current)
         }, 30000)
 
-        // 5. Refetch immediately when tab/window regains focus or becomes visible
-        const handleVisibilityChange = () => {
+        // 5. Refetch when tab/window regains focus or becomes visible (with 500ms debounce)
+        let focusDebounceTimer = null
+        const handleVisibilityOrFocus = () => {
             if (document.visibilityState === 'visible') {
-                fetchData(true, selectedDateRef.current)
+                if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
+                focusDebounceTimer = setTimeout(() => {
+                    fetchData(true, selectedDateRef.current)
+                }, 500)
             }
         }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-        const handleWindowFocus = () => fetchData(true, selectedDateRef.current)
-        window.addEventListener('focus', handleWindowFocus)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+        window.addEventListener('focus', handleVisibilityOrFocus)
 
         return () => {
             if (debounceTimer) clearTimeout(debounceTimer)
+            if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
             clearInterval(autoPollTimer)
             supabase.removeChannel(tableChannel)
             unsubscribePosBroadcast()
@@ -358,8 +362,8 @@ export default function AdminDashboard() {
             window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('pos-shift-changed', handleShiftChanged)
             window.removeEventListener('storage', handleStorageSync)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-            window.removeEventListener('focus', handleWindowFocus)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
         }
     }, [])
 

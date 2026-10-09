@@ -74,6 +74,10 @@ export default function CustomerOrderLanding() {
     // Business Data
     const [table, setTable] = useState(null);
     const [activeBooking, setActiveBooking] = useState(null);
+    const activeBookingRef = useRef(activeBooking);
+    useEffect(() => {
+        activeBookingRef.current = activeBooking;
+    }, [activeBooking]);
     const [paxCount, setPaxCount] = useState(2);
     const [showPaxModal, setShowPaxModal] = useState(false);
     const [categories, setCategories] = useState([]);
@@ -347,8 +351,11 @@ export default function CustomerOrderLanding() {
                 event: '*',
                 schema: 'public',
                 table: 'order_items'
-            }, () => {
-                refreshActiveBooking(table.id);
+            }, (payload) => {
+                const bId = payload.new?.booking_id || payload.old?.booking_id;
+                if (!bId || !activeBookingRef.current?.id || String(bId) === String(activeBookingRef.current.id)) {
+                    refreshActiveBooking(table.id);
+                }
             })
             .on('postgres_changes', {
                 event: 'UPDATE',

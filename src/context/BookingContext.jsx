@@ -157,9 +157,13 @@ export function BookingProvider({ children }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleDataChange)
             .subscribe()
 
+        let focusDebounceTimer = null
         const handleVisibilityOrFocus = () => {
             if (document.visibilityState === 'visible' && isMounted) {
-                loadMenu(true)
+                if (focusDebounceTimer) clearTimeout(focusDebounceTimer);
+                focusDebounceTimer = setTimeout(() => {
+                    if (isMounted) loadMenu(false);
+                }, 500);
             }
         }
 
@@ -170,6 +174,7 @@ export function BookingProvider({ children }) {
             isMounted = false
             if (menuDebounceTimer) clearTimeout(menuDebounceTimer)
             if (dataDebounceTimer) clearTimeout(dataDebounceTimer)
+            if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
             supabase.removeChannel(channel)
             window.removeEventListener('focus', handleVisibilityOrFocus)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)

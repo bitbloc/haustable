@@ -49,9 +49,13 @@ export function useMenuData() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeChange)
             .subscribe()
 
+        let focusDebounceTimer = null
         const handleVisibilityOrFocus = () => {
             if (document.visibilityState === 'visible' && isMountedRef.current) {
-                loadMenu(true)
+                if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
+                focusDebounceTimer = setTimeout(() => {
+                    if (isMountedRef.current) loadMenu(false)
+                }, 500)
             }
         }
 
@@ -61,6 +65,7 @@ export function useMenuData() {
         return () => {
             isMountedRef.current = false
             if (debounceTimer) clearTimeout(debounceTimer)
+            if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
             supabase.removeChannel(channel)
             window.removeEventListener('focus', handleVisibilityOrFocus)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)

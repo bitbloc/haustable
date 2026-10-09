@@ -364,12 +364,15 @@ const channel = supabase.channel(channelId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeSync)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleRealtimeSync)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRealtimeSync)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, handleRealtimeSync)
     .subscribe()
 
+let focusDebounceTimer = null
 const handleVisibilityOrFocus = () => {
     if (document.visibilityState === 'visible' && isMounted) {
-        fetchShopData()
+        if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
+        focusDebounceTimer = setTimeout(() => {
+            if (isMounted) fetchShopData()
+        }, 500)
     }
 }
 
@@ -379,6 +382,7 @@ document.addEventListener('visibilitychange', handleVisibilityOrFocus)
 return () => {
     isMounted = false
     if (debounceTimer) clearTimeout(debounceTimer)
+    if (focusDebounceTimer) clearTimeout(focusDebounceTimer)
     if (authSub) authSub.unsubscribe()
     supabase.removeChannel(channel)
     window.removeEventListener('focus', handleVisibilityOrFocus)
