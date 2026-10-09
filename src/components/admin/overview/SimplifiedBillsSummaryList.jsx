@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
-import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking } from '../../../utils/tableTransferHelper'
+import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking, parseTableTransferInfo } from '../../../utils/tableTransferHelper'
 import { groupOrderItemsIntoRounds } from '../../../utils/orderRoundHelper'
 
 /**
@@ -172,6 +172,7 @@ export default function SimplifiedBillsSummaryList({
                             const isPaid = ['completed', 'paid', 'success'].includes(b.status)
                             const isSeated = ['seated', 'ready'].includes(b.status)
                             const isCancelled = ['cancelled', 'void'].includes(b.status)
+                            const transfer = parseTableTransferInfo(b, bookings)
 
                             const itemNames = (b.order_items || [])
                                 .map(it => it.menu_items?.name)
@@ -189,6 +190,16 @@ export default function SimplifiedBillsSummaryList({
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)]">{tableName}</span>
+                                            {transfer.isMergedSource && (
+                                                <span className="text-[9px] px-1 py-0.5 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-xs font-mono font-bold">
+                                                    ➔ โต๊ะ {transfer.mergedToTable}
+                                                </span>
+                                            )}
+                                            {transfer.isMergedTarget && (
+                                                <span className="text-[9px] px-1 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs font-mono font-bold">
+                                                    +รวม {transfer.mergedFromTables.join(', ')}
+                                                </span>
+                                            )}
                                             {isPickup && (
                                                 <span className="text-[9px] px-1 py-0.5 bg-[oklch(90%_0.010_28)] text-[oklch(55%_0.010_28)] rounded-xs font-mono">
                                                     PICKUP
@@ -196,14 +207,31 @@ export default function SimplifiedBillsSummaryList({
                                             )}
                                             <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] tabular-nums">{timeStr}</span>
                                         </div>
-                                        <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
-                                            ฿{amount.toLocaleString()}
-                                        </span>
+                                        {transfer.isMergedSource ? (
+                                            <div className="text-right">
+                                                {transfer.originalTotal > 0 && (
+                                                    <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] line-through tabular-nums mr-1">
+                                                        ฿{transfer.originalTotal.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                <span className="font-mono font-bold text-sm text-[oklch(52%_0.16_28)] tabular-nums">
+                                                    ฿0
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className="font-mono font-bold text-sm text-[oklch(18%_0.012_28)] tabular-nums">
+                                                ฿{amount.toLocaleString()}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center justify-between text-xs gap-2">
                                         <div className="text-[oklch(42%_0.010_28)] truncate max-w-[200px]">
-                                            {itemsCount > 0 ? (
+                                            {transfer.isMergedSource ? (
+                                                <span className="font-mono text-[11px] text-[oklch(45%_0.010_28)]">
+                                                    โอนรายการไปที่ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                </span>
+                                            ) : itemsCount > 0 ? (
                                                 <span><strong className="text-[oklch(18%_0.012_28)]">{itemsCount} รายการ:</strong> {itemsPreview}</span>
                                             ) : (
                                                 customerName
@@ -211,7 +239,11 @@ export default function SimplifiedBillsSummaryList({
                                         </div>
 
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                            {isPaid ? (
+                                            {transfer.isMergedSource ? (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono">
+                                                    รวมบิล
+                                                </span>
+                                            ) : isPaid ? (
                                                 <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(82%_0.08_140)]">
                                                     ชำระแล้ว
                                                 </span>
@@ -265,6 +297,7 @@ export default function SimplifiedBillsSummaryList({
                                         const isPaid = ['completed', 'paid', 'success'].includes(b.status)
                                         const isSeated = ['seated', 'ready'].includes(b.status)
                                         const isCancelled = ['cancelled', 'void'].includes(b.status)
+                                        const transfer = parseTableTransferInfo(b, bookings)
 
                                         const itemNames = (b.order_items || [])
                                             .map(it => it.menu_items?.name)
@@ -275,7 +308,7 @@ export default function SimplifiedBillsSummaryList({
 
                                         return (
                                             <tr 
-                                                key={b.id}
+                                                key={b.id} 
                                                 onClick={() => setInspectingBill(b)}
                                                 className="hover:bg-[oklch(95%_0.008_28)] transition-colors cursor-pointer select-none"
                                                 title="คลิกเพื่อดูรายละเอียดบิล"
@@ -287,7 +320,19 @@ export default function SimplifiedBillsSummaryList({
 
                                                 {/* 2. Table */}
                                                 <td className="py-2.5 px-3 font-bold text-[oklch(18%_0.012_28)] whitespace-nowrap">
-                                                    <span className="font-mono">{tableName}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="font-mono">{tableName}</span>
+                                                        {transfer.isMergedSource && (
+                                                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-bold">
+                                                                ➔ โต๊ะ {transfer.mergedToTable}
+                                                            </span>
+                                                        )}
+                                                        {transfer.isMergedTarget && (
+                                                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-xs bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] font-bold">
+                                                                +รวม {transfer.mergedFromTables.join(', ')}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 {/* 3. Customer / Channel */}
@@ -308,7 +353,11 @@ export default function SimplifiedBillsSummaryList({
 
                                                 {/* 4. Items */}
                                                 <td className="py-2.5 px-3 text-[oklch(42%_0.010_28)] truncate max-w-[240px]">
-                                                    {itemsCount > 0 ? (
+                                                    {transfer.isMergedSource ? (
+                                                        <span className="font-mono text-xs text-[oklch(45%_0.010_28)]">
+                                                            โอนรายการไปที่ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                        </span>
+                                                    ) : itemsCount > 0 ? (
                                                         <span>
                                                             <strong className="text-[oklch(18%_0.012_28)] mr-1">{itemsCount} รายการ:</strong>
                                                             <span className="text-xs text-[oklch(55%_0.010_28)]">{itemsPreview}</span>
@@ -320,13 +369,28 @@ export default function SimplifiedBillsSummaryList({
 
                                                 {/* 5. Total (text-right) */}
                                                 <td className="py-2.5 px-3 text-right font-mono font-bold text-[oklch(18%_0.012_28)] tabular-nums whitespace-nowrap">
-                                                    ฿{amount.toLocaleString()}
+                                                    {transfer.isMergedSource ? (
+                                                        <div>
+                                                            <div className="text-xs font-bold text-[oklch(52%_0.16_28)]">฿0 (โอนแล้ว)</div>
+                                                            {transfer.originalTotal > 0 && (
+                                                                <div className="text-[10px] text-[oklch(55%_0.010_28)] line-through">
+                                                                    ฿{transfer.originalTotal.toLocaleString()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        `฿${amount.toLocaleString()}`
+                                                    )}
                                                 </td>
 
                                                 {/* 6. Status (Right-aligned in same visual vertical axis) */}
                                                 <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        {isPaid ? (
+                                                        {transfer.isMergedSource ? (
+                                                            <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] font-mono">
+                                                                รวมบิล ➔ โต๊ะ {transfer.mergedToTable}
+                                                            </span>
+                                                        ) : isPaid ? (
                                                             <span className="px-2 py-0.5 text-[10px] font-bold rounded-xs bg-[oklch(92%_0.012_140)] text-[oklch(35%_0.08_140)] border border-[oklch(82%_0.08_140)]">
                                                                 ชำระแล้ว
                                                             </span>
@@ -423,13 +487,39 @@ export default function SimplifiedBillsSummaryList({
                             </button>
                         </div>
 
-                        {/* Customer / Staff Note */}
-                        {(inspectingBill.customer_note || inspectingBill.staff_remark) && (
-                            <div className="mt-3 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] rounded-xs space-y-0.5">
-                                {inspectingBill.customer_note && <div>โน้ตลูกค้า: "{inspectingBill.customer_note}"</div>}
-                                {inspectingBill.staff_remark && <div>บันทึกพนักงาน: "{inspectingBill.staff_remark}"</div>}
-                            </div>
-                        )}
+                        {/* Customer / Staff Note & Merged Notice */}
+                        {(() => {
+                            const inspectingTransfer = parseTableTransferInfo(inspectingBill, bookings)
+                            return (
+                                <>
+                                    {inspectingTransfer.isMergedSource && (
+                                        <div className="mt-3 p-2.5 bg-[oklch(96%_0.02_28)] border border-[oklch(85%_0.02_28)] rounded-xs flex items-center justify-between text-xs font-mono text-[oklch(35%_0.14_28)]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[10px] font-bold">รวมบิล</span>
+                                                <span>บิลนี้ถูกรวมเข้ากับ <strong>{inspectingTransfer.targetTableDisplay || `โต๊ะ ${inspectingTransfer.mergedToTable}`}</strong> แล้ว</span>
+                                            </div>
+                                            {inspectingTransfer.originalTotal > 0 && (
+                                                <span className="text-[11px] font-bold tabular-nums">ยอดเดิม ฿{inspectingTransfer.originalTotal.toLocaleString()}</span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {inspectingTransfer.isMergedTarget && (
+                                        <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_140)] border border-[oklch(82%_0.04_140)] rounded-xs flex items-center justify-between text-xs font-mono text-[oklch(28%_0.08_140)]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-white rounded-xs text-[10px] font-bold">รวมโต๊ะ</span>
+                                                <span>รวมรายการอาหารมาจาก <strong>{inspectingTransfer.mergedFromTableDisplay || `โต๊ะ ${inspectingTransfer.mergedFromTables.join(', ')}`}</strong></span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {(inspectingBill.customer_note || inspectingTransfer.cleanRemark) && (
+                                        <div className="mt-3 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] rounded-xs space-y-0.5">
+                                            {inspectingBill.customer_note && <div>โน้ตลูกค้า: "{inspectingBill.customer_note}"</div>}
+                                            {inspectingTransfer.cleanRemark && <div>บันทึก: "{inspectingTransfer.cleanRemark}"</div>}
+                                        </div>
+                                    )}
+                                </>
+                            )
+                        })()}
 
                         {/* Order Items Table */}
                         {(() => {
@@ -567,9 +657,28 @@ export default function SimplifiedBillsSummaryList({
                         <div className="pt-3 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] p-3 rounded-sm space-y-1 text-xs">
                             <div className="flex justify-between items-center text-sm font-bold text-[oklch(18%_0.012_28)]">
                                 <span>ยอดสุทธิทั้งสิ้น:</span>
-                                <span className="font-mono text-lg text-[oklch(18%_0.012_28)] tabular-nums">
-                                    ฿{Number(inspectingBill.total_amount || inspectingBill.total_price || 0).toLocaleString()}
-                                </span>
+                                {(() => {
+                                    const modalTransfer = parseTableTransferInfo(inspectingBill, bookings)
+                                    if (modalTransfer.isMergedSource) {
+                                        return (
+                                            <div className="text-right font-mono">
+                                                {modalTransfer.originalTotal > 0 && (
+                                                    <span className="text-xs text-[oklch(55%_0.010_28)] line-through mr-1.5 tabular-nums">
+                                                        เดิม ฿{modalTransfer.originalTotal.toLocaleString()}
+                                                    </span>
+                                                )}
+                                                <span className="text-lg font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                                    ฿0 (โอนแล้ว)
+                                                </span>
+                                            </div>
+                                        )
+                                    }
+                                    return (
+                                        <span className="font-mono text-lg text-[oklch(18%_0.012_28)] tabular-nums">
+                                            ฿{Number(inspectingBill.total_amount || inspectingBill.total_price || 0).toLocaleString()}
+                                        </span>
+                                    )
+                                })()}
                             </div>
                         </div>
 

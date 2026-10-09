@@ -302,9 +302,14 @@ function OverviewTableCard({
                             }`}>
                                 {item.table.table_name}
                             </span>
-                            {item.transfer?.isTransferred && (
-                                <span className="font-mono text-[10px] px-1 py-0.2 bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs">
-                                    ย้ายโต๊ะ
+                            {item.transfer?.isMergedTarget && (
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs font-bold inline-flex items-center gap-1" title={`รวมรายการอาหารมาจาก ${item.transfer.mergedFromTableDisplay || item.transfer.mergedFromTables.join(', ')}`}>
+                                    <span>+ รวมโต๊ะ {item.transfer.mergedFromTables.join(', ')}</span>
+                                </span>
+                            )}
+                            {item.transfer?.isMoved && (
+                                <span className="font-mono text-[10px] px-1.5 py-0.5 bg-[oklch(92%_0.02_220)] text-[oklch(28%_0.10_220)] border border-[oklch(82%_0.02_220)] rounded-xs font-bold" title={`ย้ายมาจากโต๊ะ ${item.transfer.movedFromTable}`}>
+                                    ย้ายจาก {item.transfer.movedFromTable}
                                 </span>
                             )}
                             {isFreshOrder && (
@@ -1032,7 +1037,7 @@ export default function SimplifiedLiveOverview({
                 : Number(booking?.total_amount || 0)
 
             const startTime = booking?.booking_time || booking?.created_at
-            const transfer = parseTableTransferInfo(booking)
+            const transfer = parseTableTransferInfo(booking, liveBookings)
             const orderRoundsInfo = groupOrderItemsIntoRounds(orderItems, startTime)
 
             // Latest order timestamp across items, falling back to startTime for occupied table
@@ -1613,6 +1618,16 @@ export default function SimplifiedLiveOverview({
                                                     <span className={`font-mono bg-[oklch(90%_0.010_28)] text-[oklch(42%_0.010_28)] rounded-xs font-semibold ${cfg.roundsBadge}`}>
                                                         {item.table.capacity} Pax
                                                     </span>
+                                                    {item.transfer?.isMergedTarget && (
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] font-mono font-bold text-[10px] whitespace-nowrap">
+                                                            + รวม {item.transfer.mergedFromTables.join(', ')}
+                                                        </span>
+                                                    )}
+                                                    {item.transfer?.isMoved && (
+                                                        <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(92%_0.02_220)] text-[oklch(28%_0.10_220)] border border-[oklch(82%_0.02_220)] font-mono font-bold text-[10px] whitespace-nowrap">
+                                                            ย้ายจาก {item.transfer.movedFromTable}
+                                                        </span>
+                                                    )}
                                                     {isRowFresh && (
                                                         <span className="px-1.5 py-0.5 rounded-xs bg-[oklch(52%_0.16_28)] text-[oklch(97%_0.008_28)] font-mono font-black text-[10px] uppercase tracking-wider whitespace-nowrap shadow-2xs">
                                                             ● สั่งใหม่
@@ -1819,10 +1834,27 @@ export default function SimplifiedLiveOverview({
                             </button>
                         </div>
 
+                        {/* Merged / Combined Table Notice Banner */}
+                        {inspectingTable.transfer?.isMergedTarget && (
+                            <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_140)] border border-[oklch(82%_0.04_140)] rounded-xs flex items-center justify-between text-xs font-mono text-[oklch(28%_0.08_140)]">
+                                <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 bg-[oklch(45%_0.08_140)] text-white rounded-xs text-[10px] font-bold">รวมโต๊ะ</span>
+                                    <span>รวมรายการอาหารมาจาก <strong>{inspectingTable.transfer.mergedFromTableDisplay || `โต๊ะ ${inspectingTable.transfer.mergedFromTables.join(', ')}`}</strong></span>
+                                </div>
+                            </div>
+                        )}
+                        {inspectingTable.transfer?.isMoved && (
+                            <div className="mt-3 p-2.5 bg-[oklch(95%_0.02_220)] border border-[oklch(82%_0.04_220)] rounded-xs flex items-center gap-2 text-xs font-mono text-[oklch(28%_0.10_220)]">
+                                <span className="px-1.5 py-0.5 bg-[oklch(40%_0.10_220)] text-white rounded-xs text-[10px] font-bold">ย้ายโต๊ะ</span>
+                                <span>ย้ายมาจาก <strong>โต๊ะ {inspectingTable.transfer.movedFromTable}</strong></span>
+                            </div>
+                        )}
+
                         {/* Customer / Transfer Note */}
-                        {inspectingTable.booking?.customer_note && (
-                            <div className="mt-3 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] rounded-xs">
-                                โน้ตลูกค้า: "{inspectingTable.booking.customer_note}"
+                        {(inspectingTable.booking?.customer_note || inspectingTable.transfer?.cleanRemark) && (
+                            <div className="mt-3 p-2 bg-[oklch(94%_0.010_28)] border border-[oklch(88%_0.012_28)] text-xs text-[oklch(42%_0.010_28)] rounded-xs space-y-1">
+                                {inspectingTable.booking?.customer_note && <div>โน้ตลูกค้า: "{inspectingTable.booking.customer_note}"</div>}
+                                {inspectingTable.transfer?.cleanRemark && <div>หมายเหตุ: "{inspectingTable.transfer.cleanRemark}"</div>}
                             </div>
                         )}
 

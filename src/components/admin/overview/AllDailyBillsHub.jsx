@@ -365,12 +365,11 @@ export default function AllDailyBillsHub({
     const getStatusBadge = (booking) => {
         const transfer = parseTableTransferInfo(booking, bookings)
         
-        // Distinct highlight for Source Merged Bills (Thai Modern Rams UI)
+        // Distinct highlight for Source Merged Bills (Clean Rams UI - Zero duplicate clutter)
         if (transfer.isMergedSource) {
             return (
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-sm text-[10px] font-mono font-black bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border-2 border-[oklch(52%_0.16_28)] shadow-xs" title={`รวมรายการอาหารเข้ากับ ${transfer.targetTableDisplay || transfer.mergedToTable}`}>
-                    <Layers size={11} className="text-[oklch(52%_0.16_28)]" />
-                    <span>MERGED (โต๊ะรวม) ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}</span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-xs text-[10px] font-mono font-bold bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)]" title={`รวมรายการอาหารเข้ากับ ${transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}`}>
+                    <span>รวมบิล ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}</span>
                 </span>
             )
         }
@@ -416,13 +415,9 @@ export default function AllDailyBillsHub({
 
     const getPaymentBadge = (booking) => {
         const transfer = parseTableTransferInfo(booking, bookings)
+        // If this is a source merged bill, status badge already indicates the transfer cleanly (avoid duplicate badge)
         if (transfer.isMergedSource) {
-            return (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-[10px] font-mono font-bold bg-[oklch(92%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(85%_0.012_28)]">
-                    <Layers size={11} />
-                    <span>โอนยอดไป {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || 'บิลหลัก'}`}</span>
-                </span>
-            )
+            return null
         }
 
         const s = (booking?.status || '').toLowerCase()
@@ -540,20 +535,6 @@ export default function AllDailyBillsHub({
                             </div>
                         </div>
                     )}
-                    {transfer.isMergedSource && (
-                        <div className="mb-2 px-2.5 py-1 bg-[oklch(95%_0.02_28)] text-[oklch(35%_0.16_28)] font-mono text-[10px] font-black rounded-xs border border-[oklch(52%_0.16_28)] flex items-center justify-between gap-2 shadow-2xs">
-                            <span className="flex items-center gap-1">
-                                <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[8.5px] uppercase font-mono font-bold tracking-wider shrink-0">โต๊ะรวม</span>
-                                <span className="truncate">รวมบิลเข้า {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</span>
-                            </span>
-                            {transfer.originalTotal > 0 && (
-                                <span className="text-[9px] tabular-nums font-bold text-[oklch(45%_0.14_28)] shrink-0">
-                                    ยอดเดิม ฿{transfer.originalTotal.toLocaleString()}
-                                </span>
-                            )}
-                        </div>
-                    )}
-
                     {/* Top Row: Table Tag, Time & Short ID */}
                     <div className="flex items-center justify-between gap-1.5 pb-2 border-b border-[oklch(90%_0.008_28)]">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -572,14 +553,9 @@ export default function AllDailyBillsHub({
                                     <span>PICKUP</span>
                                 </span>
                             )}
-                            {transfer.isMergedSource && (
-                                <span className="px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-xs text-[9px] font-mono font-black shrink-0 truncate max-w-[150px]">
-                                    โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
-                                </span>
-                            )}
                             {transfer.isMergedTarget && (
-                                <span className="px-1 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[8px] font-mono font-black shrink-0">
-                                    +โต๊ะรวม (+{transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')})
+                                <span className="px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[9px] font-mono font-bold shrink-0 truncate max-w-[130px]" title={`รวมจาก ${transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}`}>
+                                    +รวม {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                 </span>
                             )}
                         </div>
@@ -640,14 +616,13 @@ export default function AllDailyBillsHub({
                         })}
                         {items.length === 0 && (
                             transfer.isMergedSource ? (
-                                <div className="p-2 bg-[oklch(96%_0.015_28)] border border-[oklch(88%_0.02_28)] rounded-xs text-[10px] text-[oklch(35%_0.14_28)] font-mono space-y-1">
-                                    <div className="font-bold flex items-center gap-1 text-[oklch(40%_0.16_28)]">
-                                        <Layers size={11} />
-                                        <span>โต๊ะรวม: ย้ายรายการแล้ว</span>
-                                    </div>
-                                    <div className="text-[9.5px] text-[oklch(45%_0.010_28)]">
-                                        รายการอาหารและยอดเงินถูกโอนไปยัง <strong className="text-[oklch(22%_0.012_28)]">{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong>
-                                    </div>
+                                <div className="py-2 px-1 text-[11px] font-mono text-[oklch(45%_0.010_28)] flex items-center justify-between border-t border-[oklch(90%_0.008_28)]">
+                                    <span>โอนรายการไปที่ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</span>
+                                    {transfer.originalTotal > 0 && (
+                                        <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold tabular-nums">
+                                            ฿{transfer.originalTotal.toLocaleString()}
+                                        </span>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono uppercase tracking-wider text-center py-1">
@@ -672,15 +647,17 @@ export default function AllDailyBillsHub({
                     <div className="flex items-baseline justify-between font-mono mb-2">
                         {transfer.isMergedSource ? (
                             <>
-                                <span className="text-[10px] text-[oklch(52%_0.16_28)] font-bold tabular-nums">
-                                    โต๊ะรวม (โอนยอดแล้ว)
+                                <span className="text-[10px] text-[oklch(45%_0.010_28)] font-mono">
+                                    ยอดที่โอน
                                 </span>
-                                <div className="text-right">
-                                    <span className="text-xs font-bold text-[oklch(42%_0.010_28)] line-through tabular-nums mr-1.5 opacity-60">
-                                        ฿0
-                                    </span>
-                                    <span className="text-sm font-black text-[oklch(52%_0.16_28)] tabular-nums">
-                                        {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : 'รวมบิลแล้ว'}
+                                <div className="text-right font-mono">
+                                    {transfer.originalTotal > 0 && (
+                                        <span className="text-xs text-[oklch(55%_0.010_28)] line-through tabular-nums mr-1.5 opacity-70">
+                                            ฿{transfer.originalTotal.toLocaleString()}
+                                        </span>
+                                    )}
+                                    <span className="text-xs font-bold text-[oklch(52%_0.16_28)] tabular-nums">
+                                        ฿0 (โอนแล้ว)
                                     </span>
                                 </div>
                             </>
@@ -1093,12 +1070,12 @@ export default function AllDailyBillsHub({
                                                 <Utensils size={12} className="text-[oklch(52%_0.16_28)]" />
                                                 <span>{b.tables_layout?.table_name || 'Table ?'} ({b.pax || 2}P)</span>
                                                 {transfer.isMergedSource && (
-                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-xs text-[9px] font-mono font-black">
-                                                        โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}
+                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(94%_0.02_28)] text-[oklch(40%_0.16_28)] border border-[oklch(52%_0.16_28)] rounded-xs text-[9px] font-mono font-bold">
+                                                        ➔ โต๊ะ {transfer.mergedToTable}
                                                     </span>
                                                 )}
                                                 {transfer.isMergedTarget && (
-                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(30%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[9px] font-mono font-black">
+                                                    <span className="ml-1 px-1.5 py-0.2 bg-[oklch(92%_0.02_140)] text-[oklch(28%_0.08_140)] border border-[oklch(82%_0.04_140)] rounded-xs text-[9px] font-mono font-bold">
                                                         + รวมจาก {transfer.mergedFromTableDisplay || transfer.mergedFromTables.join(', ')}
                                                     </span>
                                                 )}
@@ -1170,11 +1147,11 @@ export default function AllDailyBillsHub({
                                         <div className="text-right pl-3 border-l border-[oklch(85%_0.012_28)]">
                                             {transfer.isMergedSource ? (
                                                 <div>
-                                                    <div className="font-mono text-sm md:text-base font-black text-[oklch(52%_0.16_28)] leading-tight">
-                                                        โต๊ะรวม ➔ {transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable || '?'}`}
+                                                    <div className="font-mono text-sm md:text-base font-bold text-[oklch(52%_0.16_28)] leading-tight">
+                                                        ฿0 (โอนแล้ว)
                                                     </div>
-                                                    <div className="font-mono text-[10px] text-[oklch(42%_0.010_28)] font-bold">
-                                                        {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : 'ย้ายรายการแล้ว'}
+                                                    <div className="font-mono text-[10px] text-[oklch(50%_0.010_28)]">
+                                                        {transfer.originalTotal > 0 ? `(เดิม ฿${transfer.originalTotal.toLocaleString()})` : `➔ ${transfer.targetTableDisplay || 'บิลหลัก'}`}
                                                     </div>
                                                 </div>
                                             ) : (
@@ -1193,15 +1170,15 @@ export default function AllDailyBillsHub({
 
                                 {/* Table Transfer High-Contrast Banner Strip */}
                                 {transfer.isMergedSource && (
-                                    <div className="px-3.5 py-2 bg-[oklch(96%_0.018_28)] border-t border-[oklch(85%_0.018_28)] flex items-center justify-between text-xs font-mono text-[oklch(35%_0.12_28)] flex-wrap gap-2">
-                                        <div className="flex items-center gap-2 font-bold">
-                                            <span className="px-1.5 py-0.5 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[9px] uppercase tracking-wider font-mono font-black">
-                                                โต๊ะรวม (MERGED)
+                                    <div className="px-3.5 py-1.5 bg-[oklch(96%_0.018_28)] border-t border-[oklch(85%_0.018_28)] flex items-center justify-between text-xs font-mono text-[oklch(35%_0.12_28)] flex-wrap gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <span className="px-1.5 py-0.2 bg-[oklch(52%_0.16_28)] text-white rounded-xs text-[9px] uppercase font-mono font-bold">
+                                                รวมบิล
                                             </span>
-                                            <span>➔ รายการอาหารและยอดเงินทั้งหมดถูกรวมไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> แล้ว</span>
+                                            <span>ย้ายรายการไปที่ <strong>{transfer.targetTableDisplay || `โต๊ะ ${transfer.mergedToTable}`}</strong> แล้ว</span>
                                         </div>
                                         {transfer.cleanRemark && (
-                                            <span className="text-[oklch(42%_0.010_28)] italic">หมายเหตุเดิม: {transfer.cleanRemark}</span>
+                                            <span className="text-[oklch(42%_0.010_28)]">โน้ต: {transfer.cleanRemark}</span>
                                         )}
                                     </div>
                                 )}

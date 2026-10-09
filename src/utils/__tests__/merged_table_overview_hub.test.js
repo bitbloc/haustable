@@ -237,4 +237,22 @@ describe('AllDailyBillsHub & Merged Table ("โต๊ะรวม") Display Arch
         expect(cleaned.length).toBe(3);
         expect(cleaned.map(b => b.booking_short_id)).toEqual(['79F6', 'FB7D', 'E555']);
     });
+
+    it('should format simplified merged source and target labels for clean UI rendering', () => {
+        const source = mockBookings.find(b => b.booking_short_id === '1C9F');
+        const target = mockBookings.find(b => b.booking_short_id === '3467');
+
+        const srcTransfer = parseTableTransferInfo(source, mockBookings);
+        const tgtTransfer = parseTableTransferInfo(target, mockBookings);
+
+        // Source: Single concise badge
+        const sourceBadgeLabel = `รวมบิล ➔ ${srcTransfer.targetTableDisplay}`;
+        expect(sourceBadgeLabel).toBe('รวมบิล ➔ โต๊ะ H4 (#3467)');
+        expect(srcTransfer.originalTotal).toBe(259);
+
+        // Target: Clean compact pill
+        const targetBadgeLabel = `+ รวม ${tgtTransfer.mergedFromTables.join(', ')}`;
+        expect(targetBadgeLabel).toBe('+ รวม H9');
+        expect(tgtTransfer.mergedFromTableDisplay).toBe('โต๊ะ H9 (#1C9F)');
+    });
 });
