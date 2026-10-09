@@ -602,15 +602,30 @@ export default function AllDailyBillsHub({
                             const mName = item.custom_name || item.menu_items?.name || item.name || 'Custom Item'
                             const price = parseFloat(item.price_at_time || item.menu_items?.price || item.price || 0)
                             const qty = item.quantity || 1
+                            const optList = formatOrderItemOptions(
+                                item.selected_options, 
+                                item.item_note || item.special_instructions || item.notes || item.remark
+                            )
                             return (
-                                <div key={idx} className="flex items-center justify-between text-[11px] gap-2">
-                                    <span className="truncate text-[oklch(22%_0.012_28)]">
-                                        <strong className="text-[oklch(52%_0.16_28)] font-bold mr-1 tabular-nums">{qty}x</strong>
-                                        {mName}
-                                    </span>
-                                    <span className="text-[oklch(42%_0.010_28)] shrink-0 text-[10px] tabular-nums">
-                                        ฿{(price * qty).toLocaleString()}
-                                    </span>
+                                <div key={idx} className="space-y-0.5">
+                                    <div className="flex items-center justify-between text-[11px] gap-2">
+                                        <span className="truncate text-[oklch(22%_0.012_28)]">
+                                            <strong className="text-[oklch(52%_0.16_28)] font-bold mr-1 tabular-nums">{qty}x</strong>
+                                            {mName}
+                                        </span>
+                                        <span className="text-[oklch(42%_0.010_28)] shrink-0 text-[10px] tabular-nums">
+                                            ฿{(price * qty).toLocaleString()}
+                                        </span>
+                                    </div>
+                                    {optList.length > 0 && (
+                                        <div className="text-[9.5px] font-mono text-[oklch(52%_0.16_28)] font-semibold pl-4 space-y-0.5">
+                                            {optList.map((opt, oIdx) => (
+                                                <span key={oIdx} className="block leading-tight truncate">
+                                                    + {opt}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })}
@@ -730,17 +745,17 @@ export default function AllDailyBillsHub({
                     </div>
 
                     <div className="flex items-center gap-2 font-mono text-xs self-start sm:self-auto flex-wrap">
-                        <div className="px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold">
+                        <div className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold">
                             <span className="text-[oklch(42%_0.010_28)]">ยอดขายบิลปิด: </span>
                             <span className="font-black text-[oklch(52%_0.16_28)] text-sm">฿{metrics.totalRev.toLocaleString()}</span>
                         </div>
                         {metrics.avgDurationMins > 0 && (
-                            <div className="px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold">
+                            <div className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold">
                                 <span className="text-[oklch(42%_0.010_28)]">เวลาเฉลี่ย/โต๊ะ: </span>
                                 <span className="font-black text-[oklch(18%_0.012_28)] text-sm">{formatThaiDuration(metrics.avgDurationMins)}</span>
                             </div>
                         )}
-                        <div className="px-3 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold">
+                        <div className="px-3 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold">
                             <span className="text-[oklch(42%_0.010_28)]">บิลทั้งหมด: </span>
                             <span className="font-black text-[oklch(18%_0.012_28)] text-sm">{bookings.length}</span>
                         </div>
@@ -762,10 +777,10 @@ export default function AllDailyBillsHub({
                             <button
                                 key={tab.key}
                                 onClick={() => setStatusFilter(tab.key)}
-                                className={`px-3 py-1.5 rounded-lg whitespace-nowrap transition-all border font-bold ${
+                                className={`px-3 py-1.5 rounded-xs whitespace-nowrap transition-colors duration-150 border font-bold cursor-pointer ${
                                     statusFilter === tab.key
-                                        ? 'bg-[oklch(18%_0.012_28)] text-white border-[oklch(18%_0.012_28)]'
-                                        : 'bg-white text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-gray-50'
+                                        ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] border-[oklch(18%_0.012_28)] shadow-xs'
+                                        : 'bg-[oklch(97%_0.008_28)] text-[oklch(42%_0.010_28)] border-[oklch(85%_0.012_28)] hover:bg-[oklch(93%_0.010_28)]'
                                 }`}
                             >
                                 {tab.label}
@@ -779,7 +794,7 @@ export default function AllDailyBillsHub({
                         <select
                             value={channelFilter}
                             onChange={(e) => setChannelFilter(e.target.value)}
-                            className="px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold text-[oklch(18%_0.012_28)] focus:outline-none cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold text-[oklch(18%_0.012_28)] focus:outline-none cursor-pointer"
                         >
                             <option value="all">ทุกประเภท (Dine-in/Pickup)</option>
                             <option value="dine_in">ทานที่ร้าน (Dine-In)</option>
@@ -790,7 +805,7 @@ export default function AllDailyBillsHub({
                         <select
                             value={paymentFilter}
                             onChange={(e) => setPaymentFilter(e.target.value)}
-                            className="px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-bold text-[oklch(18%_0.012_28)] focus:outline-none cursor-pointer"
+                            className="px-2.5 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-bold text-[oklch(18%_0.012_28)] focus:outline-none cursor-pointer"
                         >
                             <option value="all">ทุกช่องทางชำระ</option>
                             <option value="cash">เงินสด (Cash)</option>
@@ -810,12 +825,12 @@ export default function AllDailyBillsHub({
                             placeholder="ค้นหาตาม #เลขบิล, ชื่อโต๊ะ, ชื่อลูกค้า, เบอร์โทร, เมนูอาหาร หรือหมายเหตุ..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-9 pr-8 py-2 bg-white border border-[oklch(85%_0.012_28)] rounded-lg font-mono text-xs text-[oklch(18%_0.012_28)] placeholder:text-gray-400 focus:outline-none focus:border-[oklch(52%_0.16_28)]"
+                            className="w-full pl-9 pr-8 py-2 bg-[oklch(99%_0.005_28)] border border-[oklch(85%_0.012_28)] rounded-xs font-mono text-xs text-[oklch(18%_0.012_28)] placeholder:text-[oklch(55%_0.010_28)] focus:outline-none focus:border-[oklch(52%_0.16_28)]"
                         />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[oklch(55%_0.010_28)] hover:text-[oklch(18%_0.012_28)]"
                             >
                                 <X size={14} />
                             </button>
@@ -825,13 +840,13 @@ export default function AllDailyBillsHub({
                     <div className="flex items-center gap-1.5 font-mono text-xs shrink-0">
                         <button
                             onClick={expandAll}
-                            className="px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(42%_0.010_28)] hover:text-black font-bold"
+                            className="px-2.5 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-bold transition-colors cursor-pointer"
                         >
                             ขยายทั้งหมด
                         </button>
                         <button
                             onClick={collapseAll}
-                            className="px-2.5 py-1.5 bg-white border border-[oklch(85%_0.012_28)] rounded-lg text-[oklch(42%_0.010_28)] hover:text-black font-bold"
+                            className="px-2.5 py-1.5 bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xs text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] font-bold transition-colors cursor-pointer"
                         >
                             ย่อทั้งหมด
                         </button>
@@ -853,10 +868,10 @@ export default function AllDailyBillsHub({
                     <button
                         type="button"
                         onClick={() => handleViewModeChange('grid')}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-colors duration-150 cursor-pointer ${
                             viewMode === 'grid'
                                 ? 'bg-[oklch(18%_0.012_28)] text-white'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                         }`}
                         title="มุมมองการ์ด Visual Database — กวาดสายตาดูได้พร้อมกันหลายบิล"
                     >
@@ -866,10 +881,10 @@ export default function AllDailyBillsHub({
                     <button
                         type="button"
                         onClick={() => handleViewModeChange('kanban')}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-colors duration-150 cursor-pointer ${
                             viewMode === 'kanban'
                                 ? 'bg-[oklch(18%_0.012_28)] text-white'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                         }`}
                         title="มุมมองแยกตามลำดับความสำคัญ — กำลังทาน / รอตรวจ / ชำระแล้ว / รับกลับ"
                     >
@@ -879,10 +894,10 @@ export default function AllDailyBillsHub({
                     <button
                         type="button"
                         onClick={() => handleViewModeChange('list')}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono font-black transition-colors duration-150 cursor-pointer ${
                             viewMode === 'list'
                                 ? 'bg-[oklch(18%_0.012_28)] text-white'
-                                : 'text-[oklch(42%_0.010_28)] hover:text-black hover:bg-[oklch(90%_0.012_28)]'
+                                : 'text-[oklch(42%_0.010_28)] hover:text-[oklch(18%_0.012_28)] hover:bg-[oklch(90%_0.012_28)]'
                         }`}
                         title="มุมมองรายการละเอียด"
                     >
@@ -1035,7 +1050,7 @@ export default function AllDailyBillsHub({
                         return (
                             <div 
                                 key={b.id} 
-                                className={`bg-white border-2 rounded-xl overflow-hidden shadow-sm transition-all ${
+                                className={`bg-[oklch(97%_0.008_28)] border rounded-xs overflow-hidden shadow-2xs transition-colors duration-150 ${
                                     transfer.isMergedSource 
                                         ? 'border-[oklch(52%_0.16_28)]/50 bg-[oklch(99%_0.005_28)]' 
                                         : 'border-[oklch(85%_0.012_28)] hover:border-[oklch(52%_0.16_28)]'
@@ -1202,7 +1217,7 @@ export default function AllDailyBillsHub({
                                 )}
 
                                 {/* Quick Action Bar */}
-                                <div className="px-3.5 py-2 bg-white border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
+                                <div className="px-3.5 py-2 bg-[oklch(96%_0.008_28)] border-t border-[oklch(85%_0.012_28)] flex flex-wrap items-center justify-between gap-2 font-mono text-xs">
                                     <div className="flex items-center gap-1.5 text-[11px] text-[oklch(42%_0.010_28)] truncate max-w-[280px]">
                                         {transfer.cleanRemark && (
                                             <span className="truncate">Remark: <strong className="text-[oklch(18%_0.012_28)]">{transfer.cleanRemark}</strong></span>
@@ -1285,7 +1300,7 @@ export default function AllDailyBillsHub({
                                                     return (
                                                         <div key={idx} className="py-2 flex items-start justify-between gap-4">
                                                             <div className="flex items-start gap-2.5">
-                                                                <span className="font-black text-[oklch(52%_0.16_28)] bg-white px-1.5 py-0.5 rounded border border-[oklch(85%_0.012_28)] min-w-[24px] text-center">
+                                                                <span className="font-black text-[oklch(52%_0.16_28)] bg-[oklch(94%_0.010_28)] px-1.5 py-0.5 rounded-xs border border-[oklch(85%_0.012_28)] min-w-[24px] text-center">
                                                                     {qty}x
                                                                 </span>
                                                                 <div>

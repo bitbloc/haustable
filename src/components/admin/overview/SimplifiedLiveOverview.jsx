@@ -100,7 +100,7 @@ export const SIZE_CONFIGS = {
         itemName: 'text-[11px]',
         itemPrice: 'text-[11px]',
         itemSpacing: 'space-y-1',
-        listMaxHeight: 'max-h-[130px]',
+        listMaxHeight: 'max-h-[220px]',
         footerLabel: 'text-[11px] font-bold',
         footerAmount: 'text-sm font-bold',
         tableRowPadding: 'py-2 px-2.5',
@@ -129,7 +129,7 @@ export const SIZE_CONFIGS = {
         itemName: 'text-xs sm:text-sm font-medium',
         itemPrice: 'text-xs sm:text-sm font-semibold',
         itemSpacing: 'space-y-1.5',
-        listMaxHeight: 'max-h-[175px]',
+        listMaxHeight: 'max-h-[380px]',
         footerLabel: 'text-xs font-bold',
         footerAmount: 'text-base sm:text-lg font-bold',
         tableRowPadding: 'py-3 px-3',
@@ -158,7 +158,7 @@ export const SIZE_CONFIGS = {
         itemName: 'text-sm sm:text-base font-medium',
         itemPrice: 'text-sm sm:text-base font-semibold',
         itemSpacing: 'space-y-2',
-        listMaxHeight: 'max-h-[240px]',
+        listMaxHeight: 'max-h-[500px]',
         footerLabel: 'text-sm font-bold',
         footerAmount: 'text-xl sm:text-2xl font-bold',
         tableRowPadding: 'py-3.5 px-3.5',
@@ -187,7 +187,7 @@ export const SIZE_CONFIGS = {
         itemName: 'text-base sm:text-lg font-semibold',
         itemPrice: 'text-base sm:text-lg font-bold',
         itemSpacing: 'space-y-2.5',
-        listMaxHeight: 'max-h-[340px]',
+        listMaxHeight: 'max-h-[660px]',
         footerLabel: 'text-base font-bold',
         footerAmount: 'text-2xl sm:text-3xl font-extrabold',
         tableRowPadding: 'py-4 px-4',
@@ -222,6 +222,7 @@ function OverviewTableCard({
     const orderItems = item.orderItems || []
     const guestCount = item.booking?.guest_count || item.table.capacity || 2
     const roundsInfo = item.orderRoundsInfo
+    const hasMoreThan15Items = orderItems.length > 15
 
     const [expandedOlderRounds, setExpandedOlderRounds] = useState(false)
     const [now, setNow] = useState(() => Date.now())
@@ -288,8 +289,10 @@ function OverviewTableCard({
 
     return (
         <div
-            onClick={() => onInspect(item)}
-            className={`${cfg.cardPadding} rounded-xs border transition-all cursor-pointer flex flex-col justify-between shadow-2xs hover:shadow-xs hover:border-[oklch(18%_0.012_28)] ${bgClass} ${borderClass} ${leftAccentClass}`}
+            onClick={hasMoreThan15Items ? () => onInspect(item) : undefined}
+            className={`${cfg.cardPadding} rounded-xs border transition-colors duration-150 ${
+                hasMoreThan15Items ? 'cursor-pointer hover:border-[oklch(18%_0.012_28)]' : 'cursor-default'
+            } flex flex-col justify-between shadow-2xs ${bgClass} ${borderClass} ${leftAccentClass}`}
         >
             {/* 1. Header (Magazine Editorial Hierarchy) */}
             <div>
@@ -397,7 +400,7 @@ function OverviewTableCard({
                 {isOccupied ? (
                     <div className="mt-2 pt-1">
                         {orderItems.length === 0 ? (
-                            <div className={`text-[oklch(60%_0.010_28)] italic py-3 text-center ${cfg.paxTime}`}>
+                            <div className={`text-[oklch(55%_0.010_28)] font-mono py-3 text-center ${cfg.paxTime}`}>
                                 ยังไม่มีรายการสั่งอาหาร
                             </div>
                         ) : reversedRounds.length === 1 ? (
@@ -428,21 +431,34 @@ function OverviewTableCard({
                                                 const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                 const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                 const lineTotal = price * Number(it.quantity || 1)
+                                                const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
+
                                                 return (
-                                                    <div key={it.id || idx} className="pt-1 first:pt-0 flex items-center justify-between gap-2">
-                                                        <div className="flex items-center gap-2 min-w-0 flex-1 truncate">
-                                                            <span className={`font-mono tabular-nums shrink-0 ${
+                                                    <div key={it.id || idx} className="pt-1.5 first:pt-0 flex items-start justify-between gap-2">
+                                                        <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                                                            <span className={`font-mono tabular-nums shrink-0 mt-0.5 ${
                                                                 isSingleRoundFresh 
                                                                     ? 'text-[oklch(52%_0.16_28)] font-black text-xs' 
                                                                     : `text-[oklch(18%_0.012_28)] font-bold ${cfg.itemQty}`
                                                             }`}>
                                                                 {it.quantity}×
                                                             </span>
-                                                            <span className={`truncate ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'font-medium text-[oklch(18%_0.012_28)]'} ${cfg.itemName}`}>
-                                                                {itemName}
-                                                            </span>
+                                                            <div className="min-w-0 flex-1">
+                                                                <span className={`block leading-snug break-words ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'font-medium text-[oklch(18%_0.012_28)]'} ${cfg.itemName}`}>
+                                                                    {itemName}
+                                                                </span>
+                                                                {optList.length > 0 && (
+                                                                    <div className="text-[10px] font-mono text-[oklch(45%_0.10_28)] mt-0.5 space-y-0.5">
+                                                                        {optList.map((opt, oIdx) => (
+                                                                            <span key={oIdx} className="block leading-tight text-[oklch(50%_0.08_28)]">
+                                                                                + {opt}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                        <span className={`font-mono tabular-nums shrink-0 ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(42%_0.010_28)]'} ${cfg.itemPrice}`}>
+                                                        <span className={`font-mono tabular-nums shrink-0 mt-0.5 ${isSingleRoundFresh ? 'font-bold text-[oklch(18%_0.012_28)]' : 'text-[oklch(42%_0.010_28)]'} ${cfg.itemPrice}`}>
                                                             ฿{lineTotal.toLocaleString()}
                                                         </span>
                                                     </div>
@@ -475,7 +491,7 @@ function OverviewTableCard({
                                                         e.stopPropagation()
                                                         setExpandedOlderRounds(true)
                                                     }}
-                                                    className="w-full py-1 px-2 border border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center justify-between cursor-pointer transition-all"
+                                                    className="w-full py-1 px-2 border border-dashed border-[oklch(85%_0.012_28)] hover:border-[oklch(18%_0.012_28)] bg-[oklch(95%_0.010_28)] hover:bg-[oklch(92%_0.010_28)] rounded-xs text-[11px] font-mono text-[oklch(42%_0.010_28)] flex items-center justify-between cursor-pointer transition-colors"
                                                 >
                                                     <span>{olderRoundLabel}</span>
                                                     <span className="underline font-bold text-[10px]">คลิกคลี่</span>
@@ -516,17 +532,30 @@ function OverviewTableCard({
                                                         const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                         const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                         const lineTotal = price * Number(it.quantity || 1)
+                                                        const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
+
                                                         return (
-                                                            <div key={it.id || idx} className="pt-1.5 first:pt-1 flex items-center justify-between gap-2">
-                                                                <div className="flex items-center gap-2 min-w-0 flex-1 truncate">
-                                                                    <span className="font-mono font-black text-[oklch(52%_0.16_28)] tabular-nums shrink-0 text-xs">
+                                                            <div key={it.id || idx} className="pt-1.5 first:pt-1 flex items-start justify-between gap-2">
+                                                                <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                                                                    <span className="font-mono font-black text-[oklch(52%_0.16_28)] tabular-nums shrink-0 text-xs mt-0.5">
                                                                         {it.quantity}×
                                                                     </span>
-                                                                    <span className={`truncate font-bold text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
-                                                                        {itemName}
-                                                                    </span>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <span className={`block leading-snug break-words font-bold text-[oklch(18%_0.012_28)] ${cfg.itemName}`}>
+                                                                            {itemName}
+                                                                        </span>
+                                                                        {optList.length > 0 && (
+                                                                            <div className="text-[10px] font-mono text-[oklch(52%_0.16_28)] font-semibold mt-0.5 space-y-0.5">
+                                                                                {optList.map((opt, oIdx) => (
+                                                                                    <span key={oIdx} className="block leading-tight">
+                                                                                        + {opt}
+                                                                                    </span>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
-                                                                <span className={`font-mono font-bold tabular-nums text-[oklch(18%_0.012_28)] shrink-0 ${cfg.itemPrice}`}>
+                                                                <span className={`font-mono font-bold tabular-nums text-[oklch(18%_0.012_28)] shrink-0 mt-0.5 ${cfg.itemPrice}`}>
                                                                     ฿{lineTotal.toLocaleString()}
                                                                 </span>
                                                             </div>
@@ -554,17 +583,30 @@ function OverviewTableCard({
                                                     const itemName = it.custom_name || it.menu_items?.name || 'อาหาร'
                                                     const price = Number(it.price_at_time || it.menu_items?.price || 0)
                                                     const lineTotal = price * Number(it.quantity || 1)
+                                                    const optList = formatOrderItemOptions(it.selected_options, it.item_note || it.notes || it.special_instructions || it.remark)
+
                                                     return (
-                                                        <div key={it.id || idx} className="pt-1 first:pt-0.5 flex items-center justify-between gap-2 text-[oklch(45%_0.010_28)]">
-                                                            <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
-                                                                <span className="font-mono text-[oklch(55%_0.010_28)] font-semibold tabular-nums shrink-0 text-[11px]">
+                                                        <div key={it.id || idx} className="pt-1.5 first:pt-0.5 flex items-start justify-between gap-2 text-[oklch(45%_0.010_28)]">
+                                                            <div className="flex items-start gap-1.5 min-w-0 flex-1">
+                                                                <span className="font-mono text-[oklch(55%_0.010_28)] font-semibold tabular-nums shrink-0 text-[11px] mt-0.5">
                                                                     {it.quantity}×
                                                                 </span>
-                                                                <span className={`truncate text-[oklch(42%_0.010_28)] ${cfg.itemName}`}>
-                                                                    {itemName}
-                                                                </span>
+                                                                <div className="min-w-0 flex-1">
+                                                                    <span className={`block leading-snug break-words text-[oklch(42%_0.010_28)] ${cfg.itemName}`}>
+                                                                        {itemName}
+                                                                    </span>
+                                                                    {optList.length > 0 && (
+                                                                        <div className="text-[9.5px] font-mono text-[oklch(52%_0.010_28)] mt-0.5 space-y-0.5 opacity-80">
+                                                                            {optList.map((opt, oIdx) => (
+                                                                                <span key={oIdx} className="block leading-tight">
+                                                                                    + {opt}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <span className="font-mono tabular-nums text-[oklch(50%_0.010_28)] shrink-0 text-[11px]">
+                                                            <span className="font-mono tabular-nums text-[oklch(50%_0.010_28)] shrink-0 text-[11px] mt-0.5">
                                                                 ฿{lineTotal.toLocaleString()}
                                                             </span>
                                                         </div>
@@ -622,17 +664,19 @@ function OverviewTableCard({
                                 </span>
                             )}
                         </div>
-                        <button
-                            type="button"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                onInspect(item)
-                            }}
-                            className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-all active:scale-95 flex items-center gap-1"
-                        >
-                            <span>ดูบิลเต็ม</span>
-                            <span className="opacity-60 text-[9px]">➔</span>
-                        </button>
+                        {hasMoreThan15Items && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    onInspect(item)
+                                }}
+                                className="px-2.5 py-1 bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] text-[11px] font-bold rounded-xs cursor-pointer transition-colors active:scale-95 flex items-center gap-1"
+                            >
+                                <span>ดูบิลเต็ม ({orderItems.length})</span>
+                                <span className="opacity-60 text-[9px]">➔</span>
+                            </button>
+                        )}
                     </>
                 ) : isUpcoming ? (
                     <div className="w-full flex items-center justify-between text-[oklch(55%_0.010_28)]">
@@ -1599,11 +1643,15 @@ export default function SimplifiedLiveOverview({
                                         ? itemPreviews.slice(0, 3).join(', ') + (itemPreviews.length > 3 ? ` (+${itemPreviews.length - 3})` : '')
                                         : 'ยังไม่มีรายการ'
 
+                                    const canInspect = isOccupied && item.booking && orderItems.length > 15
+
                                     return (
                                         <tr
                                             key={item.table.id}
-                                            onClick={() => setInspectingTable(item)}
-                                            className={`hover:bg-[oklch(94%_0.010_28)] transition-colors cursor-pointer select-none ${
+                                            onClick={canInspect ? () => setInspectingTable(item) : undefined}
+                                            className={`transition-colors select-none ${
+                                                canInspect ? 'cursor-pointer hover:bg-[oklch(94%_0.010_28)]' : 'cursor-default'
+                                            } ${
                                                 item.hasCallBill || item.hasCallStaff ? 'bg-[oklch(96%_0.03_65)]' : isRowFresh ? 'bg-[oklch(95%_0.02_28)]' : ''
                                             }`}
                                         >
@@ -1694,9 +1742,11 @@ export default function SimplifiedLiveOverview({
                                                                     (+ก่อนหน้า {previousRoundsItemsCount} รายการ)
                                                                 </span>
                                                             )}
-                                                            <span className="text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline text-[11px]">
-                                                                [ดูบิล]
-                                                            </span>
+                                                            {canInspect && (
+                                                                <span className="text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline text-[11px]">
+                                                                    [ดูบิลเต็ม]
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 truncate">
@@ -1706,9 +1756,11 @@ export default function SimplifiedLiveOverview({
                                                             <span className={`text-[oklch(55%_0.010_28)] truncate ${cfg.paxTime}`}>
                                                                 {foodText}
                                                             </span>
-                                                            <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
-                                                                [ดูครบ]
-                                                            </span>
+                                                            {canInspect && (
+                                                                <span className={`text-[oklch(52%_0.16_28)] font-bold whitespace-nowrap ml-1 underline ${cfg.paxTime}`}>
+                                                                    [ดูบิลเต็ม]
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     )
                                                 ) : (
@@ -1727,18 +1779,24 @@ export default function SimplifiedLiveOverview({
                                             <td className={`${cfg.tableRowPadding} text-right whitespace-nowrap`}>
                                                 <div className="flex items-center justify-end">
                                                     {isOccupied && item.booking ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setInspectingTable(item)
-                                                            }}
-                                                            className={`font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1 ${cfg.tableActionBtn}`}
-                                                            title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
-                                                        >
-                                                            <span>ดูบิลอาหาร</span>
-                                                            <span>➔</span>
-                                                        </button>
+                                                        orderItems.length > 15 ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setInspectingTable(item)
+                                                                }}
+                                                                className={`font-bold bg-[oklch(94%_0.010_28)] hover:bg-[oklch(90%_0.012_28)] border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] rounded-xs cursor-pointer flex items-center gap-1 ${cfg.tableActionBtn}`}
+                                                                title="แตะเพื่อดูเช็คลิสต์รายการอาหารครบถ้วน"
+                                                            >
+                                                                <span>ดูบิลอาหาร ({orderItems.length})</span>
+                                                                <span>➔</span>
+                                                            </button>
+                                                        ) : (
+                                                            <span className="font-mono text-[11px] text-[oklch(55%_0.010_28)] font-semibold">
+                                                                {orderItems.length} รายการ
+                                                            </span>
+                                                        )
                                                     ) : (
                                                         <span className={`text-[oklch(60%_0.010_28)] ${cfg.paxTime}`}>โต๊ะว่าง</span>
                                                     )}

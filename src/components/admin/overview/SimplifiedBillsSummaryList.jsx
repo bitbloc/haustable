@@ -1,3 +1,4 @@
+/* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 · macrostructure: Workbench · theme: Atelier (Thai Modern OKLCH) */
 import React, { useState, useMemo } from 'react'
 import { formatThaiTimeOnly, getThaiDate, formatThaiDateOnly } from '../../../utils/timeUtils'
 import { isGhostPickupBooking, isInternalBlockBooking, isDuplicateGhostBooking, parseTableTransferInfo } from '../../../utils/tableTransferHelper'
@@ -125,7 +126,7 @@ export default function SimplifiedBillsSummaryList({
                                     setStatusFilter(tab.id)
                                     setPage(1)
                                 }}
-                                className={`px-2.5 py-1 rounded-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+                                className={`px-2.5 py-1 rounded-xs font-medium transition-colors duration-150 cursor-pointer whitespace-nowrap ${
                                     statusFilter === tab.id
                                         ? 'bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] font-bold shadow-xs'
                                         : 'bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] hover:bg-[oklch(90%_0.012_28)]'
@@ -643,7 +644,7 @@ export default function SimplifiedBillsSummaryList({
                                         [เปิดดูภาพเต็ม ↗]
                                     </a>
                                 </div>
-                                <div className="max-h-36 overflow-hidden rounded-xs border border-[oklch(85%_0.012_28)] bg-white flex items-center justify-center">
+                                <div className="max-h-36 overflow-hidden rounded-xs border border-[oklch(85%_0.012_28)] bg-[oklch(98%_0.005_28)] flex items-center justify-center">
                                     <img
                                         src={inspectingBill.payment_slip_url || inspectingBill.slip_url}
                                         alt="สลิปโอนเงิน"
