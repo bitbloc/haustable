@@ -156,8 +156,11 @@ export default function MenuCategoryList() {
             onConfirm: async () => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }))
                 try {
-                    const { error } = await supabase.from('menu_categories').delete().eq('id', cat.id)
+                    const { data: delCat, error } = await supabase.from('menu_categories').delete().eq('id', cat.id).select('id')
                     if (error) throw error
+                    if (!delCat || delCat.length === 0) {
+                        throw new Error('ไม่มีสิทธิ์ในการลบหมวดหมู่ (Permission Denied ในระบบ RLS)')
+                    }
                     setCategories(prev => prev.filter(c => c.id !== cat.id))
                     toast.success(`ลบหมวดหมู่ "${cat.name}" สำเร็จ`)
                 } catch (err) {
@@ -185,11 +188,15 @@ export default function MenuCategoryList() {
             }
 
             if (editingCategory) {
-                const { error } = await supabase
+                const { data: updatedCat, error } = await supabase
                     .from('menu_categories')
                     .update(payload)
                     .eq('id', editingCategory.id)
+                    .select('id')
                 if (error) throw error
+                if (!updatedCat || updatedCat.length === 0) {
+                    throw new Error('ไม่มีสิทธิ์ในการแก้ไขหมวดหมู่ (Permission Denied ในระบบ RLS)')
+                }
 
                 if (editingCategory.is_drink_stamp_eligible !== formData.is_drink_stamp_eligible) {
                     await supabase
@@ -200,10 +207,14 @@ export default function MenuCategoryList() {
 
                 toast.success('อัปเดตหมวดหมู่สำเร็จ')
             } else {
-                const { error } = await supabase
+                const { data: insertedCat, error } = await supabase
                     .from('menu_categories')
                     .insert(payload)
+                    .select('id')
                 if (error) throw error
+                if (!insertedCat || insertedCat.length === 0) {
+                    throw new Error('ไม่มีสิทธิ์ในการสร้างหมวดหมู่ (Permission Denied ในระบบ RLS)')
+                }
                 toast.success('สร้างหมวดหมู่ใหม่สำเร็จ')
             }
 
@@ -230,8 +241,11 @@ export default function MenuCategoryList() {
                 display_order: index + 1
             }))
 
-            const { error } = await supabase.from('menu_categories').upsert(updates, { onConflict: 'id' })
+            const { data: upsertedCats, error } = await supabase.from('menu_categories').upsert(updates, { onConflict: 'id' }).select('id')
             if (error) throw error
+            if (!upsertedCats || upsertedCats.length === 0) {
+                throw new Error('ไม่มีสิทธิ์ในการบันทึกลำดับหมวดหมู่ (Permission Denied ในระบบ RLS)')
+            }
             // Silent success: visual position + header indicator already provide feedback
         } catch (err) {
             console.error('Failed to save order', err)

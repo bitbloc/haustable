@@ -685,8 +685,16 @@ export default function MenuItemList() {
         setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: newValue } : i))
 
         try {
-            const { error } = await supabase.from('menu_items').update({ is_available: newValue }).eq('id', item.id)
+            const { data: updatedRows, error } = await supabase
+                .from('menu_items')
+                .update({ is_available: newValue })
+                .eq('id', item.id)
+                .select('id')
+
             if (error) throw error
+            if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('ไม่มีสิทธิ์ในการเปลี่ยนสถานะเมนู (สิทธิ์ไม่เพียงพอในระบบ RLS)')
+            }
             logStaffActivity('admin', 'menu_toggle_stock', {
                 reason: `เปลี่ยนสถานะเมนู: ${item.name} (${newValue ? 'เปิดขาย' : 'ปิดการขาย / หมด'})`,
                 metadata: { item_id: item.id, name: item.name, is_available: newValue }
@@ -695,7 +703,7 @@ export default function MenuItemList() {
         } catch (err) {
             console.error('Toggle stock error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_available: !newValue } : i))
-            toast.error('อัปเดตสถานะไม่สำเร็จ')
+            toast.error(err.message || 'อัปเดตสถานะไม่สำเร็จ')
         }
     }
 
@@ -706,8 +714,16 @@ export default function MenuItemList() {
         setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: newValue } : i))
 
         try {
-            const { error } = await supabase.from('menu_items').update({ is_pickup_available: newValue }).eq('id', item.id)
+            const { data: updatedRows, error } = await supabase
+                .from('menu_items')
+                .update({ is_pickup_available: newValue })
+                .eq('id', item.id)
+                .select('id')
+
             if (error) throw error
+            if (!updatedRows || updatedRows.length === 0) {
+                throw new Error('ไม่มีสิทธิ์ในการเปลี่ยนสถานะ Pick-up (สิทธิ์ไม่เพียงพอในระบบ RLS)')
+            }
             logStaffActivity('admin', 'menu_toggle_pickup', {
                 reason: `เปลี่ยนสถานะรับกลับบ้าน (Pick-up): ${item.name} (${newValue ? 'เปิดรับ' : 'ปิดรับ'})`,
                 metadata: { item_id: item.id, name: item.name, is_pickup_available: newValue }
@@ -716,7 +732,7 @@ export default function MenuItemList() {
         } catch (err) {
             console.error('Toggle pickup error:', err)
             setMenuItems(prev => prev.map(i => i.id === item.id ? { ...i, is_pickup_available: !newValue } : i))
-            toast.error('อัปเดต Pick-up ไม่สำเร็จ')
+            toast.error(err.message || 'อัปเดต Pick-up ไม่สำเร็จ')
         }
     }
 
@@ -794,7 +810,12 @@ export default function MenuItemList() {
             onConfirm: async () => {
                 setConfirmModal(prev => ({ ...prev, isOpen: false }))
                 try {
-                    const { error } = await supabase.from('menu_items').delete().eq('id', id)
+                    const { data: deletedRows, error } = await supabase
+                        .from('menu_items')
+                        .delete()
+                        .eq('id', id)
+                        .select('id')
+
                     if (error) {
                         if (error.code === '23503') {
                             setConfirmModal({
@@ -805,15 +826,18 @@ export default function MenuItemList() {
                                 isDanger: true,
                                 onConfirm: async () => {
                                     setConfirmModal(prev => ({ ...prev, isOpen: false }))
-                                    const { error: archiveError } = await supabase.from('menu_items').update({
+                                    const { data: archivedRows, error: archiveError } = await supabase.from('menu_items').update({
                                         category: 'Archived',
                                         category_id: null,
                                         is_available: false,
                                         is_pickup_available: false,
                                         is_recommended: false
-                                    }).eq('id', id)
+                                    }).eq('id', id).select('id')
 
                                     if (archiveError) throw archiveError
+                                    if (!archivedRows || archivedRows.length === 0) {
+                                        throw new Error('ไม่สามารถย้ายเมนูได้: ไม่มีสิทธิ์ในการแก้ไขเมนู (Permission Denied)')
+                                    }
                                     logStaffActivity('admin', 'menu_archive', {
                                         reason: `ย้ายเมนูเข้า Archived (ซ่อน): ${name}`,
                                         metadata: { item_id: id, name }
@@ -827,6 +851,10 @@ export default function MenuItemList() {
                             return
                         }
                         throw error
+                    }
+
+                    if (!deletedRows || deletedRows.length === 0) {
+                        throw new Error('ไม่สามารถลบเมนูได้: ไม่มีสิทธิ์ในการลบ (Permission Denied)')
                     }
                     
                     logStaffActivity('admin', 'menu_delete', {
@@ -977,8 +1005,16 @@ export default function MenuItemList() {
             let savedItemId = editingItem?.id
 
             if (editingItem) {
-                const { error } = await supabase.from('menu_items').update(payload).eq('id', savedItemId)
+                const { data: updatedRows, error } = await supabase
+                    .from('menu_items')
+                    .update(payload)
+                    .eq('id', savedItemId)
+                    .select('id')
+
                 if (error) throw error
+                if (!updatedRows || updatedRows.length === 0) {
+                    throw new Error('ไม่สามารถบันทึกได้: สิทธิ์ของคุณไม่เพียงพอในการแก้ไขเมนู (Permission Denied ในระบบ RLS)')
+                }
                 logStaffActivity('admin', 'menu_update', {
                     amount: priceNum,
                     reason: `แก้ไขเมนู: ${trimmedName} (฿${priceNum})`,
@@ -1066,8 +1102,15 @@ export default function MenuItemList() {
                 sort_order: idx + 1
             }))
 
-            const { error } = await supabase.from('menu_items').upsert(updates, { onConflict: 'id' })
+            const { data: upsertedRows, error } = await supabase
+                .from('menu_items')
+                .upsert(updates, { onConflict: 'id' })
+                .select('id')
+
             if (error) throw error
+            if (!upsertedRows || upsertedRows.length === 0) {
+                throw new Error('ไม่สามารถบันทึกลำดับได้: ไม่มีสิทธิ์ในการแก้ไขเมนู (Permission Denied)')
+            }
             notifyMenuChange();
             // Silent success - header indicator already shows status
         } catch (err) {

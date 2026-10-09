@@ -261,11 +261,19 @@ export default function AdminMenu() {
 
             if (editingItem && editingItem.id) {
                 // UPDATE ITEM
-                await supabase.from('menu_items').update(payload).eq('id', editingItem.id);
+                const { data: upRows, error: upErr } = await supabase.from('menu_items').update(payload).eq('id', editingItem.id).select('id');
+                if (upErr) throw upErr;
+                if (!upRows || upRows.length === 0) {
+                    throw new Error('ไม่สามารถแก้ไขเมนูได้: ไม่มีสิทธิ์ในการแก้ไข (Permission Denied ในระบบ RLS)');
+                }
             } else {
                 // CREATE NEW ITEM
                 const maxSort = menuItems.length > 0 ? Math.max(...menuItems.map(i => i.sort_order || 0)) : 0;
-                await supabase.from('menu_items').insert({ ...payload, sort_order: maxSort + 1 });
+                const { data: insRows, error: insErr } = await supabase.from('menu_items').insert({ ...payload, sort_order: maxSort + 1 }).select('id');
+                if (insErr) throw insErr;
+                if (!insRows || insRows.length === 0) {
+                    throw new Error('ไม่สามารถสร้างเมนูได้: ไม่มีสิทธิ์ในการสร้าง (Permission Denied ในระบบ RLS)');
+                }
             }
 
             try {
@@ -286,7 +294,15 @@ export default function AdminMenu() {
 
     const handleDelete = async (id) => {
         if (!confirm('ยืนยันลบเมนูนี้?')) return;
-        await supabase.from('menu_items').delete().eq('id', id);
+        const { data: delRows, error: delErr } = await supabase.from('menu_items').delete().eq('id', id).select('id');
+        if (delErr) {
+            alert('Error: ' + delErr.message);
+            return;
+        }
+        if (!delRows || delRows.length === 0) {
+            alert('ไม่สามารถลบเมนูได้: ไม่มีสิทธิ์ในการลบ (Permission Denied ในระบบ RLS)');
+            return;
+        }
         try {
             localStorage.setItem('menu_last_modified', String(Date.now()));
             localStorage.removeItem('cache_ads_items');
