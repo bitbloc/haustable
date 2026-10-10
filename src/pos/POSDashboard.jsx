@@ -1110,8 +1110,7 @@ export default function POSDashboard() {
                     slip_verified, slip_provider, slip_trans_ref, slip_verification_status,
                     pickup_contact_name, pickup_contact_phone,
                     profiles (display_name, phone_number),
-                    tables_layout (table_name),
-                    order_items (id, quantity, price_at_time, custom_name, menu_items (name))
+                    tables_layout (table_name)
                 `)
                 .in('status', ['pending', 'confirmed'])
                 .or(`status.eq.pending,payment_slip_url.not.is.null,staff_remark.ilike.%[CALL_STAFF]%`)
@@ -1139,6 +1138,29 @@ export default function POSDashboard() {
 
                     return false;
                 });
+
+                // Lazy-load order items ONLY for the actual pending bookings (avoids downloading order items of all today's orders)
+                if (pendingOnly.length > 0) {
+                    try {
+                        const pendingIds = pendingOnly.map(b => b.id);
+                        const { data: itemsData } = await supabase
+                            .from('order_items')
+                            .select('id, booking_id, quantity, price_at_time, custom_name, menu_items (name)')
+                            .in('booking_id', pendingIds);
+                        if (itemsData) {
+                            const itemsByBooking = new Map();
+                            itemsData.forEach(item => {
+                                if (!itemsByBooking.has(item.booking_id)) itemsByBooking.set(item.booking_id, []);
+                                itemsByBooking.get(item.booking_id).push(item);
+                            });
+                            pendingOnly.forEach(b => {
+                                b.order_items = itemsByBooking.get(b.id) || [];
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('[Pending Check] Error attaching order items:', e);
+                    }
+                }
 
                 // Sync staff call loop: if no active booking in store has [CALL_STAFF], ensure loop is stopped
                 const hasAnyActiveCallStaff = (pendingData || []).some(b => (b.staff_remark || '').includes('[CALL_STAFF]'));
@@ -1279,10 +1301,10 @@ export default function POSDashboard() {
             heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
         };
 
-        // Foreground active: every 45s (WebSocket handles instant push). Background / folded screen: every 30s (guarantees auto-print continues!)
+        // Foreground active: every 90s (WebSocket handles instant push <50ms). Background / folded screen: every 60s
         const updateHeartbeatMode = () => {
             const isVisible = document.visibilityState === 'visible';
-            startHeartbeat(isVisible ? 45000 : 30000);
+            startHeartbeat(isVisible ? 90000 : 60000);
         };
 
         updateHeartbeatMode();

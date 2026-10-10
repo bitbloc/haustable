@@ -8,10 +8,11 @@ import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDu
 import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
 import { subscribePOSBroadcast } from '../../../utils/realtimeNotifier'
 
-export default function LiveFloorQuickStatus({ onOccupancyChange }) {
-    const [tables, setTables] = useState([])
-    const [bookings, setBookings] = useState([])
-    const [loading, setLoading] = useState(true)
+export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables, externalBookings }) {
+    const isManaged = Boolean(externalTables && externalBookings)
+    const [tables, setTables] = useState(externalTables || [])
+    const [bookings, setBookings] = useState(externalBookings || [])
+    const [loading, setLoading] = useState(!isManaged)
     const [selectedTableData, setSelectedTableData] = useState(null)
     const [actionLoading, setActionLoading] = useState(false)
     const [currentTime, setCurrentTime] = useState(Date.now())
@@ -24,7 +25,49 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         return () => clearInterval(timer)
     }, [])
 
+    // Synchronize from parent props when managed by AdminDashboard (avoids 100% duplicate queries & duplicate sockets)
     useEffect(() => {
+        if (!isManaged) return
+        setTables(externalTables || [])
+        setBookings(externalBookings || [])
+        setLoading(false)
+
+        if (onOccupancyChange && externalTables && externalBookings) {
+            const now = new Date()
+            let occupiedCount = 0
+            let seatedGuests = 0
+
+            externalTables.forEach(table => {
+                const tBookings = externalBookings.filter(b => b.table_id === table.id)
+                const isOcc = tBookings.some(b => {
+                    if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
+                    if (b.status === 'seated') return true
+                    if (b.status === 'ready' && b.booking_type !== 'pickup') return true
+                    if (b.status === 'confirmed' || b.status === 'approved') {
+                        const bStart = new Date(b.booking_time)
+                        const bEnd = b.end_time ? new Date(b.end_time) : new Date(bStart.getTime() + 2 * 60 * 60 * 1000)
+                        return now >= bStart && now < bEnd
+                    }
+                    return false
+                })
+                if (isOcc) {
+                    occupiedCount++
+                    seatedGuests += Number(table.capacity) || 2
+                }
+            })
+
+            onOccupancyChange({
+                totalTables: externalTables.length,
+                occupiedTables: occupiedCount,
+                totalGuests: seatedGuests
+            })
+        }
+    }, [isManaged, externalTables, externalBookings, onOccupancyChange])
+
+    // Self-managed standalone mode (only runs when NOT managed by AdminDashboard)
+    useEffect(() => {
+        if (isManaged) return
+
         fetchFloorData(false)
 
         let debounceTimer = null
@@ -71,8 +114,9 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
         const autoPollTimer = setInterval(() => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
             heartbeatCounter++
-            // If realtime is healthy, only heartbeat once every 90 seconds (every 3 ticks of 30s)
-            if (isRealtimeSubscribed && heartbeatCounter % 3 !== 0) return
+            // If realtime is healthy, only heartbeat once every 180 seconds (every 6 ticks of 30s)
+            if (isRealtimeSubscribed && heartbeatCounter % 6 !== 0) return
+            if (!isRealtimeSubscribed && heartbeatCounter % 2 !== 0) return
             fetchFloorData(true)
         }, 30000)
 
@@ -101,7 +145,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange }) {
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
             window.removeEventListener('focus', handleVisibilityOrFocus)
         }
-    }, [])
+    }, [isManaged])
 
     const fetchFloorData = async (isSilent = false) => {
         if (!isSilent) setLoading(true)

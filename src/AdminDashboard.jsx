@@ -334,8 +334,10 @@ export default function AdminDashboard() {
         const autoPollTimer = setInterval(() => {
             if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
             heartbeatCounter++
-            // If realtime is healthy, only heartbeat once every 90 seconds (every 3 ticks of 30s)
-            if (isRealtimeSubscribed && heartbeatCounter % 3 !== 0) return
+            // If realtime is healthy, only heartbeat once every 180 seconds (every 6 ticks of 30s)
+            if (isRealtimeSubscribed && heartbeatCounter % 6 !== 0) return
+            // If disconnected from WebSocket, fallback poll every 60s
+            if (!isRealtimeSubscribed && heartbeatCounter % 2 !== 0) return
             fetchData(true, selectedDateRef.current)
         }, 30000)
 
@@ -602,7 +604,11 @@ export default function AdminDashboard() {
         if (activeTab === 'floor') {
             return (
                 <div className="space-y-6">
-                    <LiveFloorQuickStatus onOccupancyChange={setFloorOccupancy} />
+                    <LiveFloorQuickStatus 
+                        onOccupancyChange={setFloorOccupancy} 
+                        externalTables={tables}
+                        externalBookings={bookings}
+                    />
                 </div>
             )
         }
@@ -959,6 +965,8 @@ export default function AdminDashboard() {
                         {/* 3. Interactive Live Floor & 1-Tap Table Block */}
                         <LiveFloorQuickStatus 
                             onOccupancyChange={handleOccupancyChange}
+                            externalTables={tables}
+                            externalBookings={bookings}
                         />
 
                         {/* 4. Segmented Filter Tabs (Tabular Brutalist Division) */}

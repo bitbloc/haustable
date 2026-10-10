@@ -98,12 +98,7 @@ const POSMenuGrid = memo(function POSMenuGrid({ onAddItem, isActive = true, refr
         }
     }, [isActive]);
 
-    // Re-fetch on global POS refreshKey trigger
-    useEffect(() => {
-        if (refreshKey > 0) {
-            fetchData(false);
-        }
-    }, [refreshKey]);
+    // Menu catalog updates are pushed via dedicated pos-menu-realtime-sync channel or manual sync
 
     const fetchData = async (showLoading = true) => {
         if (showLoading && menuItems.length === 0) setLoading(true);

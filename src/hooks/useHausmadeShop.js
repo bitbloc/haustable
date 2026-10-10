@@ -363,7 +363,6 @@ const channel = supabase.channel(channelId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'option_groups' }, handleRealtimeSync)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'option_choices' }, handleRealtimeSync)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, handleRealtimeSync)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handleRealtimeSync)
     .subscribe()
 
 let focusDebounceTimer = null

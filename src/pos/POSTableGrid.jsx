@@ -340,12 +340,12 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                 }
             });
 
-        // 60-second background heartbeat fallback (POSDashboard master channel handles instant updates)
+        // 120-second background heartbeat fallback (POSDashboard master channel & broadcasts handle instant updates <50ms)
         const pollInterval = setInterval(() => {
             if (document.visibilityState === 'visible') {
                 fetchTables();
             }
-        }, 60000);
+        }, 120000);
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible') {

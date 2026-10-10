@@ -328,6 +328,14 @@ export default function CustomerOrderLanding() {
         if (!table?.id) return;
 
         // 1. Table Session Channel (Live Orders, Bill Changes, Calling Staff)
+        let bookingDebounceTimer = null;
+        const debouncedRefreshBooking = () => {
+            if (bookingDebounceTimer) clearTimeout(bookingDebounceTimer);
+            bookingDebounceTimer = setTimeout(() => {
+                refreshActiveBooking(table.id);
+            }, 400);
+        };
+
         const tableChannel = supabase.channel(`realtime_landing_table_${table.id}`)
             .on('postgres_changes', {
                 event: '*',
@@ -344,7 +352,7 @@ export default function CustomerOrderLanding() {
                         toast.info('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
                     }
                 } else {
-                    refreshActiveBooking(table.id);
+                    debouncedRefreshBooking();
                 }
             })
             .on('postgres_changes', {
@@ -353,8 +361,9 @@ export default function CustomerOrderLanding() {
                 table: 'order_items'
             }, (payload) => {
                 const bId = payload.new?.booking_id || payload.old?.booking_id;
-                if (!bId || !activeBookingRef.current?.id || String(bId) === String(activeBookingRef.current.id)) {
-                    refreshActiveBooking(table.id);
+                // Only refresh if this specific table already has an active session and the item matches its booking ID
+                if (activeBookingRef.current?.id && bId && String(bId) === String(activeBookingRef.current.id)) {
+                    debouncedRefreshBooking();
                 }
             })
             .on('postgres_changes', {
@@ -383,32 +392,45 @@ export default function CustomerOrderLanding() {
                 }
             });
 
-        // 2. Realtime Menu Catalog & App Settings Sync (Instant admin price/status/cutoff updates)
+        // 2. Realtime Menu Catalog & App Settings Sync (Instant admin price/status/cutoff updates, debounced)
+        let menuDebounceTimer = null;
+        const debouncedFetchMenu = () => {
+            if (menuDebounceTimer) clearTimeout(menuDebounceTimer);
+            menuDebounceTimer = setTimeout(() => {
+                fetchMenuData();
+            }, 500);
+        };
+
+        let settingsDebounceTimer = null;
+        const debouncedFetchSettings = () => {
+            if (settingsDebounceTimer) clearTimeout(settingsDebounceTimer);
+            settingsDebounceTimer = setTimeout(() => {
+                fetchSettings();
+            }, 500);
+        };
+
         const catalogChannel = supabase.channel(`realtime_landing_catalog_${table.id}`)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'menu_items'
-            }, () => {
-                fetchMenuData();
-            })
+            }, debouncedFetchMenu)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'menu_categories'
-            }, () => {
-                fetchMenuData();
-            })
+            }, debouncedFetchMenu)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
                 table: 'app_settings'
-            }, () => {
-                fetchSettings();
-            })
+            }, debouncedFetchSettings)
             .subscribe();
 
         return () => {
+            if (bookingDebounceTimer) clearTimeout(bookingDebounceTimer);
+            if (menuDebounceTimer) clearTimeout(menuDebounceTimer);
+            if (settingsDebounceTimer) clearTimeout(settingsDebounceTimer);
             supabase.removeChannel(tableChannel);
             supabase.removeChannel(catalogChannel);
         };
