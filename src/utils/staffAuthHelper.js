@@ -179,9 +179,14 @@ export function saveBulkOfflineStaffCredentials(credentialsList = []) {
     try {
         const store = getOfflineStaffAuth();
         const safeStaffList = [];
+        let hasChanges = false;
 
         for (const item of credentialsList) {
             if (item && item.id && item.pin_hash) {
+                const prev = store[item.id];
+                if (!prev || prev.pin_hash !== item.pin_hash || prev.display_name !== item.display_name || prev.role !== item.role) {
+                    hasChanges = true;
+                }
                 store[item.id] = {
                     id: String(item.id),
                     display_name: item.display_name || 'Staff',
@@ -201,7 +206,8 @@ export function saveBulkOfflineStaffCredentials(credentialsList = []) {
             localStorage.setItem(STORAGE_STAFF_CACHE, JSON.stringify(safeStaffList));
         }
 
-        if (typeof window !== 'undefined') {
+        // Only dispatch event when credentials actually changed to avoid triggering unnecessary re-renders
+        if (hasChanges && typeof window !== 'undefined') {
             window.dispatchEvent(new Event('pos-staff-cache-updated'));
         }
     } catch (e) {
@@ -287,21 +293,42 @@ export function getOfflineStaffList() {
     }
 }
 
+let _isSyncingStaffCredentials = false;
+let _lastStaffCredentialsSyncTime = 0;
+const CREDENTIALS_SYNC_COOLDOWN_MS = 15 * 60 * 1000; // 15 minutes cooldown
+
+export function resetStaffSyncThrottle() {
+    _lastStaffCredentialsSyncTime = 0;
+    _isSyncingStaffCredentials = false;
+}
+
 /**
  * Sync staff credentials from server when online.
  * Tries the `get_staff_offline_pin_hashes` RPC if deployed.
  * If not deployed, safely falls back without error.
+ * Includes concurrency lock and 15-minute cooldown to eliminate runaway egress polling.
  */
-export async function syncStaffCredentialsOnline() {
+export async function syncStaffCredentialsOnline(force = false) {
     if (!isOnline()) return;
+    if (_isSyncingStaffCredentials) return;
+
+    const now = Date.now();
+    if (!force && _lastStaffCredentialsSyncTime && (now - _lastStaffCredentialsSyncTime < CREDENTIALS_SYNC_COOLDOWN_MS)) {
+        return;
+    }
+
+    _isSyncingStaffCredentials = true;
     try {
         const { data, error } = await supabase.rpc('get_staff_offline_pin_hashes');
         if (!error && Array.isArray(data) && data.length > 0) {
+            _lastStaffCredentialsSyncTime = Date.now();
             saveBulkOfflineStaffCredentials(data);
             console.log(`[StaffAuth] Synced ${data.length} staff credentials for offline access.`);
         }
     } catch (err) {
         // RPC might not exist or network timed out; silent fallback to opportunistic caching
         console.log('[StaffAuth] Background sync of offline PIN hashes skipped:', err?.message || err);
+    } finally {
+        _isSyncingStaffCredentials = false;
     }
 }

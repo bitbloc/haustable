@@ -142,6 +142,25 @@ describe('POS Offline PIN Authentication & Network Resilience Tests', () => {
             expect(safeList.length).toBe(2);
             expect(safeList[0].pin_hash).toBeUndefined();
         });
+
+        it('should NOT dispatch pos-staff-cache-updated event if identical credentials are bulk saved again (loop prevention)', async () => {
+            const pinHash = await hashPin('5555');
+            const payload = [{ id: 'u-1', display_name: 'Staff 1', role: 'staff', pin_hash: pinHash }];
+
+            // First save: should dispatch
+            let dispatchCount = 0;
+            const listener = () => { dispatchCount++; };
+            window.addEventListener('pos-staff-cache-updated', listener);
+
+            saveBulkOfflineStaffCredentials(payload);
+            expect(dispatchCount).toBe(1);
+
+            // Second save with identical data: must NOT dispatch event to prevent infinite loop
+            saveBulkOfflineStaffCredentials(payload);
+            expect(dispatchCount).toBe(1);
+
+            window.removeEventListener('pos-staff-cache-updated', listener);
+        });
     });
 
     describe('3. Network Status & Reactive Offline Alerts', () => {

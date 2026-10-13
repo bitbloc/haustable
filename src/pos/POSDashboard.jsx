@@ -418,7 +418,10 @@ export default function POSDashboard() {
         }).slice(0, 50);
     }, [crmMembers, crmSearchTerm]);
 
-    const loadStaff = async () => {
+    const isStaffLoadingRef = useRef(false);
+    const lastStaffFetchTimeRef = useRef(0);
+
+    const loadStaff = async (forceOnline = false) => {
         // 1. Immediately populate from local cache if available (instant offline readiness)
         try {
             const cached = getOfflineStaffList();
@@ -427,14 +430,25 @@ export default function POSDashboard() {
             }
         } catch (e) {}
 
+        // Concurrency guard: prevent multiple parallel fetches
+        if (isStaffLoadingRef.current) return;
+
+        // Cache TTL check: only fetch online if forceOnline is true, or if never fetched, or older than 15 minutes (900,000ms)
+        const now = Date.now();
+        if (!forceOnline && lastStaffFetchTimeRef.current && (now - lastStaffFetchTimeRef.current < 15 * 60 * 1000)) {
+            return;
+        }
+
         // 2. If online, fetch fresh list from RPC and sync offline credentials
         if (isOnline()) {
+            isStaffLoadingRef.current = true;
             try {
                 const { data: rpcStaff, error: rpcError } = await supabase.rpc('get_staff_list_safe');
                 if (!rpcError && rpcStaff && rpcStaff.length > 0) {
                     setStaffList(rpcStaff);
                     localStorage.setItem('pos_cache_staff_list', JSON.stringify(rpcStaff));
-                    syncStaffCredentialsOnline();
+                    lastStaffFetchTimeRef.current = Date.now();
+                    syncStaffCredentialsOnline(false);
                     return;
                 }
 
@@ -446,7 +460,8 @@ export default function POSDashboard() {
                 if (!error && data && data.length > 0) {
                     setStaffList(data);
                     localStorage.setItem('pos_cache_staff_list', JSON.stringify(data));
-                    syncStaffCredentialsOnline();
+                    lastStaffFetchTimeRef.current = Date.now();
+                    syncStaffCredentialsOnline(false);
                 } else if (!staffList || staffList.length === 0) {
                     const DEFAULT_STAFF = [
                         { id: 'default_1', display_name: 'แคชเชียร์ A (Cashier A)', role: 'staff' },
@@ -457,6 +472,8 @@ export default function POSDashboard() {
                 }
             } catch (err) {
                 console.error("Failed to load staff profiles online:", err);
+            } finally {
+                isStaffLoadingRef.current = false;
             }
         }
     };
@@ -473,10 +490,10 @@ export default function POSDashboard() {
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             setHasSession(!!session);
-            loadStaff();
+            loadStaff(false);
         });
 
-        loadStaff();
+        loadStaff(false);
 
         checkAndRestoreActiveShift().then(restored => {
             if (restored) {
@@ -501,14 +518,30 @@ export default function POSDashboard() {
         const handleTriggerOfflineDrawer = () => {
             setShowOfflineQueueDrawer(true);
         };
+        const handleStaffCacheUpdated = () => {
+            // Read ONLY from localStorage into React state!
+            // CRITICAL: NEVER call loadStaff() or any network RPC here to prevent recursive infinite loops.
+            try {
+                const cached = getOfflineStaffList();
+                if (Array.isArray(cached) && cached.length > 0) {
+                    setStaffList(cached);
+                }
+            } catch (e) {}
+        };
+        const handleNetworkStatusChanged = (e) => {
+            // Only re-fetch online when connection transitions from offline to online
+            if (e?.detail?.isOnline && e?.detail?.wasOffline) {
+                loadStaff(true);
+            }
+        };
 
         window.addEventListener('pos-shift-changed', handleShiftChanged);
         window.addEventListener('pos-trigger-close-shift', handleTriggerClose);
         window.addEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
         window.addEventListener('pos-trigger-lock', handleTriggerLock);
         window.addEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
-        window.addEventListener('pos-staff-cache-updated', loadStaff);
-        window.addEventListener('pos-network-status-changed', loadStaff);
+        window.addEventListener('pos-staff-cache-updated', handleStaffCacheUpdated);
+        window.addEventListener('pos-network-status-changed', handleNetworkStatusChanged);
 
         return () => {
             subscription.unsubscribe();
@@ -517,8 +550,8 @@ export default function POSDashboard() {
             window.removeEventListener('pos-trigger-cash-adjustment', handleTriggerCashAdj);
             window.removeEventListener('pos-trigger-lock', handleTriggerLock);
             window.removeEventListener('pos-trigger-offline-drawer', handleTriggerOfflineDrawer);
-            window.removeEventListener('pos-staff-cache-updated', loadStaff);
-            window.removeEventListener('pos-network-status-changed', loadStaff);
+            window.removeEventListener('pos-staff-cache-updated', handleStaffCacheUpdated);
+            window.removeEventListener('pos-network-status-changed', handleNetworkStatusChanged);
         };
     }, []);
 
