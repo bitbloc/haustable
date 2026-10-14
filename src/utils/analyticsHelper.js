@@ -11,8 +11,8 @@ export const GOOGLE_ADS_ID = 'AW-11227095880';
 
 // Google Ads Outbound Click Conversion Action Labels
 export const GOOGLE_ADS_CALL_CONVERSION = 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp';        // TechSol - Call 3788
-export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/uWqACPuDvOEcEMjGv-kp';  // TechSol - Direction 26311
-export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp';        // TechSol - Line (XCMIClO2BwOEcEMjGv-kp)
+export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/QU1qCJHHvcocEMjGv-kp';  // ดูเส้นทาง (QU1qCJHHvcocEMjGv-kp)
+export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/XCmICO2BwOEcEMjGv-kp';        // TechSol - Line 95594 (XCmICO2BwOEcEMjGv-kp)
 
 // Timestamp cache for anti-spam click debouncing (2000ms cooldown)
 const lastEventTimestamps = new Map();
@@ -165,63 +165,57 @@ export const trackConversion = (sendTo, value = 1.0, currency = 'THB') => {
 export const trackLineClick = (pageLocation = '/link') => {
     if (isDebounced('float_line_click')) return;
 
-    // GA4 Standard Lead Event
-    trackEvent('generate_lead', {
+    // GA4 & GTM Event Dispatch
+    trackEvent('click_line', {
         method: 'line_oa',
-        event_category: 'engagement',
+        event_category: 'contact',
         event_label: 'line_official',
         target_destination: 'LINE OA',
         page_location: pageLocation
     });
 
-    // Google Ads Conversion (TechSol - Line 95594)
-    if (GOOGLE_ADS_LINE_CONVERSION) {
-        trackConversion(GOOGLE_ADS_LINE_CONVERSION, 1.0, 'THB');
-    }
+    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Line 6952)
+    // on link click to guarantee 1:1 attribution and zero duplicate counting.
 };
 
 /**
- * 2. Float Bar: Track Map / Directions Click (find_location & Google Ads Conversion)
+ * 2. Float Bar: Track Map / Directions Click
  * @param {string} pageLocation 
  */
 export const trackDirectionsClick = (pageLocation = '/link') => {
     if (isDebounced('float_directions_click')) return;
 
-    // GA4 Location Event
-    trackEvent('find_location', {
-        event_category: 'engagement',
+    // GA4 & GTM Event Dispatch
+    trackEvent('click_directions', {
+        event_category: 'contact',
         event_label: 'google_maps_directions',
         target_destination: 'Google Maps',
         page_location: pageLocation
     });
 
-    // Google Ads Conversion (TechSol - Direction 26311)
-    if (GOOGLE_ADS_DIRECTIONS_CONVERSION) {
-        trackConversion(GOOGLE_ADS_DIRECTIONS_CONVERSION, 1.0, 'THB');
-    }
+    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Direction 23859)
+    // on link click to guarantee 1:1 attribution and zero duplicate counting.
 };
 
 /**
- * 3. Float Bar: Track Phone Call Click (contact & Google Ads Conversion)
+ * 3. Float Bar: Track Phone Call Click
  * @param {string} phoneNumber 
  * @param {string} pageLocation 
  */
 export const trackPhoneClick = (phoneNumber = '098-528-4217', pageLocation = '/link') => {
     if (isDebounced('float_phone_click')) return;
 
-    // GA4 Standard Contact Event
-    trackEvent('contact', {
+    // GA4 & GTM Event Dispatch
+    trackEvent('click_call', {
         method: 'phone',
-        event_category: 'engagement',
+        event_category: 'contact',
         event_label: phoneNumber,
         phone_number: phoneNumber,
         page_location: pageLocation
     });
 
-    // Google Ads Conversion (TechSol - Call 3788)
-    if (GOOGLE_ADS_CALL_CONVERSION) {
-        trackConversion(GOOGLE_ADS_CALL_CONVERSION, 1.0, 'THB');
-    }
+    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Call 11647)
+    // on link click to guarantee 1:1 attribution and zero duplicate counting.
 };
 
 /**

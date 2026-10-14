@@ -55,19 +55,17 @@
         const isNative = window.Capacitor?.isNativePlatform?.() || window.location.protocol === 'capacitor:';
         if (!isNative) {
           // Initialize immediate queue configurations so events are never lost
-          gtag('js', new Date());
-          gtag('config', 'AW-11227095880');
-          gtag('config', 'G-D1M18Z54LM', { send_page_view: true });
+          window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
 
-          // Non-blocking deferred loading of Google Tag script
+          // Non-blocking deferred loading of Google Tag Manager container script
           let gtmLoaded = false;
           const loadGtm = function() {
             if (gtmLoaded) return;
             gtmLoaded = true;
-            const gtagScript = document.createElement('script');
-            gtagScript.src = "https://www.googletagmanager.com/gtag/js?id=AW-11227095880";
-            gtagScript.async = true;
-            document.head.appendChild(gtagScript);
+            const gtmScript = document.createElement('script');
+            gtmScript.src = "https://www.googletagmanager.com/gtm.js?id=GTM-NPVTXNM9";
+            gtmScript.async = true;
+            document.head.appendChild(gtmScript);
           };
 
           // On user interaction (click, touch, scroll), load GTM immediately
@@ -151,6 +149,10 @@
     </script>
   </head>
   <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <!-- End Google Tag Manager (noscript) -->
     <div id="root">
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background-color: #ECECE9; font-family: system-ui, -apple-system, sans-serif; color: #181815; user-select: none; -webkit-user-select: none;">
         <div style="font-size: 14px; font-weight: bold; font-family: monospace; letter-spacing: 0.15em; text-transform: uppercase;">ONHAUS SYSTEM</div>

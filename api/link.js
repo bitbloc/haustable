@@ -329,16 +329,14 @@ function generateStandaloneLandingHtml(data) {
         .modal-close { position: absolute; top: 16px; right: 16px; color: #fff; font-family: var(--font-mono); font-size: 18px; padding: 8px 12px; background: rgba(0,0,0,0.6); border: 1px solid #666; border-radius: 4px; }
     </style>
 
-    <!-- Immediate Google Tag Queue (Zero Event Loss, Non-blocking Deferred Execution) -->
+    <!-- Google Tag Manager (GTM-NPVTXNM9) with Zero-Loss Queue & High Performance -->
     <script>
         window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({'gtm.start': new Date().getTime(), event: 'gtm.js'});
         function gtag(){window.dataLayer.push(arguments);}
         window.gtag = gtag;
-        gtag('js', new Date());
-        gtag('config', 'AW-11227095880');
-        gtag('config', 'G-D1M18Z54LM', { send_page_view: true });
 
-        // Non-blocking deferred loading of Google Ads Tag script to keep main thread free for LCP
+        // Non-blocking deferred loading of GTM container script
         (function() {
             let loaded = false;
             window.loadGtm = function() {
@@ -346,7 +344,7 @@ function generateStandaloneLandingHtml(data) {
                 loaded = true;
                 const s = document.createElement('script');
                 s.async = true;
-                s.src = 'https://www.googletagmanager.com/gtag/js?id=AW-11227095880';
+                s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-NPVTXNM9';
                 document.head.appendChild(s);
             };
             const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
@@ -359,11 +357,16 @@ function generateStandaloneLandingHtml(data) {
                 } else {
                     setTimeout(window.loadGtm, 1200);
                 }
+            } else {
+                window.loadGtm();
             }
         })();
     </script>
 </head>
 <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <!-- Top Marquee -->
         <div class="marquee">// ${subtitle} //</div>
@@ -539,11 +542,11 @@ function generateStandaloneLandingHtml(data) {
             <div class="section-header">
                 <span class="section-title">DIRECT CONTACT</span>
             </div>
-            <a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="connect-row line" onclick="handleLineClick(event)">
+            <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="connect-row line" onclick="handleLineClick(event)">
                 <span>LINE OA // แชทสอบถามหรือสั่งอาหาร</span>
                 <span style="font-family:var(--font-mono);">➔</span>
             </a>
-            <a href="tel:0985284217" class="connect-row" onclick="handleCallClick(event)">
+            <a href="tel:0985284217" id="cta-connect-call" class="connect-row" onclick="handleCallClick(event)">
                 <span>098-528-4217 // โทรติดต่อร้าน</span>
                 <span style="font-family:var(--font-mono);">CALL ➔</span>
             </a>
@@ -579,7 +582,7 @@ function generateStandaloneLandingHtml(data) {
                 <span>HAUS CHECK-IN WALL // บอร์ดเช็กอินลูกค้า</span>
                 <span style="font-family:var(--font-mono);">➔</span>
             </a>
-            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="connect-row" style="background:var(--color-ink);color:var(--color-paper);" onclick="handleDirectionsClick(event)">
+            <a href="${mapUrl}" id="cta-connect-map" target="_blank" rel="noopener noreferrer" class="connect-row" style="background:var(--color-ink);color:var(--color-paper);" onclick="handleDirectionsClick(event)">
                 <span>LAUNCH MAP // นำทางมาร้าน (ริมโขง นครพนม)</span>
                 <span style="font-family:var(--font-mono);">➔</span>
             </a>
@@ -605,13 +608,13 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Sticky Contact Bar -->
         <div class="sticky-bar">
-            <a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">
+            <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">
                 LINE CHAT
             </a>
-            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
+            <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
                 DIRECTIONS
             </a>
-            <a href="tel:0985284217" class="sticky-btn call" onclick="handleCallClick(event)">
+            <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn call" onclick="handleCallClick(event)">
                 CALL US
             </a>
         </div>
@@ -823,81 +826,33 @@ function generateStandaloneLandingHtml(data) {
         function handleCallClick(e) {
             if (isDebounced('call')) return;
             if (window.loadGtm) window.loadGtm();
-            if (typeof window.gtag === 'function') {
-                gtag('event', 'conversion', {
-                    send_to: 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp',
-                    value: 1.0,
-                    currency: 'THB',
-                    transport_type: 'beacon'
-                });
-                gtag('event', 'contact', {
-                    method: 'phone',
-                    event_category: 'engagement',
-                    event_label: '098-528-4217',
-                    phone_number: '098-528-4217',
-                    transport_type: 'beacon',
-                    page_location: '/link'
-                });
-                gtag('event', 'click_call', {
-                    event_category: 'contact',
-                    event_label: '098-528-4217',
-                    transport_type: 'beacon',
-                    page_path: '/link'
-                });
-            }
+            window.dataLayer.push({
+                event: 'click_call',
+                phone_number: '098-528-4217',
+                page_path: '/link'
+            });
             logAdEvent('contact');
         }
 
         function handleDirectionsClick(e) {
             if (isDebounced('directions')) return;
             if (window.loadGtm) window.loadGtm();
-            if (typeof window.gtag === 'function') {
-                gtag('event', 'conversion', {
-                    send_to: 'AW-11227095880/uWqACPuDvOEcEMjGv-kp',
-                    value: 1.0,
-                    currency: 'THB',
-                    transport_type: 'beacon'
-                });
-                gtag('event', 'find_location', {
-                    event_category: 'engagement',
-                    event_label: 'google_maps_directions',
-                    target_destination: 'Google Maps',
-                    transport_type: 'beacon',
-                    page_location: '/link'
-                });
-                gtag('event', 'click_directions', {
-                    event_category: 'contact',
-                    transport_type: 'beacon',
-                    page_path: '/link'
-                });
-            }
+            window.dataLayer.push({
+                event: 'click_directions',
+                target_destination: 'Google Maps',
+                page_path: '/link'
+            });
             logAdEvent('find_location');
         }
 
         function handleLineClick(e) {
             if (isDebounced('line')) return;
             if (window.loadGtm) window.loadGtm();
-            if (typeof window.gtag === 'function') {
-                gtag('event', 'conversion', {
-                    send_to: 'AW-11227095880/XCMIClO2BwOEcEMjGv-kp',
-                    value: 1.0,
-                    currency: 'THB',
-                    transport_type: 'beacon'
-                });
-                gtag('event', 'generate_lead', {
-                    method: 'line_oa',
-                    event_category: 'engagement',
-                    event_label: 'line_official',
-                    target_destination: 'LINE OA',
-                    transport_type: 'beacon',
-                    page_location: '/link'
-                });
-                gtag('event', 'click_line', {
-                    event_category: 'contact',
-                    transport_type: 'beacon',
-                    page_path: '/link'
-                });
-            }
+            window.dataLayer.push({
+                event: 'click_line',
+                target_destination: 'LINE OA',
+                page_path: '/link'
+            });
             logAdEvent('generate_lead');
         }
 
