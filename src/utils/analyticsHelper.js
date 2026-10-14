@@ -13,6 +13,8 @@ export const GOOGLE_ADS_ID = 'AW-11227095880';
 export const GOOGLE_ADS_CALL_CONVERSION = 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp';        // TechSol - Call 3788
 export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/QU1qCJHHvcocEMjGv-kp';  // ดูเส้นทาง (QU1qCJHHvcocEMjGv-kp)
 export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/XCmICO2BwOEcEMjGv-kp';        // TechSol - Line 95594 (XCmICO2BwOEcEMjGv-kp)
+export const GOOGLE_ADS_BOOKING_CONVERSION = 'AW-11227095880/tc4FCIyyn5wdEMjGv-kp';    // จองโต๊ะ (Click Booking)
+export const GOOGLE_ADS_PICKUP_CONVERSION = 'AW-11227095880/HSdNCl-yn5wdEMjGv-kp';      // สั่งอาหาร (Pickup)
 
 // Timestamp cache for anti-spam click debouncing (2000ms cooldown)
 const lastEventTimestamps = new Map();
@@ -250,7 +252,7 @@ export const trackBookletClick = (pageLocation = '/link') => {
 export const trackBookingClick = (pageLocation = '/link') => {
     if (isDebounced('booking_click')) return;
 
-    trackEvent('click_booking_link', {
+    trackEvent('click_booking', {
         page_location: pageLocation,
         target_destination: '/booking'
     });
@@ -263,7 +265,7 @@ export const trackBookingClick = (pageLocation = '/link') => {
 export const trackPickupClick = (pageLocation = '/link') => {
     if (isDebounced('pickup_click')) return;
 
-    trackEvent('click_pickup_link', {
+    trackEvent('click_pickup', {
         page_location: pageLocation,
         target_destination: '/pickup'
     });

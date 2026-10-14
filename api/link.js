@@ -410,14 +410,14 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Quick Actions: Reservation & Pickup -->
         <div class="quick-grid">
-            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="logAdEvent('click_booking_link')">
+            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">
                 <div class="quick-tag"><span>// RESERVATION</span><span>➔</span></div>
                 <div>
                     <div class="quick-title">จองโต๊ะล่วงหน้า</div>
                     <div class="quick-sub">BOOK A TABLE</div>
                 </div>
             </a>
-            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="logAdEvent('click_pickup_link')">
+            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">
                 <div class="quick-tag"><span>// SELF-PICKUP</span><span>➔</span></div>
                 <div>
                     <div class="quick-title">สั่งอาหารรับหน้าร้าน</div>
@@ -854,6 +854,28 @@ function generateStandaloneLandingHtml(data) {
                 page_path: '/link'
             });
             logAdEvent('generate_lead');
+        }
+
+        function handleBookingClick(e) {
+            if (isDebounced('booking')) return;
+            if (window.loadGtm) window.loadGtm();
+            window.dataLayer.push({
+                event: 'click_booking',
+                target_destination: '/booking',
+                page_path: '/link'
+            });
+            logAdEvent('click_booking_link');
+        }
+
+        function handlePickupClick(e) {
+            if (isDebounced('pickup')) return;
+            if (window.loadGtm) window.loadGtm();
+            window.dataLayer.push({
+                event: 'click_pickup',
+                target_destination: '/pickup',
+                page_path: '/link'
+            });
+            logAdEvent('click_pickup_link');
         }
 
         // Preserve UTM Search Parameters on internal navigation & Defer PageView out of Critical Chain
