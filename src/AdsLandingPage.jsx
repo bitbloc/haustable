@@ -397,6 +397,17 @@ export default function AdsLandingPage() {
                 metaDescription.content = descText;
                 document.head.appendChild(metaDescription);
             }
+
+            // Self-referencing Canonical for /link to resolve duplicate GSC warnings across UTM/query params
+            let canonicalLink = document.querySelector('link[rel="canonical"]');
+            if (canonicalLink) {
+                canonicalLink.setAttribute('href', 'https://haustable.vercel.app/link');
+            } else {
+                canonicalLink = document.createElement('link');
+                canonicalLink.rel = 'canonical';
+                canonicalLink.href = 'https://haustable.vercel.app/link';
+                document.head.appendChild(canonicalLink);
+            }
         }
     }, [hours, loading]);
  

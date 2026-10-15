@@ -169,6 +169,7 @@ function generateStandaloneLandingHtml(data) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>${shopName} | อาหารใต้รสชัด ริมโขง นครพนม</title>
     <meta name="description" content="อาหารใต้รสชัด บรรยากาศนั่งสบายริมโขง ครบทั้งเซ็ต กับข้าว และกาแฟ ร้านอาหารและคาเฟ่นครพนม เหมาะกับมื้อเที่ยง คุยงาน รับแขก หรือมื้อเย็น พริกแกงนครศรีฯ แท้ · มีที่จอดรถสะดวก">
+    <link rel="canonical" href="https://haustable.vercel.app/link">
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="theme-color" content="#181815">
