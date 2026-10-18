@@ -32,7 +32,19 @@ function dispatchBroadcastEvent(event, payload) {
     });
 }
 
-function getBroadcastChannel() {
+function getBroadcastChannel(forceRecreate = false) {
+    if (posBroadcastChannel) {
+        const chState = posBroadcastChannel.state;
+        const isDead = forceRecreate || (chState && chState !== 'joined' && chState !== 'joining');
+        if (isDead) {
+            try {
+                supabase.removeChannel(posBroadcastChannel);
+            } catch (e) {}
+            posBroadcastChannel = null;
+            posChannelSubPromise = null;
+        }
+    }
+
     if (!posBroadcastChannel) {
         posBroadcastChannel = supabase.channel('pos-realtime-notifications', {
             config: {
@@ -87,7 +99,7 @@ function getBroadcastChannel() {
                         broadcastReconnectTimer = setTimeout(() => {
                             broadcastReconnectTimer = null;
                             console.log('⚡ [RealtimeNotifier] Auto-reconnecting broadcast channel...');
-                            getBroadcastChannel();
+                            getBroadcastChannel(true);
                         }, 2500);
                     }
                 }
@@ -97,13 +109,13 @@ function getBroadcastChannel() {
     return { channel: posBroadcastChannel, promise: posChannelSubPromise };
 }
 
-// Lifecycle watcher: revive channel whenever Android WebView is foregrounded or network reconnects
+// Lifecycle watcher: revive channel whenever Android WebView / mobile browser is foregrounded or network reconnects
 if (typeof window !== 'undefined') {
     const handleRevive = () => {
-        if (document.visibilityState === 'visible' && broadcastListeners.size > 0) {
+        if (document.visibilityState === 'visible' && (broadcastListeners.size > 0 || posBroadcastChannel)) {
             if (!posBroadcastChannel || posBroadcastChannel.state !== 'joined') {
                 console.log('⚡ [RealtimeNotifier] Foreground/online triggered broadcast channel re-verification');
-                getBroadcastChannel();
+                getBroadcastChannel(true);
             }
         }
     };
@@ -143,7 +155,7 @@ export function prewarmPOSBroadcastChannel() {
  */
 export async function sendPOSBroadcast(event, payload = {}) {
     try {
-        const { channel, promise } = getBroadcastChannel();
+        let { channel, promise } = getBroadcastChannel();
         const fullPayload = {
             ...payload,
             timestamp: Date.now()
@@ -162,11 +174,30 @@ export async function sendPOSBroadcast(event, payload = {}) {
             await promise;
         }
 
-        const res = await channel.send({
-            type: 'broadcast',
-            event: event,
-            payload: fullPayload
-        });
+        let res = 'error';
+        if (channel) {
+            res = await channel.send({
+                type: 'broadcast',
+                event: event,
+                payload: fullPayload
+            });
+        }
+
+        // If channel was stale/disconnected when sending, force recreate and retry once
+        if (res !== 'ok') {
+            console.warn(`[RealtimeNotifier] Initial broadcast "${event}" returned "${res}", reconnecting and retrying...`);
+            const recreated = getBroadcastChannel(true);
+            if (recreated.promise) {
+                await recreated.promise;
+            }
+            if (recreated.channel) {
+                res = await recreated.channel.send({
+                    type: 'broadcast',
+                    event: event,
+                    payload: fullPayload
+                });
+            }
+        }
 
         // Local cross-tab & in-app instant sync (0ms)
         try {

@@ -1143,6 +1143,9 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                     detail: { tableId: targetTableId, bookingId: booking?.id } 
                                 }));
                             }
+                            if (booking?.id) {
+                                stopStaffCallLoop(booking.id);
+                            }
 
                             // 2. If table object exists, optimistically clear hasCallStaff
                             if (order?.table) {

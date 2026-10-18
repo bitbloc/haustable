@@ -31,7 +31,7 @@ graph TD
 
     subgraph P4 [Phase 4: ภาษี & ความปลอดภัย]
         M13[Thai Baht Text & VAT 7% / WHT]
-        M14[Gemini AI Vision Receipt OCR]
+        M14[Gemini 4 Argon AI Vision Receipt OCR]
         M15[PIN Code Auth & RLS Security]
         M16[PostgreSQL Index Optimization]
     end
@@ -61,7 +61,7 @@ graph TD
 
 ### เฟสที่ 4: ระบบภาษีสรรพากร AI OCR และความปลอดภัย (Thai Tax, OCR & Security)
 - **ภาษีสรรพากร & ตัวหนังสือไทย:** `thaiBahtText` แปลงตัวเลขเป็นบาทไทยถูกต้องตามมาตรฐานสรรพากร พร้อมคำนวณ VAT 7% (รวมใน/แยกนอก) และภาษีหัก ณ ที่จ่าย WHT
-- **Gemini AI Vision OCR:** สแกนบิลซื้อของเข้าคลังวัตถุดิบ รองรับบิลหมุนตะแคง (90°/180°/270°) และบิลหลายหน้า
+- **Gemini 4 Argon AI Vision OCR:** สแกนบิลซื้อของเข้าคลังวัตถุดิบและเอกสารภาษีด้วยโมเดลเรือธง Gemini 4 Argon รองรับบิลหมุนตะแคง (90°/180°/270°) บิลหลายหน้า และแยกหมวดหมู่อัตโนมัติพร้อมโมเดลสำรองแบบ Cascade
 - **ความปลอดภัย & ประสิทธิภาพ:** ยืนยันตัวตนด้วย PIN Code ผ่าน `SECURITY DEFINER` RPC และมี Database Index รองรับการค้นหา < 50ms
 
 ---

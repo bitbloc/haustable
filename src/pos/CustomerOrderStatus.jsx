@@ -14,7 +14,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
-import { sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeNotifier';
 import { isValidUuid } from '../utils/urlHelper';
 import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
@@ -61,6 +61,8 @@ export default function CustomerOrderStatus() {
         let channelSub = null;
         let settingsSub = null;
         let isMounted = true;
+
+        prewarmPOSBroadcastChannel();
 
         const initStatus = async () => {
             if (tableId) {
@@ -127,6 +129,7 @@ export default function CustomerOrderStatus() {
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && isMounted) {
+                prewarmPOSBroadcastChannel();
                 fetchActiveOrder(true);
                 fetchSettings();
             }
@@ -255,9 +258,15 @@ export default function CustomerOrderStatus() {
         setRequestingBill(true);
         try {
             const currentRemark = booking.staff_remark || '';
-            const newRemark = currentRemark.includes('[CALL_BILL]') 
-                ? currentRemark 
-                : `[CALL_BILL] ${currentRemark}`.trim();
+            const baseRemark = currentRemark.replace(/\[CALL_BILL\]/g, '').trim();
+            const newRemark = `[CALL_BILL] ${baseRemark}`.trim();
+
+            if (currentRemark.includes('[CALL_BILL]')) {
+                await supabase
+                    .from('bookings')
+                    .update({ staff_remark: baseRemark })
+                    .eq('id', booking.id);
+            }
 
             const { error } = await supabase
                 .from('bookings')
@@ -266,13 +275,16 @@ export default function CustomerOrderStatus() {
 
             if (error) throw error;
 
-            // Instant Realtime Broadcast to POS (< 50ms)
+            // Instant Realtime Broadcast to POS (< 50ms) with timeout protection
             const tableDisplayName = resolvedTableInfo?.table_name || booking.tables_layout?.table_name || `โต๊ะ #${booking.table_id || tableId}`;
-            sendPOSBroadcast('call_bill', {
-                table_id: booking.table_id || resolvedTableInfo?.id,
-                table_name: tableDisplayName,
-                booking_id: booking.id
-            });
+            await Promise.race([
+                sendPOSBroadcast('call_bill', {
+                    table_id: booking.table_id || resolvedTableInfo?.id,
+                    table_name: tableDisplayName,
+                    booking_id: booking.id
+                }),
+                new Promise((resolve) => setTimeout(resolve, 1500))
+            ]);
 
             toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
             fetchActiveOrder(true);
@@ -609,6 +621,14 @@ export default function CustomerOrderStatus() {
                                         พนักงานกำลังนำใบแจ้งยอดและ QR Code มาแสดงที่โต๊ะเพื่อสแกนจ่ายโดยตรง
                                     </p>
                                 </div>
+                                <button
+                                    type="button"
+                                    onClick={handleRequestBill}
+                                    disabled={requestingBill}
+                                    className="mt-2 bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] px-3.5 py-1.5 rounded-sm font-mono font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95"
+                                >
+                                    {requestingBill ? 'กำลังส่งสัญญาณ...' : 'แจ้งเรียกเช็คบิลซ้ำอีกครั้ง'}
+                                </button>
                             </div>
                         </div>
                     )}

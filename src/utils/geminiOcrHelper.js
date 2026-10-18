@@ -2,7 +2,8 @@
 import { supabase } from '../lib/supabaseClient';
 
 export const GEMINI_SUPPORTED_MODELS = [
-    { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash (ล่าสุด - แนะนำ ฉลาดและแม่นยำสูงสุด)' },
+    { id: 'gemini-4-argon', label: 'Gemini 4 Argon (เรือธงล่าสุด - แนะนำ ฉลาดลึกซึ้งและแม่นยำสูงสุด)' },
+    { id: 'gemini-3.7-flash', label: 'Gemini 3.7 Flash' },
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (เสถียร & รวดเร็ว)' },
     { id: 'gemini-3.7-pro', label: 'Gemini 3.7 Pro' },
@@ -61,7 +62,7 @@ export async function saveGeminiApiKey(apiKey) {
 export async function getGeminiPreferredModel() {
     const localModel = localStorage.getItem('onhaus_gemini_model');
     if (localModel && localModel.trim()) return localModel.trim();
-    return 'gemini-3.7-flash';
+    return 'gemini-4-argon';
 }
 
 export async function saveGeminiPreferredModel(modelName) {
@@ -294,10 +295,11 @@ Payment Method Rules:
         }
     };
 
-    // Candidate models order: Start with user selection or gemini-3.7-flash, then cascade down
+    // Candidate models order: Start with user selection or gemini-4-argon, then cascade down
     const userChoice = preferredModel || (await getGeminiPreferredModel());
     const candidateModels = Array.from(new Set([
         userChoice,
+        'gemini-4-argon',
         'gemini-3.7-flash',
         'gemini-2.5-flash',
         'gemini-2.0-flash',

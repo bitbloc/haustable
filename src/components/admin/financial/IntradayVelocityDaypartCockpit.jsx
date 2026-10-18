@@ -1156,7 +1156,7 @@ export default function IntradayVelocityDaypartCockpit({
         setAiLoading(true)
         try {
             const apiKey = await getGeminiApiKey()
-            const preferredModel = await getGeminiPreferredModel() || 'gemini-2.5-flash'
+            const preferredModel = await getGeminiPreferredModel() || 'gemini-4-argon'
 
             if (!apiKey) {
                 toast.error('กรุณาตั้งค่า Gemini API Key ในระบบก่อนใช้งาน')
@@ -1232,6 +1232,8 @@ ${dayMetrics?.daypartBreakdown?.map(dp => `  * ${dp.label} [${dp.status?.toUpper
 
             const candidateModels = [
                 preferredModel,
+                'gemini-4-argon',
+                'gemini-3.7-flash',
                 'gemini-2.5-flash',
                 'gemini-2.0-flash',
                 'gemini-1.5-flash'

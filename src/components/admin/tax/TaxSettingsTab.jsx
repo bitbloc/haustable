@@ -55,7 +55,7 @@ export default function TaxSettingsTab({
         tax_signature_image: localStorage.getItem('onhaus_tax_signature_image') || '',
         tax_signature_enabled: 'true',
         gemini_api_key: localStorage.getItem('onhaus_gemini_api_key') || '',
-        gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-3.7-flash'
+        gemini_model: localStorage.getItem('onhaus_gemini_model') || 'gemini-4-argon'
     });
 
     const [saving, setSaving] = useState(false);
@@ -906,7 +906,7 @@ export default function TaxSettingsTab({
                             ))}
                         </select>
                         <span className="text-[10px] text-zinc-500 font-mono mt-1 block">
-                            * หากโมเดลที่เลือกไม่พร้อมใช้งาน ระบบจะสลับไปยังโมเดลอื่นโดยอัตโนมัติ (Fallback Cascade: Gemini 2.0 Flash &rarr; 1.5 Flash Latest &rarr; 2.5 Flash)
+                            * หากโมเดลที่เลือกไม่พร้อมใช้งาน ระบบจะสลับไปยังโมเดลอื่นโดยอัตโนมัติ (Fallback Cascade: Gemini 4 Argon &rarr; Gemini 3.7 Flash &rarr; 2.5 Flash &rarr; 2.0 Flash)
                         </span>
                     </div>
 

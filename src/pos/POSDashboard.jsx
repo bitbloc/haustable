@@ -32,7 +32,7 @@ import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportDa
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
-import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast } from '../utils/realtimeNotifier';
+import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeNotifier';
 import { 
     playOrderAlert, 
     playStaffCallAlert, 
@@ -1195,11 +1195,8 @@ export default function POSDashboard() {
                     }
                 }
 
-                // Sync staff call loop: if no active booking in store has [CALL_STAFF], ensure loop is stopped
-                const hasAnyActiveCallStaff = (pendingData || []).some(b => (b.staff_remark || '').includes('[CALL_STAFF]'));
-                if (!hasAnyActiveCallStaff) {
-                    stopStaffCallLoop(null, true);
-                }
+                // Do NOT call stopStaffCallLoop(null, true) here because pendingData only queries
+                // status IN ('pending', 'confirmed') and excludes 'seated' tables and free-table staff calls.
 
                 // Only trigger state updates if pending bookings signature actually changed (avoids 15-second re-render storms)
                 const newIdsSignature = pendingOnly.map(b => `${b.id}:${b.status}:${b.payment_slip_url ? 1 : 0}`).join('|');
@@ -1334,10 +1331,10 @@ export default function POSDashboard() {
             heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
         };
 
-        // Foreground active: every 90s (WebSocket handles instant push <50ms). Background / folded screen: every 60s
+        // Foreground active: every 25s (WebSocket handles instant push <50ms, heartbeat recovers any dropped packets quickly). Background: every 45s
         const updateHeartbeatMode = () => {
             const isVisible = document.visibilityState === 'visible';
-            startHeartbeat(isVisible ? 90000 : 60000);
+            startHeartbeat(isVisible ? 25000 : 45000);
         };
 
         updateHeartbeatMode();
@@ -1689,6 +1686,8 @@ export default function POSDashboard() {
                         subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
                         dot: 'terracotta',
                         onClick: () => {
+                            if (tId) stopStaffCallLoop(tId);
+                            if (bId) stopStaffCallLoop(bId);
                             if (tId) {
                                 supabase.from('tables_layout').select('*').eq('id', tId).single().then(({ data }) => {
                                     if (data) handleSelectTable(data);
@@ -1932,7 +1931,9 @@ export default function POSDashboard() {
                             // QR order addition to an already seated table
                             const isNewQrRemark = newRemark.includes('[QR]') && !oldRemark.includes('[QR]');
                             const totalIncreased = (Number(newRow?.total_amount) || 0) > (Number(oldRow?.total_amount) || 0);
-                            const isNotCurrentPosStaffEdit = activeBookingRef.current?.id !== bookingId && !localStaffSubmittedBookingsRef.current.has(String(bookingId));
+                            const bIdStr = String(bookingId);
+                            const lastLocalSub = localStaffSubmittedBookingsRef.current.get(bIdStr);
+                            const isNotCurrentPosStaffEdit = !submittingOrderRef.current && !(lastLocalSub && (Date.now() - lastLocalSub < 30000));
                             if ((isNewQrRemark || (totalIncreased && newRemark.includes('[QR]'))) && isNotCurrentPosStaffEdit) {
                                 if (checkEventDeduplication(pendingOrderKey, 6000)) {
                                     toast.custom((t) => renderPosToast(t, {
@@ -1950,6 +1951,9 @@ export default function POSDashboard() {
                                     }), { id: pendingOrderKey, duration: 10000 });
                                     pushNotifHistory('ADD_ORDER', 'Add Order (QR)', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติมผ่าน QR`, tableId);
                                     playOrderAlert(pendingOrderKey, 1200, 3.4);
+                                }
+                                if (tableId && !newRemark.includes('GPS_UNVERIFIED')) {
+                                    scheduleAutoPrint(bookingId, tableName, 600);
                                 }
                             }
                         }
@@ -1982,7 +1986,8 @@ export default function POSDashboard() {
                         const isClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(newRow?.status);
                         const wasClosed = ['cancelled', 'void', 'completed', 'no_show'].includes(oldRow?.status);
                         if (isClosed && !wasClosed) {
-                            stopStaffCallLoop(tableId || bookingId);
+                            if (tableId) stopStaffCallLoop(tableId);
+                            if (bookingId) stopStaffCallLoop(bookingId);
                             toast.dismiss(callStaffKey);
                             toast.dismiss(callBillKey);
                             toast.dismiss(pendingOrderKey);
@@ -2036,6 +2041,8 @@ export default function POSDashboard() {
                                     subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
                                     dot: 'terracotta',
                                     onClick: () => {
+                                        if (tableId) stopStaffCallLoop(tableId);
+                                        if (bookingId) stopStaffCallLoop(bookingId);
                                         if (tableId) {
                                             supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
                                                 if (data) handleSelectTable(data);
@@ -2050,7 +2057,8 @@ export default function POSDashboard() {
                                 window.dispatchEvent(new CustomEvent('pos_table_call_staff', { detail: { tableId } }));
                             }
                         } else if (oldRemark.includes('[CALL_STAFF]') && !newRemark.includes('[CALL_STAFF]')) {
-                            stopStaffCallLoop(tableId || bookingId);
+                            if (tableId) stopStaffCallLoop(tableId);
+                            if (bookingId) stopStaffCallLoop(bookingId);
                             toast.dismiss(callStaffKey);
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId } }));
@@ -2116,9 +2124,6 @@ export default function POSDashboard() {
                                 return;
                             }
 
-                            // If staff is currently editing or viewing this booking right on this POS terminal, do not alert
-                            const isCurrentPosBooking = activeBookingRef.current?.id === bookingId;
-
                             // Lookup booking details with tracking_token, status, and sources
                             supabase.from('bookings')
                                 .select('id, tracking_token, table_id, staff_remark, source, booking_type, status, pickup_contact_name, payment_slip_url, tables_layout(table_name)')
@@ -2137,8 +2142,9 @@ export default function POSDashboard() {
                                     const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
                                     const isWalkInPickup = bData.booking_type === 'pickup' && isExplicitInHouse;
 
-                                    // Strictly suppress notifications and audio for cashier-entered in-store actions, current screen viewing, or inactive states
-                                    if (isExplicitInHouse || isWalkInPickup || isCurrentPosBooking || bData.status === 'completed' || bData.status === 'cancelled' || bData.status === 'void') {
+                                    // Strictly suppress notifications and audio for cashier-entered in-store actions or inactive states.
+                                    // Do NOT suppress customer QR orders merely because the table happens to be selected in activeBookingRef!
+                                    if (isExplicitInHouse || isWalkInPickup || bData.status === 'completed' || bData.status === 'cancelled' || bData.status === 'void') {
                                         return;
                                     }
 
@@ -2175,8 +2181,11 @@ export default function POSDashboard() {
                                         pushNotifHistory('ORDER', isItemPickup ? 'Online Pickup' : 'QR Order', itemTitle, tId);
                                     }
 
-                                    const resolvedPrintName = bData.tables_layout?.table_name || (bData.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : 'TABLE');
-                                    scheduleAutoPrint(bookingId, resolvedPrintName, 600);
+                                    const isUnverifiedGps = bData.status === 'pending' && remarkLower.includes('gps_unverified');
+                                    if (!isUnverifiedGps) {
+                                        const resolvedPrintName = bData.tables_layout?.table_name || (bData.table_id ? (tablesMap[bData.table_id] || `#${bData.table_id}`) : 'TABLE');
+                                        scheduleAutoPrint(bookingId, resolvedPrintName, 600);
+                                    }
                                 });
                         }
 
@@ -2220,8 +2229,25 @@ export default function POSDashboard() {
 
         setupMasterDbChannel();
 
+        const handleDbChannelWakeup = () => {
+            if (document.visibilityState === 'visible' && !isUnmounted) {
+                const chState = activeChannel?.state;
+                if (!activeChannel || (chState && chState !== 'joined' && chState !== 'joining')) {
+                    console.log('⚡ [Realtime POS] Reviving master database channel on foreground/online...');
+                    setupMasterDbChannel();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleDbChannelWakeup);
+        window.addEventListener('online', handleDbChannelWakeup);
+        window.addEventListener('focus', handleDbChannelWakeup);
+
         return () => {
             isUnmounted = true;
+            document.removeEventListener('visibilitychange', handleDbChannelWakeup);
+            window.removeEventListener('online', handleDbChannelWakeup);
+            window.removeEventListener('focus', handleDbChannelWakeup);
             unsubscribeBroadcast();
             if (reconnectTimer) clearTimeout(reconnectTimer);
             if (activeChannel) {

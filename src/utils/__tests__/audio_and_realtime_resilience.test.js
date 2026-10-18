@@ -549,5 +549,40 @@ describe('Audio Engine & Notification Resilience', () => {
             expect(nativeResult).toBe(true); // Handled as muted cleanly
             expect(playAlertSoundMock).not.toHaveBeenCalled();
         });
+
+        it('should play notibill on every 3.5s tick in startStaffCallLoop without being suppressed by 4s dedup window', () => {
+            stopStaffCallLoop(null, true);
+            const playAlertSoundMock = vi.fn().mockReturnValue(true);
+            window.AndroidPosBridge = {
+                playAlertSound: playAlertSoundMock
+            };
+
+            setAudioVolume(80);
+            setAudioMuted(false);
+
+            startStaffCallLoop('H4');
+            expect(isStaffCallLooping()).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledTimes(1);
+            expect(playAlertSoundMock).toHaveBeenLastCalledWith('notibill', 0.8);
+
+            // Advance 3500ms -> Tick 2 must ring (not suppressed by 4000ms dedup map)
+            vi.advanceTimersByTime(3500);
+            expect(playAlertSoundMock).toHaveBeenCalledTimes(2);
+
+            // Advance another 3500ms -> Tick 3 must ring
+            vi.advanceTimersByTime(3500);
+            expect(playAlertSoundMock).toHaveBeenCalledTimes(3);
+
+            // Stop loop and immediately trigger another staff call 1000ms later
+            stopStaffCallLoop('H4');
+            expect(isStaffCallLooping()).toBe(false);
+
+            vi.advanceTimersByTime(1000);
+            startStaffCallLoop('H8');
+            expect(isStaffCallLooping()).toBe(true);
+            expect(playAlertSoundMock).toHaveBeenCalledTimes(4);
+
+            stopStaffCallLoop(null, true);
+        });
     });
 });

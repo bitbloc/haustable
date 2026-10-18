@@ -163,7 +163,7 @@ export default function MonthlyExecutiveReportModal({
         const toastId = toast.loading('กำลังประมวลผลกลยุทธ์เชิงลึกด้วย Gemini AI...')
         try {
             const apiKey = await getGeminiApiKey()
-            const model = (await getGeminiPreferredModel()) || 'gemini-2.5-flash'
+            const model = (await getGeminiPreferredModel()) || 'gemini-4-argon'
 
             if (!apiKey) {
                 toast.info('ใช้โมเดลวิเคราะห์เชิงสถิติขั้นสูงในระบบ (สำหรับโหมดออฟไลน์)', { id: toastId })

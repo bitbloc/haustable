@@ -732,7 +732,7 @@ ${JSON.stringify(summaryPayload, null, 2)}
      3) การดึงดูดและตอบสนองความต้องการซื้อ (Unmet Demand เช่น การกระตุ้นให้จองโต๊ะล่วงหน้าเพื่อลดความแออัด หรือเปิดพรีออเดอร์)
 3. ห้ามใช้อีโมจิ ความยาวรวมประมาณ 220-260 คำ
 `
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${preferredModel || 'gemini-2.5-flash'}:generateContent?key=${apiKey}`
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${preferredModel || 'gemini-4-argon'}:generateContent?key=${apiKey}`
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

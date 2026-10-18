@@ -842,11 +842,16 @@ export default function CustomerOrderLanding() {
                     return;
                 }
 
-                let currentRemark = currentBooking.staff_remark || '';
-                let newRemark = currentRemark;
-                
-                if (!currentRemark.includes('[CALL_STAFF]')) {
-                    newRemark = `[CALL_STAFF] ${currentRemark}`.trim();
+                const currentRemark = currentBooking.staff_remark || '';
+                const baseRemark = currentRemark.replace(/\[CALL_STAFF\]/g, '').trim();
+                const newRemark = `[CALL_STAFF] ${baseRemark}`.trim();
+
+                // If [CALL_STAFF] was already present, briefly clear it first so postgres_changes UPDATE diff always fires on repeat calls
+                if (currentRemark.includes('[CALL_STAFF]')) {
+                    await supabase
+                        .from('bookings')
+                        .update({ staff_remark: baseRemark })
+                        .eq('id', currentBooking.id);
                 }
 
                 const { error } = await supabase
@@ -862,13 +867,16 @@ export default function CustomerOrderLanding() {
                 });
             }
 
-            // Instant Realtime Broadcast to POS (< 50ms)
+            // Instant Realtime Broadcast to POS (< 50ms) with timeout protection
             // Works for both active tables and free tables requesting staff to open
-            sendPOSBroadcast('call_staff', {
-                table_id: effectiveNumericTableId,
-                table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId}`,
-                booking_id: currentBooking?.id || null
-            });
+            await Promise.race([
+                sendPOSBroadcast('call_staff', {
+                    table_id: effectiveNumericTableId,
+                    table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId}`,
+                    booking_id: currentBooking?.id || null
+                }),
+                new Promise((resolve) => setTimeout(resolve, 1500))
+            ]);
 
             toast.success('แจ้งเรียกพนักงานเรียบร้อยแล้ว กรุณารอสักครู่ครับ');
         } catch (err) {
@@ -912,9 +920,15 @@ export default function CustomerOrderLanding() {
         setRequestingBill(true);
         try {
             const currentRemark = activeBooking.staff_remark || '';
-            const newRemark = currentRemark.includes('[CALL_BILL]') 
-                ? currentRemark 
-                : `[CALL_BILL] ${currentRemark}`.trim();
+            const baseRemark = currentRemark.replace(/\[CALL_BILL\]/g, '').trim();
+            const newRemark = `[CALL_BILL] ${baseRemark}`.trim();
+
+            if (currentRemark.includes('[CALL_BILL]')) {
+                await supabase
+                    .from('bookings')
+                    .update({ staff_remark: baseRemark })
+                    .eq('id', activeBooking.id);
+            }
 
             const { error } = await supabase
                 .from('bookings')
@@ -923,12 +937,15 @@ export default function CustomerOrderLanding() {
 
             if (error) throw error;
 
-            // Instant Realtime Broadcast to POS (< 50ms)
-            sendPOSBroadcast('call_bill', {
-                table_id: effectiveNumericTableId || activeBooking.table_id,
-                table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId || activeBooking.table_id}`,
-                booking_id: activeBooking.id
-            });
+            // Instant Realtime Broadcast to POS (< 50ms) with timeout protection
+            await Promise.race([
+                sendPOSBroadcast('call_bill', {
+                    table_id: effectiveNumericTableId || activeBooking.table_id,
+                    table_name: table?.table_name || `โต๊ะ #${effectiveNumericTableId || activeBooking.table_id}`,
+                    booking_id: activeBooking.id
+                }),
+                new Promise((resolve) => setTimeout(resolve, 1500))
+            ]);
 
             toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
             refreshActiveBooking();

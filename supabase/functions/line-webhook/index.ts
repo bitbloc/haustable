@@ -158,7 +158,7 @@ async function fetchExchangeRate(fromCurrency: string = 'USD'): Promise<number> 
 async function scanReceiptImageWithGemini(
   base64ImagesInput: string | string[],
   apiKey: string,
-  preferredModel: string = 'gemini-3.7-flash'
+  preferredModel: string = 'gemini-4-argon'
 ): Promise<any> {
   const imagesArray = Array.isArray(base64ImagesInput) ? base64ImagesInput : [base64ImagesInput];
   const isMultiPage = imagesArray.length > 1;
@@ -266,6 +266,7 @@ Payment Method Rules:
 
   const candidateModels = Array.from(new Set([
     preferredModel,
+    'gemini-4-argon',
     'gemini-3.7-flash',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
@@ -634,7 +635,7 @@ function getDailySaiMuContext(dateObj: Date) {
 async function generateIntradayTrafficWithSaiMu(
   summaryPayload: any,
   apiKey: string,
-  preferredModel: string = 'gemini-3.7-flash'
+  preferredModel: string = 'gemini-4-argon'
 ): Promise<any> {
   const saiMu = summaryPayload.saiMuContext;
   const promptText = `
@@ -674,6 +675,7 @@ Return ONLY a valid JSON object matching this schema:
   if (apiKey) {
     const candidateModels = Array.from(new Set([
       preferredModel,
+      'gemini-4-argon',
       'gemini-3.7-flash',
       'gemini-2.5-flash',
       'gemini-2.0-flash',
@@ -3441,7 +3443,7 @@ Deno.serve(async (req) => {
               geminiApiKey = keyRow?.value || ''
             }
 
-            let preferredModel = 'gemini-3.7-flash'
+            let preferredModel = 'gemini-4-argon'
             const { data: modelRow } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'gemini_model').maybeSingle()
             if (modelRow?.value) preferredModel = modelRow.value
 
@@ -4485,7 +4487,7 @@ Deno.serve(async (req) => {
             geminiApiKey = keyRow?.value || ''
           }
 
-          let preferredModel = 'gemini-3.7-flash'
+          let preferredModel = 'gemini-4-argon'
           const { data: modelRow } = await supabaseAdmin
             .from('app_settings')
             .select('value')

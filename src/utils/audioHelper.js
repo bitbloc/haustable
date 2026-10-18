@@ -1152,9 +1152,9 @@ export function startStaffCallLoop(tableId = null) {
     if (_staffCallLoopActive) return; // Already looping — singleton guard
     _staffCallLoopActive = true;
 
-    // Play immediately on first trigger
+    // Play immediately on first trigger (null eventKey so 4000ms dedup map never blocks 3500ms loop ticks)
     lastAlertPlayedTime = 0;
-    playBillSoundAlert('staff_call_loop_tick', 100, 3.4);
+    playBillSoundAlert(null, 100, 3.4);
 
     // Then repeat every 3.5 seconds
     _staffCallLoopIntervalId = setInterval(() => {
@@ -1165,7 +1165,7 @@ export function startStaffCallLoop(tableId = null) {
         }
         // Reset throttle timestamp so repeated loop ticks are never suppressed
         lastAlertPlayedTime = 0;
-        playBillSoundAlert('staff_call_loop_tick', 100, 3.4);
+        playBillSoundAlert(null, 100, 3.4);
     }, 3500);
 }
 
