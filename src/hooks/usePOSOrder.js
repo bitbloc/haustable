@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueue, saveOfflineQueue } from '../utils/offlineHelper';
 import { recordShiftTransaction } from '../utils/shiftHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
+import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
@@ -722,11 +723,13 @@ export function usePOSOrder() {
         }
 
         try {
-            // 1. Fetch current remark to preserve transfer tags (e.g. [MERGED_FROM:...], [MOVED:...])
+            // 1. Fetch current remark and tracking_token to preserve transfer tags (e.g. [MERGED_FROM:...], [MOVED:...])
             let existingRemark = '';
+            let existingTrackingToken = null;
             try {
-                const { data: curB } = await supabase.from('bookings').select('staff_remark').eq('id', bookingId).maybeSingle();
+                const { data: curB } = await supabase.from('bookings').select('staff_remark, tracking_token').eq('id', bookingId).maybeSingle();
                 existingRemark = curB?.staff_remark || '';
+                existingTrackingToken = curB?.tracking_token || null;
             } catch (e) {}
 
             const transferTags = (existingRemark.match(/\[(MERGED_FROM|MERGED_TO|MOVED|SPLIT_ROUNDS|ORIG_AMT|SPLIT)[^\]]*\]/gi) || []).join(' ');
@@ -759,6 +762,17 @@ export function usePOSOrder() {
                 .eq('id', bookingId);
 
             if (bookingErr) throw bookingErr;
+
+            if (existingTrackingToken) {
+                sendTrackingBroadcast(existingTrackingToken, 'order_status_updated', {
+                    status: 'completed',
+                    booking_id: bookingId
+                });
+            }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: bookingId,
+                status: 'completed'
+            });
 
             // 1.5 Increment reward used_count quota if rewardId is present
             if (rewardId) {
@@ -919,7 +933,7 @@ export function usePOSOrder() {
         try {
             const { data: currentB } = await supabase
                 .from('bookings')
-                .select('id, table_id, staff_remark')
+                .select('id, table_id, staff_remark, tracking_token')
                 .eq('id', bookingId)
                 .maybeSingle();
 
@@ -935,6 +949,17 @@ export function usePOSOrder() {
             setLoading(false);
             if (error) throw error;
             
+            if (currentB?.tracking_token) {
+                sendTrackingBroadcast(currentB.tracking_token, 'order_status_updated', {
+                    status: 'seated',
+                    booking_id: bookingId
+                });
+            }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: bookingId,
+                status: 'seated'
+            });
+
             const bookings = posCache.getBookings();
             const updated = bookings.map(b => b.id === bookingId ? { ...b, status: 'seated', staff_remark: cleanedRemark } : b);
             posCache.setBookings(updated);

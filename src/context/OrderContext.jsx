@@ -2,6 +2,7 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { isOnline, kdsCache, addToOfflineQueue, syncOfflineQueue } from '../utils/offlineHelper'
+import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier'
 import { toast } from 'sonner'
 
 const OrderContext = createContext()
@@ -11,7 +12,7 @@ const initialScheduleOrders = kdsCache.getScheduleOrders()
 
 const initialState = {
     orders: initialLiveOrders, // Live pending orders (Instant Cache Hydration)
-    scheduleOrders: initialScheduleOrders, // Confirmed / Seated / Ready orders
+    scheduleOrders: initialScheduleOrders, // Confirmed / Preparing / Seated / Ready orders
     historyOrders: [],
     loading: initialLiveOrders.length === 0 && initialScheduleOrders.length === 0,
     connectionState: isOnline() ? 'reconnecting' : 'offline', // 'live' | 'polling' | 'offline' | 'reconnecting'
@@ -89,6 +90,8 @@ export function OrderProvider({ children }) {
     const reconnectTimerRef = useRef(null)
     const retryCountRef = useRef(0)
     const alertCallbackRef = useRef(null)
+    const isFetchingLiveRef = useRef(false)
+    const isFetchingScheduleRef = useRef(false)
     const knownOrderIdsRef = useRef(new Set([
         ...initialLiveOrders.map(o => o.id),
         ...initialScheduleOrders.map(o => o.id)
@@ -106,12 +109,16 @@ export function OrderProvider({ children }) {
 
     // --- Actions ---
     const fetchLiveOrders = useCallback(async (silent = false) => {
+        if (isFetchingLiveRef.current) return null
+        isFetchingLiveRef.current = true
         if (!silent) dispatch({ type: 'SET_LOADING', payload: true })
         try {
+            const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tables_layout (table_name), promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
                 .eq('status', 'pending')
+                .gte('booking_time', cutoff)
                 .order('booking_time', { ascending: true })
             
             if (error) throw error
@@ -122,17 +129,22 @@ export function OrderProvider({ children }) {
             console.error('Error fetching live orders:', err)
             return null
         } finally {
+            isFetchingLiveRef.current = false
             if (!silent) dispatch({ type: 'SET_LOADING', payload: false })
         }
     }, [])
 
     const fetchScheduleOrders = useCallback(async (silent = false) => {
+        if (isFetchingScheduleRef.current) return null
+        isFetchingScheduleRef.current = true
         if (!silent) dispatch({ type: 'SET_LOADING', payload: true })
         try {
+            const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
             const { data, error } = await supabase
                 .from('bookings')
                 .select(`*, tables_layout (table_name), promotion_codes (code), order_items (id, quantity, selected_options, price_at_time, is_checked, menu_items (name, category_id))`)
-                .in('status', ['confirmed', 'ready', 'seated'])
+                .in('status', ['confirmed', 'preparing', 'ready', 'seated'])
+                .gte('booking_time', cutoff)
                 .order('booking_time', { ascending: true })
             
             if (error) throw error
@@ -143,6 +155,7 @@ export function OrderProvider({ children }) {
             console.error('Error fetching schedule orders:', err)
             return null
         } finally {
+            isFetchingScheduleRef.current = false
             if (!silent) dispatch({ type: 'SET_LOADING', payload: false })
         }
     }, [])
@@ -183,7 +196,7 @@ export function OrderProvider({ children }) {
             if (!fullOrder) return
 
             const isPending = fullOrder.status === 'pending'
-            const isSchedule = ['confirmed', 'ready', 'seated'].includes(fullOrder.status)
+            const isSchedule = ['confirmed', 'preparing', 'ready', 'seated'].includes(fullOrder.status)
             const isFinished = ['completed', 'cancelled', 'void'].includes(fullOrder.status)
 
             if (isPending) {
@@ -270,12 +283,13 @@ export function OrderProvider({ children }) {
 
     const cleanupChannel = useCallback(() => {
         if (channelRef.current) {
+            const oldChannel = channelRef.current
+            channelRef.current = null
             try {
-                supabase.removeChannel(channelRef.current)
+                supabase.removeChannel(oldChannel)
             } catch (e) {
                 console.warn('Error removing channel:', e)
             }
-            channelRef.current = null
         }
     }, [])
 
@@ -330,36 +344,39 @@ export function OrderProvider({ children }) {
                     }
                 }
             })
-            .subscribe(status => {
-                console.log(`[KDS Realtime Status]: ${status}`)
-                if (status === 'SUBSCRIBED') {
-                    retryCountRef.current = 0
-                    dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' })
-                    stopPolling()
-                    // Re-sync in case an order arrived right before channel subscribed
-                    fetchLiveOrders(true)
-                    fetchScheduleOrders(true)
-                } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
-                    if (isOnline()) {
-                        console.warn(`[KDS Realtime] WebSocket ${status}. Activating adaptive polling fallback.`);
-                        dispatch({ type: 'SET_CONNECTION_STATE', payload: 'polling' })
-                        startPolling()
-
-                        // Schedule auto-reconnect with exponential backoff & jitter
-                        if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
-                        const backoff = Math.min(1000 * Math.pow(1.5, retryCountRef.current) + Math.random() * 500, 15000)
-                        retryCountRef.current += 1
-                        reconnectTimerRef.current = setTimeout(() => {
-                            setupRealtimeChannel(alertCallbackRef.current)
-                        }, backoff)
-                    } else {
-                        dispatch({ type: 'SET_CONNECTION_STATE', payload: 'offline' })
-                        stopPolling()
-                    }
-                }
-            })
 
         channelRef.current = channel
+
+        channel.subscribe(status => {
+            if (isUnmountedRef.current || channel !== channelRef.current) return
+            console.log(`[KDS Realtime Status]: ${status}`)
+            if (status === 'SUBSCRIBED') {
+                retryCountRef.current = 0
+                dispatch({ type: 'SET_CONNECTION_STATE', payload: 'live' })
+                stopPolling()
+                // Re-sync in case an order arrived right before channel subscribed
+                fetchLiveOrders(true)
+                fetchScheduleOrders(true)
+            } else if (status === 'TIMED_OUT' || status === 'CHANNEL_ERROR' || status === 'CLOSED') {
+                if (isOnline()) {
+                    console.warn(`[KDS Realtime] WebSocket ${status}. Activating adaptive polling fallback.`);
+                    dispatch({ type: 'SET_CONNECTION_STATE', payload: 'polling' })
+                    startPolling()
+
+                    // Schedule auto-reconnect with exponential backoff & jitter
+                    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+                    const backoff = Math.min(1000 * Math.pow(1.5, retryCountRef.current) + Math.random() * 500, 15000)
+                    retryCountRef.current += 1
+                    reconnectTimerRef.current = setTimeout(() => {
+                        setupRealtimeChannel(alertCallbackRef.current)
+                    }, backoff)
+                } else {
+                    dispatch({ type: 'SET_CONNECTION_STATE', payload: 'offline' })
+                    stopPolling()
+                }
+            }
+        })
+
         return channel
     }, [cleanupChannel, fetchAndAddOrder, fetchLiveOrders, fetchScheduleOrders, startPolling, stopPolling])
 
@@ -437,8 +454,23 @@ export function OrderProvider({ children }) {
         try {
             const updatePayload = { status: newStatus }
             if (staffRemark) updatePayload.staff_remark = staffRemark
-            const { error } = await supabase.from('bookings').update(updatePayload).eq('id', id)
+            const { data: updatedRow, error } = await supabase
+                .from('bookings')
+                .update(updatePayload)
+                .eq('id', id)
+                .select('id, tracking_token, status')
+                .maybeSingle()
             if (error) throw error
+            if (updatedRow?.tracking_token) {
+                sendTrackingBroadcast(updatedRow.tracking_token, 'order_status_updated', {
+                    status: newStatus,
+                    booking_id: id
+                })
+            }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: id,
+                status: newStatus
+            })
             return { success: true }
         } catch (error) {
             console.warn('Status update network issue, adding to offline queue:', error)
@@ -469,8 +501,13 @@ export function OrderProvider({ children }) {
     }
 
     const subscribeRealtime = useCallback((triggerAlertCallback) => {
+        isUnmountedRef.current = false
         setupRealtimeChannel(triggerAlertCallback)
         return () => {
+            if (reconnectTimerRef.current) {
+                clearTimeout(reconnectTimerRef.current)
+                reconnectTimerRef.current = null
+            }
             cleanupChannel()
             stopPolling()
             clearAllDebounceTimeouts()

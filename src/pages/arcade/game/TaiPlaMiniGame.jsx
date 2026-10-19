@@ -5,6 +5,46 @@
 import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { taiPlaRenderer } from './renderers/TaiPla128Renderer';
+import { pixelSound, getArcadeRank } from './utils/pixelSoundEngine';
+
+function PixelCharAvatar({ charId, size = 36, animate = false }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    let animId = null;
+    let tick = 0;
+
+    const draw = () => {
+      ctx.clearRect(0, 0, 48, 48);
+      const sheet = taiPlaRenderer.sprites[charId] || taiPlaRenderer.sprites.tai_pla;
+      if (sheet) {
+        const frameIdx = animate ? Math.floor((tick / 8) % 4) : 0;
+        ctx.drawImage(sheet, frameIdx * 48, 0, 48, 48, 0, 0, 48, 48);
+      }
+      if (animate) {
+        tick++;
+        animId = requestAnimationFrame(draw);
+      }
+    };
+    draw();
+    return () => {
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [charId, animate]);
+
+  return (
+    <canvas
+      ref={ref}
+      width={48}
+      height={48}
+      style={{ width: size, height: size, imageRendering: 'pixelated' }}
+      className="shrink-0 block"
+    />
+  );
+}
 
 const CHARACTERS = {
   tai_pla: {
@@ -187,166 +227,39 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   });
 
   useEffect(() => {
-    if (gameState === 'idle') {
-      const gy = 550;
-      gameRef.current.groundY = gy;
-      gameRef.current.catY = gy;
-      gameRef.current.catX = 75;
-    }
-  }, [gameState]);
+    if (gameState !== 'idle') return;
+    const gy = 550;
+    gameRef.current.groundY = gy;
+    gameRef.current.catY = gy;
+    gameRef.current.catX = 75;
 
-  // 8-Bit / 128-Bit Retro Synthesizer
+    // Render live animated Pop-Pixel preview on canvas while idle
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let previewAnim = null;
+    let pFrame = 0;
+
+    const renderIdlePreview = () => {
+      pFrame++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      taiPlaRenderer.drawBackground(ctx, canvas.width, canvas.height, gy, pFrame * 1.4, pFrame, 1, 0);
+      taiPlaRenderer.drawCharacter(ctx, selectedCharId, 75, gy, pFrame, true, 0, 0, 1.0, 1.0, gy);
+      previewAnim = requestAnimationFrame(renderIdlePreview);
+    };
+    previewAnim = requestAnimationFrame(renderIdlePreview);
+
+    return () => {
+      if (previewAnim) cancelAnimationFrame(previewAnim);
+    };
+  }, [gameState, selectedCharId]);
+
+  // 8-Bit / 16-Bit Pop-Pixel Chiptune Synthesizer
   const playRetroSound = (type) => {
     if (!soundEnabled) return;
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') ctx.resume();
-
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (type === 'jump') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(240, now);
-        osc.frequency.exponentialRampToValueAtTime(620, now + 0.12);
-        gain.gain.setValueAtTime(0.09, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-        osc.start(now);
-        osc.stop(now + 0.13);
-      } else if (type === 'double_jump') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(520, now);
-        osc.frequency.exponentialRampToValueAtTime(1040, now + 0.14);
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
-        osc.start(now);
-        osc.stop(now + 0.15);
-      } else if (type === 'spring') {
-        // High bouncy spring launch
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(320, now);
-        osc.frequency.exponentialRampToValueAtTime(880, now + 0.18);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
-        osc.start(now);
-        osc.stop(now + 0.23);
-      } else if (type === 'collect') {
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(587.33, now); // D5
-        osc.frequency.setValueAtTime(880.00, now + 0.04); // A5
-        osc.frequency.setValueAtTime(1174.66, now + 0.08); // D6
-        gain.gain.setValueAtTime(0.12, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-        osc.start(now);
-        osc.stop(now + 0.19);
-      } else if (type === 'golden_mortar') {
-        // Sparkly golden fanfare
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(659.25, now); // E5
-        osc.frequency.setValueAtTime(880.00, now + 0.06); // A5
-        osc.frequency.setValueAtTime(1046.50, now + 0.12); // C6
-        osc.frequency.setValueAtTime(1318.51, now + 0.18); // E6
-        osc.frequency.setValueAtTime(1760.00, now + 0.24); // A6
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-        osc.start(now);
-        osc.stop(now + 0.46);
-      } else if (type === 'god_mode') {
-        // Super Saiyan Satow Powerup Fanfare
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(440, now);
-        osc.frequency.setValueAtTime(554.37, now + 0.06);
-        osc.frequency.setValueAtTime(659.25, now + 0.12);
-        osc.frequency.setValueAtTime(880, now + 0.18);
-        gain.gain.setValueAtTime(0.14, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-        osc.start(now);
-        osc.stop(now + 0.36);
-      } else if (type === 'fever_start') {
-        // Happy Fever Time Arpeggio
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
-        osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
-        osc.frequency.setValueAtTime(1318.51, now + 0.24); // E6
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
-        osc.start(now);
-        osc.stop(now + 0.45);
-      } else if (type === 'smash') {
-        // Enemy smash hit in God Mode
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(500, now);
-        osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
-        gain.gain.setValueAtTime(0.16, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.22);
-      } else if (type === 'mortar_smash') {
-        // Heavy bass explosion for giant mortar
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.3);
-        gain.gain.setValueAtTime(0.20, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      } else if (type === 'thunder') {
-        // Crackling lightning
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(180, now);
-        osc.frequency.exponentialRampToValueAtTime(30, now + 0.25);
-        gain.gain.setValueAtTime(0.18, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-        osc.start(now);
-        osc.stop(now + 0.30);
-      } else if (type === 'tier_up') {
-        // Ascending Tier Brass Fanfare
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(392.00, now); // G4
-        osc.frequency.setValueAtTime(523.25, now + 0.08); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.16); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.24); // G5
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-        osc.start(now);
-        osc.stop(now + 0.40);
-      } else if (type === 'pot_complete') {
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.06); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.12); // G5
-        osc.frequency.setValueAtTime(1046.50, now + 0.18); // C6
-        gain.gain.setValueAtTime(0.14, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-        osc.start(now);
-        osc.stop(now + 0.30);
-      } else if (type === 'meow') {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(700, now);
-        osc.frequency.exponentialRampToValueAtTime(1100, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(800, now + 0.18);
-        gain.gain.setValueAtTime(0.10, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-        osc.start(now);
-        osc.stop(now + 0.22);
-      } else if (type === 'hit') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(260, now);
-        osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
-        gain.gain.setValueAtTime(0.15, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-        osc.start(now);
-        osc.stop(now + 0.26);
-      }
-      triggerHaptic(type);
-    } catch (e) {}
+    pixelSound.setMuted(false);
+    pixelSound.play(type);
+    triggerHaptic(type);
   };
 
   // =========================================================================
@@ -359,7 +272,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     }
     if (bgmGainRef.current) {
       try {
-        bgmGainRef.current.gain.linearRampToValueAtTime(0.001, (audioCtxRef.current?.currentTime || 0) + 0.15);
+        bgmGainRef.current.gain.linearRampToValueAtTime(0.0001, (audioCtxRef.current?.currentTime || 0) + 0.12);
       } catch (e) {}
     }
     setIsBgmPlaying(false);
@@ -370,20 +283,65 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     if (!soundEnabled) return;
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
+      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+        audioCtxRef.current = new AudioCtx();
+      }
       const ctx = audioCtxRef.current;
       if (ctx.state === 'suspended') ctx.resume();
 
       const track = BGM_TRACKS.find(t => t.id === trackId) || BGM_TRACKS[0];
-      const effectiveBpm = isFeverActive ? track.bpm * 1.22 : track.bpm;
+      const effectiveBpm = isFeverActive ? track.bpm * 1.2 : track.bpm;
       const stepTimeMs = (60000 / effectiveBpm) / 4; // 16th note in ms
       let step = 0;
 
-      // Master BGM gain
+      // Master BGM gain with warm low-pass filter so BGM sits smoothly under SFX
+      const bgmFilter = ctx.createBiquadFilter();
+      bgmFilter.type = 'lowpass';
+      bgmFilter.frequency.setValueAtTime(3200, ctx.currentTime);
+
       const bgmGain = ctx.createGain();
-      bgmGain.gain.setValueAtTime(0.16, ctx.currentTime);
+      bgmGain.gain.setValueAtTime(0.18, ctx.currentTime);
+      bgmFilter.connect(bgmGain);
       bgmGain.connect(ctx.destination);
       bgmGainRef.current = bgmGain;
+
+      // Pre-generate crisp percussion noise buffer for hi-hats & snares
+      const noiseLen = Math.floor(ctx.sampleRate * 0.12);
+      const noiseBuf = ctx.createBuffer(1, noiseLen, ctx.sampleRate);
+      const noiseData = noiseBuf.getChannelData(0);
+      for (let i = 0; i < noiseLen; i++) {
+        noiseData[i] = Math.random() * 2 - 1;
+      }
+
+      const playDrumNoise = (now, freq, dur, vol, type = 'highpass') => {
+        const src = ctx.createBufferSource();
+        src.buffer = noiseBuf;
+        const flt = ctx.createBiquadFilter();
+        flt.type = type;
+        flt.frequency.setValueAtTime(freq, now);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(vol, now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        src.connect(flt);
+        flt.connect(g);
+        g.connect(bgmFilter);
+        src.start(now);
+        src.stop(now + dur + 0.01);
+      };
+
+      const playKick = (now, startFreq = 135, vol = 0.16) => {
+        const kick = ctx.createOscillator();
+        const kg = ctx.createGain();
+        kick.type = 'sine';
+        kick.frequency.setValueAtTime(startFreq, now);
+        kick.frequency.exponentialRampToValueAtTime(36, now + 0.09);
+        kg.gain.setValueAtTime(vol, now);
+        kg.gain.exponentialRampToValueAtTime(0.0001, now + 0.10);
+        kick.connect(kg);
+        kg.connect(bgmFilter);
+        kick.start(now);
+        kick.stop(now + 0.11);
+      };
 
       // Warm overdrive distortion curve for Indie Rock
       let distortionCurve = null;
@@ -391,7 +349,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         const n = 256;
         const curve = new Float32Array(n);
         const deg = Math.PI / 180;
-        const k = 40;
+        const k = 32;
         for (let i = 0; i < n; i++) {
           const x = (i * 2) / n - 1;
           curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
@@ -405,116 +363,44 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         const s = step % 16;
         const bar = Math.floor(step / 16) % 8;
 
-        // 1. Drum / Rhythm Percussion
+        // 1. Crisp Chiptune Drum & Rhythm Percussion
         if (track.id === 'swing_jazz') {
-          // Swing Hi-hat on 0, 4, 6, 8, 12, 14 (swung feel)
-          if (s === 0 || s === 4 || s === 6 || s === 8 || s === 12 || s === 14) {
-            const hatOsc = ctx.createOscillator();
-            const hatGain = ctx.createGain();
-            hatOsc.type = 'highpass';
-            hatOsc.frequency.setValueAtTime(s === 6 || s === 14 ? 7500 : 9200, now);
-            hatGain.gain.setValueAtTime(s === 6 || s === 14 ? 0.03 : 0.06, now);
-            hatGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
-            hatOsc.connect(hatGain);
-            hatGain.connect(bgmGain);
-            hatOsc.start(now);
-            hatOsc.stop(now + 0.05);
+          // Swung Jazz Ride / Hi-Hat on 0, 4, 7, 8, 12, 15
+          if (s === 0 || s === 4 || s === 7 || s === 8 || s === 12 || s === 15) {
+            playDrumNoise(now, s === 7 || s === 15 ? 6800 : 8200, 0.045, s === 7 || s === 15 ? 0.035 : 0.06, 'highpass');
           }
-          // Soft brush kick on 0, 8
-          if (s === 0 || s === 8) {
-            const kick = ctx.createOscillator();
-            const kg = ctx.createGain();
-            kick.frequency.setValueAtTime(115, now);
-            kick.frequency.exponentialRampToValueAtTime(40, now + 0.08);
-            kg.gain.setValueAtTime(0.12, now);
-            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-            kick.connect(kg);
-            kg.connect(bgmGain);
-            kick.start(now);
-            kick.stop(now + 0.1);
-          }
+          if (s === 0 || s === 8) playKick(now, 115, 0.13);
+          if (s === 4 || s === 12) playDrumNoise(now, 1800, 0.07, 0.05, 'bandpass');
         } else if (track.id === 'indie_rock') {
-          // Driving Rock Drum Groove: Kick on 0, 8, 10; Snare on 4, 12
-          if (s === 0 || s === 8 || s === 10) {
-            const kick = ctx.createOscillator();
-            const kg = ctx.createGain();
-            kick.frequency.setValueAtTime(140, now);
-            kick.frequency.exponentialRampToValueAtTime(36, now + 0.09);
-            kg.gain.setValueAtTime(0.18, now);
-            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
-            kick.connect(kg);
-            kg.connect(bgmGain);
-            kick.start(now);
-            kick.stop(now + 0.11);
-          }
+          if (s === 0 || s === 8 || s === 10) playKick(now, 145, 0.18);
           if (s === 4 || s === 12) {
-            const snare = ctx.createOscillator();
-            const sg = ctx.createGain();
-            snare.type = 'triangle';
-            snare.frequency.setValueAtTime(190, now);
-            snare.frequency.exponentialRampToValueAtTime(55, now + 0.11);
-            sg.gain.setValueAtTime(0.14, now);
-            sg.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-            snare.connect(sg);
-            sg.connect(bgmGain);
-            snare.start(now);
-            snare.stop(now + 0.13);
+            playDrumNoise(now, 1400, 0.10, 0.11, 'bandpass');
+            playKick(now, 190, 0.09);
           }
-          if (s % 2 === 0) {
-            const hat = ctx.createOscillator();
-            const hg = ctx.createGain();
-            hat.type = 'sine';
-            hat.frequency.setValueAtTime(8500, now);
-            hg.gain.setValueAtTime(0.035, now);
-            hg.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
-            hat.connect(hg);
-            hg.connect(bgmGain);
-            hat.start(now);
-            hat.stop(now + 0.035);
-          }
+          if (s % 2 === 0) playDrumNoise(now, 7500, 0.035, 0.04, 'highpass');
         } else if (track.id === 'mekong_funk') {
-          // Funk Slap Kick on 0, 6, 10; Clap on 4, 12
-          if (s === 0 || s === 6 || s === 10) {
-            const kick = ctx.createOscillator();
-            const kg = ctx.createGain();
-            kick.frequency.setValueAtTime(125, now);
-            kick.frequency.exponentialRampToValueAtTime(42, now + 0.08);
-            kg.gain.setValueAtTime(0.16, now);
-            kg.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
-            kick.connect(kg);
-            kg.connect(bgmGain);
-            kick.start(now);
-            kick.stop(now + 0.1);
-          }
-          if (s === 4 || s === 12) {
-            const clap = ctx.createOscillator();
-            const cg = ctx.createGain();
-            clap.type = 'sawtooth';
-            clap.frequency.setValueAtTime(320, now);
-            cg.gain.setValueAtTime(0.08, now);
-            cg.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-            clap.connect(cg);
-            cg.connect(bgmGain);
-            clap.start(now);
-            clap.stop(now + 0.09);
-          }
+          if (s === 0 || s === 6 || s === 10) playKick(now, 135, 0.17);
+          if (s === 4 || s === 12) playDrumNoise(now, 1650, 0.085, 0.10, 'bandpass');
+          if (s % 2 === 0) playDrumNoise(now, 8000, 0.03, s % 4 === 2 ? 0.055 : 0.03, 'highpass');
+        } else if (track.id === 'sunset_lofi') {
+          if (s === 0 || s === 10) playKick(now, 110, 0.14);
+          if (s === 4 || s === 12) playDrumNoise(now, 1200, 0.08, 0.06, 'bandpass');
+          if (s % 4 === 2) playDrumNoise(now, 6000, 0.04, 0.03, 'highpass');
         }
 
-        // 2. Bass & Harmonic Melodies
+        // 2. Bass, Chords & Catchy Chiptune Lead Melodies
         if (track.id === 'swing_jazz') {
           // Walking Upright Bass on quarter beats (0, 4, 8, 12)
           if (s % 4 === 0) {
             const jazzWalking = [
-              // Part A: ii - V - I - VI
-              [73.42, 98.00, 110.00, 123.47],  // D2 - G2 - A2 - B2 (Dm9)
-              [98.00, 123.47, 130.81, 146.83], // G2 - B2 - C3 - D3 (G13)
-              [130.81, 164.81, 146.83, 123.47], // C3 - E3 - D3 - B2 (Cmaj9)
-              [110.00, 138.59, 146.83, 164.81], // A2 - C#3 - D3 - E3 (A7alt)
-              // Part B: Bridge & Tritone Substitution Turnaround
-              [92.50, 110.00, 130.81, 146.83],  // F#2 - A2 - C3 - D3 (F#m7b5)
-              [123.47, 155.56, 174.61, 196.00], // B2 - D#3 - F3 - G3 (B7b9)
-              [82.41, 123.47, 146.83, 164.81],  // E2 - B2 - D3 - E3 (Em9)
-              [69.30, 103.83, 123.47, 138.59]   // Db2 - Ab2 - B2 - Db3 (Db9 Tritone resolution)
+              [73.42, 98.00, 110.00, 123.47],
+              [98.00, 123.47, 130.81, 146.83],
+              [130.81, 164.81, 146.83, 123.47],
+              [110.00, 138.59, 146.83, 164.81],
+              [92.50, 110.00, 130.81, 146.83],
+              [123.47, 155.56, 174.61, 196.00],
+              [82.41, 123.47, 146.83, 164.81],
+              [69.30, 103.83, 123.47, 138.59]
             ];
             const quarter = Math.floor(s / 4);
             const freq = jazzWalking[bar][quarter];
@@ -522,49 +408,70 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             const bg = ctx.createGain();
             bass.type = 'triangle';
             bass.frequency.setValueAtTime(freq, now);
-            bg.gain.setValueAtTime(0.14, now);
-            bg.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            bg.gain.setValueAtTime(0.15, now);
+            bg.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
             bass.connect(bg);
-            bg.connect(bgmGain);
+            bg.connect(bgmFilter);
             bass.start(now);
-            bass.stop(now + 0.23);
+            bass.stop(now + 0.25);
           }
 
           // Comping piano chords on syncopated off-beats (2, 7, 11)
           if (s === 2 || s === 7 || s === 11) {
             const jazzChords = [
-              // Part A
-              [293.66, 349.23, 440.00, 493.88], // Dm9
-              [246.94, 329.63, 349.23, 440.00], // G13
-              [261.63, 329.63, 392.00, 493.88], // Cmaj9
-              [220.00, 277.18, 349.23, 415.30], // A7alt
-              // Part B
-              [349.23, 440.00, 523.25, 659.25], // F#m7b5
-              [311.13, 392.00, 493.88, 622.25], // B7b9
-              [329.63, 392.00, 493.88, 587.33], // Em9
-              [277.18, 349.23, 415.30, 493.88]  // Db9
+              [293.66, 349.23, 440.00, 523.25],
+              [246.94, 329.63, 349.23, 440.00],
+              [261.63, 329.63, 392.00, 493.88],
+              [220.00, 277.18, 349.23, 415.30],
+              [349.23, 440.00, 523.25, 659.25],
+              [311.13, 392.00, 493.88, 622.25],
+              [329.63, 392.00, 493.88, 587.33],
+              [277.18, 349.23, 415.30, 493.88]
             ];
-            const chordNotes = jazzChords[bar];
-            chordNotes.forEach((f, idx) => {
+            jazzChords[bar].forEach((f, idx) => {
               const pOsc = ctx.createOscillator();
               const pGain = ctx.createGain();
-              pOsc.type = 'sine';
-              pOsc.frequency.setValueAtTime(f, now + idx * 0.012);
-              pGain.gain.setValueAtTime(0.05, now + idx * 0.012);
-              pGain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.012 + 0.22);
+              pOsc.type = 'triangle';
+              pOsc.frequency.setValueAtTime(f, now + idx * 0.01);
+              pGain.gain.setValueAtTime(0.055, now + idx * 0.01);
+              pGain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.01 + 0.24);
               pOsc.connect(pGain);
-              pGain.connect(bgmGain);
-              pOsc.start(now + idx * 0.012);
-              pOsc.stop(now + idx * 0.012 + 0.24);
+              pGain.connect(bgmFilter);
+              pOsc.start(now + idx * 0.01);
+              pOsc.stop(now + idx * 0.01 + 0.25);
             });
           }
-        } else if (track.id === 'indie_rock') {
-          // Driving 8th-note Bass across Verse & Chorus (8 bars)
-          if (s % 2 === 0) {
-            const rockRoots = [
-              110.00, 87.31, 130.81, 98.00,  // Verse: A2 - F2 - C3 - G2
-              73.42, 82.41, 92.50, 82.41     // Chorus: D2 - E2 - F#2 - E2
+
+          // Playful Jazz Vibraphone / Chiptune Lead Hook
+          if (s === 0 || s === 3 || s === 6 || s === 10 || s === 14) {
+            const jazzLead = [
+              [587.33, 659.25, 783.99, 880.00, 659.25],
+              [587.33, 493.88, 587.33, 659.25, 783.99],
+              [523.25, 587.33, 659.25, 783.99, 987.77],
+              [880.00, 783.99, 698.46, 659.25, 554.37],
+              [659.25, 783.99, 880.00, 1046.50, 880.00],
+              [783.99, 698.46, 622.25, 587.33, 493.88],
+              [659.25, 587.33, 493.88, 587.33, 659.25],
+              [554.37, 659.25, 783.99, 659.25, 587.33]
             ];
+            const noteIdx = [0, 3, 6, 10, 14].indexOf(s);
+            const lFreq = jazzLead[bar][noteIdx];
+            if (lFreq) {
+              const lOsc = ctx.createOscillator();
+              const lGain = ctx.createGain();
+              lOsc.type = 'sine';
+              lOsc.frequency.setValueAtTime(lFreq, now);
+              lGain.gain.setValueAtTime(0.075, now);
+              lGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+              lOsc.connect(lGain);
+              lGain.connect(bgmFilter);
+              lOsc.start(now);
+              lOsc.stop(now + 0.23);
+            }
+          }
+        } else if (track.id === 'indie_rock') {
+          if (s % 2 === 0) {
+            const rockRoots = [110.00, 87.31, 130.81, 98.00, 73.42, 82.41, 92.50, 82.41];
             const bass = ctx.createOscillator();
             const bg = ctx.createGain();
             bass.type = 'sawtooth';
@@ -572,30 +479,27 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             bg.gain.setValueAtTime(0.10, now);
             bg.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
             bass.connect(bg);
-            bg.connect(bgmGain);
+            bg.connect(bgmFilter);
             bass.start(now);
             bass.stop(now + 0.14);
           }
 
-          // Melodic Overdrive Guitar Riff across 8 bars (Verse + Chorus Hook)
           if (s === 0 || s === 3 || s === 6 || s === 8 || s === 11 || s === 14) {
             const guitarMelody = [
-              // Verse
               [440.00, 523.25, 659.25, 523.25, 440.00, 392.00],
               [349.23, 440.00, 523.25, 440.00, 349.23, 329.63],
               [523.25, 659.25, 783.99, 659.25, 523.25, 440.00],
               [392.00, 493.88, 587.33, 493.88, 392.00, 349.23],
-              // Chorus Hook
               [587.33, 659.25, 783.99, 880.00, 783.99, 659.25],
               [659.25, 783.99, 880.00, 987.77, 880.00, 783.99],
               [739.99, 880.00, 987.77, 1108.73, 987.77, 880.00],
               [659.25, 783.99, 880.00, 783.99, 659.25, 587.33]
             ];
-            const noteIdx = Math.floor(s / 2.5) % 6;
+            const noteIdx = [0, 3, 6, 8, 11, 14].indexOf(s);
             const freq = guitarMelody[bar][noteIdx];
             const gOsc = ctx.createOscillator();
             const gGain = ctx.createGain();
-            gOsc.type = 'triangle';
+            gOsc.type = 'square';
             gOsc.frequency.setValueAtTime(freq, now);
 
             if (distortionCurve) {
@@ -607,58 +511,84 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               gOsc.connect(gGain);
             }
 
-            gGain.gain.setValueAtTime(0.08, now);
+            gGain.gain.setValueAtTime(0.065, now);
             gGain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-            gGain.connect(bgmGain);
+            gGain.connect(bgmFilter);
             gOsc.start(now);
             gOsc.stop(now + 0.20);
           }
         } else if (track.id === 'mekong_funk') {
-          // Isan Surf Pentatonic Riffs with A/B variation
-          if (s === 0 || s === 3 || s === 6 || s === 10 || s === 12) {
-            const funkScale = bar < 4 
-              ? [220.00, 261.63, 293.66, 329.63, 392.00, 440.00, 523.25]
-              : [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25];
+          // Funky Slap Bassline
+          if (s === 0 || s === 3 || s === 8 || s === 10 || s === 14) {
+            const funkBass = [82.41, 110.00, 98.00, 123.47, 110.00, 146.83, 98.00, 123.47];
+            const bOsc = ctx.createOscillator();
+            const bGain = ctx.createGain();
+            bOsc.type = 'triangle';
+            bOsc.frequency.setValueAtTime(funkBass[bar] * (s === 3 || s === 14 ? 2 : 1), now);
+            bGain.gain.setValueAtTime(0.14, now);
+            bGain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+            bOsc.connect(bGain);
+            bGain.connect(bgmFilter);
+            bOsc.start(now);
+            bOsc.stop(now + 0.15);
+          }
+          // Isan Phin / Surf Pentatonic Lead Riffs
+          if (s === 0 || s === 2 || s === 6 || s === 9 || s === 12 || s === 14) {
+            const funkScale = bar < 4
+              ? [329.63, 392.00, 440.00, 523.25, 587.33, 659.25]
+              : [440.00, 493.88, 587.33, 659.25, 783.99, 880.00];
             const fNote = funkScale[(s + bar * 2) % funkScale.length];
             const fOsc = ctx.createOscillator();
             const fg = ctx.createGain();
-            fOsc.type = 'sawtooth';
+            fOsc.type = 'square';
             fOsc.frequency.setValueAtTime(fNote, now);
-            fg.gain.setValueAtTime(0.07, now);
+            fg.gain.setValueAtTime(0.06, now);
             fg.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
             fOsc.connect(fg);
-            fg.connect(bgmGain);
+            fg.connect(bgmFilter);
             fOsc.start(now);
             fOsc.stop(now + 0.16);
           }
         } else if (track.id === 'sunset_lofi') {
-          // Ambient Warm Lo-Fi Chords every 8 steps
+          // Warm Rhodes Lo-Fi Chords + Gentle Bell Top Melody
           if (s === 0 || s === 8) {
             const lofiChords = [
-              // Part A
-              [174.61, 261.63, 329.63, 392.00, 440.00], // Fmaj9
-              [164.81, 246.94, 293.66, 349.23, 392.00], // Em7
-              [146.83, 293.66, 349.23, 440.00, 523.25], // Dm9
-              [130.81, 261.63, 329.63, 392.00, 493.88], // Cmaj7
-              // Part B
-              [116.54, 233.08, 293.66, 349.23, 440.00], // Bbmaj7
-              [110.00, 220.00, 261.63, 329.63, 392.00], // Am7
-              [98.00, 196.00, 293.66, 349.23, 440.00],  // Gm9
-              [130.81, 261.63, 349.23, 392.00, 523.25]  // C13sus4
+              [174.61, 261.63, 329.63, 392.00, 440.00],
+              [164.81, 246.94, 293.66, 349.23, 392.00],
+              [146.83, 293.66, 349.23, 440.00, 523.25],
+              [130.81, 261.63, 329.63, 392.00, 493.88],
+              [116.54, 233.08, 293.66, 349.23, 440.00],
+              [110.00, 220.00, 261.63, 329.63, 392.00],
+              [98.00, 196.00, 293.66, 349.23, 440.00],
+              [130.81, 261.63, 349.23, 392.00, 523.25]
             ];
             const notes = lofiChords[bar];
             notes.forEach((f, idx) => {
               const lOsc = ctx.createOscillator();
               const lg = ctx.createGain();
-              lOsc.type = 'sine';
-              lOsc.frequency.setValueAtTime(f, now + idx * 0.03);
-              lg.gain.setValueAtTime(0.07, now + idx * 0.03);
-              lg.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.03 + 0.55);
+              lOsc.type = idx === 0 ? 'triangle' : 'sine';
+              lOsc.frequency.setValueAtTime(f, now + idx * 0.025);
+              lg.gain.setValueAtTime(idx === 0 ? 0.11 : 0.065, now + idx * 0.025);
+              lg.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.025 + 0.65);
               lOsc.connect(lg);
-              lg.connect(bgmGain);
-              lOsc.start(now + idx * 0.03);
-              lOsc.stop(now + idx * 0.03 + 0.6);
+              lg.connect(bgmFilter);
+              lOsc.start(now + idx * 0.025);
+              lOsc.stop(now + idx * 0.025 + 0.70);
             });
+          }
+          if (s === 4 || s === 11 || s === 14) {
+            const bellNotes = [523.25, 659.25, 783.99, 880.00, 1046.50, 783.99, 659.25, 587.33];
+            const bf = bellNotes[(bar + s) % bellNotes.length];
+            const bOsc = ctx.createOscillator();
+            const bg = ctx.createGain();
+            bOsc.type = 'sine';
+            bOsc.frequency.setValueAtTime(bf, now);
+            bg.gain.setValueAtTime(0.055, now);
+            bg.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+            bOsc.connect(bg);
+            bg.connect(bgmFilter);
+            bOsc.start(now);
+            bOsc.stop(now + 0.38);
           }
         }
 
@@ -676,6 +606,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     const currIdx = BGM_TRACKS.findIndex(t => t.id === currentBgmTrack);
     const nextTrack = BGM_TRACKS[(currIdx + 1) % BGM_TRACKS.length];
     setCurrentBgmTrack(nextTrack.id);
+    playRetroSound('ui_click');
     if (gameState === 'playing' && soundEnabled) {
       startBgm(nextTrack.id);
     }
@@ -739,7 +670,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     startBgm(currentBgmTrack);
   };
 
-  // Ultra-Snappy Jump with Double Jump & Coyote Time
+  // Ultra-Snappy Jump with Double / Triple Jump & Coyote Time
   const handleJumpPress = () => {
     if (gameState !== 'playing') {
       if (gameState === 'idle') {
@@ -762,45 +693,46 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       playRetroSound('jump');
 
       // Sparkle / Dust particles on jump
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         g.particles.push({
-          x: g.catX + 14 + (Math.random() * 10 - 5),
-          y: g.groundY + 2,
-          vx: (Math.random() - 0.7) * 2,
-          vy: -Math.random() * 2,
+          x: g.catX + 18 + (Math.random() * 12 - 6),
+          y: g.groundY - 2,
+          vx: (Math.random() - 0.7) * 2.5,
+          vy: -Math.random() * 2.5,
           size: Math.random() * 4 + 2,
           color: g.feverTimer > 0 ? '#fde047' : (g.godModeTimer > 0 ? '#eab308' : '#fbbf24'),
-          life: 0.7
+          life: 0.75
         });
       }
-    } 
-    // Double jump in mid-air (if character supports maxJumps >= 2)
+    }
+    // Mid-air Double / Triple Jump
     else if (g.jumpCount < g.maxJumps) {
       g.catVy = char.doubleJumpPower || -15.2;
       g.jumpCount += 1;
-      g.scaleX = 0.8;
-      g.scaleY = 1.3;
-      playRetroSound('double_jump');
+      const isTriple = g.jumpCount >= 3;
+      g.scaleX = 0.78;
+      g.scaleY = 1.32;
+      playRetroSound(isTriple ? 'triple_jump' : 'double_jump');
 
       g.floatingTexts.push({
-        x: g.catX + 8,
-        y: g.catY - 26,
-        text: 'DOUBLE JUMP!',
-        color: '#38bdf8',
-        life: 0.9
+        x: g.catX + 4,
+        y: g.catY - 46,
+        text: isTriple ? 'TRIPLE NAGA GLIDE!' : 'DOUBLE JUMP!',
+        color: isTriple ? '#facc15' : '#38bdf8',
+        life: 0.95
       });
 
       // Ring of spin sparkles for mid-air flip
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
+      for (let i = 0; i < (isTriple ? 12 : 8); i++) {
+        const angle = (i / (isTriple ? 12 : 8)) * Math.PI * 2;
         g.particles.push({
-          x: g.catX + 16 + Math.cos(angle) * 12,
-          y: g.catY - 10 + Math.sin(angle) * 12,
-          vx: Math.cos(angle) * 3,
-          vy: Math.sin(angle) * 3,
-          size: 3,
-          color: '#38bdf8',
-          life: 0.6
+          x: g.catX + 20 + Math.cos(angle) * 14,
+          y: g.catY - 22 + Math.sin(angle) * 14,
+          vx: Math.cos(angle) * 3.2,
+          vy: Math.sin(angle) * 3.2,
+          size: isTriple ? 4 : 3,
+          color: isTriple ? '#facc15' : '#38bdf8',
+          life: 0.65
         });
       }
     } else {
@@ -1634,10 +1566,18 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
     if (e && e.stopPropagation) e.stopPropagation();
     setIsClaiming(true);
     triggerHaptic('collect');
+    playRetroSound('tier_up');
     const finalScore = gameRef.current.score || score;
     if (onClaimScore) {
       onClaimScore(finalScore);
     }
+  };
+
+  const currentRank = getArcadeRank(score, 'tai_pla');
+
+  const handleSelectCharacter = (charId) => {
+    setSelectedCharId(charId);
+    playRetroSound('char_select');
   };
 
   if (isDedicated || isFullscreen) {
@@ -1660,8 +1600,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             </div>
           </div>
 
-          {/* Right score, music and sound controls */}
-          <div className="flex items-center gap-2 font-mono text-xs">
+          {/* Right score, rank, music and sound controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 font-mono text-xs">
+            <span className={`hidden sm:inline-block px-2 py-1 rounded-lg border text-[10px] font-bold uppercase ${currentRank.badgeClass}`}>
+              {currentRank.badge}
+            </span>
             <div className="bg-[#181615] text-[#FAF7F5] px-2.5 py-1 rounded-lg border border-[#3D3835] text-[11px] font-bold">
               <span>{score} PTS</span>
             </div>
@@ -1703,7 +1646,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
             {/* In The Haus Badge & Spicy Tier Indicator Overlay */}
             {gameState === 'playing' && (
-              <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-2 font-mono text-[9px]">
+              <div className="absolute top-2.5 left-3.5 z-10 flex items-center gap-1.5 font-mono text-[9px] flex-wrap">
                 <div className="flex items-center gap-1.5 bg-[#181615]/90 text-[#FAF7F5] px-2.5 py-1 rounded border border-[#3D3835] backdrop-blur-[2px] shadow-xs">
                   <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
                   <span className="font-bold text-[#fef08a] tracking-wider uppercase font-pixel">HAUS 128-BIT</span>
@@ -1714,6 +1657,10 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                     {currentSpicyTier === 4 ? '[ TIER 4 // HELL EXTREME ]' : (currentSpicyTier === 3 ? '[ TIER 3 // ULTRA SPICY ]' : (currentSpicyTier === 2 ? '[ TIER 2 // SPICY UP ]' : '[ TIER 1 // CHILL RUN ]'))}
                   </span>
                 </div>
+
+                <div className={`px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${currentRank.badgeClass}`}>
+                  {currentRank.badge}
+                </div>
               </div>
             )}
 
@@ -1721,7 +1668,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             {gameState === 'idle' && (
               <div 
                 onClick={(e) => { e.stopPropagation(); startGame(); }}
-                className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 cursor-pointer select-none"
+                className="absolute inset-0 bg-[#FAF7F5]/82 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 cursor-pointer select-none"
               >
                 <div className="flex flex-col items-center gap-1.5">
                   <div className="bg-[#181615] px-3.5 py-1 rounded border border-[#3D3835] flex items-center gap-2 shadow-xs">
@@ -1733,23 +1680,32 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-pixel text-xl sm:text-2xl font-bold text-[#181615] uppercase tracking-wider">
-                    {activeChar.name}
-                  </h4>
-                  <p className="font-mono text-[10px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
-                    {activeChar.title} // {activeChar.trait}
-                  </p>
+                {/* Pop-Pixel Companion Portrait Box */}
+                <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl px-4 py-2.5 shadow-[3px_3px_0px_#181615] flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#F4EFE6] border border-[#181615] flex items-center justify-center shrink-0">
+                    <PixelCharAvatar charId={activeChar.id} size={44} animated={true} />
+                  </div>
+                  <div className="text-left">
+                    <h4 className="font-pixel text-base sm:text-lg font-bold text-[#181615] uppercase tracking-wider leading-tight">
+                      {activeChar.name}
+                    </h4>
+                    <p className="font-mono text-[9px] text-[oklch(45%_0.010_28)] uppercase tracking-wider mt-0.5">
+                      {activeChar.title}
+                    </p>
+                    <span className={`inline-block mt-1 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold border ${activeChar.badgeColor}`}>
+                      {activeChar.trait}
+                    </span>
+                  </div>
                 </div>
 
-                <p className="text-xs text-[#69635D] font-sans max-w-sm leading-relaxed hidden sm:block">
+                <p className="text-xs text-[#181615] font-sans max-w-sm leading-relaxed bg-[#FAF7F2]/90 px-3 py-1.5 rounded-lg border border-[#181615]/20 hidden sm:block">
                   แตะหน้าจอเพื่อกระโดดหลบสิ่งกีดขวางริมแม่น้ำโขงนครพนม<br/>
-                  สะสมวัตถุดิบครบหม้อรับเหรียญ XHAUS เข้ากระเป๋า!
+                  สะสมวัตถุดิบครบหม้อรับเหรียญ XHAUS และปลดล็อก Rank S+!
                 </p>
 
                 <button
                   onClick={(e) => { e.stopPropagation(); startGame(); }}
-                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform duration-100 ease-out"
+                  className="btn-action mt-1 px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95 transition-transform duration-100 ease-out"
                 >
                   [ ▶ START RUN // แตะเพื่อเริ่มวิ่ง ]
                 </button>
@@ -1760,7 +1716,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             {gameState === 'gameover' && (
               <div 
                 onClick={(e) => e.stopPropagation()} 
-                className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-3 text-center p-4 sm:p-6 animate-[fadeIn_0.15s_ease-out] select-none"
+                className="absolute inset-0 bg-[#181615]/95 backdrop-blur-[3px] flex flex-col items-center justify-center gap-2.5 text-center p-4 sm:p-6 animate-[fadeIn_0.15s_ease-out] select-none"
               >
                 <div className="flex items-center gap-2 bg-[#252220] px-3.5 py-1 rounded border border-[#3D3835]">
                   <img src="/logo.png" alt="ในบ้าน" className="w-3.5 h-3.5 object-contain" />
@@ -1776,13 +1732,33 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
                   </p>
                 </div>
 
+                {/* Earned Rank Evaluation Card */}
+                <div className="bg-[#252220] border border-[#3D3835] rounded-xl px-4 py-2.5 w-full max-w-xs flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-0.5 rounded border font-mono text-[11px] font-bold uppercase ${currentRank.badgeClass}`}>
+                      {currentRank.badge}
+                    </span>
+                    <span className="font-mono text-xs font-bold text-[#FAF7F5]">
+                      {currentRank.titleTh}
+                    </span>
+                  </div>
+                  <span className="font-mono text-[10px] text-[#E9F344] font-bold">
+                    {currentRank.rewardText}
+                  </span>
+                  {currentRank.nextTarget && (
+                    <span className="font-mono text-[9px] text-[#A8A29E]">
+                      อีก {Math.max(0, currentRank.nextTarget - score)} PTS เพื่อเลื่อนขั้นสู่ [RANK {currentRank.nextTier}]
+                    </span>
+                  )}
+                </div>
+
                 {earnedXhaus > 0 && (
                   <div className="bg-[#181615] border border-[#526A3B] text-[#86efac] px-3 py-1 rounded font-mono text-xs font-bold">
                     + {earnedXhaus.toFixed(2)} XHAUS COIN RECORDED
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-2 justify-center font-mono text-xs mt-2">
+                <div className="flex flex-wrap gap-2 justify-center font-mono text-xs mt-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1846,10 +1822,12 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           <div 
             onClick={handleJumpPress}
             onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className="w-full max-w-md py-3.5 sm:py-4 px-4 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm sm:text-base rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] transition-transform text-center flex flex-col items-center justify-center cursor-pointer select-none"
+            className="w-full max-w-md py-3 sm:py-3.5 px-4 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm sm:text-base rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] transition-transform text-center flex flex-col items-center justify-center cursor-pointer select-none"
           >
             <span className="tracking-wide uppercase">[ แตะตรงไหนก็ได้เพื่อกระโดด // TAP TO JUMP ]</span>
-            <span className="text-[10px] font-normal text-[#181615]/80 mt-0.5">แตะ 2 ครั้งเพื่อกระโดด 2 จังหวะ (Double Jump)</span>
+            <span className="text-[10px] font-normal text-[#181615]/80 mt-0.5">
+              {selectedCharId === 'naga' ? 'พญานาคน้อยกระโดดได้ 3 จังหวะ (Triple Naga Glide)!' : 'แตะ 2 ครั้งเพื่อกระโดด 2 จังหวะ (Double Jump)'}
+            </span>
           </div>
 
           {/* Companion character switcher when idle */}
@@ -1858,14 +1836,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               {Object.values(CHARACTERS).map((char) => (
                 <button
                   key={char.id}
-                  onClick={() => setSelectedCharId(char.id)}
-                  className={`flex-1 py-1 px-2 rounded-xl border font-bold uppercase truncate transition-colors cursor-pointer ${
+                  onClick={() => handleSelectCharacter(char.id)}
+                  className={`flex-1 py-1 px-2 rounded-xl border-2 font-bold uppercase truncate transition-all cursor-pointer flex items-center justify-center gap-1 ${
                     selectedCharId === char.id
-                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]'
                       : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
                   }`}
                 >
-                  {char.name.split(' ')[0]}
+                  <PixelCharAvatar charId={char.id} size={18} animated={selectedCharId === char.id} />
+                  <span>{char.name.split(' ')[0]}</span>
                 </button>
               ))}
             </div>
@@ -1881,8 +1860,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
       {/* Clean Header Bar & Character Selector */}
       <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between border-b border-[var(--color-rule)] pb-4 gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-[#FAF7F5] flex items-center justify-center border-2 border-[#181615] shrink-0 overflow-hidden relative shadow-2xs p-1">
-            <img src="/logo.png" alt="ในบ้าน" className="w-full h-full object-contain" />
+          <div className="w-11 h-11 rounded-xl bg-[#FAF7F5] flex items-center justify-center border-2 border-[#181615] shrink-0 overflow-hidden relative shadow-2xs p-0.5">
+            <PixelCharAvatar charId={activeChar.id} size={38} animated={true} />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -1904,6 +1883,9 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
         {/* Status Score & LCD Coins Deck */}
         <div className="flex items-center gap-2 font-mono text-xs self-end sm:self-auto flex-wrap">
+          <span className={`px-2.5 py-1 rounded-xl border text-[10px] font-bold uppercase ${currentRank.badgeClass}`}>
+            {currentRank.badge}
+          </span>
           {earnedXhaus > 0 && (
             <div className="bg-[#E9F344] border-2 border-[#181615] px-2.5 py-1 rounded-xl text-[#181615] font-bold text-[11px]">
               +{earnedXhaus.toFixed(2)} XH
@@ -1941,14 +1923,15 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           {Object.values(CHARACTERS).map((char) => (
             <button
               key={char.id}
-              onClick={() => setSelectedCharId(char.id)}
-              className={`flex-1 py-1.5 px-2 rounded-xl border font-bold uppercase truncate transition-colors cursor-pointer ${
+              onClick={() => handleSelectCharacter(char.id)}
+              className={`flex-1 py-1.5 px-2 rounded-xl border-2 font-bold uppercase truncate transition-all cursor-pointer flex items-center justify-center gap-1 ${
                 selectedCharId === char.id
-                  ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
+                  ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]'
                   : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:bg-[#F2ECE4]'
               }`}
             >
-              {char.name.split(' ')[0]}
+              <PixelCharAvatar charId={char.id} size={18} animated={selectedCharId === char.id} />
+              <span>{char.name.split(' ')[0]}</span>
             </button>
           ))}
         </div>
@@ -1971,14 +1954,24 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         {gameState === 'idle' && (
           <div 
             onClick={(e) => { e.stopPropagation(); startGame(); }}
-            className="absolute inset-0 bg-[#FAF7F5]/96 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 text-center p-6 cursor-pointer select-none"
+            className="absolute inset-0 bg-[#FAF7F5]/82 backdrop-blur-[1px] flex flex-col items-center justify-center gap-3 text-center p-6 cursor-pointer select-none"
           >
-            <h4 className="font-pixel text-2xl font-bold text-[#181615] uppercase tracking-wider">
-              {activeChar.name}
-            </h4>
+            <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl px-4 py-2.5 shadow-[3px_3px_0px_#181615] flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-[#F4EFE6] border border-[#181615] flex items-center justify-center shrink-0">
+                <PixelCharAvatar charId={activeChar.id} size={44} animated={true} />
+              </div>
+              <div className="text-left">
+                <h4 className="font-pixel text-lg font-bold text-[#181615] uppercase tracking-wider">
+                  {activeChar.name}
+                </h4>
+                <p className="font-mono text-[9px] text-[oklch(45%_0.010_28)] uppercase tracking-wider">
+                  {activeChar.title} // {activeChar.trait}
+                </p>
+              </div>
+            </div>
             <button
               onClick={(e) => { e.stopPropagation(); startGame(); }}
-              className="px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95"
+              className="px-8 py-3 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono text-xs font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-[3px_3px_0px_#181615] active:scale-95"
             >
               [ START RUN // เริ่มออกวิ่ง ]
             </button>
@@ -1994,8 +1987,16 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
               RUN TERMINATED
             </h4>
             <p className="text-xs text-[#D9D2CB] font-mono mt-1">
-              FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong>
+              FINAL SCORE: <strong className="text-[#FAF7F5] text-base">{score} PTS</strong> // ปรุงสำเร็จ {completedPots} หม้อ
             </p>
+            <div className="bg-[#252220] border border-[#3D3835] rounded-xl px-4 py-2 w-full max-w-xs flex flex-col items-center gap-1">
+              <span className={`px-2.5 py-0.5 rounded border font-mono text-[11px] font-bold uppercase ${currentRank.badgeClass}`}>
+                {currentRank.badge} — {currentRank.titleTh}
+              </span>
+              <span className="font-mono text-[10px] text-[#E9F344] font-bold">
+                {currentRank.rewardText}
+              </span>
+            </div>
             <div className="flex gap-3 font-mono text-xs mt-2">
               <button
                 onClick={(e) => { e.stopPropagation(); startGame(); }}

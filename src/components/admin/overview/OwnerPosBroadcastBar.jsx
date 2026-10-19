@@ -91,6 +91,8 @@ export default function OwnerPosBroadcastBar() {
                 })
             } catch (broadcastErr) {
                 console.warn('Realtime broadcast notice:', broadcastErr)
+            } finally {
+                try { supabase.removeChannel(channel) } catch (e) {}
             }
 
             // 2. Persist in app_settings
@@ -143,6 +145,8 @@ export default function OwnerPosBroadcastBar() {
                 })
             } catch (broadcastErr) {
                 console.warn('Realtime broadcast clear notice:', broadcastErr)
+            } finally {
+                try { supabase.removeChannel(channel) } catch (e) {}
             }
 
             setActiveBroadcast(null)

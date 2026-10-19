@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
 import { getThaiDate, formatThaiTimeOnly, calculateDurationMinutes, formatThaiDuration, formatShortDuration } from '../../../utils/timeUtils'
-import { parseTableTransferInfo } from '../../../utils/tableTransferHelper'
+import { parseTableTransferInfo, isInternalBlockBooking } from '../../../utils/tableTransferHelper'
 import { subscribePOSBroadcast } from '../../../utils/realtimeNotifier'
 
 export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables, externalBookings }) {
@@ -38,8 +38,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
             let seatedGuests = 0
 
             externalTables.forEach(table => {
-                const tBookings = externalBookings.filter(b => b.table_id === table.id)
-                const isOcc = tBookings.some(b => {
+                const tBookings = externalBookings.filter(b => b.table_id === table.id && !isInternalBlockBooking(b))
+                const activeB = tBookings.find(b => {
                     if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
                     if (b.status === 'seated') return true
                     if (b.status === 'ready' && b.booking_type !== 'pickup') return true
@@ -50,9 +50,9 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                     }
                     return false
                 })
-                if (isOcc) {
+                if (activeB) {
                     occupiedCount++
-                    seatedGuests += Number(table.capacity) || 2
+                    seatedGuests += Number(activeB.pax || activeB.guest_count || table.capacity) || 2
                 }
             })
 
@@ -94,16 +94,9 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                 }
             })
 
-        // Direct POS broadcast channel (cross-device < 50ms)
+        // Direct POS broadcast channel (cross-device < 50ms & local BroadcastChannel deduplicated)
         const unsubscribePosBroadcast = subscribePOSBroadcast(() => debouncedFetch())
 
-        // Local 0ms BroadcastChannel synchronization with POS
-        const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
-        if (posSyncChannel) {
-            posSyncChannel.onmessage = () => debouncedFetch()
-        }
-        const handleCustomSync = () => debouncedFetch()
-        window.addEventListener('pos_sync_event', handleCustomSync)
         const handleStorageSync = (e) => {
             if (e.key === 'pos_last_order_sync') debouncedFetch()
         }
@@ -139,8 +132,6 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
             clearInterval(autoPollTimer)
             supabase.removeChannel(channel)
             unsubscribePosBroadcast()
-            if (posSyncChannel) posSyncChannel.close()
-            window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('storage', handleStorageSync)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
             window.removeEventListener('focus', handleVisibilityOrFocus)
@@ -166,6 +157,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
             const today = getThaiDate()
             const start = `${today}T00:00:00+07:00`
             const end = `${today}T23:59:59+07:00`
+            const recentCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
             const todayReq = supabase
                 .from('bookings')
@@ -177,6 +169,7 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                 .from('bookings')
                 .select('*, profiles(display_name, phone_number), order_items(price_at_time, quantity)')
                 .in('status', ['seated', 'confirmed', 'ready'])
+                .gte('booking_time', recentCutoff)
 
             const [todayRes, seatedRes] = await Promise.all([todayReq, seatedReq])
 
@@ -199,8 +192,8 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                 let seatedGuests = 0
 
                 sortedTables.forEach(table => {
-                    const tBookings = activeBookings.filter(b => b.table_id === table.id)
-                    const isOcc = tBookings.some(b => {
+                    const tBookings = activeBookings.filter(b => b.table_id === table.id && !isInternalBlockBooking(b))
+                    const activeB = tBookings.find(b => {
                         if (['completed', 'cancelled', 'void', 'no_show'].includes(b.status)) return false
                         if (b.status === 'seated') return true
                         if (b.status === 'ready' && b.booking_type !== 'pickup') return true
@@ -211,9 +204,9 @@ export default function LiveFloorQuickStatus({ onOccupancyChange, externalTables
                         }
                         return false
                     })
-                    if (isOcc) {
+                    if (activeB) {
                         occupiedCount++
-                        seatedGuests += Number(table.capacity) || 2
+                        seatedGuests += Number(activeB.pax || activeB.guest_count || table.capacity) || 2
                     }
                 })
 

@@ -24,6 +24,8 @@ import MenuEngineeringMatrix from './financial/MenuEngineeringMatrix'
 import TrafficAndVelocityDuo from './financial/TrafficAndVelocityDuo'
 import OperationalMarginBreakdown from './financial/OperationalMarginBreakdown'
 import { classifyMenuCategory, formatCategoryLabel, MENU_CATEGORY_KEYS } from '../../utils/categoryClassifier'
+import { getBookingPaymentBreakdown } from '../../utils/shiftHelper'
+import { parseTableTransferInfo, isInternalBlockBooking, isGhostPickupBooking } from '../../utils/tableTransferHelper'
 
 export default function AdminFinancialDashboard() {
     const [loading, setLoading] = useState(false)
@@ -278,15 +280,21 @@ export default function AdminFinancialDashboard() {
                     .from('bookings')
                     .select(`
                         id,
+                        table_id,
                         booking_time,
                         created_at,
                         total_amount,
+                        deposit_amount,
                         discount_amount,
                         xhaus_discount,
                         status,
                         pax,
+                        source,
                         booking_type,
+                        order_type,
+                        payment_method,
                         payment_slip_url,
+                        slip_verified,
                         staff_remark,
                         customer_note,
                         user_id,
@@ -352,13 +360,16 @@ export default function AdminFinancialDashboard() {
                 try {
                     const { data: prevData } = await supabase
                         .from('bookings')
-                        .select('total_amount, status, pax, discount_amount, xhaus_discount')
+                        .select('id, table_id, total_amount, status, pax, discount_amount, xhaus_discount, staff_remark, customer_note, booking_type, order_type, source')
                         .gte('booking_time', prevStartIso)
                         .lte('booking_time', prevEndIso)
 
                     if (currentSeq === fetchSeqRef.current && prevData) {
                         const prevValid = prevData.filter(b => 
-                            ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
+                            ['completed', 'paid', 'success'].includes(b.status) &&
+                            !isInternalBlockBooking(b) &&
+                            !isGhostPickupBooking(b) &&
+                            !parseTableTransferInfo(b).isMergedSource
                         )
                         prevGross = prevValid.reduce((sum, b) => sum + parseFloat(b.total_amount || 0), 0)
                         prevOrdersCount = prevValid.length
@@ -378,9 +389,12 @@ export default function AdminFinancialDashboard() {
             const totalExpensesReal = expensesList.reduce((sum, exp) => sum + parseFloat(exp.amount || 0), 0)
             const hasRecordedExpenses = expensesList.length > 0
 
-            // Filter for valid revenue-generating orders
+            // Filter strictly for settled revenue-generating orders (excluding unpaid open tables and merged source bills)
             const validOrders = (bookingsRes.data || []).filter(b => 
-                ['completed', 'confirmed', 'paid', 'success', 'seated', 'ready'].includes(b.status)
+                ['completed', 'paid', 'success'].includes(b.status) &&
+                !isInternalBlockBooking(b) &&
+                !isGhostPickupBooking(b) &&
+                !parseTableTransferInfo(b).isMergedSource
             )
 
             if (!validOrders || validOrders.length === 0) {
@@ -421,7 +435,7 @@ export default function AdminFinancialDashboard() {
             setHasLiveData(true)
 
             // --- 3. Core KPI & Breakdown Calculations ---
-            let totalGross = 0
+            let totalSettled = 0
             let totalDiscounts = 0
             let discountCount = 0
             let totalGuests = 0
@@ -470,7 +484,7 @@ export default function AdminFinancialDashboard() {
                 const hour = bTime.getHours()
                 const dayIdx = (bTime.getDay() + 6) % 7 // Monday = 0
 
-                totalGross += amount
+                totalSettled += amount
                 if (discount > 0) {
                     totalDiscounts += discount
                     discountCount += 1
@@ -488,42 +502,22 @@ export default function AdminFinancialDashboard() {
                     largeCount++; largeRev += amount
                 }
 
-                // Payment Method detection (Split parsing & remarks)
-                const isRemarkCredit = remark.includes('credit') || remark.includes('card') || remark.includes('บัตร')
-                const isRemarkQr = b.payment_slip_url || remark.includes('qr') || remark.includes('transfer') || remark.includes('โอน') || remark.includes('promptpay')
-                const isRemarkWallet = remark.includes('wallet')
-
+                // Unified Payment Method Breakdown (matches POS & Admin Overview 100%)
+                const isRemarkWallet = remark.includes('wallet') && !remark.includes('paid by cash') && !remark.includes('paid by qr')
                 let txPayMethod = 'Cash'
                 let txIsSplit = false
 
-                const splitMatch = remark.match(/\[split:?\s*([^\]]+)\]/i) || remark.match(/split:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i)
-                if (splitMatch) {
-                    txIsSplit = true
-                    txPayMethod = 'Split'
-                    const splitText = splitMatch[1]
-                    let spCash = 0, spQr = 0, spCredit = 0
-                    const cashM = splitText.match(/cash[:=\s]+(\d+(?:\.\d+)?)/i)
-                    if (cashM) spCash = parseFloat(cashM[1]) || 0
-                    const qrM = splitText.match(/(?:qr|transfer|โอน)[:=\s]+(\d+(?:\.\d+)?)/i)
-                    if (qrM) spQr = parseFloat(qrM[1]) || 0
-                    const creditM = splitText.match(/(?:credit|card|บัตร)[:=\s]+(\d+(?:\.\d+)?)/i)
-                    if (creditM) spCredit = parseFloat(creditM[1]) || 0
-
-                    if (spCash > 0) { cashAmt += spCash; cashCount++ }
-                    if (spQr > 0) { promptpayAmt += spQr; promptpayCount++ }
-                    if (spCredit > 0) { creditAmt += spCredit; creditCount++ }
-                } else if (isRemarkCredit) {
-                    txPayMethod = 'Credit Card'
-                    creditAmt += amount; creditCount++
-                } else if (isRemarkQr) {
-                    txPayMethod = 'PromptPay QR'
-                    promptpayAmt += amount; promptpayCount++
-                } else if (isRemarkWallet) {
+                if (isRemarkWallet) {
                     txPayMethod = 'Member Wallet'
-                    walletAmt += amount; walletCount++
+                    walletAmt += amount
+                    walletCount++
                 } else {
-                    txPayMethod = 'Cash'
-                    cashAmt += amount; cashCount++
+                    const pBreakdown = getBookingPaymentBreakdown(b)
+                    txIsSplit = Boolean(pBreakdown.isSplit)
+                    txPayMethod = pBreakdown.methodLabel === 'QR Transfer' ? 'PromptPay QR' : (pBreakdown.methodLabel || 'Cash')
+                    if (pBreakdown.cash > 0) { cashAmt += pBreakdown.cash; cashCount++ }
+                    if (pBreakdown.qr > 0) { promptpayAmt += pBreakdown.qr; promptpayCount++ }
+                    if (pBreakdown.credit > 0) { creditAmt += pBreakdown.credit; creditCount++ }
                 }
 
                 // Dining Channels
@@ -695,18 +689,19 @@ export default function AdminFinancialDashboard() {
             setRawTransactionsData(formattedRawTx)
 
             const completedOrdersCount = validOrders.length
-            const salesPerHead = totalGuests > 0 ? Math.round(totalGross / totalGuests) : 0
-            const avgBillSize = completedOrdersCount > 0 ? Math.round(totalGross / completedOrdersCount) : 0
-            const netRev = totalGross - totalDiscounts
+            const netRev = totalSettled
+            const totalGross = totalSettled + totalDiscounts
+            const salesPerHead = totalGuests > 0 ? Math.round(netRev / totalGuests) : 0
+            const avgBillSize = completedOrdersCount > 0 ? Math.round(netRev / completedOrdersCount) : 0
             const netProfitReal = hasRecordedExpenses ? (netRev - totalExpensesReal) : netRev
-            const netProfitMarginPct = totalGross > 0 ? ((netProfitReal / totalGross) * 100).toFixed(1) : '0.0'
+            const netProfitMarginPct = netRev > 0 ? ((netProfitReal / netRev) * 100).toFixed(1) : '0.0'
             const tableTurnoverRate = (completedOrdersCount / 12).toFixed(1)
 
             let growthPct = '0.0'
             if (prevGross > 0) {
-                const diff = ((totalGross - prevGross) / prevGross) * 100
+                const diff = ((netRev - prevGross) / prevGross) * 100
                 growthPct = (diff >= 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1))
-            } else if (totalGross > 0) {
+            } else if (netRev > 0) {
                 growthPct = '+100.0'
             }
 
@@ -725,8 +720,8 @@ export default function AdminFinancialDashboard() {
                 prevAvgTicket: prevAvgBill
             })
 
-            const calculatedFoodCostPct = (totalGross > 0 && totalCostRecorded > 0)
-                ? parseFloat(((totalCostRecorded / totalGross) * 100).toFixed(1))
+            const calculatedFoodCostPct = (netRev > 0 && totalCostRecorded > 0)
+                ? parseFloat(((totalCostRecorded / netRev) * 100).toFixed(1))
                 : 30.0
 
             setLiveMetrics({
@@ -758,8 +753,8 @@ export default function AdminFinancialDashboard() {
 
             // Format Dining Channels
             setDiningChannelsData([
-                { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: dineInAmt, percent: Math.round((dineInAmt / (totalGross || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0, code: 'DINE_IN' },
-                { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: takeawayAmt, percent: Math.round((takeawayAmt / (totalGross || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0, code: 'PICKUP' },
+                { name: 'Dine-In (ทานที่ร้าน / จองโต๊ะ)', amount: dineInAmt, percent: Math.round((dineInAmt / (netRev || 1)) * 100), tables: dineInTables, avgPerTable: dineInTables > 0 ? Math.round(dineInAmt / dineInTables) : 0, code: 'DINE_IN' },
+                { name: 'Takeaway / Pickup (รับกลับบ้าน)', amount: takeawayAmt, percent: Math.round((takeawayAmt / (netRev || 1)) * 100), orders: takeawayOrders, avgPerOrder: takeawayOrders > 0 ? Math.round(takeawayAmt / takeawayOrders) : 0, code: 'PICKUP' },
             ])
 
             // Format Top Selling Items from POS

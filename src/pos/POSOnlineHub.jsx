@@ -45,6 +45,15 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     const [isSimulating, setIsSimulating] = useState(false);
 
     const alertIntervalRef = useRef(null);
+    const isFetchingRef = useRef(false);
+    const pendingFetchRef = useRef(false);
+    const fetchDebounceRef = useRef(null);
+    const isActiveRef = useRef(isActive);
+    const hasLoadedOnceRef = useRef(false);
+
+    useEffect(() => {
+        isActiveRef.current = isActive;
+    }, [isActive]);
 
     const playAlert = (eventKey = null) => {
         const didPlay = playOrderAlert(eventKey, 1200, 3.4);
@@ -75,6 +84,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     useEffect(() => {
         return () => {
             stopAlert();
+            if (fetchDebounceRef.current) {
+                clearTimeout(fetchDebounceRef.current);
+                fetchDebounceRef.current = null;
+            }
         };
     }, []);
 
@@ -96,18 +109,25 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         return bookingType === 'hausmade' || orderType.startsWith('hausmade') || sourceLower.includes('hausmade') || note.includes('hausmade') || remark.includes('hausmade');
     };
 
-    const fetchOnlineData = async () => {
-        if (!isActive) return;
+    const fetchOnlineData = async (forceSpinner = false) => {
+        if (!isActiveRef.current && hasLoadedOnceRef.current) return;
+        if (isFetchingRef.current) {
+            pendingFetchRef.current = true;
+            return;
+        }
+        isFetchingRef.current = true;
         try {
-            setLoading(true);
+            if (!hasLoadedOnceRef.current || forceSpinner) {
+                setLoading(true);
+            }
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const todayIso = today.toISOString();
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, tables_layout(*), profiles(display_name, phone_number), order_items(*, menu_items(name, category_id))')
-                .or(`booking_time.gte.${todayIso},order_type.in.(hausmade_shipping,hausmade_pickup),booking_type.eq.hausmade`)
+                .select('*, tables_layout(*), profiles(display_name, phone_number), order_items(*, menu_items(name, price, category_id, menu_categories(name)))')
+                .or(`booking_time.gte.${todayIso},created_at.gte.${todayIso},and(booking_type.eq.hausmade,status.in.(pending,confirmed,seated,preparing,packing,ready)),and(order_type.in.(hausmade_shipping,hausmade_pickup),status.in.(pending,confirmed,seated,preparing,packing,ready))`)
                 .order('booking_time', { ascending: false });
 
             if (error) throw error;
@@ -121,25 +141,47 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 const isExplicitInHouse = !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || b.booking_type === 'walk_in');
                 if (isExplicitInHouse) return false;
 
-                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('online') || isLineman || isHausmade);
+                // Physical dine-in table QR orders belong strictly to Table Grid / Floorplan, NEVER to Online Hub
+                const isTableQrOrder = Boolean(b.table_id) && (sourceLower === 'qr' || remarkLower.includes('qr walk-in') || b.booking_type === 'walk_in');
+                if (isTableQrOrder) return false;
+
+                const isOnlineSource = (sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('online') || isLineman || isHausmade);
                 const hasSlip = !!b.payment_slip_url;
                 const isOnlinePickup = (b.booking_type === 'pickup' || b.order_type === 'hausmade_pickup') && !isExplicitInHouse;
                 return isOnlineSource || hasSlip || isOnlinePickup || isLineman || isHausmade;
             });
 
             setOrders(onlineRelevant);
+            hasLoadedOnceRef.current = true;
         } catch (err) {
             console.error('Failed to fetch online orders:', err);
         } finally {
             setLoading(false);
+            isFetchingRef.current = false;
+            if (pendingFetchRef.current) {
+                pendingFetchRef.current = false;
+                scheduleFetchOnlineData(150);
+            }
         }
+    };
+
+    const scheduleFetchOnlineData = (delayMs = 220) => {
+        if (fetchDebounceRef.current) {
+            clearTimeout(fetchDebounceRef.current);
+        }
+        fetchDebounceRef.current = setTimeout(() => {
+            fetchDebounceRef.current = null;
+            fetchOnlineData(false);
+        }, delayMs);
     };
 
     useEffect(() => {
         if (isActive) {
-            fetchOnlineData();
+            fetchOnlineData(false);
         }
+    }, [isActive]);
 
+    useEffect(() => {
         const handleIncomingBroadcast = async ({ event, payload }) => {
             if (event === 'online_order_created') {
                 const bId = payload?.booking_id;
@@ -158,14 +200,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     }
                     playAlert(eventKey);
                 }
-                if (isActive) fetchOnlineData();
+                if (isActiveRef.current) scheduleFetchOnlineData(120);
             } else if (event === 'payment_slip_uploaded') {
                 const bId = payload?.booking_id;
                 const slipEventKey = getCanonicalSlipAlertKey(bId);
                 if (checkEventDeduplication(slipEventKey, 5000)) {
                     playAlert(slipEventKey);
                 }
-                if (isActive) fetchOnlineData();
+                if (isActiveRef.current) scheduleFetchOnlineData(120);
+            } else if (event === 'online_order_status_updated' || event === 'customer_arrived') {
+                if (isActiveRef.current) scheduleFetchOnlineData(120);
             }
         };
 
@@ -206,7 +250,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             setPersistentAlert(b);
                             playAlert(eventKey);
                         }
-                        if (isActive) fetchOnlineData();
+                        if (isActiveRef.current) scheduleFetchOnlineData(180);
                     }
                 }
             )
@@ -218,13 +262,13 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     table: 'bookings',
                 },
                 (payload) => {
-                    if (isActive) fetchOnlineData();
+                    if (isActiveRef.current) scheduleFetchOnlineData(180);
                     const updated = payload.new;
                     
                     // Auto-dismiss persistent alert if this order was accepted/cancelled/completed from another terminal!
                     setPersistentAlert(prev => {
                         if (prev && prev.id === updated.id) {
-                            const isNoLongerPending = ['confirmed', 'seated', 'ready', 'completed', 'cancelled', 'void'].includes(updated.status);
+                            const isNoLongerPending = ['confirmed', 'seated', 'preparing', 'ready', 'completed', 'cancelled', 'void'].includes(updated.status);
                             if (isNoLongerPending) {
                                 stopAlert();
                                 return null;
@@ -251,32 +295,35 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     table: 'order_items',
                 },
                 () => {
-                    if (isActive) fetchOnlineData();
+                    if (isActiveRef.current) scheduleFetchOnlineData(250);
                 }
             )
             .subscribe();
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && isActive) {
-                fetchOnlineData();
+            if (document.visibilityState === 'visible' && isActiveRef.current) {
+                scheduleFetchOnlineData(150);
             }
         };
+        const handleOnline = () => {
+            if (isActiveRef.current) scheduleFetchOnlineData(150);
+        };
         document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('online', fetchOnlineData);
+        window.addEventListener('online', handleOnline);
 
         return () => {
             stopAlert();
             document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('online', fetchOnlineData);
+            window.removeEventListener('online', handleOnline);
             unsubscribeBroadcast();
             supabase.removeChannel(dbChannel);
         };
-    }, [isActive]);
+    }, []);
 
     // Fast-path listener for local native WMA bridge interception
     useEffect(() => {
         const handleWmaOrder = (event) => {
-            if (isActive) fetchOnlineData();
+            if (isActiveRef.current) scheduleFetchOnlineData(100);
             const b = event.detail?.booking;
             if (b) {
                 const eventKey = getCanonicalOrderAlertKey(b.id) || `order_${Date.now()}`;
@@ -291,11 +338,11 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         return () => {
             window.removeEventListener('wma_order_received', handleWmaOrder);
         };
-    }, [isActive]);
+    }, []);
 
     useEffect(() => {
         if (isActive && refreshKey > 0) {
-            fetchOnlineData();
+            scheduleFetchOnlineData(150);
         }
     }, [isActive, refreshKey]);
 
@@ -328,7 +375,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 status: newStatus
             });
 
-            fetchOnlineData();
+            scheduleFetchOnlineData(50);
         } catch (err) {
             console.error(err);
             toast.error('ไม่สามารถอัปเดตสถานะได้: ' + (err.message || 'Error'));
@@ -341,7 +388,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
             setApprovingId(order.id);
             const total = order.total_amount || 0;
             const updates = {
-                status: order.booking_type === 'dine_in' ? 'confirmed' : 'ready',
+                status: 'confirmed',
                 deposit_amount: order.deposit_amount > 0 ? order.deposit_amount : total,
                 slip_verified: true,
                 slip_verification_status: 'manual_verified',
@@ -368,12 +415,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                 status: updates.status
             });
 
-            // Auto-trigger kitchen order print if items exist
-            if (order.order_items && order.order_items.length > 0 && onOpenSlipModal) {
+            // Auto-trigger kitchen order print if items exist for pickup/hausmade orders
+            if (order.booking_type !== 'dine_in' && order.order_items && order.order_items.length > 0 && onOpenSlipModal) {
                 onOpenSlipModal({ ...order, ...updates }, 'kitchen');
             }
 
-            fetchOnlineData();
+            scheduleFetchOnlineData(50);
         } catch (err) {
             console.error('Failed to approve slip:', err);
             toast.error('อนุมัติสลิปไม่สำเร็จ: ' + err.message);
@@ -431,11 +478,25 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
     }, [orders, searchQuery, channelFilter]);
 
     // Active column groups (without confusing card duplicates)
-    const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status === 'pending');
+    const slipsToVerify = activeOrders.filter(o => !!o.payment_slip_url && o.status === 'pending' && !o.slip_verified);
     const linemanOrders = activeOrders.filter(o => isOrderLineman(o));
-    const newBookings = activeOrders.filter(o => !isOrderLineman(o) && !isOrderHausmade(o) && o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending'));
-    const onlinePickups = activeOrders.filter(o => !isOrderLineman(o) && (o.booking_type === 'pickup' || o.order_type === 'hausmade_pickup') && (!o.payment_slip_url || o.status !== 'pending'));
-    const hausmadeOrders = activeOrders.filter(o => isOrderHausmade(o) && (!o.payment_slip_url || o.status !== 'pending'));
+    const newBookings = activeOrders.filter(o => !isOrderLineman(o) && !isOrderHausmade(o) && o.booking_type === 'dine_in' && (!o.payment_slip_url || o.status !== 'pending' || o.slip_verified));
+    const onlinePickups = activeOrders.filter(o => !isOrderLineman(o) && (o.booking_type === 'pickup' || o.order_type === 'hausmade_pickup') && (!o.payment_slip_url || o.status !== 'pending' || o.slip_verified));
+    const hausmadeOrders = activeOrders.filter(o => isOrderHausmade(o) && (!o.payment_slip_url || o.status !== 'pending' || o.slip_verified));
+
+    const normalizeSelectedOptions = (rawOpts) => {
+        if (!rawOpts) return [];
+        if (Array.isArray(rawOpts)) return rawOpts;
+        if (typeof rawOpts === 'string') {
+            return rawOpts.trim() ? [rawOpts.trim()] : [];
+        }
+        if (typeof rawOpts === 'object') {
+            return Object.entries(rawOpts)
+                .filter(([, val]) => val != null && val !== '' && (!Array.isArray(val) || val.length > 0))
+                .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`);
+        }
+        return [];
+    };
 
     const renderCard = (order, typeBadge) => {
         const shortId = getShortBookingId(order);
@@ -444,6 +505,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         const isHausmadePickup = order.order_type === 'hausmade_pickup';
         const isHausmadeShipping = order.order_type === 'hausmade_shipping' || (isHausmade && !isHausmadePickup);
         const isPickup = order.booking_type === 'pickup' || isHausmadePickup;
+        const isCustomerArrived = (order.customer_note || '').includes('[CUSTOMER_ARRIVED]') || (order.staff_remark || '').includes('[CUSTOMER_ARRIVED]');
         
         // Order submission timestamp (when created)
         const orderDate = order.created_at ? new Date(order.created_at) : new Date(order.booking_time);
@@ -534,6 +596,12 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         }`}>
                             {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : 'UNPAID'}
                         </span>
+
+                        {isCustomerArrived && (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded animate-pulse">
+                                ARRIVED · มาถึงร้านแล้ว
+                            </span>
+                        )}
                     </div>
 
                     <div className="text-right font-mono shrink-0 flex flex-col items-end gap-0.5">
@@ -582,29 +650,32 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             ITEMS ({items.reduce((s, i) => s + (i.quantity || 1), 0)} TOTAL):
                         </div>
                         <ul className="space-y-1.5">
-                            {items.slice(0, 4).map((item, idx) => (
-                                <li key={item.id || idx} className="text-[oklch(18%_0.012_28)]">
-                                    <div className="flex justify-between items-center">
-                                        <span className="truncate pr-2 font-medium">
-                                            <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
-                                            {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
-                                        </span>
-                                        <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
-                                            ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}
-                                        </span>
-                                    </div>
-                                    {/* Options & Modifiers */}
-                                    {item.selected_options && item.selected_options.length > 0 && (
-                                        <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono pl-4">
-                                            {item.selected_options.map((opt, oIdx) => (
-                                                <span key={oIdx} className="inline-block mr-1.5">
-                                                    • {opt.name || opt.choice || opt}
-                                                </span>
-                                            ))}
+                            {items.slice(0, 4).map((item, idx) => {
+                                const optsList = normalizeSelectedOptions(item.selected_options);
+                                return (
+                                    <li key={item.id || idx} className="text-[oklch(18%_0.012_28)]">
+                                        <div className="flex justify-between items-center">
+                                            <span className="truncate pr-2 font-medium">
+                                                <strong className="font-mono font-bold mr-1">{item.quantity}x</strong> 
+                                                {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
+                                            </span>
+                                            <span className="font-mono text-[10px] text-[oklch(42%_0.010_28)] shrink-0">
+                                                ฿{((item.price_at_time || item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                                            </span>
                                         </div>
-                                    )}
-                                </li>
-                            ))}
+                                        {/* Options & Modifiers */}
+                                        {optsList.length > 0 && (
+                                            <div className="text-[10px] text-[oklch(55%_0.010_28)] font-mono pl-4">
+                                                {optsList.map((opt, oIdx) => (
+                                                    <span key={oIdx} className="inline-block mr-1.5">
+                                                        • {typeof opt === 'object' ? (opt.name || opt.choice || JSON.stringify(opt)) : opt}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </li>
+                                );
+                            })}
                         </ul>
                         {items.length > 4 && (
                             <div className="text-[9px] font-mono text-[oklch(55%_0.010_28)] text-right pt-0.5 font-bold">
@@ -687,7 +758,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {order.payment_slip_url && order.status === 'pending' && (
+                    {order.payment_slip_url && order.status === 'pending' && !order.slip_verified && (
                         <button
                             type="button"
                             disabled={approvingId === order.id}
@@ -716,7 +787,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {isLineman && order.status === 'seated' && (
+                    {isLineman && (order.status === 'seated' || order.status === 'preparing') && (
                         <button
                             type="button"
                             onClick={() => updateBookingStatus(order.id, 'ready')}
@@ -756,6 +827,9 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             type="button"
                             onClick={async () => {
                                 await updateBookingStatus(order.id, 'seated');
+                                if (onOpenSlipModal && items.length > 0) {
+                                    onOpenSlipModal({ ...order, status: 'seated' }, 'kitchen');
+                                }
                                 if (onSelectOrder) {
                                     onSelectOrder({ ...order, status: 'seated' });
                                 }
@@ -768,25 +842,25 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {/* Standard Pickup pending */}
-                    {!isLineman && order.booking_type === 'pickup' && order.status === 'pending' && !order.payment_slip_url && (
+                    {/* Standard Pickup pending or confirmed -> ACCEPT & COOK (send to kitchen & print) */}
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && ((order.status === 'pending' && (!order.payment_slip_url || order.slip_verified)) || order.status === 'confirmed') && (
                         <button
                             type="button"
                             onClick={() => {
-                                updateBookingStatus(order.id, 'seated');
+                                updateBookingStatus(order.id, 'preparing');
                                 if (onOpenSlipModal && items.length > 0) {
-                                    onOpenSlipModal(order, 'kitchen');
+                                    onOpenSlipModal({ ...order, status: 'preparing' }, 'kitchen');
                                 }
                             }}
                             className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Check size={12} />
-                            <span>ACCEPT & COOK</span>
+                            <span>COOK & PRINT</span>
                         </button>
                     )}
 
-                    {/* Standard Pickup seated/confirmed/preparing */}
-                    {!isLineman && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'confirmed') && (
+                    {/* Standard Pickup seated/confirmed/preparing -> MARK READY */}
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'confirmed' || order.status === 'preparing') && (
                         <button
                             type="button"
                             onClick={() => updateBookingStatus(order.id, 'ready')}
@@ -821,7 +895,7 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                     )}
 
                     {/* HAUSMADE Pickup Actions */}
-                    {isHausmade && isHausmadePickup && (order.status === 'confirmed' || order.status === 'packing') && (
+                    {isHausmade && isHausmadePickup && (order.status === 'confirmed' || order.status === 'packing' || order.status === 'preparing') && (
                         <button
                             type="button"
                             onClick={() => updateBookingStatus(order.id, 'ready')}

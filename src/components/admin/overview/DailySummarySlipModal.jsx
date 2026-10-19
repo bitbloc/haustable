@@ -260,7 +260,7 @@ export default function DailySummarySlipModal({
         if (!shifts || shifts.length === 0) return null
 
         const sorted = [...shifts].sort((a, b) => new Date(a.opened_at || 0) - new Date(b.opened_at || 0))
-        const openingFloat = Number(sorted[0]?.opening_float || 0)
+        const openingFloat = sorted.reduce((sum, s) => sum + Number(s.opening_float || 0), 0)
         const totalIn = sorted.reduce((sum, s) => sum + Number(s.total_in || 0), 0)
         const totalOut = sorted.reduce((sum, s) => sum + Number(s.total_out || 0), 0)
         const allAdjustments = []
@@ -270,8 +270,21 @@ export default function DailySummarySlipModal({
             })
         })
         const cashSales = reportData.cashTotal
-        const expectedCash = openingFloat + cashSales + totalIn - totalOut
-        const closedCash = Number(sorted[sorted.length - 1]?.closed_cash ?? expectedCash)
+        const expectedCash = sorted.reduce((sum, s) => {
+            const sOpen = Number(s.opening_float || 0)
+            const sCash = Number(s.cash_sales || 0)
+            const sIn = Number(s.total_in || 0)
+            const sOut = Number(s.total_out || 0)
+            return sum + Number(s.expected_cash ?? (sOpen + sCash + sIn - sOut))
+        }, 0)
+        const closedCash = sorted.reduce((sum, s) => {
+            const sOpen = Number(s.opening_float || 0)
+            const sCash = Number(s.cash_sales || 0)
+            const sIn = Number(s.total_in || 0)
+            const sOut = Number(s.total_out || 0)
+            const sExp = Number(s.expected_cash ?? (sOpen + sCash + sIn - sOut))
+            return sum + (s.closed_cash !== null && s.closed_cash !== undefined ? Number(s.closed_cash) : sExp)
+        }, 0)
         const difference = closedCash - expectedCash
 
         return {

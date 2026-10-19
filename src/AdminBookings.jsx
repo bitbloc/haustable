@@ -12,6 +12,7 @@ import { formatOrderItemOptions } from './utils/menuHelper'
 import { parseTableTransferInfo } from './utils/tableTransferHelper'
 import { isValidUuid } from './utils/urlHelper'
 import { calculateBookingFinancials, getBookingPaymentStatusInfo } from './utils/bookingHelper'
+import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast } from './utils/realtimeNotifier'
 import { toast } from 'sonner'
 
 // Helper to format item options into clean human-readable tags
@@ -262,6 +263,10 @@ export default function AdminBookings() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'tables_layout' }, debouncedFetchTables)
             .subscribe()
 
+        const unsubscribePosBroadcast = subscribePOSBroadcast(() => {
+            debouncedFetchBookings()
+        })
+
         // Visibility & Window Focus Sync (Syncs on resume without running wasteful interval polling)
         const handleVisibilityOrFocus = () => {
             if (document.visibilityState === 'visible' && isMountedRef.current) {
@@ -281,7 +286,8 @@ export default function AdminBookings() {
             if (bookingsDebounceTimer) clearTimeout(bookingsDebounceTimer)
             if (tablesDebounceTimer) clearTimeout(tablesDebounceTimer)
             window.removeEventListener('focus', handleVisibilityOrFocus)
-            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            window.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            unsubscribePosBroadcast()
             supabase.removeChannel(channel)
         }
     }, [fetchBookings, fetchTables])
@@ -323,6 +329,16 @@ export default function AdminBookings() {
             if (error) throw error
 
             setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: newStatus } : b))
+            if (booking.tracking_token) {
+                sendTrackingBroadcast(booking.tracking_token, 'order_status_updated', {
+                    status: newStatus,
+                    booking_id: booking.id
+                })
+            }
+            sendPOSBroadcast('online_order_status_updated', {
+                booking_id: booking.id,
+                status: newStatus
+            })
             toast.success(`Status updated to ${newStatus.toUpperCase()}`)
 
             if (newStatus === 'confirmed' || newStatus === 'cancelled') {

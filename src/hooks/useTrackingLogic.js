@@ -14,13 +14,18 @@ export function useTrackingLogic(token) {
   const [timeLeft, setTimeLeft] = useState('')
   const [isDataLoaded, setIsDataLoaded] = useState(false)
   const isFetchingRef = useRef(false)
+  const pendingRefetchRef = useRef(false)
 
   const fetchTrackingInfo = useCallback(async () => {
-    if (!token || !isValidToken(token) || isFetchingRef.current) {
+    if (!token || !isValidToken(token)) {
       if (token && !isValidToken(token)) {
         setError('ไม่พบรหัสติดตามออเดอร์ที่ถูกต้อง (Invalid Tracking Link)')
         setLoading(false)
       }
+      return
+    }
+    if (isFetchingRef.current) {
+      pendingRefetchRef.current = true
       return
     }
     isFetchingRef.current = true
@@ -130,6 +135,12 @@ export function useTrackingLogic(token) {
     } finally {
       setLoading(false)
       isFetchingRef.current = false
+      if (pendingRefetchRef.current) {
+        pendingRefetchRef.current = false
+        setTimeout(() => {
+          fetchTrackingInfo()
+        }, 80)
+      }
     }
   }, [token])
 
@@ -177,7 +188,7 @@ export function useTrackingLogic(token) {
         table: 'order_items'
       }, (payload) => {
         const bId = payload.new?.booking_id || payload.old?.booking_id
-        if (!bId || !currentBookingIdRef.current || String(bId) === String(currentBookingIdRef.current)) {
+        if (bId && currentBookingIdRef.current && String(bId) === String(currentBookingIdRef.current)) {
           fetchTrackingInfo()
         }
       })

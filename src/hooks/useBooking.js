@@ -218,7 +218,7 @@ export function useBooking() {
                 quantity: item.qty,
                 price_at_time: item.totalPricePerUnit || item.price,
                 price: item.totalPricePerUnit || item.price,
-                selected_options: item.selectedOptions || {}
+                selected_options: item.optionsSummary || item.selected_options || item.selectedOptions || []
             }))
 
             // Resolve Line Token

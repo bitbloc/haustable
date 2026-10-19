@@ -79,13 +79,28 @@ export const getBookingPaymentBreakdown = (b) => {
         };
     }
 
-    // 2. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
+    // 2. Check if booking has a prepaid online deposit (via slip/EasySlip) and remaining balance paid in-store via Cash or Credit
+    const deposit = parseFloat(b.deposit_amount || 0);
+    const hasPrepaidDeposit = deposit > 0 && deposit < total && (
+        Boolean(b.payment_slip_url || b.slip_url || b.slip_verified) ||
+        isOnline ||
+        remark.includes('easyslip') ||
+        remark.includes('[slip_verified]')
+    );
+
+    // 3. Explicit Cash Check (Must take highest priority over QR-order prefixes and reservation slips)
     if (remark.includes('paid by cash') || remark.includes('[cash:') || remark.includes('[paid: cash]') || remark.includes('เงินสด') || remark.includes('ชำระเงินสด') || explicitMethod === 'cash') {
+        if (hasPrepaidDeposit) {
+            return { cash: Math.max(0, total - deposit), qr: deposit, credit: 0, isSplit: true, isOnline, methodLabel: 'Split (ผสม)' };
+        }
         return { cash: total, qr: 0, credit: 0, isSplit: false, isOnline, methodLabel: 'Cash' };
     }
 
-    // 3. Explicit Credit Card Check
+    // 4. Explicit Credit Card Check
     if (remark.includes('paid by credit') || remark.includes('[credit:') || remark.includes('[paid: credit]') || remark.includes('paid by card') || remark.includes('บัตรเครดิต') || /credit[:=\s]+[1-9]/i.test(remark) || explicitMethod === 'credit' || explicitMethod === 'credit_card') {
+        if (hasPrepaidDeposit) {
+            return { cash: 0, qr: deposit, credit: Math.max(0, total - deposit), isSplit: true, isOnline, methodLabel: 'Split (ผสม)' };
+        }
         return { cash: 0, qr: 0, credit: total, isSplit: false, isOnline, methodLabel: 'Credit Card' };
     }
 

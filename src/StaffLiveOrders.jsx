@@ -43,7 +43,7 @@ function StaffLiveOrdersContent() {
 
     // Local State
     const [activeTab, setActiveTab] = useState('kds')
-    const [historyDate, setHistoryDate] = useState(new Date().toISOString().split('T')[0])
+    const [historyDate, setHistoryDate] = useState(() => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' }))
     const [systemReady, setSystemReady] = useState(false)
     const [hiddenKdsOrders, setHiddenKdsOrders] = useState(() => {
         try {
@@ -71,17 +71,22 @@ function StaffLiveOrdersContent() {
     const { requestPermission: requestPush, triggerNotification, isSubscribed } = usePushNotifications()
 
     // --- Helper ---
-    const isToday = (dateString) => {
-        if (!dateString) return false;
-        const bookingDate = new Date(dateString);
-        const today = new Date();
-        return bookingDate.getDate() === today.getDate() &&
-               bookingDate.getMonth() === today.getMonth() &&
-               bookingDate.getFullYear() === today.getFullYear();
+    const isTodayOrActiveSession = (order) => {
+        if (!order?.booking_time) return false;
+        const bDate = new Date(order.booking_time);
+        const now = new Date();
+        const ageMs = now.getTime() - bDate.getTime();
+        // Keep active in-progress orders (pending, seated, preparing) from late-night sessions (< 16h old) visible across midnight
+        if (ageMs >= 0 && ageMs <= 16 * 60 * 60 * 1000 && ['pending', 'seated', 'preparing'].includes(order.status)) {
+            return true;
+        }
+        const bDateStr = bDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+        const todayStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+        return bDateStr === todayStr;
     }
 
-    const todayOrders = orders.filter(o => isToday(o.booking_time))
-    const todaySchedule = scheduleOrders.filter(o => isToday(o.booking_time))
+    const todayOrders = orders.filter(o => isTodayOrActiveSession(o))
+    const todaySchedule = scheduleOrders.filter(o => isTodayOrActiveSession(o))
     const visibleKdsOrders = todaySchedule.filter(o => {
         // If an order has any unchecked items, ensure it stays visible on KDS even if previously hidden
         const hasUncheckedItems = (o.order_items || []).some(item => !item.is_checked);

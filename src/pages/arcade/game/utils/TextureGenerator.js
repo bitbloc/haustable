@@ -6,24 +6,28 @@
  */
 
 export function generateGameTextures(scene) {
-  // 1. Generate Flappy Cat Spritesheet (64x32 canvas, two 32x32 frames)
+  // 1. Generate Flappy Cat Spritesheet (64x32 canvas, two 32x32 Pop-Pixel frames)
   if (!scene.textures.exists('cat_sheet')) {
     const width = 64;
     const height = 32;
     const canvasTexture = scene.textures.createCanvas('cat_sheet', width, height);
     const ctx = canvasTexture.context;
     
-    // Define pixel color palette (Vibrant Orange Cat with Bold Black outline)
+    // Define Pop-Pixel color palette (Vibrant Orange Cat + Haus Terracotta Collar & Golden Bell)
     const colors = {
-      'W': '#ff9f43', // Orange (body)
-      'B': '#000000', // Solid black outline
-      'P': '#FFA6B9', // Pink (ears inner)
-      'G': '#d35400', // Dark orange shading
-      'E': '#FFFFFF', // White eye highlight
+      'W': '#FF9F43', // Vibrant Pop Orange body
+      'H': '#FFBE76', // Warm cream-orange highlight
+      'B': '#181615', // Crisp ink black outline
+      'P': '#FFA6B9', // Pink inner ears
+      'R': '#FF6B81', // Rosy pop cheeks
+      'C': '#BD4924', // Haus Terracotta collar
+      'Y': '#E9F344', // Neon Yellow-Gold bell
+      'G': '#D35400', // Deep orange tabby stripes / shading
+      'E': '#FFFFFF', // Crisp white eye shine & wing feathers
       '.': null      // Transparent
     };
     
-    // Frame 1: Legs Extended
+    // Frame 1: Wings Up / Legs Extended
     const frame1 = [
       "................................",
       "..........................BB....",
@@ -34,32 +38,32 @@ export function generateGameTextures(scene) {
       "...BPB.....BPB.......BWWB.......",
       "..BPPB....BPPB......BWWB........",
       "..BPPBBBBBBPPB.....BWWB.........",
-      ".BWWWWWWWWWWWWBBBBBWWb..........",
-      "BWWWWWWWWWWWWWWWWWWWWb..........",
-      "BWWWWWWWWWWWWWWWWWWWWWb.........",
-      "BWWWWWWWWWWWWWWWWWWWWWWb........",
-      "BWBEEBWBWWWWWWWWWWWWWWWWb.......",
-      "BWBEEBWBWWWWWWWWWWWWWWWWWb......",
-      "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
-      "BWWWWWWWWWWWWWWWWWWWWWWWWWWb....",
-      ".BWWWWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "..BBWWWWWWWWWWWWWWWWWWWWWWWWWb..",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWWWb.",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "....BGGGGWWWBWWWWWBGGGGGGGGb....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGb...BGGb...BGGGGb......",
-      "....BBBBb.....BB.....BBBBb......",
+      ".BWWWWGWWGWWWWBBBBBWWB..........",
+      "BWHHHHWWWWWWWWWWWWWWWB..........",
+      "BWHWWWWWWWWWBEEBWWWWWWB.........",
+      "BWWWWWWWWWWWBEEBWWWWWWWB........",
+      "BWBEEBWBWWWWBEEBWWWWWWWWB.......",
+      "BWBEEBWBWWWWBBBBWWWWWWWWWB......",
+      "BWRRWWWWWWWWWWWWWWWWWWWWWWB.....",
+      "BWWWWWWWWCCCYCCCWWWWWWWWWWWB....",
+      ".BWWWWWWWCCCYCCCWWWWWWWWWWWWB...",
+      "..BBWWWWWWWWWWWWWWWWWWWWWWWWWB..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWWB.",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWB..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWB...",
+      "....BGGGGWWWBWWWWWBGGGGGGGGB....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGB...BGGB...BGGGGB......",
+      "....BBBBB.....BB.....BBBBB......",
       "................................",
       "................................",
       "................................"
     ].map(line => line.replaceAll('b', 'B'));
 
-    // Frame 2: Legs Bent (animation state)
+    // Frame 2: Wings Down / Legs Bent (animation state)
     const frame2 = [
       "................................",
       ".........................BB.....",
@@ -70,32 +74,32 @@ export function generateGameTextures(scene) {
       "...BPB.....BPB......BWWB........",
       "..BPPB....BPPB.....BWWB.........",
       "..BPPBBBBBBPPB....BWWB..........",
-      ".BWWWWWWWWWWWWBBBBWWB...........",
-      "BWWWWWWWWWWWWWWWWWWWB...........",
-      "BWWWWWWWWWWWWWWWWWWWWb..........",
-      "BWWWWWWWWWWWWWWWWWWWWWb.........",
-      "BWBEEBWBWWWWWWWWWWWWWWWb........",
-      "BWBEEBWBWWWWWWWWWWWWWWWWb.......",
-      "BWWWWWWWWWWWWWWWWWWWWWWWWb......",
-      "BWWWWWWWWWWWWWWWWWWWWWWWWWb.....",
-      ".BWWWWWWWWWWWWWWWWWWWWWWWWWb....",
-      "..BBWWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWWb..",
-      "....BWWWWWWWWWWWWWWWWWWWWWWWb...",
-      "....BGGGGWWWBWWWWWBGGGGGGGGb....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGWb.BGGGWb.BGGGGGGb.....",
-      "....BGGGGb...BGGb...BGGGGb......",
-      "....BBBBb.....BB.....BBBBb......",
+      ".BWWWWGWWGWWWWBBBBWWB...........",
+      "BWHHHHWWWWWWWWWWWWWWB...........",
+      "BWHWWWWWWWWWWWWWWWWWWB..........",
+      "BWWWWWWWWWWWWWWWWWWWWWB.........",
+      "BWBEEBWBWWWWBBBBWWWWWWWB........",
+      "BWBEEBWBWWWWBEEBWWWWWWWWB.......",
+      "BWRRWWWWWWWWBEEBWWWWWWWWWB......",
+      "BWWWWWWWWCCCYCCCWWWWWWWWWWB.....",
+      ".BWWWWWWWCCCYCCCWWWWWWWWWWWB....",
+      "..BBWWWWWWWWWWWWWWWWWWWWWWWWB...",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWB..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWWB..",
+      "....BWWWWWWWWWWWWWWWWWWWWWWWB...",
+      "....BGGGGWWWBWWWWWBGGGGGGGGB....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGWB.BGGGWB.BGGGGGGb.....",
+      "....BGGGGB...BGGB...BGGGGB......",
+      "....BBBBB.....BB.....BBBBB......",
       "................................",
       "................................",
       "................................"
     ].map(line => line.replaceAll('b', 'B'));
 
-    const pixelSize = 1; // 1x1 screen pixels per sprite pixel
+    const pixelSize = 1;
     
     // Draw Frame 1
     for (let r = 0; r < 32; r++) {
@@ -130,58 +134,77 @@ export function generateGameTextures(scene) {
     });
   }
 
-  // 2. Generate Giant Satow Obstacles (Green Pod with yellow beans)
+  // 2. Generate Giant Satow Obstacles (64x480 1:1 non-stretched Pop-Pixel Pod with Rim Cap)
   if (!scene.textures.exists('satow_pod')) {
     const width = 64;
-    const height = 128;
+    const height = 480;
     const canvasTexture = scene.textures.createCanvas('satow_pod', width, height);
     const ctx = canvasTexture.context;
     
-    // Palette
+    // Pop-Pixel Palette
     const colors = {
-      'G': '#39FF14', // Bright Lime Green
-      'D': '#006400', // Dark Green border
-      'Y': '#FFD700', // Gold/Yellow (สะตอ beans)
-      'K': '#1A330E', // Inner shadow
+      'B': '#181615', // Crisp dark ink border
+      'G': '#2ECC71', // Vibrant Emerald Pod Green
+      'L': '#7BED9F', // Left specular highlight green
+      'Y': '#E9F344', // Pop Neon-Gold Satow Bean center
+      'O': '#F39C12', // Warm Amber bean shading
+      'K': '#1E824C', // Deep green inner shadow
       '.': null
     };
 
-    // A wavy green pod pattern
+    // Wavy Satow pod segment (12x10 grid at 4px per cell = 48x40px per pod bulge)
     const pattern = [
-      "..DDDDDD..",
-      ".DGGGGGGD.",
-      "DGGYYYGGGD",
-      "DGYYYYYYGD",
-      "DGYYYYYYKD",
-      "DGGYYYGKKD",
-      "DGGGGGKKKD",
-      ".DKKKKKKD.",
-      "..DDDDDD.."
+      "...BBBBBB...",
+      "..BLLGGGGB..",
+      ".BLLGYYYGGKB",
+      "BLLGYYYYYOGB",
+      "BLGGYYYYOOKB",
+      "BLGGYYYOOKKB",
+      ".BLGGGGKKKB.",
+      "..BKKKKKKB..",
+      "...BBBBBB...",
+      "....BBBB...."
     ];
 
     const px = 4; // 4x4 canvas pixels per pattern cell
-    
     ctx.clearRect(0, 0, width, height);
-    
-    // Tile the pattern vertically to create a long pod
-    for (let tile = 0; tile < 3; tile++) {
-      const yOffset = tile * 40;
+
+    // Central dark stem backbone
+    ctx.fillStyle = '#181615';
+    ctx.fillRect(26, 0, 12, height);
+    ctx.fillStyle = '#1E824C';
+    ctx.fillRect(28, 0, 8, height);
+
+    // Draw Pop-Pixel Satow Rim Cap at the top edge (y = 0..24) so bottom pipes & flipped top pipes have a bold entrance cap
+    ctx.fillStyle = '#181615';
+    ctx.fillRect(6, 0, 52, 22);
+    ctx.fillStyle = '#2ECC71';
+    ctx.fillRect(8, 2, 48, 18);
+    ctx.fillStyle = '#7BED9F';
+    ctx.fillRect(8, 2, 48, 4);
+    ctx.fillStyle = '#1E824C';
+    ctx.fillRect(8, 16, 48, 4);
+    // Three golden Satow bean studs on the rim cap
+    [16, 28, 40].forEach((bx) => {
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(bx, 6, 8, 8);
+      ctx.fillStyle = '#E9F344';
+      ctx.fillRect(bx + 1, 7, 6, 6);
+    });
+
+    // Tile the pod segments vertically below the cap (from y = 24 to 480)
+    for (let yOffset = 24; yOffset < height; yOffset += 40) {
       for (let r = 0; r < pattern.length; r++) {
         for (let c = 0; c < pattern[r].length; c++) {
           const char = pattern[r][c];
           const color = colors[char];
           if (color) {
             ctx.fillStyle = color;
-            // Center the pod horizontally
-            ctx.fillRect(12 + c * px, yOffset + r * px, px, px);
+            ctx.fillRect(8 + c * px, yOffset + r * px, px, px);
           }
         }
       }
     }
-    
-    // Draw connection stems on top and bottom
-    ctx.fillStyle = '#006400';
-    ctx.fillRect(28, 0, 8, 128); // Stem center line
     
     canvasTexture.refresh();
   }

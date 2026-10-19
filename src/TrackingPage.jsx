@@ -11,6 +11,7 @@ import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { useLanguage } from './context/LanguageContext'
 import { getAppOrigin } from './utils/urlHelper'
+import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from './utils/realtimeNotifier'
 
 // Hooks & Components
 import { useTrackingLogic } from './hooks/useTrackingLogic'
@@ -35,6 +36,11 @@ export default function TrackingPage() {
   const [showSlipModal, setShowSlipModal] = useState(false)
   const [optionMap, setOptionMap] = useState({})
   const celebrationTimerRef = useRef(null)
+
+  // Pre-warm broadcast channel for instant customer arrival / cancellation notification
+  useEffect(() => {
+    prewarmPOSBroadcastChannel()
+  }, [])
 
   // Fetch Options Map
   useEffect(() => {
@@ -147,15 +153,31 @@ export default function TrackingPage() {
       if (!data?.id) return
       setNotifyingArrival(true)
       try {
-          const currentNote = data.customer_note || ''
-          if (!currentNote.includes('[CUSTOMER_ARRIVED]')) {
-              const updatedNote = `${currentNote}\n[CUSTOMER_ARRIVED] Customer arrived at shop (${new Date().toLocaleTimeString('th-TH')})`
-              const { error } = await supabase
-                  .from('bookings')
-                  .update({ customer_note: updatedNote })
-                  .eq('id', data.id)
-              if (error) throw error
-          }
+          const currentNote = (data.customer_note || '').replace(/\s*\[CUSTOMER_ARRIVED\][^\n]*/gi, '').trim()
+          const currentRemark = (data.staff_remark || '').replace(/\s*\[CUSTOMER_ARRIVED\]/gi, '').trim()
+          const arrivalTimeStr = new Date().toLocaleTimeString('th-TH')
+          const updatedNote = `${currentNote}\n[CUSTOMER_ARRIVED] Customer arrived at shop (${arrivalTimeStr})`.trim()
+          const updatedRemark = `${currentRemark} [CUSTOMER_ARRIVED]`.trim()
+
+          const { error } = await supabase
+              .from('bookings')
+              .update({
+                  customer_note: updatedNote,
+                  staff_remark: updatedRemark
+              })
+              .eq('id', data.id)
+          if (error) throw error
+
+          await Promise.race([
+              sendPOSBroadcast('customer_arrived', {
+                  booking_id: data.id,
+                  customer_name: data.full_name || data.pickup_contact_name || data.customer_name || 'Guest',
+                  table_name: data.table_name || null,
+                  booking_type: data.booking_type || 'dine_in'
+              }),
+              new Promise(resolve => setTimeout(resolve, 600))
+          ])
+
           setArrivedNotified(true)
       } catch (err) {
           console.error(err)
@@ -176,6 +198,14 @@ export default function TrackingPage() {
               .eq('id', data.id)
               
           if (error) throw error
+
+          await Promise.race([
+              sendPOSBroadcast('online_order_status_updated', {
+                  booking_id: data.id,
+                  status: 'cancelled'
+              }),
+              new Promise(resolve => setTimeout(resolve, 600))
+          ])
           window.location.reload()
       } catch (err) {
           console.error(err)
@@ -210,15 +240,20 @@ export default function TrackingPage() {
   
   if (!data) return null
 
-  const isPickup = data.booking_type === 'pickup'
+  const isPickup = data.booking_type === 'pickup' || data.order_type === 'hausmade_pickup'
   const isShippingOrder = data.order_type === 'hausmade_shipping' || (data.booking_type === 'hausmade' && data.shipping_address && data.shipping_address !== 'รับหน้าร้าน IN THE HAUS')
   const steps = getSteps(isPickup)
   const currentStatus = data.status?.toLowerCase() || 'pending'
-  const currentStepIndex = steps.findIndex(s => s.key === currentStatus)
+  const normalizedStepStatus = (isPickup && currentStatus === 'seated')
+      ? 'preparing'
+      : (!isPickup && currentStatus === 'preparing')
+          ? 'seated'
+          : currentStatus
+  const currentStepIndex = steps.findIndex(s => s.key === normalizedStepStatus)
   const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
   
   // Logic to Enable Slip Download
-  const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'completed'].includes(currentStatus)
+  const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'preparing', 'completed'].includes(currentStatus)
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
   const canSaveSlip = isBookingConfirmed || isPickupReady
 

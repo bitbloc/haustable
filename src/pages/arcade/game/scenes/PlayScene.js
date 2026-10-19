@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pixelSound, getArcadeRank } from '../utils/pixelSoundEngine';
 
 export default class PlayScene extends Phaser.Scene {
   constructor() {
@@ -10,6 +11,7 @@ export default class PlayScene extends Phaser.Scene {
     this.isGameOver = false;
     this.baseSpeed = -230;
     this.speedMultiplier = 1.0;
+    this.currentRankTier = 'C';
     
     // Pipe tracking array for 100% reliable scoring
     this.pipePairs = [];
@@ -31,6 +33,7 @@ export default class PlayScene extends Phaser.Scene {
     // 0. Ensure Background Music is playing (especially when restarting from GameOverScene)
     const playBGM = () => {
       try {
+        if (!pixelSound.isSoundEnabled()) return;
         let bgm = this.sound.get('bgm');
         if (bgm) {
           if (!bgm.isPlaying) {
@@ -65,16 +68,28 @@ export default class PlayScene extends Phaser.Scene {
       cornerLogo.setAlpha(0.65); // Semi-transparent
     }
 
-    // 3. Atelier Rams Monospace Scoreboard Pill (Top-Center)
-    this.scorePill = this.add.rectangle(width / 2, 54, 88, 42, 0x181615, 0.82)
+    // 3. Atelier Rams Monospace Scoreboard Pill & Live Rank Badge (Top-Center)
+    this.scorePill = this.add.rectangle(width / 2, 48, 88, 40, 0x181615, 0.88)
       .setOrigin(0.5)
       .setDepth(99)
-      .setStrokeStyle(1, 0x5C544D);
+      .setStrokeStyle(2, 0x5C544D);
 
-    this.scoreText = this.add.text(width / 2, 54, '0', {
+    this.scoreText = this.add.text(width / 2, 48, '0', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '26px',
       fill: '#FAF7F5',
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(100);
+
+    this.rankPill = this.add.rectangle(width / 2, 82, 136, 20, 0x181615, 0.9)
+      .setOrigin(0.5)
+      .setDepth(99)
+      .setStrokeStyle(1, 0xBD4924);
+
+    this.rankText = this.add.text(width / 2, 82, '[RANK C] มือใหม่หัดบิน', {
+      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
+      fontSize: '10px',
+      fill: '#E9F344',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(100);
 
@@ -360,8 +375,11 @@ export default class PlayScene extends Phaser.Scene {
     // Set upward velocity
     this.player.body.setVelocityY(-315); // finely tuned responsive jump velocity
 
-    // Play jump sound & mobile tactile haptic
-    try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
+    // Play Pop-Pixel Chiptune flap sound + Phaser fallback + mobile tactile haptic
+    pixelSound.play('flap');
+    if (pixelSound.isSoundEnabled()) {
+      try { this.sound.play('jump', { volume: 0.28 }); } catch (e) {}
+    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(12); } catch (e) {}
     }
@@ -396,27 +414,26 @@ export default class PlayScene extends Phaser.Scene {
     
     // Spawning parameters - Narrows gap progressively based on score (starts at 170px, shrinks to 125px)
     const gap = Math.max(125, 170 - this.score * 2.5);
-    const minHeight = 40; // Random heights go significantly higher/lower
+    const minHeight = 52;
     const maxHeight = height - 64 - gap - minHeight;
     const gapY = Phaser.Math.Between(minHeight, maxHeight);
 
     const spawnX = width + 64;
-    const speed = this.baseSpeed * this.speedMultiplier; // Obstacle velocity scales up
+    const speed = this.baseSpeed * this.speedMultiplier;
 
-    // 1. Top Satow (hanging down)
+    // 1. Top Satow (hanging down, 1:1 pixel-crisp 64x480 texture with rim cap at bottom edge)
     const topSatow = this.physics.add.sprite(spawnX, gapY, 'satow_pod');
     this.satowGroup.add(topSatow);
-    topSatow.setOrigin(0.5, 1); // Align at bottom edge of top pipe
-    topSatow.setFlipY(true);    // Point downward
+    topSatow.setOrigin(0.5, 1); // Align rim cap at bottom edge of top pipe
+    topSatow.setFlipY(true);    // Rim cap faces downward into the gap
+    topSatow.setDepth(3);
     topSatow.body.allowGravity = false;
     topSatow.body.setImmovable(true);
     topSatow.body.setVelocityX(speed);
     
-    // Forgiving hitbox (avoids edge snagging)
-    topSatow.body.setSize(36, 128);
-    topSatow.body.setOffset(14, 0);
-    // Stretch graphic height to fit
-    topSatow.setDisplaySize(64, gapY);
+    // Forgiving 1:1 hitbox (avoids edge snagging)
+    topSatow.body.setSize(38, 480);
+    topSatow.body.setOffset(13, 0);
 
     // Set scoring metadata for 100% reliable crossing check
     topSatow.isTopPipe = true;
@@ -427,19 +444,18 @@ export default class PlayScene extends Phaser.Scene {
     topSatow.moving = this.score >= 15;
     topSatow.spawnTime = this.time.now;
 
-    // 2. Bottom Satow (pointing up)
-    const bottomHeight = height - 64 - (gapY + gap);
+    // 2. Bottom Satow (pointing up, 1:1 pixel-crisp 64x480 texture with rim cap at top edge)
     const bottomSatow = this.physics.add.sprite(spawnX, gapY + gap, 'satow_pod');
     this.satowGroup.add(bottomSatow);
-    bottomSatow.setOrigin(0.5, 0); // Align at top edge of bottom pipe
+    bottomSatow.setOrigin(0.5, 0); // Align rim cap at top edge of bottom pipe
+    bottomSatow.setDepth(3);
     bottomSatow.body.allowGravity = false;
     bottomSatow.body.setImmovable(true);
     bottomSatow.body.setVelocityX(speed);
     
-    // Forgiving hitbox
-    bottomSatow.body.setSize(36, 128);
-    bottomSatow.body.setOffset(14, 0);
-    bottomSatow.setDisplaySize(64, bottomHeight);
+    // Forgiving 1:1 hitbox
+    bottomSatow.body.setSize(38, 480);
+    bottomSatow.body.setOffset(13, 0);
 
     // Set movement coordinates
     bottomSatow.initialY = gapY + gap;
@@ -448,11 +464,10 @@ export default class PlayScene extends Phaser.Scene {
 
     // 3. Invisible score sensor zone (placed between pipes)
     const scoreSensor = this.add.rectangle(spawnX + 32, gapY + gap / 2, 10, gap);
-    this.physics.add.existing(scoreSensor); // dynamic body
+    this.physics.add.existing(scoreSensor);
     scoreSensor.body.allowGravity = false;
     scoreSensor.body.setVelocityX(speed);
     
-    // Set movement coordinates
     scoreSensor.initialY = gapY + gap / 2;
     scoreSensor.moving = this.score >= 15;
     scoreSensor.spawnTime = this.time.now;
@@ -473,17 +488,18 @@ export default class PlayScene extends Phaser.Scene {
       });
     }
 
-    // Destroy sensor after it goes offscreen (4 seconds is plenty to go from spawn to left screen edge)
+    // Destroy sensor after it goes offscreen
     this.time.delayedCall(4000, () => {
       if (scoreSensor && scoreSensor.active) {
         scoreSensor.destroy();
       }
     });
 
-    // 4. Spawning a Satow Bean with 10% probability in the middle of the gap (rare item)
-    if (Phaser.Math.Between(1, 100) <= 10) {
+    // 4. Spawning a Satow Bean with 12% probability in the middle of the gap (Super Satow Dash item)
+    if (Phaser.Math.Between(1, 100) <= 12) {
       const bean = this.physics.add.sprite(spawnX, gapY + gap / 2, 'satow_bean');
       this.beanGroup.add(bean);
+      bean.setDepth(6);
       bean.body.allowGravity = false;
       bean.body.setImmovable(true);
       bean.body.setVelocityX(speed);
@@ -492,7 +508,7 @@ export default class PlayScene extends Phaser.Scene {
       bean.moving = this.score >= 15;
       bean.spawnTime = this.time.now;
       
-      bean.setScale(1.5);
+      bean.setScale(1.65);
     }
   }
 
@@ -500,6 +516,8 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isGameOver) return;
 
     this.score += 1;
+    const rankInfo = getArcadeRank(this.score, 'flappy');
+
     if (this.scoreText) {
       this.scoreText.setText(this.score.toString());
       if (this.scorePill) {
@@ -516,17 +534,69 @@ export default class PlayScene extends Phaser.Scene {
       });
     }
 
-    // Play score sound & mobile haptics
-    try { this.sound.play('point', { volume: 0.5 }); } catch (e) {}
+    // Update live Rank Badge & trigger Milestone Banner when crossing Rank thresholds (10, 20, 35, 40)
+    if (this.rankText) {
+      this.rankText.setText(`${rankInfo.badge} ${rankInfo.titleTh}`);
+    }
+    if (rankInfo.tier !== this.currentRankTier) {
+      this.currentRankTier = rankInfo.tier;
+      pixelSound.play('rank_up');
+
+      if (this.rankPill && this.rankText) {
+        this.tweens.add({
+          targets: [this.rankPill, this.rankText],
+          scaleX: 1.25,
+          scaleY: 1.25,
+          duration: 180,
+          yoyo: true,
+          repeat: 1,
+          ease: 'Back.easeOut'
+        });
+      }
+
+      // Milestone Celebration Banner
+      const width = this.cameras.main.width;
+      const bannerBg = this.add.rectangle(width / 2, 122, width - 48, 34, 0x181615, 0.95)
+        .setOrigin(0.5)
+        .setDepth(105)
+        .setStrokeStyle(2, 0xE9F344);
+      const bannerTxt = this.add.text(width / 2, 122, `★ ${rankInfo.badge} UNLOCKED // ${rankInfo.rewardText} ★`, {
+        fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
+        fontSize: '11px',
+        fill: '#E9F344',
+        fontStyle: 'bold'
+      }).setOrigin(0.5).setDepth(106);
+
+      this.tweens.add({
+        targets: [bannerBg, bannerTxt],
+        y: 114,
+        alpha: { from: 1, to: 0 },
+        delay: 1600,
+        duration: 450,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          bannerBg.destroy();
+          bannerTxt.destroy();
+        }
+      });
+    } else {
+      // Standard Pop-Pixel point chime
+      pixelSound.play('point');
+    }
+
+    // Play Phaser point sound backup & mobile haptics
+    if (pixelSound.isSoundEnabled()) {
+      try { this.sound.play('point', { volume: 0.35 }); } catch (e) {}
+    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(15); } catch (e) {}
     }
 
-    // Floating Score Popup Effect (+1) in Atelier Terracotta
+    // Floating Score Popup Effect (+1) in Pop-Pixel Gold & Terracotta
     const popup = this.add.text(this.player.x + 24, this.player.y - 14, '+1', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '18px',
-      fill: '#BD4924',
+      fill: '#E9F344',
       stroke: '#181615',
       strokeThickness: 4,
       fontStyle: 'bold'
@@ -595,7 +665,6 @@ export default class PlayScene extends Phaser.Scene {
   handleScoreSensor(player, sensor) {
     if (this.isGameOver) return;
     if (sensor && sensor.active) {
-      // If crossing detection didn't trigger yet, trigger here as backup
       if (this.pipePairs) {
         const pair = this.pipePairs.find(p => p.sensor === sensor);
         if (pair && !pair.scored) {
@@ -618,6 +687,9 @@ export default class PlayScene extends Phaser.Scene {
     const maxHeight = height - 140;
     const targetY = Phaser.Math.Between(minHeight, maxHeight);
     
+    // Play Pop-Pixel Warning Beep!
+    pixelSound.play('warning');
+
     // Show Warning Icon flashing at the right edge
     const warningX = width - 40;
     const warningIcon = this.add.image(warningX, targetY, 'warning_icon').setDepth(20);
@@ -695,8 +767,11 @@ export default class PlayScene extends Phaser.Scene {
       }
     } catch (e) {}
 
-    // Play hit sound
-    try { this.sound.play('hit', { volume: 0.5 }); } catch (e) {}
+    // Play Pop-Pixel hit crunch + Phaser backup
+    pixelSound.play('hit');
+    if (pixelSound.isSoundEnabled()) {
+      try { this.sound.play('hit', { volume: 0.4 }); } catch (e) {}
+    }
 
     // Visual terracotta / red hit tint
     this.player.setTint(0xff5544);
@@ -739,11 +814,32 @@ export default class PlayScene extends Phaser.Scene {
     // Destroy the bean
     bean.destroy();
     
-    // Play point/collect sound & tactile haptic
-    try { this.sound.play('point', { volume: 0.6 }); } catch (e) {}
+    // Play Pop-Pixel Super Satow Bean fanfare + tactile haptic
+    pixelSound.play('bean_powerup');
+    if (pixelSound.isSoundEnabled()) {
+      try { this.sound.play('point', { volume: 0.45 }); } catch (e) {}
+    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate([25, 35]); } catch (e) {}
     }
+
+    // Floating Powerup Banner
+    const popup = this.add.text(this.player.x, this.player.y - 28, 'SUPER SATOW DASH!', {
+      fontFamily: '"Geist Mono", "Space Mono", monospace',
+      fontSize: '14px',
+      fill: '#E9F344',
+      stroke: '#181615',
+      strokeThickness: 4,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(110);
+    this.tweens.add({
+      targets: popup,
+      y: popup.y - 36,
+      alpha: 0,
+      duration: 750,
+      ease: 'Quad.easeOut',
+      onComplete: () => popup.destroy()
+    });
     
     // Set dash state
     this.isDashing = true;
@@ -848,6 +944,7 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isDashing || this.isInvincible) {
       if (!obstacle.fxTriggered) {
         obstacle.fxTriggered = true;
+        pixelSound.play('smash');
         
         // Visual impact screen shake
         this.cameras.main.shake(100, 0.005);
@@ -858,7 +955,7 @@ export default class PlayScene extends Phaser.Scene {
         for (let i = 0; i < 15; i++) {
           const size = Phaser.Math.Between(4, 8);
           const rect = this.add.rectangle(fxX, fxY, size, size);
-          rect.setDepth(15); // front
+          rect.setDepth(15);
           
           const colors = [0x39FF14, 0x006400, 0xFFD700, 0xffffff];
           const color = Phaser.Utils.Array.GetRandom(colors);
@@ -886,6 +983,7 @@ export default class PlayScene extends Phaser.Scene {
     if (this.isDashing || this.isInvincible) {
       if (!knife.fxTriggered) {
         knife.fxTriggered = true;
+        pixelSound.play('smash');
         
         this.cameras.main.shake(100, 0.005);
         

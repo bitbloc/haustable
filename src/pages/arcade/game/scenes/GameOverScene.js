@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import QRCode from 'qrcode';
+import { pixelSound, getArcadeRank } from '../utils/pixelSoundEngine';
 
 // Secure hashing helper for client-side validation
 export function generateScoreHash(score, timestamp) {
@@ -28,6 +29,7 @@ export default class GameOverScene extends Phaser.Scene {
   create() {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+    const rankInfo = getArcadeRank(this.finalScore, 'flappy');
 
     // 1. Static/Parallax backgrounds
     this.add.tileSprite(0, 0, width, height, 'bg_wall').setOrigin(0, 0).setDepth(0);
@@ -37,7 +39,10 @@ export default class GameOverScene extends Phaser.Scene {
     // 2. Play gameover audio & trigger mobile haptics
     try {
       this.sound.stopAll();
-      this.sound.play('gameover', { volume: 0.55 });
+      pixelSound.play('gameover');
+      if (pixelSound.isSoundEnabled()) {
+        this.sound.play('gameover', { volume: 0.45 });
+      }
     } catch (e) {
       console.warn('Game over audio error:', e);
     }
@@ -46,24 +51,24 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     // 3. Central Atelier Rams Enclosure Card
-    const cardY = height / 2 - 25;
-    const cardW = Math.min(width - 48, 440);
-    const cardH = this.finalScore > 0 ? 370 : 310;
+    const cardY = height / 2 - 15;
+    const cardW = Math.min(width - 44, 440);
+    const cardH = this.finalScore > 0 ? 430 : 370;
     
     // Card background (Tinted warm charcoal-ink)
-    const cardBg = this.add.rectangle(width / 2, cardY, cardW, cardH, 0x181615, 0.94)
+    this.add.rectangle(width / 2, cardY, cardW, cardH, 0x181615, 0.95)
       .setOrigin(0.5)
       .setDepth(10)
-      .setStrokeStyle(1, 0x5C544D);
+      .setStrokeStyle(2, 0x5C544D);
 
     // Subtle inner hairline divider
-    const headerLineY = cardY - cardH / 2 + 72;
+    const headerLineY = cardY - cardH / 2 + 68;
     const lineGraphics = this.add.graphics().setDepth(11);
     lineGraphics.lineStyle(1, 0x3D3835, 1.0);
     lineGraphics.lineBetween(width / 2 - cardW / 2 + 20, headerLineY, width / 2 + cardW / 2 - 20, headerLineY);
 
     // 4. Header Section: Atelier Clean Upright Typography
-    const tagY = cardY - cardH / 2 + 28;
+    const tagY = cardY - cardH / 2 + 24;
     this.add.text(width / 2, tagY, 'IN THE HAUS • ATELIER ARCADE', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '11px',
@@ -80,16 +85,16 @@ export default class GameOverScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(12);
 
     // 5. Monospace Score Panel (Minimalist Instrument readout)
-    const scoreY = headerLineY + 54;
-    this.add.text(width / 2, scoreY - 18, 'FINAL SCORE / คะแนนสุทธิ', {
+    const scoreY = headerLineY + 46;
+    this.add.text(width / 2, scoreY - 20, 'FINAL SCORE / คะแนนสุทธิ', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '11px',
       fill: '#89827B'
     }).setOrigin(0.5).setDepth(12);
 
-    const scoreDisplay = this.add.text(width / 2, scoreY + 16, `${this.finalScore}`, {
+    const scoreDisplay = this.add.text(width / 2, scoreY + 14, `${this.finalScore}`, {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
-      fontSize: '48px',
+      fontSize: '46px',
       fill: '#FAF7F5', // Warm cream
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(12);
@@ -103,8 +108,35 @@ export default class GameOverScene extends Phaser.Scene {
       ease: 'Back.easeOut'
     });
 
+    // 5B. Rank Tier & Reward Evaluation Box
+    const rankBoxY = scoreY + 68;
+    const rankBoxW = cardW - 48;
+    this.add.rectangle(width / 2, rankBoxY, rankBoxW, 56, 0x24201E, 1.0)
+      .setOrigin(0.5)
+      .setDepth(12)
+      .setStrokeStyle(1, rankInfo.tier === 'S+' || rankInfo.tier === 'S' ? 0xE9F344 : 0x5C544D);
+
+    const rankBadgeFill = rankInfo.tier === 'S+' ? '#E9F344' : (rankInfo.tier === 'S' ? '#FBBF24' : (rankInfo.tier === 'A' ? '#34D399' : '#FAF7F5'));
+    this.add.text(width / 2, rankBoxY - 11, `${rankInfo.badge} — ${rankInfo.titleTh}`, {
+      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
+      fontSize: '13px',
+      fill: rankBadgeFill,
+      fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(13);
+
+    const rewardSub = rankInfo.nextTarget
+      ? `${rankInfo.rewardText} (อีก ${Math.max(0, rankInfo.nextTarget - this.finalScore)} ต้น สู่ RANK ${rankInfo.nextTier})`
+      : rankInfo.rewardText;
+
+    this.add.text(width / 2, rankBoxY + 12, rewardSub, {
+      fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
+      fontSize: '10px',
+      fill: '#D9D2CB'
+    }).setOrigin(0.5).setDepth(13);
+
     const triggerRestart = () => {
       if (!this.canRestart) return;
+      pixelSound.play('ui_click');
       try { this.sound.stopAll(); } catch (e) {}
 
       const onGameOver = this.registry.get('onGameOver');
@@ -116,20 +148,20 @@ export default class GameOverScene extends Phaser.Scene {
     };
 
     // 6. Action Buttons Section
-    let currentBtnY = scoreY + 68;
+    let currentBtnY = rankBoxY + 58;
 
     // Direct Score Claim Button (if score > 0)
     let claimBtn = null;
     let claimBtnBg = null;
     if (this.finalScore > 0) {
       const btnW = cardW - 48;
-      claimBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 46, 0xBD4924)
+      claimBtnBg = this.add.rectangle(width / 2, currentBtnY, btnW, 44, 0xBD4924)
         .setOrigin(0.5)
         .setDepth(20)
         .setStrokeStyle(1, 0xE05A36)
         .setInteractive({ useHandCursor: true });
 
-      claimBtn = this.add.text(width / 2, currentBtnY, 'บันทึกแต้ม / SAVE SCORE', {
+      claimBtn = this.add.text(width / 2, currentBtnY, '[ บันทึกแต้ม / SAVE SCORE ]', {
         fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         fontSize: '13px',
         fill: '#FAF7F5',
@@ -139,6 +171,7 @@ export default class GameOverScene extends Phaser.Scene {
       const handleClaimClick = (pointer) => {
         if (pointer && pointer.event) pointer.event.stopPropagation();
         this.isClaiming = true;
+        pixelSound.play('tier_up');
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           try { navigator.vibrate([20, 30]); } catch (e) {}
         }
@@ -155,21 +188,21 @@ export default class GameOverScene extends Phaser.Scene {
       claimBtn.on('pointerdown', handleClaimClick);
       claimBtnBg.on('pointerdown', handleClaimClick);
 
-      currentBtnY += 56;
+      currentBtnY += 54;
     }
 
     // "PLAY AGAIN / เล่นอีกครั้ง" Button
     const retryBtnW = cardW - 48;
-    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, retryBtnW, 46, 0x24201E)
+    const restartBtnBg = this.add.rectangle(width / 2, currentBtnY, retryBtnW, 44, 0xE9F344)
       .setOrigin(0.5)
       .setDepth(20)
-      .setStrokeStyle(1, 0x5C544D)
+      .setStrokeStyle(2, 0x181615)
       .setInteractive({ useHandCursor: true });
 
-    const restartBtn = this.add.text(width / 2, currentBtnY, 'เล่นอีกครั้ง / PLAY AGAIN', {
+    const restartBtn = this.add.text(width / 2, currentBtnY, '[ ▶ เล่นอีกครั้ง / PLAY AGAIN ]', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '13px',
-      fill: '#FAF7F5',
+      fill: '#181615',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(21).setInteractive({ useHandCursor: true });
 
@@ -186,7 +219,7 @@ export default class GameOverScene extends Phaser.Scene {
     restartBtnBg.on('pointerdown', handleRestartClick);
 
     // 7. Cooldown Lockout & Helper Subtext
-    const subtextY = currentBtnY + 36;
+    const subtextY = currentBtnY + 34;
     const helperSubtext = this.add.text(width / 2, subtextY, 'โปรดรอสักครู่…', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '10px',

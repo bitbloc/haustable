@@ -5,11 +5,28 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
+import { pixelSound } from './game/utils/pixelSoundEngine';
 
 // Zero-icon discipline: purely monospace typographic indicators
 export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin, isFullscreen, setIsFullscreen, onBackToHub = null }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
+  const [soundEnabled, setSoundEnabled] = useState(pixelSound.isSoundEnabled());
+
+  const handleToggleSound = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const next = pixelSound.toggleSound();
+    setSoundEnabled(next);
+    if (gameRef.current && gameRef.current.sound) {
+      gameRef.current.sound.mute = !next;
+    }
+    if (next) {
+      pixelSound.play('ui_click');
+    }
+  };
 
   // Initialize Phaser Game after ensuring Thai web fonts are loaded
   useEffect(() => {
@@ -23,6 +40,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
       if (fallbackTimer) clearTimeout(fallbackTimer);
       const config = getGameConfig(containerRef.current, onGameOver, leaderboard, onClaimScore, session, onRequireLogin);
       const game = new Phaser.Game(config);
+      game.sound.mute = !pixelSound.isSoundEnabled();
       gameRef.current = game;
     };
 
@@ -78,7 +96,6 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
   // Handle resizing Phaser canvas on fullscreen toggle
   useEffect(() => {
     if (gameRef.current) {
-      // Small delay to let the CSS transition/layout update before triggering resize calculation
       const timer = setTimeout(() => {
         window.dispatchEvent(new Event('resize'));
       }, 150);
@@ -101,6 +118,7 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
   const handleFullscreenToggle = (e) => {
     e.preventDefault();
     e.stopPropagation();
+    pixelSound.play('ui_click');
     if (onBackToHub && isFullscreen) {
       onBackToHub();
       return;
@@ -115,10 +133,6 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         : 'relative w-full h-full rounded-2xl border-2 border-[var(--color-ink)] shadow-md'
     } flex justify-center items-center select-none overflow-hidden bg-[#181615]`}>
       
-      {/* 
-        Double protection for crisp retro styling:
-        Phaser configuration uses pixelArt: true, and the canvas container uses CSS pixelated rendering.
-      */}
       {/* Hidden DOM font preloader ensuring browser fetches the Thai unicode-range chunk */}
       <span 
         aria-hidden="true"
@@ -144,34 +158,52 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         }} 
       />
 
-      {/* Navigation Controls in Fullscreen Mode */}
+      {/* Navigation & Sound Controls in Fullscreen Mode */}
       {isFullscreen ? (
         <>
           {onBackToHub && (
             <button
-              onClick={onBackToHub}
-              onTouchStart={onBackToHub}
+              onClick={(e) => { pixelSound.play('ui_click'); onBackToHub(e); }}
+              onTouchStart={(e) => { pixelSound.play('ui_click'); onBackToHub(e); }}
               className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5"
             >
               <span>[ ← กลับโถงเกม ]</span>
             </button>
           )}
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+            <button
+              onClick={handleToggleSound}
+              onTouchStart={handleToggleSound}
+              className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider"
+            >
+              {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
+            </button>
+            <button
+              onClick={handleFullscreenToggle}
+              onTouchStart={handleFullscreenToggle}
+              className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+            >
+              [ ESC // ออกจากเต็มจอ ]
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="absolute bottom-3 right-3 z-40 flex items-center gap-1.5">
+          <button
+            onClick={handleToggleSound}
+            onTouchStart={handleToggleSound}
+            className="px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[#E9F344] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide"
+          >
+            {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
+          </button>
           <button
             onClick={handleFullscreenToggle}
             onTouchStart={handleFullscreenToggle}
-            className="absolute top-4 right-4 z-50 px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+            className="px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
           >
-            [ ESC // ออกจากเต็มจอ ]
+            [ FULLSCREEN // เต็มจอ ]
           </button>
-        </>
-      ) : (
-        <button
-          onClick={handleFullscreenToggle}
-          onTouchStart={handleFullscreenToggle}
-          className="absolute bottom-3 right-3 z-40 px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
-        >
-          [ FULLSCREEN // เต็มจอ ]
-        </button>
+        </div>
       )}
     </div>
   );

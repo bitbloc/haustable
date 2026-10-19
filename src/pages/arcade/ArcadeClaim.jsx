@@ -6,9 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import { generateScoreHash } from './game/scenes/GameOverScene';
+import { getArcadeRank, pixelSound } from './game/utils/pixelSoundEngine';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
-import { LogIn } from 'lucide-react';
 
 const SHOP_LAT = 17.39008981227407;
 const SHOP_LNG = 104.79292770946343;
@@ -47,6 +47,7 @@ export default function ArcadeClaim() {
   const score = searchParams.get('score');
   const ts = searchParams.get('ts');
   const hash = searchParams.get('hash');
+  const earnedRank = getArcadeRank(parseInt(score || '0', 10), 'flappy');
 
   // Verify auth session
   useEffect(() => {
@@ -203,6 +204,8 @@ export default function ArcadeClaim() {
       // Lock token locally
       localStorage.setItem(`claimed_${hash}`, 'true');
 
+      pixelSound.play('rank_up');
+
       // Trigger Confetti Celebration!
       confetti({
         particleCount: 120,
@@ -219,12 +222,14 @@ export default function ArcadeClaim() {
   };
 
   const showError = (msg) => {
+    pixelSound.play('warning');
     setErrorMessage(msg);
     setStatus('error');
   };
 
   const handleLineLogin = async () => {
     try {
+      pixelSound.play('ui_click');
       setGpsLoading(true);
       // OAuth sign in directly redirecting back to this exact URL
       const { error } = await supabase.auth.signInWithOAuth({
@@ -291,15 +296,24 @@ export default function ArcadeClaim() {
         {/* Minimal orange highlight strip */}
         <div className="absolute top-0 left-0 w-full h-1 bg-[var(--color-brand)] rounded-t-md" />
 
-        <h1 className="text-xs font-bold font-mono tracking-widest text-[var(--color-brand)] mb-8 uppercase">
+        <h1 className="text-xs font-bold font-mono tracking-widest text-[var(--color-brand)] mb-6 uppercase">
           // HAUS ARCADE RECEIPT CLAIM
         </h1>
+
+        {score && (
+          <div className="mb-6 p-3 rounded border border-[var(--color-rule)] bg-[var(--color-paper)] flex items-center justify-between font-mono text-xs">
+            <span className="font-bold text-[var(--color-ink)]">SCORE: {score} PTS</span>
+            <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${earnedRank.badgeBg} ${earnedRank.badgeText} ${earnedRank.badgeBorder}`}>
+              [ RANK {earnedRank.rank} // {earnedRank.titleTh} ]
+            </span>
+          </div>
+        )}
 
         {/* View: Auth / Login Required */}
         {status === 'login_required' && (
           <div className="flex flex-col items-center">
-            <div className="w-12 h-12 bg-[#06C755]/10 text-[#06C755] rounded-[3px] flex items-center justify-center mb-6">
-              <LogIn className="w-6 h-6" />
+            <div className="w-12 h-12 bg-[#06C755]/10 text-[#06C755] rounded-[3px] flex items-center justify-center mb-6 border border-[#06C755]/30">
+              <span className="font-mono text-xs font-bold uppercase">[ LINE ]</span>
             </div>
             <h2 className="text-[13px] font-bold mb-2 font-mono uppercase tracking-tight">ยินดีด้วย! คุณทำคะแนนได้ {score} แต้ม</h2>
             <p className="text-[10px] text-[var(--color-ink-2)] mb-6 leading-relaxed">
@@ -309,7 +323,7 @@ export default function ArcadeClaim() {
               onClick={handleLineLogin}
               className="btn-action w-full bg-[#06C755] text-white font-mono font-bold py-2.5 rounded-[4px] flex items-center justify-center gap-2 cursor-pointer text-xs uppercase border border-[#05b04b] shadow-sm"
             >
-              เข้าสู่ระบบด้วย LINE
+              [ CONNECT LINE // เข้าสู่ระบบด้วย LINE ]
             </button>
           </div>
         )}
@@ -374,10 +388,13 @@ export default function ArcadeClaim() {
             </p>
             
             <button
-              onClick={() => navigate('/arcade')}
+              onClick={() => {
+                pixelSound.play('ui_click');
+                navigate('/arcade');
+              }}
               className="btn-action w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink-2)] text-[var(--color-paper)] font-mono font-bold py-2.5 rounded-[4px] cursor-pointer text-xs uppercase shadow-sm focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
             >
-              GO TO HALL OF FAME
+              [ GO TO HALL OF FAME ]
             </button>
           </div>
         )}
@@ -397,13 +414,13 @@ export default function ArcadeClaim() {
                 onClick={validateAndProcessClaim}
                 className="btn-action w-full bg-[var(--color-brand)] text-white font-mono font-bold py-2.5 rounded-[4px] cursor-pointer text-xs uppercase border border-[oklch(52% 0.16 35)] shadow-sm focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
               >
-                RETRY TRANSACTION
+                [ RETRY TRANSACTION ]
               </button>
               <button
                 onClick={() => navigate('/')}
                 className="btn-action w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink-2)] font-mono py-2.5 rounded-[4px] border border-[var(--color-rule)] text-xs uppercase transition-colors duration-150 cursor-pointer"
               >
-                RETURN TO STORE FRONT
+                [ RETURN TO STORE FRONT ]
               </button>
             </div>
           </div>

@@ -12,6 +12,7 @@ import { formatOrderItemOptions } from '../utils/menuHelper';
 import { calculateTierDiscount } from '../utils/crmHelper';
 import { getBookingSplitRounds, getSplitTotalPaid } from '../utils/splitPaymentHelper';
 import { stopStaffCallLoop } from '../utils/audioHelper';
+import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 
 const STAMP_PUNCHCARD_SLOTS = Object.freeze([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
@@ -345,15 +346,31 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
     });
 
 
+    const bookingRef = React.useRef(booking);
+    bookingRef.current = booking;
+
     // Synchronize includeTax whenever cashier switches tables
     React.useEffect(() => {
         const tableKey = booking?.id || booking?.table_id || 'counter';
         if (tableVatOverridesRef.current.has(tableKey)) {
             setIncludeTax(tableVatOverridesRef.current.get(tableKey));
+        } else if (typeof booking?.tax_included === 'boolean') {
+            setIncludeTax(booking.tax_included);
         } else {
-            setIncludeTax(defaultVatEnabled);
+            // If this is an online order or pickup that was already paid in full online (0% VAT online pricing),
+            // do not unexpectedly add 7% VAT onto remainingDue unless cashier explicitly toggles VAT on.
+            const sourceLower = (booking?.source || '').toLowerCase();
+            const remarkLower = (booking?.staff_remark || '').toLowerCase();
+            const isOnlinePrepaid = (sourceLower === 'online' || booking?.booking_type === 'pickup' || (booking?.order_type || '').startsWith('hausmade') || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip')) &&
+                (Number(booking?.deposit_amount) || 0) > 0 &&
+                (Number(booking?.deposit_amount) || 0) >= (Number(booking?.total_amount) || 0);
+            if (isOnlinePrepaid) {
+                setIncludeTax(false);
+            } else {
+                setIncludeTax(defaultVatEnabled);
+            }
         }
-    }, [booking?.id, booking?.table_id, defaultVatEnabled]);
+    }, [booking?.id, booking?.table_id, booking?.tax_included, booking?.deposit_amount, booking?.total_amount, booking?.source, booking?.booking_type, booking?.order_type, booking?.staff_remark, defaultVatEnabled]);
 
     React.useEffect(() => {
         const loadDefaultVat = async () => {
@@ -367,10 +384,6 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     const isVatOn = data.value === 'true';
                     try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (e) {}
                     setDefaultVatEnabled(isVatOn);
-                    const tableKey = booking?.id || booking?.table_id || 'counter';
-                    if (!tableVatOverridesRef.current.has(tableKey)) {
-                        setIncludeTax(isVatOn);
-                    }
                 }
             } catch (err) {
                 console.error("Error loading default VAT:", err);
@@ -378,7 +391,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
         };
         loadDefaultVat();
 
-        // Realtime sync from Admin Settings
+        // Realtime sync from Admin Settings (mount once to avoid channel churn on table click)
         const vatChannel = supabase
             .channel(`pos-vat-sync-${Date.now()}`)
             .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, (payload) => {
@@ -386,7 +399,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     const isVatOn = payload.new.value === 'true';
                     try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (e) {}
                     setDefaultVatEnabled(isVatOn);
-                    const tableKey = booking?.id || booking?.table_id || 'counter';
+                    const curB = bookingRef.current;
+                    const tableKey = curB?.id || curB?.table_id || 'counter';
                     if (!tableVatOverridesRef.current.has(tableKey)) {
                         setIncludeTax(isVatOn);
                     }
@@ -402,7 +416,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                     const isVatOn = e.data.value === 'true' || e.data.enabled === true;
                     try { localStorage.setItem('pos_default_vat_enabled', String(isVatOn)); } catch (err) {}
                     setDefaultVatEnabled(isVatOn);
-                    const tableKey = booking?.id || booking?.table_id || 'counter';
+                    const curB = bookingRef.current;
+                    const tableKey = curB?.id || curB?.table_id || 'counter';
                     if (!tableVatOverridesRef.current.has(tableKey)) {
                         setIncludeTax(isVatOn);
                     }
@@ -414,7 +429,8 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             if (e.key === 'pos_default_vat_enabled') {
                 const isVatOn = e.newValue === 'true';
                 setDefaultVatEnabled(isVatOn);
-                const tableKey = booking?.id || booking?.table_id || 'counter';
+                const curB = bookingRef.current;
+                const tableKey = curB?.id || curB?.table_id || 'counter';
                 if (!tableVatOverridesRef.current.has(tableKey)) {
                     setIncludeTax(isVatOn);
                 }
@@ -427,7 +443,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             if (posSyncChannel) posSyncChannel.close();
             window.removeEventListener('storage', handleStorage);
         };
-    }, [booking?.id, booking?.table_id]);
+    }, []);
 
     React.useEffect(() => {
         const loadCrmSettings = async () => {
@@ -1572,10 +1588,22 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
                                             if (booking?.id) {
                                                 const toastId = toast.loading('กำลังบันทึกปิดบิล...');
                                                 try {
-                                                    await supabase
+                                                    const { error } = await supabase
                                                         .from('bookings')
                                                         .update({ status: 'completed' })
                                                         .eq('id', booking.id);
+                                                    if (error) throw error;
+                                                    booking.status = 'completed';
+                                                    if (booking.tracking_token) {
+                                                        sendTrackingBroadcast(booking.tracking_token, 'order_status_updated', {
+                                                            status: 'completed',
+                                                            booking_id: booking.id
+                                                        });
+                                                    }
+                                                    sendPOSBroadcast('online_order_status_updated', {
+                                                        booking_id: booking.id,
+                                                        status: 'completed'
+                                                    });
                                                     toast.success('ปิดบิลเรียบร้อยแล้ว (Completed)', { id: toastId });
                                                     onClear && onClear();
                                                 } catch (e) {

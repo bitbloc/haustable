@@ -4,7 +4,7 @@
  * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { 
@@ -22,7 +22,7 @@ import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
     if (!booking) return false;
-    if (!['pending', 'confirmed', 'seated', 'ready'].includes(booking.status)) return false;
+    if (!['pending', 'confirmed', 'seated', 'preparing', 'ready'].includes(booking.status)) return false;
     if (booking.booking_time) {
         const bookingAgeMs = Date.now() - new Date(booking.booking_time).getTime();
         const MAX_SESSION_AGE_MS = 16 * 60 * 60 * 1000; // 16 hours
@@ -50,6 +50,18 @@ export default function CustomerOrderStatus() {
     const [googleReviewUrl, setGoogleReviewUrl] = useState('https://g.page/r/CXmnpQhwM5MYEBM/review');
     const [resolvedTableInfo, setResolvedTableInfo] = useState(null);
     const [showOrderSuccessBanner, setShowOrderSuccessBanner] = useState(false);
+
+    const activeBookingIdRef = useRef(null);
+    const isFetchingRef = useRef(false);
+    const pendingFetchRef = useRef(false);
+    const fetchDebounceRef = useRef(null);
+
+    const scheduleFetchActiveOrder = () => {
+        if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
+        fetchDebounceRef.current = setTimeout(() => {
+            fetchActiveOrder(true);
+        }, 250);
+    };
 
     useEffect(() => {
         if (searchParams.get('ordered') === '1') {
@@ -81,14 +93,20 @@ export default function CustomerOrderStatus() {
                         table: 'bookings',
                         filter: `table_id=eq.${numericId}` 
                     }, () => {
-                        if (isMounted) fetchActiveOrder(true);
+                        if (isMounted) scheduleFetchActiveOrder();
                     })
                     .on('postgres_changes', {
                         event: '*',
                         schema: 'public',
                         table: 'order_items'
-                    }, () => {
-                        if (isMounted) fetchActiveOrder(true);
+                    }, (payload) => {
+                        if (!isMounted) return;
+                        const itemBookingId = payload?.new?.booking_id || payload?.old?.booking_id;
+                        // Only refetch if the order_item belongs to this table's active booking (or if DELETE has no booking_id)
+                        if (itemBookingId && activeBookingIdRef.current && String(itemBookingId) !== String(activeBookingIdRef.current)) {
+                            return;
+                        }
+                        scheduleFetchActiveOrder();
                     })
                     .on('postgres_changes', {
                         event: '*',
@@ -100,6 +118,7 @@ export default function CustomerOrderStatus() {
                             if (payload.eventType === 'DELETE') {
                                 setResolvedTableInfo(null);
                                 setBooking(null);
+                                activeBookingIdRef.current = null;
                             } else if (payload.new) {
                                 setResolvedTableInfo(payload.new);
                                 localStorage.setItem('active_customer_table_name', payload.new.table_name || `Table ${payload.new.id}`);
@@ -130,7 +149,7 @@ export default function CustomerOrderStatus() {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && isMounted) {
                 prewarmPOSBroadcastChannel();
-                fetchActiveOrder(true);
+                scheduleFetchActiveOrder();
                 fetchSettings();
             }
         };
@@ -139,6 +158,7 @@ export default function CustomerOrderStatus() {
 
         return () => {
             isMounted = false;
+            if (fetchDebounceRef.current) clearTimeout(fetchDebounceRef.current);
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('focus', handleVisibilityChange);
             if (channelSub) supabase.removeChannel(channelSub);
@@ -166,6 +186,11 @@ export default function CustomerOrderStatus() {
     };
 
     const fetchActiveOrder = async (silent = false) => {
+        if (isFetchingRef.current) {
+            pendingFetchRef.current = true;
+            return resolvedTableInfo?.id || null;
+        }
+        isFetchingRef.current = true;
         if (!silent) setLoading(true);
         try {
             // Resolve table layout using smart table resolver
@@ -185,6 +210,7 @@ export default function CustomerOrderStatus() {
             const numericTableId = resolvedTable?.id || (/^\d+$/.test(cleanParam) ? parseInt(cleanParam) : null);
             if (!numericTableId) {
                 setBooking(null);
+                activeBookingIdRef.current = null;
                 setLoading(false);
                 return null;
             }
@@ -197,7 +223,7 @@ export default function CustomerOrderStatus() {
                 .from('bookings')
                 .select('*, tables_layout(*)')
                 .eq('table_id', numericTableId)
-                .in('status', ['pending', 'confirmed', 'seated', 'ready']);
+                .in('status', ['pending', 'confirmed', 'seated', 'preparing', 'ready']);
 
             if (savedToken) {
                 query = query.eq('tracking_token', savedToken);
@@ -214,7 +240,7 @@ export default function CustomerOrderStatus() {
                     .from('bookings')
                     .select('*, tables_layout(*)')
                     .eq('table_id', numericTableId)
-                    .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                    .in('status', ['pending', 'confirmed', 'seated', 'preparing', 'ready'])
                     .order('booking_time', { ascending: false })
                     .limit(1)
                     .maybeSingle();
@@ -223,6 +249,7 @@ export default function CustomerOrderStatus() {
 
             if (bookingError || !bookingData || !isBookingActiveAndFresh(bookingData)) {
                 setBooking(null);
+                activeBookingIdRef.current = null;
                 setOrderItems([]);
                 // Clear stale tracking tokens
                 if (tableId) localStorage.removeItem(`table_${tableId}_token`);
@@ -231,6 +258,7 @@ export default function CustomerOrderStatus() {
                 return numericTableId;
             }
             setBooking(bookingData);
+            activeBookingIdRef.current = bookingData.id;
 
             // Fetch order items for this booking
             const { data: itemsData } = await supabase
@@ -249,7 +277,12 @@ export default function CustomerOrderStatus() {
             console.error('Error fetching order status:', err);
             return null;
         } finally {
+            isFetchingRef.current = false;
             if (!silent) setLoading(false);
+            if (pendingFetchRef.current) {
+                pendingFetchRef.current = false;
+                scheduleFetchActiveOrder();
+            }
         }
     };
 

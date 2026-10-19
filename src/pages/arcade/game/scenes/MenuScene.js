@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { pixelSound, getArcadeRank } from '../utils/pixelSoundEngine';
 
 export default class MenuScene extends Phaser.Scene {
   constructor() {
@@ -47,7 +48,7 @@ export default class MenuScene extends Phaser.Scene {
 
     // Bouncing animated cat sprite
     const menuCat = this.add.sprite(width / 2, 195, 'cat').setDepth(5);
-    menuCat.setScale(1.4);
+    menuCat.setScale(1.45);
     menuCat.setFlipX(true);
     
     if (!this.anims.exists('flap')) {
@@ -77,27 +78,27 @@ export default class MenuScene extends Phaser.Scene {
     const startCardBg = this.add.rectangle(width / 2, 260, startBtnW, 58, 0x181615, 0.92)
       .setOrigin(0.5)
       .setDepth(10)
-      .setStrokeStyle(1, 0xBD4924)
+      .setStrokeStyle(2, 0xE9F344)
       .setInteractive({ useHandCursor: true });
 
-    const startText = this.add.text(width / 2, 250, 'แตะหน้าจอเพื่อเริ่มเล่น', {
+    const startText = this.add.text(width / 2, 250, '[ ▶ แตะหน้าจอเพื่อเริ่มเล่น ]', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
       fontSize: '16px',
-      fill: '#FAF7F5',
+      fill: '#E9F344',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(11);
 
-    const subPromptText = this.add.text(width / 2, 274, isLoggedIn ? '● บัญชีสมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '○ โหมดเล่นอิสระ (Guest Mode)', {
+    const subPromptText = this.add.text(width / 2, 274, isLoggedIn ? '● บัญชีสมาชิกเชื่อมต่อแล้ว (สะสมเหรียญ xhaus)' : '○ โหมดเล่นอิสระ (10P = B | 20P = A | 35P = S | 40P = S+)', {
       fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-      fontSize: '11px',
-      fill: isLoggedIn ? '#526A3B' : '#89827B',
+      fontSize: '10px',
+      fill: isLoggedIn ? '#86efac' : '#D9D2CB',
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(11);
 
     // Subtle breathing animation on start card
     this.tweens.add({
       targets: [startCardBg, startText, subPromptText],
-      alpha: { from: 1.0, to: 0.75 },
+      alpha: { from: 1.0, to: 0.78 },
       duration: 800,
       yoyo: true,
       repeat: -1,
@@ -124,10 +125,10 @@ export default class MenuScene extends Phaser.Scene {
       letterSpacing: 1.5
     }).setOrigin(0, 0.5).setDepth(11);
 
-    this.add.text(width / 2 + boardW / 2 - 20, boardY - boardH / 2 + 22, '[ TOP 5 ]', {
+    this.add.text(width / 2 + boardW / 2 - 20, boardY - boardH / 2 + 22, '[ TOP 5 // RANKED ]', {
       fontFamily: '"Geist Mono", "Space Mono", monospace',
       fontSize: '10px',
-      fill: '#89827B'
+      fill: '#E9F344'
     }).setOrigin(1, 0.5).setDepth(11);
 
     // Hairline divider
@@ -148,16 +149,17 @@ export default class MenuScene extends Phaser.Scene {
     } else {
       leaderboard.slice(0, 5).forEach((entry, index) => {
         let name = entry.display_name ? entry.display_name.toUpperCase() : 'GUEST';
-        if (name.length > 12) name = name.substring(0, 10) + '..';
-        const score = entry.score;
+        if (name.length > 11) name = name.substring(0, 9) + '..';
+        const score = entry.score || 0;
+        const rankInfo = getArcadeRank(score, 'leaderboard');
         const rowY = rowStartY + (index * 38);
 
-        // Rank pill
+        // Rank position
         const isFirst = index === 0;
-        const rankColor = isFirst ? '#BD4924' : '#89827B';
+        const rankColor = isFirst ? '#E9F344' : '#89827B';
         const rankNum = String(index + 1).padStart(2, '0');
 
-        this.add.text(width / 2 - boardW / 2 + 22, rowY, rankNum, {
+        this.add.text(width / 2 - boardW / 2 + 20, rowY, rankNum, {
           fontFamily: '"Geist Mono", "Space Mono", monospace',
           fontSize: '12px',
           fill: rankColor,
@@ -165,15 +167,24 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setDepth(11);
 
         // Player Name
-        this.add.text(width / 2 - boardW / 2 + 56, rowY, name, {
+        this.add.text(width / 2 - boardW / 2 + 48, rowY, name, {
           fontFamily: '"IBM Plex Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           fontSize: '12px',
           fill: isFirst ? '#FAF7F5' : '#D9D2CB',
           fontStyle: isFirst ? 'bold' : 'normal'
         }).setOrigin(0, 0.5).setDepth(11);
 
+        // Tier Rank Badge
+        const tierFill = rankInfo.tier === 'S+' ? '#E9F344' : (rankInfo.tier === 'S' ? '#FBBF24' : (rankInfo.tier === 'A' ? '#34D399' : '#A8A29E'));
+        this.add.text(width / 2 + boardW / 2 - 74, rowY, rankInfo.badge, {
+          fontFamily: '"Geist Mono", "Space Mono", monospace',
+          fontSize: '10px',
+          fill: tierFill,
+          fontStyle: 'bold'
+        }).setOrigin(1, 0.5).setDepth(11);
+
         // Score (Right-aligned)
-        this.add.text(width / 2 + boardW / 2 - 22, rowY, `${score}`, {
+        this.add.text(width / 2 + boardW / 2 - 20, rowY, `${score}`, {
           fontFamily: '"Geist Mono", "Space Mono", monospace',
           fontSize: '13px',
           fill: isFirst ? '#BD4924' : '#FAF7F5',
@@ -182,9 +193,10 @@ export default class MenuScene extends Phaser.Scene {
       });
     }
 
-    // 5. Play Background Music if available
+    // 5. Play Background Music if available and sound is enabled
     const playBGM = () => {
       try {
+        if (!pixelSound.isSoundEnabled()) return;
         let bgm = this.sound.get('bgm');
         if (bgm) {
           if (!bgm.isPlaying) {
@@ -215,7 +227,10 @@ export default class MenuScene extends Phaser.Scene {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try { navigator.vibrate(15); } catch (e) {}
       }
-      try { this.sound.play('jump', { volume: 0.5 }); } catch (e) {}
+      pixelSound.play('meow');
+      if (pixelSound.isSoundEnabled()) {
+        try { this.sound.play('jump', { volume: 0.4 }); } catch (e) {}
+      }
       this.scene.start('PlayScene');
     };
 

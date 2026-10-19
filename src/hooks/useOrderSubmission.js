@@ -79,9 +79,11 @@ export function useOrderSubmission() {
 
             const fallbackPayload = {
                 user_id: payload.user_id || null,
+                source: payload.source || 'online',
                 booking_type: payload.booking_type || 'hausmade',
                 status: payload.status || 'pending',
                 table_id: payload.table_id || null,
+                pax: payload.pax || null,
                 booking_time: payload.booking_time,
                 total_amount: payload.total_amount,
                 deposit_amount: payload.deposit_amount !== undefined ? payload.deposit_amount : payload.total_amount,
@@ -108,7 +110,7 @@ export function useOrderSubmission() {
             const fallbackRes = await supabase.from('bookings').insert(fallbackPayload).select().single()
             if (fallbackRes.error) {
                 // If slip columns caused error, retry without slip columns
-                const { slip_verified, slip_trans_ref, slip_provider, slip_verification_status, slip_verified_data, ...safePayload } = fallbackPayload
+                const { slip_verified, slip_trans_ref, slip_provider, slip_verification_status, slip_verified_data, source, ...safePayload } = fallbackPayload
                 const safeRes = await supabase.from('bookings').insert(safePayload).select().single()
                 if (safeRes.error) throw safeRes.error
                 return safeRes.data
@@ -347,30 +349,42 @@ export function useOrderSubmission() {
                 try {
                     const custName = resultData.pickup_contact_name || resultData.customer_name || 'Guest'
                     const custPhone = resultData.pickup_contact_phone || resultData.customer_phone || ''
-                    sendPOSBroadcast('online_order_created', {
-                        booking_id: resultData.id,
-                        booking_type: resultData.booking_type,
-                        table_id: resultData.table_id || null,
-                        customer_name: custName,
-                        phone: custPhone,
-                        total_amount: resultData.total_amount || 0,
-                        has_slip: !!finalSlipUrl,
-                        slip_verified: Boolean(resultData.slip_verified),
-                        slip_provider: resultData.slip_provider || null,
-                        booking_time: resultData.booking_time,
-                        items_count: orderItemsPayload?.length || 0
-                    })
-
-                    if (finalSlipUrl) {
-                        sendPOSBroadcast('payment_slip_uploaded', {
+                    const broadcastPromises = [
+                        sendPOSBroadcast('online_order_created', {
                             booking_id: resultData.id,
-                            booking_type: resultData.booking_type,
-                            slip_url: finalSlipUrl,
+                            booking_type: resultData.booking_type || bookingPayload.booking_type,
+                            order_type: resultData.order_type || bookingPayload.order_type || null,
+                            status: resultData.status || bookingPayload.status || 'pending',
+                            table_id: resultData.table_id || null,
+                            customer_name: custName,
+                            phone: custPhone,
+                            total_amount: resultData.total_amount || 0,
+                            has_slip: !!finalSlipUrl,
                             slip_verified: Boolean(resultData.slip_verified),
                             slip_provider: resultData.slip_provider || null,
-                            total_amount: resultData.total_amount || 0
+                            booking_time: resultData.booking_time,
+                            tracking_token: trackingToken,
+                            items_count: orderItemsPayload?.length || 0
                         })
+                    ]
+
+                    if (finalSlipUrl) {
+                        broadcastPromises.push(
+                            sendPOSBroadcast('payment_slip_uploaded', {
+                                booking_id: resultData.id,
+                                booking_type: resultData.booking_type || bookingPayload.booking_type,
+                                slip_url: finalSlipUrl,
+                                slip_verified: Boolean(resultData.slip_verified),
+                                slip_provider: resultData.slip_provider || null,
+                                total_amount: resultData.total_amount || 0
+                            })
+                        )
                     }
+
+                    await Promise.race([
+                        Promise.all(broadcastPromises),
+                        new Promise(resolve => setTimeout(resolve, 600))
+                    ])
                 } catch (bErr) {
                     console.warn('[useOrderSubmission] POS broadcast error:', bErr)
                 }

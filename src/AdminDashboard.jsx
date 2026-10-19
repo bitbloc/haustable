@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import ConfirmationModal from './components/ConfirmationModal'
 import { getBookingPaymentBreakdown } from './pos/POSReportsPanel'
 import { playOrderAlert } from './utils/audioHelper'
-import { subscribePOSBroadcast } from './utils/realtimeNotifier'
+import { subscribePOSBroadcast, sendTrackingBroadcast, sendPOSBroadcast } from './utils/realtimeNotifier'
 
 // Components
 import LivePulseMetrics from './components/admin/overview/LivePulseMetrics'
@@ -124,7 +124,9 @@ export default function AdminDashboard() {
         const requestId = ++activeRequestIdRef.current
         if (!isSilent) setLoading(true)
         try {
-            // 1. Fetch ALL Pending (Inbox) across all dates with full order_items fields
+            const recentCutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+            // 1. Fetch Recent Pending (Inbox) with full order_items fields
             const pendingReq = supabase
                 .from('bookings')
                 .select(`
@@ -142,6 +144,7 @@ export default function AdminDashboard() {
                     tables_layout ( table_name )
                 `)
                 .eq('status', 'pending')
+                .gte('booking_time', recentCutoff)
                 .order('booking_time', { ascending: true })
 
             // 2. Fetch ALL Selected Date's bookings (All statuses: completed, seated, confirmed, ready, void, cancelled)
@@ -164,7 +167,7 @@ export default function AdminDashboard() {
                 .or(`and(booking_time.gte.${queryDate}T00:00:00+07:00,booking_time.lte.${queryDate}T23:59:59+07:00),and(created_at.gte.${queryDate}T00:00:00+07:00,created_at.lte.${queryDate}T23:59:59+07:00)`)
                 .order('created_at', { ascending: false })
 
-            // 3. Fetch active seated/in-service tables across floor (so in-store tables are never lost)
+            // 3. Fetch active seated/in-service tables across floor (bounded to recent 7 days + future reservations)
             const seatedReq = supabase
                 .from('bookings')
                 .select(`
@@ -182,6 +185,7 @@ export default function AdminDashboard() {
                     tables_layout ( table_name )
                 `)
                 .in('status', ['seated', 'confirmed', 'ready', 'preparing'])
+                .gte('booking_time', recentCutoff)
                 .order('booking_time', { ascending: false })
 
             // 4. Fetch Shifts for queryDate
@@ -309,19 +313,12 @@ export default function AdminDashboard() {
                 }
             })
 
-        // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms)
-        const unsubscribePosBroadcast = subscribePOSBroadcast(({ event, payload }) => {
+        // 2. Direct POS Realtime Notifications Broadcast Channel (cross-device < 50ms & local BroadcastChannel deduplicated)
+        const unsubscribePosBroadcast = subscribePOSBroadcast(({ event }) => {
             console.log('⚡ [Admin Realtime] POS broadcast received:', event);
             debouncedFetchData();
         });
 
-        // 3. Local BroadcastChannel for same-origin tabs (< 5ms)
-        const posSyncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('onhaus_pos_sync') : null
-        if (posSyncChannel) {
-            posSyncChannel.onmessage = () => debouncedFetchData()
-        }
-        const handleCustomSync = () => debouncedFetchData()
-        window.addEventListener('pos_sync_event', handleCustomSync)
         const handleShiftChanged = () => debouncedFetchData()
         window.addEventListener('pos-shift-changed', handleShiftChanged)
         const handleStorageSync = (e) => {
@@ -360,8 +357,6 @@ export default function AdminDashboard() {
             clearInterval(autoPollTimer)
             supabase.removeChannel(tableChannel)
             unsubscribePosBroadcast()
-            if (posSyncChannel) posSyncChannel.close()
-            window.removeEventListener('pos_sync_event', handleCustomSync)
             window.removeEventListener('pos-shift-changed', handleShiftChanged)
             window.removeEventListener('storage', handleStorageSync)
             document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
@@ -378,15 +373,27 @@ export default function AdminDashboard() {
             action: async () => {
                 setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b))
 
-                const { error } = await supabase
+                const { data: updatedRow, error } = await supabase
                     .from('bookings')
                     .update({ status })
                     .eq('id', id)
+                    .select('id, tracking_token, status')
+                    .maybeSingle()
 
                 if (error) {
                     toast.error('Error updating status: ' + error.message)
                     fetchData(true)
                 } else {
+                    if (updatedRow?.tracking_token) {
+                        sendTrackingBroadcast(updatedRow.tracking_token, 'order_status_updated', {
+                            status,
+                            booking_id: id
+                        })
+                    }
+                    sendPOSBroadcast('online_order_status_updated', {
+                        booking_id: id,
+                        status
+                    })
                     toast.success('Status updated to ' + status)
                     fetchData(true)
                 }

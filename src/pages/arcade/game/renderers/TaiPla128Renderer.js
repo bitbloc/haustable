@@ -1918,56 +1918,74 @@ export class TaiPla128Renderer {
   }
 
   /**
-   * Draw the Character Sprite with State Matrix
+   * Draw the Character Sprite with State Matrix (Anchored cleanly at feet y = groundY)
    */
-  drawCharacter(ctx, charId, x, y, frame, isGrounded, godModeTimer, feverTimer, scaleX, scaleY, groundY = 185) {
+  drawCharacter(ctx, charId, x, y, frame, isGrounded, godModeTimer, feverTimer, scaleX, scaleY, groundY = 550) {
     const sheet = this.sprites[charId] || this.sprites.tai_pla;
     if (!sheet) return;
 
     ctx.save();
 
     // Ground Contact Shadow
-    const shadowScale = Math.max(0.4, 1.0 - (groundY - y) / 100);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+    const shadowScale = Math.max(0.35, 1.0 - Math.max(0, groundY - y) / 140);
+    ctx.fillStyle = 'rgba(24, 22, 21, 0.28)';
     ctx.beginPath();
-    ctx.ellipse(x + 24, groundY + 2, 16 * shadowScale, 4.0 * shadowScale, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + 24, groundY + 2, 17 * shadowScale, 4.5 * shadowScale, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // God Mode / Fever Auras
-    if (feverTimer > 0) {
-      const pulse = Math.sin(frame * 0.4) * 6;
-      ctx.fillStyle = 'rgba(250, 204, 21, 0.45)';
-      ctx.beginPath();
-      ctx.arc(x + 24, y + 24, 28 + pulse, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (godModeTimer > 0) {
-      const pulse = Math.sin(frame * 0.35) * 5;
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.40)';
-      ctx.beginPath();
-      ctx.arc(x + 24, y + 24, 26 + pulse, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    const centerY = y - 20;
 
-    if (charId === 'khao_lam') {
-      const magnetWave = (frame * 1.5) % 36;
-      ctx.strokeStyle = `rgba(56, 189, 248, ${0.45 - (magnetWave / 36) * 0.4})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(x + 24, y + 24, 20 + magnetWave, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Transform
-    ctx.translate(x + 24, y + 24);
-    ctx.scale(scaleX, scaleY);
-    ctx.translate(-24, -24);
-
+    // Pop-Pixel Afterimage Ghost Trail during Fever or God Mode
     let fIdx = 0;
     if (!isGrounded) {
       fIdx = 4;
     } else {
       fIdx = Math.floor((frame / 4) % 4);
     }
+
+    if (feverTimer > 0 || godModeTimer > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      ctx.drawImage(sheet, fIdx * 48, 0, 48, 48, x - 14, y - 42, 48, 48);
+      ctx.globalAlpha = 0.14;
+      ctx.drawImage(sheet, fIdx * 48, 0, 48, 48, x - 26, y - 42, 48, 48);
+      ctx.restore();
+    }
+
+    // God Mode / Fever Pop-Pixel Auras (Centered on character body)
+    if (feverTimer > 0) {
+      const pulse = Math.sin(frame * 0.4) * 5;
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.38)';
+      ctx.beginPath();
+      ctx.arc(x + 24, centerY, 27 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else if (godModeTimer > 0) {
+      const pulse = Math.sin(frame * 0.35) * 4;
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
+      ctx.beginPath();
+      ctx.arc(x + 24, centerY, 25 + pulse, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#86efac';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    if (charId === 'khao_lam') {
+      const magnetWave = (frame * 1.5) % 36;
+      ctx.strokeStyle = `rgba(56, 189, 248, ${0.5 - (magnetWave / 36) * 0.45})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x + 24, centerY, 18 + magnetWave, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Anchor squash & stretch transform at the character's feet (x + 24, y)
+    ctx.translate(x + 24, y);
+    ctx.scale(scaleX, scaleY);
+    ctx.translate(-24, -42);
 
     ctx.drawImage(sheet, fIdx * 48, 0, 48, 48, 0, 0, 48, 48);
 
@@ -1990,7 +2008,7 @@ export class TaiPla128Renderer {
     if (mon.type !== 'hawk' && mon.type !== 'naga_thunder') {
       const hopH = Math.max(0, groundY - my);
       const shadowScale = Math.max(0.35, 1.0 - (hopH / 32));
-      ctx.fillStyle = `rgba(0, 0, 0, ${0.20 * shadowScale})`;
+      ctx.fillStyle = `rgba(0, 0, 0, ${0.24 * shadowScale})`;
       ctx.beginPath();
       ctx.ellipse(mx + (mon.width / 2), groundY + 2, (mon.width * 0.42) * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -2028,9 +2046,11 @@ export class TaiPla128Renderer {
       const pulse = Math.abs(Math.sin(frame * 0.3));
       ctx.fillStyle = `rgba(239, 68, 68, ${0.25 + pulse * 0.4})`;
       ctx.fillRect(tx - 12, 0, 24, groundY);
-      ctx.fillStyle = '#ef4444';
-      ctx.font = 'bold 11px monospace';
-      ctx.fillText('[ WARNING ]', tx - 36, groundY - 25);
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(tx - 38, groundY - 38, 76, 18);
+      ctx.fillStyle = '#E9F344';
+      ctx.font = 'bold 10px Space Mono, monospace';
+      ctx.fillText('! THUNDER !', tx - 32, groundY - 26);
     } else {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(tx - 6, 0, 12, groundY);
@@ -2048,18 +2068,35 @@ export class TaiPla128Renderer {
     const ix = item.x;
     const iy = item.y + bob;
 
+    // Pop-Pixel High-Contrast Collectible Halo
+    const aura = Math.sin(frame * 0.22) * 2.5;
     if (item.type === 'satow') {
-      const aura = Math.sin(frame * 0.25) * 3;
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.42)';
       ctx.beginPath();
-      ctx.arc(ix + 16, iy + 16, 16 + aura, 0, Math.PI * 2);
+      ctx.arc(ix + 16, iy + 16, 17 + aura, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#181615';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     } else if (item.type === 'golden_mortar') {
-      const aura = Math.sin(frame * 0.3) * 4;
-      ctx.fillStyle = 'rgba(250, 204, 21, 0.5)';
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.62)';
       ctx.beginPath();
-      ctx.arc(ix + 18, iy + 18, 20 + aura, 0, Math.PI * 2);
+      ctx.arc(ix + 18, iy + 18, 21 + aura, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#181615';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = item.type === 'fish' ? 'rgba(56, 189, 248, 0.32)' : 'rgba(250, 204, 21, 0.32)';
+      ctx.beginPath();
+      ctx.arc(ix + 16, iy + 16, 15 + aura, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Pop-Pixel Corner Sparkle
+    if (Math.floor(frame / 8) % 2 === 0) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(ix + 2, iy + 2, 3, 3);
     }
 
     const sprite = this.sprites[item.type] || this.sprites.fish;

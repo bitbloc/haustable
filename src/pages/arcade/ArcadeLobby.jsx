@@ -10,6 +10,7 @@ import { getAppOrigin } from '../../utils/urlHelper';
 import { resolveTableIdentifier } from '../../utils/tableResolver';
 import FlappyCatGame from './FlappyCatGame';
 import TaiPlaMiniGame from './game/TaiPlaMiniGame';
+import { pixelSound, getArcadeRank, normalizeLeaderboard } from './game/utils/pixelSoundEngine';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
 
@@ -67,10 +68,11 @@ export default function ArcadeLobby() {
 
   // --- Lo-Fi Lounge Audio & Sleep Timer States ---
   const [chillPlaying, setChillPlaying] = useState(false);
-  const [chillVolume, setChillVolume] = useState(0.85); // High dynamic range
-  const [noiseVolume, setNoiseVolume] = useState(0.60);
+  const [chillVolume, setChillVolume] = useState(0.85);
+  const [noiseVolume, setNoiseVolume] = useState(0.45);
   const [chordVolume, setChordVolume] = useState(0.85);
-  const [chillPreset, setChillPreset] = useState('jazz'); // 'jazz' | 'cafe_jazz' | 'sunset' | 'rain' | 'campfire'
+  const [beatVolume, setBeatVolume] = useState(0.75);
+  const [chillPreset, setChillPreset] = useState('jazz');
   const [hasHeadphonesConfirmed, setHasHeadphonesConfirmed] = useState(false);
   const [showHeadphonePrompt, setShowHeadphonePrompt] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(0); // 0 = off, 15, 30, 45
@@ -80,17 +82,41 @@ export default function ArcadeLobby() {
   const [chordIndexState, setChordIndexState] = useState(0);
   const chordCycleRef = useRef(0);
   const chordVariationRef = useRef('auto');
+  const chillVolumeRef = useRef(0.85);
+  const noiseVolumeRef = useRef(0.45);
+  const chordVolumeRef = useRef(0.85);
+  const beatVolumeRef = useRef(0.75);
+  const chillPresetRef = useRef('jazz');
 
   useEffect(() => {
     chordVariationRef.current = chordVariation;
   }, [chordVariation]);
+  useEffect(() => {
+    chillVolumeRef.current = chillVolume;
+  }, [chillVolume]);
+  useEffect(() => {
+    noiseVolumeRef.current = noiseVolume;
+  }, [noiseVolume]);
+  useEffect(() => {
+    chordVolumeRef.current = chordVolume;
+  }, [chordVolume]);
+  useEffect(() => {
+    beatVolumeRef.current = beatVolume;
+  }, [beatVolume]);
+  useEffect(() => {
+    chillPresetRef.current = chillPreset;
+  }, [chillPreset]);
 
   const audioCtxRef = useRef(null);
   const masterGainRef = useRef(null);
   const compressorRef = useRef(null);
+  const synthBusRef = useRef(null);
   const noiseNodeRef = useRef(null);
+  const binauralNodesRef = useRef([]);
   const chordGainRef = useRef(null);
   const synthIntervalRef = useRef(null);
+  const beatIntervalRef = useRef(null);
+  const beatStepRef = useRef(0);
   const lofiCanvasRef = useRef(null);
   const lofiAnimRef = useRef(null);
 
@@ -143,11 +169,12 @@ export default function ArcadeLobby() {
     }
   }, [session]);
 
-  // Fetch real-time top scores from Supabase leaderboard
+  // Fetch real-time top scores from Supabase leaderboard (deduplicated per player)
   const fetchLeaderboard = async (isManual = false) => {
     try {
       if (isManual) {
         setIsRefreshing(true);
+        pixelSound.play('ui_click');
       } else if (leaderboard.length === 0) {
         setLoading(true);
       }
@@ -155,6 +182,7 @@ export default function ArcadeLobby() {
         .from('leaderboard')
         .select(`
           id,
+          profile_id,
           score,
           created_at,
           display_name,
@@ -164,39 +192,27 @@ export default function ArcadeLobby() {
           )
         `)
         .order('score', { ascending: false })
-        .limit(10);
+        .limit(40);
 
       if (error) throw error;
 
       const formatted = (data || []).map(entry => ({
         id: entry.id,
+        profile_id: entry.profile_id || null,
         score: entry.score,
         display_name: entry.display_name || entry.profiles?.nickname || entry.profiles?.display_name || 'GUEST',
         created_at: entry.created_at
       }));
 
-      // Merge local guest scores if any (for instant client resilience)
-      let combined = [...formatted];
+      let localScores = [];
       try {
-        const localScores = JSON.parse(localStorage.getItem('local_guest_leaderboard') || '[]');
-        if (Array.isArray(localScores) && localScores.length > 0) {
-          localScores.forEach(localEntry => {
-            const existingIdx = combined.findIndex(c => c.display_name?.toUpperCase() === localEntry.display_name?.toUpperCase());
-            if (existingIdx !== -1) {
-              if (localEntry.score > combined[existingIdx].score) {
-                combined[existingIdx].score = localEntry.score;
-              }
-            } else {
-              combined.push(localEntry);
-            }
-          });
-          combined.sort((a, b) => b.score - a.score);
-        }
+        localScores = JSON.parse(localStorage.getItem('local_guest_leaderboard') || '[]');
       } catch (err) {
         console.warn('Error reading local guest leaderboard:', err);
       }
 
-      setLeaderboard(combined.slice(0, 10));
+      const normalizedTop10 = normalizeLeaderboard(formatted, localScores).slice(0, 10);
+      setLeaderboard(normalizedTop10);
       if (isManual) {
         toast.success('รีเฟรชข้อมูลทำเนียบ 10 อันดับเรียบร้อย');
       }
@@ -335,7 +351,6 @@ export default function ArcadeLobby() {
                 .limit(1);
 
               if (!activeBookings || activeBookings.length === 0) {
-                // No active booking -> do not show stale table bar
                 localStorage.removeItem('active_customer_table_id');
                 localStorage.removeItem('active_customer_table_name');
                 setActiveTableId(null);
@@ -421,7 +436,6 @@ export default function ArcadeLobby() {
   const handleLineLogin = async () => {
     try {
       setGpsLoading(true);
-      // Save pending score before redirecting
       localStorage.setItem('pending_claim_score', claimScore.toString());
       localStorage.setItem('pending_claim_ts', Date.now().toString());
 
@@ -438,42 +452,71 @@ export default function ArcadeLobby() {
     }
   };
 
-  // Submit score as Guest to Leaderboard
+  // Submit score as Guest to Leaderboard (deduplicated by display_name)
   const handleGuestSubmit = async (e) => {
     if (e) e.preventDefault();
-    const finalName = (guestName || '').trim() || 'GUEST CAT';
+    const finalName = ((guestName || '').trim() || 'GUEST CAT').toUpperCase();
     setIsSubmittingGuest(true);
+    pixelSound.play('tier_up');
 
     try {
-      const { error } = await supabase
+      // Check if this guest name already exists on the leaderboard to avoid duplicate rows
+      const { data: existingRows } = await supabase
         .from('leaderboard')
-        .insert({
-          display_name: finalName.toUpperCase(),
-          score: claimScore
-        });
+        .select('id, score')
+        .ilike('display_name', finalName)
+        .is('profile_id', null)
+        .order('score', { ascending: false })
+        .limit(1);
 
-      if (error) {
-        console.warn('Supabase guest insert blocked by RLS, persisting locally:', error);
-        try {
-          const localScores = JSON.parse(localStorage.getItem('local_guest_leaderboard') || '[]');
-          const existingIdx = localScores.findIndex(s => s.display_name === finalName.toUpperCase());
-          if (existingIdx !== -1) {
-            if (claimScore > localScores[existingIdx].score) {
-              localScores[existingIdx].score = claimScore;
-              localScores[existingIdx].created_at = new Date().toISOString();
-            }
-          } else {
-            localScores.push({
-              id: `guest_${Date.now()}`,
-              display_name: finalName.toUpperCase(),
+      let dbError = null;
+      if (existingRows && existingRows.length > 0) {
+        const bestExisting = existingRows[0];
+        if (claimScore > (bestExisting.score || 0)) {
+          const { error: updErr } = await supabase
+            .from('leaderboard')
+            .update({
               score: claimScore,
+              display_name: finalName,
               created_at: new Date().toISOString()
-            });
-          }
-          localStorage.setItem('local_guest_leaderboard', JSON.stringify(localScores));
-        } catch (storageErr) {
-          console.error('Local storage guest save error:', storageErr);
+            })
+            .eq('id', bestExisting.id);
+          dbError = updErr;
         }
+      } else {
+        const { error: insErr } = await supabase
+          .from('leaderboard')
+          .insert({
+            display_name: finalName,
+            score: claimScore
+          });
+        dbError = insErr;
+      }
+
+      // Always keep local fallback updated for instant UI resilience
+      try {
+        const localScores = JSON.parse(localStorage.getItem('local_guest_leaderboard') || '[]');
+        const existingIdx = localScores.findIndex(s => (s.display_name || '').toUpperCase() === finalName);
+        if (existingIdx !== -1) {
+          if (claimScore > localScores[existingIdx].score) {
+            localScores[existingIdx].score = claimScore;
+            localScores[existingIdx].created_at = new Date().toISOString();
+          }
+        } else {
+          localScores.push({
+            id: `guest_${Date.now()}`,
+            display_name: finalName,
+            score: claimScore,
+            created_at: new Date().toISOString()
+          });
+        }
+        localStorage.setItem('local_guest_leaderboard', JSON.stringify(localScores));
+      } catch (storageErr) {
+        console.error('Local storage guest save error:', storageErr);
+      }
+
+      if (dbError) {
+        console.warn('Supabase guest upsert warning, persisted locally:', dbError);
       }
 
       confetti({
@@ -482,7 +525,8 @@ export default function ArcadeLobby() {
         origin: { y: 0.6 }
       });
 
-      toast.success(`บันทึกคะแนน ${claimScore} แต้ม ของคุณ ${finalName.toUpperCase()} ลงบอร์ดแล้ว!`);
+      const earnedRank = getArcadeRank(claimScore, activeMode === 'tai_pla' ? 'tai_pla' : 'flappy');
+      toast.success(`บันทึกคะแนน ${claimScore} PTS (${earnedRank.badge}) ของคุณ ${finalName} ลงบอร์ดแล้ว!`);
       setShowClaimModal(false);
       fetchLeaderboard();
     } catch (err) {
@@ -902,25 +946,208 @@ export default function ArcadeLobby() {
   };
 
   const handlePlayClick = () => {
+    pixelSound.play('ui_click');
     if (chillPlaying) {
       stopChillAudio();
     } else {
       if (!hasHeadphonesConfirmed) {
         setShowHeadphonePrompt(true);
       } else {
-        startChillAudio();
+        startChillAudio(chillPresetRef.current);
       }
     }
   };
 
   const confirmHeadphonesAndPlay = () => {
+    pixelSound.play('ui_click');
     setHasHeadphonesConfirmed(true);
     setShowHeadphonePrompt(false);
-    startChillAudio();
+    startChillAudio(chillPresetRef.current);
   };
 
-  const startChillAudio = () => {
+  // Helper to synthesize warm Rhodes / Electric Piano / Guitar notes through the stereo FX bus
+  const triggerRichChordVoice = (ctx, targetNode, preset, freq, delay = 0, isBass = false, isMelody = false) => {
+    if (!ctx || !targetNode) return;
+    const startTime = ctx.currentTime + delay;
+    const cVol = chordVolumeRef.current;
+
+    if (isBass) {
+      // Warm analog sub-bass + upper harmonic body
+      const subOsc = ctx.createOscillator();
+      const bodyOsc = ctx.createOscillator();
+      const bassFilter = ctx.createBiquadFilter();
+      const bassGain = ctx.createGain();
+
+      subOsc.type = 'sine';
+      bodyOsc.type = 'triangle';
+      subOsc.frequency.setValueAtTime(freq, startTime);
+      bodyOsc.frequency.setValueAtTime(freq, startTime);
+
+      bassFilter.type = 'lowpass';
+      bassFilter.frequency.setValueAtTime(360, startTime);
+
+      const peak = cVol * 0.34;
+      bassGain.gain.setValueAtTime(0.0001, startTime);
+      bassGain.gain.linearRampToValueAtTime(peak, startTime + 0.045);
+      bassGain.gain.exponentialRampToValueAtTime(peak * 0.45, startTime + 0.65);
+      bassGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 2.5);
+
+      subOsc.connect(bassFilter);
+      bodyOsc.connect(bassFilter);
+      bassFilter.connect(bassGain);
+      bassGain.connect(targetNode);
+
+      subOsc.start(startTime);
+      bodyOsc.start(startTime);
+      subOsc.stop(startTime + 2.55);
+      bodyOsc.stop(startTime + 2.55);
+      return;
+    }
+
+    // Rhodes Electric Piano / Warm Acoustic Piano / Lo-Fi Pluck voicing
+    const mainOsc = ctx.createOscillator();
+    const chorusOsc = ctx.createOscillator();
+    const tineOsc = ctx.createOscillator();
+    const voiceFilter = ctx.createBiquadFilter();
+    const voiceGain = ctx.createGain();
+    const tineGain = ctx.createGain();
+
+    const isJazzOrBossa = preset.type === 'jazz' || preset.type === 'bossa';
+    mainOsc.type = isJazzOrBossa ? 'sine' : 'triangle';
+    chorusOsc.type = 'triangle';
+    tineOsc.type = 'sine';
+
+    mainOsc.frequency.setValueAtTime(freq, startTime);
+    chorusOsc.frequency.setValueAtTime(freq, startTime);
+    // Warm analog tape chorus detuning (+4.5 cents on chord, +3.5 cents on melody)
+    chorusOsc.detune.setValueAtTime(isMelody ? 3.5 : 4.5, startTime);
+    // Electric piano bell tine harmonic (2x or 3x overtone with fast decay)
+    tineOsc.frequency.setValueAtTime(freq * (isMelody ? 2 : 3), startTime);
+
+    voiceFilter.type = 'lowpass';
+    const baseCut = isMelody ? 1850 : 1250;
+    voiceFilter.frequency.setValueAtTime(baseCut, startTime);
+    voiceFilter.frequency.exponentialRampToValueAtTime(baseCut * 0.52, startTime + (isMelody ? 0.9 : 2.4));
+
+    const peakVol = isMelody
+      ? cVol * 0.18
+      : (isJazzOrBossa ? cVol * 0.19 : cVol * 0.17);
+    const dur = isMelody ? 1.15 : 3.2;
+
+    voiceGain.gain.setValueAtTime(0.0001, startTime);
+    voiceGain.gain.linearRampToValueAtTime(peakVol, startTime + (isMelody ? 0.022 : 0.065));
+    voiceGain.gain.exponentialRampToValueAtTime(peakVol * 0.38, startTime + (isMelody ? 0.35 : 0.95));
+    voiceGain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+
+    // Subtle Rhodes bell attack
+    tineGain.gain.setValueAtTime(0.0001, startTime);
+    tineGain.gain.linearRampToValueAtTime(peakVol * 0.24, startTime + 0.012);
+    tineGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.28);
+
+    // Stereo spread panner if supported
+    let outNode = voiceGain;
+    if (typeof ctx.createStereoPanner === 'function') {
+      const panner = ctx.createStereoPanner();
+      const panVal = isMelody
+        ? (Math.sin(freq) * 0.35)
+        : (((Math.round(freq) % 7) - 3) * 0.12);
+      panner.pan.setValueAtTime(Math.max(-0.6, Math.min(0.6, panVal)), startTime);
+      voiceGain.connect(panner);
+      outNode = panner;
+    }
+
+    mainOsc.connect(voiceFilter);
+    chorusOsc.connect(voiceFilter);
+    tineOsc.connect(tineGain);
+    tineGain.connect(voiceFilter);
+    voiceFilter.connect(voiceGain);
+    outNode.connect(targetNode);
+
+    mainOsc.start(startTime);
+    chorusOsc.start(startTime);
+    tineOsc.start(startTime);
+    mainOsc.stop(startTime + dur + 0.05);
+    chorusOsc.stop(startTime + dur + 0.05);
+    tineOsc.stop(startTime + 0.32);
+  };
+
+  // Synthesize warm Lo-Fi / Jazz / Bossa drum percussion & groove bass
+  const triggerLoFiDrumHit = (ctx, targetNode, drumBuffer, kind, velocity = 1.0) => {
+    if (!ctx || !targetNode) return;
+    const bVol = beatVolumeRef.current * velocity;
+    if (bVol <= 0.01) return;
+    const now = ctx.currentTime;
+
+    if (kind === 'kick') {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(118, now);
+      osc.frequency.exponentialRampToValueAtTime(42, now + 0.11);
+      g.gain.setValueAtTime(bVol * 0.42, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+      osc.connect(g);
+      g.connect(targetNode);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } else if (kind === 'snare' || kind === 'rim') {
+      // Warm rim/body tone
+      const bodyOsc = ctx.createOscillator();
+      const bodyGain = ctx.createGain();
+      bodyOsc.type = 'triangle';
+      bodyOsc.frequency.setValueAtTime(kind === 'rim' ? 340 : 185, now);
+      bodyOsc.frequency.exponentialRampToValueAtTime(kind === 'rim' ? 190 : 95, now + 0.065);
+      bodyGain.gain.setValueAtTime(bVol * (kind === 'rim' ? 0.18 : 0.22), now);
+      bodyGain.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'rim' ? 0.075 : 0.11));
+      bodyOsc.connect(bodyGain);
+      bodyGain.connect(targetNode);
+      bodyOsc.start(now);
+      bodyOsc.stop(now + 0.12);
+
+      // Filtered dusty snare wire / brush noise
+      if (drumBuffer) {
+        const src = ctx.createBufferSource();
+        src.buffer = drumBuffer;
+        const flt = ctx.createBiquadFilter();
+        flt.type = 'bandpass';
+        flt.frequency.setValueAtTime(kind === 'rim' ? 2200 : 1450, now);
+        flt.Q.setValueAtTime(kind === 'rim' ? 2.5 : 1.1, now);
+        const nGain = ctx.createGain();
+        const dur = kind === 'rim' ? 0.055 : 0.14;
+        nGain.gain.setValueAtTime(bVol * (kind === 'rim' ? 0.12 : 0.20), now);
+        nGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        src.connect(flt);
+        flt.connect(nGain);
+        nGain.connect(targetNode);
+        src.start(now);
+        src.stop(now + dur + 0.01);
+      }
+    } else if ((kind === 'hat' || kind === 'ride') && drumBuffer) {
+      const src = ctx.createBufferSource();
+      src.buffer = drumBuffer;
+      const flt = ctx.createBiquadFilter();
+      flt.type = 'highpass';
+      flt.frequency.setValueAtTime(kind === 'ride' ? 5200 : 6800, now);
+      const hGain = ctx.createGain();
+      const dur = kind === 'ride' ? 0.11 : 0.042;
+      hGain.gain.setValueAtTime(bVol * (kind === 'ride' ? 0.095 : 0.075), now);
+      hGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.connect(flt);
+      flt.connect(hGain);
+      hGain.connect(targetNode);
+      src.start(now);
+      src.stop(now + dur + 0.01);
+    }
+  };
+
+  const startChillAudio = (presetOverrideId = null) => {
     try {
+      // Always clean up any previous nodes/intervals before starting or switching presets
+      stopChillAudio(true);
+
+      const activePresetId = typeof presetOverrideId === 'string' ? presetOverrideId : chillPresetRef.current;
+      const preset = CHILL_PRESETS[activePresetId] || CHILL_PRESETS.jazz;
+
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!audioCtxRef.current) {
         audioCtxRef.current = new AudioCtx();
@@ -930,26 +1157,71 @@ export default function ArcadeLobby() {
         ctx.resume();
       }
 
-      // Master Compressor & Master Output Limiter to avoid clipping while keeping volume high & warm
+      // Master Compressor & Warm Limiter
       const compressor = ctx.createDynamicsCompressor();
       compressor.threshold.setValueAtTime(-14, ctx.currentTime);
       compressor.knee.setValueAtTime(24, ctx.currentTime);
-      compressor.ratio.setValueAtTime(8, ctx.currentTime);
-      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-      compressor.release.setValueAtTime(0.22, ctx.currentTime);
+      compressor.ratio.setValueAtTime(6, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.005, ctx.currentTime);
+      compressor.release.setValueAtTime(0.24, ctx.currentTime);
 
       const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(chillVolume * 1.45, ctx.currentTime);
+      masterGain.gain.setValueAtTime(chillVolumeRef.current * 1.45, ctx.currentTime);
+
+      // Warm Stereo Synth Bus with Tape Delay / Room Ambiance
+      const synthBus = ctx.createGain();
+      synthBus.gain.setValueAtTime(1.0, ctx.currentTime);
+
+      const delayNode = ctx.createDelay(1.0);
+      delayNode.delayTime.setValueAtTime(0.34, ctx.currentTime);
+      const delayFeedback = ctx.createGain();
+      delayFeedback.gain.setValueAtTime(0.24, ctx.currentTime);
+      const delayFilter = ctx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.setValueAtTime(1100, ctx.currentTime);
+      const delayWet = ctx.createGain();
+      delayWet.gain.setValueAtTime(0.22, ctx.currentTime);
+
+      synthBus.connect(masterGain);
+      synthBus.connect(delayNode);
+      delayNode.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+      delayFilter.connect(delayWet);
+      delayWet.connect(masterGain);
 
       masterGain.connect(compressor);
       compressor.connect(ctx.destination);
 
       masterGainRef.current = masterGain;
       compressorRef.current = compressor;
+      synthBusRef.current = synthBus;
 
-      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+      // 1. Subtle 3D Binaural Relaxation Carrier (Left 216Hz, Right 224Hz = 8Hz Alpha/Theta wave)
+      if (typeof ctx.createStereoPanner === 'function') {
+        const binGain = ctx.createGain();
+        binGain.gain.setValueAtTime(0.022 * chordVolumeRef.current, ctx.currentTime);
+        const oscL = ctx.createOscillator();
+        const oscR = ctx.createOscillator();
+        const panL = ctx.createStereoPanner();
+        const panR = ctx.createStereoPanner();
+        oscL.type = 'sine';
+        oscR.type = 'sine';
+        oscL.frequency.setValueAtTime(216, ctx.currentTime);
+        oscR.frequency.setValueAtTime(224, ctx.currentTime); // 8Hz Alpha-Theta border
+        panL.pan.setValueAtTime(-0.85, ctx.currentTime);
+        panR.pan.setValueAtTime(0.85, ctx.currentTime);
+        oscL.connect(panL);
+        oscR.connect(panR);
+        panL.connect(binGain);
+        panR.connect(binGain);
+        binGain.connect(masterGain);
+        oscL.start();
+        oscR.start();
+        binauralNodesRef.current = [oscL, oscR, binGain];
+      }
 
-      // Ambient / Noise Buffer (River Pink Noise + Rain + Vinyl crackle)
+      // 2. Ambient Mekong River / Rain / Vinyl Crackle Buffer
       const bufferSize = ctx.sampleRate * 2;
       const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = noiseBuffer.getChannelData(0);
@@ -962,7 +1234,9 @@ export default function ArcadeLobby() {
         b3 = 0.86650 * b3 + white * 0.3104856;
         b4 = 0.55000 * b4 + white * 0.5329522;
         b5 = -0.7616 * b5 - white * 0.0168980;
-        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.06;
+        // Occasional soft warm vinyl dust pop
+        const vinylPop = Math.random() < 0.00035 ? (Math.random() * 0.45 - 0.22) : 0;
+        output[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.052 + vinylPop;
         b6 = white * 0.115926;
       }
 
@@ -975,7 +1249,7 @@ export default function ArcadeLobby() {
       filter.frequency.value = preset.filterFreq;
 
       const gain = ctx.createGain();
-      gain.gain.value = noiseVolume * preset.noiseGain;
+      gain.gain.value = noiseVolumeRef.current * preset.noiseGain;
 
       noise.connect(filter);
       filter.connect(gain);
@@ -984,37 +1258,15 @@ export default function ArcadeLobby() {
 
       noiseNodeRef.current = { noise, gain, filter };
 
-      // Chime / Mellow Jazz & Lo-Fi Chords with Section A/B Variations
-      const chords = preset.chords;
+      // Short percussion noise buffer for snare & hi-hat
+      const drumBuffer = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
+      const drumData = drumBuffer.getChannelData(0);
+      for (let i = 0; i < drumData.length; i++) {
+        drumData[i] = Math.random() * 2 - 1;
+      }
+
+      // 3. Chord Progression & Soulful Melody Sequencer
       let chordIndex = chordCycleRef.current || 0;
-
-      const playChordNote = (freq, delay = 0, isBass = false) => {
-        if (!audioCtxRef.current) return;
-        const osc = ctx.createOscillator();
-        const noteGain = ctx.createGain();
-
-        // Jazz & Rhodes piano tone synthesis (warm sine with triangle overtone)
-        if (preset.type === 'jazz' || preset.type === 'bossa') {
-          osc.type = isBass ? 'triangle' : 'sine';
-        } else {
-          osc.type = 'triangle';
-        }
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-
-        const targetNoteVol = isBass 
-          ? chordVolume * 0.42 
-          : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
-
-        noteGain.gain.setValueAtTime(0, ctx.currentTime + delay);
-        noteGain.gain.linearRampToValueAtTime(targetNoteVol, ctx.currentTime + delay + (isBass ? 0.06 : 0.14));
-        noteGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.4));
-
-        osc.connect(noteGain);
-        noteGain.connect(masterGain);
-
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 3.6);
-      };
 
       const getActiveChordPool = () => {
         if (chordVariationRef.current === 'part_a') {
@@ -1036,19 +1288,97 @@ export default function ArcadeLobby() {
         setChordIndexState(idx % pool.length);
 
         chordNotes.forEach((freq, nIdx) => {
-          const delay = nIdx === 0 ? 0 : (nIdx * 0.14);
-          playChordNote(freq, delay, nIdx === 0);
+          // Gentle rolled Rhodes arpeggio strum
+          const delay = nIdx === 0 ? 0 : (nIdx * 0.085);
+          triggerRichChordVoice(ctx, synthBus, preset, freq, delay, nIdx === 0, false);
         });
       };
 
       // Sound the initial chord immediately
       triggerChordAtIndex(chordIndex);
 
-      synthIntervalRef.current = setInterval(() => {
-        chordIndex++;
-        chordCycleRef.current = chordIndex;
-        triggerChordAtIndex(chordIndex);
-      }, preset.id === 'swing_jazz' ? 2400 : (preset.id === 'mekong_funk' ? 2600 : (preset.type === 'jazz' ? 3200 : 3600)));
+      // Step Duration (16 steps = 1 bar = 1 chord change)
+      const stepMs = preset.id === 'swing_jazz' ? 155
+        : preset.id === 'mekong_funk' ? 160
+        : preset.id === 'indie_rock' ? 165
+        : preset.type === 'bossa' ? 185
+        : preset.type === 'ambient' ? 230
+        : 195;
+
+      beatStepRef.current = 0;
+      beatIntervalRef.current = setInterval(() => {
+        if (!audioCtxRef.current || !synthBusRef.current) return;
+        const step = beatStepRef.current % 16;
+
+        // Advance to next chord at the start of every 16-step bar
+        if (beatStepRef.current > 0 && step === 0) {
+          chordIndex++;
+          chordCycleRef.current = chordIndex;
+          triggerChordAtIndex(chordIndex);
+        }
+
+        const pool = getActiveChordPool();
+        const activeChord = pool[chordIndex % pool.length];
+        const notes = Array.isArray(activeChord) ? activeChord : (activeChord?.notes || []);
+
+        // A. Drum Beat Pattern per Genre
+        if (preset.type === 'bossa') {
+          // Authentic Bossa Nova groove: syncopated rimshot (0, 3, 6, 10, 13) + soft kick (0, 6, 8, 14)
+          if (step === 0 || step === 6 || step === 8 || step === 14) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.9);
+          if (step === 3 || step === 6 || step === 10 || step === 13) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.85);
+          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', step % 4 === 0 ? 0.8 : 0.5);
+        } else if (preset.id === 'swing_jazz') {
+          // Jazz Swing Ride pattern + walking bass on 0, 4, 8, 12
+          if (step === 0 || step === 8) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.8);
+          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.85);
+          if (step === 0 || step === 4 || step === 7 || step === 8 || step === 12 || step === 15) {
+            triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'ride', step % 4 === 0 ? 0.95 : 0.7);
+          }
+          // Walking Bass on quarter notes (4, 8, 12)
+          if ((step === 4 || step === 8 || step === 12) && notes.length >= 3) {
+            const walkFreq = step === 8 ? notes[0] * 1.5 : (step === 12 ? notes[0] * 1.25 : notes[0] * 1.125);
+            triggerRichChordVoice(ctx, synthBus, preset, walkFreq, 0, true, false);
+          }
+        } else if (preset.id === 'mekong_funk' || preset.id === 'indie_rock') {
+          // Upbeat Funk / Indie groove
+          if (step === 0 || step === 7 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 1.0);
+          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'snare', 0.95);
+          if (step === 9 || step === 15) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'rim', 0.55);
+          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', 0.8);
+          if (step === 6 && notes[0]) {
+            triggerRichChordVoice(ctx, synthBus, preset, notes[0] * 1.5, 0, true, false);
+          }
+        } else if (preset.type === 'ambient') {
+          // Gentle heartbeat pulse for Campfire / Sleeper
+          if (step === 0 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.55);
+          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', 0.45);
+        } else {
+          // Classic Cozy Lo-Fi Chillhop / Mekong Jazz Boom-Bap (Kick on 0, 7, 10; Snare on 4, 12; Swung hats)
+          if (step === 0 || step === 7 || step === 10) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'kick', 0.92);
+          if (step === 4 || step === 12) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'snare', 0.82);
+          if (step % 2 === 0) triggerLoFiDrumHit(ctx, masterGain, drumBuffer, 'hat', step % 4 === 0 ? 0.78 : 0.48);
+          // Warm bass 5th pickup on step 10
+          if (step === 10 && notes[0]) {
+            triggerRichChordVoice(ctx, synthBus, preset, notes[0] * 1.5, 0, true, false);
+          }
+        }
+
+        // B. Soulful Generative Rhodes / Piano / Guitar Melody Improviser
+        if (notes.length >= 3 && (step === 3 || step === 6 || step === 9 || step === 11 || step === 14)) {
+          // Deterministic yet varied melodic phrasing based on bar & step
+          const phraseSeed = (chordIndex * 7 + step) % 5;
+          if (phraseSeed !== 4) {
+            const upperNotes = notes.slice(1);
+            const baseMel = upperNotes[(chordIndex + step) % upperNotes.length];
+            const octaveShift = (step === 6 || step === 14) ? 2.0 : 1.0;
+            const melFreq = Math.min(1320, baseMel * octaveShift);
+            // Slight human swing delay (15–30ms)
+            triggerRichChordVoice(ctx, synthBus, preset, melFreq, 0.02, false, true);
+          }
+        }
+
+        beatStepRef.current++;
+      }, stepMs);
 
       setChillPlaying(true);
     } catch (e) {
@@ -1057,16 +1387,17 @@ export default function ArcadeLobby() {
   };
 
   const handleManualChordChange = () => {
+    pixelSound.play('ui_click');
     chordCycleRef.current = (chordCycleRef.current || 0) + 1;
     const idx = chordCycleRef.current;
     setChordIndexState(idx);
     if (!chillPlaying) {
-      startChillAudio();
+      startChillAudio(chillPresetRef.current);
       return;
     }
-    if (audioCtxRef.current) {
+    if (audioCtxRef.current && synthBusRef.current) {
       const ctx = audioCtxRef.current;
-      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+      const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
       let pool = preset.chords;
       if (chordVariation === 'part_a') {
         const a = preset.chords.filter(c => c.section === 'A');
@@ -1080,60 +1411,35 @@ export default function ArcadeLobby() {
       setCurrentPlayingChordName(item.name || `CHORD ${idx % pool.length + 1}`);
 
       notes.forEach((freq, noteIdx) => {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        const isBass = noteIdx === 0;
-        osc.type = (preset.type === 'jazz' || preset.type === 'bossa') ? (isBass ? 'triangle' : 'sine') : 'triangle';
-        const delay = isBass ? 0 : noteIdx * 0.08;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-        const vol = isBass ? chordVolume * 0.42 : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
-        g.gain.setValueAtTime(0, ctx.currentTime + delay);
-        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + (isBass ? 0.06 : 0.12));
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.2));
-        osc.connect(g);
-        if (masterGainRef.current) g.connect(masterGainRef.current);
-        else g.connect(ctx.destination);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 3.4);
+        const delay = noteIdx === 0 ? 0 : noteIdx * 0.075;
+        triggerRichChordVoice(ctx, synthBusRef.current, preset, freq, delay, noteIdx === 0, false);
       });
     }
   };
 
   const handleSelectSpecificChord = (targetIndex) => {
+    pixelSound.play('ui_click');
     chordCycleRef.current = targetIndex;
     setChordIndexState(targetIndex);
     if (!chillPlaying) {
-      startChillAudio();
+      startChillAudio(chillPresetRef.current);
       return;
     }
-    if (audioCtxRef.current) {
+    if (audioCtxRef.current && synthBusRef.current) {
       const ctx = audioCtxRef.current;
-      const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+      const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
       const item = preset.chords[targetIndex % preset.chords.length];
       const notes = Array.isArray(item) ? item : (item?.notes || []);
       setCurrentPlayingChordName(item.name || `CHORD ${targetIndex + 1}`);
 
       notes.forEach((freq, noteIdx) => {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        const isBass = noteIdx === 0;
-        osc.type = (preset.type === 'jazz' || preset.type === 'bossa') ? (isBass ? 'triangle' : 'sine') : 'triangle';
-        const delay = isBass ? 0 : noteIdx * 0.08;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
-        const vol = isBass ? chordVolume * 0.42 : (preset.type === 'jazz' ? chordVolume * 0.34 : chordVolume * 0.30);
-        g.gain.setValueAtTime(0, ctx.currentTime + delay);
-        g.gain.linearRampToValueAtTime(vol, ctx.currentTime + delay + (isBass ? 0.06 : 0.12));
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + (isBass ? 2.4 : 3.2));
-        osc.connect(g);
-        if (masterGainRef.current) g.connect(masterGainRef.current);
-        else g.connect(ctx.destination);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 3.4);
+        const delay = noteIdx === 0 ? 0 : noteIdx * 0.075;
+        triggerRichChordVoice(ctx, synthBusRef.current, preset, freq, delay, noteIdx === 0, false);
       });
     }
   };
 
-  const stopChillAudio = () => {
+  const stopChillAudio = (silent = false) => {
     if (noiseNodeRef.current) {
       try {
         noiseNodeRef.current.noise.stop();
@@ -1141,11 +1447,26 @@ export default function ArcadeLobby() {
       } catch (e) {}
       noiseNodeRef.current = null;
     }
+    if (binauralNodesRef.current && binauralNodesRef.current.length) {
+      binauralNodesRef.current.forEach((n) => {
+        try {
+          if (n.stop) n.stop();
+          if (n.disconnect) n.disconnect();
+        } catch (e) {}
+      });
+      binauralNodesRef.current = [];
+    }
     if (synthIntervalRef.current) {
       clearInterval(synthIntervalRef.current);
       synthIntervalRef.current = null;
     }
-    setChillPlaying(false);
+    if (beatIntervalRef.current) {
+      clearInterval(beatIntervalRef.current);
+      beatIntervalRef.current = null;
+    }
+    if (!silent) {
+      setChillPlaying(false);
+    }
   };
 
   // Sleep Timer countdown
@@ -1164,7 +1485,7 @@ export default function ArcadeLobby() {
         if (prev <= 1) {
           stopChillAudio();
           setSleepMinutes(0);
-          toast.info('⏰ ตัวตั้งเวลา Lo-Fi สิ้นสุดแล้ว ขอให้ผ่อนคลายอย่างมีความสุขครับ');
+          toast.info('ตัวตั้งเวลา Lo-Fi สิ้นสุดแล้ว ขอให้ผ่อนคลายอย่างมีความสุขครับ');
           return 0;
         }
         return prev - 1;
@@ -1219,7 +1540,7 @@ export default function ArcadeLobby() {
       // Twinkling stars in night modes
       if (isNightMode) {
         ctx.fillStyle = '#ffffff';
-        for (let s = 0; s < 22; s++) {
+        for (let s = 0; s < 26; s++) {
           const sx = (s * 37 + 15) % w;
           const sy = (s * 19 + 10) % (h - 70);
           const starAlpha = Math.sin(frame * 0.05 + s) * 0.4 + 0.6;
@@ -1227,6 +1548,27 @@ export default function ArcadeLobby() {
           ctx.fillRect(sx, sy, 2, 2);
         }
         ctx.globalAlpha = 1.0;
+      }
+
+      // Pop-Pixel Audio Spectrum Bars over the Mekong Horizon when playing
+      if (chillPlaying) {
+        const barCount = 24;
+        const barWidth = 14;
+        const gap = 8;
+        const totalW = barCount * (barWidth + gap);
+        const startX = (w - totalW) / 2;
+        for (let b = 0; b < barCount; b++) {
+          const wave1 = Math.abs(Math.sin(frame * 0.09 + b * 0.45));
+          const wave2 = Math.abs(Math.cos(frame * 0.06 - b * 0.3));
+          const barH = Math.max(6, Math.round((wave1 * 38 + wave2 * 24) * (0.45 + chordVolumeRef.current * 0.55)));
+          const bx = startX + b * (barWidth + gap);
+          const by = h - 52 - barH;
+          ctx.fillStyle = b % 3 === 0 ? 'rgba(233, 243, 68, 0.42)' : 'rgba(251, 191, 36, 0.28)';
+          ctx.fillRect(bx, by, barWidth, barH);
+          // Crisp pixel peak cap
+          ctx.fillStyle = '#E9F344';
+          ctx.fillRect(bx, by - 3, barWidth, 2);
+        }
       }
 
       // Distant Lao Mountains
@@ -1275,22 +1617,34 @@ export default function ArcadeLobby() {
         ctx.fillRect(bx, h - 38, 3, 16);
       }
 
-      // Relaxing Calico Cat Sitting at Wooden Table
-      const catX = w / 2 - 30;
+      // Relaxing Calico Cat Sitting at Wooden Table with Vinyl Turntable
+      const catX = w / 2 - 36;
       const catY = h - 22;
+      const headBob = chillPlaying ? Math.round(Math.sin(frame * 0.18) * 1.5) : 0;
 
-      // Table & Coffee Mug
+      // Wooden Table
       ctx.fillStyle = '#9a3412';
-      ctx.fillRect(catX + 28, catY - 14, 26, 14);
-      ctx.fillStyle = '#f8fafc';
-      ctx.fillRect(catX + 38, catY - 20, 6, 7);
-      ctx.fillStyle = '#ea580c';
-      ctx.fillRect(catX + 39, catY - 19, 4, 2);
+      ctx.fillRect(catX + 26, catY - 14, 52, 14);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(catX + 24, catY - 16, 56, 3);
 
-      // Coffee Steam rising
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      const steamY = ((frame * 1.2) % 25);
-      ctx.fillRect(catX + 40 + Math.sin(frame * 0.1) * 2, catY - 22 - steamY, 2, 3);
+      // Mini Pixel Vinyl Turntable on the Table
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(catX + 52, catY - 21, 22, 5);
+      // Spinning vinyl platter
+      ctx.fillStyle = '#27272a';
+      ctx.fillRect(catX + 54, catY - 23, 18, 2);
+      ctx.fillStyle = (chillPlaying && Math.floor(frame / 8) % 2 === 0) ? '#E9F344' : '#BD4924';
+      ctx.fillRect(catX + 60, catY - 23, 6, 2);
+
+      // Coffee Mug & Steam
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(catX + 34, catY - 22, 7, 7);
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(catX + 35, catY - 21, 5, 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      const steamY = ((frame * 0.9) % 22);
+      ctx.fillRect(catX + 36 + Math.sin(frame * 0.1) * 2, catY - 24 - steamY, 2, 3);
 
       // Relaxing Cat Body
       ctx.fillStyle = '#1f1d24';
@@ -1302,55 +1656,66 @@ export default function ArcadeLobby() {
       ctx.fillStyle = '#1f1d24';
       ctx.fillRect(catX + 13, catY - 12, 5, 5);
 
-      // Cat Head & Ears
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 6, catY - 26, 14, 12);
-        ctx.fillRect(catX + 6, catY - 30, 4, 5);
-        ctx.fillRect(catX + 16, catY - 30, 4, 5);
-        ctx.fillStyle = '#fef3c7';
-        ctx.fillRect(catX + 8, catY - 24, 10, 9);
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(catX + 7, catY - 29, 2, 3);
+      // Cat Head & Ears (with rhythmic head-bob!)
+      const hy = catY + headBob;
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX + 6, hy - 26, 14, 12);
+      ctx.fillRect(catX + 6, hy - 30, 4, 5);
+      ctx.fillRect(catX + 16, hy - 30, 4, 5);
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(catX + 8, hy - 24, 10, 9);
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(catX + 7, hy - 29, 2, 3);
 
-        ctx.fillStyle = '#1f1d24';
-        ctx.fillRect(catX + 10, catY - 21, 3, 1);
-        ctx.fillRect(catX + 15, catY - 21, 3, 1);
-        ctx.fillStyle = '#f43f5e';
-        ctx.fillRect(catX + 8, catY - 19, 2, 2);
-        ctx.fillRect(catX + 17, catY - 19, 2, 2);
+      // Pop-Pixel Headphones on the Cat (#E9F344 band + #BD4924 earcups)
+      ctx.fillStyle = '#E9F344';
+      ctx.fillRect(catX + 5, hy - 27, 16, 2);
+      ctx.fillStyle = '#BD4924';
+      ctx.fillRect(catX + 4, hy - 25, 3, 5);
+      ctx.fillRect(catX + 19, hy - 25, 3, 5);
 
-        if (chillPlaying) {
-          ctx.fillStyle = chillPreset === 'jazz' ? '#38bdf8' : '#facc15';
-          const note1Y = (frame * 1.5) % 80;
-          const note1X = catX + 15 + Math.sin(frame * 0.08) * 8;
-          ctx.fillRect(note1X, catY - 25 - note1Y, 3, 3);
-          ctx.fillRect(note1X + 2, catY - 30 - note1Y, 2, 6);
-          ctx.fillRect(note1X + 4, catY - 30 - note1Y, 3, 2);
+      // Eyes & Rosy Cheeks
+      ctx.fillStyle = '#1f1d24';
+      ctx.fillRect(catX + 10, hy - 21, 3, 1);
+      ctx.fillRect(catX + 15, hy - 21, 3, 1);
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(catX + 8, hy - 19, 2, 2);
+      ctx.fillRect(catX + 17, hy - 19, 2, 2);
 
-          const note2Y = ((frame * 1.5) + 40) % 80;
-          const note2X = catX + 35 + Math.cos(frame * 0.08) * 8;
-          ctx.fillRect(note2X, catY - 25 - note2Y, 3, 3);
-          ctx.fillRect(note2X + 2, catY - 30 - note2Y, 2, 6);
-          ctx.fillRect(note2X + 4, catY - 30 - note2Y, 3, 2);
+      // Floating Musical Notes when playing
+      if (chillPlaying) {
+        ctx.fillStyle = '#E9F344';
+        const note1Y = (frame * 1.3) % 80;
+        const note1X = catX + 15 + Math.sin(frame * 0.08) * 10;
+        ctx.fillRect(note1X, catY - 25 - note1Y, 3, 3);
+        ctx.fillRect(note1X + 2, catY - 30 - note1Y, 2, 6);
+        ctx.fillRect(note1X + 4, catY - 30 - note1Y, 3, 2);
+
+        ctx.fillStyle = '#38bdf8';
+        const note2Y = ((frame * 1.3) + 40) % 80;
+        const note2X = catX + 48 + Math.cos(frame * 0.08) * 10;
+        ctx.fillRect(note2X, catY - 25 - note2Y, 3, 3);
+        ctx.fillRect(note2X + 2, catY - 30 - note2Y, 2, 6);
+        ctx.fillRect(note2X + 4, catY - 30 - note2Y, 3, 2);
+      }
+
+      if (chillPreset === 'rain') {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        for (let r = 0; r < 22; r++) {
+          const rx = (r * 25 + frame * 4) % w;
+          const ry = (r * 15 + frame * 8) % (h - 22);
+          ctx.fillRect(rx, ry, 1, 6);
         }
-
-        if (chillPreset === 'rain') {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-          for (let r = 0; r < 20; r++) {
-            const rx = (r * 25 + frame * 4) % w;
-            const ry = (r * 15 + frame * 8) % (h - 22);
-            ctx.fillRect(rx, ry, 1, 6);
-          }
-        }
-
-        lofiAnimRef.current = requestAnimationFrame(renderLofi);
-      };
+      }
 
       lofiAnimRef.current = requestAnimationFrame(renderLofi);
-      return () => {
-        if (lofiAnimRef.current) cancelAnimationFrame(lofiAnimRef.current);
-      };
-    }, [activeTab, chillPlaying, chillPreset, showStudioModal]);
+    };
+
+    lofiAnimRef.current = requestAnimationFrame(renderLofi);
+    return () => {
+      if (lofiAnimRef.current) cancelAnimationFrame(lofiAnimRef.current);
+    };
+  }, [activeTab, chillPlaying, chillPreset, showStudioModal]);
 
   useEffect(() => {
     return () => {
@@ -1397,7 +1762,7 @@ export default function ArcadeLobby() {
             [ ⏭ คอร์ด ]
           </button>
           <button
-            onClick={stopChillAudio}
+            onClick={() => stopChillAudio()}
             className="px-3 py-1.5 bg-[#2A2624] hover:bg-[#3D3835] text-[#FAF7F5] rounded-xl border border-[#4A433F] text-[10px] font-bold cursor-pointer transition-colors"
           >
             [ ⏸ พักเสียง ]
@@ -1415,9 +1780,10 @@ export default function ArcadeLobby() {
 
   const renderStudioModal = () => {
     if (!showStudioModal) return null;
+    const activePresetObj = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
     return (
       <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 z-50 animate-[fadeIn_0.15s_ease-out] font-sans overflow-y-auto">
-        <div className="w-full max-w-4xl bg-[var(--color-paper)] border-2 border-[#181615] rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto flex flex-col gap-5">
+        <div className="w-full max-w-4xl bg-[var(--color-paper)] border-2 border-[#181615] rounded-3xl p-5 sm:p-7 shadow-2xl relative my-auto flex flex-col gap-4">
           <div className="flex items-center justify-between border-b-2 border-[#181615] pb-3">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615] animate-pulse" />
@@ -1426,14 +1792,14 @@ export default function ArcadeLobby() {
               </h2>
             </div>
             <button
-              onClick={() => setShowStudioModal(false)}
+              onClick={() => { pixelSound.play('ui_click'); setShowStudioModal(false); }}
               className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#181615] hover:text-[#FAF7F5] rounded-xl border-2 border-[#181615] text-xs font-mono font-bold cursor-pointer transition-colors"
             >
               [ ✕ ปิดห้องสตูดิโอ ]
             </button>
           </div>
 
-          <div className="w-full aspect-[16/6] max-h-[220px] bg-[#181615] rounded-2xl overflow-hidden border-2 border-[#181615] shadow-inner flex items-center justify-center">
+          <div className="w-full aspect-[16/6] max-h-[210px] bg-[#181615] rounded-2xl overflow-hidden border-2 border-[#181615] shadow-inner flex items-center justify-center relative">
             <canvas 
               ref={lofiCanvasRef} 
               width={680} 
@@ -1441,28 +1807,30 @@ export default function ArcadeLobby() {
               className="w-full h-full block" 
               style={{ imageRendering: 'pixelated' }} 
             />
+            <div className="absolute top-2.5 left-3 bg-[#181615]/85 text-[#FAF7F5] border border-[#3D3835] px-2.5 py-1 rounded-lg font-mono text-[10px] flex items-center gap-2">
+              <span className="text-[#E9F344] font-bold">{activePresetObj.tag}</span>
+              <span>{activePresetObj.name}</span>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#57534e]">
-              [ SELECT MEKONG SOUNDTRACK // เลือกบทเพลง ]:
-            </span>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#57534e]">
+                [ SELECT MEKONG SOUNDTRACK // เลือกบทเพลง ({ activePresetObj.desc }) ]:
+              </span>
+            </div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono text-xs">
               {Object.values(CHILL_PRESETS).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => {
+                    chillPresetRef.current = p.id;
                     setChillPreset(p.id);
-                    if (!chillPlaying) {
-                      startChillAudio();
-                    } else if (audioCtxRef.current) {
-                      stopChillAudio();
-                      setTimeout(() => startChillAudio(), 100);
-                    }
+                    startChillAudio(p.id);
                   }}
                   className={`p-2.5 rounded-xl border-2 text-left transition-colors duration-150 cursor-pointer flex flex-col gap-1 ${
                     chillPreset === p.id 
-                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-xs' 
+                      ? 'bg-[#181615] text-[#FAF7F5] border-[#181615] shadow-[2px_2px_0px_#BD4924]' 
                       : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/30 hover:border-[#181615] hover:bg-[#F2ECE4]'
                   }`}
                 >
@@ -1475,10 +1843,10 @@ export default function ArcadeLobby() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
-            <div className="bg-[#FAF7F2] p-3 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-1">
+            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
               <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ MASTER VOLUME ]</span>
+                <span>[ MASTER ]</span>
                 <span>{Math.round(chillVolume * 100)}%</span>
               </div>
               <input 
@@ -1490,6 +1858,7 @@ export default function ArcadeLobby() {
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setChillVolume(val);
+                  chillVolumeRef.current = val;
                   if (masterGainRef.current && audioCtxRef.current) {
                     masterGainRef.current.gain.setValueAtTime(val * 1.45, audioCtxRef.current.currentTime);
                   }
@@ -1498,9 +1867,49 @@ export default function ArcadeLobby() {
               />
             </div>
 
-            <div className="bg-[#FAF7F2] p-3 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
+            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
               <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ AMBIENT STREAM ]</span>
+                <span>[ RHODES / MELODY ]</span>
+                <span>{Math.round(chordVolume * 100)}%</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05"
+                value={chordVolume}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setChordVolume(val);
+                  chordVolumeRef.current = val;
+                }}
+                className="w-full accent-[#181615] cursor-pointer"
+              />
+            </div>
+
+            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
+              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
+                <span>[ BEAT GROOVE ]</span>
+                <span>{Math.round(beatVolume * 100)}%</span>
+              </div>
+              <input 
+                type="range" 
+                min="0" 
+                max="1" 
+                step="0.05"
+                value={beatVolume}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setBeatVolume(val);
+                  beatVolumeRef.current = val;
+                }}
+                className="w-full accent-[#181615] cursor-pointer"
+              />
+            </div>
+
+            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
+              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
+                <span>[ AMBIENT RIVER ]</span>
                 <span>{Math.round(noiseVolume * 100)}%</span>
               </div>
               <input 
@@ -1512,8 +1921,9 @@ export default function ArcadeLobby() {
                 onChange={(e) => {
                   const val = parseFloat(e.target.value);
                   setNoiseVolume(val);
+                  noiseVolumeRef.current = val;
                   if (noiseNodeRef.current && audioCtxRef.current) {
-                    const preset = CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz;
+                    const preset = CHILL_PRESETS[chillPresetRef.current] || CHILL_PRESETS.jazz;
                     noiseNodeRef.current.gain.gain.setValueAtTime(val * preset.noiseGain, audioCtxRef.current.currentTime);
                   }
                 }}
@@ -1521,23 +1931,7 @@ export default function ArcadeLobby() {
               />
             </div>
 
-            <div className="bg-[#FAF7F2] p-3 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5">
-              <div className="flex justify-between text-[10px] font-mono font-bold text-[#181615]">
-                <span>[ CHORD VELOCITY (น้ำหนักเสียง) ]</span>
-                <span>{Math.round(chordVolume * 100)}%</span>
-              </div>
-              <input 
-                type="range" 
-                min="0" 
-                max="1" 
-                step="0.05"
-                value={chordVolume}
-                onChange={(e) => setChordVolume(parseFloat(e.target.value))}
-                className="w-full accent-[#181615] cursor-pointer"
-              />
-            </div>
-
-            <div className="bg-[#FAF7F2] p-3 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5 font-mono">
+            <div className="bg-[#FAF7F2] p-2.5 rounded-2xl border-2 border-[#181615] flex flex-col gap-1.5 font-mono col-span-2 sm:col-span-1">
               <div className="flex justify-between text-[10px] font-bold text-[#181615]">
                 <span>[ SLEEP TIMER ]</span>
                 <span>
@@ -1550,7 +1944,7 @@ export default function ArcadeLobby() {
                 {[0, 15, 30, 45].map((m) => (
                   <button
                     key={m}
-                    onClick={() => setSleepMinutes(m)}
+                    onClick={() => { pixelSound.play('ui_click'); setSleepMinutes(m); }}
                     className={`flex-1 py-1 rounded-lg text-center font-bold cursor-pointer transition-colors ${
                       sleepMinutes === m 
                         ? 'bg-[#181615] text-[#FAF7F5]' 
@@ -1593,17 +1987,17 @@ export default function ArcadeLobby() {
             <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
               <span className="text-[#57534e] mr-1">[ โหมดทางคอร์ด ]:</span>
               <button
-                onClick={() => setChordVariation('auto')}
+                onClick={() => { pixelSound.play('ui_click'); setChordVariation('auto'); }}
                 className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
                   chordVariation === 'auto'
                     ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
                     : 'bg-[#FAF7F2] text-[#181615] border-[#181615]/40 hover:bg-[#F2ECE4]'
                 }`}
               >
-                [ 🔀 สลับท่อนต่อเนื่อง (A ➔ B อัตโนมัติ) ]
+                [ สลับท่อนต่อเนื่อง (A ➔ B อัตโนมัติ) ]
               </button>
               <button
-                onClick={() => setChordVariation('part_a')}
+                onClick={() => { pixelSound.play('ui_click'); setChordVariation('part_a'); }}
                 className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
                   chordVariation === 'part_a'
                     ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
@@ -1613,7 +2007,7 @@ export default function ArcadeLobby() {
                 [ ท่อน A // THEME ]
               </button>
               <button
-                onClick={() => setChordVariation('part_b')}
+                onClick={() => { pixelSound.play('ui_click'); setChordVariation('part_b'); }}
                 className={`px-2.5 py-1 rounded-lg border font-bold transition-colors cursor-pointer ${
                   chordVariation === 'part_b'
                     ? 'bg-[#181615] text-[#FAF7F5] border-[#181615]'
@@ -1627,7 +2021,7 @@ export default function ArcadeLobby() {
             {/* Visual Interactive Chord Progression Strip */}
             <div className="flex items-center gap-1.5 overflow-x-auto pt-1 pb-0.5">
               <span className="text-[9px] text-[#78716c] shrink-0">[ แตะเพื่อเปลี่ยนคอร์ด ]:</span>
-              {(CHILL_PRESETS[chillPreset] || CHILL_PRESETS.jazz).chords.map((ch, idx) => {
+              {activePresetObj.chords.map((ch, idx) => {
                 const cName = typeof ch === 'object' && ch.name ? ch.name : `CH-${idx+1}`;
                 const cSec = typeof ch === 'object' && ch.section ? ch.section : (idx < 4 ? 'A' : 'B');
                 const isCurrent = currentPlayingChordName === cName;
@@ -1662,7 +2056,7 @@ export default function ArcadeLobby() {
               {chillPlaying ? '[ ⏸ PAUSE SOUNDSCAPE // พักเสียง ]' : '[ ▶ START SOUNDSCAPE // เริ่มเปิดเสียง ]'}
             </button>
             <span className="font-mono text-[10px] text-[#78716c] hidden sm:inline">
-              BINAURAL 3D STEREO • HEADPHONES RECOMMENDED
+              WARM RHODES + LO-FI BEAT + BINAURAL 3D STEREO
             </span>
           </div>
         </div>
@@ -1705,11 +2099,15 @@ export default function ArcadeLobby() {
 
   const renderClaimModal = () => {
     if (!showClaimModal) return null;
+    const earnedRank = getArcadeRank(claimScore, activeMode === 'tai_pla' ? 'tai_pla' : 'flappy');
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-[fadeIn_0.15s_ease-out] font-sans">
         <div className="w-full max-w-md bg-[var(--color-paper)] border-2 border-[#181615] rounded-3xl p-6 sm:p-8 shadow-xl text-left relative">
           <button 
-            onClick={() => setShowClaimModal(false)}
+            onClick={() => {
+              pixelSound.play('ui_click');
+              setShowClaimModal(false);
+            }}
             className="absolute top-5 right-5 text-[#78716c] hover:text-[#181615] transition-colors cursor-pointer font-mono text-[10px] font-bold"
           >
             [ CLOSE ]
@@ -1721,16 +2119,27 @@ export default function ArcadeLobby() {
                 <h2 className="text-[10px] font-bold tracking-widest text-[#bd4924] uppercase mb-1">
                   // SCORE RECORDING & REWARDS
                 </h2>
-                <h3 className="text-xl font-bold text-[#181615] mb-1 font-pixel uppercase tracking-wide">
-                  FINAL SCORE: {claimScore} PTS
-                </h3>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="text-xl font-bold text-[#181615] font-pixel uppercase tracking-wide">
+                    FINAL SCORE: {claimScore} PTS
+                  </h3>
+                  <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${earnedRank.badgeBg} ${earnedRank.badgeText} ${earnedRank.badgeBorder}`}>
+                    [ RANK {earnedRank.rank} // {earnedRank.titleTh} ]
+                  </span>
+                </div>
+                <p className="text-[10px] font-bold text-[#bd4924] mb-1">
+                  {earnedRank.rewardText}
+                </p>
                 <p className="text-[11px] text-[#57534e] leading-relaxed font-sans">
                   เข้าสู่ระบบ LINE เพื่อรับเหรียญ xhaus และตั๋วสุ่มรายสัปดาห์ หรือใส่ชื่อเพื่อบันทึกสถิติลง Leaderboard ทันที
                 </p>
               </div>
 
               <button
-                onClick={handleLineLogin}
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  handleLineLogin();
+                }}
                 className="w-full bg-[#06C755] hover:bg-[#05b04b] text-white font-bold py-3 rounded-2xl flex items-center justify-center gap-2 cursor-pointer font-mono text-[11px] uppercase shadow-sm border-2 border-[#05b04b]"
               >
                 <span>[ CONNECT LINE // รับเหรียญ XHAUS ]</span>
@@ -1768,15 +2177,26 @@ export default function ArcadeLobby() {
                 <h2 className="text-[10px] font-bold tracking-widest text-[#bd4924] uppercase mb-1">
                   // GPS LOCK VERIFICATION
                 </h2>
-                <h3 className="text-xl font-bold text-[#181615] mb-1 font-pixel uppercase tracking-wide">
-                  VERIFY SCORE: {claimScore} PTS
-                </h3>
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <h3 className="text-xl font-bold text-[#181615] font-pixel uppercase tracking-wide">
+                    VERIFY SCORE: {claimScore} PTS
+                  </h3>
+                  <span className={`px-2 py-0.5 rounded border text-[10px] font-bold ${earnedRank.badgeBg} ${earnedRank.badgeText} ${earnedRank.badgeBorder}`}>
+                    [ RANK {earnedRank.rank} // {earnedRank.titleTh} ]
+                  </span>
+                </div>
+                <p className="text-[10px] font-bold text-[#bd4924] mb-1">
+                  {earnedRank.rewardText}
+                </p>
                 <p className="text-[11px] text-[#57534e] leading-relaxed font-sans">
                   ยืนยันพิกัด GPS เพื่อรับเหรียญ xhaus และบันทึกสถิติของคุณเข้าบอร์ดประจำสัปดาห์
                 </p>
               </div>
               <button
-                onClick={processClaimScore}
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  processClaimScore();
+                }}
                 className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-bold py-3.5 rounded-2xl cursor-pointer font-mono text-xs uppercase shadow-xs border-2 border-[#181615]"
               >
                 [ ยืนยัน GPS & บันทึกสถิติ ]
@@ -1809,7 +2229,12 @@ export default function ArcadeLobby() {
                 </h3>
                 <div className="bg-[#FAF7F2] border-2 border-[#181615] rounded-2xl py-3 px-4 w-full my-2 flex justify-between items-center">
                   <span className="text-[#57534e] text-[10px] uppercase">[ RECORDED SCORE ]</span>
-                  <span className="text-base font-bold text-[#bd4924]">{claimScore} PTS</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold ${earnedRank.badgeBg} ${earnedRank.badgeText} ${earnedRank.badgeBorder}`}>
+                      [ {earnedRank.rank} ]
+                    </span>
+                    <span className="text-base font-bold text-[#bd4924]">{claimScore} PTS</span>
+                  </div>
                 </div>
                 {claimResultMessage && (
                   <div className="bg-[#FAF7F2] border border-[#181615]/30 rounded-xl py-3 px-4 w-full text-center text-[10px] font-bold text-[#181615] my-2 leading-relaxed">
@@ -1818,7 +2243,10 @@ export default function ArcadeLobby() {
                 )}
               </div>
               <button
-                onClick={() => setShowClaimModal(false)}
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  setShowClaimModal(false);
+                }}
                 className="w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-bold py-3 rounded-2xl cursor-pointer font-mono text-[10px] uppercase shadow-sm"
               >
                 [ DISMISS PANEL ]
@@ -1867,6 +2295,7 @@ export default function ArcadeLobby() {
           onRequireLogin={handleRequireLogin}
           isDedicated={true}
           onBackToHub={() => {
+            pixelSound.play('ui_click');
             setActiveMode('hub');
             setTaiPlaHighScore(parseInt(localStorage.getItem('tai_pla_high_score') || '0', 10));
           }}
@@ -1898,7 +2327,10 @@ export default function ArcadeLobby() {
           setIsFullscreen={(val) => {
             if (!val) setActiveMode('hub');
           }}
-          onBackToHub={() => setActiveMode('hub')}
+          onBackToHub={() => {
+            pixelSound.play('ui_click');
+            setActiveMode('hub');
+          }}
         />
         {renderStickyMiniPlayer()}
         {renderStudioModal()}
@@ -1907,6 +2339,8 @@ export default function ArcadeLobby() {
       </div>
     );
   }
+
+  const taiPlaRank = getArcadeRank(taiPlaHighScore, 'tai_pla');
 
   return (
     <div id="arcade-lobby-root" className="min-h-screen flex flex-col relative select-none font-sans bg-[var(--color-paper)]">
@@ -2079,48 +2513,60 @@ export default function ArcadeLobby() {
                 <span className="font-mono text-[9px] font-bold text-[#181615] bg-[#E9F344] px-2.5 py-1 rounded-xl border border-[#181615] uppercase tracking-wider">
                   [ 01 // 128-BIT RUNNER ]
                 </span>
-                <span className="font-mono text-[9px] font-bold text-[#78716c]">
-                  HIGH: {taiPlaHighScore} PTS
-                </span>
+                <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold">
+                  <span className={`px-1.5 py-0.5 rounded border ${taiPlaRank.badgeBg} ${taiPlaRank.badgeText} ${taiPlaRank.badgeBorder}`}>
+                    [{taiPlaRank.rank}]
+                  </span>
+                  <span className="text-[#78716c]">HIGH: {taiPlaHighScore} PTS</span>
+                </div>
               </div>
 
-              <div className="w-full aspect-[16/9] bg-[#faf6ed] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
+              <div className="w-full aspect-[16/9] bg-[#faf6ed] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3 shadow-inner">
                 <div className="flex items-center justify-between z-10 font-mono text-[8px]">
                   <span className="bg-[#181615] text-white px-2 py-0.5 rounded-md font-bold uppercase">
-                    3 SPECIES
+                    5 SPECIES ROSTER
                   </span>
                   <span className="bg-amber-100 text-amber-900 border border-amber-300 px-1.5 py-0.5 rounded-md font-bold">
-                    MEKONG RUNNER
+                    POP-PIXEL + SFX
                   </span>
                 </div>
 
-                <div className="flex items-center justify-center gap-2.5 my-auto z-10">
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-16 h-12 bg-sky-100 rounded-xl border-2 border-[#181615] flex flex-col items-center justify-center p-1 shadow-2xs font-mono">
-                      <span className="text-[10px] font-bold text-[#181615]">ไตปลา</span>
-                      <span className="text-[7px] text-sky-800 uppercase font-bold">WATER</span>
+                <div className="grid grid-cols-5 gap-1.5 my-auto z-10">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-full h-11 bg-sky-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
+                      <span className="text-[9px] font-bold text-[#181615]">ไตปลา</span>
+                      <span className="text-[6px] text-sky-800 uppercase font-bold">2X JUMP</span>
                     </div>
-                    <span className="text-[8px] font-mono font-bold text-[#181615]">2X จัมพ์</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-16 h-12 bg-amber-100 rounded-xl border-2 border-[#181615] flex flex-col items-center justify-center p-1 shadow-2xs font-mono">
-                      <span className="text-[10px] font-bold text-[#181615]">ส้มสะตอ</span>
-                      <span className="text-[7px] text-amber-800 uppercase font-bold">BOOST</span>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-full h-11 bg-amber-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
+                      <span className="text-[9px] font-bold text-[#181615]">ส้มสะตอ</span>
+                      <span className="text-[6px] text-amber-800 uppercase font-bold">GOD BOOST</span>
                     </div>
-                    <span className="text-[8px] font-mono font-bold text-[#181615]">เทพสะตอ</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-16 h-12 bg-stone-100 rounded-xl border-2 border-[#181615] flex flex-col items-center justify-center p-1 shadow-2xs font-mono">
-                      <span className="text-[10px] font-bold text-[#181615]">ข้าวหลาม</span>
-                      <span className="text-[7px] text-stone-700 uppercase font-bold">MAGNET</span>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-full h-11 bg-stone-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
+                      <span className="text-[9px] font-bold text-[#181615]">ข้าวหลาม</span>
+                      <span className="text-[6px] text-stone-700 uppercase font-bold">MAGNET</span>
                     </div>
-                    <span className="text-[8px] font-mono font-bold text-[#181615]">แม่เหล็ก</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-full h-11 bg-rose-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
+                      <span className="text-[9px] font-bold text-[#181615]">กะปิ</span>
+                      <span className="text-[6px] text-rose-800 uppercase font-bold">2X SPICE</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <div className="w-full h-11 bg-emerald-100 rounded-lg border-2 border-[#181615] flex flex-col items-center justify-center p-0.5 shadow-2xs font-mono">
+                      <span className="text-[9px] font-bold text-[#181615]">นาคน้อย</span>
+                      <span className="text-[6px] text-emerald-800 uppercase font-bold">3X GLIDE</span>
+                    </div>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#78716c]">
-                  <span>จอใหญ่เต็มตามือถือ</span>
-                  <span>แตะเพื่อกระโดด</span>
+                  <span>4 แทร็กเพลง + Chiptune SFX</span>
+                  <span>แตะเพื่อกระโดด 2-3 จังหวะ</span>
                 </div>
               </div>
 
@@ -2129,13 +2575,16 @@ export default function ArcadeLobby() {
                   TAI-PLA RUN: 128-BIT
                 </h3>
                 <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  วิ่งตะลุยริมโขงนครพนม 3 สิ่งมีชีวิตคู่หู • กระโดด 2 จังหวะ • สปริงสะตอ • ปรุงแกงไตปลาสะสมเหรียญ XHAUS เต็มจอสะใจ!
+                  วิ่งตะลุยริมโขงนครพนม 5 คู่หูความสามารถเฉพาะตัว • กระโดด 2–3 จังหวะ • สปริงสะตอ • ปรุงแกงไตปลาสะสมเหรียญ XHAUS!
                 </p>
               </div>
             </div>
 
             <button
-              onClick={() => setActiveMode('tai_pla')}
+              onClick={() => {
+                pixelSound.play('ui_click');
+                setActiveMode('tai_pla');
+              }}
               className="w-full bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
             >
               <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY RUNNER ]</span>
@@ -2149,34 +2598,34 @@ export default function ArcadeLobby() {
                   [ 02 // RETRO CABINET ]
                 </span>
                 <span className="font-mono text-[9px] font-bold text-[#78716c]">
-                  ENGINE: PHASER
+                  ENGINE: PHASER + SFX
                 </span>
               </div>
 
               <div className="w-full aspect-[16/9] bg-[#181615] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
                 <div className="flex items-center justify-between z-10 font-mono text-[8px]">
                   <span className="bg-[#E9F344] text-[#181615] px-2 py-0.5 rounded-md font-bold uppercase">
-                    FLAPPY CAT
+                    FLAPPY CAT POP-PIXEL
                   </span>
                   <span className="text-[#A8A29E]">
-                    TOP 10 LEADERBOARD
+                    RANK S+ TO C
                   </span>
                 </div>
 
                 <div className="flex items-center justify-center gap-3 my-auto z-10">
-                  <div className="w-16 h-12 bg-[#2A2624] rounded-xl border-2 border-[#5C544D] flex flex-col items-center justify-center text-[10px] font-bold text-[#FAF7F5] font-mono shadow-md">
+                  <div className="w-16 h-12 bg-[#2A2624] rounded-xl border-2 border-[#BD4924] flex flex-col items-center justify-center text-[10px] font-bold text-[#FAF7F5] font-mono shadow-md">
                     <span>HAUS CAT</span>
-                    <span className="text-[7px] text-amber-400 font-bold">FLAP</span>
+                    <span className="text-[7px] text-[#E9F344] font-bold">COLLAR BELL</span>
                   </div>
                   <div className="flex flex-col font-mono text-[9px] text-[#FAF7F5]">
-                    <span className="text-emerald-400 font-bold">20 PIPES: +1.00 XH</span>
-                    <span className="text-amber-400 font-bold">35 PIPES: +1.00 XH</span>
-                    <span className="text-sky-300 font-bold">40 PIPES: 1 TICKET</span>
+                    <span className="text-emerald-400 font-bold">[RANK A] 20 PIPES: +1.00 XH</span>
+                    <span className="text-amber-400 font-bold">[RANK S] 35 PIPES: +1.00 XH</span>
+                    <span className="text-[#E9F344] font-bold">[RANK S+] 40 PIPES: 1 TICKET</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#78716c]">
-                  <span>ฟิสิกส์แคลคูลัสเรโทร</span>
+                  <span>ฝักสะตอ Pop-Pixel 1:1</span>
                   <span>สะสมเหรียญได้ทุกวัน</span>
                 </div>
               </div>
@@ -2186,13 +2635,16 @@ export default function ArcadeLobby() {
                   FLAPPY CAT IN THE HAUS
                 </h3>
                 <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  แมวส้มทะยานฟ้าริมฝั่งโขง • บินฝ่าท่อเก็บคะแนนสะสมเหรียญ XHAUS และรับตั๋วสุ่มรายสัปดาห์
+                  แมวส้มปลอกคอ Haus ทะยานฟ้าริมโขง • บินฝ่าฝักสะตอพิกเซลพร้อมเสียง 8-Bit Chiptune สะสมเหรียญ XHAUS และตั๋วสุ่ม
                 </p>
               </div>
             </div>
 
             <button
-              onClick={() => setActiveMode('flappy')}
+              onClick={() => {
+                pixelSound.play('ui_click');
+                setActiveMode('flappy');
+              }}
               className="w-full bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] font-mono font-bold text-sm py-3.5 px-4 rounded-2xl border-2 border-[#181615] shadow-xs active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wide transition-transform duration-100 ease-out"
             >
               <span className="whitespace-nowrap">[ ▶ เล่นเลย // PLAY FLAPPY ]</span>
@@ -2213,10 +2665,10 @@ export default function ArcadeLobby() {
               <div className="w-full aspect-[16/9] bg-[#1c2541] rounded-2xl border-2 border-[#181615] relative overflow-hidden flex flex-col justify-between p-3.5 shadow-inner">
                 <div className="flex items-center justify-between z-10 font-mono text-[8px]">
                   <span className="bg-sky-900/80 text-sky-200 px-2 py-0.5 rounded-md font-bold uppercase">
-                    13 SOUNDSCAPES
+                    13 SOUNDSCAPES + BEAT
                   </span>
                   <span className="text-[#93c5fd]">
-                    MEKONG BALCONY
+                    RHODES + 3D BINAURAL
                   </span>
                 </div>
 
@@ -2232,14 +2684,14 @@ export default function ArcadeLobby() {
                       {CHILL_PRESETS[chillPreset]?.name.split(' (')[0] || 'MEKONG JAZZ'}
                     </span>
                     <span className="text-[#E9F344] text-[8px] font-bold truncate">
-                      {currentPlayingChordName ? `CHORD: ${currentPlayingChordName}` : '3D STEREO SYNTHESIS'}
+                      {currentPlayingChordName ? `CHORD: ${currentPlayingChordName}` : 'RHODES + LO-FI GROOVE'}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between z-10 text-[8px] font-mono text-[#94a3b8]">
-                  <span>เปิดฟังคลอได้ต่อเนื่อง</span>
-                  <span>มีตัวตั้งเวลาปิด (Timer)</span>
+                  <span>จังหวะกลอง + เบส + เมโลดี้สด</span>
+                  <span>ตั้งเวลาปิดอัตโนมัติ (Timer)</span>
                 </div>
               </div>
 
@@ -2248,7 +2700,7 @@ export default function ArcadeLobby() {
                   HAUS BINAURAL LO-FI
                 </h3>
                 <p className="text-xs text-[#57534e] font-sans leading-relaxed mt-1">
-                  13 ซาวด์แทร็คแจ๊ส สวิงร็อก ฟังก์ และคลื่นแม่น้ำโขงสังเคราะห์ • มิติเสียง 3D Binaural ฟังสบายสมอง เปิดคลอระหว่างเลือกเกมได้
+                  13 ซาวด์แทร็คเปียโน Warm Rhodes คอร์ดแจ๊ส 9th/13th พร้อมจังหวะกลอง-เบส Lo-Fi Groove และคลื่นแม่น้ำโขง 3D Binaural
                 </p>
               </div>
             </div>
@@ -2265,7 +2717,10 @@ export default function ArcadeLobby() {
                 {chillPlaying ? '[ ⏸ พักเสียง ]' : '[ ▶ เปิดฟังคลอ ]'}
               </button>
               <button
-                onClick={() => setShowStudioModal(true)}
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  setShowStudioModal(true);
+                }}
                 className="py-3 px-3.5 bg-[#181615] hover:bg-[#252220] text-[#FAF7F5] rounded-2xl border-2 border-[#181615] font-bold text-xs cursor-pointer transition-colors shadow-xs"
               >
                 [ สตูดิโอ ]
@@ -2275,20 +2730,28 @@ export default function ArcadeLobby() {
         </section>
 
         <section className="w-full bg-[#FAF7F2] border-2 border-[#181615] rounded-3xl p-5 sm:p-7 shadow-sm flex flex-col gap-4">
-          <div className="flex items-center justify-between border-b-2 border-[#181615] pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-[#181615] pb-3 gap-2">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E9F344] border border-[#181615]" />
               <h3 className="font-pixel text-base sm:text-lg font-bold uppercase tracking-wider text-[#181615]">
                 WEEKLY TOP 10 ROSTER // ทำเนียบยอดฝีมือประจำสัปดาห์
               </h3>
             </div>
-            <button
-              onClick={() => fetchLeaderboard(true)}
-              disabled={isRefreshing}
-              className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] font-mono text-xs font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform disabled:opacity-60 flex items-center gap-1.5"
-            >
-              <span>{isRefreshing ? '[ กำลังรีเฟรช… ]' : '[ REFRESH // รีเฟรช ]'}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="hidden md:inline-block font-mono text-[9px] text-[#78716c] uppercase">
+                [ S+:40+ | S:35+ | A:20+ | B:10+ ]
+              </span>
+              <button
+                onClick={() => {
+                  pixelSound.play('ui_click');
+                  fetchLeaderboard(true);
+                }}
+                disabled={isRefreshing}
+                className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] font-mono text-xs font-bold rounded-xl border-2 border-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform disabled:opacity-60 flex items-center gap-1.5"
+              >
+                <span>{isRefreshing ? '[ กำลังรีเฟรช… ]' : '[ REFRESH // รีเฟรช ]'}</span>
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -2302,6 +2765,7 @@ export default function ArcadeLobby() {
                 const rankNum = (index + 1).toString().padStart(2, '0');
 
                 if (entry) {
+                  const playerRank = getArcadeRank(entry.score, 'leaderboard');
                   return (
                     <div 
                       key={entry.id || `rank-${index}`}
@@ -2313,7 +2777,7 @@ export default function ArcadeLobby() {
                             : 'bg-[#FAF7F2] border-[#181615]/30 hover:border-[#181615] text-[#181615]'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className={`font-bold shrink-0 ${
                           index === 0 
                             ? 'text-[#bd4924]' 
@@ -2323,13 +2787,18 @@ export default function ArcadeLobby() {
                         }`}>
                           [ #{rankNum} ]
                         </span>
-                        <span className="truncate max-w-[130px] sm:max-w-[150px] uppercase font-bold tracking-tight">
+                        <span className="truncate max-w-[110px] sm:max-w-[130px] uppercase font-bold tracking-tight">
                           {entry.display_name}
                         </span>
                       </div>
-                      <span className="font-bold shrink-0 text-[#181615]">
-                        {entry.score.toString().padStart(3, '0')} PTS
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`px-1.5 py-0.5 rounded border text-[9px] font-bold ${playerRank.badgeBg} ${playerRank.badgeText} ${playerRank.badgeBorder}`}>
+                          [{playerRank.rank}]
+                        </span>
+                        <span className="font-bold text-[#181615]">
+                          {entry.score.toString().padStart(3, '0')} PTS
+                        </span>
+                      </div>
                     </div>
                   );
                 }

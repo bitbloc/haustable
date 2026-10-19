@@ -37,23 +37,25 @@ function getBroadcastChannel(forceRecreate = false) {
         const chState = posBroadcastChannel.state;
         const isDead = forceRecreate || (chState && chState !== 'joined' && chState !== 'joining');
         if (isDead) {
-            try {
-                supabase.removeChannel(posBroadcastChannel);
-            } catch (e) {}
+            const staleChannel = posBroadcastChannel;
             posBroadcastChannel = null;
             posChannelSubPromise = null;
+            try {
+                supabase.removeChannel(staleChannel);
+            } catch (e) {}
         }
     }
 
     if (!posBroadcastChannel) {
-        posBroadcastChannel = supabase.channel('pos-realtime-notifications', {
+        const channelInstance = supabase.channel('pos-realtime-notifications', {
             config: {
                 broadcast: { ack: true }
             }
         });
+        posBroadcastChannel = channelInstance;
 
         // 1. Wildcard listener for all broadcast events
-        posBroadcastChannel.on('broadcast', { event: '*' }, ({ event, payload }) => {
+        channelInstance.on('broadcast', { event: '*' }, ({ event, payload }) => {
             dispatchBroadcastEvent(event, payload);
         });
 
@@ -66,17 +68,25 @@ function getBroadcastChannel(forceRecreate = false) {
             'payment_slip_uploaded',
             'table_moved',
             'bills_merged',
-            'online_order_status_updated'
+            'online_order_status_updated',
+            'customer_arrived'
         ];
         explicitEvents.forEach(evt => {
-            posBroadcastChannel.on('broadcast', { event: evt }, ({ payload }) => {
+            channelInstance.on('broadcast', { event: evt }, ({ payload }) => {
                 dispatchBroadcastEvent(evt, payload);
             });
         });
 
         posChannelSubPromise = new Promise((resolve) => {
             const timer = setTimeout(resolve, 2000);
-            posBroadcastChannel.subscribe((status) => {
+            channelInstance.subscribe((status) => {
+                // Ignore status callbacks from a superseded/removed channel instance
+                if (channelInstance !== posBroadcastChannel) {
+                    clearTimeout(timer);
+                    resolve();
+                    return;
+                }
+
                 if (status === 'SUBSCRIBED') {
                     clearTimeout(timer);
                     if (broadcastReconnectTimer) {
@@ -86,11 +96,11 @@ function getBroadcastChannel(forceRecreate = false) {
                     resolve();
                 } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                     console.warn(`[RealtimeNotifier] Channel status: ${status}, scheduling auto-reconnect...`);
-                    try {
-                        if (posBroadcastChannel) supabase.removeChannel(posBroadcastChannel);
-                    } catch (e) {}
                     posBroadcastChannel = null;
                     posChannelSubPromise = null;
+                    try {
+                        supabase.removeChannel(channelInstance);
+                    } catch (e) {}
                     clearTimeout(timer);
                     resolve();
 
@@ -109,7 +119,7 @@ function getBroadcastChannel(forceRecreate = false) {
     return { channel: posBroadcastChannel, promise: posChannelSubPromise };
 }
 
-// Lifecycle watcher: revive channel whenever Android WebView / mobile browser is foregrounded or network reconnects
+// Lifecycle watcher & cross-tab local sync listener
 if (typeof window !== 'undefined') {
     const handleRevive = () => {
         if (document.visibilityState === 'visible' && (broadcastListeners.size > 0 || posBroadcastChannel)) {
@@ -122,6 +132,20 @@ if (typeof window !== 'undefined') {
     document.addEventListener('visibilitychange', handleRevive);
     window.addEventListener('online', handleRevive);
     window.addEventListener('focus', handleRevive);
+
+    try {
+        if (typeof BroadcastChannel !== 'undefined') {
+            const localBc = new BroadcastChannel('onhaus_pos_sync');
+            localBc.onmessage = (msgEvent) => {
+                const { event, payload } = msgEvent.data || {};
+                if (event) dispatchBroadcastEvent(event, payload);
+            };
+        }
+        window.addEventListener('pos_sync_event', (customEv) => {
+            const { event, payload } = customEv.detail || {};
+            if (event) dispatchBroadcastEvent(event, payload);
+        });
+    } catch (e) {}
 }
 
 /**
@@ -158,17 +182,11 @@ export async function sendPOSBroadcast(event, payload = {}) {
         let { channel, promise } = getBroadcastChannel();
         const fullPayload = {
             ...payload,
-            timestamp: Date.now()
+            timestamp: payload?.timestamp || Date.now()
         };
 
-        // Instantly notify local in-memory listeners (< 0.1ms)
-        broadcastListeners.forEach(listener => {
-            try {
-                listener({ event, payload: fullPayload });
-            } catch (err) {
-                console.error('[RealtimeNotifier] Local broadcast listener error:', err);
-            }
-        });
+        // Instantly notify local in-memory listeners (< 0.1ms) via deduplicated dispatcher
+        dispatchBroadcastEvent(event, fullPayload);
 
         if (promise) {
             await promise;

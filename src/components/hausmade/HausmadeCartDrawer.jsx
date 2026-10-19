@@ -288,6 +288,7 @@ export default function HausmadeCartDrawer({
 
         const isAutoVerified = Boolean(slipVerifyResult?.verified)
         const bookingPayload = {
+            source: 'online',
             pickup_contact_name: contactName,
             pickup_contact_phone: contactPhone,
             booking_time: bookingDateTime,
@@ -322,7 +323,7 @@ export default function HausmadeCartDrawer({
             quantity: item.quantity,
             price_at_time: item.price + (item.optionsPrice || 0),
             price: item.price + (item.optionsPrice || 0),
-            selected_options: item.optionsText || null
+            selected_options: item.optionsText ? [{ name: item.optionsText, price: item.optionsPrice || 0 }] : []
         }))
 
         // Optional LINE LIFF token if user is inside LINE
