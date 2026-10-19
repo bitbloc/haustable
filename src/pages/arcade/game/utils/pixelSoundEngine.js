@@ -7,7 +7,13 @@
 class PixelSoundEngine {
   constructor() {
     this.ctx = null;
-    this.muted = false;
+    let initialMuted = false;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        initialMuted = window.localStorage.getItem('arcade_sound_muted') === 'true';
+      }
+    } catch (e) {}
+    this.muted = initialMuted;
   }
 
   getContext() {
@@ -29,10 +35,28 @@ class PixelSoundEngine {
 
   setMuted(isMuted) {
     this.muted = !!isMuted;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arcade_sound_muted', this.muted ? 'true' : 'false');
+      }
+    } catch (e) {}
   }
 
   isMuted() {
     return this.muted;
+  }
+
+  isSoundEnabled() {
+    return !this.muted;
+  }
+
+  setSoundEnabled(enabled) {
+    this.setMuted(!enabled);
+  }
+
+  toggleSound() {
+    this.setMuted(!this.muted);
+    return !this.muted;
   }
 
   // Helper to play a quick note with envelope
