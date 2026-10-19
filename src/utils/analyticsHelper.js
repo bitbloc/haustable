@@ -40,14 +40,16 @@ export const getStoredUtmParams = () => {
         const utm_medium = urlParams.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '';
         const utm_campaign = urlParams.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '';
         const utm_content = urlParams.get('utm_content') || localStorage.getItem('onhaus_utm_content') || '';
+        const gclid = urlParams.get('gclid') || localStorage.getItem('onhaus_gclid') || '';
 
         // Persist if found in URL for closed-loop attribution
         if (urlParams.get('utm_source')) localStorage.setItem('onhaus_utm_source', urlParams.get('utm_source'));
         if (urlParams.get('utm_medium')) localStorage.setItem('onhaus_utm_medium', urlParams.get('utm_medium'));
         if (urlParams.get('utm_campaign')) localStorage.setItem('onhaus_utm_campaign', urlParams.get('utm_campaign'));
         if (urlParams.get('utm_content')) localStorage.setItem('onhaus_utm_content', urlParams.get('utm_content'));
+        if (urlParams.get('gclid')) localStorage.setItem('onhaus_gclid', urlParams.get('gclid'));
 
-        return { utm_source, utm_medium, utm_campaign, utm_content };
+        return { utm_source, utm_medium, utm_campaign, utm_content, gclid };
     } catch {
         return {};
     }
@@ -80,6 +82,12 @@ const getDeviceType = () => {
 export const logAdEvent = async (eventName, metadata = {}) => {
     try {
         if (typeof window === 'undefined') return;
+        const isBot = Boolean(
+            navigator.webdriver ||
+            /Lighthouse|Headless|PageSpeed|PTST|Chrome-Lighthouse|Google-InspectionTool|Bytespider/i.test(navigator.userAgent)
+        );
+        if (isBot) return;
+
         const utm = getStoredUtmParams();
         const payload = {
             session_id: getSessionId(),
@@ -92,6 +100,7 @@ export const logAdEvent = async (eventName, metadata = {}) => {
             page_path: window.location.pathname || '/link',
             metadata: {
                 referrer: document.referrer || null,
+                gclid: utm.gclid || null,
                 ...metadata
             }
         };

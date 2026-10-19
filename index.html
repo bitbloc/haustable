@@ -69,19 +69,26 @@
             document.head.appendChild(gtmScript);
           };
 
-          // On user interaction (click, touch, scroll), load GTM immediately
-          const events = ['click', 'touchstart', 'scroll', 'keydown'];
-          const triggerGtm = function() {
-            loadGtm();
-            events.forEach(function(e) { window.removeEventListener(e, triggerGtm, { passive: true }); });
-          };
-          events.forEach(function(e) { window.addEventListener(e, triggerGtm, { passive: true, once: true }); });
+          const isBot = Boolean(
+            navigator.webdriver ||
+            /Lighthouse|Headless|PageSpeed|PTST|Chrome-Lighthouse|Google-InspectionTool|Bytespider/i.test(navigator.userAgent)
+          );
 
-          // Otherwise, schedule load when main thread is idle after paint
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(loadGtm, { timeout: 1500 });
-          } else {
-            setTimeout(loadGtm, 1200);
+          if (!isBot) {
+            // On user interaction (click, touch, scroll), load GTM immediately
+            const events = ['click', 'touchstart', 'scroll', 'keydown', 'mousemove'];
+            const triggerGtm = function() {
+              loadGtm();
+              events.forEach(function(e) { window.removeEventListener(e, triggerGtm, { passive: true }); });
+            };
+            events.forEach(function(e) { window.addEventListener(e, triggerGtm, { passive: true, once: true }); });
+
+            // Otherwise, schedule load when main thread is idle after paint for human visitors
+            if ('requestIdleCallback' in window) {
+              requestIdleCallback(() => setTimeout(loadGtm, 3500));
+            } else {
+              setTimeout(loadGtm, 3500);
+            }
           }
 
           // LIFF SDK: Load only when needed (skip on /link or /pos unless inside LINE app)

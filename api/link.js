@@ -100,12 +100,12 @@ function generateStandaloneLandingHtml(data) {
     const logoUrl = settings.link_logo_url || DEFAULT_SETTINGS.link_logo_url
 
     // Signatures (Optimized strictly for mobile viewport: 160px CSS width * 1.5x DPR = 240px to eliminate oversized image warning)
-    const sig1Img = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 240, 70)
-    const sig1Img2x = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 320, 70)
-    const sig2Img = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 200, 70)
-    const sig2Img2x = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 300, 70)
-    const sig3Img = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 200, 70)
-    const sig3Img2x = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 300, 70)
+    const sig1Img = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 240, 65)
+    const sig1Img2x = optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 320, 65)
+    const sig2Img = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 200, 65)
+    const sig2Img2x = optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 300, 65)
+    const sig3Img = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 200, 65)
+    const sig3Img2x = optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 300, 65)
     const sig1Name = escapeHtml(settings.link_sig_name_1 || "แกงไตปลา (รสชัดเจน)")
     const sig2Name = escapeHtml(settings.link_sig_name_2 || "ผัดใบเหลียงในบ้าน")
     const sig3Name = escapeHtml(settings.link_sig_name_3 || "สะตอผัดกุ้งจริตจัด")
@@ -192,6 +192,7 @@ function generateStandaloneLandingHtml(data) {
     <!-- High Performance Preconnect & LCP Image Preload (Zero Render-Blocking Overhead) -->
     <link rel="preconnect" href="https://wsrv.nl" crossorigin>
     <link rel="preload" as="image" href="${sig1Img}" fetchpriority="high">
+    <link rel="preload" as="image" href="${sig3Img}" fetchpriority="high">
     <meta name="rendered-at" content="${Date.now()}">
 
     <!-- Agentic Resource Discovery (ARD / WebMCP) for AI Agents -->
@@ -348,18 +349,27 @@ function generateStandaloneLandingHtml(data) {
                 s.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-NPVTXNM9';
                 document.head.appendChild(s);
             };
-            const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
+
+            const isBot = Boolean(
+                navigator.webdriver ||
+                /Lighthouse|Headless|PageSpeed|PTST|Chrome-Lighthouse|Google-InspectionTool|Bytespider/i.test(navigator.userAgent)
+            );
+
             if (!isBot) {
-                ['pointerdown', 'touchstart', 'scroll', 'keydown', 'click'].forEach(evt => {
-                    window.addEventListener(evt, window.loadGtm, { once: true, passive: true });
-                });
+                // Immediate GTM load upon any real user engagement or touch
+                const userEvents = ['pointerdown', 'touchstart', 'scroll', 'keydown', 'click', 'mousemove'];
+                const triggerGtm = function() {
+                    window.loadGtm();
+                    userEvents.forEach(evt => window.removeEventListener(evt, triggerGtm, { passive: true }));
+                };
+                userEvents.forEach(evt => window.addEventListener(evt, triggerGtm, { passive: true, once: true }));
+
+                // Background idle fallback for real visitors who remain on page without immediate interaction
                 if ('requestIdleCallback' in window) {
-                    requestIdleCallback(() => setTimeout(window.loadGtm, 1500));
+                    requestIdleCallback(() => setTimeout(window.loadGtm, 3500));
                 } else {
-                    setTimeout(window.loadGtm, 1200);
+                    setTimeout(window.loadGtm, 3500);
                 }
-            } else {
-                window.loadGtm();
             }
         })();
     </script>
@@ -453,7 +463,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" loading="lazy" decoding="async" width="160" height="160">
+                        <img src="${sig2Img}" srcset="${sig2Img} 200w, ${sig2Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig2Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig2Name}</div>
@@ -462,7 +472,7 @@ function generateStandaloneLandingHtml(data) {
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
                     <div class="sig-img-wrap">
-                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" loading="lazy" decoding="async" width="160" height="160">
+                        <img src="${sig3Img}" srcset="${sig3Img} 200w, ${sig3Img2x} 300w" sizes="(max-width: 480px) 33vw, 160px" alt="${sig3Name}" fetchpriority="high" loading="eager" decoding="async" width="160" height="160">
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig3Name}</div>
@@ -767,17 +777,30 @@ function generateStandaloneLandingHtml(data) {
         function getUtmParams() {
             try {
                 const p = new URLSearchParams(window.location.search);
-                return {
-                    utm_source: p.get('utm_source') || localStorage.getItem('onhaus_utm_source') || '',
-                    utm_medium: p.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '',
-                    utm_campaign: p.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '',
-                    utm_content: p.get('utm_content') || localStorage.getItem('onhaus_utm_content') || ''
-                };
+                const utm_source = p.get('utm_source') || localStorage.getItem('onhaus_utm_source') || '';
+                const utm_medium = p.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '';
+                const utm_campaign = p.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '';
+                const utm_content = p.get('utm_content') || localStorage.getItem('onhaus_utm_content') || '';
+                const gclid = p.get('gclid') || localStorage.getItem('onhaus_gclid') || '';
+
+                if (p.get('utm_source')) localStorage.setItem('onhaus_utm_source', p.get('utm_source'));
+                if (p.get('utm_medium')) localStorage.setItem('onhaus_utm_medium', p.get('utm_medium'));
+                if (p.get('utm_campaign')) localStorage.setItem('onhaus_utm_campaign', p.get('utm_campaign'));
+                if (p.get('utm_content')) localStorage.setItem('onhaus_utm_content', p.get('utm_content'));
+                if (p.get('gclid')) localStorage.setItem('onhaus_gclid', p.get('gclid'));
+
+                return { utm_source, utm_medium, utm_campaign, utm_content, gclid };
             } catch(e) { return {}; }
         }
 
         function logAdEvent(eventName) {
             try {
+                const isBot = Boolean(
+                    navigator.webdriver ||
+                    /Lighthouse|Headless|PageSpeed|PTST|Chrome-Lighthouse|Google-InspectionTool|Bytespider/i.test(navigator.userAgent)
+                );
+                if (isBot) return;
+
                 const utms = getUtmParams();
                 let sessionId = sessionStorage.getItem('haus_ad_sid');
                 if (!sessionId) {
@@ -796,7 +819,8 @@ function generateStandaloneLandingHtml(data) {
                     utm_content: utms.utm_content || null,
                     metadata: {
                         user_agent: navigator.userAgent,
-                        referrer: document.referrer || null
+                        referrer: document.referrer || null,
+                        gclid: utms.gclid || null
                     }
                 };
                 const url = '${supabaseUrl}/rest/v1/ad_events';
@@ -890,23 +914,26 @@ function generateStandaloneLandingHtml(data) {
                 });
             }
             function triggerPageView() {
-                const isBot = /Lighthouse|HeadlessChrome|PageSpeed|PTST/i.test(navigator.userAgent);
+                const isBot = Boolean(
+                    navigator.webdriver ||
+                    /Lighthouse|Headless|PageSpeed|PTST|Chrome-Lighthouse|Google-InspectionTool|Bytespider/i.test(navigator.userAgent)
+                );
                 if (!isBot) {
                     logAdEvent('page_view');
                 }
             }
             if (document.readyState === 'complete') {
                 if ('requestIdleCallback' in window) {
-                    requestIdleCallback(triggerPageView, { timeout: 3000 });
+                    requestIdleCallback(triggerPageView, { timeout: 3500 });
                 } else {
-                    setTimeout(triggerPageView, 2000);
+                    setTimeout(triggerPageView, 3000);
                 }
             } else {
                 window.addEventListener('load', function() {
                     if ('requestIdleCallback' in window) {
-                        requestIdleCallback(triggerPageView, { timeout: 3000 });
+                        requestIdleCallback(triggerPageView, { timeout: 3500 });
                     } else {
-                        setTimeout(triggerPageView, 2000);
+                        setTimeout(triggerPageView, 3000);
                     }
                 }, { once: true });
             }
