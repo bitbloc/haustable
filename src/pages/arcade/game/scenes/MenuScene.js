@@ -175,8 +175,10 @@ export default class MenuScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setDepth(11);
 
         // Tier Rank Badge
-        const tierFill = rankInfo.tier === 'S+' ? '#E9F344' : (rankInfo.tier === 'S' ? '#FBBF24' : (rankInfo.tier === 'A' ? '#34D399' : '#A8A29E'));
-        this.add.text(width / 2 + boardW / 2 - 74, rowY, rankInfo.badge, {
+        const rTier = rankInfo.rank || rankInfo.tier || 'C';
+        const tierFill = rTier === 'S+' ? '#E9F344' : (rTier === 'S' ? '#FBBF24' : (rTier === 'A' ? '#34D399' : '#A8A29E'));
+        const badgeText = rankInfo.badge || `[RANK ${rTier}]`;
+        this.add.text(width / 2 + boardW / 2 - 74, rowY, badgeText, {
           fontFamily: '"Geist Mono", "Space Mono", monospace',
           fontSize: '10px',
           fill: tierFill,

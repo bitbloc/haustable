@@ -283,79 +283,114 @@ export function getArcadeRank(score = 0, mode = 'leaderboard') {
   if (numScore >= tSPlus) {
     return {
       rank: 'S+',
+      tier: 'S+',
       code: 'RANK S+',
+      badge: '[RANK S+]',
       title: 'ตำนานพญานาคริมโขง',
+      titleTh: 'ตำนานพญานาคริมโขง',
       engTitle: 'MEKONG LEGEND',
       hex: '#facc15',
       textHex: '#181615',
       badgeClass: 'bg-[#E9F344] text-[#181615] border-[#181615]',
       darkBadgeClass: 'bg-[#E9F344] text-[#181615] border-[#FAF7F5]',
+      badgeBg: 'bg-[#E9F344]',
+      badgeText: 'text-[#181615]',
+      badgeBorder: 'border-[#181615]',
       rewardText: 'ปลดล็อกครบทุกภารกิจ (+2.00 XH & ตั๋วสุ่ม 50 XH)',
       nextTarget: null,
-      nextRank: null
+      nextRank: null,
+      nextTier: null
     };
   }
 
   if (numScore >= tS) {
     return {
       rank: 'S',
+      tier: 'S',
       code: 'RANK S',
+      badge: '[RANK S]',
       title: 'ยอดฝีมือคนในบ้าน',
+      titleTh: 'ยอดฝีมือคนในบ้าน',
       engTitle: 'INNER MASTER',
       hex: '#fb923c',
       textHex: '#181615',
       badgeClass: 'bg-amber-300 text-[#181615] border-[#181615]',
       darkBadgeClass: 'bg-amber-400 text-[#181615] border-[#181615]',
+      badgeBg: 'bg-amber-300',
+      badgeText: 'text-[#181615]',
+      badgeBorder: 'border-[#181615]',
       rewardText: 'ปลดล็อกโบนัส 35P (+2.00 XH สะสมรายวัน)',
       nextTarget: tSPlus,
-      nextRank: 'S+'
+      nextRank: 'S+',
+      nextTier: 'S+'
     };
   }
 
   if (numScore >= tA) {
     return {
       rank: 'A',
+      tier: 'A',
       code: 'RANK A',
+      badge: '[RANK A]',
       title: 'จอมยุทธ์เผ็ดปากเปิด',
+      titleTh: 'จอมยุทธ์เผ็ดปากเปิด',
       engTitle: 'SPICY VANGUARD',
       hex: '#4ade80',
       textHex: '#181615',
       badgeClass: 'bg-emerald-200 text-emerald-950 border-[#181615]',
       darkBadgeClass: 'bg-emerald-400 text-[#181615] border-[#181615]',
+      badgeBg: 'bg-emerald-200',
+      badgeText: 'text-emerald-950',
+      badgeBorder: 'border-[#181615]',
       rewardText: 'ปลดล็อกโบนัส 20P (+1.00 XH รายวัน)',
       nextTarget: tS,
-      nextRank: 'S'
+      nextRank: 'S',
+      nextTier: 'S'
     };
   }
 
   if (numScore >= tB) {
     return {
       rank: 'B',
+      tier: 'B',
       code: 'RANK B',
+      badge: '[RANK B]',
       title: 'นักวิ่งสายลมโขง',
+      titleTh: 'นักวิ่งสายลมโขง',
       engTitle: 'RIVER SPRINTER',
       hex: '#38bdf8',
       textHex: '#181615',
       badgeClass: 'bg-sky-200 text-sky-950 border-[#181615]',
       darkBadgeClass: 'bg-sky-400 text-[#181615] border-[#181615]',
-      rewardText: `อีก ${tA - numScore} แต้ม ปลดล็อกเหรียญ +1.00 XH`,
+      badgeBg: 'bg-sky-200',
+      badgeText: 'text-sky-950',
+      badgeBorder: 'border-[#181615]',
+      rewardText: `อีก ${tA - numScore} ${isRunner ? 'แต้ม' : 'ท่อ'} ปลดล็อกเหรียญ +1.00 XH`,
       nextTarget: tA,
-      nextRank: 'A'
+      nextRank: 'A',
+      nextTier: 'A'
     };
   }
 
   return {
     rank: 'C',
+    tier: 'C',
     code: 'RANK C',
+    badge: '[RANK C]',
     title: 'น้องใหม่ในบ้าน',
+    titleTh: 'น้องใหม่ในบ้าน',
     engTitle: 'HAUS ROOKIE',
     hex: '#a8a29e',
     textHex: '#181615',
     badgeClass: 'bg-stone-200 text-stone-800 border-[#181615]/40',
     darkBadgeClass: 'bg-stone-700 text-stone-200 border-stone-500',
-    rewardText: `สะสมให้ถึง ${tA} แต้ม เพื่อรับ +1.00 XH`,
+    badgeBg: 'bg-stone-200',
+    badgeText: 'text-stone-800',
+    badgeBorder: 'border-[#181615]/40',
+    rewardText: `สะสมให้ถึง ${tB} ${isRunner ? 'แต้ม' : 'ท่อ'} เพื่อเลื่อนสู่ RANK B`,
     nextTarget: tB,
-    nextRank: 'B'
+    nextRank: 'B',
+    nextTier: 'B'
   };
 }
 

@@ -111,22 +111,28 @@ export default class GameOverScene extends Phaser.Scene {
     // 5B. Rank Tier & Reward Evaluation Box
     const rankBoxY = scoreY + 68;
     const rankBoxW = cardW - 48;
+    const currentRank = rankInfo.rank || rankInfo.tier || 'C';
+    const isGoldTier = currentRank === 'S+' || currentRank === 'S';
     this.add.rectangle(width / 2, rankBoxY, rankBoxW, 56, 0x24201E, 1.0)
       .setOrigin(0.5)
       .setDepth(12)
-      .setStrokeStyle(1, rankInfo.tier === 'S+' || rankInfo.tier === 'S' ? 0xE9F344 : 0x5C544D);
+      .setStrokeStyle(1, isGoldTier ? 0xE9F344 : 0x5C544D);
 
-    const rankBadgeFill = rankInfo.tier === 'S+' ? '#E9F344' : (rankInfo.tier === 'S' ? '#FBBF24' : (rankInfo.tier === 'A' ? '#34D399' : '#FAF7F5'));
-    this.add.text(width / 2, rankBoxY - 11, `${rankInfo.badge} — ${rankInfo.titleTh}`, {
+    const rankBadgeFill = currentRank === 'S+' ? '#E9F344' : (currentRank === 'S' ? '#FBBF24' : (currentRank === 'A' ? '#34D399' : '#FAF7F5'));
+    const displayBadge = rankInfo.badge || `[RANK ${currentRank}]`;
+    const displayTitle = rankInfo.titleTh || rankInfo.title || 'น้องใหม่ในบ้าน';
+
+    this.add.text(width / 2, rankBoxY - 11, `${displayBadge} — ${displayTitle}`, {
       fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',
       fontSize: '13px',
       fill: rankBadgeFill,
       fontStyle: 'bold'
     }).setOrigin(0.5).setDepth(13);
 
-    const rewardSub = rankInfo.nextTarget
-      ? `${rankInfo.rewardText} (อีก ${Math.max(0, rankInfo.nextTarget - this.finalScore)} ต้น สู่ RANK ${rankInfo.nextTier})`
-      : rankInfo.rewardText;
+    const nextRankName = rankInfo.nextTier || rankInfo.nextRank;
+    const rewardSub = (rankInfo.nextTarget && nextRankName)
+      ? `${rankInfo.rewardText || ''} (อีก ${Math.max(0, rankInfo.nextTarget - this.finalScore)} ท่อ สู่ RANK ${nextRankName})`
+      : (rankInfo.rewardText || 'ยินดีด้วย! คุณสะสมสถิติประจำวันสำเร็จ');
 
     this.add.text(width / 2, rankBoxY + 12, rewardSub, {
       fontFamily: '"IBM Plex Sans Thai", "Geist Mono", monospace',

@@ -535,11 +535,14 @@ export default class PlayScene extends Phaser.Scene {
     }
 
     // Update live Rank Badge & trigger Milestone Banner when crossing Rank thresholds (10, 20, 35, 40)
+    const currentTier = rankInfo.rank || rankInfo.tier || 'C';
+    const badgeStr = rankInfo.badge || `[RANK ${currentTier}]`;
+    const titleStr = rankInfo.titleTh || rankInfo.title || '';
     if (this.rankText) {
-      this.rankText.setText(`${rankInfo.badge} ${rankInfo.titleTh}`);
+      this.rankText.setText(`${badgeStr} ${titleStr}`.trim());
     }
-    if (rankInfo.tier !== this.currentRankTier) {
-      this.currentRankTier = rankInfo.tier;
+    if (currentTier !== this.currentRankTier) {
+      this.currentRankTier = currentTier;
       pixelSound.play('rank_up');
 
       if (this.rankPill && this.rankText) {
