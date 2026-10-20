@@ -143,6 +143,7 @@ export default function POSDashboard() {
     const activeBookingRef = useRef(activeBooking);
     activeBookingRef.current = activeBooking;
     const tableSelectRequestIdRef = useRef(0);
+    const handleSelectTableRef = useRef(null);
     useEffect(() => {
         activeBookingRef.current = activeBooking;
     }, [activeBooking]);
@@ -1070,7 +1071,7 @@ export default function POSDashboard() {
                             setView('online_hub');
                         } else {
                             supabase.from('tables_layout').select('*').eq('id', fullBooking.table_id).single().then(({ data }) => {
-                                if (data) handleSelectTable(data);
+                                if (data && handleSelectTableRef.current) handleSelectTableRef.current(data);
                             });
                         }
                     }
@@ -1352,7 +1353,7 @@ export default function POSDashboard() {
                                     toast.dismiss(qrItemAlertKey);
                                     if (b.table_id) {
                                         supabase.from('tables_layout').select('*').eq('id', b.table_id).single().then(({ data }) => {
-                                            if (data) handleSelectTable(data);
+                                            if (data && handleSelectTableRef.current) handleSelectTableRef.current(data);
                                         });
                                     }
                                 }
@@ -1417,7 +1418,7 @@ export default function POSDashboard() {
                                 if (b.id) stopStaffCallLoop(b.id);
                                 if (tableId) {
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
+                                        if (data && handleSelectTableRef.current) handleSelectTableRef.current(data);
                                     });
                                 }
                             }
@@ -1440,7 +1441,7 @@ export default function POSDashboard() {
                             onClick: () => {
                                 if (tableId) {
                                     supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
-                                        if (data) handleSelectTable(data);
+                                        if (data && handleSelectTableRef.current) handleSelectTableRef.current(data);
                                     });
                                 }
                             }
@@ -1455,7 +1456,7 @@ export default function POSDashboard() {
         } finally {
             isCheckingCallsRef.current = false;
         }
-    }, [handleSelectTable]);
+    }, []);
 
     useEffect(() => {
         // Request Screen Wake Lock for POS Android APK / Tablet
@@ -2990,6 +2991,7 @@ export default function POSDashboard() {
             setOpenTableModalData({ table });
         }
     }, [getActiveBooking]);
+    handleSelectTableRef.current = handleSelectTable;
 
     const handleSeatOnlineReservation = useCallback(async (table, reservation) => {
         if (!reservation?.id || isSeatingReservation || seatingReservationRef.current) return;
@@ -3978,8 +3980,6 @@ export default function POSDashboard() {
         const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
         // 1. Instant optimistic load from posCache (<10ms)
-        const cachedTables = posCache.getTables() || [];
-        const cachedBookings = posCache.getBookings() || [];
 
         const computeFreeTables = (tList, bList) => {
             const occupiedTableIds = new Set();
@@ -4169,8 +4169,6 @@ export default function POSDashboard() {
         const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
         // 1. Instant optimistic load from posCache (<10ms)
-        const cachedTables = posCache.getTables() || [];
-        const cachedBookings = posCache.getBookings() || [];
 
         const computeMergeable = (tList, bList) => {
             const activeBookingMap = {};
