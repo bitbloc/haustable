@@ -3958,14 +3958,14 @@ export default function POSDashboard() {
     };
 
     const handleOpenMoveModal = async () => {
+        const cachedTables = posCache.getTables() || [];
+        const cachedBookings = posCache.getBookings() || [];
         let table = selectedTable;
         let booking = activeBooking;
         if (!table && booking?.table_id) {
-            const cachedTables = posCache.getTables() || [];
             table = cachedTables.find(t => String(t.id) === String(booking.table_id)) || booking.tables_layout;
         }
         if (!booking && table?.id) {
-            const cachedBookings = posCache.getBookings() || [];
             booking = cachedBookings.find(b => String(b.table_id) === String(table.id) && ['pending', 'confirmed', 'seated', 'ready'].includes(b.status));
         }
 
@@ -4147,14 +4147,14 @@ export default function POSDashboard() {
     };
 
     const handleOpenMergeModal = async () => {
+        const cachedTables = posCache.getTables() || [];
+        const cachedBookings = posCache.getBookings() || [];
         let table = selectedTable;
         let booking = activeBooking;
         if (!table && booking?.table_id) {
-            const cachedTables = posCache.getTables() || [];
             table = cachedTables.find(t => String(t.id) === String(booking.table_id)) || booking.tables_layout;
         }
         if (!booking && table?.id) {
-            const cachedBookings = posCache.getBookings() || [];
             booking = cachedBookings.find(b => String(b.table_id) === String(table.id) && ['pending', 'confirmed', 'seated', 'ready'].includes(b.status));
         }
 

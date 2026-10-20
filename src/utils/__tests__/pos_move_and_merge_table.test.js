@@ -252,4 +252,37 @@ describe('POS Table Move & Table Merge Resilience Suite (APK & Offline First)', 
         expect(mergeAction.payload.sourceBookingId).toBe('local_src_999');
         expect(mergeAction.payload.targetBookingId).toBe('target-202');
     });
+
+    it('guarantees handleOpenMoveModal and handleOpenMergeModal in POSDashboard have cachedTables and cachedBookings in scope', async () => {
+        const fs = await import('fs');
+        const path = await import('path');
+        const parser = await import('@babel/parser');
+        const _traverse = await import('@babel/traverse');
+        const traverse = _traverse.default?.default || _traverse.default || _traverse;
+
+        const code = fs.readFileSync(path.resolve(process.cwd(), 'src/pos/POSDashboard.jsx'), 'utf8');
+        const ast = parser.parse(code, {
+            sourceType: 'module',
+            plugins: ['jsx']
+        });
+
+        let undefinedCount = 0;
+        traverse(ast, {
+            VariableDeclarator(p) {
+                if (p.node.id && (p.node.id.name === 'handleOpenMoveModal' || p.node.id.name === 'handleOpenMergeModal')) {
+                    const fnPath = p.get('init');
+                    fnPath.traverse({
+                        Identifier(idPath) {
+                            if (idPath.node.name === 'cachedTables' || idPath.node.name === 'cachedBookings') {
+                                const binding = idPath.scope.getBinding(idPath.node.name);
+                                if (!binding) undefinedCount++;
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        expect(undefinedCount).toBe(0);
+    });
 });
