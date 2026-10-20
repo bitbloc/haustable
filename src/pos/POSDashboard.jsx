@@ -977,13 +977,23 @@ export default function POSDashboard() {
         if (processingQrPrintRef.current.has(bookingId)) return;
         processingQrPrintRef.current.add(bookingId);
         try {
-            const { data: fullBooking } = await supabase
+            let { data: fullBooking } = await supabase
                 .from('bookings')
                 .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
                 .eq('id', bookingId)
                 .maybeSingle();
 
-            if (!fullBooking || !fullBooking.order_items || fullBooking.order_items.length === 0) return;
+            if (!fullBooking || !fullBooking.order_items || fullBooking.order_items.length === 0) {
+                // Wait 350ms and retry once in case order_items insert is in-flight
+                await new Promise(r => setTimeout(r, 350));
+                const { data: retryBooking } = await supabase
+                    .from('bookings')
+                    .select('*, tables_layout(*), profiles(*), order_items(*, menu_items(name, category_id, is_drink_stamp_eligible, menu_categories(name, is_drink_stamp_eligible)))')
+                    .eq('id', bookingId)
+                    .maybeSingle();
+                if (!retryBooking || !retryBooking.order_items || retryBooking.order_items.length === 0) return;
+                fullBooking = retryBooking;
+            }
 
             const sourceLower = (fullBooking.source || '').toLowerCase();
             const remarkStr = (fullBooking.staff_remark || '').toLowerCase();
@@ -1047,6 +1057,9 @@ export default function POSDashboard() {
 
                 const displayTable = fullBooking.tables_layout?.table_name || (isOnlinePickupOrDelivery ? 'PICKUP' : tableNameHint);
                 const printKey = getCanonicalOrderAlertKey(bookingId) || `order_${bookingId}`;
+                if (checkEventDeduplication(printKey, 5000)) {
+                    playOrderAlert(printKey, 1200, 3.4);
+                }
                 toast.custom((t) => renderPosToast(t, {
                     badge: 'KITCHEN PRINT · พิมพ์ใบครัวแล้ว',
                     title: `${isOnlinePickupOrDelivery ? `ออเดอร์รับกลับ #${getShortBookingId(fullBooking)}` : `โต๊ะ ${displayTable}`} - พิมพ์ใบครัว ${unprintedItems.length} รายการ`,
@@ -1325,8 +1338,27 @@ export default function POSDashboard() {
                 if (unprinted.length > 0) {
                     const isWaitingGpsApproval = b.status === 'pending' && remarkLower.includes('gps_unverified');
                     if (!isWaitingGpsApproval) {
-                        console.log(`⚡ [Safety Heartbeat] Recovered unprinted QR order items for booking ${b.id} (${unprinted.length} items) - triggering auto-print.`);
+                        console.log(`⚡ [Safety Heartbeat] Recovered unprinted QR order items for booking ${b.id} (${unprinted.length} items) - triggering auto-print & alert sound.`);
                         const tableName = b.tables_layout?.table_name || `โต๊ะ #${b.table_id || ''}`;
+                        const qrItemAlertKey = getCanonicalOrderAlertKey(b.id);
+                        if (checkEventDeduplication(qrItemAlertKey, 6000)) {
+                            playOrderAlert(qrItemAlertKey, 1200, 3.4);
+                            toast.custom((t) => renderPosToast(t, {
+                                badge: 'QR ORDER · ออเดอร์เข้าใหม่',
+                                title: `โต๊ะ ${tableName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`,
+                                subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                                dot: 'emerald',
+                                onClick: () => {
+                                    toast.dismiss(qrItemAlertKey);
+                                    if (b.table_id) {
+                                        supabase.from('tables_layout').select('*').eq('id', b.table_id).single().then(({ data }) => {
+                                            if (data) handleSelectTable(data);
+                                        });
+                                    }
+                                }
+                            }), { id: qrItemAlertKey, duration: 10000 });
+                            pushNotifHistory('ORDER', 'QR Order', `โต๊ะ ${tableName} สั่งอาหารผ่าน QR Code เข้ามาแล้ว`, b.table_id);
+                        }
                         await handleAutoPrintQROrder(b.id, tableName);
                     }
                 }
@@ -1337,6 +1369,93 @@ export default function POSDashboard() {
             isCheckingUnprintedRef.current = false;
         }
     }, []);
+
+    const isCheckingCallsRef = useRef(false);
+
+    const checkStaffAndBillCalls = useCallback(async () => {
+        if (isCheckingCallsRef.current) return;
+        if (typeof navigator !== 'undefined' && !navigator.onLine) return;
+
+        isCheckingCallsRef.current = true;
+        try {
+            const today = new Date();
+            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+
+            const { data: callingBookings, error } = await supabase
+                .from('bookings')
+                .select('id, table_id, status, staff_remark, tables_layout(table_name)')
+                .in('status', ['seated', 'pending', 'confirmed'])
+                .or(`booking_time.gte.${startOfToday},created_at.gte.${startOfToday}`)
+                .or('staff_remark.ilike.%[CALL_STAFF]%,staff_remark.ilike.%[CALL_BILL]%');
+
+            if (error || !callingBookings || callingBookings.length === 0) return;
+
+            let acknowledgedTimes = {};
+            try {
+                acknowledgedTimes = JSON.parse(localStorage.getItem('pos_ack_table_times') || '{}');
+            } catch (e) {}
+
+            for (const b of callingBookings) {
+                const remark = b.staff_remark || '';
+                const tableId = b.table_id;
+                const tName = b.tables_layout?.table_name || (tableId ? `โต๊ะ #${tableId}` : 'หน้าร้าน');
+                const lastAck = acknowledgedTimes[tableId] || 0;
+                const isRecentlyAcked = Date.now() - lastAck < 45000;
+
+                // Check Call Staff
+                if (remark.includes('[CALL_STAFF]') && !isRecentlyAcked) {
+                    const callStaffKey = getCanonicalTableAlertKey('call_staff', tableId, b.id || tableId);
+                    if (checkEventDeduplication(callStaffKey, 5000)) {
+                        console.log(`🔊 [Safety Heartbeat] Recovered active Call Staff for Table ${tName}`);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'CALL STAFF · เรียกพนักงาน',
+                            title: `โต๊ะ ${tName} เรียกพนักงาน`,
+                            subtitle: 'แตะเพื่อเปิดดูโต๊ะนี้',
+                            dot: 'terracotta',
+                            onClick: () => {
+                                if (tableId) stopStaffCallLoop(tableId);
+                                if (b.id) stopStaffCallLoop(b.id);
+                                if (tableId) {
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        }), { id: callStaffKey, duration: 10000 });
+                        pushNotifHistory('CALL_STAFF', 'Call Staff', `โต๊ะ ${tName} เรียกพนักงาน`, tableId);
+                        startStaffCallLoop(tableId || b.id);
+                    }
+                }
+
+                // Check Call Bill
+                if (remark.includes('[CALL_BILL]') && !isRecentlyAcked) {
+                    const callBillKey = getCanonicalTableAlertKey('call_bill', tableId, b.id || tableId);
+                    if (checkEventDeduplication(callBillKey, 5000)) {
+                        console.log(`🔊 [Safety Heartbeat] Recovered active Call Bill for Table ${tName}`);
+                        toast.custom((t) => renderPosToast(t, {
+                            badge: 'CALL BILL · เรียกเช็คบิล',
+                            title: `โต๊ะ ${tName} เรียกเช็คบิล`,
+                            subtitle: 'แตะเพื่อเปิดดูและเตรียมบิล',
+                            dot: 'terracotta',
+                            onClick: () => {
+                                if (tableId) {
+                                    supabase.from('tables_layout').select('*').eq('id', tableId).single().then(({ data }) => {
+                                        if (data) handleSelectTable(data);
+                                    });
+                                }
+                            }
+                        }), { id: callBillKey, duration: 10000 });
+                        pushNotifHistory('CALL_BILL', 'Call Bill', `โต๊ะ ${tName} เรียกเช็คบิล`, tableId);
+                        playBillAlert(callBillKey);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('[Safety Heartbeat] Error checking staff/bill calls:', err);
+        } finally {
+            isCheckingCallsRef.current = false;
+        }
+    }, [handleSelectTable]);
 
     useEffect(() => {
         // Request Screen Wake Lock for POS Android APK / Tablet
@@ -1354,9 +1473,19 @@ export default function POSDashboard() {
 
             isHeartbeatRunningRef.current = true;
             try {
+                // Realtime health auto-revival: if WebSocket socket dropped silently, re-establish connection immediately
+                if (supabase.realtime && typeof supabase.realtime.isConnected === 'function') {
+                    if (!supabase.realtime.isConnected()) {
+                        console.warn('⚡ [Safety Heartbeat] Supabase Realtime socket is disconnected. Reviving connection...');
+                        try { supabase.realtime.connect(); } catch (e) {}
+                    }
+                }
+                prewarmPOSBroadcastChannel();
+
                 await Promise.allSettled([
                     checkPendingOrders(true),
-                    checkUnprintedQrOrders()
+                    checkUnprintedQrOrders(),
+                    checkStaffAndBillCalls()
                 ]);
             } catch (e) {
                 console.warn('[Safety Heartbeat] Execution error:', e);
@@ -1374,10 +1503,10 @@ export default function POSDashboard() {
             heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
         };
 
-        // Foreground active: every 25s (WebSocket handles instant push <50ms, heartbeat recovers any dropped packets quickly). Background: every 45s
+        // High-frequency safety heartbeat: every 3.5s in foreground (sub-second reaction if WebSocket dropped, zero print delays). Background: every 8s
         const updateHeartbeatMode = () => {
             const isVisible = document.visibilityState === 'visible';
-            startHeartbeat(isVisible ? 25000 : 45000);
+            startHeartbeat(isVisible ? 3500 : 8000);
         };
 
         updateHeartbeatMode();
@@ -2007,6 +2136,7 @@ export default function POSDashboard() {
                             }
                         }
                     } else if (eventType === 'UPDATE') {
+                        bookingLookupCache.delete(String(bookingId));
                         const newRemark = newRow?.staff_remark || '';
                         const oldRemark = oldRow?.staff_remark || '';
                         const newCustomerNote = newRow?.customer_note || '';
@@ -2244,22 +2374,38 @@ export default function POSDashboard() {
                             }
 
                             // Lookup booking details using 3s in-memory promise cache to avoid N+1 query storm
-                            getCachedBookingForItems(bookingId).then((bData) => {
-                                if (!bData) return;
+                            getCachedBookingForItems(bookingId).then(async (cachedBooking) => {
+                                if (!cachedBooking) return;
+                                let bData = cachedBooking;
+
+                                let sourceLower = (bData.source || '').toLowerCase();
+                                let remarkLower = (bData.staff_remark || '').toLowerCase();
                                 
-                                const sourceLower = (bData.source || '').toLowerCase();
-                                const remarkLower = (bData.staff_remark || '').toLowerCase();
-                                
-                                // A true customer QR or Online order MUST have explicit QR / online markers
-                                const isQr = sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('[qr]');
+                                let isQr = sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('[qr]');
                                 const isLineman = sourceLower === 'lineman' || remarkLower.includes('lineman');
                                 const hasOnlineMarker = isQr || sourceLower === 'online' || sourceLower === 'line' || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip') || !!bData.payment_slip_url || (bData.order_type || '').startsWith('hausmade');
+
+                                // If booking in cache has no explicit online/QR marker, check fresh DB record directly in case it was just converted by customer QR submission
+                                if (!hasOnlineMarker && !isLineman) {
+                                    try {
+                                        const { data: freshB } = await supabase.from('bookings')
+                                            .select('id, tracking_token, table_id, staff_remark, source, booking_type, order_type, status, pickup_contact_name, payment_slip_url, slip_verified, tables_layout(table_name)')
+                                            .eq('id', bookingId)
+                                            .maybeSingle();
+                                        if (freshB) {
+                                            bData = freshB;
+                                            sourceLower = (bData.source || '').toLowerCase();
+                                            remarkLower = (bData.staff_remark || '').toLowerCase();
+                                            isQr = sourceLower === 'qr' || remarkLower.includes('qr') || remarkLower.includes('[qr]');
+                                        }
+                                    } catch (e) {}
+                                }
+
                                 const isExplicitInHouse = !isQr && !isLineman && !hasOnlineMarker && (sourceLower === 'pos' || sourceLower === 'walk_in' || remarkLower.includes('walk-in') || remarkLower.includes('walk in') || bData.booking_type === 'walk_in');
                                 const isWalkInPickup = bData.booking_type === 'pickup' && isExplicitInHouse;
 
-                                // Strictly suppress notifications and audio for cashier-entered in-store actions or inactive states.
-                                // Do NOT suppress customer QR orders merely because the table happens to be selected in activeBookingRef!
-                                if (isExplicitInHouse || isWalkInPickup || bData.status === 'completed' || bData.status === 'cancelled' || bData.status === 'void') {
+                                // Strictly suppress notifications ONLY if confirmed in-house cashier submission on this terminal or inactive states.
+                                if ((isExplicitInHouse && isLocalStaffSubmission) || isWalkInPickup || bData.status === 'completed' || bData.status === 'cancelled' || bData.status === 'void') {
                                     return;
                                 }
 

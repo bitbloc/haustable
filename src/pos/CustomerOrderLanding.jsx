@@ -1383,7 +1383,7 @@ export default function CustomerOrderLanding() {
                         needs_approval: !isGeofenceVerified,
                         is_auto_submit: !isGeofenceVerified
                     }),
-                    new Promise((resolve) => setTimeout(resolve, 2000))
+                    new Promise((resolve) => setTimeout(resolve, 4000))
                 ]);
             } catch (broadcastErr) {
                 console.warn('[Checkout] Broadcast delivery non-fatal warning:', broadcastErr);

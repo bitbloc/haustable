@@ -33,6 +33,14 @@ function dispatchBroadcastEvent(event, payload) {
 }
 
 function getBroadcastChannel(forceRecreate = false) {
+    if (supabase.realtime && typeof supabase.realtime.isConnected === 'function') {
+        if (!supabase.realtime.isConnected()) {
+            try {
+                supabase.realtime.connect();
+            } catch (e) {}
+        }
+    }
+
     if (posBroadcastChannel) {
         const chState = posBroadcastChannel.state;
         const isDead = forceRecreate || (chState && chState !== 'joined' && chState !== 'joining');
@@ -47,11 +55,7 @@ function getBroadcastChannel(forceRecreate = false) {
     }
 
     if (!posBroadcastChannel) {
-        const channelInstance = supabase.channel('pos-realtime-notifications', {
-            config: {
-                broadcast: { ack: true }
-            }
-        });
+        const channelInstance = supabase.channel('pos-realtime-notifications');
         posBroadcastChannel = channelInstance;
 
         // 1. Wildcard listener for all broadcast events
@@ -166,9 +170,19 @@ export function subscribePOSBroadcast(callback) {
 }
 
 /**
+ * Check if POS Realtime Broadcast Channel is currently active and joined
+ */
+export function isPOSBroadcastConnected() {
+    return Boolean(posBroadcastChannel && posBroadcastChannel.state === 'joined');
+}
+
+/**
  * Pre-warm the broadcast channel subscription so sending is instant (< 5ms) when an order is placed.
  */
-export function prewarmPOSBroadcastChannel() {
+export function prewarmPOSBroadcastChannel(forceRecreate = false) {
+    if (forceRecreate) {
+        return getBroadcastChannel(true);
+    }
     return getBroadcastChannel();
 }
 
