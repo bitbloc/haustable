@@ -6,12 +6,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import { getGameConfig } from './game/FlappyCatConfig';
 import { pixelSound } from './game/utils/pixelSoundEngine';
+import { toggleBrowserFullscreen, isBrowserFullscreen, onFullscreenChange, exitBrowserFullscreen } from './game/utils/arcadeFullscreenHelper';
 
 // Zero-icon discipline: purely monospace typographic indicators
 export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, session, onRequireLogin, isFullscreen, setIsFullscreen, onBackToHub = null }) {
   const containerRef = useRef(null);
   const gameRef = useRef(null);
   const [soundEnabled, setSoundEnabled] = useState(pixelSound.isSoundEnabled());
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(isBrowserFullscreen());
+
+  useEffect(() => {
+    const unsub = onFullscreenChange((active) => {
+      setIsNativeFullscreen(active);
+      if (active && !isFullscreen) {
+        setIsFullscreen(true);
+      }
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 150);
+    });
+    return () => unsub();
+  }, [isFullscreen, setIsFullscreen]);
 
   const handleToggleSound = (e) => {
     if (e) {
@@ -116,14 +131,28 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
   }, [isFullscreen]);
 
   const handleFullscreenToggle = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    pixelSound.play('ui_click');
-    if (onBackToHub && isFullscreen) {
-      onBackToHub();
-      return;
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
-    setIsFullscreen(!isFullscreen);
+    pixelSound.play('ui_click');
+    toggleBrowserFullscreen(containerRef.current?.parentElement || document.documentElement);
+  };
+
+  const handleBack = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    pixelSound.play('ui_click');
+    if (isNativeFullscreen) {
+      exitBrowserFullscreen();
+    }
+    if (onBackToHub) {
+      onBackToHub(e);
+    } else if (setIsFullscreen) {
+      setIsFullscreen(false);
+    }
   };
 
   return (
@@ -163,9 +192,9 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
         <>
           {onBackToHub && (
             <button
-              onClick={(e) => { pixelSound.play('ui_click'); onBackToHub(e); }}
-              onTouchStart={(e) => { pixelSound.play('ui_click'); onBackToHub(e); }}
-              className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5"
+              onClick={handleBack}
+              onTouchStart={handleBack}
+              className="absolute top-4 left-4 z-50 px-3.5 py-2 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] shadow-xl text-xs font-mono font-bold tracking-wider active:scale-95 cursor-pointer flex items-center gap-1.5 transition-colors"
             >
               <span>[ ← กลับโถงเกม ]</span>
             </button>
@@ -181,9 +210,14 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
             <button
               onClick={handleFullscreenToggle}
               onTouchStart={handleFullscreenToggle}
-              className="px-3 py-1.5 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded-xl border-2 border-[#5C544D] shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+              className={`px-3 py-1.5 rounded-xl border-2 shadow-xl text-[11px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wider focus-visible:outline-2 focus-visible:outline-[var(--color-focus)] ${
+                isNativeFullscreen
+                  ? 'bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] border-[#181615]'
+                  : 'bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] border-[#5C544D]'
+              }`}
+              title="สลับโหมดเต็มจอระดับเบราว์เซอร์ (Native Fullscreen)"
             >
-              [ ESC // ออกจากเต็มจอ ]
+              {isNativeFullscreen ? '[ ⛶ ย่อจอ // EXIT ]' : '[ ⛶ เต็มจอ // FULL ]'}
             </button>
           </div>
         </>
@@ -199,9 +233,9 @@ export default function FlappyCatGame({ onGameOver, leaderboard, onClaimScore, s
           <button
             onClick={handleFullscreenToggle}
             onTouchStart={handleFullscreenToggle}
-            className="px-2.5 py-1 bg-[#181615]/95 hover:bg-[#24201E] text-[#FAF7F5] rounded border border-[#3D3835] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
+            className="px-2.5 py-1 bg-[#E9F344] hover:bg-[#d9e334] text-[#181615] rounded border border-[#181615] shadow-md text-[10px] font-mono transition-colors active:scale-95 cursor-pointer font-bold tracking-wide focus-visible:outline-2 focus-visible:outline-[var(--color-focus)]"
           >
-            [ FULLSCREEN // เต็มจอ ]
+            [ ⛶ เต็มจอ // FULLSCREEN ]
           </button>
         </div>
       )}

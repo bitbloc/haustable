@@ -508,7 +508,18 @@ export default class PlayScene extends Phaser.Scene {
       bean.moving = this.score >= 15;
       bean.spawnTime = this.time.now;
       
-      bean.setScale(1.65);
+      bean.setScale(1.5);
+
+      // Luminous pulsating reward animation (clearly shows it is a friendly collectible)
+      this.tweens.add({
+        targets: bean,
+        scaleX: 1.85,
+        scaleY: 1.85,
+        duration: 350,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
     }
   }
 
@@ -693,6 +704,17 @@ export default class PlayScene extends Phaser.Scene {
     // Play Pop-Pixel Warning Beep!
     pixelSound.play('warning');
 
+    // Danger Telegraph Laser Guide Line (Crimson red)
+    const dangerLine = this.add.rectangle(width / 2, targetY, width, 2, 0xef4444, 0.45).setDepth(18);
+    
+    // Danger tag
+    const dangerTag = this.add.text(width - 48, targetY - 14, '! มีดบิน', {
+      fontFamily: '"IBM Plex Sans Thai", monospace',
+      fontSize: '10px',
+      fill: '#ef4444',
+      fontStyle: 'bold'
+    }).setOrigin(1, 0.5).setDepth(20);
+
     // Show Warning Icon flashing at the right edge
     const warningX = width - 40;
     const warningIcon = this.add.image(warningX, targetY, 'warning_icon').setDepth(20);
@@ -700,13 +722,15 @@ export default class PlayScene extends Phaser.Scene {
     
     // Flashing warning sign (blinks 3 times)
     this.tweens.add({
-      targets: warningIcon,
+      targets: [warningIcon, dangerLine, dangerTag],
       alpha: 0.1,
       duration: 150,
       yoyo: true,
       repeat: 2,
       onComplete: () => {
         warningIcon.destroy();
+        dangerLine.destroy();
+        dangerTag.destroy();
         if (!this.isGameOver) {
           this.spawnKnife(targetY);
         }
@@ -735,6 +759,27 @@ export default class PlayScene extends Phaser.Scene {
     knife.body.setOffset(7, 11);
     
     knife.setDepth(15);
+
+    // Crimson danger trail sparks behind the flying knife
+    const trailTimer = this.time.addEvent({
+      delay: 50,
+      repeat: 35,
+      callback: () => {
+        if (!knife || !knife.active) {
+          trailTimer.destroy();
+          return;
+        }
+        const spark = this.add.rectangle(knife.x + Phaser.Math.Between(-3, 3), knife.y + Phaser.Math.Between(-3, 3), 4, 4, 0xef4444, 0.75).setDepth(14);
+        this.tweens.add({
+          targets: spark,
+          alpha: 0,
+          scaleX: 0.2,
+          scaleY: 0.2,
+          duration: 180,
+          onComplete: () => spark.destroy()
+        });
+      }
+    });
   }
 
   hitObstacle() {

@@ -6,6 +6,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import confetti from 'canvas-confetti';
 import { taiPlaRenderer } from './renderers/TaiPla128Renderer';
 import { pixelSound, getArcadeRank } from './utils/pixelSoundEngine';
+import { toggleBrowserFullscreen, isBrowserFullscreen, onFullscreenChange, exitBrowserFullscreen } from './utils/arcadeFullscreenHelper';
 
 function PixelCharAvatar({ charId, size = 36, animate = false }) {
   const ref = useRef(null);
@@ -143,11 +144,19 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
   const [currentBgmTrack, setCurrentBgmTrack] = useState('swing_jazz');
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isNativeFullscreen, setIsNativeFullscreen] = useState(isBrowserFullscreen());
   const [canRestart, setCanRestart] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
   const [isMobileView, setIsMobileView] = useState(() => {
     return typeof window !== 'undefined' ? window.innerWidth < 640 : false;
   });
+
+  useEffect(() => {
+    const unsub = onFullscreenChange((active) => {
+      setIsNativeFullscreen(active);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -768,8 +777,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         } else {
           handleJumpPress();
         }
-      } else if (e.code === 'Escape' && isFullscreen) {
-        setIsFullscreen(false);
+      } else if (e.code === 'Escape') {
+        if (isNativeFullscreen) {
+          exitBrowserFullscreen();
+        }
+        if (isFullscreen) {
+          setIsFullscreen(false);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1575,6 +1589,31 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
   const currentRank = getArcadeRank(score, 'tai_pla');
 
+  const handleToggleNativeFullscreen = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    playRetroSound('menu_click');
+    toggleBrowserFullscreen(document.documentElement);
+  };
+
+  const handleBack = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    playRetroSound('menu_click');
+    if (isNativeFullscreen) {
+      exitBrowserFullscreen();
+    }
+    if (onBackToHub) {
+      onBackToHub();
+    } else {
+      setIsFullscreen(false);
+    }
+  };
+
   const handleSelectCharacter = (charId) => {
     setSelectedCharId(charId);
     playRetroSound('char_select');
@@ -1587,7 +1626,7 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
         <header className="w-full bg-[#FAF7F2] border-b-2 border-[#181615] px-3 sm:px-6 py-2.5 flex items-center justify-between z-20 shrink-0 shadow-2xs">
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={onBackToHub || (() => setIsFullscreen(false))}
+              onClick={handleBack}
               className="px-3 py-1.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] rounded-xl border-2 border-[#181615] font-mono font-bold text-xs shadow-xs active:scale-95 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <span>[ ← กลับโถงเกม ]</span>
@@ -1626,6 +1665,17 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             >
               {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
             </button>
+            <button
+              onClick={handleToggleNativeFullscreen}
+              className={`px-2.5 py-1 rounded-lg border font-mono text-[10px] font-bold cursor-pointer transition-colors shadow-2xs ${
+                isNativeFullscreen
+                  ? 'bg-[#E9F344] text-[#181615] border-[#181615]'
+                  : 'bg-[#FAF7F2] hover:bg-[#F2ECE4] text-[#181615] border-[#181615]'
+              }`}
+              title="สลับโหมดเต็มจอระดับเบราว์เซอร์ (Native Fullscreen)"
+            >
+              {isNativeFullscreen ? '[ ⛶ ย่อจอ ]' : '[ ⛶ เต็มจอ ]'}
+            </button>
           </div>
         </header>
 
@@ -1634,7 +1684,11 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
           <div 
             onClick={handleJumpPress}
             onTouchStart={(e) => { e.preventDefault(); handleJumpPress(); }}
-            className="relative w-full max-w-[420px] aspect-[9/16] max-h-[72vh] sm:max-h-[76vh] bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-transform duration-100 ease-out"
+            className={`relative w-full aspect-[9/16] bg-[#faf6ed] rounded-2xl overflow-hidden border-2 border-[#181615] cursor-pointer select-none shadow-md transition-all duration-200 ease-out ${
+              isNativeFullscreen 
+                ? 'max-w-[480px] max-h-[86vh] sm:max-h-[90vh]' 
+                : 'max-w-[420px] max-h-[72vh] sm:max-h-[76vh]'
+            }`}
           >
             <canvas 
               ref={canvasRef} 
@@ -1786,8 +1840,8 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
 
                   {onBackToHub && (
                     <button
-                      onClick={onBackToHub}
-                      className="px-4 py-2.5 bg-[#FAF7F2] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-sm active:scale-95"
+                      onClick={handleBack}
+                      className="px-4 py-2.5 bg-[#FAF7F2] hover:bg-[#E9F344] text-[#181615] font-bold uppercase rounded-xl border-2 border-[#181615] cursor-pointer shadow-sm active:scale-95 transition-colors"
                     >
                       [ กลับโถงเกม ]
                     </button>
@@ -1909,10 +1963,13 @@ export default function TaiPlaMiniGame({ session, onClaimScore, onRequireLogin, 
             {soundEnabled ? '[ SND: ON ]' : '[ SND: OFF ]'}
           </button>
           <button
-            onClick={() => setIsFullscreen(true)}
-            className="px-3 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer"
+            onClick={() => {
+              setIsFullscreen(true);
+              handleToggleNativeFullscreen();
+            }}
+            className="px-3 py-1.5 bg-[#E9F344] hover:bg-[#d9e334] rounded-xl border-2 border-[#181615] text-[10px] font-mono font-bold text-[#181615] cursor-pointer shadow-xs active:scale-95 transition-transform"
           >
-            [ เต็มจอ / FULL ]
+            [ ⛶ เล่นเต็มจอ // FULL ]
           </button>
         </div>
       </div>

@@ -853,187 +853,251 @@ export class TaiPla128Renderer {
   // 2. CRISP FOOD INGREDIENTS (32x32)
   // =========================================================================
   bakeIngredients() {
-    // 1. ปลาทูแม่กลอง (Mackerel)
+    // 1. ปลาทูแม่กลอง (Mackerel) - Pop-Pixel Aquatic Shimmer
     const fish = createOffscreen(32, 32);
     const fctx = fish.ctx;
     fctx.fillStyle = '#181615';
-    fctx.fillRect(5, 11, 20, 12);
-    fctx.fillRect(23, 9, 7, 16);
-    fctx.fillRect(2, 14, 6, 5);
+    fctx.fillRect(4, 10, 22, 13);
+    fctx.fillRect(24, 8, 7, 17);
+    fctx.fillRect(1, 13, 6, 6);
+    // Sapphire blue & cyan scales
     fctx.fillStyle = '#0284c7';
-    fctx.fillRect(7, 12, 16, 5);
+    fctx.fillRect(6, 11, 18, 5);
     fctx.fillStyle = '#38bdf8';
-    fctx.fillRect(7, 17, 16, 4);
+    fctx.fillRect(6, 16, 18, 4);
     fctx.fillStyle = '#f0f9ff';
-    fctx.fillRect(7, 21, 16, 2);
-    fctx.fillStyle = '#f59e0b';
-    fctx.fillRect(25, 10, 4, 14);
+    fctx.fillRect(6, 20, 18, 2);
+    // Golden catchlight on fin
+    fctx.fillStyle = '#fbbf24';
+    fctx.fillRect(25, 9, 5, 15);
+    fctx.fillStyle = '#fef08a';
+    fctx.fillRect(26, 11, 2, 10);
+    // Big friendly anime eye
     fctx.fillStyle = '#ffffff';
-    fctx.fillRect(5, 13, 4, 4);
+    fctx.fillRect(4, 12, 5, 5);
     fctx.fillStyle = '#181615';
-    fctx.fillRect(7, 14, 2, 2);
+    fctx.fillRect(6, 13, 3, 3);
+    fctx.fillStyle = '#ffffff';
+    fctx.fillRect(6, 13, 1, 1);
     this.sprites.fish = fish.canvas;
 
-    // 2. เมล็ดสะตอ (Satow Bean)
+    // 2. เมล็ดสะตอ (Satow Bean) - Luminous Emerald Glow
     const satow = createOffscreen(32, 32);
     const sctx = satow.ctx;
     sctx.fillStyle = '#181615';
-    sctx.fillRect(5, 7, 22, 18);
-    sctx.fillRect(7, 5, 18, 22);
+    sctx.fillRect(4, 6, 24, 20);
+    sctx.fillRect(6, 4, 20, 24);
     sctx.fillStyle = '#15803d';
-    sctx.fillRect(7, 7, 18, 18);
+    sctx.fillRect(6, 6, 20, 20);
     sctx.fillStyle = '#22c55e';
-    sctx.fillRect(9, 9, 14, 13);
+    sctx.fillRect(8, 8, 16, 15);
     sctx.fillStyle = '#86efac';
-    sctx.fillRect(11, 10, 5, 4);
+    sctx.fillRect(9, 9, 6, 5);
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(10, 10, 2, 2);
+    // Twin golden bean embryo core
+    sctx.fillStyle = '#facc15';
+    sctx.fillRect(14, 12, 5, 5);
     this.sprites.satow = satow.canvas;
 
-    // 3. หน่อไม้ต้ม (Bamboo Shoot)
+    // 3. หน่อไม้ต้ม (Bamboo Shoot) - Crisp Gold Layers
     const bamboo = createOffscreen(32, 32);
     const bctx = bamboo.ctx;
     bctx.fillStyle = '#181615';
-    bctx.fillRect(11, 5, 10, 7);
-    bctx.fillRect(8, 10, 16, 9);
-    bctx.fillRect(5, 17, 22, 11);
+    bctx.fillRect(10, 4, 12, 8);
+    bctx.fillRect(7, 9, 18, 10);
+    bctx.fillRect(4, 16, 24, 12);
     bctx.fillStyle = '#fef08a';
-    bctx.fillRect(12, 6, 8, 5);
+    bctx.fillRect(11, 5, 10, 6);
     bctx.fillStyle = '#fde047';
-    bctx.fillRect(9, 11, 14, 7);
+    bctx.fillRect(8, 10, 16, 8);
     bctx.fillStyle = '#eab308';
-    bctx.fillRect(6, 18, 20, 9);
+    bctx.fillRect(5, 17, 22, 10);
     bctx.fillStyle = '#a16207';
-    bctx.fillRect(8, 22, 16, 2);
+    bctx.fillRect(7, 21, 18, 2);
+    bctx.fillStyle = '#ffffff';
+    bctx.fillRect(12, 6, 3, 2);
+    bctx.fillRect(9, 11, 3, 2);
     this.sprites.bamboo = bamboo.canvas;
 
-    // 4. ครกหินทองคำ (Golden Mortar)
+    // 4. ครกหินทองคำ (Golden Mortar) - Royal God Mode Relic
     const goldMortar = createOffscreen(36, 36);
     const gmctx = goldMortar.ctx;
     gmctx.fillStyle = '#181615';
-    gmctx.fillRect(5, 11, 26, 20);
-    gmctx.fillRect(8, 7, 20, 7);
-    gmctx.fillRect(15, 1, 8, 14);
+    gmctx.fillRect(4, 10, 28, 22);
+    gmctx.fillRect(7, 6, 22, 8);
+    gmctx.fillRect(14, 0, 9, 15);
+    // Brilliant Gold body
     gmctx.fillStyle = '#facc15';
-    gmctx.fillRect(7, 13, 22, 16);
-    gmctx.fillRect(9, 8, 18, 5);
+    gmctx.fillRect(6, 12, 24, 18);
+    gmctx.fillRect(8, 7, 20, 6);
     gmctx.fillStyle = '#fef08a';
-    gmctx.fillRect(9, 10, 9, 3);
-    gmctx.fillRect(16, 2, 5, 11);
+    gmctx.fillRect(8, 9, 10, 4);
+    gmctx.fillRect(15, 1, 6, 12);
     gmctx.fillStyle = '#b45309';
-    gmctx.fillRect(9, 24, 18, 4);
+    gmctx.fillRect(8, 24, 20, 5);
+    // Ruby jewel core
+    gmctx.fillStyle = '#ef4444';
+    gmctx.fillRect(16, 16, 4, 4);
+    gmctx.fillStyle = '#ffffff';
+    gmctx.fillRect(17, 17, 1, 1);
     this.sprites.golden_mortar = goldMortar.canvas;
   }
 
   // =========================================================================
-  // 3. CRISP HIGH-CONTRAST HAZARDS (7 TYPES)
+  // 3. CRISP HIGH-CONTRAST HAZARDS (ENEMIES & OBSTACLES)
   // =========================================================================
   bakeEnemies() {
     // 1. hop_chili (ปีศาจพริกแดงกระโดด - Ground Chili Devil)
     this.sprites.hop_chili = this.bakeGroundChiliDevil();
 
-    // 2. coconut (ลูกมะพร้าวกลิ้ง)
+    // 2. coconut (ลูกมะพร้าวกลิ้งหนาม - Thorny Terrain Obstacle)
     const coconut = createOffscreen(28, 28);
     const cctx = coconut.ctx;
+    // Outer thorny silhouette
     cctx.fillStyle = '#181615';
     cctx.beginPath();
     cctx.arc(14, 14, 13, 0, Math.PI * 2);
     cctx.fill();
+    // Fiber husk thorns
+    cctx.fillRect(0, 12, 4, 4);
+    cctx.fillRect(24, 12, 4, 4);
+    cctx.fillRect(12, 0, 4, 4);
+    cctx.fillRect(12, 24, 4, 4);
+    // Deep rustic wood & cracked hazard shell
     cctx.fillStyle = '#78350f';
     cctx.beginPath();
     cctx.arc(14, 14, 11, 0, Math.PI * 2);
     cctx.fill();
+    // Hazard yellow/black core crack
+    cctx.fillStyle = '#e9f344';
+    cctx.fillRect(8, 13, 12, 2);
     cctx.fillStyle = '#181615';
-    cctx.fillRect(8, 8, 3, 3);
-    cctx.fillRect(17, 8, 3, 3);
-    cctx.fillRect(12, 16, 4, 3);
+    cctx.fillRect(7, 8, 3, 3);
+    cctx.fillRect(18, 8, 3, 3);
+    cctx.fillRect(11, 16, 6, 3);
     this.sprites.coconut = coconut.canvas;
 
     // 3. hawk / fly_chili (ปีศาจพริกแดงเวหา - Aerial Chili Devil)
     this.sprites.hawk = this.bakeFlyingChiliDevil();
 
-    // 4. pot_ghost (ผีหม้อดิน)
+    // 4. pot_ghost (ผีหม้อดินหลอกหลอน - Cursed Pot Ghost)
     const potGhost = createOffscreen(32 * 2, 34);
     const pgctx = potGhost.ctx;
     for (let f = 0; f < 2; f++) {
       pgctx.save();
       pgctx.translate(f * 32, 0);
       const lidLift = f === 0 ? 0 : 8;
+      // Dark silhouette
       pgctx.fillStyle = '#181615';
-      pgctx.fillRect(5, 15, 22, 18);
-      pgctx.fillRect(3, 18, 26, 12);
-      pgctx.fillStyle = '#b45309';
-      pgctx.fillRect(6, 16, 20, 16);
-      pgctx.fillRect(4, 19, 24, 10);
-      pgctx.fillStyle = '#ea580c';
-      pgctx.fillRect(7, 16, 18, 5);
-      pgctx.fillStyle = '#facc15';
-      pgctx.fillRect(9, 17, 3, 3);
-      pgctx.fillRect(18, 17, 3, 3);
+      pgctx.fillRect(4, 14, 24, 19);
+      pgctx.fillRect(2, 17, 28, 13);
+      // Terracotta clay pot
+      pgctx.fillStyle = '#9a3412';
+      pgctx.fillRect(5, 15, 22, 17);
+      pgctx.fillRect(3, 18, 26, 11);
+      // Purple spectral ectoplasm inside
+      pgctx.fillStyle = '#7e22ce';
+      pgctx.fillRect(6, 16, 20, 6);
+      pgctx.fillStyle = '#c084fc';
+      pgctx.fillRect(8, 17, 16, 4);
+      // Glowing evil magenta eyes
+      pgctx.fillStyle = '#f43f5e';
+      pgctx.fillRect(8, 17, 4, 3);
+      pgctx.fillRect(19, 17, 4, 3);
+      pgctx.fillStyle = '#ffffff';
+      pgctx.fillRect(9, 18, 1, 1);
+      pgctx.fillRect(20, 18, 1, 1);
+      // Pot Lid with steam gaps
       pgctx.fillStyle = '#181615';
-      pgctx.fillRect(3, 11 - lidLift, 26, 7);
-      pgctx.fillRect(11, 7 - lidLift, 9, 6);
-      pgctx.fillStyle = '#92400e';
-      pgctx.fillRect(4, 12 - lidLift, 24, 5);
-      pgctx.fillRect(12, 8 - lidLift, 7, 4);
+      pgctx.fillRect(2, 10 - lidLift, 28, 7);
+      pgctx.fillRect(10, 6 - lidLift, 11, 6);
+      pgctx.fillStyle = '#78350f';
+      pgctx.fillRect(3, 11 - lidLift, 26, 5);
+      pgctx.fillRect(11, 7 - lidLift, 9, 4);
       pgctx.restore();
     }
     this.sprites.pot_ghost = potGhost.canvas;
 
-    // 5. hot_runner (กุ๊กกระทะร้อน)
+    // 5. hot_runner (กุ๊กกระทะร้อน - Flaming Chili Chef Enemy)
     const hotRunner = createOffscreen(36 * 2, 40);
     const hrctx = hotRunner.ctx;
     for (let f = 0; f < 2; f++) {
       hrctx.save();
       hrctx.translate(f * 36, 0);
-      hrctx.fillStyle = '#f97316';
-      hrctx.fillRect(9, 3, 16, 9);
+      // Flaming Chef Toque
+      hrctx.fillStyle = '#dc2626';
+      hrctx.fillRect(8, 2, 18, 10);
       hrctx.fillStyle = '#ef4444';
-      hrctx.fillRect(11, 0, 12, 6);
-      hrctx.fillStyle = '#fef08a';
-      hrctx.fillRect(13, 5, 8, 5);
+      hrctx.fillRect(10, 0, 14, 7);
+      hrctx.fillStyle = '#facc15';
+      hrctx.fillRect(12, 4, 10, 5);
+      // Face
       hrctx.fillStyle = '#181615';
-      hrctx.fillRect(9, 10, 16, 14);
+      hrctx.fillRect(8, 9, 18, 15);
       hrctx.fillStyle = '#fed7aa';
-      hrctx.fillRect(10, 11, 14, 12);
+      hrctx.fillRect(9, 10, 16, 13);
+      // Angry flaming eyes
       hrctx.fillStyle = '#dc2626';
-      hrctx.fillRect(12, 13, 3, 3);
-      hrctx.fillRect(19, 13, 3, 3);
+      hrctx.fillRect(11, 12, 4, 4);
+      hrctx.fillRect(19, 12, 4, 4);
+      hrctx.fillStyle = '#fef08a';
+      hrctx.fillRect(12, 13, 2, 2);
+      hrctx.fillRect(20, 13, 2, 2);
+      // Chef Coat
       hrctx.fillStyle = '#181615';
-      hrctx.fillRect(7, 21, 20, 14);
+      hrctx.fillRect(6, 20, 22, 15);
       hrctx.fillStyle = '#dc2626';
-      hrctx.fillRect(8, 22, 18, 12);
+      hrctx.fillRect(7, 21, 20, 13);
+      // Wok with chili flames
       hrctx.fillStyle = '#181615';
-      hrctx.fillRect(24, 23, 11, 7);
-      hrctx.fillRect(29, 19, 2, 7);
+      hrctx.fillRect(24, 22, 12, 8);
+      hrctx.fillRect(29, 18, 3, 8);
       hrctx.fillStyle = '#f97316';
-      hrctx.fillRect(25, 24, 9, 4);
+      hrctx.fillRect(25, 23, 10, 5);
+      hrctx.fillStyle = '#facc15';
+      hrctx.fillRect(27, 21, 3, 3);
       const legRun = f === 0 ? 0 : 5;
       hrctx.fillStyle = '#181615';
-      hrctx.fillRect(8 + legRun, 34, 6, 6);
-      hrctx.fillRect(18 - legRun, 34, 6, 6);
+      hrctx.fillRect(7 + legRun, 34, 7, 6);
+      hrctx.fillRect(18 - legRun, 34, 7, 6);
       hrctx.restore();
     }
     this.sprites.hot_runner = hotRunner.canvas;
 
-    // 6. giant_mortar (ครกหินยักษ์)
+    // 6. giant_mortar (ครกหินยักษ์ - Heavy Terrain Obstacle with Caution Stripes)
     const giantMortar = createOffscreen(52, 52);
     const gmctx = giantMortar.ctx;
     gmctx.fillStyle = '#181615';
-    gmctx.fillRect(7, 19, 38, 32);
-    gmctx.fillRect(11, 13, 30, 9);
-    gmctx.fillRect(21, 1, 10, 22);
-    gmctx.fillStyle = '#64748b';
-    gmctx.fillRect(9, 21, 34, 28);
-    gmctx.fillRect(13, 15, 26, 7);
+    gmctx.fillRect(6, 18, 40, 33);
+    gmctx.fillRect(10, 12, 32, 10);
+    gmctx.fillRect(20, 0, 12, 23);
+    // Solid granite stone body
     gmctx.fillStyle = '#475569';
-    gmctx.fillRect(11, 35, 30, 12);
+    gmctx.fillRect(8, 20, 36, 29);
+    gmctx.fillRect(12, 14, 28, 8);
+    gmctx.fillStyle = '#334155';
+    gmctx.fillRect(10, 34, 32, 13);
     gmctx.fillStyle = '#94a3b8';
-    gmctx.fillRect(13, 16, 12, 3);
+    gmctx.fillRect(12, 15, 14, 3);
+    // Diagonal yellow-and-black hazard caution stripes on the base
+    for (let s = 0; s < 5; s++) {
+      gmctx.fillStyle = s % 2 === 0 ? '#e9f344' : '#181615';
+      gmctx.fillRect(9 + s * 7, 43, 7, 5);
+    }
+    // Angry chiseled skull face
     gmctx.fillStyle = '#181615';
-    gmctx.fillRect(18, 25, 4, 3);
-    gmctx.fillRect(30, 25, 4, 3);
-    gmctx.fillRect(22, 31, 8, 2);
+    gmctx.fillRect(17, 24, 5, 4);
+    gmctx.fillRect(29, 24, 5, 4);
+    gmctx.fillRect(21, 30, 9, 3);
+    gmctx.fillStyle = '#ef4444';
+    gmctx.fillRect(18, 25, 2, 2);
+    gmctx.fillRect(30, 25, 2, 2);
+    // Heavy wooden pestle
     gmctx.fillStyle = '#78350f';
-    gmctx.fillRect(23, 3, 6, 20);
+    gmctx.fillRect(22, 2, 8, 20);
+    gmctx.fillStyle = '#a16207';
+    gmctx.fillRect(24, 4, 3, 16);
     this.sprites.giant_mortar = giantMortar.canvas;
   }
 
@@ -1993,11 +2057,15 @@ export class TaiPla128Renderer {
   }
 
   /**
-   * Draw an Enemy Sprite
+   * Draw an Enemy Sprite or Environmental Obstacle
+   * Visually separates living ENEMIES (Crimson Danger Aura + [ 💀 ] tag)
+   * from inanimate OBSTACLES (Hazard Stripes + [ /// ] caution tag).
    */
   drawEnemy(ctx, mon, frame, groundY) {
     const mx = mon.x;
     let my = mon.y;
+    const isLivingEnemy = mon.type === 'hop_chili' || mon.type === 'hawk' || mon.type === 'pot_ghost' || mon.type === 'hot_runner' || mon.type === 'naga_thunder';
+    const isObstacle = mon.type === 'giant_mortar' || mon.type === 'coconut';
 
     if (mon.type === 'hop_chili') {
       my = mon.y - Math.abs(Math.sin(frame * 0.12 + (mon.animPhase || 0))) * 24;
@@ -2005,15 +2073,68 @@ export class TaiPla128Renderer {
       my = mon.y + Math.sin(frame * 0.09 + (mon.animPhase || 0)) * 12;
     }
 
+    // 1. Shadow beneath entity
     if (mon.type !== 'hawk' && mon.type !== 'naga_thunder') {
       const hopH = Math.max(0, groundY - my);
       const shadowScale = Math.max(0.35, 1.0 - (hopH / 32));
-      ctx.fillStyle = `rgba(0, 0, 0, ${0.24 * shadowScale})`;
+      // Red danger tinted shadow for living enemies, dark neutral for obstacles
+      ctx.fillStyle = isLivingEnemy ? `rgba(220, 38, 38, ${0.35 * shadowScale})` : `rgba(0, 0, 0, ${0.35 * shadowScale})`;
       ctx.beginPath();
-      ctx.ellipse(mx + (mon.width / 2), groundY + 2, (mon.width * 0.42) * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.ellipse(mx + (mon.width / 2), groundY + 2, (mon.width * 0.45) * shadowScale, 4.0 * shadowScale, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    // 2. ENEMY: Pulsing Crimson Threat Aura & Danger Indicators
+    if (isLivingEnemy && mon.type !== 'naga_thunder') {
+      const dangerPulse = Math.sin(frame * 0.25 + (mon.animPhase || 0)) * 3;
+      ctx.save();
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+      ctx.beginPath();
+      ctx.ellipse(mx + mon.width / 2, my - mon.height / 2, (mon.width * 0.62) + dangerPulse, (mon.height * 0.62) + dangerPulse, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(220, 38, 38, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.restore();
+
+      // Floating Crimson Danger Tag above Living Enemy
+      const enemyName = mon.type === 'hop_chili' ? 'ปีศาจพริก' : (mon.type === 'hawk' ? 'พริกเวหา' : (mon.type === 'pot_ghost' ? 'ผีหม้อดิน' : 'กุ๊กไฟแรง'));
+      const tagW = 44;
+      const tagX = mx + (mon.width / 2) - (tagW / 2);
+      const tagY = my - mon.height - 14;
+
+      ctx.save();
+      ctx.fillStyle = '#dc2626'; // Red header
+      ctx.fillRect(tagX - 1, tagY - 1, tagW + 2, 11);
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(tagX, tagY, tagW, 9);
+      ctx.fillStyle = '#fecaca';
+      ctx.font = 'bold 8px "Space Mono", monospace';
+      ctx.fillText(`! ${enemyName}`, tagX + 3, tagY + 7);
+      ctx.restore();
+    }
+
+    // 3. OBSTACLE: Hazard Stripes & Heavy Obstacle Marker
+    if (isObstacle) {
+      const obsName = mon.type === 'giant_mortar' ? 'ครกหินยักษ์' : 'มะพร้าวหนาม';
+      const tagW = 54;
+      const tagX = mx + (mon.width / 2) - (tagW / 2);
+      const tagY = my - mon.height - 13;
+
+      ctx.save();
+      // Hazard yellow/black caution border
+      ctx.fillStyle = '#e9f344';
+      ctx.fillRect(tagX - 1, tagY - 1, tagW + 2, 11);
+      ctx.fillStyle = '#181615';
+      ctx.fillRect(tagX, tagY, tagW, 9);
+      ctx.fillStyle = '#e9f344';
+      ctx.font = 'bold 8px "Space Mono", monospace';
+      ctx.fillText(`/// ${obsName}`, tagX + 2, tagY + 7);
+      ctx.restore();
+    }
+
+    // 4. Render Entity Sprites
     if (mon.type === 'hop_chili' && this.sprites.hop_chili) {
       const f = Math.floor((frame / 5) % 4);
       ctx.drawImage(this.sprites.hop_chili, f * 36, 0, 36, 38, mx, my - 34, 36, 38);
@@ -2044,73 +2165,135 @@ export class TaiPla128Renderer {
     const tx = mon.x;
     if (mon.isTelegraph) {
       const pulse = Math.abs(Math.sin(frame * 0.3));
-      ctx.fillStyle = `rgba(239, 68, 68, ${0.25 + pulse * 0.4})`;
-      ctx.fillRect(tx - 12, 0, 24, groundY);
+      ctx.fillStyle = `rgba(239, 68, 68, ${0.28 + pulse * 0.45})`;
+      ctx.fillRect(tx - 14, 0, 28, groundY);
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(tx - 40, groundY - 40, 80, 20);
       ctx.fillStyle = '#181615';
-      ctx.fillRect(tx - 38, groundY - 38, 76, 18);
+      ctx.fillRect(tx - 38, groundY - 38, 76, 16);
       ctx.fillStyle = '#E9F344';
-      ctx.font = 'bold 10px Space Mono, monospace';
-      ctx.fillText('! THUNDER !', tx - 32, groundY - 26);
+      ctx.font = 'bold 9px "Space Mono", monospace';
+      ctx.fillText('! ⚡ THUNDER !', tx - 32, groundY - 26);
     } else {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(tx - 6, 0, 12, groundY);
+      ctx.fillRect(tx - 7, 0, 14, groundY);
       ctx.fillStyle = '#facc15';
-      ctx.fillRect(tx - 3, 0, 6, groundY);
-      ctx.fillStyle = 'rgba(250, 204, 21, 0.6)';
+      ctx.fillRect(tx - 4, 0, 8, groundY);
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.75)';
       ctx.beginPath();
-      ctx.arc(tx, groundY, 28, 0, Math.PI * 2);
+      ctx.arc(tx, groundY, 32, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
+  /**
+   * Draw a Collectible Item (Food ingredient or God Relic)
+   * Visually highlighted with Luminous Sparkle Halo + Friendly Pill Tag
+   * completely distinct from enemies and obstacles.
+   */
   drawItem(ctx, item, frame) {
-    const bob = Math.sin(frame * 0.1 + (item.bobOffset || 0)) * 4;
+    const bob = Math.sin(frame * 0.12 + (item.bobOffset || 0)) * 5;
     const ix = item.x;
     const iy = item.y + bob;
+    const aura = Math.sin(frame * 0.22) * 3;
 
-    // Pop-Pixel High-Contrast Collectible Halo
-    const aura = Math.sin(frame * 0.22) * 2.5;
+    ctx.save();
+
+    // 1. Luminous Friendly Halo
     if (item.type === 'satow') {
       ctx.fillStyle = 'rgba(34, 197, 94, 0.42)';
       ctx.beginPath();
-      ctx.arc(ix + 16, iy + 16, 17 + aura, 0, Math.PI * 2);
+      ctx.arc(ix + 16, iy + 16, 18 + aura, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#181615';
+      ctx.strokeStyle = '#22c55e';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     } else if (item.type === 'golden_mortar') {
-      ctx.fillStyle = 'rgba(250, 204, 21, 0.62)';
+      // Radiant God Mode Crown
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.65)';
       ctx.beginPath();
-      ctx.arc(ix + 18, iy + 18, 21 + aura, 0, Math.PI * 2);
+      ctx.arc(ix + 18, iy + 18, 22 + aura, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#181615';
+      ctx.strokeStyle = '#e9f344';
       ctx.lineWidth = 2;
       ctx.stroke();
-    } else {
-      ctx.fillStyle = item.type === 'fish' ? 'rgba(56, 189, 248, 0.32)' : 'rgba(250, 204, 21, 0.32)';
+    } else if (item.type === 'bamboo') {
+      ctx.fillStyle = 'rgba(234, 179, 8, 0.38)';
       ctx.beginPath();
-      ctx.arc(ix + 16, iy + 16, 15 + aura, 0, Math.PI * 2);
+      ctx.arc(ix + 16, iy + 16, 17 + aura, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#eab308';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    } else {
+      // Fish
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.42)';
+      ctx.beginPath();
+      ctx.arc(ix + 16, iy + 16, 17 + aura, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
 
-    // Pop-Pixel Corner Sparkle
-    if (Math.floor(frame / 8) % 2 === 0) {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(ix + 2, iy + 2, 3, 3);
-    }
+    // 2. Rotating 4-Point Golden Star (✦)
+    const starAngle = frame * 0.08;
+    const starCenterX = ix + (item.type === 'golden_mortar' ? 18 : 16);
+    const starCenterY = iy - 6;
+    ctx.save();
+    ctx.translate(starCenterX, starCenterY);
+    ctx.rotate(starAngle);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(-1.5, -6, 3, 12);
+    ctx.fillRect(-6, -1.5, 12, 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-1, -1, 2, 2);
+    ctx.restore();
 
+    // 3. Draw Sprite Texture
     const sprite = this.sprites[item.type] || this.sprites.fish;
     if (sprite) {
       ctx.drawImage(sprite, ix, iy);
     }
+
+    // 4. Pop-Pixel Friendly Label Tag below the Item (100% Unmistakable Collectible)
+    const itemLabel = item.type === 'fish' ? '+ปลาทู' : (item.type === 'satow' ? '+สะตอ' : (item.type === 'bamboo' ? '+หน่อไม้' : '★ บัฟเทพ ★'));
+    const labelColor = item.type === 'fish' ? '#38bdf8' : (item.type === 'satow' ? '#4ade80' : (item.type === 'bamboo' ? '#fde047' : '#e9f344'));
+    const tagW = item.type === 'golden_mortar' ? 44 : 34;
+    const tagX = ix + (item.type === 'golden_mortar' ? 18 : 16) - tagW / 2;
+    const tagY = iy + (item.type === 'golden_mortar' ? 36 : 30);
+
+    ctx.fillStyle = '#181615';
+    ctx.fillRect(tagX - 1, tagY - 1, tagW + 2, 10);
+    ctx.fillStyle = labelColor;
+    ctx.fillRect(tagX, tagY, tagW, 8);
+    ctx.fillStyle = '#181615';
+    ctx.font = 'bold 7px "Space Mono", monospace';
+    ctx.fillText(itemLabel, tagX + 2, tagY + 6.5);
+
+    ctx.restore();
   }
 
+  /**
+   * Draw Stage Interactive Elements (Spring Jump Pad, Steam Vent)
+   */
   drawElement(ctx, elem, frame, groundY) {
     if (elem.type === 'satow_spring' && this.sprites.satow_spring) {
       const f = elem.isCompressed ? 1 : 0;
       ctx.drawImage(this.sprites.satow_spring, f * 36, 0, 36, 26, elem.x, groundY - 24, 36, 26);
+
+      // Friendly spring jump indicator
+      const arrowBounce = Math.sin(frame * 0.2) * 2;
+      ctx.save();
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(elem.x + 3, groundY - 33 + arrowBounce, 30, 8);
+      ctx.fillStyle = '#181615';
+      ctx.font = 'bold 6px "Space Mono", monospace';
+      ctx.fillText('▲ สปริงจัมพ์ ▲', elem.x + 4, groundY - 27 + arrowBounce);
+      ctx.restore();
     } else if (elem.type === 'steam_jet' && this.sprites.steam_vent) {
       ctx.drawImage(this.sprites.steam_vent, elem.x, groundY - 18);
+
       if (elem.isBursting) {
         const steamH = 75;
         const pulse = Math.sin(frame * 0.5) * 4;
@@ -2118,6 +2301,11 @@ export class TaiPla128Renderer {
         ctx.fillRect(elem.x + 8, groundY - 18 - steamH, 12, steamH);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.fillRect(elem.x + 10, groundY - 18 - steamH + 10, 8, steamH - 10 + pulse);
+      } else {
+        // Pre-burst warning light (blinks yellow/red)
+        const warnBlink = Math.floor(frame / 6) % 2 === 0;
+        ctx.fillStyle = warnBlink ? '#ef4444' : '#f59e0b';
+        ctx.fillRect(elem.x + 11, groundY - 22, 6, 4);
       }
     }
   }

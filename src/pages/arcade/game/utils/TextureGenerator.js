@@ -177,20 +177,28 @@ export function generateGameTextures(scene) {
 
     // Draw Pop-Pixel Satow Rim Cap at the top edge (y = 0..24) so bottom pipes & flipped top pipes have a bold entrance cap
     ctx.fillStyle = '#181615';
-    ctx.fillRect(6, 0, 52, 22);
+    ctx.fillRect(6, 0, 52, 24);
     ctx.fillStyle = '#2ECC71';
-    ctx.fillRect(8, 2, 48, 18);
+    ctx.fillRect(8, 2, 48, 20);
     ctx.fillStyle = '#7BED9F';
     ctx.fillRect(8, 2, 48, 4);
     ctx.fillStyle = '#1E824C';
-    ctx.fillRect(8, 16, 48, 4);
+    ctx.fillRect(8, 18, 48, 4);
+
     // Three golden Satow bean studs on the rim cap
-    [16, 28, 40].forEach((bx) => {
+    [14, 28, 42].forEach((bx) => {
       ctx.fillStyle = '#181615';
-      ctx.fillRect(bx, 6, 8, 8);
+      ctx.fillRect(bx, 4, 8, 8);
       ctx.fillStyle = '#E9F344';
-      ctx.fillRect(bx + 1, 7, 6, 6);
+      ctx.fillRect(bx + 1, 5, 6, 6);
     });
+
+    // Alternating Yellow & Black Caution Hazard Chevrons across the rim lip (y = 18..23)
+    // Clearly marks this pipe edge as an OBSTACLE / BARRIER to avoid
+    for (let hx = 8; hx < 56; hx += 8) {
+      ctx.fillStyle = (Math.floor(hx / 8) % 2 === 0) ? '#E9F344' : '#181615';
+      ctx.fillRect(hx, 18, 8, 4);
+    }
 
     // Tile the pod segments vertically below the cap (from y = 24 to 480)
     for (let yOffset = 24; yOffset < height; yOffset += 40) {
@@ -625,7 +633,7 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 6. Generate Kitchen Knife Sprite (32x32 canvas, centered knife to rotate without clipping)
+  // 6. Generate Kitchen Knife Hazard Sprite (32x32 canvas, Flying Chef Cleaver with Crimson Danger Glow)
   if (!scene.textures.exists('kitchen_knife')) {
     const width = 32;
     const height = 32;
@@ -633,12 +641,14 @@ export function generateGameTextures(scene) {
     const ctx = canvasTexture.context;
     
     const colors = {
-      'W': '#FFFFFF', // Blade highlights
-      'S': '#A5B1C2', // Silver blade
-      'D': '#778CA3', // Dark blade shadow
-      'B': '#1E272E', // Black outline
-      'H': '#8C5A3C', // Wooden handle
-      'K': '#5C3A21', // Dark handle shadow
+      'W': '#FFFFFF', // Blade specular shine
+      'S': '#CBD5E1', // Polished steel blade
+      'D': '#64748B', // Shadowed blade steel
+      'R': '#EF4444', // Crimson Danger edge (clearly marks as ENEMY HAZARD)
+      'F': '#991B1B', // Deep crimson gore/heat trail
+      'B': '#181615', // Crisp ink outline
+      'H': '#78350F', // Wooden handle
+      'K': '#451A03', // Dark handle shadow
       '.': null
     };
 
@@ -651,15 +661,15 @@ export function generateGameTextures(scene) {
       "................................",
       "................................",
       "................................",
-      "................................",
-      "................................",
-      ".............BBBBBBBBBB.........",
-      "...........BBWWWWWWWWWSB........",
-      "..........BWWWWWWWWWWWSB........",
-      "...BBBBBBBWWWWWWWWWWWDDB........",
-      "..BHHHHHHHWWWWWWWWWWWDDB........",
-      "..BKKKKKKKBBBBBBBBBBBBB.........",
-      "...BBBBBBB......................",
+      "............BBBBBBBBBB..........",
+      "..........BBRRRRRRRRRRB.........",
+      ".........BBRWWWWWWWWWWSB........",
+      "........BRWWWWWWWWWWWWWSB.......",
+      "....BBBBBRWWWWWWWWWWWWWSB.......",
+      "...BHHHHHHWWWWWWWWWWWWWDB.......",
+      "...BHHHHHHWWWWWWWWWWWWWDDB......",
+      "...BKKKKKKRFFFFFFFFFFFFFFB......",
+      "....BBBBBBBBBBBBBBBBBBBBB.......",
       "................................",
       "................................",
       "................................",
@@ -691,7 +701,7 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 7. Generate Warning Icon Sprite (32x32 warning sign)
+  // 7. Generate Warning Icon Sprite (32x32 Crimson/Yellow Hazard Triangle)
   if (!scene.textures.exists('warning_icon')) {
     const width = 32;
     const height = 32;
@@ -699,42 +709,44 @@ export function generateGameTextures(scene) {
     const ctx = canvasTexture.context;
     
     const colors = {
-      'Y': '#DFFF00', // Brand Lime-yellow
-      'B': '#000000', // Black text/outline
+      'R': '#EF4444', // Danger Crimson Border
+      'Y': '#E9F344', // High-Contrast Neon Yellow
+      'B': '#181615', // Black ink
+      'W': '#FFFFFF',
       '.': null
     };
 
     const warningPattern = [
       "...............BB...............",
-      "..............BYYB..............",
-      ".............BYYYYB.............",
-      "............BYYYYYYB............",
-      "...........BYYYBYYYYB...........",
-      "..........BYYYBBBYYYYB..........",
-      ".........BYYYBBBBYYYYB..........",
-      "........BYYYBBBBBYYYYBB.........",
-      ".......BYYYYBBBBBYYYYYBB........",
-      "......BYYYYYBBBBBYYYYYYBB.......",
-      ".....BYYYYYYBBBBBYYYYYYYBB......",
-      "....BYYYYYYYBBBBBYYYYYYYYBB.....",
-      "...BYYYYYYYYYBBYYYYYYYYYYBB....",
-      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
-      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
-      "..BYYYYYYYYYBBBYYYYYYYYYYYBB...",
-      "..BYYYYYYYYYBBBYYYYYYYYYYYBB...",
-      "..BYYYYYYYYYYBYYYYYYYYYYYYBB...",
-      "..BYYYYYYYYYYYYYYYYYYYYYYYBB...",
-      "...BYYYYYYYYYBBBYYYYYYYYYYBB....",
-      "....BYYYYYYYYBBBYYYYYYYYYBB.....",
-      ".....BYYYYYYYBBBYYYYYYYYBB......",
-      "......BYYYYYYBBBYYYYYYYBB.......",
-      ".......BYYYYYYYYYYYYYYBB........",
-      "........BYYYYYYYYYYYYBB.........",
-      ".........BYYYYYYYYYYBB..........",
-      "..........BYYYYYYYYBB...........",
-      "...........BYYYYYYBB............",
-      "............BYYYYBB.............",
-      ".............BYYBB..............",
+      "..............BRRB..............",
+      ".............BRYYRB.............",
+      "............BRYYYYRB............",
+      "...........BRYYBYYYRB...........",
+      "..........BRYYBBBYYYRB..........",
+      ".........BRYYBBBBYYYRB..........",
+      "........BRYYBBBBBYYYYRB.........",
+      ".......BRYYYBBBBBYYYYYRB........",
+      "......BRYYYYBBBBBYYYYYYRB.......",
+      ".....BRYYYYYBBBBBYYYYYYYRB......",
+      "....BRYYYYYYBBBBBYYYYYYYYRB.....",
+      "...BRYYYYYYYYBBYYYYYYYYYYRB.....",
+      "..BRYYYYYYYYYBYYYYYYYYYYYYRB....",
+      "..BRYYYYYYYYYBYYYYYYYYYYYYRB....",
+      "..BRYYYYYYYYBBBYYYYYYYYYYYRB....",
+      "..BRYYYYYYYYBBBYYYYYYYYYYYRB....",
+      "..BRYYYYYYYYYBYYYYYYYYYYYYRB....",
+      "..BRYYYYYYYYYYYYYYYYYYYYYYRB....",
+      "...BRYYYYYYYYBBBYYYYYYYYYRB.....",
+      "....BRYYYYYYYBBBYYYYYYYYRB......",
+      ".....BRYYYYYYBBBYYYYYYYRB.......",
+      "......BRYYYYYBBBYYYYYYRB........",
+      ".......BRYYYYYYYYYYYYRB.........",
+      "........BRYYYYYYYYYYRB..........",
+      ".........BRYYYYYYYYRB...........",
+      "..........BRYYYYYYRB............",
+      "...........BRYYYYRB.............",
+      "............BRYYRB..............",
+      ".............BRRB...............",
       "..............BB................",
       "................................"
     ];
@@ -753,42 +765,53 @@ export function generateGameTextures(scene) {
     canvasTexture.refresh();
   }
 
-  // 8. Generate Satow Bean Item Sprite (16x16 pixel art bean)
+  // 8. Generate Satow Bean Item Sprite (24x24 Pop-Pixel Luminous Star Bean)
   if (!scene.textures.exists('satow_bean')) {
-    const width = 16;
-    const height = 16;
+    const width = 24;
+    const height = 24;
     const canvasTexture = scene.textures.createCanvas('satow_bean', width, height);
     const ctx = canvasTexture.context;
     
     const colors = {
-      'Y': '#FFD700', // Bright gold/yellow bean
-      'O': '#FF8C00', // Orange shading
-      'B': '#000000', // Black outline
+      'W': '#FFFFFF', // Diamond Catchlight
+      'Y': '#FACC15', // Vibrant Gold
+      'L': '#FEF08A', // Pale Gold Shine
+      'G': '#22C55E', // Emerald Pod Accent
+      'O': '#F97316', // Warm Orange Shading
+      'B': '#181615', // Crisp Black Outline
       '.': null
     };
 
     const pattern = [
-      "......BB........",
-      "....BBYYBB......",
-      "...BYYYYYYBB....",
-      "..BYYYYYYYYYB...",
-      ".BYYYYYYYYYYOB..",
-      ".BYYYYYYYYYOOB..",
-      "BYYYYYYYYYOOOB.",
-      "BYYYYYYYYYOOOB.",
-      "BYYYYYYYYOOOOB.",
-      ".BYYYYYOOOOOB...",
-      ".BYYYOOOOOOB....",
-      "..BYOOOOOOB.....",
-      "...BBOOOOB......",
-      ".....BBBB.......",
-      "................",
-      "................"
+      ".........BB.............",
+      ".......BBLLBB...........",
+      "......BLLYYYYBB.........",
+      ".....BLYYYYYYYYB........",
+      "....BLYYYYYYYYYYOB......",
+      "....BLYYYYYYYYYOOB......",
+      "...BLYYYYYYYYYOOOB......",
+      "...BLWWYYYYYYYOOOB......",
+      "...BLWWYYYYYYYOOOB......",
+      "...BLYYYYYYYYOOOOOB.....",
+      "....BLYYYYYYOOOOOB......",
+      "....BLYYYYOOOOOOB.......",
+      ".....BLYYOOOOOOB........",
+      "......BBLOOOOBB.........",
+      "........BBBB............",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................",
+      "........................"
     ];
 
     ctx.clearRect(0, 0, width, height);
-    for (let r = 0; r < 16; r++) {
-      for (let c = 0; c < 16; c++) {
+    for (let r = 0; r < 24; r++) {
+      for (let c = 0; c < 24; c++) {
         const char = pattern[r][c];
         const color = colors[char];
         if (color) {
@@ -797,6 +820,14 @@ export function generateGameTextures(scene) {
         }
       }
     }
+
+    // Four-point sparkling cross star on upper left of the bean
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(4, 3, 2, 6);
+    ctx.fillRect(2, 5, 6, 2);
+    ctx.fillStyle = '#FEF08A';
+    ctx.fillRect(4, 5, 2, 2);
+
     canvasTexture.refresh();
   }
 }
