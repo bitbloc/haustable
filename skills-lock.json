@@ -1,11 +1,23 @@
 {
   "version": 1,
   "skills": {
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "65049e1890f5fedf8f8e1144848f07bcda788e51c22bac78afbd073aeb486725"
+    },
     "hallmark": {
       "source": "nutlope/hallmark",
       "sourceType": "github",
       "skillPath": "skills/hallmark/SKILL.md",
       "computedHash": "c25595fa30b123e0cf6f8bb4e2c584bd592c9ada9a4b5b4a1d161d97ff8105e3"
+    },
+    "minimalist": {
+      "source": "tasteskill/tasteskill",
+      "sourceType": "github",
+      "skillPath": "minimalist/SKILL.md",
+      "computedHash": "503dacc845f8d19d48e38e637477a03dcd7f32b94877c0f10d01a0c336ff5b1e"
     }
   }
 }

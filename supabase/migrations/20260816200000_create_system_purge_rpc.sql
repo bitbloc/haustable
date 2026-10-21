@@ -156,16 +156,9 @@ BEGIN
             DELETE FROM public.payment_slips_registry;
         END IF;
 
-        -- Delete main bookings
+        -- Delete main bookings (occupancy in tables_layout is dynamic based on bookings, so deleting bookings clears occupancy)
         IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'bookings') THEN
             DELETE FROM public.bookings;
-        END IF;
-
-        -- Reset table occupancy
-        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tables_layout') THEN
-            UPDATE public.tables_layout
-            SET status = 'available'
-            WHERE status <> 'available';
         END IF;
 
         v_deleted_info := jsonb_set(v_deleted_info, '{orders_purged}', 'true'::JSONB);

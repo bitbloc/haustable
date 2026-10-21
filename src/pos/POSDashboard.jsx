@@ -18,6 +18,7 @@ const POSSplitPaymentModal = React.lazy(() => import('./POSSplitPaymentModal'));
 const POSOnlineHub = React.lazy(() => import('./POSOnlineHub'));
 
 import { getCurrentShift, startShift, closeShift, addShiftAdjustment, checkAndRestoreActiveShift, voidShiftTransaction, cleanUpAllShifts, syncShiftToCloud, logPosAudit, calculateShiftMetrics, getBookingPaymentBreakdown, recordShiftTransaction, fetchShiftBookings } from '../utils/shiftHelper';
+import { isValidUuid } from '../utils/urlHelper';
 import { isOnline, addToOfflineQueue, posCache } from '../utils/offlineHelper';
 import { 
     verifyPinOffline, 
@@ -1096,7 +1097,7 @@ export default function POSDashboard() {
     };
 
     const scheduleAutoPrint = useCallback((bookingId, tableNameHint = 'TABLE', delay = 500) => {
-        if (!bookingId) return;
+        if (!bookingId || !isValidUuid(bookingId)) return;
         const existingHint = autoPrintTableNamesRef.current.get(bookingId);
         const resolvedHint = (tableNameHint && tableNameHint !== 'TABLE') ? tableNameHint : (existingHint || 'TABLE');
         autoPrintTableNamesRef.current.set(bookingId, resolvedHint);
@@ -1114,7 +1115,7 @@ export default function POSDashboard() {
     }, []);
 
     const refreshActiveBookingItems = async (bookingId) => {
-        if (!bookingId) return;
+        if (!bookingId || !isValidUuid(bookingId)) return;
         if (activeBookingRef.current?.id !== bookingId) return;
         try {
             const { data: latestBooking, error } = await supabase
@@ -1838,7 +1839,7 @@ export default function POSDashboard() {
                 const callStaffKey = getCanonicalTableAlertKey('call_staff', tId, bId || tId);
 
                 // Suppress staff call if the associated booking was voided or closed
-                if (bId) {
+                if (bId && isValidUuid(bId)) {
                     try {
                         const { data: bCheck } = await supabase
                             .from('bookings')
@@ -1884,7 +1885,7 @@ export default function POSDashboard() {
                 const callBillKey = getCanonicalTableAlertKey('call_bill', tId, bId || tId);
 
                 // Suppress bill call if the associated booking was voided or closed
-                if (bId) {
+                if (bId && isValidUuid(bId)) {
                     try {
                         const { data: bCheck } = await supabase
                             .from('bookings')
@@ -2018,6 +2019,7 @@ export default function POSDashboard() {
         // Short-lived in-memory promise cache for order_items INSERT -> bookings lookup to prevent N+1 query storms
         const bookingLookupCache = new Map();
         const getCachedBookingForItems = (bId) => {
+            if (!bId || !isValidUuid(bId)) return Promise.resolve(null);
             const key = String(bId);
             const cached = bookingLookupCache.get(key);
             if (cached && (Date.now() - cached.ts < 3000)) {

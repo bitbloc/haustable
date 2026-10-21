@@ -1,4 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../../lib/supabaseClient', () => ({
+    supabase: {
+        channel: vi.fn(() => ({
+            on: vi.fn().mockReturnThis(),
+            subscribe: vi.fn((cb) => {
+                if (cb) cb('SUBSCRIBED');
+                return { unsubscribe: vi.fn() };
+            }),
+            send: vi.fn().mockResolvedValue('ok')
+        })),
+        removeChannel: vi.fn(),
+        realtime: {
+            isConnected: vi.fn(() => true),
+            connect: vi.fn()
+        }
+    }
+}));
+
 import { subscribePOSBroadcast, sendPOSBroadcast } from '../realtimeNotifier';
 
 describe('Realtime & Broadcast Hub Resilience', () => {
@@ -14,12 +33,13 @@ describe('Realtime & Broadcast Hub Resilience', () => {
 
         expect(typeof unsubscribe).toBe('function');
 
-        await sendPOSBroadcast('qr_order_created', { table_id: 5, booking_id: 'b-123' });
+        const testUuid = '00000000-0000-0000-0000-000000000123';
+        await sendPOSBroadcast('qr_order_created', { table_id: 5, booking_id: testUuid });
 
         expect(received.length).toBe(1);
         expect(received[0].event).toBe('qr_order_created');
         expect(received[0].payload.table_id).toBe(5);
-        expect(received[0].payload.booking_id).toBe('b-123');
+        expect(received[0].payload.booking_id).toBe(testUuid);
         expect(received[0].payload.timestamp).toBeDefined();
 
         unsubscribe();
@@ -66,8 +86,11 @@ describe('Realtime & Broadcast Hub Resilience', () => {
         const events = [];
         const unsub = subscribePOSBroadcast(e => events.push(e));
 
-        await sendPOSBroadcast('table_moved', { fromTableId: 3, toTableId: 7, bookingId: 'b-999' });
-        await sendPOSBroadcast('bills_merged', { fromTableId: 2, toTableId: 8, sourceBookingId: 'b-1', targetBookingId: 'b-2' });
+        const moveUuid = '00000000-0000-0000-0000-000000000999';
+        const sourceUuid = '00000000-0000-0000-0000-000000000001';
+        const targetUuid = '00000000-0000-0000-0000-000000000002';
+        await sendPOSBroadcast('table_moved', { fromTableId: 3, toTableId: 7, bookingId: moveUuid });
+        await sendPOSBroadcast('bills_merged', { fromTableId: 2, toTableId: 8, sourceBookingId: sourceUuid, targetBookingId: targetUuid });
 
         expect(events.length).toBe(2);
         expect(events[0].event).toBe('table_moved');
