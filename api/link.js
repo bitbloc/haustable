@@ -43,7 +43,49 @@ const DEFAULT_SETTINGS = {
     link_url_2: "https://www.instagram.com/inthehausth/",
     link_url_3: "https://www.facebook.com/inthehausth/",
     link_url_4: "https://maps.app.goo.gl/ZkjCsDkQdJi4g2EN7",
-    link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม"
+    link_tags: "อาหารใต้รสจัด, คาเฟ่ริมโขง, นครพนม, พริกแกงใต้แท้, ที่จอดรถสะดวก, อาหารจานเดียว, จริตจัด รสชัดเต็ม",
+    // Same wording as the Google Ads headline (message match)
+    link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
+    link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
+    // Starter set card: a menu item id or part of its name
+    link_starter_solo_item: "115",
+    link_starter_item: "141",
+    link_starter_xl_item: "143",
+    // Solo set is pre-selected during this window (Asia/Bangkok)
+    link_lunch_window: "11:30-15:00",
+    // "part of menu name=level" (0 = not spicy … 3 = very spicy); unmatched items get no badge
+    link_spice_map: "แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, (ไม่เผ็ด)=0, ใบเหลียง=0, ต้มจิ๋ว=0, คอหมูย่าง=0",
+    // Categories left out of SPECIALTIES (non-food); is_hausmade items are always left out
+    link_hide_categories: "Hausmade."
+}
+
+const SPICE_LABELS = ['ไม่เผ็ด', '🌶 เผ็ดน้อย', '🌶🌶 เผ็ดกลาง', '🌶🌶🌶 เผ็ดมาก']
+
+function parseSpiceMap(str) {
+    return String(str || '').split(',').map(pair => {
+        const i = pair.lastIndexOf('=')
+        if (i < 1) return null
+        const key = pair.slice(0, i).trim()
+        const level = Number(pair.slice(i + 1).trim())
+        return key && level >= 0 && level <= 3 ? { key, level } : null
+    }).filter(Boolean)
+}
+
+// Lowest and highest spice level among map keys found in the name (null when none match)
+function spiceRange(name, spiceMap) {
+    const levels = spiceMap.filter(s => String(name || '').includes(s.key)).map(s => s.level)
+    if (levels.length === 0) return null
+    return { min: Math.min(...levels), max: Math.max(...levels) }
+}
+
+function spiceBadgeHtml(range, isSet = false) {
+    if (!range) return ''
+    if (isSet) {
+        return range.max === 0
+            ? '<span class="spice s0">ไม่เผ็ด · เหมาะกับมาครั้งแรก</span>'
+            : `<span class="spice s${range.max}">มีจานเผ็ด ${'🌶'.repeat(range.max)}</span>`
+    }
+    return `<span class="spice s${range.max}">${SPICE_LABELS[range.max]}</span>`
 }
 
 const DEFAULT_MENU_ITEMS = [
@@ -84,6 +126,43 @@ function formatDescriptionHtml(desc) {
         }
         return `<span>${escapeHtml(trimmed)}</span>`
     }).filter(Boolean).join('<br>')
+}
+
+// Resolve a starter-set setting (menu item id, or part of the item name) to a card model
+function buildStarterSet(menuItems, ref, spiceMap, chipLabel = '') {
+    if (!ref) return null
+    const key = String(ref).trim()
+    const item = /^\d+$/.test(key)
+        ? menuItems.find(i => String(i.id) === key)
+        : menuItems.find(i => (i.name || '').toLowerCase().includes(key.toLowerCase()))
+    if (!item) return null
+
+    const name = String(item.name || '')
+    const price = Number(item.price) || 0
+    const pax = name.match(/(\d+)\s*-\s*(\d+)\s*ท่าน/)
+    // "Set Size L สำหรับ 2-4 ท่าน …" → "Set Size L"; "SET : ข้าวหมูย่าง + เครื่องดื่ม" → "ข้าวหมูย่าง + เครื่องดื่ม"
+    const title = (name.includes('สำหรับ') ? name.split('สำหรับ')[0] : name.replace(/^set\s*:\s*/i, '')).trim() || name
+    // Dish list only (first line): drop a leading "set name :" label
+    const firstLine = String(item.description || '').trim().split('\n')[0].trim()
+    const dishes = (firstLine || name.replace(/^.*ท่าน/, '').trim()).replace(/^[^:•]*:\s*/, '').replace(/\s*>\s*/g, ' ')
+    let perPerson = ''
+    if (pax && price) {
+        const low = Math.round(price / Number(pax[2]))
+        const high = Math.round(price / Number(pax[1]))
+        perPerson = low === high ? `ตกคนละ ฿${low}` : `ตกคนละ ฿${low}–${high}`
+    }
+    const paxLabel = pax ? `${pax[1]}–${pax[2]} ท่าน` : chipLabel.replace(' คน', ' ท่าน')
+    return {
+        title,
+        paxLabel,
+        chip: chipLabel || (pax ? `${pax[1]}–${pax[2]} คน` : title),
+        spiceHtml: spiceBadgeHtml(spiceRange(name, spiceMap), true),
+        dishes,
+        price,
+        perPerson,
+        img: item.image_url ? optImg(item.image_url, 240, 70) : '',
+        bigImg: item.image_url ? optImg(item.image_url, 800) : ''
+    }
 }
 
 function generateStandaloneLandingHtml(data) {
@@ -156,8 +235,32 @@ function generateStandaloneLandingHtml(data) {
     let diningCheckins = checkins.filter(c => foodKeywords.some(kw => (c.text || '').toLowerCase().includes(kw))).slice(0, 8)
     if (diningCheckins.length === 0) diningCheckins = checkins.slice(0, 6)
 
-    // Recommended Specialties
-    const recommendedItems = menuItems.filter(i => i.is_recommended).slice(0, 15)
+    // Spice badges: attach a level range to every item (also used by the client-rendered full menu)
+    const spiceMap = parseSpiceMap(settings.link_spice_map || DEFAULT_SETTINGS.link_spice_map)
+    menuItems.forEach(item => { item.spice = spiceRange(item.name, spiceMap) })
+
+    // Recommended Specialties (food only: merch / hausmade goods stay in the full menu)
+    const hiddenCategoryNames = String(settings.link_hide_categories || DEFAULT_SETTINGS.link_hide_categories)
+        .split(',').map(s => s.trim()).filter(Boolean)
+    const hiddenCategoryIds = new Set(categories.filter(c => hiddenCategoryNames.includes(String(c.name).trim())).map(c => c.id))
+    const recommendedItems = menuItems
+        .filter(i => i.is_recommended && !i.is_hausmade && !hiddenCategoryIds.has(i.category_id))
+        .slice(0, 15)
+
+    // "First time here?" starter sets (each shown only if its menu item still exists)
+    const starterSets = [
+        buildStarterSet(menuItems, settings.link_starter_solo_item, spiceMap, '1 คน'),
+        buildStarterSet(menuItems, settings.link_starter_item, spiceMap),
+        buildStarterSet(menuItems, settings.link_starter_xl_item, spiceMap)
+    ].filter(Boolean)
+    // The 2–4 people set is the default; the solo set is pre-selected client-side at lunch
+    const soloIdx = settings.link_starter_solo_item && starterSets[0] && starterSets[0].chip === '1 คน' ? 0 : -1
+    const starterIdx = starterSets.length > 1 && soloIdx === 0 ? 1 : 0
+    const starter = starterSets[starterIdx]
+    const lunchWindow = escapeHtml(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)
+
+    const locationShort = escapeHtml(settings.link_location_short || DEFAULT_SETTINGS.link_location_short)
+    const directionsSub = escapeHtml(settings.link_directions_sub || DEFAULT_SETTINGS.link_directions_sub)
 
     // Tags
     const tags = (settings.link_tags || DEFAULT_SETTINGS.link_tags).split(',').map(t => t.trim()).filter(Boolean)
@@ -257,6 +360,42 @@ function generateStandaloneLandingHtml(data) {
         .quick-title { font-size: 15px; font-weight: bold; color: var(--color-ink); }
         .quick-sub { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); margin-top: 2px; }
 
+        .loc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .loc-map-btn { flex-shrink: 0; min-height: 40px; padding: 8px 12px; background: var(--color-ink); color: var(--color-paper); font-size: 13px; font-weight: bold; border-radius: 2px; display: inline-flex; align-items: center; }
+        .loc-more summary { font-size: 12px; color: var(--color-ink-muted); cursor: pointer; margin-top: 6px; }
+        .loc-more p { font-size: 12px; color: var(--color-ink-muted); margin-top: 4px; line-height: 1.5; }
+
+        .starter { border-bottom: 1px solid var(--color-rule); background: var(--color-paper); }
+        .starter-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: var(--color-brand); color: var(--color-ink); }
+        .starter-kicker { font-size: 15px; font-weight: 800; }
+        .starter-pax { display: flex; align-items: center; gap: 6px; padding: 10px 12px 0; }
+        .starter-pax-label { font-size: 13px; font-weight: bold; color: var(--color-ink-muted); margin-right: 2px; }
+        .starter-pax button { min-height: 36px; padding: 4px 12px; font-size: 13px; font-weight: bold; border: 1px solid var(--color-ink); color: var(--color-ink); background: transparent; border-radius: 2px; }
+        .starter-pax button.active { background: var(--color-ink); color: var(--color-paper); }
+        .starter-walkin { margin: 0 12px 8px; padding: 8px 10px; background: oklch(95% 0.05 150); color: oklch(32% 0.09 150); font-size: 13px; font-weight: bold; border-radius: 2px; }
+        .starter-more { padding: 0 12px 12px; font-size: 13px; color: var(--color-ink-muted); text-align: center; }
+        .starter-more a { color: var(--color-ink); font-weight: bold; text-decoration: underline; text-underline-offset: 2px; }
+        .spice { display: inline-block; margin-top: 6px; padding: 2px 8px; font-size: 12px; font-weight: bold; border-radius: 2px; background: oklch(94% 0.04 40); color: oklch(42% 0.14 35); }
+        .spice.s0 { background: oklch(95% 0.05 150); color: oklch(32% 0.09 150); }
+        .item-name .spice, .sig-body .spice { margin-top: 0; margin-left: 4px; font-size: 11px; padding: 1px 6px; vertical-align: middle; }
+        .sig-body .spice { margin-left: 0; align-self: flex-start; }
+        .kitchen-note { font-size: 12px; font-weight: bold; color: oklch(48% 0.15 45); }
+        .loc-hero { background: var(--color-brand); color: var(--color-ink); padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; flex-direction: column; gap: 6px; }
+        .loc-hero[hidden] { display: none; }
+        .loc-hero-title { font-size: 19px; font-weight: 800; line-height: 1.25; }
+        .loc-hero-sub { font-size: 13px; font-weight: bold; }
+        .loc-hero-btn { margin-top: 4px; min-height: 46px; display: flex; align-items: center; justify-content: center; background: var(--color-ink); color: var(--color-paper); font-size: 15px; font-weight: bold; border-radius: 2px; }
+        .starter-body { display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
+        .starter-img { width: 104px; height: 104px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--color-rule); background: var(--color-paper-warm); cursor: pointer; }
+        .starter-info { flex: 1; min-width: 0; }
+        .starter-name { font-size: 16px; font-weight: 800; line-height: 1.2; }
+        .starter-dishes { font-size: 13px; color: var(--color-ink-muted); margin-top: 4px; line-height: 1.45; }
+        .starter-price { margin-top: 6px; font-family: var(--font-mono); font-size: 20px; font-weight: 800; }
+        .starter-pp { font-family: var(--font-body); font-size: 12px; font-weight: bold; color: var(--color-ink-muted); margin-left: 6px; }
+        .starter-ctas { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; padding: 0 12px 12px; }
+        .starter-btn { min-height: 46px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 1px solid var(--color-ink); border-radius: 2px; text-align: center; }
+        .starter-btn.primary { background: var(--color-ink); color: var(--color-paper); }
+
         .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: 30; }
         .tab-btn { padding: 14px 8px; font-family: var(--font-body); font-size: 14px; font-weight: bold; letter-spacing: 0.02em; text-align: center; border-right: 1px solid var(--color-rule); color: var(--color-ink-muted); background: transparent; }
         .tab-btn:last-child { border-right: none; }
@@ -321,11 +460,12 @@ function generateStandaloneLandingHtml(data) {
         .footer-seo p { margin: 0; }
         .footer-copy { font-size: 10px; letter-spacing: 0.15em; color: var(--color-ink-muted); margin-top: 2px; }
 
-        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
+        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: 1.7fr 1fr 0.8fr 1fr; gap: 6px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
         .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 8px 2px; font-family: var(--font-body); font-size: 13px; font-weight: bold; line-height: 1.15; border-radius: 2px; text-align: center; }
-        .sticky-btn.book { background: var(--color-brand); color: var(--color-ink); font-weight: 800; }
+        .sticky-btn.book { background: var(--color-paper); border: 1px solid var(--color-ink); color: var(--color-ink); }
         .sticky-btn.line { background: var(--color-line-bg); color: #ffffff; font-weight: 800; }
-        .sticky-btn.map { background: var(--color-paper-warm); border: 1px solid var(--color-rule); color: var(--color-ink); }
+        .sticky-btn.map { background: var(--color-brand); border: 1px solid var(--color-ink); color: var(--color-ink); font-weight: 800; flex-direction: column; gap: 1px; }
+        .sticky-sub { font-size: 10.5px; font-weight: 600; color: var(--color-ink); line-height: 1.15; }
         .sticky-btn.call { background: var(--color-ink); color: var(--color-paper); }
 
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
@@ -397,11 +537,19 @@ function generateStandaloneLandingHtml(data) {
         <!-- Main Content Landmark -->
         <main id="main">
 
+        <!-- Location-first banner: shown when utm_content says the ad sold the location -->
+        <section class="loc-hero" id="loc-hero" hidden>
+            <div class="loc-hero-title">📍 ${directionsSub}</div>
+            <div class="loc-hero-sub">ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ</div>
+            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">นำทางมาร้านเลย ➔</a>
+        </section>
+
         <!-- Tabular Metadata Grid -->
         <div class="meta-grid">
             <div class="meta-item">
                 <span class="meta-label">สถานะ · STATUS</span>
                 <span class="meta-val" id="open-status" data-hours="${hours}"><span class="dot-green"></span> เปิดทุกวัน</span>
+                <span class="kitchen-note" id="kitchen-note" hidden></span>
             </div>
             <div class="meta-item">
                 <span class="meta-label">เวลาเปิด · HOURS</span>
@@ -409,9 +557,49 @@ function generateStandaloneLandingHtml(data) {
             </div>
             <div class="meta-item full">
                 <span class="meta-label">ที่ตั้ง · LOCATION</span>
-                <span class="meta-val">${locationText}</span>
+                <div class="loc-row">
+                    <span class="meta-val">${locationShort}</span>
+                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">แผนที่ ➔</a>
+                </div>
+                <details class="loc-more">
+                    <summary>วิธีมาที่ร้าน</summary>
+                    <p>${locationText}</p>
+                </details>
             </div>
         </div>
+
+        ${starter ? `
+        <!-- Starter Set: one-tap answer to "what should we eat / how much"; walk-in first, booking optional -->
+        <section class="starter" id="starter-card" data-lunch="${lunchWindow}" data-solo="${soloIdx}">
+            <div class="starter-head">
+                <span class="starter-kicker">เพิ่งมาครั้งแรก? เริ่มที่ชุดนี้</span>
+            </div>
+            ${starterSets.length > 1 ? `
+            <div class="starter-pax" role="group" aria-label="มากี่คน">
+                <span class="starter-pax-label">มากี่คน?</span>
+                ${starterSets.map((s, i) => `<button type="button" class="${i === starterIdx ? 'active' : ''}" onclick="selectStarter(${i})">${escapeHtml(s.chip)}</button>`).join('')}
+            </div>` : ''}
+            <div class="starter-body">
+                ${starter.img ? `<img id="starter-img" class="starter-img" src="${starter.img}" alt="${escapeHtml(starter.title)}" width="104" height="104" loading="eager" decoding="async" onclick="openLightbox(starterSets[currentStarter].bigImg)">` : ''}
+                <div class="starter-info">
+                    <div class="starter-name" id="starter-name">${escapeHtml(starter.title)}${starter.paxLabel ? ` · ${escapeHtml(starter.paxLabel)}` : ''}</div>
+                    <div class="starter-dishes" id="starter-dishes">${escapeHtml(starter.dishes)}</div>
+                    <div class="starter-price"><span id="starter-price">฿${starter.price}</span><span class="starter-pp" id="starter-pp">${escapeHtml(starter.perPerson)}</span></div>
+                    <div id="starter-spice">${starter.spiceHtml}</div>
+                </div>
+            </div>
+            <div class="starter-walkin">✓ ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</div>
+            <div class="starter-ctas">
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="starter-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
+                <a href="tel:0985284217" class="starter-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
+            </div>
+            <div class="starter-more">
+                อยากได้โต๊ะแน่นอน? <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า ➔</a>
+                <span aria-hidden="true">·</span>
+                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน ➔</a>
+            </div>
+            <script id="starter-data" type="application/json">${JSON.stringify(starterSets).replace(/</g, '\u003c')}</script>
+        </section>` : ''}
 
         <!-- Live Stream Customer Photos Ticker -->
         <a href="/link/hauscheckin" class="live-stream">
@@ -422,8 +610,8 @@ function generateStandaloneLandingHtml(data) {
             <span>ดูทั้งหมด ➔</span>
         </a>
 
-        <!-- Quick Actions: Reservation & Pickup -->
-        <div class="quick-grid">
+        <!-- Quick Actions: Reservation & Pickup (fallback when no starter set card) -->
+        ${starter ? '' : `<div class="quick-grid">
             <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">
                 <div class="quick-tag"><span>// RESERVATION</span><span>➔</span></div>
                 <div>
@@ -438,7 +626,7 @@ function generateStandaloneLandingHtml(data) {
                     <div class="quick-sub">PICK UP ONLINE</div>
                 </div>
             </a>
-        </div>
+        </div>`}
 
         <!-- Tab Switcher -->
         <div class="tab-bar">
@@ -462,6 +650,7 @@ function generateStandaloneLandingHtml(data) {
                     <div class="sig-body">
                         <div class="sig-name">${sig1Name}</div>
                         <div class="sig-price">฿${sig1Price}</div>
+                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
                     </div>
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
@@ -471,6 +660,7 @@ function generateStandaloneLandingHtml(data) {
                     <div class="sig-body">
                         <div class="sig-name">${sig2Name}</div>
                         <div class="sig-price">฿${sig2Price}</div>
+                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
                     </div>
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
@@ -480,6 +670,7 @@ function generateStandaloneLandingHtml(data) {
                     <div class="sig-body">
                         <div class="sig-name">${sig3Name}</div>
                         <div class="sig-price">฿${sig3Price}</div>
+                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
                     </div>
                 </div>
             </div>
@@ -507,7 +698,7 @@ function generateStandaloneLandingHtml(data) {
                 ${recommendedItems.map(item => `
                 <div class="item-row"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
                     <div class="item-info">
-                        <div class="item-name">${escapeHtml(item.name)}</div>
+                        <div class="item-name">${escapeHtml(item.name)}${spiceBadgeHtml(item.spice)}</div>
                         ${item.description ? `<div class="item-desc">${formatDescriptionHtml(item.description)}</div>` : ''}
                         <div class="item-price">฿${escapeHtml(item.price)}</div>
                     </div>
@@ -633,18 +824,20 @@ function generateStandaloneLandingHtml(data) {
         </footer>
 
         <!-- Sticky Contact Bar -->
+        <!-- Walk-in first: directions is the main action, booking stays available but quiet -->
         <div class="sticky-bar">
-            <a href="/booking" id="cta-sticky-booking" class="sticky-btn book" onclick="handleBookingClick(event)">
-                จองโต๊ะ
+            <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
+                <span>นำทาง</span>
+                <span class="sticky-sub">${directionsSub}</span>
             </a>
             <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">
                 แชท LINE
             </a>
-            <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
-                นำทาง
-            </a>
             <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn call" onclick="handleCallClick(event)">
                 โทร
+            </a>
+            <a href="/booking" id="cta-sticky-booking" class="sticky-btn book" onclick="handleBookingClick(event)">
+                จองโต๊ะ
             </a>
         </div>
     </div>
@@ -673,6 +866,51 @@ function generateStandaloneLandingHtml(data) {
         // ─── BOOKLET DATA ───
         const bookletPages = ${JSON.stringify(bookletImages.map(img => optImg(img, 900)))};
         let currentBookletIdx = 0;
+
+        // ─── STARTER SET CARD (2–4 / 4–6 people) ───
+        const starterSets = (function() {
+            try { return JSON.parse(document.getElementById('starter-data').textContent); } catch(e) { return []; }
+        })();
+        const starterCard = document.getElementById('starter-card');
+        let currentStarter = 0;
+        document.querySelectorAll('.starter-pax button').forEach(function(b, j) {
+            if (b.classList.contains('active')) currentStarter = j;
+        });
+        function selectStarter(i, silent) {
+            const s = starterSets[i];
+            if (!s) return;
+            currentStarter = i;
+            document.getElementById('starter-name').textContent = s.title + (s.paxLabel ? ' · ' + s.paxLabel : '');
+            document.getElementById('starter-dishes').textContent = s.dishes;
+            document.getElementById('starter-price').textContent = '฿' + s.price;
+            document.getElementById('starter-pp').textContent = s.perPerson;
+            document.getElementById('starter-spice').innerHTML = s.spiceHtml;
+            const img = document.getElementById('starter-img');
+            if (img && s.img) { img.src = s.img; img.alt = s.title; }
+            document.querySelectorAll('.starter-pax button').forEach(function(b, j) {
+                b.className = j === i ? 'active' : '';
+            });
+            if (!silent) logAdEvent('select_starter_set');
+        }
+        function handleStarterClick(e, target) {
+            logAdEvent('click_starter_set');
+            if (target === 'directions') handleDirectionsClick(e);
+            else if (target === 'call') handleCallClick(e);
+            else if (target === 'booking') handleBookingClick(e);
+            else handlePickupClick(e);
+        }
+
+        // Lunch hours (Asia/Bangkok): pre-select the solo set for people eating alone / working lunch
+        (function() {
+            if (!starterCard || starterCard.dataset.solo !== '0') return;
+            const w = (starterCard.dataset.lunch || '').match(/(\\d{1,2})[:.](\\d{2})\\s*-\\s*(\\d{1,2})[:.](\\d{2})/);
+            if (!w) return;
+            try {
+                const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+                const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value);
+                if (now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])) selectStarter(0, true);
+            } catch(e) {}
+        })();
 
         // ─── TAB SWITCHING ───
         function switchSection(name) {
@@ -711,8 +949,37 @@ function generateStandaloneLandingHtml(data) {
                 el.innerHTML = isOpen
                     ? '<span class="dot-green"></span> เปิดอยู่ตอนนี้'
                     : '<span class="dot-green closed"></span> ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+
+                // Kitchen closing countdown: last 2 hours before "ครัวปิด HH:MM", then "kitchen closed"
+                const k = (el.dataset.hours || '').match(/ครัวปิด\\s*(\\d{1,2})[:.](\\d{2})/);
+                const note = document.getElementById('kitchen-note');
+                if (isOpen && k && note) {
+                    let kitchen = Number(k[1]) * 60 + Number(k[2]);
+                    if (kitchen < open) kitchen += 24 * 60;
+                    const nowAdj = now < open ? now + 24 * 60 : now;
+                    const left = kitchen - nowAdj;
+                    if (left > 0 && left <= 120) {
+                        const h = Math.floor(left / 60), mm = left % 60;
+                        note.textContent = 'ครัวปิด ' + k[1] + ':' + k[2] + ' · เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '');
+                        note.hidden = false;
+                    } else if (left <= 0) {
+                        note.textContent = 'ครัวปิดแล้ว · ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.';
+                        note.hidden = false;
+                    }
+                }
             } catch(e) {}
         })();
+
+        // ─── LOCATION-FIRST MODE: ad sold the location (utm_content like "location", "map", "naga") ───
+        // Deferred: getUtmParams() relies on constants declared further down this script
+        setTimeout(function() {
+            try {
+                const content = (getUtmParams().utm_content || '').toLowerCase();
+                if (/loc|map|direct|nav|near|naga|phaya|พญานาค|นำทาง/.test(content)) {
+                    document.getElementById('loc-hero').hidden = false;
+                }
+            } catch(e) {}
+        }, 0);
 
         // ─── MODAL HISTORY: phone back button / Esc closes the modal instead of leaving the page ───
         function pushModalState() {
@@ -762,6 +1029,12 @@ function generateStandaloneLandingHtml(data) {
             return html.replace(/(<br>)+$/, '');
         }
 
+        const SPICE_LABELS = ${JSON.stringify(SPICE_LABELS)};
+        function clientSpiceBadge(range) {
+            if (!range) return '';
+            return '<span class="spice s' + range.max + '">' + SPICE_LABELS[range.max] + '</span>';
+        }
+
         function toggleFullMenu() {
             const content = document.getElementById('full-menu-content');
             const btn = document.getElementById('btn-full-menu');
@@ -779,7 +1052,7 @@ function generateStandaloneLandingHtml(data) {
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
                                 const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)" style="cursor:pointer;"' : '';
                                 const descHtml = item.description ? '<div class="item-desc">' + formatClientDescription(item.description) + '</div>' : '';
-                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + '</div>' + descHtml + '<div class="item-price">฿' + escapeClientHtml(item.price) + '</div></div>' + thumb + '</div>';
+                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + clientSpiceBadge(item.spice) + '</div>' + descHtml + '<div class="item-price">฿' + escapeClientHtml(item.price) + '</div></div>' + thumb + '</div>';
                             });
                             html += '</div>';
                         });
@@ -1104,7 +1377,7 @@ export default async function handler(req, res) {
             try {
                 const fetchPromise = Promise.all([
                     supabase.from('app_settings').select('key, value').or('key.like.link_%,key.eq.contact_map_url'),
-                    supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, category_id, sort_order').eq('is_available', true).order('sort_order'),
+                    supabase.from('menu_items').select('id, name, price, description, image_url, is_available, is_recommended, is_hausmade, category_id, sort_order').eq('is_available', true).order('sort_order'),
                     supabase.from('menu_categories').select('id, name, display_order').order('display_order'),
                     supabase.from('haus_checkins').select('id, image_url, text, is_visible').eq('is_visible', true).order('created_at', { ascending: false }).limit(24)
                 ])

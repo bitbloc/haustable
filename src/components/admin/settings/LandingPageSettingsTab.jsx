@@ -352,6 +352,126 @@ export default function LandingPageSettingsTab({
                     placeholder="ริมแม่น้ำโขง · นครพนม"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
+                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    แสดงเป็น "วิธีมาที่ร้าน" (กดเปิดดู) ใต้บรรทัดที่ตั้งแบบสั้น
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ที่ตั้งแบบสั้น (Location Short)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_location_short || ''}
+                        onChange={(e) => handleSave('link_location_short', e.target.value)}
+                        placeholder="ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ข้อความใต้ปุ่มนำทาง (Sticky Bar)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_directions_sub || ''}
+                        onChange={(e) => handleSave('link_directions_sub', e.target.value)}
+                        placeholder="ห่าง 2 นาที จากลานพญานาค"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                        ควรใช้คำเดียวกับ headline ใน Google Ads
+                    </p>
+                </div>
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ชุดแนะนำ 2–4 คน (การ์ด "เพิ่งมาครั้งแรก?")
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_starter_item || ''}
+                        onChange={(e) => handleSave('link_starter_item', e.target.value)}
+                        placeholder="141 หรือ Set Size L สำหรับ 2-4 ท่าน ต้มจิ๋ว"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ชุดแนะนำ 4–6 คน (ปุ่มสลับ)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_starter_xl_item || ''}
+                        onChange={(e) => handleSave('link_starter_xl_item', e.target.value)}
+                        placeholder="143 หรือ Set Size XL สำหรับ 4-6 ท่าน"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                        ใส่ ID เมนู หรือบางส่วนของชื่อเมนู · ถ้าหาไม่เจอการ์ดจะซ่อนเอง
+                    </p>
+                </div>
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ชุดแนะนำ 1 คน (มื้อเที่ยง)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_starter_solo_item || ''}
+                        onChange={(e) => handleSave('link_starter_solo_item', e.target.value)}
+                        placeholder="115 หรือ SET : ข้าวหมูย่างในบ้าน"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                </div>
+                <div>
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        ช่วงมื้อเที่ยง (เลือกชุด 1 คนให้อัตโนมัติ)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_lunch_window || ''}
+                        onChange={(e) => handleSave('link_lunch_window', e.target.value)}
+                        placeholder="11:30-15:00"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                    ระดับความเผ็ด (Spice Badges)
+                </label>
+                <textarea
+                    rows={2}
+                    value={settings.link_spice_map ?? ''}
+                    onChange={(e) => handleSave('link_spice_map', e.target.value)}
+                    placeholder="แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, (ไม่เผ็ด)=0, ใบเหลียง=0, ต้มจิ๋ว=0, คอหมูย่าง=0"
+                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                />
+                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    คำในชื่อเมนู=ระดับ คั่นด้วยจุลภาค · 0 ไม่เผ็ด · 1 เผ็ดน้อย · 2 เผ็ดกลาง · 3 เผ็ดมาก · เมนูที่ไม่ตรงคำไหนจะไม่มีป้าย · เว้นว่างไว้ = ใช้ค่าเริ่มต้น
+                </p>
+            </div>
+
+            <div>
+                <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                    หมวดที่ไม่แสดงใน SPECIALTIES (ของที่ไม่ใช่อาหาร)
+                </label>
+                <input
+                    type="text"
+                    value={settings.link_hide_categories ?? ''}
+                    onChange={(e) => handleSave('link_hide_categories', e.target.value)}
+                    placeholder="Hausmade."
+                    className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                />
+                <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                    ชื่อหมวดคั่นด้วยจุลภาค · สินค้า Hausmade ไม่แสดงอยู่แล้ว · ยังมีให้เห็นใน "เมนูทั้งหมด"
+                </p>
+            </div>
+
+            <div className="text-[10px] font-mono text-[var(--color-neutral)] border border-dashed border-[var(--color-rule)] rounded-xl p-2.5">
+                โหมดเน้นที่ตั้ง: ถ้า utm_content ของ ad มีคำว่า location / map / directions / naga / พญานาค หน้า /link จะขึ้นแถบ "นำทางมาร้านเลย" สีเหลืองไว้บนสุด
             </div>
 
             <div>
