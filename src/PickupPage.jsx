@@ -22,6 +22,7 @@ import { Tag, AlertCircle, Crown, Coffee, QrCode, Wallet, CheckCircle2, AlertTri
 import { toast } from 'sonner'
 import CRMCheckoutPrivileges from './components/shared/CRMCheckoutPrivileges'
 import { DEFAULT_CRM_SETTINGS } from './utils/crmHelper'
+import { trackPickupComplete } from './utils/analyticsHelper'
 
 // --- Main Page ---
 export default function PickupPage() {
@@ -481,6 +482,11 @@ export default function PickupPage() {
 
             if (result.success) {
                 toast.success(t('confirmOrder') + ' สำเร็จ!' + (isAutoVerified ? ' (สลิปผ่านการตรวจอัตโนมัติ ✓)' : ''))
+                // Conversion: pickup order actually placed
+                await trackPickupComplete({
+                    transactionId: result.trackingToken,
+                    value: finalTotal
+                })
                 if (result.trackingToken) {
                     window.location.replace(`/tracking/${result.trackingToken}`)
                 } else {

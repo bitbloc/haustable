@@ -11,6 +11,7 @@ import generatePayload from 'promptpay-qr'
 import { QRCodeSVG } from 'qrcode.react'
 import CRMCheckoutPrivileges from '../shared/CRMCheckoutPrivileges'
 import { DEFAULT_CRM_SETTINGS } from '../../utils/crmHelper'
+import { trackBookingComplete } from '../../utils/analyticsHelper'
 
 export default function BookingCheckout() {
     const { t } = useLanguage()
@@ -337,7 +338,16 @@ export default function BookingCheckout() {
                 const bookingData = Array.isArray(result.data) ? result.data[0] : result.data
                 const token = bookingData?.tracking_token
 
+                // Conversion: booking actually completed (not just a click on /link)
+                const trackingDone = trackBookingComplete({
+                    transactionId: bookingData?.id || token,
+                    value: finalTotal,
+                    pax
+                })
+
                 alert(t('confirmBooking') + ' Success!' + (slipVerifyResult?.verified ? ' (สลิปมัดจำผ่านการตรวจอัตโนมัติ ✓)' : ''))
+
+                await trackingDone
                 
                 if (token) {
                     window.location.replace(`/tracking/${token}`)

@@ -14,7 +14,7 @@ export const GOOGLE_ADS_CALL_CONVERSION = 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp';
 export const GOOGLE_ADS_DIRECTIONS_CONVERSION = 'AW-11227095880/QU1qCJHHvcocEMjGv-kp';  // ดูเส้นทาง (QU1qCJHHvcocEMjGv-kp)
 export const GOOGLE_ADS_LINE_CONVERSION = 'AW-11227095880/XCmICO2BwOEcEMjGv-kp';        // TechSol - Line 95594 (XCmICO2BwOEcEMjGv-kp)
 export const GOOGLE_ADS_BOOKING_CONVERSION = 'AW-11227095880/tc4FCIyyn5wdEMjGv-kp';    // จองโต๊ะ (Click Booking)
-export const GOOGLE_ADS_PICKUP_CONVERSION = 'AW-11227095880/HSdNCl-yn5wdEMjGv-kp';      // สั่งอาหาร (Pickup)
+export const GOOGLE_ADS_PICKUP_CONVERSION = 'AW-11227095880/HSdNCI-yn5wdEMjGv-kp';      // สั่งอาหาร (Pickup) — fixed: CI (capital i), was Cl
 
 // Timestamp cache for anti-spam click debouncing (2000ms cooldown)
 const lastEventTimestamps = new Map();
@@ -308,3 +308,59 @@ export const trackAtmosphereClick = (pageLocation = '/link') => {
     });
 };
 
+
+// ─── COMPLETION CONVERSIONS (fire on successful booking / pickup order) ───
+
+/**
+ * Push a completion event to dataLayer and wait until GTM has handled it
+ * (eventCallback) or a short timeout passes, so a redirect right after
+ * does not cut the conversion hit off.
+ * GTM: create Custom Event triggers named `booking_complete` / `pickup_complete`.
+ * @param {string} eventName
+ * @param {object} params - e.g. { transaction_id, value, currency }
+ * @param {number} timeoutMs
+ * @returns {Promise<void>}
+ */
+export const trackCompletion = (eventName, params = {}, timeoutMs = 1500) => {
+    return new Promise((resolve) => {
+        let done = false;
+        const finish = () => {
+            if (done) return;
+            done = true;
+            resolve();
+        };
+        try {
+            if (typeof window === 'undefined') return finish();
+
+            logAdEvent(eventName, params);
+
+            window.dataLayer = window.dataLayer || [];
+            window.dataLayer.push({
+                event: eventName,
+                ...params,
+                eventCallback: finish,
+                eventTimeout: timeoutMs
+            });
+        } catch (err) {
+            console.warn('[Analytics] trackCompletion failed:', err);
+            finish();
+        }
+        // Safety net in case GTM is blocked or not loaded
+        setTimeout(finish, timeoutMs + 200);
+    });
+};
+
+export const trackBookingComplete = ({ transactionId, value, pax } = {}) =>
+    trackCompletion('booking_complete', {
+        transaction_id: transactionId || undefined,
+        value: Number(value) || 0,
+        currency: 'THB',
+        pax: pax || undefined
+    });
+
+export const trackPickupComplete = ({ transactionId, value } = {}) =>
+    trackCompletion('pickup_complete', {
+        transaction_id: transactionId || undefined,
+        value: Number(value) || 0,
+        currency: 'THB'
+    });
