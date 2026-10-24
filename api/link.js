@@ -232,39 +232,40 @@ function generateStandaloneLandingHtml(data) {
         }
         img { display: block; max-width: 100%; height: auto; }
 
-        .container { width: 100%; max-width: 580px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 80px; }
-        .marquee { background: #E9F344; color: var(--color-ink); border-bottom: 1px solid var(--color-rule); padding: 6px 12px; font-family: var(--font-mono); font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .container { width: 100%; max-width: 580px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 88px; }
+        .marquee { background: #E9F344; color: var(--color-ink); border-bottom: 1px solid var(--color-rule); padding: 6px 12px; font-family: var(--font-mono); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-cell { display: flex; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--color-rule); }
         .logo-box { width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
         .shop-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.15; color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; }
-        .shop-sub { font-family: var(--font-mono); font-size: 10px; font-weight: bold; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink-muted); margin-top: 4px; }
+        .shop-sub { font-family: var(--font-mono); font-size: 12px; font-weight: bold; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink-muted); margin-top: 4px; }
 
         .meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); font-size: 10px; }
         .meta-item { padding: 12px; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); display: flex; flex-direction: column; gap: 4px; }
         .meta-item:nth-child(2) { border-right: none; }
         .meta-item.full { grid-column: span 2; border-right: none; border-bottom: none; }
-        .meta-label { font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); font-weight: bold; letter-spacing: 0.08em; }
-        .meta-val { font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+        .meta-label { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); font-weight: bold; letter-spacing: 0.08em; }
+        .meta-val { font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
         .dot-green { width: 8px; height: 8px; background: #10B981; border: 1px solid var(--color-rule); display: inline-block; flex-shrink: 0; }
+        .dot-green.closed { background: var(--color-ink-muted); }
 
-        .live-stream { background: var(--color-ink); color: var(--color-paper); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-rule); font-size: 12px; font-weight: bold; }
+        .live-stream { background: var(--color-ink); color: var(--color-paper); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-rule); font-size: 13px; font-weight: bold; }
         .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
         .quick-btn { padding: 14px 16px; background: var(--color-paper); border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
         .quick-btn:last-child { border-right: none; }
         .quick-btn:hover { background: var(--color-paper-warm); }
-        .quick-tag { font-family: var(--font-mono); font-size: 9px; font-weight: bold; color: var(--color-ink-muted); letter-spacing: 0.08em; display: flex; justify-content: space-between; }
-        .quick-title { font-size: 13px; font-weight: bold; color: var(--color-ink); }
-        .quick-sub { font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); margin-top: 2px; }
+        .quick-tag { font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: var(--color-ink-muted); letter-spacing: 0.08em; display: flex; justify-content: space-between; }
+        .quick-title { font-size: 15px; font-weight: bold; color: var(--color-ink); }
+        .quick-sub { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); margin-top: 2px; }
 
         .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: 30; }
-        .tab-btn { padding: 14px 8px; font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.1em; text-align: center; border-right: 1px solid var(--color-rule); color: var(--color-ink-muted); background: transparent; }
+        .tab-btn { padding: 14px 8px; font-family: var(--font-body); font-size: 14px; font-weight: bold; letter-spacing: 0.02em; text-align: center; border-right: 1px solid var(--color-rule); color: var(--color-ink-muted); background: transparent; }
         .tab-btn:last-child { border-right: none; }
         .tab-btn.active { background: var(--color-ink); color: var(--color-paper); }
         .tab-btn.active span { color: #f97316; }
 
         .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--color-paper-warm); border-bottom: 1px solid var(--color-rule); }
-        .section-title { font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
-        .badge { font-family: var(--font-mono); font-size: 9px; font-weight: bold; padding: 2px 6px; background: var(--color-ink); color: var(--color-paper); border: 1px solid var(--color-ink); }
+        .section-title { font-family: var(--font-mono); font-size: 12px; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
+        .badge { font-family: var(--font-mono); font-size: 11px; font-weight: bold; padding: 2px 6px; background: var(--color-ink); color: var(--color-paper); border: 1px solid var(--color-ink); }
 
         .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
         .sig-card { border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; height: 100%; background: var(--color-paper); cursor: pointer; }
@@ -273,8 +274,8 @@ function generateStandaloneLandingHtml(data) {
         .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s ease; }
         .sig-card:hover .sig-img-wrap img { transform: scale(1.04); }
         .sig-body { padding: 10px; display: flex; flex-direction: column; justify-content: space-between; flex: 1; gap: 6px; }
-        .sig-name { font-size: 12px; font-weight: bold; line-height: 1.25; color: var(--color-ink); }
-        .sig-price { font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: var(--color-ink-muted); }
+        .sig-name { font-size: 13px; font-weight: bold; line-height: 1.25; color: var(--color-ink); }
+        .sig-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink-muted); }
 
         .booklet-card { padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; align-items: center; justify-content: space-between; background: var(--color-paper); cursor: pointer; gap: 12px; }
         .booklet-card:hover { background: var(--color-paper-warm); }
@@ -282,13 +283,13 @@ function generateStandaloneLandingHtml(data) {
         .item-row { display: flex; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--color-rule); background: var(--color-paper); gap: 12px; align-items: flex-start; cursor: pointer; }
         .item-row:hover { background: var(--color-paper-warm); }
         .item-info { flex: 1; min-width: 0; }
-        .item-name { font-size: 13px; font-weight: bold; color: var(--color-ink); }
-        .item-desc { font-size: 11px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-        .modifier-tag { display: inline-block; font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; color: var(--color-ink); background: var(--color-paper-warm); border: 1px solid var(--color-rule); padding: 1px 6px; border-radius: 2px; margin-bottom: 2px; letter-spacing: 0.04em; vertical-align: middle; }
-        .item-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
+        .item-name { font-size: 14px; font-weight: bold; color: var(--color-ink); }
+        .item-desc { font-size: 12px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .modifier-tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--color-ink); background: var(--color-paper-warm); border: 1px solid var(--color-rule); padding: 1px 6px; border-radius: 2px; margin-bottom: 2px; letter-spacing: 0.04em; vertical-align: middle; }
+        .item-price { font-family: var(--font-mono); font-size: 13px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
         .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-warm); }
 
-        .full-menu-btn { width: 100%; padding: 16px; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-mono); font-size: 11px; font-weight: bold; letter-spacing: 0.12em; text-align: center; text-transform: uppercase; border-bottom: 1px solid var(--color-rule); display: block; }
+        .full-menu-btn { width: 100%; padding: 16px; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-mono); font-size: 13px; font-weight: bold; letter-spacing: 0.12em; text-align: center; text-transform: uppercase; border-bottom: 1px solid var(--color-rule); display: block; }
         .full-menu-btn:hover { background: #27272a; }
 
         .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
@@ -299,28 +300,30 @@ function generateStandaloneLandingHtml(data) {
         .gallery-caption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 65%, transparent 100%); color: #fff; padding: 20px 8px 6px 8px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; font-weight: bold; pointer-events: none; }
         .gallery-caption .caption-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 72%; font-size: 11px; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
         .gallery-caption .caption-price { font-family: var(--font-mono); font-size: 11px; color: #fed7aa; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-        .gallery-caption.checkin { font-size: 10px; font-weight: normal; }
+        .gallery-caption.checkin { font-size: 11px; font-weight: normal; }
         .gallery-caption.checkin .caption-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; color: #f4f4f5; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
 
-        .connect-row { padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; justify-content: space-between; align-items: center; background: var(--color-paper); font-size: 12px; font-weight: bold; }
+        .connect-row { padding: 14px 16px; min-height: 52px; border-bottom: 1px solid var(--color-rule); display: flex; justify-content: space-between; align-items: center; background: var(--color-paper); font-size: 14px; font-weight: bold; }
         .connect-row:hover { background: var(--color-paper-warm); }
         .connect-row.line { background: var(--color-line-bg); color: #fff; }
         .connect-row.line:hover { background: #007335; }
         .connect-row.lineman { background: var(--color-ink); color: var(--color-paper); }
+        .connect-row.book { background: var(--color-brand); color: var(--color-ink); }
 
         .tags-wrap { padding: 16px 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-bottom: 1px solid var(--color-rule); }
-        .tag-pill { padding: 4px 10px; background: var(--color-paper-warm); border: 1px solid var(--color-rule); font-family: var(--font-mono); font-size: 9px; color: var(--color-ink-muted); border-radius: 2px; }
+        .tag-pill { padding: 4px 10px; background: var(--color-paper-warm); border: 1px solid var(--color-rule); font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); border-radius: 2px; }
 
-        footer { padding: 28px 20px 88px 20px; text-align: center; font-size: 9px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 8px; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
+        footer { padding: 28px 20px 96px 20px; text-align: center; font-size: 11px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 8px; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
         .footer-brand { font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-ink); }
-        .footer-sub { font-family: var(--font-body); font-size: 10px; color: var(--color-ink-muted); letter-spacing: 0.05em; }
+        .footer-sub { font-family: var(--font-body); font-size: 12px; color: var(--color-ink-muted); letter-spacing: 0.05em; }
         .footer-rule { width: 32px; height: 1px; background: var(--color-rule); margin: 4px 0; }
-        .footer-seo { max-width: 420px; margin: 4px auto; font-family: var(--font-body); font-size: 8.5px; line-height: 1.75; color: var(--color-seo-text); text-align: center; letter-spacing: 0.01em; }
+        .footer-seo { max-width: 420px; margin: 4px auto; font-family: var(--font-body); font-size: 11px; line-height: 1.75; color: var(--color-seo-text); text-align: center; letter-spacing: 0.01em; }
         .footer-seo p { margin: 0; }
-        .footer-copy { font-size: 8px; letter-spacing: 0.15em; color: var(--color-ink-muted); margin-top: 2px; }
+        .footer-copy { font-size: 10px; letter-spacing: 0.15em; color: var(--color-ink-muted); margin-top: 2px; }
 
-        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
-        .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; padding: 10px 4px; font-family: var(--font-mono); font-size: 9px; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 2px; text-align: center; }
+        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
+        .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 8px 2px; font-family: var(--font-body); font-size: 13px; font-weight: bold; line-height: 1.15; border-radius: 2px; text-align: center; }
+        .sticky-btn.book { background: var(--color-brand); color: var(--color-ink); font-weight: 800; }
         .sticky-btn.line { background: var(--color-line-bg); color: #ffffff; font-weight: 800; }
         .sticky-btn.map { background: var(--color-paper-warm); border: 1px solid var(--color-rule); color: var(--color-ink); }
         .sticky-btn.call { background: var(--color-ink); color: var(--color-paper); }
@@ -397,15 +400,15 @@ function generateStandaloneLandingHtml(data) {
         <!-- Tabular Metadata Grid -->
         <div class="meta-grid">
             <div class="meta-item">
-                <span class="meta-label">STATUS</span>
-                <span class="meta-val"><span class="dot-green"></span> OPEN DAILY</span>
+                <span class="meta-label">สถานะ · STATUS</span>
+                <span class="meta-val" id="open-status" data-hours="${hours}"><span class="dot-green"></span> เปิดทุกวัน</span>
             </div>
             <div class="meta-item">
-                <span class="meta-label">HOURS</span>
+                <span class="meta-label">เวลาเปิด · HOURS</span>
                 <span class="meta-val">${hours.replace('เปิดทุกวัน ', '')}</span>
             </div>
             <div class="meta-item full">
-                <span class="meta-label">LOCATION</span>
+                <span class="meta-label">ที่ตั้ง · LOCATION</span>
                 <span class="meta-val">${locationText}</span>
             </div>
         </div>
@@ -414,9 +417,9 @@ function generateStandaloneLandingHtml(data) {
         <a href="/link/hauscheckin" class="live-stream">
             <span style="display:flex;align-items:center;gap:8px;">
                 <span class="dot-green"></span>
-                <span style="font-family:var(--font-mono);font-size:10px;letter-spacing:0.1em;">LIVE STREAM</span>
+                <span>รูปจากลูกค้าจริง</span>
             </span>
-            <span>ดูรูปภาพลูกค้า ➔</span>
+            <span>ดูทั้งหมด ➔</span>
         </a>
 
         <!-- Quick Actions: Reservation & Pickup -->
@@ -439,9 +442,9 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Tab Switcher -->
         <div class="tab-bar">
-            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')"><span>*</span> MENU</button>
-            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">VIBE</button>
-            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">CONNECT</button>
+            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')"><span>*</span> เมนู</button>
+            <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">บรรยากาศ</button>
+            <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">ติดต่อ</button>
         </div>
 
         <!-- ─── SECTION 1: MENU ─── -->
@@ -551,6 +554,18 @@ function generateStandaloneLandingHtml(data) {
         <!-- ─── SECTION 3: CONNECT ─── -->
         <div id="sec-connect" style="display:none;">
             <div class="section-header">
+                <span class="section-title">จองโต๊ะ & สั่งอาหาร</span>
+            </div>
+            <a href="/booking" class="connect-row book" onclick="handleBookingClick(event)">
+                <span>จองโต๊ะออนไลน์ // BOOK A TABLE</span>
+                <span style="font-family:var(--font-mono);">➔</span>
+            </a>
+            <a href="/pickup" class="connect-row" onclick="handlePickupClick(event)">
+                <span>สั่งอาหารรับหน้าร้าน // PICK UP</span>
+                <span style="font-family:var(--font-mono);">➔</span>
+            </a>
+
+            <div class="section-header" style="margin-top:16px;">
                 <span class="section-title">DIRECT CONTACT</span>
             </div>
             <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="connect-row line" onclick="handleLineClick(event)">
@@ -577,7 +592,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="section-header" style="margin-top:16px;">
                 <span class="section-title">DELIVERY SERVICE</span>
             </div>
-            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="connect-row lineman" onclick="logAdEvent('click_pickup_link')">
+            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="connect-row lineman" onclick="logAdEvent('click_lineman')">
                 <span>ORDER DIRECT ON LINEMAN</span>
                 <span style="font-family:var(--font-mono);">➔</span>
             </a>
@@ -619,14 +634,17 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Sticky Contact Bar -->
         <div class="sticky-bar">
+            <a href="/booking" id="cta-sticky-booking" class="sticky-btn book" onclick="handleBookingClick(event)">
+                จองโต๊ะ
+            </a>
             <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">
-                LINE CHAT
+                แชท LINE
             </a>
             <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
-                DIRECTIONS
+                นำทาง
             </a>
             <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn call" onclick="handleCallClick(event)">
-                CALL US
+                โทร
             </a>
         </div>
     </div>
@@ -665,7 +683,55 @@ function generateStandaloneLandingHtml(data) {
             document.getElementById('tab-btn-menu').className = 'tab-btn' + (name === 'menu' ? ' active' : '');
             document.getElementById('tab-btn-vibe').className = 'tab-btn' + (name === 'vibe' ? ' active' : '');
             document.getElementById('tab-btn-connect').className = 'tab-btn' + (name === 'connect' ? ' active' : '');
+
+            // If the user switched tabs while scrolled down, bring the new section's top into view
+            const bar = document.querySelector('.tab-bar');
+            const sec = document.getElementById('sec-' + name);
+            const secTop = sec.getBoundingClientRect().top;
+            if (secTop < bar.offsetHeight) {
+                window.scrollTo({ top: window.scrollY + secTop - bar.offsetHeight });
+            }
         }
+
+        // ─── OPEN / CLOSED STATUS (Asia/Bangkok, from the hours text) ───
+        (function() {
+            const el = document.getElementById('open-status');
+            if (!el) return;
+            const m = (el.dataset.hours || '').match(/(\\d{1,2})[:.](\\d{2})\\s*-\\s*(\\d{1,2})[:.](\\d{2})/);
+            if (!m) return;
+            try {
+                const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+                const h = Number(parts.find(p => p.type === 'hour').value);
+                const mi = Number(parts.find(p => p.type === 'minute').value);
+                const now = h * 60 + mi;
+                const open = Number(m[1]) * 60 + Number(m[2]);
+                let close = Number(m[3]) * 60 + Number(m[4]);
+                if (close <= open) close += 24 * 60;
+                const isOpen = (now >= open && now < close) || (now + 24 * 60 >= open && now + 24 * 60 < close);
+                el.innerHTML = isOpen
+                    ? '<span class="dot-green"></span> เปิดอยู่ตอนนี้'
+                    : '<span class="dot-green closed"></span> ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+            } catch(e) {}
+        })();
+
+        // ─── MODAL HISTORY: phone back button / Esc closes the modal instead of leaving the page ───
+        function pushModalState() {
+            if (!(history.state && history.state.hausModal)) history.pushState({ hausModal: true }, '');
+        }
+        function popModalState() {
+            if (history.state && history.state.hausModal) history.back();
+        }
+        function closeAllModals() {
+            document.getElementById('lightbox-modal').classList.remove('open');
+            document.getElementById('booklet-modal').classList.remove('open');
+        }
+        window.addEventListener('popstate', closeAllModals);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.querySelector('.modal.open')) {
+                closeAllModals();
+                popModalState();
+            }
+        });
 
         // ─── FULL MENU ACCORDION (ON-DEMAND INSTANT EXPANSION) ───
         function escapeClientHtml(str) {
@@ -737,22 +803,31 @@ function generateStandaloneLandingHtml(data) {
             const img = document.getElementById('lightbox-img');
             img.src = url;
             m.classList.add('open');
+            pushModalState();
             logAdEvent('view_atmosphere');
         }
         function closeLightbox() {
-            document.getElementById('lightbox-modal').classList.remove('open');
+            // The close button's click also bubbles to the backdrop; only the first call may go back
+            const m = document.getElementById('lightbox-modal');
+            if (!m.classList.contains('open')) return;
+            m.classList.remove('open');
+            popModalState();
         }
 
         // ─── BOOKLET MODAL ───
         function openBooklet() {
             if (bookletPages.length === 0) return;
             document.getElementById('booklet-modal').classList.add('open');
+            pushModalState();
             if (window.gtag) gtag('event', 'click_booklet', { event_category: 'engagement', page_path: '/link' });
             logAdEvent('view_booklet_menu');
         }
         function closeBooklet(e) {
             if (e && e.target !== e.currentTarget && !e.target.classList.contains('modal-close')) return;
-            document.getElementById('booklet-modal').classList.remove('open');
+            const m = document.getElementById('booklet-modal');
+            if (!m.classList.contains('open')) return;
+            m.classList.remove('open');
+            popModalState();
         }
         function updateBooklet() {
             document.getElementById('booklet-img').src = bookletPages[currentBookletIdx];
@@ -774,22 +849,23 @@ function generateStandaloneLandingHtml(data) {
             return false;
         }
 
+        // Keep in sync with getStoredUtmParams() in src/utils/analyticsHelper.js
+        // A new ad touch replaces the whole set; a stored touch expires after 30 days
+        const ATTR_KEY = 'onhaus_attribution';
+        const ATTR_TTL_MS = 30 * 24 * 3600 * 1000;
+        const ATTR_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'gclid', 'gbraid', 'wbraid'];
         function getUtmParams() {
             try {
                 const p = new URLSearchParams(window.location.search);
-                const utm_source = p.get('utm_source') || localStorage.getItem('onhaus_utm_source') || '';
-                const utm_medium = p.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '';
-                const utm_campaign = p.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '';
-                const utm_content = p.get('utm_content') || localStorage.getItem('onhaus_utm_content') || '';
-                const gclid = p.get('gclid') || localStorage.getItem('onhaus_gclid') || '';
-
-                if (p.get('utm_source')) localStorage.setItem('onhaus_utm_source', p.get('utm_source'));
-                if (p.get('utm_medium')) localStorage.setItem('onhaus_utm_medium', p.get('utm_medium'));
-                if (p.get('utm_campaign')) localStorage.setItem('onhaus_utm_campaign', p.get('utm_campaign'));
-                if (p.get('utm_content')) localStorage.setItem('onhaus_utm_content', p.get('utm_content'));
-                if (p.get('gclid')) localStorage.setItem('onhaus_gclid', p.get('gclid'));
-
-                return { utm_source, utm_medium, utm_campaign, utm_content, gclid };
+                const fromUrl = {};
+                ATTR_FIELDS.forEach(k => { if (p.get(k)) fromUrl[k] = p.get(k); });
+                if (Object.keys(fromUrl).length > 0) {
+                    localStorage.setItem(ATTR_KEY, JSON.stringify({ ...fromUrl, ts: Date.now() }));
+                    return fromUrl;
+                }
+                const saved = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null');
+                if (saved && Date.now() - (saved.ts || 0) < ATTR_TTL_MS) return saved;
+                return {};
             } catch(e) { return {}; }
         }
 
@@ -802,10 +878,11 @@ function generateStandaloneLandingHtml(data) {
                 if (isBot) return;
 
                 const utms = getUtmParams();
-                let sessionId = sessionStorage.getItem('haus_ad_sid');
+                // Same key as the React app so a /link visit and its booking_complete share one session
+                let sessionId = sessionStorage.getItem('onhaus_ad_sid');
                 if (!sessionId) {
-                    sessionId = 's_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
-                    sessionStorage.setItem('haus_ad_sid', sessionId);
+                    sessionId = 'sid_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+                    sessionStorage.setItem('onhaus_ad_sid', sessionId);
                 }
                 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
                 const payload = {
@@ -820,7 +897,9 @@ function generateStandaloneLandingHtml(data) {
                     metadata: {
                         user_agent: navigator.userAgent,
                         referrer: document.referrer || null,
-                        gclid: utms.gclid || null
+                        gclid: utms.gclid || null,
+                        gbraid: utms.gbraid || null,
+                        wbraid: utms.wbraid || null
                     }
                 };
                 const url = '${supabaseUrl}/rest/v1/ad_events';

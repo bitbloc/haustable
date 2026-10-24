@@ -29,27 +29,31 @@ const isDebounced = (key, cooldownMs = 2000) => {
     return false;
 };
 
+const ATTR_KEY = 'onhaus_attribution';
+const ATTR_TTL_MS = 30 * 24 * 3600 * 1000;
+const ATTR_FIELDS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'gclid', 'gbraid', 'wbraid'];
+
 /**
- * Extract and persist UTM Attribution parameters across entire customer journey
+ * Extract and persist UTM / ad-click attribution across the customer journey.
+ * A new ad touch in the URL replaces the whole stored set (no mixing fields
+ * from different visits); a stored touch expires after 30 days.
+ * Keep in sync with getUtmParams() in api/link.js.
  */
 export const getStoredUtmParams = () => {
     try {
         if (typeof window === 'undefined') return {};
         const urlParams = new URLSearchParams(window.location.search);
-        const utm_source = urlParams.get('utm_source') || localStorage.getItem('onhaus_utm_source') || '';
-        const utm_medium = urlParams.get('utm_medium') || localStorage.getItem('onhaus_utm_medium') || '';
-        const utm_campaign = urlParams.get('utm_campaign') || localStorage.getItem('onhaus_utm_campaign') || '';
-        const utm_content = urlParams.get('utm_content') || localStorage.getItem('onhaus_utm_content') || '';
-        const gclid = urlParams.get('gclid') || localStorage.getItem('onhaus_gclid') || '';
-
-        // Persist if found in URL for closed-loop attribution
-        if (urlParams.get('utm_source')) localStorage.setItem('onhaus_utm_source', urlParams.get('utm_source'));
-        if (urlParams.get('utm_medium')) localStorage.setItem('onhaus_utm_medium', urlParams.get('utm_medium'));
-        if (urlParams.get('utm_campaign')) localStorage.setItem('onhaus_utm_campaign', urlParams.get('utm_campaign'));
-        if (urlParams.get('utm_content')) localStorage.setItem('onhaus_utm_content', urlParams.get('utm_content'));
-        if (urlParams.get('gclid')) localStorage.setItem('onhaus_gclid', urlParams.get('gclid'));
-
-        return { utm_source, utm_medium, utm_campaign, utm_content, gclid };
+        const fromUrl = {};
+        ATTR_FIELDS.forEach((k) => {
+            if (urlParams.get(k)) fromUrl[k] = urlParams.get(k);
+        });
+        if (Object.keys(fromUrl).length > 0) {
+            localStorage.setItem(ATTR_KEY, JSON.stringify({ ...fromUrl, ts: Date.now() }));
+            return fromUrl;
+        }
+        const saved = JSON.parse(localStorage.getItem(ATTR_KEY) || 'null');
+        if (saved && Date.now() - (saved.ts || 0) < ATTR_TTL_MS) return saved;
+        return {};
     } catch {
         return {};
     }
@@ -101,6 +105,8 @@ export const logAdEvent = async (eventName, metadata = {}) => {
             metadata: {
                 referrer: document.referrer || null,
                 gclid: utm.gclid || null,
+                gbraid: utm.gbraid || null,
+                wbraid: utm.wbraid || null,
                 ...metadata
             }
         };
@@ -144,6 +150,27 @@ export const trackEvent = (eventName, params = {}) => {
 };
 
 /**
+ * Push a plain `{ event }` object to dataLayer for GTM Custom Event triggers.
+ * Events queued before the lazily loaded GTM container arrives are replayed
+ * when it loads, so an early tap still counts.
+ * GTM owns the GA4 + Google Ads tags for these events, so no gtag() call here.
+ * @param {string} eventName
+ * @param {object} params
+ */
+export const trackGtmEvent = (eventName, params = {}) => {
+    try {
+        if (typeof window === 'undefined') return;
+
+        logAdEvent(eventName, params);
+
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ event: eventName, ...params });
+    } catch (err) {
+        console.warn('[Analytics] trackGtmEvent failed:', err);
+    }
+};
+
+/**
  * Track Google Ads Conversion with label validation
  * @param {string} sendTo - Conversion label e.g. 'AW-11227095880/tBbmCO-Vr-EcEMjGv-kp'
  * @param {number} value - Conversion value
@@ -176,8 +203,8 @@ export const trackConversion = (sendTo, value = 1.0, currency = 'THB') => {
 export const trackLineClick = (pageLocation = '/link') => {
     if (isDebounced('float_line_click')) return;
 
-    // GA4 & GTM Event Dispatch
-    trackEvent('click_line', {
+    // GTM Custom Event trigger → GA4 + Google Ads tags
+    trackGtmEvent('click_line', {
         method: 'line_oa',
         event_category: 'contact',
         event_label: 'line_official',
@@ -185,8 +212,8 @@ export const trackLineClick = (pageLocation = '/link') => {
         page_location: pageLocation
     });
 
-    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Line 6952)
-    // on link click to guarantee 1:1 attribution and zero duplicate counting.
+    // NOTE: Google Ads Conversion (TechSol - Line 6952) is fired only by GTM on this event,
+    // so there is no direct gtag conversion call here (no double counting).
 };
 
 /**
@@ -196,16 +223,16 @@ export const trackLineClick = (pageLocation = '/link') => {
 export const trackDirectionsClick = (pageLocation = '/link') => {
     if (isDebounced('float_directions_click')) return;
 
-    // GA4 & GTM Event Dispatch
-    trackEvent('click_directions', {
+    // GTM Custom Event trigger → GA4 + Google Ads tags
+    trackGtmEvent('click_directions', {
         event_category: 'contact',
         event_label: 'google_maps_directions',
         target_destination: 'Google Maps',
         page_location: pageLocation
     });
 
-    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Direction 23859)
-    // on link click to guarantee 1:1 attribution and zero duplicate counting.
+    // NOTE: Google Ads Conversion (TechSol - Direction 23859) is fired only by GTM on this event,
+    // so there is no direct gtag conversion call here (no double counting).
 };
 
 /**
@@ -216,8 +243,8 @@ export const trackDirectionsClick = (pageLocation = '/link') => {
 export const trackPhoneClick = (phoneNumber = '098-528-4217', pageLocation = '/link') => {
     if (isDebounced('float_phone_click')) return;
 
-    // GA4 & GTM Event Dispatch
-    trackEvent('click_call', {
+    // GTM Custom Event trigger → GA4 + Google Ads tags
+    trackGtmEvent('click_call', {
         method: 'phone',
         event_category: 'contact',
         event_label: phoneNumber,
@@ -225,8 +252,8 @@ export const trackPhoneClick = (phoneNumber = '098-528-4217', pageLocation = '/l
         page_location: pageLocation
     });
 
-    // NOTE: Google Ads Conversion is fired exclusively via GTM container (TechSol - Call 11647)
-    // on link click to guarantee 1:1 attribution and zero duplicate counting.
+    // NOTE: Google Ads Conversion (TechSol - Call 11647) is fired only by GTM on this event,
+    // so there is no direct gtag conversion call here (no double counting).
 };
 
 /**

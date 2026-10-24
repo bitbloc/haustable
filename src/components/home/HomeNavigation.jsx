@@ -140,14 +140,15 @@ export default function HomeNavigation({
 
                 {/* 3. Digital Menu / Booklet Button (Right Cell) */}
                 <div className="flex-1">
-                    <Link 
-                        to="/link"
+                    {/* Full page load: /link is server-rendered by api/link.js */}
+                    <a 
+                        href="/link"
                         className="w-full h-12 flex items-center justify-center bg-[var(--color-hallmark-paper)] hover:bg-[var(--color-hallmark-paper-dark)] transition-colors cursor-pointer px-2"
                     >
                         <span className="font-mono text-[11px] font-black uppercase">
                             [ MENU ]
                         </span>
-                    </Link>
+                    </a>
                 </div>
 
             </div>

@@ -97,7 +97,7 @@ export default function AdLandingAnalyticsTab() {
             ? events.filter(e => ['find_location', 'click_directions', 'directions'].includes(e.event_name)).length 
             : 215
         const phoneClicks = isLive 
-            ? events.filter(e => ['contact', 'click_phone', 'call'].includes(e.event_name)).length 
+            ? events.filter(e => ['contact', 'click_phone', 'click_call', 'call'].includes(e.event_name)).length 
             : 64
 
         // 3. Direct Contact & Messaging
@@ -107,11 +107,19 @@ export default function AdLandingAnalyticsTab() {
 
         // 4. Direct Online Services & Transactions (Table Booking & Self-Pickup)
         const bookingClicks = isLive 
-            ? events.filter(e => ['click_booking_link', 'booking'].includes(e.event_name)).length 
+            ? events.filter(e => ['click_booking_link', 'click_booking', 'booking'].includes(e.event_name)).length 
             : 98
         const pickupClicks = isLive 
-            ? events.filter(e => ['click_pickup_link', 'pickup'].includes(e.event_name)).length 
+            ? events.filter(e => ['click_pickup_link', 'click_pickup', 'pickup'].includes(e.event_name)).length 
             : 42
+
+        // Completed transactions (fired on the booking / pickup success step, not on /link)
+        const bookingCompletes = isLive
+            ? events.filter(e => e.event_name === 'booking_complete').length
+            : 31
+        const pickupCompletes = isLive
+            ? events.filter(e => e.event_name === 'pickup_complete').length
+            : 12
 
         // 5. Deep Exploration (Full Menu, Classic Booklet, Atmosphere / Vibe)
         const fullMenuViews = isLive
@@ -189,10 +197,10 @@ export default function AdLandingAnalyticsTab() {
                 else if (['find_location', 'click_directions', 'directions'].includes(ev)) {
                     sourceMap[s].directions++
                     sourceMap[s].conversions++
-                } else if (['generate_lead', 'click_line', 'line', 'contact', 'click_phone', 'call'].includes(ev)) {
+                } else if (['generate_lead', 'click_line', 'line', 'contact', 'click_phone', 'click_call', 'call'].includes(ev)) {
                     sourceMap[s].contacts++
                     sourceMap[s].conversions++
-                } else if (['click_booking_link', 'click_pickup_link', 'booking', 'pickup'].includes(ev)) {
+                } else if (['click_booking_link', 'click_pickup_link', 'click_booking', 'click_pickup', 'booking', 'pickup'].includes(ev)) {
                     sourceMap[s].orders++
                     sourceMap[s].conversions++
                 } else if (['view_full_menu', 'view_booklet_menu', 'click_booklet', 'view_atmosphere', 'lightbox_open', 'view_vibe', 'explore_menu'].includes(ev)) {
@@ -220,6 +228,8 @@ export default function AdLandingAnalyticsTab() {
             lineClicks,
             bookingClicks,
             pickupClicks,
+            bookingCompletes,
+            pickupCompletes,
             fullMenuViews,
             bookletViews,
             atmosphereViews,
@@ -383,6 +393,7 @@ export default function AdLandingAnalyticsTab() {
                         {metrics.directOrders.toLocaleString()}
                     </div>
                     <span className="text-[10px] text-[oklch(42%_0.010_28)] block">จอง {metrics.bookingClicks} · รับกลับ {metrics.pickupClicks}</span>
+                    <span className="text-[10px] text-[oklch(45%_0.08_140)] block font-bold">สำเร็จจริง: จอง {metrics.bookingCompletes} · รับกลับ {metrics.pickupCompletes}</span>
                 </div>
 
                 {/* 6. Menu & Vibe Exploration */}

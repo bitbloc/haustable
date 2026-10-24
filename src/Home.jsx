@@ -327,8 +327,9 @@ export default function Home({ session }) {
                             </div>
 
                             {/* Full Menu Trigger */}
-                            <Link 
-                                to="/link"
+                            {/* Full page load: /link is server-rendered by api/link.js */}
+                            <a 
+                                href="/link"
                                 className="w-full p-3.5 bg-[var(--color-hallmark-paper-dark)] text-[var(--color-hallmark-ink)] hover:bg-[var(--color-hallmark-ink)] hover:text-[var(--color-hallmark-paper)] transition-colors flex items-center justify-between border-t border-[var(--color-hallmark-rule)] cursor-pointer group"
                             >
                                 <span className="font-mono text-[10px] font-bold tracking-widest uppercase">
@@ -337,7 +338,7 @@ export default function Home({ session }) {
                                 <span className="font-mono text-[11px] font-bold flex items-center gap-1">
                                     <span>เปิดดูเมนูและราคาอาหารทั้งหมด</span> <span>➔</span>
                                 </span>
-                            </Link>
+                            </a>
                         </div>
                     )}
 
