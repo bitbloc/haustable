@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-10-25",
+    "macrostructure": "Catalogue",
+    "theme": "custom",
+    "theme_axes": "light / grotesk-sans / warm (terracotta ~28°)",
+    "vibe": "Dieter Rams tabular, Thai modern OKLCH, walk-in first",
+    "enrichment": "none",
+    "brief": "Redesign ad landing /link (api/link.js): set chooser by party size, heat meter, IBM Plex Sans Thai"
+  },
+  {
     "date": "2026-08-24",
     "macrostructure": "Workbench",
     "theme": "Atelier",

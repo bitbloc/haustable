@@ -387,7 +387,7 @@ export default function LandingPageSettingsTab({
                 </div>
                 <div>
                     <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
-                        ชุดแนะนำ 2–4 คน (การ์ด "เพิ่งมาครั้งแรก?")
+                        ชุดเริ่มต้นกลุ่ม 2–4 คน (ป้าย "เริ่มที่ชุดนี้")
                     </label>
                     <input
                         type="text"
@@ -399,7 +399,7 @@ export default function LandingPageSettingsTab({
                 </div>
                 <div>
                     <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
-                        ชุดแนะนำ 4–6 คน (ปุ่มสลับ)
+                        ชุดเริ่มต้นกลุ่ม 4–6 คน
                     </label>
                     <input
                         type="text"
@@ -409,12 +409,27 @@ export default function LandingPageSettingsTab({
                         className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                     />
                     <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
-                        ใส่ ID เมนู หรือบางส่วนของชื่อเมนู · ถ้าหาไม่เจอการ์ดจะซ่อนเอง
+                        ใส่ ID เมนู หรือบางส่วนของชื่อเมนู · ชุดนี้ขึ้นเป็นอันดับแรกในกลุ่ม
+                    </p>
+                </div>
+                <div className="sm:col-span-2">
+                    <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                        หมวดเมนูชุด (การ์ด "เพิ่งมาครั้งแรก?" แสดงทุกชุดในหมวดนี้)
+                    </label>
+                    <input
+                        type="text"
+                        value={settings.link_set_category || ''}
+                        onChange={(e) => handleSave('link_set_category', e.target.value)}
+                        placeholder="Set :"
+                        className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                    />
+                    <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
+                        บางส่วนของชื่อหมวด คั่นด้วยจุลภาค · แบ่งกลุ่มตาม "สำหรับ 2-4 ท่าน" ในชื่อเมนู · ไม่มีจำนวนท่าน = กลุ่ม 1 คน
                     </p>
                 </div>
                 <div>
                     <label className="block text-xs font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
-                        ชุดแนะนำ 1 คน (มื้อเที่ยง)
+                        ชุดเริ่มต้นกลุ่ม 1 คน
                     </label>
                     <input
                         type="text"
@@ -446,11 +461,11 @@ export default function LandingPageSettingsTab({
                     rows={2}
                     value={settings.link_spice_map ?? ''}
                     onChange={(e) => handleSave('link_spice_map', e.target.value)}
-                    placeholder="แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, (ไม่เผ็ด)=0, ใบเหลียง=0, ต้มจิ๋ว=0, คอหมูย่าง=0"
+                    placeholder="#141=0, #143=0, แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, ใบเหลียง=0, ต้มจิ๋ว=0"
                     className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                 />
                 <p className="text-[10px] font-mono text-[var(--color-neutral)] mt-1">
-                    คำในชื่อเมนู=ระดับ คั่นด้วยจุลภาค · 0 ไม่เผ็ด · 1 เผ็ดน้อย · 2 เผ็ดกลาง · 3 เผ็ดมาก · เมนูที่ไม่ตรงคำไหนจะไม่มีป้าย · เว้นว่างไว้ = ใช้ค่าเริ่มต้น
+                    คำในชื่อเมนู=ระดับ คั่นด้วยจุลภาค · #ID=ระดับ ใช้กำหนดทั้งเมนู/ทั้งชุด (เช่น #143=0 ให้ XL สำรับในบ้านเป็นไม่เผ็ด) · 0 ไม่เผ็ด · 1 เผ็ดน้อย · 2 เผ็ดกลาง · 3 เผ็ดมาก · เมนูที่ไม่ตรงคำไหนจะไม่มีป้าย · เว้นว่าง = ค่าเริ่มต้น
                 </p>
             </div>
 

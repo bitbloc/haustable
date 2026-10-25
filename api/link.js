@@ -47,19 +47,22 @@ const DEFAULT_SETTINGS = {
     // Same wording as the Google Ads headline (message match)
     link_location_short: "ริมโขง · ห่าง 2 นาที จากลานพญานาค · มีที่จอดรถ",
     link_directions_sub: "ห่าง 2 นาที จากลานพญานาค",
-    // Starter set card: a menu item id or part of its name
+    // "First time here?" chooser lists every available item in these categories (name contains)
+    link_set_category: "Set :",
+    // The set listed first (tagged "เริ่มที่ชุดนี้") in each group: menu item id or part of its name
     link_starter_solo_item: "115",
     link_starter_item: "141",
     link_starter_xl_item: "143",
     // Solo set is pre-selected during this window (Asia/Bangkok)
     link_lunch_window: "11:30-15:00",
-    // "part of menu name=level" (0 = not spicy … 3 = very spicy); unmatched items get no badge
-    link_spice_map: "แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, (ไม่เผ็ด)=0, ใบเหลียง=0, ต้มจิ๋ว=0, คอหมูย่าง=0",
+    // "part of menu name=level" (0 = not spicy … 3 = very spicy); "#<menu id>=level" overrides a whole item
+    // (used for sets whose dishes are cooked mild). Unmatched items get no meter.
+    link_spice_map: "#141=0, #143=0, แกงไตปลา=3, คั่วกลิ้ง=3, (เผ็ด)=2, สะตอ=2, หมูตกเตา=2, (ไม่เผ็ด)=0, ใบเหลียง=0, ต้มจิ๋ว=0, คอหมูย่าง=0, หมูย่างในบ้าน=0, ซอสญี่ปุ่น=0",
     // Categories left out of SPECIALTIES (non-food); is_hausmade items are always left out
     link_hide_categories: "Hausmade."
 }
 
-const SPICE_LABELS = ['ไม่เผ็ด', '🌶 เผ็ดน้อย', '🌶🌶 เผ็ดกลาง', '🌶🌶🌶 เผ็ดมาก']
+const HEAT_LABELS = ['ไม่เผ็ด', 'เผ็ดน้อย', 'เผ็ดกลาง', 'เผ็ดมาก']
 
 function parseSpiceMap(str) {
     return String(str || '').split(',').map(pair => {
@@ -71,21 +74,27 @@ function parseSpiceMap(str) {
     }).filter(Boolean)
 }
 
-// Lowest and highest spice level among map keys found in the name (null when none match)
-function spiceRange(name, spiceMap) {
-    const levels = spiceMap.filter(s => String(name || '').includes(s.key)).map(s => s.level)
+// Spice range for an item: a "#id" entry wins outright; otherwise the lowest/highest
+// level among name keys found in the item name (null when nothing matches)
+function spiceRange(name, spiceMap, id) {
+    if (id !== undefined && id !== null) {
+        const byId = spiceMap.find(s => s.key === '#' + id)
+        if (byId) return { min: byId.level, max: byId.level }
+    }
+    const levels = spiceMap
+        .filter(s => !s.key.startsWith('#') && String(name || '').includes(s.key))
+        .map(s => s.level)
     if (levels.length === 0) return null
     return { min: Math.min(...levels), max: Math.max(...levels) }
 }
 
-function spiceBadgeHtml(range, isSet = false) {
+// Three-cell heat meter + Thai label. A set mixing mild and hot dishes reads "มีจานเผ็ด".
+function heatHtml(range) {
     if (!range) return ''
-    if (isSet) {
-        return range.max === 0
-            ? '<span class="spice s0">ไม่เผ็ด · เหมาะกับมาครั้งแรก</span>'
-            : `<span class="spice s${range.max}">มีจานเผ็ด ${'🌶'.repeat(range.max)}</span>`
-    }
-    return `<span class="spice s${range.max}">${SPICE_LABELS[range.max]}</span>`
+    const level = range.max
+    const label = level > 0 && range.min === 0 ? 'มีจานเผ็ด' : HEAT_LABELS[level]
+    const cells = [1, 2, 3].map(n => `<i${n <= level ? ' class="on"' : ''}></i>`).join('')
+    return `<span class="heat h${level}" role="img" aria-label="ความเผ็ด: ${label}"><span class="heat-cells" aria-hidden="true">${cells}</span><span class="heat-label">${label}</span></span>`
 }
 
 const DEFAULT_MENU_ITEMS = [
@@ -128,41 +137,57 @@ function formatDescriptionHtml(desc) {
     }).filter(Boolean).join('<br>')
 }
 
-// Resolve a starter-set setting (menu item id, or part of the item name) to a card model
-function buildStarterSet(menuItems, ref, spiceMap, chipLabel = '') {
+// Join phrases with a separator, each phrase kept on one line (Thai has no spaces to break on)
+function phrasesHtml(text, splitter, joiner) {
+    return String(text || '').split(splitter).map(t => t.trim()).filter(Boolean)
+        .map(t => `<span class="nb">${escapeHtml(t)}</span>`).join(joiner)
+}
+
+// One row of the "First time here?" set chooser
+function buildSetRow(item, spiceMap) {
+    const name = String(item.name || '')
+    const price = Number(item.price) || 0
+    const pax = name.match(/(\d+)\s*-\s*(\d+)\s*ท่าน/)
+    // "Set Size XL สำหรับ 4-6 ท่าน เซตสำรับในบ้าน : …" → "Set XL · เซตสำรับในบ้าน"
+    // "SET : ข้าวหมูย่างในบ้าน + เครื่องดื่ม" → "ข้าวหมูย่างในบ้าน + เครื่องดื่ม"
+    const size = name.match(/set\s*size\s*(\w+)/i)
+    const setName = name.match(/เซต[^\s:•]+/)
+    const title = size
+        ? `Set ${size[1].toUpperCase()}${setName ? ' · ' + setName[0] : ''}`
+        : (name.replace(/^set\s*:\s*/i, '').trim() || name)
+    // Dish list only (first description line): drop a leading "set name :" label and "> " price arrows
+    const firstLine = String(item.description || '').trim().split('\n')[0].trim()
+    const dishes = (firstLine || name.replace(/^.*ท่าน/, '').trim())
+        .replace(/^[^:•]*:\s*/, '')
+        .replace(/\s*>\s*/g, ' ')
+    let perPerson = ''
+    if (pax && price) {
+        const low = Math.round(price / Number(pax[2]))
+        const high = Math.round(price / Number(pax[1]))
+        perPerson = low === high ? `คนละ ฿${low}` : `คนละ ฿${low}–${high}`
+    }
+    return {
+        id: item.id,
+        group: pax ? `${pax[1]}–${pax[2]}` : '1',
+        groupMin: pax ? Number(pax[1]) : 1,
+        title,
+        dishes,
+        price,
+        perPerson,
+        heat: heatHtml(spiceRange(name, spiceMap, item.id)),
+        thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
+        bigImg: item.image_url ? optImg(item.image_url, 800) : ''
+    }
+}
+
+// Resolve a "menu item id or part of its name" setting to an item id
+function resolveItemId(menuItems, ref) {
     if (!ref) return null
     const key = String(ref).trim()
     const item = /^\d+$/.test(key)
         ? menuItems.find(i => String(i.id) === key)
         : menuItems.find(i => (i.name || '').toLowerCase().includes(key.toLowerCase()))
-    if (!item) return null
-
-    const name = String(item.name || '')
-    const price = Number(item.price) || 0
-    const pax = name.match(/(\d+)\s*-\s*(\d+)\s*ท่าน/)
-    // "Set Size L สำหรับ 2-4 ท่าน …" → "Set Size L"; "SET : ข้าวหมูย่าง + เครื่องดื่ม" → "ข้าวหมูย่าง + เครื่องดื่ม"
-    const title = (name.includes('สำหรับ') ? name.split('สำหรับ')[0] : name.replace(/^set\s*:\s*/i, '')).trim() || name
-    // Dish list only (first line): drop a leading "set name :" label
-    const firstLine = String(item.description || '').trim().split('\n')[0].trim()
-    const dishes = (firstLine || name.replace(/^.*ท่าน/, '').trim()).replace(/^[^:•]*:\s*/, '').replace(/\s*>\s*/g, ' ')
-    let perPerson = ''
-    if (pax && price) {
-        const low = Math.round(price / Number(pax[2]))
-        const high = Math.round(price / Number(pax[1]))
-        perPerson = low === high ? `ตกคนละ ฿${low}` : `ตกคนละ ฿${low}–${high}`
-    }
-    const paxLabel = pax ? `${pax[1]}–${pax[2]} ท่าน` : chipLabel.replace(' คน', ' ท่าน')
-    return {
-        title,
-        paxLabel,
-        chip: chipLabel || (pax ? `${pax[1]}–${pax[2]} คน` : title),
-        spiceHtml: spiceBadgeHtml(spiceRange(name, spiceMap), true),
-        dishes,
-        price,
-        perPerson,
-        img: item.image_url ? optImg(item.image_url, 240, 70) : '',
-        bigImg: item.image_url ? optImg(item.image_url, 800) : ''
-    }
+    return item ? item.id : null
 }
 
 function generateStandaloneLandingHtml(data) {
@@ -237,29 +262,47 @@ function generateStandaloneLandingHtml(data) {
 
     // Spice badges: attach a level range to every item (also used by the client-rendered full menu)
     const spiceMap = parseSpiceMap(settings.link_spice_map || DEFAULT_SETTINGS.link_spice_map)
-    menuItems.forEach(item => { item.spice = spiceRange(item.name, spiceMap) })
+    menuItems.forEach(item => { item.spice = spiceRange(item.name, spiceMap, item.id) })
 
-    // Recommended Specialties (food only: merch / hausmade goods stay in the full menu)
+    // "First time here?" chooser: every set, grouped by party size, configured starters first
+    const setCategoryKeys = String(settings.link_set_category || DEFAULT_SETTINGS.link_set_category)
+        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+    const setCategoryIds = new Set(categories
+        .filter(c => setCategoryKeys.some(k => String(c.name || '').toLowerCase().includes(k)))
+        .map(c => c.id))
+    const starterIds = [settings.link_starter_solo_item, settings.link_starter_item, settings.link_starter_xl_item]
+        .map(ref => resolveItemId(menuItems, ref))
+        .filter(id => id !== null)
+    const setRows = menuItems
+        .filter(i => setCategoryIds.has(i.category_id) && !i.is_hausmade)
+        .map(i => ({ ...buildSetRow(i, spiceMap), starter: starterIds.includes(i.id) }))
+    const setGroups = []
+    setRows.forEach(row => {
+        let g = setGroups.find(x => x.key === row.group)
+        if (!g) { g = { key: row.group, min: row.groupMin, rows: [] }; setGroups.push(g) }
+        g.rows.push(row)
+    })
+    setGroups.sort((a, b) => a.min - b.min)
+    setGroups.forEach(g => g.rows.sort((a, b) => (b.starter - a.starter) || (a.price - b.price)))
+    // Default group: the one holding the 2+ people starter, else the first group with 2+ people
+    const defaultGroup = (setGroups.find(g => g.rows.some(r => r.starter && r.groupMin > 1))
+        || setGroups.find(g => g.min > 1) || setGroups[0] || {}).key
+    const lunchWindow = escapeHtml(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)
+
+    // Recommended Specialties: food only (merch stays in the full menu) and no sets (they live in the chooser)
     const hiddenCategoryNames = String(settings.link_hide_categories || DEFAULT_SETTINGS.link_hide_categories)
         .split(',').map(s => s.trim()).filter(Boolean)
     const hiddenCategoryIds = new Set(categories.filter(c => hiddenCategoryNames.includes(String(c.name).trim())).map(c => c.id))
     const recommendedItems = menuItems
-        .filter(i => i.is_recommended && !i.is_hausmade && !hiddenCategoryIds.has(i.category_id))
+        .filter(i => i.is_recommended && !i.is_hausmade && !hiddenCategoryIds.has(i.category_id) && !setCategoryIds.has(i.category_id))
         .slice(0, 15)
 
-    // "First time here?" starter sets (each shown only if its menu item still exists)
-    const starterSets = [
-        buildStarterSet(menuItems, settings.link_starter_solo_item, spiceMap, '1 คน'),
-        buildStarterSet(menuItems, settings.link_starter_item, spiceMap),
-        buildStarterSet(menuItems, settings.link_starter_xl_item, spiceMap)
-    ].filter(Boolean)
-    // The 2–4 people set is the default; the solo set is pre-selected client-side at lunch
-    const soloIdx = settings.link_starter_solo_item && starterSets[0] && starterSets[0].chip === '1 คน' ? 0 : -1
-    const starterIdx = starterSets.length > 1 && soloIdx === 0 ? 1 : 0
-    const starter = starterSets[starterIdx]
-    const lunchWindow = escapeHtml(settings.link_lunch_window || DEFAULT_SETTINGS.link_lunch_window)
-
     const locationShort = escapeHtml(settings.link_location_short || DEFAULT_SETTINGS.link_location_short)
+    const locationShortHtml = phrasesHtml(settings.link_location_short || DEFAULT_SETTINGS.link_location_short, '·', ' · ')
+    // "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)" → "11:30 - 23:30 น." + "ครัวปิด 22:00 น."
+    const hoursPlain = String(settings.link_hours || DEFAULT_SETTINGS.link_hours).replace('เปิดทุกวัน ', '')
+    const hoursMain = escapeHtml(hoursPlain.replace(/\s*\(.*\)\s*/, '').trim())
+    const hoursNote = escapeHtml((hoursPlain.match(/\(([^)]*)\)/) || [])[1] || '')
     const directionsSub = escapeHtml(settings.link_directions_sub || DEFAULT_SETTINGS.link_directions_sub)
 
     // Tags
@@ -302,176 +345,234 @@ function generateStandaloneLandingHtml(data) {
     <link rel="ai-catalog" href="/.well-known/ai-catalog.json" type="application/json">
     <link rel="ard" href="/.well-known/ard.json" type="application/json">
 
-    <!-- Dieter Rams + Thai Modern OKLCH Pure Inline CSS (Zero Render-Blocking CSS) -->
+    <!-- Fonts: IBM Plex Sans Thai (display + body, Thai + Latin) · IBM Plex Mono (numbers only). Non-blocking. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+
     <style>
-        /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
+        /* Hallmark · macrostructure: Catalogue · tone: utilitarian (Dieter Rams × Thai modern) · anchor hue: 28 terracotta
+         * theme: custom (.agents/AGENTS.md) · paper oklch(97% 0.008 28) · accent oklch(52% 0.16 28) · IBM Plex Sans Thai + IBM Plex Mono
+         * axes: light / grotesk-sans / warm · nav: tabular tab strip · footer: Ft4 dense colophon · sticky: C4 tabular bar · enrichment: none
+         * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
         :root {
             --color-paper: oklch(97% 0.008 28);
-            --color-paper-dark: oklch(12% 0.008 28);
-            --color-paper-warm: oklch(94% 0.010 28);
+            --color-paper-2: oklch(94% 0.010 28);
+            --color-paper-3: oklch(91% 0.012 28);
             --color-rule: oklch(85% 0.012 28);
+            --color-neutral: oklch(55% 0.010 28);
+            --color-muted: oklch(42% 0.010 28);
             --color-ink: oklch(18% 0.012 28);
-            --color-ink-muted: oklch(42% 0.010 28);
-            --color-seo-text: oklch(34% 0.010 28);
-            --color-brand: #DFFF00;
+            --color-ink-2: oklch(28% 0.012 28);
             --color-accent: oklch(52% 0.16 28);
-            --color-line-bg: #00873e;
-            --font-display: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
-            --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans Thai", sans-serif;
-            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+            --color-accent-2: oklch(45% 0.08 140);
+            --color-accent-2-wash: oklch(95% 0.025 140);
+            --color-focus: oklch(60% 0.15 28);
+            --color-signal: oklch(93% 0.19 113);
+            --color-line: oklch(53% 0.14 152);
+            --color-line-2: oklch(47% 0.13 152);
+            --color-scrim: oklch(14% 0.010 28 / 0.9);
+            --color-scrim-soft: oklch(14% 0.010 28 / 0);
+
+            --font-display: "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+            --font-body: "IBM Plex Sans Thai", -apple-system, "Segoe UI", "Noto Sans Thai", sans-serif;
+            --font-mono: "IBM Plex Mono", "IBM Plex Sans Thai", ui-monospace, Menlo, Consolas, monospace;
+
+            --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+            --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+
+            --text-xs: 12px; --text-sm: 13px; --text-md: 14px; --text-lg: 16px; --text-xl: 20px; --text-2xl: 24px;
+
+            --radius: 2px;
+            --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+            --dur: 160ms;
+            --bar-h: 60px;
+            --z-sticky: 30; --z-bar: 50; --z-modal: 100;
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { overflow-x: clip; }
         html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper); }
-        body { font-family: var(--font-body); background: var(--color-paper); color: var(--color-ink); line-height: 1.4; -webkit-font-smoothing: antialiased; }
+        body { font-family: var(--font-body); font-size: var(--text-md); background: var(--color-paper); color: var(--color-ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
         a { color: inherit; text-decoration: none; }
-        button { font-family: inherit; cursor: pointer; border: none; background: none; }
-        a, button, .tab-btn, .quick-btn, .connect-row, .item-row, .sig-card, .gallery-item {
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        button:active, a:active {
-            opacity: 0.88;
-        }
+        button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
         img { display: block; max-width: 100%; height: auto; }
+        a, button, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+        .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+        .arrow { font-family: var(--font-mono); }
+        .nb { white-space: nowrap; }
+        .fact-val.flow { display: block; }
+        .fact-note { font-size: var(--text-xs); color: var(--color-muted); line-height: 1.4; }
 
-        .container { width: 100%; max-width: 580px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: 88px; }
-        .marquee { background: #E9F344; color: var(--color-ink); border-bottom: 1px solid var(--color-rule); padding: 6px 12px; font-family: var(--font-mono); font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.15em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .header-cell { display: flex; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--color-rule); }
+        /* Page frame */
+        .container { width: 100%; max-width: 560px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom)); }
+        .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-1) var(--space-3); font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .masthead { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5) var(--space-4); border-bottom: 1px solid var(--color-rule); }
         .logo-box { width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
-        .shop-title { font-family: var(--font-display); font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.15; color: var(--color-ink); overflow-wrap: anywhere; min-width: 0; }
-        .shop-sub { font-family: var(--font-mono); font-size: 12px; font-weight: bold; letter-spacing: 0.15em; text-transform: uppercase; color: var(--color-ink-muted); margin-top: 4px; }
+        .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; overflow-wrap: anywhere; min-width: 0; }
+        .shop-sub { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); }
 
-        .meta-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); font-size: 10px; }
-        .meta-item { padding: 12px; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); display: flex; flex-direction: column; gap: 4px; }
-        .meta-item:nth-child(2) { border-right: none; }
-        .meta-item.full { grid-column: span 2; border-right: none; border-bottom: none; }
-        .meta-label { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); font-weight: bold; letter-spacing: 0.08em; }
-        .meta-val { font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-        .dot-green { width: 8px; height: 8px; background: #10B981; border: 1px solid var(--color-rule); display: inline-block; flex-shrink: 0; }
-        .dot-green.closed { background: var(--color-ink-muted); }
+        /* Status / hours / location cells */
+        .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .fact { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+        .fact + .fact { border-left: 1px solid var(--color-rule); }
+        .fact.full { grid-column: span 2; border-left: none; border-top: 1px solid var(--color-rule); }
+        .fact-label { font-size: var(--text-xs); color: var(--color-neutral); }
+        .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
+        .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
+        .dot.closed { background: var(--color-neutral); }
+        .kitchen-note { font-size: var(--text-xs); font-weight: 600; color: var(--color-accent); line-height: 1.4; }
+        .loc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+        .loc-map-btn { flex-shrink: 0; min-height: 40px; padding: var(--space-2) var(--space-4); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-sm); font-weight: 600; border-radius: var(--radius); display: inline-flex; align-items: center; gap: var(--space-2); white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .loc-map-btn:hover { background: var(--color-ink-2); }
+        .loc-more summary { font-size: var(--text-xs); color: var(--color-muted); cursor: pointer; margin-top: var(--space-1); width: fit-content; }
+        .loc-more p { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); line-height: 1.6; }
 
-        .live-stream { background: var(--color-ink); color: var(--color-paper); padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--color-rule); font-size: 13px; font-weight: bold; }
-        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
-        .quick-btn { padding: 14px 16px; background: var(--color-paper); border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; justify-content: space-between; gap: 4px; }
-        .quick-btn:last-child { border-right: none; }
-        .quick-btn:hover { background: var(--color-paper-warm); }
-        .quick-tag { font-family: var(--font-mono); font-size: 11px; font-weight: bold; color: var(--color-ink-muted); letter-spacing: 0.08em; display: flex; justify-content: space-between; }
-        .quick-title { font-size: 15px; font-weight: bold; color: var(--color-ink); }
-        .quick-sub { font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); margin-top: 2px; }
-
-        .loc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .loc-map-btn { flex-shrink: 0; min-height: 40px; padding: 8px 12px; background: var(--color-ink); color: var(--color-paper); font-size: 13px; font-weight: bold; border-radius: 2px; display: inline-flex; align-items: center; }
-        .loc-more summary { font-size: 12px; color: var(--color-ink-muted); cursor: pointer; margin-top: 6px; }
-        .loc-more p { font-size: 12px; color: var(--color-ink-muted); margin-top: 4px; line-height: 1.5; }
-
-        .starter { border-bottom: 1px solid var(--color-rule); background: var(--color-paper); }
-        .starter-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; background: var(--color-brand); color: var(--color-ink); }
-        .starter-kicker { font-size: 15px; font-weight: 800; }
-        .starter-pax { display: flex; align-items: center; gap: 6px; padding: 10px 12px 0; }
-        .starter-pax-label { font-size: 13px; font-weight: bold; color: var(--color-ink-muted); margin-right: 2px; }
-        .starter-pax button { min-height: 36px; padding: 4px 12px; font-size: 13px; font-weight: bold; border: 1px solid var(--color-ink); color: var(--color-ink); background: transparent; border-radius: 2px; }
-        .starter-pax button.active { background: var(--color-ink); color: var(--color-paper); }
-        .starter-walkin { margin: 0 12px 8px; padding: 8px 10px; background: oklch(95% 0.05 150); color: oklch(32% 0.09 150); font-size: 13px; font-weight: bold; border-radius: 2px; }
-        .starter-more { padding: 0 12px 12px; font-size: 13px; color: var(--color-ink-muted); text-align: center; }
-        .starter-more a { color: var(--color-ink); font-weight: bold; text-decoration: underline; text-underline-offset: 2px; }
-        .spice { display: inline-block; margin-top: 6px; padding: 2px 8px; font-size: 12px; font-weight: bold; border-radius: 2px; background: oklch(94% 0.04 40); color: oklch(42% 0.14 35); }
-        .spice.s0 { background: oklch(95% 0.05 150); color: oklch(32% 0.09 150); }
-        .item-name .spice, .sig-body .spice { margin-top: 0; margin-left: 4px; font-size: 11px; padding: 1px 6px; vertical-align: middle; }
-        .sig-body .spice { margin-left: 0; align-self: flex-start; }
-        .kitchen-note { font-size: 12px; font-weight: bold; color: oklch(48% 0.15 45); }
-        .loc-hero { background: var(--color-brand); color: var(--color-ink); padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; flex-direction: column; gap: 6px; }
+        /* Location-first banner (utm_content = location / map / naga) */
+        .loc-hero { background: var(--color-signal); padding: var(--space-4); border-bottom: 1px solid var(--color-ink); display: flex; flex-direction: column; gap: var(--space-2); }
         .loc-hero[hidden] { display: none; }
-        .loc-hero-title { font-size: 19px; font-weight: 800; line-height: 1.25; }
-        .loc-hero-sub { font-size: 13px; font-weight: bold; }
-        .loc-hero-btn { margin-top: 4px; min-height: 46px; display: flex; align-items: center; justify-content: center; background: var(--color-ink); color: var(--color-paper); font-size: 15px; font-weight: bold; border-radius: 2px; }
-        .starter-body { display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
-        .starter-img { width: 104px; height: 104px; object-fit: cover; flex-shrink: 0; border: 1px solid var(--color-rule); background: var(--color-paper-warm); cursor: pointer; }
-        .starter-info { flex: 1; min-width: 0; }
-        .starter-name { font-size: 16px; font-weight: 800; line-height: 1.2; }
-        .starter-dishes { font-size: 13px; color: var(--color-ink-muted); margin-top: 4px; line-height: 1.45; }
-        .starter-price { margin-top: 6px; font-family: var(--font-mono); font-size: 20px; font-weight: 800; }
-        .starter-pp { font-family: var(--font-body); font-size: 12px; font-weight: bold; color: var(--color-ink-muted); margin-left: 6px; }
-        .starter-ctas { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; padding: 0 12px 12px; }
-        .starter-btn { min-height: 46px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border: 1px solid var(--color-ink); border-radius: 2px; text-align: center; }
-        .starter-btn.primary { background: var(--color-ink); color: var(--color-paper); }
+        .loc-hero-title { font-size: var(--text-2xl); font-weight: 700; line-height: 1.3; }
+        .loc-hero-sub { font-size: var(--text-sm); font-weight: 500; }
+        .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
 
-        .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); position: sticky; top: 0; z-index: 30; }
-        .tab-btn { padding: 14px 8px; font-family: var(--font-body); font-size: 14px; font-weight: bold; letter-spacing: 0.02em; text-align: center; border-right: 1px solid var(--color-rule); color: var(--color-ink-muted); background: transparent; }
-        .tab-btn:last-child { border-right: none; }
+        /* First-time set chooser (Catalogue) */
+        .sets { border-bottom: 1px solid var(--color-rule); }
+        .sets-head { padding: var(--space-5) var(--space-4) var(--space-3); }
+        .sets-title { font-size: var(--text-xl); font-weight: 700; line-height: 1.3; }
+        .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--text-sm); font-weight: 500; color: var(--color-accent-2); }
+        .sets-walkin::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); flex-shrink: 0; }
+        .set-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-top: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); }
+        .set-tab { min-height: 48px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.25; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out); }
+        .set-tab + .set-tab { border-left: 1px solid var(--color-rule); }
+        .set-tab:hover { background: var(--color-paper-2); }
+        .set-tab-label { font-size: var(--text-md); font-weight: 600; white-space: nowrap; }
+        .set-tab-count { font-size: 11px; }
+        .set-tab[aria-selected="true"] { background: var(--color-ink); color: var(--color-paper); }
+        .set-panel[hidden] { display: none; }
+        .set-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3) var(--space-4); }
+        .set-row + .set-row { border-top: 1px solid var(--color-rule); }
+        .set-thumb { width: 72px; height: 72px; object-fit: cover; border: 1px solid var(--color-rule); background: var(--color-paper-2); cursor: zoom-in; }
+        .set-thumb-empty { width: 72px; height: 72px; background: var(--color-paper-2); border: 1px solid var(--color-rule); }
+        .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.35; }
+        .set-tag { display: inline-block; margin-left: var(--space-1); padding: 0 var(--space-2); font-size: 11px; font-weight: 600; line-height: 20px; vertical-align: 2px; color: var(--color-ink); border: 1px solid var(--color-ink); border-radius: var(--radius); white-space: nowrap; }
+        .set-dishes { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.55; margin-top: var(--space-1); }
+        .set-price { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
+        .set-price .num { font-size: var(--text-xl); font-weight: 600; line-height: 1.2; }
+        .set-pp { font-size: var(--text-xs); color: var(--color-muted); white-space: nowrap; }
+        .set-ctas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); border-top: 1px solid var(--color-rule); }
+        .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .set-btn.primary { background: var(--color-ink); color: var(--color-paper); }
+        .set-btn.primary:hover { background: var(--color-ink-2); }
+        .set-btn + .set-btn { border-left: 1px solid var(--color-rule); }
+        .set-btn:not(.primary):hover { background: var(--color-paper-2); }
+        .set-more { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-rule); font-size: var(--text-sm); color: var(--color-muted); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-3); }
+        .set-more a { color: var(--color-ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-rule); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
+        .set-more a:hover { text-decoration-color: var(--color-ink); }
+
+        /* Heat meter: three cells + label */
+        .heat { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 1; color: var(--color-accent); white-space: nowrap; }
+        .heat-cells { display: inline-flex; gap: 2px; }
+        .heat-cells i { width: 10px; height: 6px; border: 1px solid currentColor; }
+        .heat-cells i.on { background: currentColor; }
+        .heat.h0 { color: var(--color-accent-2); }
+
+        /* Link rows (customer photos, booklet, connect) */
+        .row-link { min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-rule); font-size: var(--text-md); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
+        .row-link:hover { background: var(--color-paper-2); }
+        .row-link .row-sub { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-muted); margin-top: 2px; }
+        .row-link .arrow { color: var(--color-muted); }
+        .row-link.ink { background: var(--color-ink); color: var(--color-paper); }
+        .row-link.ink:hover { background: var(--color-ink-2); }
+        .row-link.ink .arrow, .row-link.ink .row-sub { color: var(--color-rule); }
+        .row-link.line { background: var(--color-line); color: var(--color-paper); }
+        .row-link.line:hover { background: var(--color-line-2); }
+        .row-link.line .arrow, .row-link.line .row-sub { color: var(--color-paper); }
+        .row-link.as-button { width: 100%; text-align: left; }
+        .row-thumb { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; }
+        .row-main { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+
+        /* Quick actions fallback (no sets configured) */
+        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .quick-btn { padding: var(--space-4); display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
+        .quick-btn + .quick-btn { border-left: 1px solid var(--color-rule); }
+        .quick-btn:hover { background: var(--color-paper-2); }
+
+        /* Tab strip */
+        .tab-bar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-ink); background: var(--color-paper); position: sticky; top: 0; z-index: var(--z-sticky); }
+        .tab-btn { min-height: 48px; padding: var(--space-3) var(--space-2); font-size: var(--text-md); font-weight: 600; text-align: center; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out); }
+        .tab-btn + .tab-btn { border-left: 1px solid var(--color-rule); }
+        .tab-btn:hover { background: var(--color-paper-2); }
         .tab-btn.active { background: var(--color-ink); color: var(--color-paper); }
-        .tab-btn.active span { color: #f97316; }
 
-        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: var(--color-paper-warm); border-bottom: 1px solid var(--color-rule); }
-        .section-title { font-family: var(--font-mono); font-size: 12px; font-weight: bold; letter-spacing: 0.1em; text-transform: uppercase; }
-        .badge { font-family: var(--font-mono); font-size: 11px; font-weight: bold; padding: 2px 6px; background: var(--color-ink); color: var(--color-paper); border: 1px solid var(--color-ink); }
+        /* Section heads */
+        .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
+        .section-header.sub { padding: var(--space-4) var(--space-4) var(--space-2); background: var(--color-paper-2); }
+        .section-title { font-size: var(--text-lg); font-weight: 700; line-height: 1.35; }
+        .section-meta { font-size: var(--text-xs); color: var(--color-neutral); white-space: nowrap; }
 
+        /* Signature dishes */
         .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
-        .sig-card { border-right: 1px solid var(--color-rule); display: flex; flex-direction: column; height: 100%; background: var(--color-paper); cursor: pointer; }
-        .sig-card:last-child { border-right: none; }
-        .sig-img-wrap { width: 100%; aspect-ratio: 1/1; overflow: hidden; background: var(--color-paper-warm); border-bottom: 1px solid var(--color-rule); contain: paint layout; }
-        .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s ease; }
-        .sig-card:hover .sig-img-wrap img { transform: scale(1.04); }
-        .sig-body { padding: 10px; display: flex; flex-direction: column; justify-content: space-between; flex: 1; gap: 6px; }
-        .sig-name { font-size: 13px; font-weight: bold; line-height: 1.25; color: var(--color-ink); }
-        .sig-price { font-family: var(--font-mono); font-size: 12px; font-weight: bold; color: var(--color-ink-muted); }
+        .sig-card { display: flex; flex-direction: column; cursor: zoom-in; min-width: 0; }
+        .sig-card + .sig-card { border-left: 1px solid var(--color-rule); }
+        .sig-img-wrap { aspect-ratio: 1 / 1; overflow: hidden; background: var(--color-paper-2); border-bottom: 1px solid var(--color-rule); contain: paint layout; }
+        .sig-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .sig-body { padding: var(--space-3); display: flex; flex-direction: column; flex: 1; gap: var(--space-1); }
+        .sig-name { font-size: var(--text-sm); font-weight: 600; line-height: 1.45; }
+        .sig-price { font-size: var(--text-sm); color: var(--color-muted); }
+        .sig-body .heat { margin-top: auto; padding-top: var(--space-1); }
 
-        .booklet-card { padding: 14px 16px; border-bottom: 1px solid var(--color-rule); display: flex; align-items: center; justify-content: space-between; background: var(--color-paper); cursor: pointer; gap: 12px; }
-        .booklet-card:hover { background: var(--color-paper-warm); }
-
-        .item-row { display: flex; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--color-rule); background: var(--color-paper); gap: 12px; align-items: flex-start; cursor: pointer; }
-        .item-row:hover { background: var(--color-paper-warm); }
+        /* Menu rows */
+        .item-row { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--color-rule); }
+        .item-row.zoomable { cursor: zoom-in; }
         .item-info { flex: 1; min-width: 0; }
-        .item-name { font-size: 14px; font-weight: bold; color: var(--color-ink); }
-        .item-desc { font-size: 12px; color: var(--color-ink-muted); margin-top: 3px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
-        .modifier-tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--color-ink); background: var(--color-paper-warm); border: 1px solid var(--color-rule); padding: 1px 6px; border-radius: 2px; margin-bottom: 2px; letter-spacing: 0.04em; vertical-align: middle; }
-        .item-price { font-family: var(--font-mono); font-size: 13px; font-weight: bold; color: var(--color-ink); margin-top: 4px; }
-        .item-thumb { width: 56px; height: 56px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-warm); }
+        .item-name { font-size: var(--text-md); font-weight: 600; line-height: 1.45; }
+        .item-desc { font-size: var(--text-sm); color: var(--color-muted); margin-top: 2px; line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+        .modifier-tag { display: inline-block; font-size: var(--text-xs); font-weight: 600; padding: 0 var(--space-2); border: 1px solid var(--color-rule); border-radius: var(--radius); background: var(--color-paper-2); margin-bottom: 2px; }
+        .item-price { font-size: var(--text-md); font-weight: 600; margin-top: var(--space-1); }
+        .item-row .heat { margin-top: var(--space-1); }
+        .item-thumb { width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--color-rule); flex-shrink: 0; background: var(--color-paper-2); }
+        .full-menu-btn { width: 100%; min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; font-size: var(--text-md); font-weight: 600; border-bottom: 1px solid var(--color-rule); background: var(--color-paper-2); transition: background-color var(--dur) var(--ease-out); }
+        .full-menu-btn:hover { background: var(--color-paper-3); }
 
-        .full-menu-btn { width: 100%; padding: 16px; background: var(--color-ink); color: var(--color-paper); font-family: var(--font-mono); font-size: 13px; font-weight: bold; letter-spacing: 0.12em; text-align: center; text-transform: uppercase; border-bottom: 1px solid var(--color-rule); display: block; }
-        .full-menu-btn:hover { background: #27272a; }
-
+        /* Galleries */
         .gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
-        .gallery-item { aspect-ratio: 1/1; overflow: hidden; border-right: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); cursor: pointer; background: var(--color-paper-warm); position: relative; }
-        .gallery-item:nth-child(2n) { border-right: none; }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1/1; transition: transform 0.2s; display: block; }
-        .gallery-item:hover img { transform: scale(1.04); }
-        .gallery-caption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 65%, transparent 100%); color: #fff; padding: 20px 8px 6px 8px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 11px; font-weight: bold; pointer-events: none; }
-        .gallery-caption .caption-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 72%; font-size: 11px; line-height: 1.2; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-        .gallery-caption .caption-price { font-family: var(--font-mono); font-size: 11px; color: #fed7aa; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
-        .gallery-caption.checkin { font-size: 11px; font-weight: normal; }
-        .gallery-caption.checkin .caption-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.3; color: #f4f4f5; text-shadow: 0 1px 2px rgba(0,0,0,0.8); }
+        .gallery-item { aspect-ratio: 1 / 1; overflow: hidden; position: relative; cursor: zoom-in; background: var(--color-paper-2); border-bottom: 1px solid var(--color-rule); }
+        .gallery-item:nth-child(2n) { border-left: 1px solid var(--color-rule); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-caption { position: absolute; inset: auto 0 0 0; padding: var(--space-6) var(--space-2) var(--space-2); background: linear-gradient(to top, var(--color-scrim), var(--color-scrim-soft)); color: var(--color-paper); font-size: var(--text-xs); line-height: 1.45; pointer-events: none; }
+        .gallery-caption .caption-text { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        .connect-row { padding: 14px 16px; min-height: 52px; border-bottom: 1px solid var(--color-rule); display: flex; justify-content: space-between; align-items: center; background: var(--color-paper); font-size: 14px; font-weight: bold; }
-        .connect-row:hover { background: var(--color-paper-warm); }
-        .connect-row.line { background: var(--color-line-bg); color: #fff; }
-        .connect-row.line:hover { background: #007335; }
-        .connect-row.lineman { background: var(--color-ink); color: var(--color-paper); }
-        .connect-row.book { background: var(--color-brand); color: var(--color-ink); }
+        /* Tags + footer (Ft4 dense colophon) */
+        .tags-wrap { padding: var(--space-4); display: flex; flex-wrap: wrap; gap: var(--space-2); border-bottom: 1px solid var(--color-rule); }
+        .tag-pill { padding: 2px var(--space-2); font-size: var(--text-xs); color: var(--color-muted); border: 1px solid var(--color-rule); border-radius: var(--radius); }
+        footer { padding: var(--space-6) var(--space-4) var(--space-8); display: flex; flex-direction: column; gap: var(--space-2); background: var(--color-paper); }
+        .footer-brand { font-size: var(--text-md); font-weight: 700; }
+        .footer-sub { font-size: var(--text-sm); color: var(--color-muted); }
+        .footer-seo { font-size: var(--text-xs); line-height: 1.7; color: var(--color-muted); max-width: 46ch; }
+        .footer-copy { font-family: var(--font-mono); font-size: 11px; color: var(--color-neutral); letter-spacing: 0.04em; text-transform: uppercase; padding-top: var(--space-2); border-top: 1px solid var(--color-rule); }
 
-        .tags-wrap { padding: 16px 12px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; border-bottom: 1px solid var(--color-rule); }
-        .tag-pill { padding: 4px 10px; background: var(--color-paper-warm); border: 1px solid var(--color-rule); font-family: var(--font-mono); font-size: 11px; color: var(--color-ink-muted); border-radius: 2px; }
+        /* C4 sticky bar: full-width tabular cells */
+        .sticky-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: var(--z-bar); background: var(--color-paper); border-top: 1px solid var(--color-ink); padding-bottom: env(safe-area-inset-bottom); }
+        .sticky-inner { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1fr); }
+        .sticky-btn { min-height: var(--bar-h); padding: var(--space-2) var(--space-1); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: var(--text-md); font-weight: 600; line-height: 1.25; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
+        .sticky-btn + .sticky-btn { border-left: 1px solid var(--color-rule); }
+        .sticky-btn:hover { background: var(--color-paper-2); }
+        .sticky-btn.map { background: var(--color-ink); color: var(--color-paper); }
+        .sticky-btn.map:hover { background: var(--color-ink-2); }
+        .sticky-btn.line { background: var(--color-line); color: var(--color-paper); }
+        .sticky-btn.line:hover { background: var(--color-line-2); }
+        .sticky-sub { font-size: 11px; font-weight: 400; color: var(--color-rule); white-space: normal; line-height: 1.3; }
 
-        footer { padding: 28px 20px 96px 20px; text-align: center; font-size: 11px; color: var(--color-ink-muted); font-family: var(--font-mono); display: flex; flex-direction: column; align-items: center; gap: 8px; border-top: 1px solid var(--color-rule); background: var(--color-paper); }
-        .footer-brand { font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--color-ink); }
-        .footer-sub { font-family: var(--font-body); font-size: 12px; color: var(--color-ink-muted); letter-spacing: 0.05em; }
-        .footer-rule { width: 32px; height: 1px; background: var(--color-rule); margin: 4px 0; }
-        .footer-seo { max-width: 420px; margin: 4px auto; font-family: var(--font-body); font-size: 11px; line-height: 1.75; color: var(--color-seo-text); text-align: center; letter-spacing: 0.01em; }
-        .footer-seo p { margin: 0; }
-        .footer-copy { font-size: 10px; letter-spacing: 0.15em; color: var(--color-ink-muted); margin-top: 2px; }
-
-        .sticky-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); width: calc(100% - 24px); max-width: 440px; background: var(--color-paper); border: 1px solid var(--color-ink); padding: 8px; display: grid; grid-template-columns: 1.7fr 1fr 0.8fr 1fr; gap: 6px; z-index: 50; box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-radius: 2px; }
-        .sticky-btn { display: flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 8px 2px; font-family: var(--font-body); font-size: 13px; font-weight: bold; line-height: 1.15; border-radius: 2px; text-align: center; }
-        .sticky-btn.book { background: var(--color-paper); border: 1px solid var(--color-ink); color: var(--color-ink); }
-        .sticky-btn.line { background: var(--color-line-bg); color: #ffffff; font-weight: 800; }
-        .sticky-btn.map { background: var(--color-brand); border: 1px solid var(--color-ink); color: var(--color-ink); font-weight: 800; flex-direction: column; gap: 1px; }
-        .sticky-sub { font-size: 10.5px; font-weight: 600; color: var(--color-ink); line-height: 1.15; }
-        .sticky-btn.call { background: var(--color-ink); color: var(--color-paper); }
-
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+        /* Modals */
+        .modal { display: none; position: fixed; inset: 0; z-index: var(--z-modal); background: var(--color-scrim); align-items: center; justify-content: center; padding: var(--space-4); }
         .modal.open { display: flex; }
-        .modal-content { max-width: 90vw; max-height: 85vh; object-fit: contain; }
-        .modal-close { position: absolute; top: 16px; right: 16px; color: #fff; font-family: var(--font-mono); font-size: 18px; padding: 8px 12px; background: rgba(0,0,0,0.6); border: 1px solid #666; border-radius: 4px; }
+        .modal-content { max-width: 92vw; max-height: 82vh; object-fit: contain; }
+        .modal-close { position: absolute; top: var(--space-4); right: var(--space-4); min-height: 40px; padding: var(--space-2) var(--space-4); font-size: var(--text-md); font-weight: 600; color: var(--color-paper); border: 1px solid var(--color-paper); border-radius: var(--radius); }
+        .modal-stack { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); max-width: 92vw; }
+        .booklet-nav { display: flex; align-items: center; gap: var(--space-4); color: var(--color-paper); font-size: var(--text-sm); }
+        .booklet-nav button { min-height: 40px; padding: var(--space-2) var(--space-3); color: var(--color-paper); font-weight: 600; border: 1px solid var(--color-muted); border-radius: var(--radius); }
+
+        @media (prefers-reduced-motion: reduce) { * { transition-duration: 0ms !important; scroll-behavior: auto !important; } }
     </style>
 
     <!-- Google Tag Manager (GTM-NPVTXNM9) with Zero-Loss Queue & High Performance -->
@@ -522,11 +623,9 @@ function generateStandaloneLandingHtml(data) {
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NPVTXNM9"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
-        <!-- Top Marquee -->
-        <div class="marquee">// ${subtitle} //</div>
+        <div class="marquee">${subtitle}</div>
 
-        <!-- Identity & Brand Header -->
-        <header class="header-cell">
+        <header class="masthead">
             <img src="${optImg(logoUrl, 120, 80)}" alt="${shopName}" class="logo-box" width="56" height="56">
             <div>
                 <h1 class="shop-title">${shopName}</h1>
@@ -534,32 +633,32 @@ function generateStandaloneLandingHtml(data) {
             </div>
         </header>
 
-        <!-- Main Content Landmark -->
         <main id="main">
 
         <!-- Location-first banner: shown when utm_content says the ad sold the location -->
         <section class="loc-hero" id="loc-hero" hidden>
-            <div class="loc-hero-title">📍 ${directionsSub}</div>
+            <div class="loc-hero-title">${directionsSub}</div>
             <div class="loc-hero-sub">ริมโขง · ไม่ต้องจองก็มาได้ · มีที่จอดรถ</div>
-            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">นำทางมาร้านเลย ➔</a>
+            <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">นำทางมาร้าน <span class="arrow">→</span></a>
         </section>
 
-        <!-- Tabular Metadata Grid -->
-        <div class="meta-grid">
-            <div class="meta-item">
-                <span class="meta-label">สถานะ · STATUS</span>
-                <span class="meta-val" id="open-status" data-hours="${hours}"><span class="dot-green"></span> เปิดทุกวัน</span>
+        <!-- Facts: status · hours · location -->
+        <div class="facts">
+            <div class="fact">
+                <span class="fact-label">สถานะ</span>
+                <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> เปิดทุกวัน</span>
                 <span class="kitchen-note" id="kitchen-note" hidden></span>
             </div>
-            <div class="meta-item">
-                <span class="meta-label">เวลาเปิด · HOURS</span>
-                <span class="meta-val">${hours.replace('เปิดทุกวัน ', '')}</span>
+            <div class="fact">
+                <span class="fact-label">เวลาเปิด</span>
+                <span class="fact-val nb">${hoursMain}</span>
+                ${hoursNote ? `<span class="fact-note">${hoursNote}</span>` : ''}
             </div>
-            <div class="meta-item full">
-                <span class="meta-label">ที่ตั้ง · LOCATION</span>
+            <div class="fact full">
+                <span class="fact-label">ที่ตั้ง</span>
                 <div class="loc-row">
-                    <span class="meta-val">${locationShort}</span>
-                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">แผนที่ ➔</a>
+                    <span class="fact-val flow">${locationShortHtml}</span>
+                    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-map-btn" onclick="handleDirectionsClick(event)">แผนที่ <span class="arrow">→</span></a>
                 </div>
                 <details class="loc-more">
                     <summary>วิธีมาที่ร้าน</summary>
@@ -568,79 +667,65 @@ function generateStandaloneLandingHtml(data) {
             </div>
         </div>
 
-        ${starter ? `
-        <!-- Starter Set: one-tap answer to "what should we eat / how much"; walk-in first, booking optional -->
-        <section class="starter" id="starter-card" data-lunch="${lunchWindow}" data-solo="${soloIdx}">
-            <div class="starter-head">
-                <span class="starter-kicker">เพิ่งมาครั้งแรก? เริ่มที่ชุดนี้</span>
+        ${setGroups.length > 0 ? `
+        <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
+        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
+            <div class="sets-head">
+                <h2 class="sets-title" id="sets-title">เพิ่งมาครั้งแรก? เลือกชุดตามจำนวนคน</h2>
+                <p class="sets-walkin">ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</p>
             </div>
-            ${starterSets.length > 1 ? `
-            <div class="starter-pax" role="group" aria-label="มากี่คน">
-                <span class="starter-pax-label">มากี่คน?</span>
-                ${starterSets.map((s, i) => `<button type="button" class="${i === starterIdx ? 'active' : ''}" onclick="selectStarter(${i})">${escapeHtml(s.chip)}</button>`).join('')}
+            ${setGroups.length > 1 ? `
+            <div class="set-tabs" role="tablist" aria-label="มากี่คน">
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${g.key} คน</span><span class="set-tab-count">${g.rows.length} ชุด</span></button>`).join('')}
             </div>` : ''}
-            <div class="starter-body">
-                ${starter.img ? `<img id="starter-img" class="starter-img" src="${starter.img}" alt="${escapeHtml(starter.title)}" width="104" height="104" loading="eager" decoding="async" onclick="openLightbox(starterSets[currentStarter].bigImg)">` : ''}
-                <div class="starter-info">
-                    <div class="starter-name" id="starter-name">${escapeHtml(starter.title)}${starter.paxLabel ? ` · ${escapeHtml(starter.paxLabel)}` : ''}</div>
-                    <div class="starter-dishes" id="starter-dishes">${escapeHtml(starter.dishes)}</div>
-                    <div class="starter-price"><span id="starter-price">฿${starter.price}</span><span class="starter-pp" id="starter-pp">${escapeHtml(starter.perPerson)}</span></div>
-                    <div id="starter-spice">${starter.spiceHtml}</div>
-                </div>
+            ${setGroups.map(g => `
+            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
+                ${g.rows.map(r => `
+                <div class="set-row">
+                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="72" height="72" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
+                    <div>
+                        <div class="set-name">${escapeHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</div>
+                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
+                        ${r.heat}
+                    </div>
+                    <div class="set-price">
+                        <span class="num">฿${r.price}</span>
+                        ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
+                    </div>
+                </div>`).join('')}
+            </div>`).join('')}
+            <div class="set-ctas">
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
+                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
             </div>
-            <div class="starter-walkin">✓ ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</div>
-            <div class="starter-ctas">
-                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="starter-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
-                <a href="tel:0985284217" class="starter-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
+            <div class="set-more">
+                <span>อยากได้โต๊ะแน่นอน?</span>
+                <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า</a>
+                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน</a>
             </div>
-            <div class="starter-more">
-                อยากได้โต๊ะแน่นอน? <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า ➔</a>
-                <span aria-hidden="true">·</span>
-                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน ➔</a>
-            </div>
-            <script id="starter-data" type="application/json">${JSON.stringify(starterSets).replace(/</g, '\u003c')}</script>
-        </section>` : ''}
-
-        <!-- Live Stream Customer Photos Ticker -->
-        <a href="/link/hauscheckin" class="live-stream">
-            <span style="display:flex;align-items:center;gap:8px;">
-                <span class="dot-green"></span>
-                <span>รูปจากลูกค้าจริง</span>
-            </span>
-            <span>ดูทั้งหมด ➔</span>
-        </a>
-
-        <!-- Quick Actions: Reservation & Pickup (fallback when no starter set card) -->
-        ${starter ? '' : `<div class="quick-grid">
-            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">
-                <div class="quick-tag"><span>// RESERVATION</span><span>➔</span></div>
-                <div>
-                    <div class="quick-title">จองโต๊ะล่วงหน้า</div>
-                    <div class="quick-sub">BOOK A TABLE</div>
-                </div>
-            </a>
-            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">
-                <div class="quick-tag"><span>// SELF-PICKUP</span><span>➔</span></div>
-                <div>
-                    <div class="quick-title">สั่งอาหารรับหน้าร้าน</div>
-                    <div class="quick-sub">PICK UP ONLINE</div>
-                </div>
-            </a>
+        </section>` : `
+        <div class="quick-grid">
+            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">จองโต๊ะ <span class="arrow">→</span></a>
+            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">สั่งรับหน้าร้าน <span class="arrow">→</span></a>
         </div>`}
 
-        <!-- Tab Switcher -->
-        <div class="tab-bar">
-            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')"><span>*</span> เมนู</button>
+        <a href="/link/hauscheckin" class="row-link">
+            <span class="row-main"><span class="dot"></span><span>รูปจากลูกค้าจริง<span class="row-sub">บอร์ดเช็กอินของลูกค้าที่มาร้าน</span></span></span>
+            <span class="arrow">→</span>
+        </a>
+
+        <!-- Tab strip -->
+        <div class="tab-bar" role="tablist">
+            <button class="tab-btn active" id="tab-btn-menu" onclick="switchSection('menu')">เมนู</button>
             <button class="tab-btn" id="tab-btn-vibe" onclick="switchSection('vibe')">บรรยากาศ</button>
             <button class="tab-btn" id="tab-btn-connect" onclick="switchSection('connect')">ติดต่อ</button>
         </div>
 
         <!-- ─── SECTION 1: MENU ─── -->
         <div id="sec-menu">
-            <!-- 3 Signature Dishes (LCP Preloaded) -->
             <div class="section-header">
-                <span class="section-title">SIGNATURE DISHES</span>
-                <span class="badge">RECOMMENDED</span>
+                <h2 class="section-title">จานเด่นของร้าน</h2>
+                <span class="section-meta">แตะรูปเพื่อขยาย</span>
             </div>
             <div class="sig-grid">
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_1 || DEFAULT_SETTINGS.link_sig_img_1, 800)}')">
@@ -649,8 +734,8 @@ function generateStandaloneLandingHtml(data) {
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig1Name}</div>
-                        <div class="sig-price">฿${sig1Price}</div>
-                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
+                        <div class="sig-price num">฿${sig1Price}</div>
+                        ${heatHtml(spiceRange(settings.link_sig_name_1 || DEFAULT_SETTINGS.link_sig_name_1, spiceMap))}
                     </div>
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_2 || DEFAULT_SETTINGS.link_sig_img_2, 800)}')">
@@ -659,8 +744,8 @@ function generateStandaloneLandingHtml(data) {
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig2Name}</div>
-                        <div class="sig-price">฿${sig2Price}</div>
-                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
+                        <div class="sig-price num">฿${sig2Price}</div>
+                        ${heatHtml(spiceRange(settings.link_sig_name_2 || DEFAULT_SETTINGS.link_sig_name_2, spiceMap))}
                     </div>
                 </div>
                 <div class="sig-card" onclick="openLightbox('${optImg(settings.link_sig_img_3 || DEFAULT_SETTINGS.link_sig_img_3, 800)}')">
@@ -669,56 +754,50 @@ function generateStandaloneLandingHtml(data) {
                     </div>
                     <div class="sig-body">
                         <div class="sig-name">${sig3Name}</div>
-                        <div class="sig-price">฿${sig3Price}</div>
-                        ${spiceBadgeHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
+                        <div class="sig-price num">฿${sig3Price}</div>
+                        ${heatHtml(spiceRange(settings.link_sig_name_3 || DEFAULT_SETTINGS.link_sig_name_3, spiceMap))}
                     </div>
                 </div>
             </div>
 
-            <!-- Booklet Menu Banner -->
             ${bookletImages.length > 0 ? `
-            <div class="booklet-card" onclick="openBooklet()">
-                <div style="display:flex;align-items:center;gap:12px;">
-                    <img src="${optImg(bookletImages[0], 120)}" alt="Menu Booklet" style="width:44px;height:44px;object-fit:cover;border:1px solid var(--color-rule);">
-                    <div>
-                        <div style="font-family:var(--font-mono);font-size:9px;font-weight:bold;color:var(--color-ink-muted);">ORIGINAL BOOKLET</div>
-                        <div style="font-size:13px;font-weight:bold;">เปิดดูสมุดเมนูเล่มจริง</div>
-                    </div>
-                </div>
-                <div style="font-family:var(--font-mono);font-size:11px;font-weight:bold;">VIEW ➔</div>
-            </div>` : ''}
+            <button type="button" class="row-link as-button" onclick="openBooklet()">
+                <span class="row-main">
+                    <img src="${optImg(bookletImages[0], 120)}" alt="" class="row-thumb" width="44" height="44" loading="lazy">
+                    <span>เปิดดูเมนูแบบเล่ม<span class="row-sub">เมนูเล่มจริงของร้าน ${bookletImages.length} หน้า</span></span>
+                </span>
+                <span class="arrow">→</span>
+            </button>` : ''}
 
-            <!-- Specialties List -->
             ${recommendedItems.length > 0 ? `
             <div class="section-header">
-                <span class="section-title">SPECIALTIES</span>
-                <span class="meta-label">${recommendedItems.length} ITEMS</span>
+                <h2 class="section-title">เมนูแนะนำ</h2>
+                <span class="section-meta">${recommendedItems.length} รายการ</span>
             </div>
             <div>
                 ${recommendedItems.map(item => `
-                <div class="item-row"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
+                <div class="item-row${item.image_url ? ' zoomable' : ''}"${item.image_url ? ` onclick="openLightbox('${optImg(item.image_url, 800)}')"` : ''}>
                     <div class="item-info">
-                        <div class="item-name">${escapeHtml(item.name)}${spiceBadgeHtml(item.spice)}</div>
+                        <div class="item-name">${escapeHtml(item.name)}</div>
                         ${item.description ? `<div class="item-desc">${formatDescriptionHtml(item.description)}</div>` : ''}
-                        <div class="item-price">฿${escapeHtml(item.price)}</div>
+                        <div class="item-price num">฿${escapeHtml(item.price)}</div>
+                        ${heatHtml(item.spice)}
                     </div>
-                    ${item.image_url ? `<img src="${optImg(item.image_url, 120)}" alt="${escapeHtml(item.name)}" class="item-thumb" loading="lazy" width="56" height="56">` : ''}
+                    ${item.image_url ? `<img src="${optImg(item.image_url, 128)}" alt="${escapeHtml(item.name)}" class="item-thumb" loading="lazy" width="64" height="64">` : ''}
                 </div>`).join('')}
             </div>` : ''}
 
-            <!-- Full Menu Accordion Button -->
-            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()">[+] VIEW FULL MENU (${menuItems.length} ITEMS)</button>
+            <button class="full-menu-btn" id="btn-full-menu" onclick="toggleFullMenu()"><span id="full-menu-label">ดูเมนูทั้งหมด ${menuItems.length} รายการ</span><span class="arrow" id="full-menu-arrow">↓</span></button>
             <div id="full-menu-content" style="display:none;"></div>
-            <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems })}</script>
+            <script id="full-menu-data" type="application/json">${JSON.stringify({ categories, menuItems }).replace(/</g, '\\u003c')}</script>
         </div>
 
-        <!-- ─── SECTION 2: VIBE / ATMOSPHERE & CUISINE ─── -->
+        <!-- ─── SECTION 2: ATMOSPHERE ─── -->
         <div id="sec-vibe" style="display:none;">
-            <!-- 1. Real Restaurant Atmosphere & Mekong Views -->
             ${atmImages.length > 0 ? `
             <div class="section-header">
-                <span class="section-title">RESTAURANT ATMOSPHERE</span>
-                <span class="meta-label">${atmImages.length} VIEWS · ริมโขง</span>
+                <h2 class="section-title">บรรยากาศร้านริมโขง</h2>
+                <span class="section-meta">${atmImages.length} รูป</span>
             </div>
             <div class="gallery-grid">
                 ${atmImages.map((img, i) => `
@@ -727,136 +806,119 @@ function generateStandaloneLandingHtml(data) {
                 </div>`).join('')}
             </div>` : ''}
 
-            <!-- 2. Customer Dining Moments & Experiences -->
             ${diningCheckins.length > 0 ? `
             <div class="section-header">
-                <span class="section-title">DINING MOMENTS</span>
-                <span class="badge" style="background:#10B981;border-color:#10B981;">REAL EXPERIENCES</span>
+                <h2 class="section-title">มื้อจริงจากลูกค้า</h2>
+                <span class="section-meta">${diningCheckins.length} รูป</span>
             </div>
             <div class="gallery-grid">
                 ${diningCheckins.map((chk, i) => `
                 <div class="gallery-item" onclick="openLightbox('${optImg(chk.image_url, 900)}')">
-                    <img src="${optImg(chk.image_url, 300, 75)}" alt="${escapeHtml(chk.text || 'Customer Moment')}" loading="lazy" decoding="async" width="200" height="200">
-                    ${chk.text ? `<div class="gallery-caption checkin"><span class="caption-text">${escapeHtml(chk.text.length > 50 ? chk.text.slice(0, 48) + '...' : chk.text)}</span></div>` : ''}
+                    <img src="${optImg(chk.image_url, 300, 75)}" alt="${escapeHtml(chk.text || 'รูปจากลูกค้า')}" loading="lazy" decoding="async" width="200" height="200">
+                    ${chk.text ? `<div class="gallery-caption"><span class="caption-text">${escapeHtml(chk.text.length > 50 ? chk.text.slice(0, 48) + '…' : chk.text)}</span></div>` : ''}
                 </div>`).join('')}
             </div>` : ''}
         </div>
 
-        <!-- ─── SECTION 3: CONNECT ─── -->
+        <!-- ─── SECTION 3: CONTACT ─── -->
         <div id="sec-connect" style="display:none;">
             <div class="section-header">
-                <span class="section-title">จองโต๊ะ & สั่งอาหาร</span>
+                <h2 class="section-title">ติดต่อร้าน</h2>
+                <span class="section-meta num">098-528-4217</span>
             </div>
-            <a href="/booking" class="connect-row book" onclick="handleBookingClick(event)">
-                <span>จองโต๊ะออนไลน์ // BOOK A TABLE</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="${mapUrl}" id="cta-connect-map" target="_blank" rel="noopener noreferrer" class="row-link ink" onclick="handleDirectionsClick(event)">
+                <span>นำทางมาร้าน<span class="row-sub">${directionsSub}</span></span>
+                <span class="arrow">→</span>
             </a>
-            <a href="/pickup" class="connect-row" onclick="handlePickupClick(event)">
-                <span>สั่งอาหารรับหน้าร้าน // PICK UP</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="row-link line" onclick="handleLineClick(event)">
+                <span>แชท LINE<span class="row-sub">สอบถามหรือสั่งอาหาร</span></span>
+                <span class="arrow">→</span>
+            </a>
+            <a href="tel:0985284217" id="cta-connect-call" class="row-link" onclick="handleCallClick(event)">
+                <span>โทรหาร้าน<span class="row-sub num">098-528-4217</span></span>
+                <span class="arrow">→</span>
             </a>
 
-            <div class="section-header" style="margin-top:16px;">
-                <span class="section-title">DIRECT CONTACT</span>
+            <div class="section-header">
+                <h2 class="section-title">จองโต๊ะและสั่งอาหาร</h2>
+                <span class="section-meta">ไม่จองก็มาได้</span>
             </div>
-            <a href="${lineUrl}" id="cta-connect-line" target="_blank" rel="noopener noreferrer" class="connect-row line" onclick="handleLineClick(event)">
-                <span>LINE OA // แชทสอบถามหรือสั่งอาหาร</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="/booking" class="row-link" onclick="handleBookingClick(event)">
+                <span>จองโต๊ะล่วงหน้า<span class="row-sub">สำหรับวันที่อยากได้โต๊ะแน่นอน</span></span>
+                <span class="arrow">→</span>
             </a>
-            <a href="tel:0985284217" id="cta-connect-call" class="connect-row" onclick="handleCallClick(event)">
-                <span>098-528-4217 // โทรติดต่อร้าน</span>
-                <span style="font-family:var(--font-mono);">CALL ➔</span>
+            <a href="/pickup" class="row-link" onclick="handlePickupClick(event)">
+                <span>สั่งรับหน้าร้าน<span class="row-sub">สั่งออนไลน์ แล้วแวะรับ</span></span>
+                <span class="arrow">→</span>
+            </a>
+            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="row-link" onclick="logAdEvent('click_lineman')">
+                <span>เดลิเวอรีผ่าน LINE MAN<span class="row-sub">สั่งผ่านแอป LINE MAN</span></span>
+                <span class="arrow">→</span>
             </a>
 
-            <div class="section-header" style="margin-top:16px;">
-                <span class="section-title">SOCIAL MEDIA</span>
+            <div class="section-header">
+                <h2 class="section-title">ติดตามและข้อมูลร้าน</h2>
             </div>
-            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="connect-row">
-                <span>INSTAGRAM // @inthehausth</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="${igUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+                <span>Instagram<span class="row-sub">@inthehausth</span></span>
+                <span class="arrow">→</span>
             </a>
-            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="connect-row">
-                <span>FACEBOOK // IN THE HAUS</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="${fbUrl}" target="_blank" rel="noopener noreferrer" class="row-link">
+                <span>Facebook<span class="row-sub">In the haus</span></span>
+                <span class="arrow">→</span>
             </a>
-
-            <div class="section-header" style="margin-top:16px;">
-                <span class="section-title">DELIVERY SERVICE</span>
-            </div>
-            <a href="https://lin.ee/8uqmIzZ" target="_blank" rel="noopener noreferrer" class="connect-row lineman" onclick="logAdEvent('click_lineman')">
-                <span>ORDER DIRECT ON LINEMAN</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="/qa" class="row-link">
+                <span>คำถามที่พบบ่อย<span class="row-sub">รวมคำถามที่ลูกค้าถามบ่อย</span></span>
+                <span class="arrow">→</span>
             </a>
-
-            <div class="section-header" style="margin-top:16px;">
-                <span class="section-title">INFORMATION & LOCATION</span>
-            </div>
-            <a href="/qa" class="connect-row">
-                <span>RESTAURANT Q&A // คำถามที่พบบ่อย</span>
-                <span style="font-family:var(--font-mono);">➔</span>
-            </a>
-            <a href="/link/hauscheckin" class="connect-row" style="background:#DFFF00;color:#181815;">
-                <span>HAUS CHECK-IN WALL // บอร์ดเช็กอินลูกค้า</span>
-                <span style="font-family:var(--font-mono);">➔</span>
-            </a>
-            <a href="${mapUrl}" id="cta-connect-map" target="_blank" rel="noopener noreferrer" class="connect-row" style="background:var(--color-ink);color:var(--color-paper);" onclick="handleDirectionsClick(event)">
-                <span>LAUNCH MAP // นำทางมาร้าน (ริมโขง นครพนม)</span>
-                <span style="font-family:var(--font-mono);">➔</span>
+            <a href="/link/hauscheckin" class="row-link">
+                <span>บอร์ดเช็กอินลูกค้า<span class="row-sub">รูปจากลูกค้าที่มาร้าน</span></span>
+                <span class="arrow">→</span>
             </a>
         </div>
 
-        <!-- Tags List -->
         <div class="tags-wrap">
             ${tags.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}
         </div>
         </main>
 
-        <!-- Footer -->
+        <!-- Footer: dense colophon -->
         <footer>
-            <div class="footer-brand">// ${shopName}</div>
+            <div class="footer-brand">${shopName}</div>
             <div class="footer-sub">จริตจัด รสชัดเจน · Real Southern Taste</div>
-            <div class="footer-rule"></div>
-            <div class="footer-seo">
-                <p>ในบ้าน นครพนม · ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่มองหาร้านน่านั่งในนครพนม · อาหารรสชัด กาแฟ และเครื่องดื่ม มื้อกลางวันถึงมื้อค่ำ · ร้านเด็ดนครพนม · ร้านอาหารริมโขงใกล้ฉัน · คาเฟ่ นครพนม · ร้านกาแฟ นครพนม · จริตจัด รสชัดเจน ที่นี่นครพนม</p>
-            </div>
-            <div class="footer-rule"></div>
-            <div class="footer-copy">© ${new Date().getFullYear()} IN THE HAUS · NAKHON PHANOM</div>
+            <p class="footer-seo">ในบ้าน นครพนม · ร้านอาหารและคาเฟ่ริมโขงสำหรับคนที่มองหาร้านน่านั่งในนครพนม · อาหารรสชัด กาแฟ และเครื่องดื่ม มื้อกลางวันถึงมื้อค่ำ · ร้านเด็ดนครพนม · ร้านอาหารริมโขงใกล้ฉัน · คาเฟ่ นครพนม · ร้านกาแฟ นครพนม · จริตจัด รสชัดเจน ที่นี่นครพนม</p>
+            <div class="footer-copy">© ${new Date().getFullYear()} In the haus · Nakhon Phanom</div>
         </footer>
 
-        <!-- Sticky Contact Bar -->
-        <!-- Walk-in first: directions is the main action, booking stays available but quiet -->
-        <div class="sticky-bar">
-            <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
-                <span>นำทาง</span>
-                <span class="sticky-sub">${directionsSub}</span>
-            </a>
-            <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">
-                แชท LINE
-            </a>
-            <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn call" onclick="handleCallClick(event)">
-                โทร
-            </a>
-            <a href="/booking" id="cta-sticky-booking" class="sticky-btn book" onclick="handleBookingClick(event)">
-                จองโต๊ะ
-            </a>
-        </div>
+        <!-- Sticky bar: walk-in first (directions), booking stays available but quiet -->
+        <nav class="sticky-bar" aria-label="ติดต่อด่วน">
+            <div class="sticky-inner">
+                <a href="${mapUrl}" id="cta-sticky-map" target="_blank" rel="noopener noreferrer" class="sticky-btn map" onclick="handleDirectionsClick(event)">
+                    <span>นำทาง</span>
+                    <span class="sticky-sub">${directionsSub}</span>
+                </a>
+                <a href="${lineUrl}" id="cta-sticky-line" target="_blank" rel="noopener noreferrer" class="sticky-btn line" onclick="handleLineClick(event)">แชท LINE</a>
+                <a href="tel:0985284217" id="cta-sticky-call" class="sticky-btn" onclick="handleCallClick(event)">โทร</a>
+                <a href="/booking" id="cta-sticky-booking" class="sticky-btn" onclick="handleBookingClick(event)">จองโต๊ะ</a>
+            </div>
+        </nav>
     </div>
 
     <!-- Image Lightbox Modal -->
     <div id="lightbox-modal" class="modal" onclick="closeLightbox()">
-        <button class="modal-close" onclick="closeLightbox()">✕</button>
-        <img id="lightbox-img" class="modal-content" src="" alt="Enlarged view">
+        <button class="modal-close" onclick="closeLightbox()">ปิด</button>
+        <img id="lightbox-img" class="modal-content" src="" alt="รูปขยาย">
     </div>
 
     <!-- Booklet Viewer Modal -->
     <div id="booklet-modal" class="modal" onclick="closeBooklet(event)">
-        <button class="modal-close" onclick="closeBooklet()">✕ CLOSE</button>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;max-width:92vw;" onclick="event.stopPropagation()">
-            <img id="booklet-img" class="modal-content" src="${bookletImages[0] ? optImg(bookletImages[0], 900) : ''}" alt="Booklet page">
-            <div style="display:flex;gap:16px;align-items:center;background:rgba(0,0,0,0.7);padding:8px 16px;border-radius:4px;color:#fff;font-family:var(--font-mono);font-size:12px;">
-                <button onclick="prevBookletPage()" style="color:#fff;padding:4px 8px;font-weight:bold;">◀ PREV</button>
-                <span id="booklet-counter">1 / ${bookletImages.length}</span>
-                <button onclick="nextBookletPage()" style="color:#fff;padding:4px 8px;font-weight:bold;">NEXT ▶</button>
+        <button class="modal-close" onclick="closeBooklet()">ปิด</button>
+        <div class="modal-stack" onclick="event.stopPropagation()">
+            <img id="booklet-img" class="modal-content" src="${bookletImages[0] ? optImg(bookletImages[0], 900) : ''}" alt="หน้าเมนูแบบเล่ม">
+            <div class="booklet-nav">
+                <button onclick="prevBookletPage()">← ก่อนหน้า</button>
+                <span id="booklet-counter" class="num">1 / ${bookletImages.length}</span>
+                <button onclick="nextBookletPage()">ถัดไป →</button>
             </div>
         </div>
     </div>
@@ -867,28 +929,19 @@ function generateStandaloneLandingHtml(data) {
         const bookletPages = ${JSON.stringify(bookletImages.map(img => optImg(img, 900)))};
         let currentBookletIdx = 0;
 
-        // ─── STARTER SET CARD (2–4 / 4–6 people) ───
-        const starterSets = (function() {
-            try { return JSON.parse(document.getElementById('starter-data').textContent); } catch(e) { return []; }
-        })();
+        // ─── FIRST-TIME SET CHOOSER (tabs by party size) ───
         const starterCard = document.getElementById('starter-card');
-        let currentStarter = 0;
-        document.querySelectorAll('.starter-pax button').forEach(function(b, j) {
-            if (b.classList.contains('active')) currentStarter = j;
-        });
-        function selectStarter(i, silent) {
-            const s = starterSets[i];
-            if (!s) return;
-            currentStarter = i;
-            document.getElementById('starter-name').textContent = s.title + (s.paxLabel ? ' · ' + s.paxLabel : '');
-            document.getElementById('starter-dishes').textContent = s.dishes;
-            document.getElementById('starter-price').textContent = '฿' + s.price;
-            document.getElementById('starter-pp').textContent = s.perPerson;
-            document.getElementById('starter-spice').innerHTML = s.spiceHtml;
-            const img = document.getElementById('starter-img');
-            if (img && s.img) { img.src = s.img; img.alt = s.title; }
-            document.querySelectorAll('.starter-pax button').forEach(function(b, j) {
-                b.className = j === i ? 'active' : '';
+        function selectSetGroup(key, silent) {
+            if (!starterCard) return;
+            let found = false;
+            starterCard.querySelectorAll('.set-panel').forEach(function(p) {
+                const on = p.dataset.group === key;
+                p.hidden = !on;
+                if (on) found = true;
+            });
+            if (!found) return;
+            starterCard.querySelectorAll('.set-tab').forEach(function(t) {
+                t.setAttribute('aria-selected', String(t.dataset.group === key));
             });
             if (!silent) logAdEvent('select_starter_set');
         }
@@ -902,13 +955,13 @@ function generateStandaloneLandingHtml(data) {
 
         // Lunch hours (Asia/Bangkok): pre-select the solo set for people eating alone / working lunch
         (function() {
-            if (!starterCard || starterCard.dataset.solo !== '0') return;
+            if (!starterCard || !starterCard.querySelector('.set-panel[data-group="1"]')) return;
             const w = (starterCard.dataset.lunch || '').match(/(\\d{1,2})[:.](\\d{2})\\s*-\\s*(\\d{1,2})[:.](\\d{2})/);
             if (!w) return;
             try {
                 const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
                 const now = Number(parts.find(p => p.type === 'hour').value) * 60 + Number(parts.find(p => p.type === 'minute').value);
-                if (now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])) selectStarter(0, true);
+                if (now >= Number(w[1]) * 60 + Number(w[2]) && now < Number(w[3]) * 60 + Number(w[4])) selectSetGroup('1', true);
             } catch(e) {}
         })();
 
@@ -947,8 +1000,8 @@ function generateStandaloneLandingHtml(data) {
                 if (close <= open) close += 24 * 60;
                 const isOpen = (now >= open && now < close) || (now + 24 * 60 >= open && now + 24 * 60 < close);
                 el.innerHTML = isOpen
-                    ? '<span class="dot-green"></span> เปิดอยู่ตอนนี้'
-                    : '<span class="dot-green closed"></span> ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+                    ? '<span class="dot"></span> เปิดอยู่ตอนนี้'
+                    : '<span class="dot closed"></span> ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
 
                 // Kitchen closing countdown: last 2 hours before "ครัวปิด HH:MM", then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/ครัวปิด\\s*(\\d{1,2})[:.](\\d{2})/);
@@ -1029,10 +1082,14 @@ function generateStandaloneLandingHtml(data) {
             return html.replace(/(<br>)+$/, '');
         }
 
-        const SPICE_LABELS = ${JSON.stringify(SPICE_LABELS)};
-        function clientSpiceBadge(range) {
+        const HEAT_LABELS = ${JSON.stringify(HEAT_LABELS)};
+        function clientHeat(range) {
             if (!range) return '';
-            return '<span class="spice s' + range.max + '">' + SPICE_LABELS[range.max] + '</span>';
+            const level = range.max;
+            const label = level > 0 && range.min === 0 ? 'มีจานเผ็ด' : HEAT_LABELS[level];
+            let cells = '';
+            for (let n = 1; n <= 3; n++) cells += '<i' + (n <= level ? ' class="on"' : '') + '></i>';
+            return '<span class="heat h' + level + '" role="img" aria-label="ความเผ็ด: ' + label + '"><span class="heat-cells" aria-hidden="true">' + cells + '</span><span class="heat-label">' + label + '</span></span>';
         }
 
         function toggleFullMenu() {
@@ -1046,13 +1103,13 @@ function generateStandaloneLandingHtml(data) {
                         raw.categories.forEach(cat => {
                             const cItems = raw.menuItems.filter(i => i.category_id === cat.id);
                             if (cItems.length === 0) return;
-                            html += '<div class="section-header" style="background:#e5e5e0;"><span class="section-title">' + escapeClientHtml(cat.name) + '</span><span class="meta-label">' + cItems.length + ' ITEMS</span></div><div>';
+                            html += '<div class="section-header sub"><h3 class="section-title">' + escapeClientHtml(cat.name) + '</h3><span class="section-meta">' + cItems.length + ' รายการ</span></div><div>';
                             cItems.forEach(item => {
-                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=120&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="56" height="56">' : '';
+                                const thumb = item.image_url ? '<img src="https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=128&q=75&output=webp" alt="' + escapeClientHtml(item.name) + '" class="item-thumb" loading="lazy" width="64" height="64">' : '';
                                 const bigImg = item.image_url ? 'https://wsrv.nl/?url=' + encodeURIComponent(item.image_url.split('?')[0]) + '&w=800&q=75&output=webp' : '';
-                                const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)" style="cursor:pointer;"' : '';
+                                const clickAttr = bigImg ? ' data-img="' + bigImg + '" onclick="openLightbox(this.dataset.img)"' : '';
                                 const descHtml = item.description ? '<div class="item-desc">' + formatClientDescription(item.description) + '</div>' : '';
-                                html += '<div class="item-row"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + clientSpiceBadge(item.spice) + '</div>' + descHtml + '<div class="item-price">฿' + escapeClientHtml(item.price) + '</div></div>' + thumb + '</div>';
+                                html += '<div class="item-row' + (bigImg ? ' zoomable' : '') + '"' + clickAttr + '><div class="item-info"><div class="item-name">' + escapeClientHtml(item.name) + '</div>' + descHtml + '<div class="item-price num">฿' + escapeClientHtml(item.price) + '</div>' + clientHeat(item.spice) + '</div>' + thumb + '</div>';
                             });
                             html += '</div>';
                         });
@@ -1060,12 +1117,14 @@ function generateStandaloneLandingHtml(data) {
                     } catch(e) {}
                 }
                 content.style.display = 'block';
-                btn.innerText = '[-] CLOSE FULL MENU';
+                document.getElementById('full-menu-label').textContent = 'ปิดเมนูทั้งหมด';
+                document.getElementById('full-menu-arrow').textContent = '↑';
                 if (window.gtag) gtag('event', 'view_full_menu', { event_category: 'engagement', page_path: '/link' });
                 logAdEvent('view_full_menu');
             } else {
                 content.style.display = 'none';
-                btn.innerText = '[+] VIEW FULL MENU (${menuItems.length} ITEMS)';
+                document.getElementById('full-menu-label').textContent = 'ดูเมนูทั้งหมด ${menuItems.length} รายการ';
+                document.getElementById('full-menu-arrow').textContent = '↓';
             }
         }
 
