@@ -158,7 +158,7 @@ async function fetchExchangeRate(fromCurrency: string = 'USD'): Promise<number> 
 async function scanReceiptImageWithGemini(
   base64ImagesInput: string | string[],
   apiKey: string,
-  preferredModel: string = 'gemini-4-argon'
+  preferredModel: string = 'gemini-flash-latest'
 ): Promise<any> {
   const imagesArray = Array.isArray(base64ImagesInput) ? base64ImagesInput : [base64ImagesInput];
   const isMultiPage = imagesArray.length > 1;
@@ -266,16 +266,12 @@ Payment Method Rules:
 
   const candidateModels = Array.from(new Set([
     preferredModel,
+    'gemini-flash-latest',
+    'gemini-flash-lite-latest',
+    'gemini-3.8-flash',
     'gemini-4-argon',
     'gemini-3.7-flash',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-3.7-pro',
-    'gemini-2.5-pro',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash-exp',
-    'gemini-1.5-pro'
+    'gemini-pro-latest'
   ]));
 
   let lastError: any = null;
@@ -283,15 +279,29 @@ Payment Method Rules:
   for (const model of candidateModels) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify(requestBody)
+        });
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        lastError = fetchErr;
+        continue;
+      }
+      clearTimeout(timeout);
 
       if (!response.ok) {
         const errText = await response.text();
         console.warn(`[Gemini ${model}] failed with status ${response.status}:`, errText);
+        if (response.status === 402) {
+          throw new Error('Gemini API Error: 402 Prepayment credits depleted');
+        }
         if (response.status === 404 || errText.toLowerCase().includes('not found')) {
           continue;
         }
@@ -635,7 +645,7 @@ function getDailySaiMuContext(dateObj: Date) {
 async function generateIntradayTrafficWithSaiMu(
   summaryPayload: any,
   apiKey: string,
-  preferredModel: string = 'gemini-4-argon'
+  preferredModel: string = 'gemini-flash-latest'
 ): Promise<any> {
   const saiMu = summaryPayload.saiMuContext;
   const promptText = `
@@ -675,12 +685,12 @@ Return ONLY a valid JSON object matching this schema:
   if (apiKey) {
     const candidateModels = Array.from(new Set([
       preferredModel,
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-3.8-flash',
       'gemini-4-argon',
       'gemini-3.7-flash',
-      'gemini-2.5-flash',
-      'gemini-2.0-flash',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash'
+      'gemini-pro-latest'
     ]));
 
     for (const model of candidateModels) {
@@ -3443,7 +3453,7 @@ Deno.serve(async (req) => {
               geminiApiKey = keyRow?.value || ''
             }
 
-            let preferredModel = 'gemini-4-argon'
+            let preferredModel = 'gemini-flash-latest'
             const { data: modelRow } = await supabaseAdmin.from('app_settings').select('value').eq('key', 'gemini_model').maybeSingle()
             if (modelRow?.value) preferredModel = modelRow.value
 
@@ -4391,6 +4401,7 @@ Deno.serve(async (req) => {
           continue
         }
       }
+    } // End of per-event text loop
 
     // --- Image Message Handler for Receipt OCR & Auto Expense Recording (Supports Multi-Page Batches) ---
     const imageEvents = events.filter((e: any) => e.type === 'message' && e.message?.type === 'image')
@@ -4487,7 +4498,7 @@ Deno.serve(async (req) => {
             geminiApiKey = keyRow?.value || ''
           }
 
-          let preferredModel = 'gemini-4-argon'
+          let preferredModel = 'gemini-flash-latest'
           const { data: modelRow } = await supabaseAdmin
             .from('app_settings')
             .select('value')
@@ -4657,9 +4668,46 @@ Deno.serve(async (req) => {
           }
         } catch (batchErr: any) {
           console.error('Error in batch image receipt handler:', batchErr)
+          const targetId = latestItem?.source?.groupId || latestItem?.source?.roomId || latestItem?.source?.userId
+          const isQuota = String(batchErr?.message || '').includes('402') || String(batchErr?.message || '').includes('RESOURCE_EXHAUSTED')
+          const isRateLimit = String(batchErr?.message || '').includes('429') || String(batchErr?.message || '').includes('quota')
+          let errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้: เกิดข้อผิดพลาดในระบบ AI (${batchErr?.message || 'Unknown error'})`
+          if (isQuota) {
+            errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้:\nเครดิต Gemini API ใน Google AI Studio หมดอายุ/ยอดเงินคงเหลือหมด (Prepayment credits depleted)\nโปรดตรวจสอบหรือเติมเครดิตในระบบ`
+          } else if (isRateLimit) {
+            errorText = `⚠️ บอท Yuzu ไม่สามารถอ่านบิลได้:\nการเรียกใช้งาน Gemini API เกินขีดจำกัดชั่วคราว (Rate limit exceeded) กรุณาลองใหม่อีกครั้งใน 1-2 นาที`
+          }
+
+          try {
+            const errResp = await fetch('https://api.line.me/v2/bot/message/reply', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+              },
+              body: JSON.stringify({
+                replyToken: replyToken,
+                messages: [{ type: 'text', text: errorText }]
+              })
+            })
+            if (!errResp.ok && targetId) {
+              await fetch('https://api.line.me/v2/bot/message/push', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${CHANNEL_ACCESS_TOKEN}`,
+                },
+                body: JSON.stringify({
+                  to: targetId,
+                  messages: [{ type: 'text', text: errorText }]
+                })
+              })
+            }
+          } catch (lineErr) {
+            console.error('Failed to notify LINE about receipt scanning error:', lineErr)
+          }
         }
       }
-    }
     }
 
     return new Response('OK', { headers: corsHeaders })
