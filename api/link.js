@@ -204,7 +204,9 @@ function generateStandaloneLandingHtml(data) {
     const checkins = data.checkins || []
 
     const shopName = escapeHtml(settings.link_shop_name || "In the haus | ร้านในบ้าน นครพนม")
-    const shopNameTh = escapeHtml(settings.link_shop_name_th || "ในบ้าน")
+    // Masthead: "In the haus | ร้านในบ้าน นครพนม" → "In the haus" over "ร้านในบ้าน นครพนม", leaving room for the status cell
+    const [mastTitle, ...mastRest] = String(settings.link_shop_name || "In the haus | ร้านในบ้าน นครพนม").split('|').map(t => t.trim())
+    const mastSub = mastRest.join(' ') || settings.link_shop_name_th || "ในบ้าน"
     const subtitle = escapeHtml(settings.link_subtitle || "We Make It Bold . จริตจัด รสชัดเต็ม · Real Southern Taste")
     const hours = escapeHtml(settings.link_hours || "เปิดทุกวัน 11:30 - 23:30 น. (ครัวปิด 22:00 น.)")
     const locationText = escapeHtml(settings.link_location_text || "ตัวร้านตั้งอยู่บนถนนสุนทรวิจิตร ใกล้ลานพญาศรีสัตตนาคราช 2 นาที ริมโขง นครพนม")
@@ -429,16 +431,22 @@ function generateStandaloneLandingHtml(data) {
         :where(#sec-menu, #sec-vibe, #sec-connect) > .section-header:not(:first-child) { margin-top: var(--space-2); }
         .row-link.slip { border-bottom: none; }
         .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-1) var(--space-3); font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .masthead { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5) var(--space-4); }
-        .logo-box { width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
-        .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; overflow-wrap: anywhere; min-width: 0; }
-        .shop-sub { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); }
+        /* Masthead: brand cell | live status cell */
+        .masthead { display: grid; grid-template-columns: auto minmax(0, 1fr); }
+        .brand { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); min-width: 0; }
+        .logo-box { width: 48px; height: 48px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
+        .shop-name { display: flex; flex-direction: column; min-width: 0; }
+        .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; white-space: nowrap; }
+        .shop-sub { font-size: var(--text-sm); font-weight: 400; line-height: 1.5; color: var(--color-muted); }
+        .status-cell { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: var(--space-3) var(--space-4); border-left: 1px solid var(--color-rule); min-width: 0; }
+        @media (max-width: 359px) { .brand { padding: var(--space-3); } .status-cell { padding: var(--space-3); } }
 
         /* Status / hours / location cells */
         .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .fact { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
         .fact + .fact { border-left: 1px solid var(--color-rule); }
         .fact.full { grid-column: span 2; border-left: none; border-top: 1px solid var(--color-rule); }
+        .fact.wide { grid-column: span 2; }
         .fact-label { font-size: var(--text-xs); color: var(--color-neutral); }
         .fact-val { font-size: var(--text-md); font-weight: 600; line-height: 1.4; display: flex; align-items: center; gap: var(--space-2); }
         .dot { width: 8px; height: 8px; flex-shrink: 0; background: var(--color-accent-2); }
@@ -667,10 +675,15 @@ function generateStandaloneLandingHtml(data) {
         <div class="marquee">${subtitle}</div>
 
         <header class="masthead">
-            <img src="${optImg(logoUrl, 120, 80)}" alt="${shopName}" class="logo-box" width="56" height="56">
-            <div>
-                <h1 class="shop-title">${shopName}</h1>
-                <p class="shop-sub">${shopNameTh}</p>
+            <div class="brand">
+                <img src="${optImg(logoUrl, 120, 80)}" alt="${shopName}" class="logo-box" width="48" height="48">
+                <h1 class="shop-name"><span class="shop-title">${escapeHtml(mastTitle)}</span><span class="shop-sub">${escapeHtml(mastSub)}</span></h1>
+            </div>
+            <!-- Live status: can I go now? -->
+            <div class="status-cell" aria-live="polite">
+                <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> เปิดทุกวัน</span>
+                <span class="fact-note nb" id="status-hours">${hoursMain}</span>
+                <span class="kitchen-note" id="kitchen-note" hidden></span>
             </div>
         </header>
 
@@ -742,12 +755,7 @@ function generateStandaloneLandingHtml(data) {
 
         <!-- Facts: status · hours · location -->
         <div class="facts">
-            <div class="fact">
-                <span class="fact-label">สถานะ</span>
-                <span class="fact-val" id="open-status" data-hours="${hours}"><span class="dot"></span> เปิดทุกวัน</span>
-                <span class="kitchen-note" id="kitchen-note" hidden></span>
-            </div>
-            <div class="fact">
+            <div class="fact wide">
                 <span class="fact-label">เวลาเปิด</span>
                 <span class="fact-val nb">${hoursMain}</span>
                 ${hoursNote ? `<span class="fact-note">${hoursNote}</span>` : ''}
@@ -1056,8 +1064,10 @@ function generateStandaloneLandingHtml(data) {
                 if (close <= open) close += 24 * 60;
                 const isOpen = (now >= open && now < close) || (now + 24 * 60 >= open && now + 24 * 60 < close);
                 el.innerHTML = isOpen
-                    ? '<span class="dot"></span> เปิดอยู่ตอนนี้'
-                    : '<span class="dot closed"></span> ปิดอยู่ · เปิด ' + m[1] + ':' + m[2] + ' น.';
+                    ? '<span class="dot"></span> เปิดอยู่'
+                    : '<span class="dot closed"></span> ปิดอยู่';
+                const hoursLine = document.getElementById('status-hours');
+                if (!isOpen && hoursLine) hoursLine.textContent = 'เปิด ' + m[1] + ':' + m[2] + ' น.';
 
                 // Kitchen closing countdown: last 2 hours before "ครัวปิด HH:MM", then "kitchen closed"
                 const k = (el.dataset.hours || '').match(/ครัวปิด\\s*(\\d{1,2})[:.](\\d{2})/);
@@ -1073,9 +1083,10 @@ function generateStandaloneLandingHtml(data) {
                         note.innerHTML = '<span class="nb">ครัวปิด ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>';
                         note.hidden = false;
                     } else if (left <= 0) {
-                        note.textContent = 'ครัวปิดแล้ว · ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.';
+                        note.innerHTML = '<span class="nb">ครัวปิดแล้ว</span> · <span class="nb">ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.</span>';
                         note.hidden = false;
                     }
+                    if (!note.hidden && hoursLine) hoursLine.hidden = true;
                 }
             } catch(e) {}
         })();
