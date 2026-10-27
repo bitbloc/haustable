@@ -143,6 +143,12 @@ function phrasesHtml(text, splitter, joiner) {
         .map(t => `<span class="nb">${escapeHtml(t)}</span>`).join(joiner)
 }
 
+// Set name with each phrase kept whole: lines break only at " + " or " · "
+function setTitleHtml(title) {
+    return String(title || '').split(/(\s[+·]\s)/)
+        .map((part, i) => i % 2 ? escapeHtml(part) : `<span class="nb">${escapeHtml(part)}</span>`).join('')
+}
+
 // One row of the "First time here?" set chooser
 function buildSetRow(item, spiceMap) {
     const name = String(item.name || '')
@@ -176,6 +182,7 @@ function buildSetRow(item, spiceMap) {
         perPerson,
         heat: heatHtml(spiceRange(name, spiceMap, item.id)),
         thumb: item.image_url ? optImg(item.image_url, 160, 70) : '',
+        feature: item.image_url ? optImg(item.image_url, 720, 70) : '',
         bigImg: item.image_url ? optImg(item.image_url, 800) : ''
     }
 }
@@ -354,7 +361,8 @@ function generateStandaloneLandingHtml(data) {
         /* Hallmark · macrostructure: Catalogue · tone: utilitarian (Dieter Rams × Thai modern) · anchor hue: 28 terracotta
          * theme: custom (.agents/AGENTS.md) · paper oklch(97% 0.008 28) · accent oklch(52% 0.16 28) · IBM Plex Sans Thai + IBM Plex Mono
          * axes: light / grotesk-sans / warm · nav: tabular tab strip · footer: Ft4 dense colophon · sticky: C4 tabular bar · enrichment: none
-         * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
+         * tasteskill pass (--keep palette,type): blocks separated by tone + 8px ground gaps; first-time set chooser is the one dark field with a large starter photo
+         * Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V5 */
         :root {
             --color-paper: oklch(97% 0.008 28);
             --color-paper-2: oklch(94% 0.010 28);
@@ -364,11 +372,16 @@ function generateStandaloneLandingHtml(data) {
             --color-muted: oklch(42% 0.010 28);
             --color-ink: oklch(18% 0.012 28);
             --color-ink-2: oklch(28% 0.012 28);
+            --color-ink-3: oklch(36% 0.012 28);
+            --color-on-ink-2: oklch(82% 0.010 28);
             --color-accent: oklch(52% 0.16 28);
+            --color-accent-light: oklch(72% 0.13 28);
             --color-accent-2: oklch(45% 0.08 140);
+            --color-accent-2-light: oklch(80% 0.10 140);
             --color-accent-2-wash: oklch(95% 0.025 140);
             --color-focus: oklch(60% 0.15 28);
             --color-signal: oklch(93% 0.19 113);
+            --color-signal-2: oklch(88% 0.19 113);
             --color-line: oklch(53% 0.14 152);
             --color-line-2: oklch(47% 0.13 152);
             --color-scrim: oklch(14% 0.010 28 / 0.9);
@@ -391,8 +404,8 @@ function generateStandaloneLandingHtml(data) {
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { overflow-x: clip; }
-        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper); }
-        body { font-family: var(--font-body); font-size: var(--text-md); background: var(--color-paper); color: var(--color-ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--color-paper-3); }
+        body { font-family: var(--font-body); font-size: var(--text-md); background: var(--color-paper-3); color: var(--color-ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
         a { color: inherit; text-decoration: none; }
         button { font: inherit; color: inherit; cursor: pointer; border: none; background: none; }
         img { display: block; max-width: 100%; height: auto; }
@@ -405,15 +418,20 @@ function generateStandaloneLandingHtml(data) {
         .fact-note { font-size: var(--text-xs); color: var(--color-muted); line-height: 1.4; }
 
         /* Page frame */
-        .container { width: 100%; max-width: 560px; margin: 0 auto; background: var(--color-paper); border-left: 1px solid var(--color-rule); border-right: 1px solid var(--color-rule); min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom)); }
+        /* Blocks are paper slips on a darker ground: an 8px gap of ground between blocks, never a hairline */
+        .container { width: 100%; max-width: 560px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom)); }
+        .masthead, .facts, .tags-wrap, footer, :where(#sec-menu, #sec-vibe, #sec-connect) > * { background-color: var(--color-paper); }
+        .row-link.slip, .facts, .tab-bar, .quick-grid, .tags-wrap, footer { margin-top: var(--space-2); }
+        :where(#sec-menu, #sec-vibe, #sec-connect) > .section-header:not(:first-child) { margin-top: var(--space-2); }
+        .row-link.slip { border-bottom: none; }
         .marquee { background: var(--color-signal); color: var(--color-ink); border-bottom: 1px solid var(--color-ink); padding: var(--space-1) var(--space-3); font-family: var(--font-mono); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.12em; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .masthead { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5) var(--space-4); border-bottom: 1px solid var(--color-rule); }
+        .masthead { display: flex; align-items: center; gap: var(--space-4); padding: var(--space-5) var(--space-4); }
         .logo-box { width: 56px; height: 56px; flex-shrink: 0; border: 1px solid var(--color-ink); object-fit: cover; }
         .shop-title { font-family: var(--font-display); font-size: var(--text-xl); font-weight: 700; line-height: 1.3; letter-spacing: 0.01em; overflow-wrap: anywhere; min-width: 0; }
         .shop-sub { font-size: var(--text-sm); color: var(--color-muted); margin-top: var(--space-1); }
 
         /* Status / hours / location cells */
-        .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .fact { padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
         .fact + .fact { border-left: 1px solid var(--color-rule); }
         .fact.full { grid-column: span 2; border-left: none; border-top: 1px solid var(--color-rule); }
@@ -435,49 +453,66 @@ function generateStandaloneLandingHtml(data) {
         .loc-hero-sub { font-size: var(--text-sm); font-weight: 500; }
         .loc-hero-btn { margin-top: var(--space-1); min-height: 48px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--color-ink); color: var(--color-paper); font-size: var(--text-lg); font-weight: 600; border-radius: var(--radius); }
 
-        /* First-time set chooser (Catalogue) */
-        .sets { border-bottom: 1px solid var(--color-rule); }
-        .sets-head { padding: var(--space-5) var(--space-4) var(--space-3); }
-        .sets-title { font-size: var(--text-xl); font-weight: 700; line-height: 1.3; }
-        .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--text-sm); font-weight: 500; color: var(--color-accent-2); }
-        .sets-walkin::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2); flex-shrink: 0; }
-        .set-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border-top: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); }
-        .set-tab { min-height: 48px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.25; color: var(--color-muted); transition: background-color var(--dur) var(--ease-out); }
-        .set-tab + .set-tab { border-left: 1px solid var(--color-rule); }
-        .set-tab:hover { background: var(--color-paper-2); }
-        .set-tab-label { font-size: var(--text-md); font-weight: 600; white-space: nowrap; }
-        .set-tab-count { font-size: 11px; }
-        .set-tab[aria-selected="true"] { background: var(--color-ink); color: var(--color-paper); }
+        /* First-time set chooser: the page's one dark field, so the first decision is read first.
+         * Inside it the starter set is a light card with a large photo; the other sets are dark tiles. */
+        .sets { margin-top: var(--space-2); background: var(--color-ink); color: var(--color-paper); padding-bottom: var(--space-2); }
+        .sets-head { padding: var(--space-6) var(--space-4) var(--space-5); }
+        .sets-title { font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
+        .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
+        .sets-walkin::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2-light); flex-shrink: 0; }
+        .set-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 0 var(--space-4); }
+        .set-tab { min-height: 56px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; background: var(--color-ink-2); color: var(--color-on-ink-2); border-radius: var(--radius); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .set-tab:hover { background: var(--color-ink-3); color: var(--color-paper); }
+        .set-tab-label { font-size: var(--text-lg); font-weight: 700; white-space: nowrap; }
+        .set-tab-count { font-size: var(--text-xs); }
+        .set-tab[aria-selected="true"] { background: var(--color-paper); color: var(--color-ink); }
+        .set-panel { display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4) 0; }
         .set-panel[hidden] { display: none; }
-        .set-row { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3) var(--space-4); }
-        .set-row + .set-row { border-top: 1px solid var(--color-rule); }
-        .set-thumb { width: 72px; height: 72px; object-fit: cover; border: 1px solid var(--color-rule); background: var(--color-paper-2); cursor: zoom-in; }
-        .set-thumb-empty { width: 72px; height: 72px; background: var(--color-paper-2); border: 1px solid var(--color-rule); }
-        .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.35; }
-        .set-tag { display: inline-block; margin-left: var(--space-1); padding: 0 var(--space-2); font-size: 11px; font-weight: 600; line-height: 20px; vertical-align: 2px; color: var(--color-ink); border: 1px solid var(--color-ink); border-radius: var(--radius); white-space: nowrap; }
-        .set-dishes { font-size: var(--text-sm); color: var(--color-muted); line-height: 1.55; margin-top: var(--space-1); }
+        .set-feature { background: var(--color-paper); color: var(--color-ink); border-radius: var(--radius); overflow: hidden; }
+        .set-feature-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--color-paper-3); cursor: zoom-in; }
+        .set-feature-body { padding: var(--space-4); }
+        .set-feature-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; }
+        .set-feature .set-name { font-size: var(--text-xl); line-height: 1.35; }
+        .set-feature .set-price .num { font-size: 28px; line-height: 1.15; }
+        .set-feature .set-dishes { font-size: var(--text-md); color: var(--color-ink-2); margin-top: var(--space-2); }
+        .set-feature .set-pp { color: var(--color-muted); }
+        .set-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3); background: var(--color-ink-2); border-radius: var(--radius); }
+        .set-row > .set-thumb, .set-row > .set-thumb-empty { grid-row: span 2; }
+        .set-row-body { grid-column: 2 / -1; margin-top: calc(var(--space-1) * -1); }
+        .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-ink-3); cursor: zoom-in; }
+        .set-thumb-empty { width: 64px; height: 64px; background: var(--color-ink-3); }
+        .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.4; }
+        .set-tag { display: inline-block; margin-left: var(--space-2); padding: 0 var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 22px; vertical-align: 2px; color: var(--color-paper); background: var(--color-accent); border-radius: var(--radius); white-space: nowrap; }
+        .set-dishes { font-size: var(--text-sm); color: var(--color-on-ink-2); line-height: 1.6; margin-top: var(--space-1); }
         .set-price { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-1); }
         .set-price .num { font-size: var(--text-xl); font-weight: 600; line-height: 1.2; }
-        .set-pp { font-size: var(--text-xs); color: var(--color-muted); white-space: nowrap; }
-        .set-ctas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); border-top: 1px solid var(--color-rule); }
-        .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; white-space: nowrap; transition: background-color var(--dur) var(--ease-out); }
-        .set-btn.primary { background: var(--color-ink); color: var(--color-paper); }
-        .set-btn.primary:hover { background: var(--color-ink-2); }
-        .set-btn + .set-btn { border-left: 1px solid var(--color-rule); }
-        .set-btn:not(.primary):hover { background: var(--color-paper-2); }
-        .set-more { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--color-rule); font-size: var(--text-sm); color: var(--color-muted); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-3); }
-        .set-more a { color: var(--color-ink); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-rule); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
-        .set-more a:hover { text-decoration-color: var(--color-ink); }
+        .set-pp { font-size: var(--text-xs); color: var(--color-on-ink-2); white-space: nowrap; }
+        .set-ctas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 2px; padding: var(--space-4) var(--space-4) 0; }
+        .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 700; white-space: nowrap; border-radius: var(--radius); background: var(--color-ink-2); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .set-btn:hover { background: var(--color-ink-3); }
+        .set-btn:active { transform: scale(0.98); }
+        .set-btn.primary { background: var(--color-signal); color: var(--color-ink); }
+        .set-btn.primary:hover { background: var(--color-signal-2); }
+        .set-more { padding: var(--space-4) var(--space-4) var(--space-3); font-size: var(--text-sm); color: var(--color-on-ink-2); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-3); }
+        .set-more a { color: var(--color-paper); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-ink-3); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
+        .set-more a:hover { text-decoration-color: var(--color-paper); }
+        @media (min-width: 480px) { .sets-title { font-size: 36px; } }
+        @media (prefers-reduced-motion: no-preference) {
+            .set-panel:not([hidden]) { animation: set-in 240ms var(--ease-out); }
+            @keyframes set-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+        }
 
-        /* Heat meter: three cells + label */
+        /* Heat meter: three cells + label (light variants on the dark tiles) */
         .heat { display: inline-flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 1; color: var(--color-accent); white-space: nowrap; }
         .heat-cells { display: inline-flex; gap: 2px; }
         .heat-cells i { width: 10px; height: 6px; border: 1px solid currentColor; }
         .heat-cells i.on { background: currentColor; }
         .heat.h0 { color: var(--color-accent-2); }
+        .set-row .heat { color: var(--color-accent-light); }
+        .set-row .heat.h0 { color: var(--color-accent-2-light); }
 
         /* Link rows (customer photos, booklet, connect) */
-        .row-link { min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-rule); font-size: var(--text-md); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
+        .row-link { min-height: 52px; padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-bottom: 1px solid var(--color-rule); background: var(--color-paper); font-size: var(--text-md); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
         .row-link:hover { background: var(--color-paper-2); }
         .row-link .row-sub { display: block; font-size: var(--text-xs); font-weight: 400; color: var(--color-muted); margin-top: 2px; }
         .row-link .arrow { color: var(--color-muted); }
@@ -492,7 +527,7 @@ function generateStandaloneLandingHtml(data) {
         .row-main { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
 
         /* Quick actions fallback (no sets configured) */
-        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 1px solid var(--color-rule); }
+        .quick-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: var(--color-paper); }
         .quick-btn { padding: var(--space-4); display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 600; transition: background-color var(--dur) var(--ease-out); }
         .quick-btn + .quick-btn { border-left: 1px solid var(--color-rule); }
         .quick-btn:hover { background: var(--color-paper-2); }
@@ -507,7 +542,7 @@ function generateStandaloneLandingHtml(data) {
         /* Section heads */
         .section-header { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); padding: var(--space-6) var(--space-4) var(--space-3); border-bottom: 1px solid var(--color-rule); }
         .section-header.sub { padding: var(--space-4) var(--space-4) var(--space-2); background: var(--color-paper-2); }
-        .section-title { font-size: var(--text-lg); font-weight: 700; line-height: 1.35; }
+        .section-title { font-size: var(--text-xl); font-weight: 700; line-height: 1.35; }
         .section-meta { font-size: var(--text-xs); color: var(--color-neutral); white-space: nowrap; }
 
         /* Signature dishes */
@@ -642,6 +677,62 @@ function generateStandaloneLandingHtml(data) {
             <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="loc-hero-btn" onclick="handleDirectionsClick(event)">นำทางมาร้าน <span class="arrow">→</span></a>
         </section>
 
+        ${setGroups.length > 0 ? `
+        <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
+        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
+            <div class="sets-head">
+                <h2 class="sets-title" id="sets-title"><span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span></h2>
+                <p class="sets-walkin">ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</p>
+            </div>
+            ${setGroups.length > 1 ? `
+            <div class="set-tabs" role="tablist" aria-label="มากี่คน">
+                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${g.key} คน</span><span class="set-tab-count">${g.rows.length} ชุด</span></button>`).join('')}
+            </div>` : ''}
+            ${setGroups.map(g => `
+            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
+                ${g.rows.map((r, i) => i === 0 ? `
+                <article class="set-feature">
+                    ${r.feature ? `<img class="set-feature-img" src="${r.feature}" alt="${escapeHtml(r.title)}" width="720" height="450" loading="${g.key === defaultGroup ? 'eager' : 'lazy'}"${g.key === defaultGroup ? ' fetchpriority="high"' : ''} decoding="async" onclick="openLightbox('${r.bigImg}')">` : ''}
+                    <div class="set-feature-body">
+                        <div class="set-feature-top">
+                            <h3 class="set-name">${setTitleHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</h3>
+                            <div class="set-price">
+                                <span class="num">฿${r.price}</span>
+                                ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
+                        ${r.heat}
+                    </div>
+                </article>` : `
+                <div class="set-row">
+                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="64" height="64" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
+                    <div class="set-name">${setTitleHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</div>
+                    <div class="set-price">
+                        <span class="num">฿${r.price}</span>
+                        ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
+                    </div>
+                    <div class="set-row-body">
+                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
+                        ${r.heat}
+                    </div>
+                </div>`).join('')}
+            </div>`).join('')}
+            <div class="set-ctas">
+                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
+                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
+            </div>
+            <div class="set-more">
+                <span>อยากได้โต๊ะแน่นอน?</span>
+                <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า</a>
+                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน</a>
+            </div>
+        </section>` : `
+        <div class="quick-grid">
+            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">จองโต๊ะ <span class="arrow">→</span></a>
+            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">สั่งรับหน้าร้าน <span class="arrow">→</span></a>
+        </div>`}
+
         <!-- Facts: status · hours · location -->
         <div class="facts">
             <div class="fact">
@@ -667,49 +758,7 @@ function generateStandaloneLandingHtml(data) {
             </div>
         </div>
 
-        ${setGroups.length > 0 ? `
-        <!-- First-time set chooser: every set, grouped by party size; walk-in first, booking optional -->
-        <section class="sets" id="starter-card" data-lunch="${lunchWindow}" aria-labelledby="sets-title">
-            <div class="sets-head">
-                <h2 class="sets-title" id="sets-title">เพิ่งมาครั้งแรก? เลือกชุดตามจำนวนคน</h2>
-                <p class="sets-walkin">ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</p>
-            </div>
-            ${setGroups.length > 1 ? `
-            <div class="set-tabs" role="tablist" aria-label="มากี่คน">
-                ${setGroups.map(g => `<button type="button" class="set-tab" role="tab" id="set-tab-${g.min}" aria-controls="set-panel-${g.min}" aria-selected="${g.key === defaultGroup}" data-group="${g.key}" onclick="selectSetGroup('${g.key}')"><span class="set-tab-label">${g.key} คน</span><span class="set-tab-count">${g.rows.length} ชุด</span></button>`).join('')}
-            </div>` : ''}
-            ${setGroups.map(g => `
-            <div class="set-panel" role="tabpanel" id="set-panel-${g.min}" aria-labelledby="set-tab-${g.min}" data-group="${g.key}"${g.key === defaultGroup ? '' : ' hidden'}>
-                ${g.rows.map(r => `
-                <div class="set-row">
-                    ${r.thumb ? `<img class="set-thumb" src="${r.thumb}" alt="${escapeHtml(r.title)}" width="72" height="72" loading="eager" decoding="async" onclick="openLightbox('${r.bigImg}')">` : '<span class="set-thumb-empty" aria-hidden="true"></span>'}
-                    <div>
-                        <div class="set-name">${escapeHtml(r.title)}${r.starter ? '<span class="set-tag">เริ่มที่ชุดนี้</span>' : ''}</div>
-                        <div class="set-dishes">${phrasesHtml(r.dishes, '•', ' • ')}</div>
-                        ${r.heat}
-                    </div>
-                    <div class="set-price">
-                        <span class="num">฿${r.price}</span>
-                        ${r.perPerson ? `<span class="set-pp">${escapeHtml(r.perPerson)}</span>` : ''}
-                    </div>
-                </div>`).join('')}
-            </div>`).join('')}
-            <div class="set-ctas">
-                <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="set-btn primary" onclick="handleStarterClick(event, 'directions')">นำทางมาร้าน</a>
-                <a href="tel:0985284217" class="set-btn" onclick="handleStarterClick(event, 'call')">โทรสอบถาม</a>
-            </div>
-            <div class="set-more">
-                <span>อยากได้โต๊ะแน่นอน?</span>
-                <a href="/booking" onclick="handleStarterClick(event, 'booking')">จองล่วงหน้า</a>
-                <a href="/pickup" onclick="handleStarterClick(event, 'pickup')">สั่งรับหน้าร้าน</a>
-            </div>
-        </section>` : `
-        <div class="quick-grid">
-            <a href="/booking" class="quick-btn" id="btn-quick-booking" onclick="handleBookingClick(event)">จองโต๊ะ <span class="arrow">→</span></a>
-            <a href="/pickup" class="quick-btn" id="btn-quick-pickup" onclick="handlePickupClick(event)">สั่งรับหน้าร้าน <span class="arrow">→</span></a>
-        </div>`}
-
-        <a href="/link/hauscheckin" class="row-link">
+        <a href="/link/hauscheckin" class="row-link slip">
             <span class="row-main"><span class="dot"></span><span>รูปจากลูกค้าจริง<span class="row-sub">บอร์ดเช็กอินของลูกค้าที่มาร้าน</span></span></span>
             <span class="arrow">→</span>
         </a>
@@ -1013,7 +1062,8 @@ function generateStandaloneLandingHtml(data) {
                     const left = kitchen - nowAdj;
                     if (left > 0 && left <= 120) {
                         const h = Math.floor(left / 60), mm = left % 60;
-                        note.textContent = 'ครัวปิด ' + k[1] + ':' + k[2] + ' · เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '');
+                        // Each phrase stays on one line ("เหลืออีก 21 นาที" never splits)
+                        note.innerHTML = '<span class="nb">ครัวปิด ' + k[1] + ':' + k[2] + '</span> · <span class="nb">เหลืออีก ' + (h ? h + ' ชม. ' : '') + (mm ? mm + ' นาที' : '') + '</span>';
                         note.hidden = false;
                     } else if (left <= 0) {
                         note.textContent = 'ครัวปิดแล้ว · ร้านเปิดถึง ' + m[3] + ':' + m[4] + ' น.';
