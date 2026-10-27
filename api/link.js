@@ -373,9 +373,13 @@ function generateStandaloneLandingHtml(data) {
             --color-ink: oklch(18% 0.012 28);
             --color-ink-2: oklch(28% 0.012 28);
             --color-ink-3: oklch(36% 0.012 28);
-            --color-on-ink-2: oklch(82% 0.010 28);
+            --color-on-ink-2: oklch(84% 0.012 28);
+            /* First-time field: roasted clay brown, softer against the cream than ink */
+            --color-field: oklch(31% 0.035 28);
+            --color-field-2: oklch(37% 0.035 28);
+            --color-field-3: oklch(44% 0.035 28);
             --color-accent: oklch(52% 0.16 28);
-            --color-accent-light: oklch(72% 0.13 28);
+            --color-accent-light: oklch(76% 0.12 28);
             --color-accent-2: oklch(45% 0.08 140);
             --color-accent-2-light: oklch(80% 0.10 140);
             --color-accent-2-wash: oklch(95% 0.025 140);
@@ -455,14 +459,16 @@ function generateStandaloneLandingHtml(data) {
 
         /* First-time set chooser: the page's one dark field, so the first decision is read first.
          * Inside it the starter set is a light card with a large photo; the other sets are dark tiles. */
-        .sets { margin-top: var(--space-2); background: var(--color-ink); color: var(--color-paper); padding-bottom: var(--space-2); }
+        .sets { margin-top: var(--space-2); background: var(--color-field); color: var(--color-paper); padding-bottom: var(--space-2); }
         .sets-head { padding: var(--space-6) var(--space-4) var(--space-5); }
         .sets-title { font-size: 30px; font-weight: 700; line-height: 1.3; letter-spacing: -0.01em; }
         .sets-walkin { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); font-size: var(--text-md); font-weight: 500; color: var(--color-on-ink-2); }
+        .sets-menu-link { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; margin-top: var(--space-1); font-size: var(--text-md); font-weight: 600; color: var(--color-paper); text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 4px; transition: text-decoration-color var(--dur) var(--ease-out); }
+        .sets-menu-link:hover { text-decoration-color: var(--color-paper); }
         .sets-walkin::before { content: ""; width: 8px; height: 8px; background: var(--color-accent-2-light); flex-shrink: 0; }
         .set-tabs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 2px; padding: 0 var(--space-4); }
-        .set-tab { min-height: 56px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; background: var(--color-ink-2); color: var(--color-on-ink-2); border-radius: var(--radius); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
-        .set-tab:hover { background: var(--color-ink-3); color: var(--color-paper); }
+        .set-tab { min-height: 56px; padding: var(--space-2); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.3; background: var(--color-field-2); color: var(--color-on-ink-2); border-radius: var(--radius); transition: background-color var(--dur) var(--ease-out), color var(--dur) var(--ease-out); }
+        .set-tab:hover { background: var(--color-field-3); color: var(--color-paper); }
         .set-tab-label { font-size: var(--text-lg); font-weight: 700; white-space: nowrap; }
         .set-tab-count { font-size: var(--text-xs); }
         .set-tab[aria-selected="true"] { background: var(--color-paper); color: var(--color-ink); }
@@ -476,11 +482,11 @@ function generateStandaloneLandingHtml(data) {
         .set-feature .set-price .num { font-size: 28px; line-height: 1.15; }
         .set-feature .set-dishes { font-size: var(--text-md); color: var(--color-ink-2); margin-top: var(--space-2); }
         .set-feature .set-pp { color: var(--color-muted); }
-        .set-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3); background: var(--color-ink-2); border-radius: var(--radius); }
+        .set-row { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: var(--space-3); align-items: start; padding: var(--space-3); background: var(--color-field-2); border-radius: var(--radius); }
         .set-row > .set-thumb, .set-row > .set-thumb-empty { grid-row: span 2; }
         .set-row-body { grid-column: 2 / -1; margin-top: calc(var(--space-1) * -1); }
-        .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-ink-3); cursor: zoom-in; }
-        .set-thumb-empty { width: 64px; height: 64px; background: var(--color-ink-3); }
+        .set-thumb { width: 64px; height: 64px; object-fit: cover; background: var(--color-field-3); cursor: zoom-in; }
+        .set-thumb-empty { width: 64px; height: 64px; background: var(--color-field-3); }
         .set-name { font-size: var(--text-lg); font-weight: 700; line-height: 1.4; }
         .set-tag { display: inline-block; margin-left: var(--space-2); padding: 0 var(--space-2); font-size: var(--text-xs); font-weight: 600; line-height: 22px; vertical-align: 2px; color: var(--color-paper); background: var(--color-accent); border-radius: var(--radius); white-space: nowrap; }
         .set-dishes { font-size: var(--text-sm); color: var(--color-on-ink-2); line-height: 1.6; margin-top: var(--space-1); }
@@ -488,13 +494,13 @@ function generateStandaloneLandingHtml(data) {
         .set-price .num { font-size: var(--text-xl); font-weight: 600; line-height: 1.2; }
         .set-pp { font-size: var(--text-xs); color: var(--color-on-ink-2); white-space: nowrap; }
         .set-ctas { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 2px; padding: var(--space-4) var(--space-4) 0; }
-        .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 700; white-space: nowrap; border-radius: var(--radius); background: var(--color-ink-2); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
-        .set-btn:hover { background: var(--color-ink-3); }
+        .set-btn { min-height: 52px; display: flex; align-items: center; justify-content: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: 700; white-space: nowrap; border-radius: var(--radius); background: var(--color-field-2); color: var(--color-paper); transition: background-color var(--dur) var(--ease-out), transform var(--dur) var(--ease-out); }
+        .set-btn:hover { background: var(--color-field-3); }
         .set-btn:active { transform: scale(0.98); }
         .set-btn.primary { background: var(--color-signal); color: var(--color-ink); }
         .set-btn.primary:hover { background: var(--color-signal-2); }
         .set-more { padding: var(--space-4) var(--space-4) var(--space-3); font-size: var(--text-sm); color: var(--color-on-ink-2); display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-3); }
-        .set-more a { color: var(--color-paper); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-ink-3); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
+        .set-more a { color: var(--color-paper); font-weight: 600; text-decoration: underline; text-decoration-color: var(--color-field-3); text-underline-offset: 3px; white-space: nowrap; transition: text-decoration-color var(--dur) var(--ease-out); }
         .set-more a:hover { text-decoration-color: var(--color-paper); }
         @media (min-width: 480px) { .sets-title { font-size: 36px; } }
         @media (prefers-reduced-motion: no-preference) {
@@ -683,6 +689,7 @@ function generateStandaloneLandingHtml(data) {
             <div class="sets-head">
                 <h2 class="sets-title" id="sets-title"><span class="nb">เพิ่งมาครั้งแรก?</span> <span class="nb">เลือกชุดตามจำนวนคน</span></h2>
                 <p class="sets-walkin">ไม่ต้องจองก็มาได้ · walk-in ได้เลย มีที่จอดรถ</p>
+                <a href="#btn-full-menu" class="sets-menu-link" onclick="jumpToFullMenu(event)">หรือดูเมนูทั้งหมด ${menuItems.length} รายการ <span class="arrow">↓</span></a>
             </div>
             ${setGroups.length > 1 ? `
             <div class="set-tabs" role="tablist" aria-label="มากี่คน">
@@ -1140,6 +1147,17 @@ function generateStandaloneLandingHtml(data) {
             let cells = '';
             for (let n = 1; n <= 3; n++) cells += '<i' + (n <= level ? ' class="on"' : '') + '></i>';
             return '<span class="heat h' + level + '" role="img" aria-label="ความเผ็ด: ' + label + '"><span class="heat-cells" aria-hidden="true">' + cells + '</span><span class="heat-label">' + label + '</span></span>';
+        }
+
+        // From the first-time block: open the full menu and bring it under the tab strip
+        function jumpToFullMenu(e) {
+            if (e) e.preventDefault();
+            switchSection('menu');
+            if (document.getElementById('full-menu-content').style.display === 'none') toggleFullMenu();
+            const bar = document.querySelector('.tab-bar');
+            const top = document.getElementById('btn-full-menu').getBoundingClientRect().top + window.scrollY - bar.offsetHeight;
+            const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            window.scrollTo({ top: top, behavior: smooth ? 'smooth' : 'auto' });
         }
 
         function toggleFullMenu() {
