@@ -657,11 +657,14 @@ function generateStandaloneLandingHtml(data) {
                 };
                 userEvents.forEach(evt => window.addEventListener(evt, triggerGtm, { passive: true, once: true }));
 
-                // Background idle fallback for real visitors who remain on page without immediate interaction
-                if ('requestIdleCallback' in window) {
-                    requestIdleCallback(() => setTimeout(window.loadGtm, 3500));
+                // Load GTM as soon as the page has finished loading, so the tags are ready
+                // before an ad visitor taps "นำทาง" / LINE / โทร. Waiting 3.5s for idle lost
+                // conversions on mobile: the tap hands off to the Maps/LINE app before GTM arrives.
+                // Bots are excluded above, so lab CWV scores are unaffected.
+                if (document.readyState === 'complete') {
+                    window.loadGtm();
                 } else {
-                    setTimeout(window.loadGtm, 3500);
+                    window.addEventListener('load', window.loadGtm, { once: true });
                 }
             }
         })();
