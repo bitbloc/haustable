@@ -38,6 +38,37 @@ function getDistance(lat1, lon1, lat2, lon2) {
     return R * c; // Distance in meters
 }
 
+// Search aliases: menu names are mostly Thai, so common English / Thai terms map to each other
+const SEARCH_ALIASES = {
+    'กาแฟ': ['coffee'],
+    'coffee': ['กาแฟ'],
+    'latte': ['ลาเต้'],
+    'americano': ['อเมริกาโน่'],
+    'cappuccino': ['คาปูชิโน่'],
+    'mocha': ['มอคค่า'],
+    'espresso': ['เอสเปรสโซ่'],
+    'tea': ['ชา'],
+    'thai tea': ['ชาไทย'],
+    'matcha': ['มัทฉะ'],
+    'cocoa': ['โกโก้'],
+    'beer': ['เบียร์'],
+    'เบียร์': ['beer'],
+    'cocktail': ['ค็อกเทล'],
+    'water': ['น้ำเปล่า', 'น้ำแร่'],
+    'ice': ['น้ำแข็ง'],
+    'soda': ['โซดา'],
+    'coke': ['โค้ก'],
+    'rice': ['ข้าว'],
+    'egg': ['ไข่'],
+    'curry': ['แกง'],
+    'beef': ['เนื้อ'],
+    'shrimp': ['กุ้ง'],
+    'spaghetti': ['สปาเก็ตตี้'],
+    'fries': ['เฟรนช์ฟรายส์'],
+    'dessert': ['ของหวาน', 'ไอศกรีม', 'บราวนี่'],
+    'ice cream': ['ไอศกรีม'],
+};
+
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
     if (!booking) return false;
@@ -1077,8 +1108,17 @@ export default function CustomerOrderLanding() {
         }
     }, [isKitchenClosed, activeCategory, closedCategoryIdentifiers, categories]);
 
+    const isItemInCategory = useCallback((item, cat) => {
+        const iCatId = item.category_id ? String(item.category_id) : '';
+        const iCatName = (item.category || item.category_name || '').trim().toLowerCase();
+        return iCatId === String(cat.id) || iCatName === (cat.name || '').trim().toLowerCase();
+    }, []);
+
     // Filtered Items for Display
     const filteredItems = useMemo(() => {
+        const searchTrim = search.trim().toLowerCase();
+        const searchTerms = searchTrim ? [searchTrim, ...(SEARCH_ALIASES[searchTrim] || [])] : [];
+
         return visibleMenuItems.filter(item => {
             let matchesCat = true;
             if (activeCategory === 'all') {
@@ -1094,14 +1134,31 @@ export default function CustomerOrderLanding() {
                 matchesCat = (catId === String(activeCategory)) || (catName === targetName);
             }
 
-            const searchTrim = search.trim().toLowerCase();
-            const matchesSearch = !searchTrim || 
-                item.name.toLowerCase().includes(searchTrim) || 
-                (item.description && item.description.toLowerCase().includes(searchTrim));
+            let matchesSearch = true;
+            if (searchTerms.length > 0) {
+                const itemCat = categories.find(c => isItemInCategory(item, c));
+                const haystack = [item.name, item.description, item.category, itemCat?.name]
+                    .filter(Boolean)
+                    .join(' ')
+                    .toLowerCase();
+                matchesSearch = searchTerms.some(term => haystack.includes(term));
+            }
 
             return matchesCat && matchesSearch;
         });
-    }, [visibleMenuItems, activeCategory, search, categories]);
+    }, [visibleMenuItems, activeCategory, search, categories, isItemInCategory]);
+
+    // "All" view without search: group items under their category heading
+    const groupedItems = useMemo(() => {
+        if (activeCategory !== 'all' || search.trim()) return null;
+        const groups = visibleCategories
+            .map(cat => ({ key: String(cat.id), title: cat.name, items: filteredItems.filter(item => isItemInCategory(item, cat)) }))
+            .filter(group => group.items.length > 0);
+        const groupedIds = new Set(groups.flatMap(group => group.items.map(item => item.id)));
+        const ungrouped = filteredItems.filter(item => !groupedIds.has(item.id));
+        if (ungrouped.length > 0) groups.push({ key: 'other', title: 'อื่นๆ', items: ungrouped });
+        return groups;
+    }, [activeCategory, search, visibleCategories, filteredItems, isItemInCategory]);
 
     // Cart Operations
     const handleAddToCart = (item) => {
@@ -1454,6 +1511,73 @@ export default function CustomerOrderLanding() {
 
     const currentCategoryObj = categories.find(c => String(c.id) === String(activeCategory));
 
+    const renderMenuCard = (item, keyPrefix = '') => {
+        const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
+        const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
+
+        return (
+            <motion.div
+                key={`${keyPrefix}${item.id}`}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => handleAddToCart(item)}
+                className="bg-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] p-2.5 flex flex-col justify-between text-left group cursor-pointer hover:border-[var(--color-ink)] transition-all relative"
+            >
+                <div>
+                    {/* Image Frame */}
+                    <div className="aspect-[4/3] rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] mb-2">
+                        {item.image_url ? (
+                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-lg uppercase font-mono">
+                                {item.name.charAt(0)}
+                            </div>
+                        )}
+
+                        {/* Badges */}
+                        {item.is_recommended && (
+                            <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                                SIGNATURE
+                            </div>
+                        )}
+
+                        {inCartCount > 0 && (
+                            <div className="absolute top-1.5 right-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[11px] font-mono font-black w-6 h-6 rounded-full flex items-center justify-center">
+                                {inCartCount}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Item Title & Desc: 2 lines each. Line-height 1.5+ keeps stacked Thai marks of the clamped (hidden) line from showing */}
+                    <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-normal">
+                        {item.name}
+                    </h4>
+                    {item.description && (
+                        <p className="text-xs text-[var(--color-neutral)] line-clamp-2 mt-1.5 leading-relaxed">
+                            {item.description}
+                        </p>
+                    )}
+                </div>
+
+                {/* Bottom Price & Action */}
+                <div className="pt-2 mt-2 border-t border-[var(--color-rule)]/60 flex items-center justify-between gap-1">
+                    <span className="text-[var(--color-ink)] font-mono font-bold text-sm">
+                        ฿{Number(item.price).toLocaleString()}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                        {hasOptions && (
+                            <span className="text-[11px] text-[var(--color-neutral)] whitespace-nowrap">
+                                มีตัวเลือก
+                            </span>
+                        )}
+                        <div className="w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
+                            <Plus size={14} />
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        );
+    };
+
     return (
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
             {/* Top Brutalist Structural Header (Tabular Layout) */}
@@ -1743,147 +1867,46 @@ export default function CustomerOrderLanding() {
                             </div>
 
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                                {recommendedMenuItems.slice(0, 6).map(item => {
-                                    const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
-                                    const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
-
-                                    return (
-                                        <motion.div
-                                            key={`rec-${item.id}`}
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => handleAddToCart(item)}
-                                            className="bg-[var(--color-paper)] rounded-sm border border-[var(--color-accent)]/30 hover:border-[var(--color-ink)] p-2.5 flex flex-col justify-between text-left group cursor-pointer transition-all relative shadow-xs"
-                                        >
-                                            <div>
-                                                <div className="aspect-[4/3] rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] mb-2">
-                                                    {item.image_url ? (
-                                                        <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-lg uppercase font-mono">
-                                                            {item.name.charAt(0)}
-                                                        </div>
-                                                    )}
-                                                    <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider shadow-xs">
-                                                        SIGNATURE
-                                                    </div>
-                                                    {inCartCount > 0 && (
-                                                        <div className="absolute top-1.5 right-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                                                            {inCartCount}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <h4 className="font-bold text-xs text-[var(--color-ink)] line-clamp-1 leading-tight">
-                                                    {item.name}
-                                                </h4>
-                                                {item.description && (
-                                                    <p className="text-[10px] text-[var(--color-neutral)] line-clamp-2 mt-0.5 leading-snug">
-                                                        {item.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <div className="pt-2 mt-1 border-t border-[var(--color-rule)]/60 flex items-center justify-between">
-                                                <span className="text-[var(--color-ink)] font-mono font-bold text-xs">
-                                                    ฿{Number(item.price).toLocaleString()}
-                                                </span>
-                                                <div className="flex items-center gap-1">
-                                                    {hasOptions && (
-                                                        <span className="text-[8px] font-mono text-[var(--color-neutral)]">
-                                                            + OPTIONS
-                                                        </span>
-                                                    )}
-                                                    <div className="w-6 h-6 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
-                                                        <Plus size={12} />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                {recommendedMenuItems.slice(0, 6).map(item => renderMenuCard(item, 'rec-'))}
                             </div>
                         </section>
                     )}
 
-                    {/* Section Title Header */}
-                    <div className="mb-2.5 flex items-center justify-between">
-                        <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-neutral)]">
-                            {activeCategory === 'all' ? (
-                                search ? `ผลการค้นหา "${search}" (${filteredItems.length})` : `รายการทั้งหมด (${filteredItems.length})`
-                            ) : activeCategory === 'recommended' ? (
-                                `HAUS SIGNATURE DISHES & DRINKS (${filteredItems.length})`
-                            ) : (
-                                `หมวดหมู่: ${currentCategoryObj?.name || 'รายการ'} (${filteredItems.length})`
-                            )}
-                        </h3>
-                    </div>
+                    {/* Section Title Header (grouped "All" view carries its own category headings) */}
+                    {!groupedItems && (
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
+                                {search.trim() ? (
+                                    `ผลการค้นหา "${search.trim()}"`
+                                ) : activeCategory === 'recommended' ? (
+                                    'เมนูแนะนำ'
+                                ) : (
+                                    currentCategoryObj?.name || 'รายการ'
+                                )}
+                                <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{filteredItems.length}</span>
+                            </h3>
+                        </div>
+                    )}
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                        {filteredItems.map(item => {
-                            const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
-                            const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
-
-                            return (
-                                <motion.div
-                                    key={item.id}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleAddToCart(item)}
-                                    className="bg-[var(--color-paper)] rounded-sm border border-[var(--color-rule)] p-2.5 flex flex-col justify-between text-left group cursor-pointer hover:border-[var(--color-ink)] transition-all relative"
-                                >
-                                    <div>
-                                        {/* Image Frame */}
-                                        <div className="aspect-[4/3] rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] mb-2">
-                                            {item.image_url ? (
-                                                <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-lg uppercase font-mono">
-                                                    {item.name.charAt(0)}
-                                                </div>
-                                            )}
-                                            
-                                            {/* Badges */}
-                                            {item.is_recommended && (
-                                                <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
-                                                    SIGNATURE
-                                                </div>
-                                            )}
-
-                                            {inCartCount > 0 && (
-                                                <div className="absolute top-1.5 right-1.5 bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-black w-5 h-5 rounded-full flex items-center justify-center shadow-md">
-                                                    {inCartCount}
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Item Title & Desc */}
-                                        <h4 className="font-bold text-xs text-[var(--color-ink)] line-clamp-1 leading-tight">
-                                            {item.name}
-                                        </h4>
-                                        {item.description && (
-                                            <p className="text-[10px] text-[var(--color-neutral)] line-clamp-2 mt-0.5 leading-snug">
-                                                {item.description}
-                                            </p>
-                                        )}
+                    {groupedItems ? (
+                        <div className="space-y-8">
+                            {groupedItems.map(group => (
+                                <section key={group.key} aria-labelledby={`cat-${group.key}`}>
+                                    <h3 id={`cat-${group.key}`} className="mb-3 text-base font-bold text-[var(--color-ink)] leading-snug">
+                                        {group.title}
+                                        <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{group.items.length}</span>
+                                    </h3>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                                        {group.items.map(item => renderMenuCard(item))}
                                     </div>
-
-                                    {/* Bottom Price & Action */}
-                                    <div className="pt-2 mt-1 border-t border-[var(--color-rule)]/60 flex items-center justify-between">
-                                        <span className="text-[var(--color-ink)] font-mono font-bold text-xs">
-                                            ฿{Number(item.price).toLocaleString()}
-                                        </span>
-                                        <div className="flex items-center gap-1">
-                                            {hasOptions && (
-                                                <span className="text-[8px] font-mono text-[var(--color-neutral)]">
-                                                    + มีตัวเลือก
-                                                </span>
-                                            )}
-                                            <div className="w-6 h-6 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
-                                                <Plus size={12} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            );
-                        })}
-                    </div>
+                                </section>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                            {filteredItems.map(item => renderMenuCard(item))}
+                        </div>
+                    )}
 
                     {filteredItems.length === 0 && (
                         <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider space-y-2">
