@@ -11,7 +11,7 @@ import {
     Search, ShoppingBag, MapPin, X, Plus, Minus, AlertTriangle, 
     ShieldCheck, Check, Bell, Receipt, Smartphone, CheckCircle, 
     Clock, Crown, UserCheck, Phone, Gamepad2, UserPlus, Music, 
-    ChevronRight, Sparkles, RefreshCw, Layers, Star
+    ChevronRight, ChevronLeft, Sparkles, RefreshCw, Layers, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
@@ -1472,6 +1472,48 @@ export default function CustomerOrderLanding() {
     const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
     const cartSubtotal = cart.reduce((sum, item) => sum + (item.totalPricePerUnit * item.qty), 0);
 
+    // Category chip row: track overflow so the edge arrows only show when there is more to scroll
+    const chipRowRef = useRef(null);
+    const [chipScroll, setChipScroll] = useState({ left: false, right: false });
+    const chipNudgedRef = useRef(false);
+
+    const updateChipScroll = useCallback(() => {
+        const row = chipRowRef.current;
+        if (!row) return;
+        const left = row.scrollLeft > 4;
+        const right = row.scrollLeft + row.clientWidth < row.scrollWidth - 4;
+        setChipScroll(prev => (prev.left === left && prev.right === right ? prev : { left, right }));
+    }, []);
+
+    const scrollChips = (direction) => {
+        const row = chipRowRef.current;
+        if (!row) return;
+        row.scrollBy({ left: direction * row.clientWidth * 0.7, behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        updateChipScroll();
+        window.addEventListener('resize', updateChipScroll);
+        return () => window.removeEventListener('resize', updateChipScroll);
+    }, [updateChipScroll, visibleCategories.length, loading]);
+
+    // One-time nudge after load so customers see the row moves sideways (skipped for reduced motion)
+    useEffect(() => {
+        const row = chipRowRef.current;
+        if (loading || chipNudgedRef.current || !row || row.scrollWidth <= row.clientWidth) return;
+        if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+        chipNudgedRef.current = true;
+        const toTimer = setTimeout(() => row.scrollTo({ left: 56, behavior: 'smooth' }), 700);
+        const backTimer = setTimeout(() => row.scrollTo({ left: 0, behavior: 'smooth' }), 1300);
+        return () => { clearTimeout(toTimer); clearTimeout(backTimer); };
+    }, [loading, visibleCategories.length]);
+
+    // Keep the selected chip fully in view
+    useEffect(() => {
+        const chip = chipRowRef.current?.querySelector(`[data-cat="${String(activeCategory)}"]`);
+        chip?.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+    }, [activeCategory]);
+
     if (loading) {
         const isNumeric = /^\d+$/.test((tableId || '').trim());
         const cachedName = localStorage.getItem('active_customer_table_name');
@@ -1580,68 +1622,74 @@ export default function CustomerOrderLanding() {
 
     return (
         <div className="min-h-screen w-full bg-[var(--color-paper)] text-[var(--color-ink)] font-[var(--font-body)] flex flex-col pb-36 select-none">
-            {/* Top Brutalist Structural Header (Tabular Layout) */}
-            <header className="sticky top-0 bg-[var(--color-paper)]/95 backdrop-blur-md border-b border-[var(--color-rule)] z-40">
+            {/* Top Header: brand, table, party size and session status in one row */}
+            <header className="sticky top-0 bg-[var(--color-paper)] border-b border-[var(--color-rule)] z-40">
                 <div className="max-w-2xl mx-auto flex items-stretch divide-x divide-[var(--color-rule)]">
-                    {/* Brand & Table Cell */}
-                    <div className="flex-1 p-3.5 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono font-black text-sm tracking-wider uppercase text-[var(--color-ink)]">
+                    <div className="flex-1 min-w-0 px-4 py-2.5 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <span className="block text-[11px] font-bold tracking-wide text-[var(--color-neutral)] leading-tight">
                                 IN THE HAUS
                             </span>
-                            <span className="bg-[var(--color-ink)] text-[var(--color-paper)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-                                {table?.table_name || 'TABLE'}
-                            </span>
+                            <div className="flex items-baseline gap-2">
+                                <h1 className="text-lg font-bold text-[var(--color-ink)] leading-snug whitespace-nowrap">
+                                    โต๊ะ {table?.table_name}
+                                </h1>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPaxModal(true)}
+                                    className="text-xs text-[var(--color-neutral)] hover:text-[var(--color-ink)] underline underline-offset-2 whitespace-nowrap cursor-pointer"
+                                    aria-label={`จำนวนลูกค้า ${paxCount} ท่าน แตะเพื่อแก้ไข`}
+                                >
+                                    {paxCount} ท่าน
+                                </button>
+                            </div>
                         </div>
                         {gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) ? (
-                            <div className="flex items-center gap-1 text-[var(--color-accent-2)] font-mono text-[9px] font-bold uppercase">
-                                <ShieldCheck size={12} />
-                                <span>{activeBooking ? 'TABLE ACTIVE' : settings.qr_gps_enabled === 'false' ? 'GPS BYPASS' : 'IN-STORE OK'}</span>
+                            <div className="flex items-center gap-1 text-[var(--color-accent-2)] text-xs font-semibold whitespace-nowrap">
+                                <ShieldCheck size={14} />
+                                <span>{activeBooking ? 'เปิดโต๊ะแล้ว' : 'พร้อมสั่ง'}</span>
                             </div>
                         ) : gpsChecking ? (
-                            <div className="flex items-center gap-1 text-[var(--color-neutral)] font-mono text-[9px] font-bold uppercase animate-pulse">
-                                <MapPin size={12} />
-                                <span>LOCATING…</span>
+                            <div className="flex items-center gap-1 text-[var(--color-neutral)] text-xs font-semibold whitespace-nowrap animate-pulse">
+                                <MapPin size={14} />
+                                <span>กำลังตรวจตำแหน่ง</span>
                             </div>
                         ) : (
                             <button
                                 type="button"
                                 onClick={() => setShowStaffActivationModal(true)}
-                                className="flex items-center gap-1 text-[var(--color-accent)] font-mono text-[9px] font-bold uppercase border border-[var(--color-accent)]/40 px-1.5 py-0.5 rounded-sm bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 cursor-pointer"
+                                className="flex items-center gap-1 text-[var(--color-accent)] text-xs font-semibold whitespace-nowrap border border-[var(--color-accent)]/40 px-2 py-1 rounded-sm bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 cursor-pointer"
                                 title="แตะเพื่อดูสถานะเปิดโต๊ะ"
                             >
-                                <AlertTriangle size={11} />
-                                <span>WAITING STAFF</span>
+                                <AlertTriangle size={13} />
+                                <span>รอพนักงาน</span>
                             </button>
                         )}
                     </div>
 
-                    {/* Quick Nav Links (Member) */}
                     <div className="flex items-center">
-                        <Link 
-                            to="/member-card" 
-                            className="p-3 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
-                            title="Member Card"
+                        <Link
+                            to="/member-card"
+                            className="px-3.5 self-stretch text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
+                            title="บัตรสมาชิก"
+                            aria-label="บัตรสมาชิก"
                         >
-                            <Crown size={16} />
+                            <Crown size={18} />
                         </Link>
                     </div>
                 </div>
             </header>
 
-            {/* GPS Unverified Notice Banner (Dieter Rams + Thai Modern OKLCH) */}
+            {/* GPS Unverified Notice */}
             {settings.qr_gps_enabled === 'true' && gpsStatus === 'failed' && !(activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) && (
-                <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-2.5 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2 text-[var(--color-neutral)]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)] animate-pulse shrink-0" />
-                        <span className="text-[11px] leading-tight">
-                            ระบบระบุพิกัดไม่พร้อมใช้งาน · ออเดอร์ของคุณจะถูกส่งเข้า POS เพื่อรอพนักงานอนุมัติ
-                        </span>
-                    </div>
+                <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-2 flex items-center justify-between gap-3">
+                    <span className="text-xs leading-normal text-[var(--color-muted)]">
+                        ยืนยันตำแหน่งไม่ได้ ออเดอร์จะรอพนักงานอนุมัติก่อนส่งครัว
+                    </span>
                     <button
                         type="button"
                         onClick={() => setShowStaffActivationModal(true)}
-                        className="text-[10px] font-mono font-bold uppercase text-[var(--color-accent)] underline cursor-pointer shrink-0 ml-2"
+                        className="text-xs font-semibold text-[var(--color-accent)] underline underline-offset-2 cursor-pointer shrink-0"
                     >
                         ดูสถานะ
                     </button>
@@ -1649,99 +1697,44 @@ export default function CustomerOrderLanding() {
             )}
 
             <div className="max-w-2xl mx-auto w-full flex flex-col">
-                {/* Table Overview & Party Size Bar */}
-                <div className="p-4 bg-[var(--color-paper)] border-b border-[var(--color-rule)] flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-sm font-bold text-[var(--color-ink)]">
-                                โต๊ะ {table?.table_name}
-                            </h2>
-                            {table?.zone && (
-                                <span className="text-[10px] font-mono uppercase text-[var(--color-neutral)] border border-[var(--color-rule)] px-1.5 py-0.2 rounded-sm">
-                                    {table.zone}
-                                </span>
-                            )}
-                            {activeBooking?.booking_time && (() => {
-                                const startMins = Math.max(0, Math.floor((Date.now() - new Date(activeBooking.booking_time).getTime()) / 60000));
-                                const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h ${startMins % 60}m`;
-                                return (
-                                    <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.5 rounded-sm font-mono text-[9px] font-bold tracking-wider uppercase">
-                                        ELAPSED {formatted}
-                                    </span>
-                                );
-                            })()}
-                        </div>
-                        <p className="text-[11px] text-[var(--color-neutral)] mt-0.5">
-                            เลือกเมนูโปรดและส่งออเดอร์ตรงสู่ครัวได้ทันที
-                        </p>
-                    </div>
-
-                    <button
-                        onClick={() => setShowPaxModal(true)}
-                        className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                    >
-                        <span>PAX: {paxCount} ท่าน</span>
-                        <span className="text-[10px] text-[var(--color-accent)] underline uppercase">EDIT</span>
-                    </button>
-                </div>
-
-                {/* Member CRM Strip (Dieter Rams Tabular Style) */}
-                <div className="px-4 py-3 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between">
+                {/* Member Strip: one line, sign-in action on the right */}
+                <div className="px-4 py-2 bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] flex items-center justify-between gap-3">
                     {memberProfile ? (
-                        <div className="flex items-center gap-3 text-xs">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-accent)]/10 text-[var(--color-accent)] border border-[var(--color-accent)]/30 flex items-center justify-center font-mono font-bold text-xs shrink-0">
-                                CRM
+                        <div className="min-w-0 text-xs leading-normal">
+                            <div className="font-bold text-[var(--color-ink)] truncate">
+                                คุณ{memberProfile.display_name || memberProfile.nickname || 'สมาชิก'}
+                                <span className="ml-1.5 font-normal text-[var(--color-neutral)]">
+                                    {tierDetails.current_tier || 'Haus Common'} {tierDetails.multiplier || '1.0'}x
+                                </span>
                             </div>
-                            <div>
-                                <div className="flex items-center gap-1.5 font-bold text-[var(--color-ink)] flex-wrap">
-                                    <span>คุณ {memberProfile.display_name || memberProfile.nickname || 'สมาชิก'}</span>
-                                    <span className="px-1.5 py-0.2 bg-[var(--color-accent)] text-[var(--color-paper)] text-[8px] font-mono font-bold rounded-sm uppercase tracking-wider">
-                                        {tierDetails.current_tier || 'Haus Common'} ({tierDetails.multiplier || '1.0'}x)
-                                    </span>
-                                    {(memberProfile.free_drink_quota || 0) > 0 && (
-                                        <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
-                                            FREE {memberProfile.free_drink_quota} DRINKS
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2 text-[10px] font-mono font-bold mt-0.5 flex-wrap">
-                                    <span className="text-[var(--color-accent)]">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)} XHAUS</span>
-                                    <span className="text-[var(--color-rule)]">|</span>
-                                    <span className="text-[var(--color-ink)]">STAMPS: {memberProfile.drink_stamp_count || 0}/10</span>
-                                </div>
+                            <div className="text-[var(--color-muted)] truncate">
+                                <span className="font-mono">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span> xhaus · แสตมป์ <span className="font-mono">{memberProfile.drink_stamp_count || 0}/10</span>
+                                {(memberProfile.free_drink_quota || 0) > 0 && (
+                                    <span className="ml-1.5 font-semibold text-[var(--color-accent-2)]">ฟรี {memberProfile.free_drink_quota} แก้ว</span>
+                                )}
                             </div>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2.5 text-xs">
-                            <div className="w-8 h-8 rounded-sm bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)] flex items-center justify-center font-mono font-bold text-xs shrink-0">
-                                CRM
-                            </div>
-                            <div>
-                                <span className="font-bold text-[var(--color-ink)] block text-xs uppercase font-mono tracking-wider">HAUS MEMBERSHIP</span>
-                                <span className="text-[10px] text-[var(--color-neutral)]">ระบุเบอร์โทรเพื่อสะสมแต้ม xhaus & แก้ว 10 แถม 1</span>
-                            </div>
-                        </div>
+                        <p className="min-w-0 text-xs leading-normal text-[var(--color-muted)]">
+                            <span className="font-bold text-[var(--color-ink)]">สมาชิก</span> สะสมแต้ม xhaus · แก้ว 10 แถม 1
+                        </p>
                     )}
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
                         {memberProfile && (
                             <Link
                                 to="/member-card"
-                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1.5 rounded-sm text-[10px] font-mono font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer active:scale-95 shrink-0"
+                                className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95"
                                 title="เปิดบัตรสมาชิกดิจิทัล"
                             >
-                                <span>CARD</span>
+                                บัตร
                             </Link>
                         )}
                         <button
                             onClick={() => setShowMemberModal(true)}
-                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                            className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95 whitespace-nowrap"
                         >
-                            {memberProfile ? (
-                                <span>SWITCH</span>
-                            ) : (
-                                <span>SIGN IN / JOIN</span>
-                            )}
+                            {memberProfile ? 'เปลี่ยน' : 'สมัคร / เข้าสู่ระบบ'}
                         </button>
                     </div>
                 </div>
@@ -1773,28 +1766,34 @@ export default function CustomerOrderLanding() {
                 )}
 
                 {/* Menu Search & Category Navigation */}
-                <div className="p-3 sticky top-[53px] bg-[var(--color-paper)]/95 backdrop-blur-md z-30 space-y-2.5 border-b border-[var(--color-rule)]">
+                <div className="px-3 pt-3 pb-2.5 sticky top-[59px] bg-[var(--color-paper)] z-30 space-y-2.5 border-b border-[var(--color-rule)]">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={15} />
                         <input 
                             type="search" 
                             placeholder="ค้นหาเมนูอาหารและเครื่องดื่ม..." 
-                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 pl-9 pr-8 text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] text-xs transition-colors"
+                            className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 pl-9 pr-9 text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] text-base transition-colors"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                         {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] p-1">
+                            <button onClick={() => setSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] p-2" aria-label="ล้างคำค้นหา">
                                 <X size={13} />
                             </button>
                         )}
                     </div>
 
-                    <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                    <div className="relative">
+                    <div
+                        ref={chipRowRef}
+                        onScroll={updateChipScroll}
+                        className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    >
                         {/* All Menu Pill */}
-                        <button 
-                            onClick={() => setActiveCategory('all')} 
-                            className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
+                        <button
+                            data-cat="all"
+                            onClick={() => setActiveCategory('all')}
+                            className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
                                 activeCategory === 'all' 
                                     ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]' 
                                     : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -1805,9 +1804,10 @@ export default function CustomerOrderLanding() {
 
                         {/* Recommended Pill */}
                         {recommendedMenuItems.length > 0 && (
-                            <button 
-                                onClick={() => setActiveCategory('recommended')} 
-                                className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
+                            <button
+                                data-cat="recommended"
+                                onClick={() => setActiveCategory('recommended')}
+                                className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
                                     activeCategory === 'recommended' 
                                         ? 'bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-paper)]' 
                                         : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]'
@@ -1828,10 +1828,11 @@ export default function CustomerOrderLanding() {
                             }).length;
 
                             return (
-                                <button 
-                                    key={cat.id} 
-                                    onClick={() => setActiveCategory(cat.id)} 
-                                    className={`px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold uppercase tracking-wider transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
+                                <button
+                                    key={cat.id}
+                                    data-cat={String(cat.id)}
+                                    onClick={() => setActiveCategory(cat.id)}
+                                    className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-all border whitespace-nowrap shrink-0 cursor-pointer ${
                                         activeCategory === cat.id 
                                             ? 'bg-[var(--color-ink)] border-[var(--color-ink)] text-[var(--color-paper)]' 
                                             : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
@@ -1841,6 +1842,31 @@ export default function CustomerOrderLanding() {
                                 </button>
                             );
                         })}
+                        {/* End spacer so the last chip clears the arrow cell */}
+                        <span className="shrink-0 w-9" aria-hidden="true" />
+                    </div>
+
+                    {/* Scroll cues: solid edge cells, shown only when more chips sit that way */}
+                    {chipScroll.left && (
+                        <button
+                            type="button"
+                            onClick={() => scrollChips(-1)}
+                            className="absolute left-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            aria-label="เลื่อนดูหมวดก่อนหน้า"
+                        >
+                            <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronLeft size={16} /></span>
+                        </button>
+                    )}
+                    {chipScroll.right && (
+                        <button
+                            type="button"
+                            onClick={() => scrollChips(1)}
+                            className="absolute right-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
+                            aria-label="เลื่อนดูหมวดถัดไป"
+                        >
+                            <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronRight size={16} /></span>
+                        </button>
+                    )}
                     </div>
                 </div>
 
@@ -1848,21 +1874,17 @@ export default function CustomerOrderLanding() {
                 <main className="flex-1 p-3">
                     {/* Top Highlight Showcase: HAUS SIGNATURE & RECOMMENDED */}
                     {activeCategory === 'all' && !search.trim() && recommendedMenuItems.length > 0 && (
-                        <section className="mb-4 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-3.5 shadow-xs">
-                            <div className="flex items-center justify-between mb-2.5">
-                                <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-pulse" />
-                                    <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)] flex items-center gap-1.5">
-                                        <span>HAUS SIGNATURES</span>
-                                        <span className="text-[9px] text-[var(--color-neutral)] font-normal">/ เมนูแนะนำ</span>
-                                    </h3>
-                                </div>
+                        <section className="mb-8 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-3.5">
+                            <div className="flex items-baseline justify-between mb-3">
+                                <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
+                                    เมนูแนะนำ
+                                </h3>
                                 <button
                                     onClick={() => setActiveCategory('recommended')}
-                                    className="text-[10px] font-mono font-bold text-[var(--color-accent)] hover:underline flex items-center gap-0.5 cursor-pointer uppercase"
+                                    className="text-sm font-semibold text-[var(--color-accent)] hover:underline underline-offset-2 flex items-center gap-0.5 cursor-pointer"
                                 >
-                                    <span>SEE ALL ({recommendedMenuItems.length})</span>
-                                    <ChevronRight size={12} />
+                                    <span>ดูทั้งหมด {recommendedMenuItems.length}</span>
+                                    <ChevronRight size={14} />
                                 </button>
                             </div>
 
@@ -1932,22 +1954,32 @@ export default function CustomerOrderLanding() {
                 )}
             </AnimatePresence>
 
-            {/* Unified Floating Actions & Cart Bar at Bottom */}
-            <div className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)]/95 backdrop-blur-md border-t border-[var(--color-rule)] z-40 safe-area-bottom shadow-lg">
+            {/* Bottom Actions: staff + ordered items; cart row only when the cart has items */}
+            <div className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] z-40 safe-area-bottom">
                 <div className="max-w-2xl mx-auto flex flex-col gap-2">
-                    {/* Top Row: Quick Staff & Order Tracking Actions */}
+                    {cart.length > 0 && (
+                        <button
+                            onClick={() => setCartOpen(true)}
+                            className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm text-sm font-bold flex items-center justify-between gap-3 active:scale-98 transition-transform cursor-pointer"
+                        >
+                            <span className="flex items-center gap-2">
+                                <ShoppingBag size={16} />
+                                <span>ดูตะกร้า · {cartCount} รายการ</span>
+                            </span>
+                            <span className="font-mono">฿{cartSubtotal.toLocaleString()}</span>
+                        </button>
+                    )}
+
                     <div className="flex gap-2 w-full">
-                        {/* Call Staff Button */}
                         <button
                             onClick={handleCallStaff}
                             disabled={callingStaff}
-                            className="flex-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2 px-3 rounded-sm font-mono font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer"
+                            className="flex-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                         >
-                            <Bell size={13} className="text-[var(--color-accent)]" />
-                            <span>{callingStaff ? 'กำลังเรียก...' : 'เรียกพนักงาน (Call Staff)'}</span>
+                            <Bell size={15} className="text-[var(--color-accent)]" />
+                            <span>{callingStaff ? 'กำลังเรียก...' : 'เรียกพนักงาน'}</span>
                         </button>
 
-                        {/* View Ordered Items Button */}
                         <button
                             onClick={() => {
                                 if (activeBooking) {
@@ -1956,45 +1988,19 @@ export default function CustomerOrderLanding() {
                                     toast.info('กรุณาสั่งรายการแรกเพื่อเริ่มเซสชันก่อนครับ');
                                 }
                             }}
-                            className={`flex-1 py-2 px-3 rounded-sm font-mono font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer ${
-                                activeBooking 
-                                    ? 'bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]' 
-                                    : 'bg-[var(--color-paper-2)] border border-[var(--color-rule)]/60 text-[var(--color-neutral)] cursor-not-allowed'
+                            className={`flex-1 py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap ${
+                                activeBooking
+                                    ? 'bg-[var(--color-paper)] border border-[var(--color-rule)] text-[var(--color-ink)]'
+                                    : 'bg-[var(--color-paper-2)] border border-[var(--color-rule)]/60 text-[var(--color-muted)] cursor-not-allowed'
                             }`}
                         >
-                            <Receipt size={13} className={activeBooking ? "text-[var(--color-accent-2)]" : "text-[var(--color-neutral)]"} />
-                            <span>รายการที่สั่ง {activeBooking ? `(฿${Number(activeBooking.total_amount || 0).toLocaleString()})` : ''}</span>
+                            <Receipt size={15} className={activeBooking ? "text-[var(--color-accent-2)]" : "text-[var(--color-muted)]"} />
+                            <span>สั่งไปแล้ว</span>
+                            {activeBooking && (
+                                <span className="font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}</span>
+                            )}
                         </button>
                     </div>
-
-                    {/* Bottom Row: Cart Status or Active Session Pill */}
-                    {cart.length > 0 ? (
-                        <button 
-                            onClick={() => setCartOpen(true)}
-                            className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-between shadow-md active:scale-98 transition-transform cursor-pointer"
-                        >
-                            <div className="flex items-center gap-2">
-                                <ShoppingBag size={14} />
-                                <span className="bg-[var(--color-accent)] text-[var(--color-paper)] text-[9px] px-1.5 py-0.2 rounded-sm font-black font-mono">
-                                    {cartCount}
-                                </span>
-                            </div>
-                            <span>ดูตะกร้าสั่งอาหาร ({cartCount} รายการ)</span>
-                            <span className="font-mono font-black">฿{cartSubtotal.toLocaleString()}.-</span>
-                        </button>
-                    ) : activeBooking ? (
-                        <div className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2 px-3 rounded-sm font-mono text-[10px] uppercase tracking-wider flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                                <span className="bg-emerald-500 w-1.5 h-1.5 rounded-full animate-ping" />
-                                <span className="font-bold">ACTIVE SESSION · โต๊ะ {table?.table_name}</span>
-                            </div>
-                            <span className="text-[var(--color-neutral)]">ยอดรวมปัจจุบัน: ฿{Number(activeBooking.total_amount || 0).toLocaleString()}.-</span>
-                        </div>
-                    ) : (
-                        <div className="w-full bg-[var(--color-paper-2)] text-[var(--color-neutral)] py-2 px-3 rounded-sm font-mono text-[9px] uppercase tracking-widest text-center border border-dashed border-[var(--color-rule)]">
-                            แตะเลือกเมนูเพื่อเริ่มสั่งอาหาร
-                        </div>
-                    )}
                 </div>
             </div>
 
