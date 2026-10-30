@@ -18,6 +18,7 @@ import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeN
 import { isValidUuid } from '../utils/urlHelper';
 import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
+import { useTableStrings } from './customerOrderStrings';
 
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
@@ -36,6 +37,7 @@ function isBookingActiveAndFresh(booking) {
 
 export default function CustomerOrderStatus() {
     const { tableId } = useParams();
+    const { tt } = useTableStrings();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -319,11 +321,11 @@ export default function CustomerOrderStatus() {
                 new Promise((resolve) => setTimeout(resolve, 1500))
             ]);
 
-            toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
+            toast.success(tt('toastBillRequested'));
             fetchActiveOrder(true);
         } catch (err) {
             console.error('Request bill failed:', err);
-            toast.error('ล้มเหลว: ' + err.message);
+            toast.error(tt('toastFailed', { error: err.message }));
         } finally {
             setRequestingBill(false);
         }
@@ -338,7 +340,7 @@ export default function CustomerOrderStatus() {
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)]">
                 <div className="w-10 h-10 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">
-                    {displayLoadingName ? `Loading Table ${displayLoadingName} Status...` : 'Loading Order Status...'}
+                    {displayLoadingName ? tt('stLoadingTable', { table: displayLoadingName }) : tt('stLoading')}
                 </p>
             </div>
         );
@@ -350,15 +352,15 @@ export default function CustomerOrderStatus() {
                 <div className="w-16 h-16 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-full flex items-center justify-center text-[var(--color-neutral)] mb-4">
                     <Clock size={28} />
                 </div>
-                <h3 className="font-mono font-bold text-xs tracking-wider uppercase mb-2">NO ACTIVE SESSION</h3>
+                <h3 className="font-bold text-base mb-2">{tt('stNoSessionTitle')}</h3>
                 <p className="text-[var(--color-neutral)] text-xs max-w-xs leading-relaxed mb-6">
-                    ยังไม่พบรายการสั่งอาหารในเซสชันปัจจุบันของโต๊ะนี้
+                    {tt('stNoSessionBody')}
                 </p>
                 <button 
                     onClick={() => navigate(`/table/${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)} 
                     className="bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] px-6 py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider active:scale-95 transition-all cursor-pointer shadow-sm"
                 >
-                    ไปที่หน้าสั่งอาหาร (Go to Menu)
+                    {tt('stGoToMenu')}
                 </button>
             </div>
         );
@@ -367,12 +369,12 @@ export default function CustomerOrderStatus() {
     const isWaitingStaffApproval = booking.status === 'pending';
 
     const steps = isWaitingStaffApproval ? [
-        { key: 'sent', label: 'ส่งออเดอร์แล้ว', desc: 'รายการอาหารถูกส่งเข้าสู่ระบบ POS หน้าร้านแล้ว', time: booking.booking_time },
-        { key: 'waiting_approval', label: 'รอพนักงานอนุมัติ', desc: 'พนักงานกำลังตรวจสอบและเปิดโต๊ะเพื่อเริ่มปรุงอาหาร', time: null },
-        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามลำดับคิว', time: null },
+        { key: 'sent', label: tt('stepSentLabel'), desc: tt('stStepSentPosDesc'), time: booking.booking_time },
+        { key: 'waiting_approval', label: tt('stStepApprovalLabel'), desc: tt('stStepApprovalDesc'), time: null },
+        { key: 'seated', label: tt('stepPreparingLabel'), desc: tt('stStepPreparingDesc'), time: null },
     ] : [
-        { key: 'sent', label: 'ส่งออเดอร์แล้ว', desc: 'ห้องครัวได้รับรายการเรียบร้อยแล้ว', time: booking.booking_time },
-        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามลำดับคิว', time: booking.booking_time },
+        { key: 'sent', label: tt('stepSentLabel'), desc: tt('stStepSentKitchenDesc'), time: booking.booking_time },
+        { key: 'seated', label: tt('stepPreparingLabel'), desc: tt('stStepPreparingDesc'), time: booking.booking_time },
     ];
 
     const activeStep = isWaitingStaffApproval ? 1 : (booking.status === 'pending' ? 0 : 1);
@@ -394,19 +396,19 @@ export default function CustomerOrderStatus() {
                         </button>
                         <div>
                             <h1 className="font-bold text-sm text-[var(--color-ink)] flex items-center gap-2">
-                                <span>สถานะออเดอร์โต๊ะ {resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId}</span>
+                                <span>{tt('stTitle', { table: resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId })}</span>
                                 {booking.booking_time && (() => {
                                     const startMins = Math.max(0, Math.floor((Date.now() - new Date(booking.booking_time).getTime()) / 60000));
                                     const formatted = startMins < 60 ? `${startMins}m` : `${Math.floor(startMins / 60)}h${startMins % 60}m`;
                                     return (
                                         <span className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2 py-0.2 rounded-sm font-mono text-[9px] font-bold uppercase tracking-wider">
-                                            ELAPSED {formatted}
+                                            {tt('stElapsed', { time: formatted })}
                                         </span>
                                     );
                                 })()}
                             </h1>
                             <p className="text-[9px] text-[var(--color-neutral)] uppercase tracking-widest font-mono font-bold mt-0.5">
-                                Queue #{getShortBookingId(booking)} · Status: {isWaitingStaffApproval ? 'WAITING APPROVAL' : booking.status.toUpperCase()}
+                                {tt('stQueueLine', { queue: getShortBookingId(booking), status: isWaitingStaffApproval ? tt('stStatus_waiting') : tt(`stStatus_${booking.status}`) })}
                             </p>
                         </div>
                     </div>
@@ -418,7 +420,7 @@ export default function CustomerOrderStatus() {
                         }}
                         className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] px-2.5 py-1 rounded-sm text-xs font-mono font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm uppercase"
                     >
-                        <span>PAX: {booking.pax || 1} ท่าน</span>
+                        <span>{tt('paxCount', { n: booking.pax || 1 })}</span>
                         <Edit size={10} className="text-[var(--color-accent)]" />
                     </button>
                 </div>
@@ -434,10 +436,10 @@ export default function CustomerOrderStatus() {
                             </div>
                             <div>
                                 <h4 className="font-bold text-xs">
-                                    {isWaitingStaffApproval ? 'ส่งรายการอาหารเข้า POS เรียบร้อยแล้ว' : 'ส่งรายการสั่งอาหารสู่ห้องครัวเรียบร้อยแล้ว'}
+                                    {isWaitingStaffApproval ? tt('stHeroSentPos') : tt('stHeroSentKitchen')}
                                 </h4>
                                 <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">
-                                    {isWaitingStaffApproval ? 'กรุณารอพนักงานตรวจสอบและเปิดโต๊ะสักครู่ครับ' : 'ห้องครัวและบาร์กำลังเริ่มจัดเตรียมรายการตามคิว'}
+                                    {isWaitingStaffApproval ? tt('stHeroWaitBody') : tt('stHeroPrepBody')}
                                 </p>
                             </div>
                         </div>
@@ -456,13 +458,13 @@ export default function CustomerOrderStatus() {
                     className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 px-4 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer active:scale-98"
                 >
                     <Plus size={14} />
-                    <span>+ สั่งอาหารเพิ่ม (Order More Dishes)</span>
+                    <span>{tt('stOrderMore')}</span>
                 </button>
 
                 {/* Progress Status Card (LED Dial Style) */}
                 <section className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 shadow-sm">
                     <h3 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-4">
-                        ความคืบหน้า (ORDER PROGRESS)
+                        {tt('stProgress')}
                     </h3>
                     <div className="relative pl-6 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[var(--color-rule)]">
                         {steps.map((step, idx) => {
@@ -487,7 +489,7 @@ export default function CustomerOrderStatus() {
                                             </span>
                                             {isCurrent && (
                                                 <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold uppercase px-1.5 py-0.2 rounded-sm">
-                                                    กำลังเตรียม
+                                                    {tt('stPreparing')}
                                                 </span>
                                             )}
                                         </div>
@@ -519,10 +521,10 @@ export default function CustomerOrderStatus() {
                             </div>
                             <div>
                                 <h3 className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
-                                    HAUS ARCADE PLAYGROUND
+                                    {tt('stArcadeTitle')}
                                 </h3>
                                 <p className="text-[9px] text-[var(--color-neutral)] font-mono uppercase tracking-widest mt-0.5">
-                                    PLAY WHILE WAITING FOR FOOD
+                                    {tt('stArcadeSub')}
                                 </p>
                             </div>
                         </div>
@@ -532,14 +534,14 @@ export default function CustomerOrderStatus() {
                     </div>
 
                     <p className="text-xs text-[var(--color-ink)] leading-relaxed mb-3.5">
-                        ระหว่างรอห้องครัวจัดเตรียมอาหาร ชวนเล่นเกม <strong>Flappy Cat / TaiPla</strong> สะสมแต้ม <strong>xhaus</strong> และรับสิทธิ์แลกของรางวัลพิเศษได้ทันที!
+                        {tt('stArcadeBodyPre')} <strong>Flappy Cat / TaiPla</strong> {tt('stArcadeBodyMid')} <strong>xhaus</strong> {tt('stArcadeBodyPost')}
                     </p>
 
                     <button
                         onClick={() => navigate(`/arcade?tableId=${encodeURIComponent(resolvedTableInfo?.table_name || tableId)}`)}
                         className="w-full bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-[var(--color-paper)] py-2.5 px-4 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-97 cursor-pointer flex items-center justify-center gap-2"
                     >
-                        <span>เข้าสู่ Arcade เล่นเกมรออาหาร</span>
+                        <span>{tt('stArcadeCta')}</span>
                         <ArrowRight size={14} />
                     </button>
                 </section>
@@ -547,7 +549,7 @@ export default function CustomerOrderStatus() {
                 {/* Order Items Ledger */}
                 <section className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 shadow-sm">
                     <h3 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3.5">
-                        รายการอาหารสุทธิ (ITEMS SUMMARY)
+                        {tt('stItemsSummary')}
                     </h3>
                     
                     <div className="space-y-3">
@@ -557,7 +559,7 @@ export default function CustomerOrderStatus() {
                                     <span className="font-bold font-mono text-[var(--color-accent)]">{item.quantity}x</span>
                                     <div>
                                         <span className="font-bold text-[var(--color-ink)] block leading-tight">
-                                            {item.custom_name || item.menu_items?.name || item.name || 'เมนูเพิ่มเติม'}
+                                            {item.custom_name || item.menu_items?.name || item.name || tt('stItemFallback')}
                                         </span>
                                         {item.selected_options && (
                                             <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono space-y-0.5">
@@ -578,25 +580,25 @@ export default function CustomerOrderStatus() {
                         
                         {orderItems.length === 0 && (
                             <div className="text-center py-4 text-[var(--color-neutral)] font-mono text-[9px] font-bold uppercase">
-                                กำลังโหลดรายละเอียดรายการอาหาร...
+                                {tt('stItemsLoading')}
                             </div>
                         )}
 
                         <div className="border-t border-[var(--color-rule)] pt-3 mt-2 space-y-1.5">
                             <div className="flex justify-between items-baseline">
-                                <span className="text-[10px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-wider">ยอดรวมค่าอาหาร (Total)</span>
+                                <span className="text-[10px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-wider">{tt('stTotal')}</span>
                                 <span className="text-sm font-bold text-[var(--color-ink)] font-mono">฿{dynamicTotal.toLocaleString()}.-</span>
                             </div>
                             
                             {depositPaid > 0 && (
                                 <div className="flex justify-between items-baseline text-emerald-600">
-                                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">หักมัดจำ (Paid Deposit)</span>
+                                    <span className="text-[10px] font-mono font-bold uppercase tracking-wider">{tt('stDeposit')}</span>
                                     <span className="text-sm font-bold font-mono">-฿{depositPaid.toLocaleString()}.-</span>
                                 </div>
                             )}
 
                             <div className="flex justify-between items-baseline pt-2 border-t border-[var(--color-rule)]">
-                                <span className="text-[10px] text-[var(--color-ink)] font-mono font-bold uppercase tracking-wider">ยอดที่ต้องชำระ (Remaining)</span>
+                                <span className="text-[10px] text-[var(--color-ink)] font-mono font-bold uppercase tracking-wider">{tt('stRemaining')}</span>
                                 <span className="text-xl font-black text-[var(--color-ink)] font-mono">฿{remainingBalance.toLocaleString()}.-</span>
                             </div>
                         </div>
@@ -609,7 +611,7 @@ export default function CustomerOrderStatus() {
                                 className="w-full bg-[var(--color-paper-2)] hover:bg-[var(--color-rule)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] py-2.5 px-3 rounded-xs font-mono font-bold text-xs uppercase tracking-wider transition-all shadow-xs active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <Plus size={14} className="text-[var(--color-accent)] shrink-0" />
-                                <span>สั่งอาหารหรือเครื่องดื่มเพิ่ม · ORDER MORE</span>
+                                <span>{tt('stOrderMoreLong')}</span>
                             </button>
                         </div>
                     </div>
@@ -618,16 +620,16 @@ export default function CustomerOrderStatus() {
                 {/* Checkout & Bill Request Card */}
                 <section className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm p-4 shadow-sm">
                     <h3 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3">
-                        การเช็คบิลและชำระเงิน (CHECKOUT & PAYMENT)
+                        {tt('stCheckoutTitle')}
                     </h3>
                     
                     {!booking.staff_remark?.includes('[CALL_BILL]') ? (
                         <div className="w-full text-center space-y-3 py-1">
                             <Smartphone size={24} className="text-[var(--color-neutral)] mx-auto animate-pulse" />
                             <div>
-                                <h4 className="font-bold text-xs text-[var(--color-ink)]">ต้องการเช็คบิลชำระเงิน?</h4>
+                                <h4 className="font-bold text-xs text-[var(--color-ink)]">{tt('billQuestion')}</h4>
                                 <p className="text-[10px] text-[var(--color-neutral)] mt-0.5 leading-relaxed">
-                                    กดปุ่มเพื่อเรียกพนักงานนำใบแจ้งยอดและ QR Code มาให้สแกนจ่ายที่โต๊ะ
+                                    {tt('stBillHint')}
                                 </p>
                             </div>
                             <button
@@ -636,22 +638,22 @@ export default function CustomerOrderStatus() {
                                 className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer active:scale-98"
                             >
                                 <Receipt size={13} />
-                                <span>{requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}</span>
+                                <span>{requestingBill ? tt('processing') : tt('requestBill')}</span>
                             </button>
                         </div>
                     ) : (
                         <div className="w-full space-y-3">
                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-sm py-2 px-3 flex items-center gap-2 font-mono font-bold text-[10px] uppercase tracking-wider justify-center">
                                 <CheckCircle size={13} />
-                                <span>เรียกพนักงานเช็คบิลแล้ว</span>
+                                <span>{tt('stBillRequestedShort')}</span>
                             </div>
 
                             <div className="w-full text-center py-5 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm flex flex-col items-center gap-2">
                                 <Smartphone size={28} className="text-[var(--color-accent)] animate-bounce" />
                                 <div>
-                                    <h4 className="font-bold text-xs text-[var(--color-ink)]">กรุณาชำระเงินกับพนักงาน</h4>
+                                    <h4 className="font-bold text-xs text-[var(--color-ink)]">{tt('stPayStaff')}</h4>
                                     <p className="text-[10px] text-[var(--color-neutral)] max-w-xs leading-relaxed mx-auto mt-0.5">
-                                        พนักงานกำลังนำใบแจ้งยอดและ QR Code มาแสดงที่โต๊ะเพื่อสแกนจ่ายโดยตรง
+                                        {tt('stBillOnTheWay')}
                                     </p>
                                 </div>
                                 <button
@@ -660,7 +662,7 @@ export default function CustomerOrderStatus() {
                                     disabled={requestingBill}
                                     className="mt-2 bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] text-[var(--color-ink)] px-3.5 py-1.5 rounded-sm font-mono font-bold text-[10px] uppercase tracking-wider transition-all cursor-pointer active:scale-95"
                                 >
-                                    {requestingBill ? 'กำลังส่งสัญญาณ...' : 'แจ้งเรียกเช็คบิลซ้ำอีกครั้ง'}
+                                    {requestingBill ? tt('signalSending') : tt('stBillAgain')}
                                 </button>
                             </div>
                         </div>
@@ -674,8 +676,8 @@ export default function CustomerOrderStatus() {
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between">
                             <div>
-                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ปรับจำนวนลูกค้า (PARTY SIZE)</h3>
-                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">โต๊ะ {resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId}</p>
+                                <h3 className="font-bold text-sm">{tt('stPaxTitle')}</h3>
+                                <p className="text-xs text-[var(--color-neutral)] mt-0.5">{tt('tableName', { table: resolvedTableInfo?.table_name || booking.tables_layout?.table_name || tableId })}</p>
                             </div>
                             <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
                                 <X size={15} />
@@ -684,7 +686,7 @@ export default function CustomerOrderStatus() {
                         
                         <div className="p-5 flex flex-col items-center gap-3 text-center">
                             <div className="text-xs font-bold text-[var(--color-ink)]">
-                                ระบุจำนวนลูกค้าล่าสุดสำหรับโต๊ะนี้
+                                {tt('stPaxQuestion')}
                             </div>
 
                             {/* Stepper */}
@@ -734,7 +736,7 @@ export default function CustomerOrderStatus() {
                                 onClick={async () => {
                                     const num = parseInt(editPaxInput);
                                     if (!num || num <= 0) {
-                                        toast.error('กรุณาระบุจำนวนคนให้ถูกต้อง');
+                                        toast.error(tt('stPaxInvalid'));
                                         return;
                                     }
                                     const { error } = await supabase
@@ -743,9 +745,9 @@ export default function CustomerOrderStatus() {
                                         .eq('id', booking.id);
 
                                     if (error) {
-                                        toast.error('ล้มเหลว: ' + error.message);
+                                        toast.error(tt('toastFailed', { error: error.message }));
                                     } else {
-                                        toast.success(`อัปเดตจำนวนลูกค้าเป็น ${num} คนแล้ว`);
+                                        toast.success(tt('paxUpdated', { n: num }));
                                         fetchActiveOrder(true);
                                         setShowPaxModal(false);
                                     }
@@ -753,7 +755,7 @@ export default function CustomerOrderStatus() {
                                 className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                             >
                                 <Check size={14} />
-                                <span>บันทึกจำนวนคน (Save)</span>
+                                <span>{tt('stPaxSave')}</span>
                             </button>
                         </div>
                     </div>

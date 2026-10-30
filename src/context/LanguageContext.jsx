@@ -1,4 +1,5 @@
 import { createContext, useState, useContext } from 'react';
+import { SUPPORTED_LANGUAGES, LANG_STORAGE_KEY, readStoredLanguage } from '../utils/languageHelper';
 
 const LanguageContext = createContext();
 
@@ -364,16 +365,29 @@ const translations = {
 };
 
 export const LanguageProvider = ({ children }) => {
-    const [lang, setLang] = useState('th');
+    const [storedLang] = useState(readStoredLanguage);
+    const [lang, setLang] = useState(storedLang || 'th');
+    // True once the visitor picked a language themselves (now or on an earlier visit)
+    const [hasChosenLanguage, setHasChosenLanguage] = useState(Boolean(storedLang));
 
-    const toggleLanguage = () => {
-        setLang(prev => prev === 'th' ? 'en' : 'th');
+    const setLanguage = (code, { remember = true } = {}) => {
+        if (!SUPPORTED_LANGUAGES.includes(code)) return;
+        setLang(code);
+        if (remember) {
+            setHasChosenLanguage(true);
+            try { localStorage.setItem(LANG_STORAGE_KEY, code); } catch { /* storage unavailable */ }
+        }
     };
 
-    const t = (key) => translations[lang][key] || key;
+    const toggleLanguage = () => {
+        setLanguage(lang === 'th' ? 'en' : 'th');
+    };
+
+    // Shared dictionary covers th/en; anything else reads the English entry
+    const t = (key) => (translations[lang] || translations.en)[key] || key;
 
     return (
-        <LanguageContext.Provider value={{ lang, toggleLanguage, t }}>
+        <LanguageContext.Provider value={{ lang, setLanguage, toggleLanguage, hasChosenLanguage, t }}>
             {children}
         </LanguageContext.Provider>
     );

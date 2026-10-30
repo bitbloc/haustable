@@ -7,6 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ExternalLink, Check, Heart, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTableStrings } from '../../pos/customerOrderStrings';
 
 const DEFAULT_REVIEW_URL = 'https://g.page/r/CXmnpQhwM5MYEBM/review';
 
@@ -16,6 +17,7 @@ export default function CustomerGoogleReviewCard({
     className = '',
     onReviewClick
 }) {
+    const { tt } = useTableStrings();
     const [hoveredStar, setHoveredStar] = useState(0);
     const [hasReviewed, setHasReviewed] = useState(false);
     const effectiveUrl = googleReviewUrl || DEFAULT_REVIEW_URL;
@@ -54,7 +56,7 @@ export default function CustomerGoogleReviewCard({
                             <span className="flex text-amber-500 text-[10px]">★★★★★</span>
                         </div>
                         <p className="text-xs font-bold text-[var(--color-ink)] truncate">
-                            {hasReviewed ? 'ขอบคุณสำหรับรีวิวของคุณครับ' : 'ประทับใจอาหารและบริการ?'}
+                            {hasReviewed ? tt('rvThanksShort') : tt('rvAskShort')}
                         </p>
                     </div>
 
@@ -62,7 +64,7 @@ export default function CustomerGoogleReviewCard({
                         onClick={() => handleOpenReview(5)}
                         className="shrink-0 bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] px-3 py-1.5 rounded-sm font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 cursor-pointer shadow-xs"
                     >
-                        <span>{hasReviewed ? 'ดูรีวิว' : 'รีวิวร้าน 5★'}</span>
+                        <span>{hasReviewed ? tt('rvViewReview') : tt('rvReviewCta')}</span>
                         <ExternalLink size={11} />
                     </button>
                 </div>
@@ -84,10 +86,10 @@ export default function CustomerGoogleReviewCard({
                             </span>
                         </div>
                         <h4 className="font-bold text-xs text-[var(--color-ink)] mt-0.5">
-                            {hasReviewed ? 'ขอบพระคุณสำหรับทุกคะแนนรีวิวครับ' : 'แบ่งปันความประทับใจผ่าน Google Review'}
+                            {hasReviewed ? tt('rvThanksLong') : tt('rvAskLong')}
                         </h4>
                         <p className="text-[10px] text-[var(--color-neutral)] leading-relaxed mt-0.5">
-                            ทุก 1 รีวิวมีความหมายและเป็นกำลังใจสำคัญให้ทีมงาน ในเดอะเฮาส์ พัฒนาต่อไป
+                            {tt('rvBody')}
                         </p>
                     </div>
                 </div>
@@ -97,7 +99,7 @@ export default function CustomerGoogleReviewCard({
                         onClick={() => handleOpenReview(5)}
                         className="bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2 px-3.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer flex items-center gap-1.5"
                     >
-                        <span>{hasReviewed ? 'เปิดหน้า Google Review' : 'ให้คะแนน 5 ดาว ↗'}</span>
+                        <span>{hasReviewed ? tt('rvOpenReview') : tt('rvRateCta')}</span>
                         <ExternalLink size={12} />
                     </button>
                 </div>
@@ -117,7 +119,7 @@ export default function CustomerGoogleReviewCard({
                         </span>
                     </div>
                     <h3 className="font-bold text-sm text-[var(--color-ink)] mt-1">
-                        {hasReviewed ? 'ขอบพระคุณสำหรับทุกกำลังใจและรีวิวครับ' : 'ประทับใจอาหารหรือบริการวันนี้?'}
+                        {hasReviewed ? tt('rvThanksHero') : tt('rvAskHero')}
                     </h3>
                 </div>
 
@@ -130,13 +132,13 @@ export default function CustomerGoogleReviewCard({
             {/* Content & Star Rating Interaction */}
             <div className="py-3.5 space-y-3">
                 <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
-                    ชวนแบ่งปันความรู้สึก รูปถ่ายบรรยากาศ หรือเมนูโปรดของคุณบน Google Maps เพื่อส่งต่อความสุขและเป็นกำลังใจสำคัญให้กับทีมงาน In the HAUS ครับ
+                    {tt('rvHeroBody')}
                 </p>
 
                 {/* 5-Star Interactive Rating Bar */}
                 <div className="flex flex-col items-center justify-center p-3 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm gap-2">
                     <div className="text-[10px] font-mono font-bold text-[var(--color-neutral)] uppercase tracking-wider">
-                        แตะดาวเพื่อเปิดรีวิว (TAP TO RATE 5 STARS)
+                        {tt('rvTapToRate')}
                     </div>
                     
                     <div 
@@ -152,7 +154,7 @@ export default function CustomerGoogleReviewCard({
                                     onClick={() => handleOpenReview(starIndex)}
                                     onMouseEnter={() => setHoveredStar(starIndex)}
                                     className="p-1 rounded-sm text-amber-500 hover:scale-115 active:scale-90 transition-transform cursor-pointer focus:outline-none"
-                                    title={`ให้ ${starIndex} ดาวบน Google Review`}
+                                    title={tt('rvStarTitle', { n: starIndex })}
                                 >
                                     <Star 
                                         size={26} 
@@ -164,7 +166,7 @@ export default function CustomerGoogleReviewCard({
                     </div>
 
                     <div className="text-[10px] font-mono text-[var(--color-accent)] font-bold">
-                        {hoveredStar > 0 ? `⭐️ ${hoveredStar} ดาว - ยอดเยี่ยมมาก!` : '⭐️⭐️⭐️⭐️⭐️ 5.0 OUT OF 5'}
+                        {hoveredStar > 0 ? tt('rvStarHover', { n: hoveredStar }) : tt('rvStarDefault')}
                     </div>
                 </div>
             </div>
@@ -180,7 +182,7 @@ export default function CustomerGoogleReviewCard({
                     onClick={() => handleOpenReview(5)}
                     className="w-full sm:w-auto bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 px-4 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                 >
-                    <span>{hasReviewed ? 'เปิดดูรีวิวบน Google Maps' : 'เขียนรีวิว 5 ดาวบน Google Maps'}</span>
+                    <span>{hasReviewed ? tt('rvOpenMaps') : tt('rvWriteReview')}</span>
                     <ExternalLink size={13} />
                 </button>
             </div>

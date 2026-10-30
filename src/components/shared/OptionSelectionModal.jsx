@@ -3,7 +3,28 @@ import { X, Plus, Minus } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 
-export default function OptionSelectionModal({ item, onClose, onConfirm }) {
+// Default copy matches what POS and booking have always shown; customer pages pass `labels`
+const DEFAULT_LABELS = {
+    specialNote: 'Special Note',
+    optional: 'OPTIONAL',
+    notePlaceholder: 'E.g. Less spicy, no cilantro',
+    quantity: 'Quantity',
+    addToOrder: 'ADD TO ORDER',
+    required: '*REQ',
+    pickOne: 'SEL 1',
+    pickMax: 'MAX {n}',
+    soldOut: 'หมด',
+    toastMax: 'เลือกได้สูงสุด {n} รายการ',
+    toastRequired: 'กรุณาเลือกตัวเลือกสำหรับ "{group}"',
+    toastError: 'เกิดข้อผิดพลาดในการเลือกตัวเลือก',
+}
+
+const fill = (template, vars) => template.replace(/\{(\w+)\}/g, (match, name) => (vars[name] ?? match))
+
+export default function OptionSelectionModal({ item, onClose, onConfirm, labels }) {
+    const L = labels ? { ...DEFAULT_LABELS, ...labels } : DEFAULT_LABELS
+    // Mono uppercase suits the English POS labels; translated (Thai) labels read better in the text face
+    const labelFace = labels ? '' : 'font-mono uppercase'
     const [quantity, setQuantity] = useState(1)
     const [selectedOptions, setSelectedOptions] = useState({})
     const [itemNote, setItemNote] = useState('')
@@ -79,7 +100,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
             } else {
                 // Check max selection
                 if (group.max_selection > 0 && currentSelections.length >= group.max_selection) {
-                    toast.error(`เลือกได้สูงสุด ${group.max_selection} รายการ`)
+                    toast.error(fill(L.toastMax, { n: group.max_selection }))
                     return
                 }
                 setSelectedOptions(prev => ({
@@ -99,7 +120,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
             if (group.is_required) {
                 const selections = selectedOptions[group.id] || []
                 if (selections.length < (group.min_selection || 1)) {
-                    toast.error(`กรุณาเลือกตัวเลือกสำหรับ "${group.name}"`)
+                    toast.error(fill(L.toastRequired, { group: group.name }))
                     return false
                 }
             }
@@ -157,7 +178,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 });
             } catch (err) {
                 console.error("Option modal confirm error:", err);
-                toast.error("เกิดข้อผิดพลาดในการเลือกตัวเลือก");
+                toast.error(L.toastError);
             } finally {
                 setTimeout(() => {
                     confirmingRef.current = false;
@@ -203,9 +224,9 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                             <div key={group.id} className="mb-2 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                 <div className="flex justify-between items-baseline p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
                                     <h4 className="font-bold text-base text-[var(--color-ink)]">{group.name}</h4>
-                                    <div className="text-xs text-[var(--color-neutral)] font-mono">
-                                        {group.is_required && <span className="text-[var(--color-accent)] font-bold mr-1">*REQ</span>}
-                                        {group.selection_type === 'single' ? 'SEL 1' : `MAX ${group.max_selection}`}
+                                    <div className={`text-xs text-[var(--color-neutral)] whitespace-nowrap ${labels ? '' : 'font-mono'}`}>
+                                        {group.is_required && <span className="text-[var(--color-accent)] font-bold mr-1">{L.required}</span>}
+                                        {group.selection_type === 'single' ? L.pickOne : fill(L.pickMax, { n: group.max_selection })}
                                     </div>
                                 </div>
 
@@ -234,7 +255,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                                                         <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{choice.name}</span>
                                                         {isSoldOut && (
                                                             <span className="text-[10px] font-mono font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-sm">
-                                                                หมด
+                                                                {L.soldOut}
                                                             </span>
                                                         )}
                                                     </div>
@@ -255,13 +276,13 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                     {/* Special Note */}
                     <div className="bg-[var(--color-paper)] border-b border-[var(--color-rule)] mb-8">
                         <label className="flex items-center justify-between p-4 border-b border-[var(--color-rule)]">
-                            <span className="font-bold text-base text-[var(--color-ink)]">Special Note</span>
-                            <span className="text-xs text-[var(--color-neutral)] font-mono">OPTIONAL</span>
+                            <span className="font-bold text-base text-[var(--color-ink)]">{L.specialNote}</span>
+                            <span className={`text-xs text-[var(--color-neutral)] ${labels ? '' : 'font-mono'}`}>{L.optional}</span>
                         </label>
                         <div className="p-4">
                             <input
                                 type="text"
-                                placeholder="E.g. Less spicy, no cilantro"
+                                placeholder={L.notePlaceholder}
                                 value={itemNote}
                                 onChange={(e) => setItemNote(e.target.value)}
                                 className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] px-4 py-3 text-base text-[var(--color-ink)] placeholder:text-[var(--color-muted)] focus:outline-none focus:border-[var(--color-ink)] touch-manipulation"
@@ -273,7 +294,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                 {/* Footer Controls */}
                 <div className="p-4 border-t border-[var(--color-rule)] bg-[var(--color-paper)] safe-area-bottom shrink-0 touch-manipulation select-none flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                        <span className="font-bold text-[var(--color-neutral)] text-sm font-mono uppercase">Quantity</span>
+                        <span className={`font-bold text-[var(--color-neutral)] text-sm ${labelFace}`}>{L.quantity}</span>
                         <div className="flex items-center border border-[var(--color-rule)] bg-[var(--color-paper)]">
                             <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-12 h-12 flex items-center justify-center text-[var(--color-ink)] disabled:opacity-30 active:bg-[var(--color-paper-2)] touch-manipulation" disabled={quantity <= 1}><Minus size={18} /></button>
                             <span className="font-mono font-bold w-10 text-center text-lg text-[var(--color-ink)]">{quantity}</span>
@@ -285,7 +306,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm }) {
                         onClick={handleConfirm}
                         className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-4 font-bold flex justify-between px-6 text-base cursor-pointer touch-manipulation active:scale-[0.99] transition-transform"
                     >
-                        <span>ADD TO ORDER</span>
+                        <span>{L.addToOrder}</span>
                         <span className="font-mono">{currentTotal}.-</span>
                     </button>
                 </div>

@@ -21,6 +21,8 @@ import { sendPOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeN
 import { isValidUuid, safeUuid } from '../utils/urlHelper';
 import { resolveTableIdentifier } from '../utils/tableResolver';
 import CustomerGoogleReviewCard from '../components/pos/CustomerGoogleReviewCard';
+import { detectDeviceLanguage } from '../utils/languageHelper';
+import { useTableStrings, translateTable, TABLE_LANGUAGES } from './customerOrderStrings';
 
 // Haversine Distance Formula
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -86,6 +88,17 @@ function isBookingActiveAndFresh(booking) {
 
 export default function CustomerOrderLanding() {
     const { tableId } = useParams();
+    const { lang, setLanguage, hasChosenLanguage } = useTableStrings();
+    // Read the language through a ref so toasts fired from long-lived callbacks use the current choice
+    const langRef = useRef(lang);
+    langRef.current = lang;
+    const tt = useCallback((key, vars) => translateTable(langRef.current, key, vars), []);
+
+    // First visit without a saved choice: follow the phone's language
+    useEffect(() => {
+        if (!hasChosenLanguage) setLanguage(detectDeviceLanguage(), { remember: false });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const navigate = useNavigate();
 
     // UI States
@@ -380,7 +393,7 @@ export default function CustomerOrderLanding() {
                     if (tableId) localStorage.removeItem(`table_${tableId}_token`);
                     if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
                     if (b.status === 'void') {
-                        toast.info('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+                        toast.info(tt('toastBillVoided'));
                     }
                 } else {
                     debouncedRefreshBooking();
@@ -414,7 +427,7 @@ export default function CustomerOrderLanding() {
                 table: 'tables_layout',
                 filter: `id=eq.${table.id}`
             }, () => {
-                toast.error('โต๊ะนี้ถูกยกเลิกในระบบหลังบ้านแล้ว กรุณาติดต่อพนักงาน');
+                toast.error(tt('toastTableCancelled'));
                 setTable(null);
             })
             .subscribe((status, err) => {
@@ -478,7 +491,7 @@ export default function CustomerOrderLanding() {
             const tableData = await resolveTableIdentifier(tableId, supabase);
 
             if (!tableData) {
-                toast.error(`ไม่พบข้อมูลโต๊ะ ${tableId}`);
+                toast.error(tt('toastTableNotFound', { table: tableId }));
                 setLoading(false);
                 return;
             }
@@ -596,7 +609,7 @@ export default function CustomerOrderLanding() {
             
         } catch (err) {
             console.error('Initialization error:', err);
-            toast.error('Failed to connect to restaurant database');
+            toast.error(tt('toastConnectFailed'));
         } finally {
             setLoading(false);
         }
@@ -607,7 +620,7 @@ export default function CustomerOrderLanding() {
         if (e) e.preventDefault();
         const cleanPhone = memberPhoneInput.replace(/\D/g, '');
         if (cleanPhone.length < 9) {
-            toast.error('กรุณาระบุเบอร์โทรศัพท์อย่างน้อย 9-10 หลัก');
+            toast.error(tt('toastPhoneRequired'));
             return;
         }
         setMemberLookupLoading(true);
@@ -629,17 +642,17 @@ export default function CustomerOrderLanding() {
                     await supabase.from('bookings').update({ user_id: data.id }).eq('id', activeBooking.id);
                     setActiveBooking(prev => prev ? { ...prev, user_id: data.id } : null);
                 }
-                toast.success(`ยินดีต้อนรับสมาชิก คุณ${data.display_name || 'ลูกค้า'}`);
+                toast.success(tt('toastMemberWelcome', { name: data.display_name || tt('toastMemberFallback') }));
                 setShowMemberModal(false);
                 setIsNewMemberForm(false);
             } else {
-                toast.info('ยังไม่พบสมาชิกเบอร์นี้ สามารถสมัครสมาชิกใหม่ได้ทันทีด้านล่างครับ');
+                toast.info(tt('toastMemberNotFound'));
                 setIsNewMemberForm(true);
                 setNewMemberForm({ display_name: '', phone_number: cleanPhone });
             }
         } catch (err) {
             console.error('Member lookup error:', err);
-            toast.error('ค้นหาสมาชิกล้มเหลว: ' + err.message);
+            toast.error(tt('toastMemberLookupFailed', { error: err.message }));
         } finally {
             setMemberLookupLoading(false);
         }
@@ -651,11 +664,11 @@ export default function CustomerOrderLanding() {
         const cleanPhone = (newMemberForm.phone_number || '').trim().replace(/\D/g, '');
 
         if (!nameTrim) {
-            toast.error('กรุณาระบุชื่อของคุณ');
+            toast.error(tt('toastNameRequired'));
             return;
         }
         if (cleanPhone.length < 9) {
-            toast.error('กรุณาระบุเบอร์โทรศัพท์อย่างน้อย 9-10 หลัก');
+            toast.error(tt('toastPhoneRequired'));
             return;
         }
 
@@ -715,12 +728,12 @@ export default function CustomerOrderLanding() {
                     console.warn('Booking user_id update warning:', bErr);
                 }
             }
-            toast.success(`สมัครสมาชิกสำเร็จ! ยินดีต้อนรับคุณ ${savedProfile.display_name}`);
+            toast.success(tt('toastMemberRegistered', { name: savedProfile.display_name }));
             setShowMemberModal(false);
             setIsNewMemberForm(false);
         } catch (err) {
             console.error('Register member error:', err);
-            toast.error('สมัครสมาชิกไม่สำเร็จ: ' + err.message);
+            toast.error(tt('toastMemberRegisterFailed', { error: err.message }));
         } finally {
             setMemberLookupLoading(false);
         }
@@ -730,7 +743,7 @@ export default function CustomerOrderLanding() {
         setMemberProfile(null);
         localStorage.removeItem('customer_member_profile');
         window.dispatchEvent(new Event('customer_profile_updated'));
-        toast.info('ยกเลิกการเชื่อมต่อสมาชิกเรียบร้อยแล้ว');
+        toast.info(tt('toastMemberUnlinked'));
     };
 
     const performGeofenceCheck = (loadedSettings, isRetry = false) => {
@@ -746,7 +759,7 @@ export default function CustomerOrderLanding() {
 
         if (!navigator.geolocation) {
             setGpsStatus('failed');
-            setGpsError('อุปกรณ์ของคุณไม่รองรับการระบุพิกัด GPS สามารถเรียกพนักงานเปิดโต๊ะได้ครับ');
+            setGpsError({ key: 'gpsUnsupported' });
             setGpsChecking(false);
             return;
         }
@@ -776,7 +789,7 @@ export default function CustomerOrderLanding() {
                 setShowStaffActivationModal(false);
             } else {
                 setGpsStatus('failed');
-                setGpsError(`พิกัดอยู่นอกพื้นที่ร้าน (${Math.round(distance)}ม. คลาดเคลื่อน ±${Math.round(accuracy)}ม.)`);
+                setGpsError({ key: 'gpsOutOfArea', vars: { distance: Math.round(distance), accuracy: Math.round(accuracy) } });
             }
             setGpsChecking(false);
         };
@@ -789,7 +802,7 @@ export default function CustomerOrderLanding() {
                     (fallbackErr) => {
                         console.warn('GPS low-accuracy fallback error:', fallbackErr);
                         setGpsStatus('failed');
-                        setGpsError('ค้นหาพิกัด GPS ล้มเหลว สามารถเรียกพนักงานเปิดโต๊ะได้ครับ');
+                        setGpsError({ key: 'gpsFailed' });
                         setGpsChecking(false);
                     },
                     { enableHighAccuracy: false, timeout: 8000, maximumAge: 120000 }
@@ -799,15 +812,15 @@ export default function CustomerOrderLanding() {
 
             console.warn('GPS error:', error);
             setGpsStatus('failed');
-            let errMsg = 'กรุณาเปิดพิกัด GPS หรือเรียกพนักงานเปิดโต๊ะ';
+            let errKey = 'gpsGeneric';
             if (error?.code === error?.PERMISSION_DENIED) {
-                errMsg = 'เบราว์เซอร์ถูกปฏิเสธการเข้าถึงตำแหน่งพิกัด สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+                errKey = 'gpsDenied';
             } else if (error?.code === error?.POSITION_UNAVAILABLE) {
-                errMsg = 'ไม่สามารถระบุตำแหน่งพิกัดในอาคารได้ สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+                errKey = 'gpsUnavailable';
             } else if (error?.code === error?.TIMEOUT) {
-                errMsg = 'ค้นหาพิกัด GPS ล้มเหลว (หมดเวลา) สามารถเรียกพนักงานเปิดโต๊ะได้ครับ';
+                errKey = 'gpsTimeout';
             }
-            setGpsError(errMsg);
+            setGpsError({ key: errKey });
             setGpsChecking(false);
         };
 
@@ -828,10 +841,10 @@ export default function CustomerOrderLanding() {
         setIsCallingStaffOpen(true);
         try {
             await handleCallStaff();
-            toast.success('ส่งสัญญาณเรียกพนักงานเรียบร้อยแล้ว กรุณารอพนักงานเปิดโต๊ะสักครู่ครับ');
+            toast.success(tt('toastStaffSignalSent'));
         } catch (e) {
             console.error('Call staff error:', e);
-            toast.error('ไม่สามารถเรียกพนักงานได้');
+            toast.error(tt('toastCallStaffFailed'));
         }
     };
 
@@ -855,7 +868,7 @@ export default function CustomerOrderLanding() {
                 setActiveBooking(null);
                 if (tableId) localStorage.removeItem(`table_${tableId}_token`);
                 if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
-                toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว กรุณาสแกน QR Code หรือสั่งรายการใหม่เพื่อเปิดรอบครับ');
+                toast.error(tt('toastBillVoidedRescan'));
                 setCallingStaff(false);
                 return;
             }
@@ -868,7 +881,7 @@ export default function CustomerOrderLanding() {
                     setActiveBooking(null);
                     if (tableId) localStorage.removeItem(`table_${tableId}_token`);
                     if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
-                    toast.error('บิลของโต๊ะนี้ถูกยกเลิกแล้ว กรุณาสแกน QR Code เพื่อเริ่มสั่งใหม่ครับ');
+                    toast.error(tt('toastBillVoidedStartOver'));
                     setCallingStaff(false);
                     return;
                 }
@@ -909,10 +922,10 @@ export default function CustomerOrderLanding() {
                 new Promise((resolve) => setTimeout(resolve, 1500))
             ]);
 
-            toast.success('แจ้งเรียกพนักงานเรียบร้อยแล้ว กรุณารอสักครู่ครับ');
+            toast.success(tt('toastStaffCalled'));
         } catch (err) {
             console.error("Failed to call staff:", err);
-            toast.error('ไม่สามารถเรียกพนักงานได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+            toast.error(tt('toastCallStaffRetry'));
         } finally {
             setCallingStaff(false);
         }
@@ -927,7 +940,7 @@ export default function CustomerOrderLanding() {
             setActiveBooking(null);
             if (tableId) localStorage.removeItem(`table_${tableId}_token`);
             if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
-            toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+            toast.error(tt('toastBillVoided'));
             return;
         }
 
@@ -943,7 +956,7 @@ export default function CustomerOrderLanding() {
             setActiveBooking(null);
             if (tableId) localStorage.removeItem(`table_${tableId}_token`);
             if (table?.id) localStorage.removeItem(`table_${table.id}_token`);
-            toast.error('บิลของโต๊ะนี้ถูกยกเลิก (Void) แล้ว');
+            toast.error(tt('toastBillVoided'));
             return;
         }
 
@@ -978,11 +991,11 @@ export default function CustomerOrderLanding() {
                 new Promise((resolve) => setTimeout(resolve, 1500))
             ]);
 
-            toast.success('แจ้งพนักงานเรียกเช็คบิลเรียบร้อยแล้ว');
+            toast.success(tt('toastBillRequested'));
             refreshActiveBooking();
         } catch (err) {
             console.error('Request bill failed:', err);
-            toast.error('ล้มเหลว: ' + err.message);
+            toast.error(tt('toastFailed', { error: err.message }));
         } finally {
             setRequestingBill(false);
         }
@@ -1156,14 +1169,14 @@ export default function CustomerOrderLanding() {
             .filter(group => group.items.length > 0);
         const groupedIds = new Set(groups.flatMap(group => group.items.map(item => item.id)));
         const ungrouped = filteredItems.filter(item => !groupedIds.has(item.id));
-        if (ungrouped.length > 0) groups.push({ key: 'other', title: 'อื่นๆ', items: ungrouped });
+        if (ungrouped.length > 0) groups.push({ key: 'other', title: tt('otherGroup'), items: ungrouped });
         return groups;
-    }, [activeCategory, search, visibleCategories, filteredItems, isItemInCategory]);
+    }, [activeCategory, search, visibleCategories, filteredItems, isItemInCategory, tt]);
 
     // Cart Operations
     const handleAddToCart = (item) => {
         if (isItemKitchenClosed(item)) {
-            toast.error(`ขออภัยครับ อยู่นอกเวลาสั่งอาหารครัว (ครัวเปิดรับ ${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.)`);
+            toast.error(tt('toastKitchenClosed', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' }));
             return;
         }
         setSelectedItem(item);
@@ -1186,7 +1199,7 @@ export default function CustomerOrderLanding() {
             return [...prev, configuredItem];
         });
         setSelectedItem(null);
-        toast.success(`เพิ่ม ${configuredItem.name} เข้าตะกร้าแล้ว`);
+        toast.success(tt('toastAddedToCart', { name: configuredItem.name }));
     };
 
     const handleUpdateQty = (index, delta) => {
@@ -1216,7 +1229,7 @@ export default function CustomerOrderLanding() {
 
         const effectiveNumericTableId = table?.id || (tableId && /^\d+$/.test(tableId) ? parseInt(tableId) : null);
         if (!effectiveNumericTableId) {
-            toast.error('ไม่พบรหัสโต๊ะที่ถูกต้อง กรุณาสแกน QR Code ใหม่อีกครั้ง');
+            toast.error(tt('toastInvalidTable'));
             submittingRef.current = false;
             setSubmitting(false);
             return;
@@ -1226,7 +1239,7 @@ export default function CustomerOrderLanding() {
         if (isKitchenClosed) {
             const invalidItems = cart.filter(item => isItemKitchenClosed(item));
             if (invalidItems.length > 0) {
-                toast.error(`ขออภัยครับ รายการ "${invalidItems.map(i => i.name).join(', ')}" ไม่สามารถสั่งได้เนื่องจากอยู่นอกเวลาครัว (${settings.qr_kitchen_open_time || '10:00'} - ${settings.qr_kitchen_close_time || '22:00'} น.) ระบบได้นำออกจากตะกร้าให้แล้วครับ`);
+                toast.error(tt('toastItemsRemovedKitchenClosed', { items: invalidItems.map(i => i.name).join(', '), open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' }));
                 setCart(prev => prev.filter(item => !isItemKitchenClosed(item)));
                 submittingRef.current = false;
                 setSubmitting(false);
@@ -1446,7 +1459,7 @@ export default function CustomerOrderLanding() {
                 console.warn('[Checkout] Broadcast delivery non-fatal warning:', broadcastErr);
             }
 
-            toast.success(isGeofenceVerified ? 'ออเดอร์ถูกส่งไปยังห้องครัวแล้ว!' : 'ส่งออเดอร์เข้าสู่ POS เรียบร้อยแล้ว (รอพนักงานอนุมัติ)');
+            toast.success(isGeofenceVerified ? tt('toastOrderSentKitchen') : tt('toastOrderSentPos'));
             setCart([]);
             setCartOpen(false);
             setTableRemarkInput('');
@@ -1462,7 +1475,7 @@ export default function CustomerOrderLanding() {
 
         } catch (err) {
             console.error('Checkout error:', err);
-            toast.error('Failed to submit order: ' + err.message);
+            toast.error(tt('toastOrderFailed', { error: err.message }));
         } finally {
             submittingRef.current = false;
             setSubmitting(false);
@@ -1523,7 +1536,7 @@ export default function CustomerOrderLanding() {
             <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col items-center justify-center font-[var(--font-body)]">
                 <div className="w-10 h-10 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin mb-4" />
                 <p className="text-[var(--color-neutral)] text-xs font-mono font-bold tracking-widest uppercase">
-                    {displayLoadingName ? `Connecting Table ${displayLoadingName}...` : 'Connecting Table...'}
+                    {displayLoadingName ? tt('connectingTable', { table: displayLoadingName }) : tt('connectingTableGeneric')}
                 </p>
             </div>
         );
@@ -1536,20 +1549,35 @@ export default function CustomerOrderLanding() {
                 <div className="w-16 h-16 bg-[var(--color-accent)]/10 border border-[var(--color-accent)]/20 rounded-full flex items-center justify-center text-[var(--color-accent)] mb-4">
                     <AlertTriangle size={30} />
                 </div>
-                <h3 className="font-mono font-bold text-xs tracking-wider uppercase mb-2 text-[var(--color-accent)]">Ordering Closed / ระบบสั่งอาหารปิด</h3>
+                <h3 className="font-bold text-base mb-2 text-[var(--color-accent)]">{tt('orderingClosedTitle')}</h3>
                 <p className="text-[var(--color-neutral)] text-xs max-w-sm leading-relaxed mb-6">
-                    ขณะนี้ร้านยังไม่เปิดรับออเดอร์ผ่าน QR Code ชั่วคราว กรุณาติดต่อพนักงานประจำร้านครับ
+                    {tt('orderingClosedBody')}
                 </p>
                 <button 
                     onClick={() => window.location.reload()} 
                     className="bg-[var(--color-paper)] border border-[var(--color-rule)] hover:border-[var(--color-ink)] px-6 py-2.5 rounded-sm text-xs font-mono font-bold uppercase tracking-wider active:scale-95 transition-all text-[var(--color-ink)] flex items-center gap-2 cursor-pointer shadow-sm"
                 >
                     <RefreshCw size={12} />
-                    <span>รีเฟรชหน้าเว็บ</span>
+                    <span>{tt('reloadPage')}</span>
                 </button>
             </div>
         );
     }
+
+    const optionLabels = {
+        specialNote: tt('optSpecialNote'),
+        optional: tt('optOptional'),
+        notePlaceholder: tt('optNotePlaceholder'),
+        quantity: tt('optQuantity'),
+        addToOrder: tt('optAddToOrder'),
+        required: tt('optRequired'),
+        pickOne: tt('optPickOne'),
+        pickMax: tt('optPickMax'),
+        soldOut: tt('optSoldOut'),
+        toastMax: tt('optToastMax'),
+        toastRequired: tt('optToastRequired'),
+        toastError: tt('optToastError'),
+    };
 
     const currentCategoryObj = categories.find(c => String(c.id) === String(activeCategory));
 
@@ -1578,7 +1606,7 @@ export default function CustomerOrderLanding() {
                         {/* Badges */}
                         {item.is_recommended && (
                             <div className="absolute top-1.5 left-1.5 bg-[var(--color-accent)] text-[var(--color-paper)] text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-                                SIGNATURE
+                                {tt('signatureBadge')}
                             </div>
                         )}
 
@@ -1608,7 +1636,7 @@ export default function CustomerOrderLanding() {
                     <div className="flex items-center gap-1.5">
                         {hasOptions && (
                             <span className="text-[11px] text-[var(--color-neutral)] whitespace-nowrap">
-                                มีตัวเลือก
+                                {tt('hasOptions')}
                             </span>
                         )}
                         <div className="w-8 h-8 rounded-sm bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] group-hover:bg-[var(--color-ink)] group-hover:text-[var(--color-paper)] flex items-center justify-center transition-colors">
@@ -1626,53 +1654,72 @@ export default function CustomerOrderLanding() {
             <header className="sticky top-0 bg-[var(--color-paper)] border-b border-[var(--color-rule)] z-40">
                 <div className="max-w-2xl mx-auto flex items-stretch divide-x divide-[var(--color-rule)]">
                     <div className="flex-1 min-w-0 px-4 py-2.5 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 overflow-hidden">
                             <span className="block text-[11px] font-bold tracking-wide text-[var(--color-neutral)] leading-tight">
                                 IN THE HAUS
                             </span>
                             <div className="flex items-baseline gap-2">
                                 <h1 className="text-lg font-bold text-[var(--color-ink)] leading-snug whitespace-nowrap">
-                                    โต๊ะ {table?.table_name}
+                                    {tt('tableName', { table: table?.table_name })}
                                 </h1>
                                 <button
                                     type="button"
                                     onClick={() => setShowPaxModal(true)}
                                     className="text-xs text-[var(--color-neutral)] hover:text-[var(--color-ink)] underline underline-offset-2 whitespace-nowrap cursor-pointer"
-                                    aria-label={`จำนวนลูกค้า ${paxCount} ท่าน แตะเพื่อแก้ไข`}
+                                    aria-label={tt('paxEditLabel', { n: paxCount })}
                                 >
-                                    {paxCount} ท่าน
+                                    {tt('paxCount', { n: paxCount })}
                                 </button>
                             </div>
                         </div>
                         {gpsStatus === 'verified' || settings.qr_gps_enabled === 'false' || (activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) ? (
                             <div className="flex items-center gap-1 text-[var(--color-accent-2)] text-xs font-semibold whitespace-nowrap">
                                 <ShieldCheck size={14} />
-                                <span>{activeBooking ? 'เปิดโต๊ะแล้ว' : 'พร้อมสั่ง'}</span>
+                                <span>{activeBooking ? tt('statusTableOpen') : tt('statusReady')}</span>
                             </div>
                         ) : gpsChecking ? (
                             <div className="flex items-center gap-1 text-[var(--color-neutral)] text-xs font-semibold whitespace-nowrap animate-pulse">
                                 <MapPin size={14} />
-                                <span>กำลังตรวจตำแหน่ง</span>
+                                <span>{tt('statusLocating')}</span>
                             </div>
                         ) : (
                             <button
                                 type="button"
                                 onClick={() => setShowStaffActivationModal(true)}
                                 className="flex items-center gap-1 text-[var(--color-accent)] text-xs font-semibold whitespace-nowrap border border-[var(--color-accent)]/40 px-2 py-1 rounded-sm bg-[var(--color-accent)]/10 hover:bg-[var(--color-accent)]/20 cursor-pointer"
-                                title="แตะเพื่อดูสถานะเปิดโต๊ะ"
+                                title={tt('statusWaitingStaffHint')}
                             >
                                 <AlertTriangle size={13} />
-                                <span>รอพนักงาน</span>
+                                <span>{tt('statusWaitingStaff')}</span>
                             </button>
                         )}
+                    </div>
+
+                    {/* Language switch: one cell, the active language in ink */}
+                    <div className="flex items-stretch" role="group" aria-label={tt('languageSwitch')}>
+                        {TABLE_LANGUAGES.map(option => (
+                            <button
+                                key={option.code}
+                                type="button"
+                                onClick={() => setLanguage(option.code)}
+                                aria-pressed={lang === option.code}
+                                className={`px-2.5 text-xs font-bold transition-colors cursor-pointer ${
+                                    lang === option.code
+                                        ? 'text-[var(--color-ink)] underline underline-offset-4 decoration-2'
+                                        : 'text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
+                                }`}
+                            >
+                                {option.label}
+                            </button>
+                        ))}
                     </div>
 
                     <div className="flex items-center">
                         <Link
                             to="/member-card"
                             className="px-3.5 self-stretch text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] flex items-center justify-center transition-colors"
-                            title="บัตรสมาชิก"
-                            aria-label="บัตรสมาชิก"
+                            title={tt('memberCard')}
+                            aria-label={tt('memberCard')}
                         >
                             <Crown size={18} />
                         </Link>
@@ -1684,14 +1731,14 @@ export default function CustomerOrderLanding() {
             {settings.qr_gps_enabled === 'true' && gpsStatus === 'failed' && !(activeBooking && ['confirmed', 'seated', 'ready'].includes(activeBooking.status)) && (
                 <div className="max-w-2xl mx-auto w-full bg-[var(--color-paper-2)] border-b border-[var(--color-rule)] px-4 py-2 flex items-center justify-between gap-3">
                     <span className="text-xs leading-normal text-[var(--color-muted)]">
-                        ยืนยันตำแหน่งไม่ได้ ออเดอร์จะรอพนักงานอนุมัติก่อนส่งครัว
+                        {tt('gpsNotice')}
                     </span>
                     <button
                         type="button"
                         onClick={() => setShowStaffActivationModal(true)}
                         className="text-xs font-semibold text-[var(--color-accent)] underline underline-offset-2 cursor-pointer shrink-0"
                     >
-                        ดูสถานะ
+                        {tt('viewStatus')}
                     </button>
                 </div>
             )}
@@ -1702,21 +1749,21 @@ export default function CustomerOrderLanding() {
                     {memberProfile ? (
                         <div className="min-w-0 text-xs leading-normal">
                             <div className="font-bold text-[var(--color-ink)] truncate">
-                                คุณ{memberProfile.display_name || memberProfile.nickname || 'สมาชิก'}
+                                {tt('memberGreeting', { name: memberProfile.display_name || memberProfile.nickname || tt('memberFallbackName') })}
                                 <span className="ml-1.5 font-normal text-[var(--color-neutral)]">
                                     {tierDetails.current_tier || 'Haus Common'} {tierDetails.multiplier || '1.0'}x
                                 </span>
                             </div>
                             <div className="text-[var(--color-muted)] truncate">
-                                <span className="font-mono">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span> xhaus · แสตมป์ <span className="font-mono">{memberProfile.drink_stamp_count || 0}/10</span>
+                                <span className="font-mono">{parseFloat(memberProfile.xhaus_balance || 0).toFixed(0)}</span> xhaus · {tt('memberStamps')} <span className="font-mono">{memberProfile.drink_stamp_count || 0}/10</span>
                                 {(memberProfile.free_drink_quota || 0) > 0 && (
-                                    <span className="ml-1.5 font-semibold text-[var(--color-accent-2)]">ฟรี {memberProfile.free_drink_quota} แก้ว</span>
+                                    <span className="ml-1.5 font-semibold text-[var(--color-accent-2)]">{tt('memberFreeDrinks', { n: memberProfile.free_drink_quota })}</span>
                                 )}
                             </div>
                         </div>
                     ) : (
                         <p className="min-w-0 text-xs leading-normal text-[var(--color-muted)]">
-                            <span className="font-bold text-[var(--color-ink)]">สมาชิก</span> สะสมแต้ม xhaus · แก้ว 10 แถม 1
+                            <span className="font-bold text-[var(--color-ink)]">{tt('memberPitchLabel')}</span> {tt('memberPitch')}
                         </p>
                     )}
 
@@ -1725,16 +1772,16 @@ export default function CustomerOrderLanding() {
                             <Link
                                 to="/member-card"
                                 className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-2.5 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95"
-                                title="เปิดบัตรสมาชิกดิจิทัล"
+                                title={tt('memberCardOpen')}
                             >
-                                บัตร
+                                {tt('memberCardShort')}
                             </Link>
                         )}
                         <button
                             onClick={() => setShowMemberModal(true)}
                             className="bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] px-3 py-1.5 rounded-sm text-xs font-semibold cursor-pointer active:scale-95 whitespace-nowrap"
                         >
-                            {memberProfile ? 'เปลี่ยน' : 'สมัคร / เข้าสู่ระบบ'}
+                            {memberProfile ? tt('memberSwitch') : tt('memberSignIn')}
                         </button>
                     </div>
                 </div>
@@ -1750,14 +1797,14 @@ export default function CustomerOrderLanding() {
                                 <div className="min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-accent)]">
-                                            KITCHEN CLOSED · ครัวเปิดรับ {settings.qr_kitchen_open_time || '10:00'} - {settings.qr_kitchen_close_time || '22:00'} น.
+                                            {tt('kitchenClosedTitle', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' })}
                                         </span>
                                         <span className="bg-[var(--color-paper)]/15 text-[var(--color-paper)] text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
-                                            DRINKS & BAR ONLY
+                                            {tt('kitchenClosedTag')}
                                         </span>
                                     </div>
                                     <span className="text-[10px] text-[var(--color-paper)]/80 mt-0.5 block truncate">
-                                        ขณะนี้อยู่นอกเวลาสั่งอาหาร สามารถเลือกสั่งเครื่องดื่มและรายการบาร์ได้ตามปกติครับ
+                                        {tt('kitchenClosedBody')}
                                     </span>
                                 </div>
                             </div>
@@ -1771,13 +1818,13 @@ export default function CustomerOrderLanding() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-neutral)]" size={15} />
                         <input 
                             type="search" 
-                            placeholder="ค้นหาเมนูอาหารและเครื่องดื่ม..." 
+                            placeholder={tt('searchPlaceholder')} 
                             className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 pl-9 pr-9 text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] text-base transition-colors"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                         {search && (
-                            <button onClick={() => setSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] p-2" aria-label="ล้างคำค้นหา">
+                            <button onClick={() => setSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[var(--color-neutral)] p-2" aria-label={tt('clearSearch')}>
                                 <X size={13} />
                             </button>
                         )}
@@ -1799,7 +1846,7 @@ export default function CustomerOrderLanding() {
                                     : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                             }`}
                         >
-                            ทั้งหมด ({visibleMenuItems.length})
+                            {tt('chipAll', { n: visibleMenuItems.length })}
                         </button>
 
                         {/* Recommended Pill */}
@@ -1813,7 +1860,7 @@ export default function CustomerOrderLanding() {
                                         : 'bg-[var(--color-paper)] border-[var(--color-accent)]/40 text-[var(--color-accent)] hover:border-[var(--color-accent)]'
                                 }`}
                             >
-                                เมนูแนะนำ ({recommendedMenuItems.length})
+                                {tt('chipRecommended', { n: recommendedMenuItems.length })}
                             </button>
                         )}
 
@@ -1852,7 +1899,7 @@ export default function CustomerOrderLanding() {
                             type="button"
                             onClick={() => scrollChips(-1)}
                             className="absolute left-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-r border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
-                            aria-label="เลื่อนดูหมวดก่อนหน้า"
+                            aria-label={tt('chipsPrev')}
                         >
                             <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronLeft size={16} /></span>
                         </button>
@@ -1862,7 +1909,7 @@ export default function CustomerOrderLanding() {
                             type="button"
                             onClick={() => scrollChips(1)}
                             className="absolute right-0 inset-y-0 w-10 flex items-center justify-center bg-[var(--color-paper)] border-l border-[var(--color-rule)] text-[var(--color-ink)] cursor-pointer active:bg-[var(--color-paper-2)]"
-                            aria-label="เลื่อนดูหมวดถัดไป"
+                            aria-label={tt('chipsNext')}
                         >
                             <span className="w-7 h-7 rounded-sm bg-[var(--color-ink)] text-[var(--color-paper)] flex items-center justify-center"><ChevronRight size={16} /></span>
                         </button>
@@ -1877,13 +1924,13 @@ export default function CustomerOrderLanding() {
                         <section className="mb-8 bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-3.5">
                             <div className="flex items-baseline justify-between mb-3">
                                 <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
-                                    เมนูแนะนำ
+                                    {tt('recommendedTitle')}
                                 </h3>
                                 <button
                                     onClick={() => setActiveCategory('recommended')}
                                     className="text-sm font-semibold text-[var(--color-accent)] hover:underline underline-offset-2 flex items-center gap-0.5 cursor-pointer"
                                 >
-                                    <span>ดูทั้งหมด {recommendedMenuItems.length}</span>
+                                    <span>{tt('seeAll', { n: recommendedMenuItems.length })}</span>
                                     <ChevronRight size={14} />
                                 </button>
                             </div>
@@ -1899,11 +1946,11 @@ export default function CustomerOrderLanding() {
                         <div className="mb-3 flex items-center justify-between">
                             <h3 className="text-base font-bold text-[var(--color-ink)] leading-snug">
                                 {search.trim() ? (
-                                    `ผลการค้นหา "${search.trim()}"`
+                                    tt('searchResults', { q: search.trim() })
                                 ) : activeCategory === 'recommended' ? (
-                                    'เมนูแนะนำ'
+                                    tt('recommendedTitle')
                                 ) : (
-                                    currentCategoryObj?.name || 'รายการ'
+                                    currentCategoryObj?.name || tt('categoryFallback')
                                 )}
                                 <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{filteredItems.length}</span>
                             </h3>
@@ -1932,10 +1979,10 @@ export default function CustomerOrderLanding() {
 
                     {filteredItems.length === 0 && (
                         <div className="py-16 text-center text-[var(--color-neutral)] font-mono text-xs uppercase tracking-wider space-y-2">
-                            <p>ไม่พบรายการอาหารในหมวดหมู่นี้</p>
+                            <p>{tt('emptyCategory')}</p>
                             {isKitchenClosed && (
                                 <p className="text-[10px] text-[var(--color-accent)]">
-                                    (รายการอาหารหลักปิดรับออเดอร์แล้ว ครัวเปิดรับ {settings.qr_kitchen_open_time || '10:00'} - {settings.qr_kitchen_close_time || '22:00'} น.)
+                                    {tt('kitchenClosedEmpty', { open: settings.qr_kitchen_open_time || '10:00', close: settings.qr_kitchen_close_time || '22:00' })}
                                 </p>
                             )}
                         </div>
@@ -1950,12 +1997,13 @@ export default function CustomerOrderLanding() {
                         item={selectedItem} 
                         onClose={() => setSelectedItem(null)} 
                         onConfirm={handleConfirmOptions} 
+                        labels={optionLabels}
                     />
                 )}
             </AnimatePresence>
 
             {/* Bottom Actions: staff + ordered items; cart row only when the cart has items */}
-            <div className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] z-40 safe-area-bottom">
+            <div translate="no" className="fixed bottom-0 left-0 right-0 p-3 bg-[var(--color-paper)] border-t border-[var(--color-rule)] z-40 safe-area-bottom">
                 <div className="max-w-2xl mx-auto flex flex-col gap-2">
                     {cart.length > 0 && (
                         <button
@@ -1964,7 +2012,7 @@ export default function CustomerOrderLanding() {
                         >
                             <span className="flex items-center gap-2">
                                 <ShoppingBag size={16} />
-                                <span>ดูตะกร้า · {cartCount} รายการ</span>
+                                <span>{tt('viewCart', { n: cartCount })}</span>
                             </span>
                             <span className="font-mono">฿{cartSubtotal.toLocaleString()}</span>
                         </button>
@@ -1977,7 +2025,7 @@ export default function CustomerOrderLanding() {
                             className="flex-1 bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-ink)] py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                         >
                             <Bell size={15} className="text-[var(--color-accent)]" />
-                            <span>{callingStaff ? 'กำลังเรียก...' : 'เรียกพนักงาน'}</span>
+                            <span>{callingStaff ? tt('callingStaff') : tt('callStaff')}</span>
                         </button>
 
                         <button
@@ -1985,7 +2033,7 @@ export default function CustomerOrderLanding() {
                                 if (activeBooking) {
                                     setTrackingOpen(true);
                                 } else {
-                                    toast.info('กรุณาสั่งรายการแรกเพื่อเริ่มเซสชันก่อนครับ');
+                                    toast.info(tt('orderFirstHint'));
                                 }
                             }}
                             className={`flex-1 py-2.5 px-3 rounded-sm font-semibold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all cursor-pointer whitespace-nowrap ${
@@ -1995,7 +2043,7 @@ export default function CustomerOrderLanding() {
                             }`}
                         >
                             <Receipt size={15} className={activeBooking ? "text-[var(--color-accent-2)]" : "text-[var(--color-muted)]"} />
-                            <span>สั่งไปแล้ว</span>
+                            <span>{tt('orderedSoFar')}</span>
                             {activeBooking && (
                                 <span className="font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}</span>
                             )}
@@ -2021,16 +2069,17 @@ export default function CustomerOrderLanding() {
                             animate={{ y: 0 }}
                             exit={{ y: '100%' }}
                             transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+                            translate="no"
                             className="bg-[var(--color-paper)] w-full max-w-lg rounded-t-sm border-t border-[var(--color-rule)] p-4 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)] font-[var(--font-body)]"
                         >
                             {/* Drawer Header */}
                             <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                 <div>
                                     <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
-                                        ตะกร้าของคุณ (YOUR CART)
+                                        {tt('cartTitle')}
                                     </h3>
                                     <p className="text-[10px] text-[var(--color-neutral)] font-mono uppercase mt-0.5">
-                                        โต๊ะ {table?.table_name} · {cartCount} รายการ
+                                        {tt('cartSubtitle', { table: table?.table_name, n: cartCount })}
                                     </p>
                                 </div>
                                 <button 
@@ -2081,11 +2130,11 @@ export default function CustomerOrderLanding() {
                             {/* Kitchen Remark Input */}
                             <div className="pt-2 border-t border-[var(--color-rule)] shrink-0">
                                 <label className="block text-[9px] font-mono font-bold text-[var(--color-neutral)] uppercase tracking-wider mb-1">
-                                    หมายเหตุถึงครัว (KITCHEN NOTE)
+                                    {tt('kitchenNote')}
                                 </label>
                                 <input
                                     type="text"
-                                    placeholder="เช่น ขอช้อนส้อมเพิ่ม, เผ็ดน้อย, เสิร์ฟพร้อมกัน"
+                                    placeholder={tt('kitchenNotePlaceholder')}
                                     value={tableRemarkInput}
                                     onChange={(e) => setTableRemarkInput(e.target.value)}
                                     className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-2.5 text-xs text-[var(--color-ink)] placeholder-[var(--color-neutral)] focus:outline-none focus:border-[var(--color-ink)] transition-colors"
@@ -2095,7 +2144,7 @@ export default function CustomerOrderLanding() {
                             {/* Drawer Footer */}
                             <div className="border-t border-[var(--color-rule)] pt-3 mt-3 space-y-2.5 shrink-0">
                                 <div className="flex justify-between items-baseline">
-                                    <span className="text-[var(--color-neutral)] text-[10px] uppercase font-mono font-bold tracking-wider">ยอดรวมสุทธิ (Subtotal)</span>
+                                    <span className="text-[var(--color-neutral)] text-[10px] uppercase font-mono font-bold tracking-wider">{tt('subtotal')}</span>
                                     <span className="text-lg font-black text-[var(--color-ink)] font-mono">฿{cartSubtotal.toLocaleString()}.-</span>
                                 </div>
 
@@ -2107,12 +2156,12 @@ export default function CustomerOrderLanding() {
                                     {submitting ? (
                                         <>
                                             <div className="w-3.5 h-3.5 border-2 border-[var(--color-paper)] border-t-transparent rounded-full animate-spin" />
-                                            <span>กำลังส่งรายการสั่งอาหาร...</span>
+                                            <span>{tt('sendingOrder')}</span>
                                         </>
                                     ) : (
                                         <>
                                             <Check size={14} />
-                                            <span>ยืนยันส่งครัว (Place Order)</span>
+                                            <span>{tt('placeOrder')}</span>
                                         </>
                                     )}
                                 </button>
@@ -2126,8 +2175,8 @@ export default function CustomerOrderLanding() {
             <AnimatePresence>
                 {trackingOpen && activeBooking && (() => {
                     const steps = [
-                        { key: 'pending', label: 'ส่งออเดอร์แล้ว', desc: 'ห้องครัวได้รับรายการแล้ว', time: activeBooking.booking_time },
-                        { key: 'seated', label: 'กำลังจัดเตรียม', desc: 'ห้องครัวและบาร์กำลังปรุงอาหารตามคิว', time: activeBooking.status !== 'pending' ? activeBooking.booking_time : null },
+                        { key: 'pending', label: tt('stepSentLabel'), desc: tt('stepSentDesc'), time: activeBooking.booking_time },
+                        { key: 'seated', label: tt('stepPreparingLabel'), desc: tt('stepPreparingDesc'), time: activeBooking.status !== 'pending' ? activeBooking.booking_time : null },
                     ];
 
                     const activeStep = activeBooking.status === 'pending' ? 0 : 1;
@@ -2148,16 +2197,17 @@ export default function CustomerOrderLanding() {
                                 animate={{ y: 0 }}
                                 exit={{ y: '100%' }}
                                 transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-                                className="bg-[var(--color-paper)] w-full max-w-lg rounded-t-sm border-t border-[var(--color-rule)] p-4 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)] font-[var(--font-body)]"
+                                translate="no"
+                            className="bg-[var(--color-paper)] w-full max-w-lg rounded-t-sm border-t border-[var(--color-rule)] p-4 shadow-2xl z-10 pointer-events-auto overflow-hidden flex flex-col max-h-[85vh] text-[var(--color-ink)] font-[var(--font-body)]"
                             >
                                 {/* Header */}
                                 <div className="flex justify-between items-center pb-3 border-b border-[var(--color-rule)] shrink-0">
                                     <div>
                                         <h3 className="text-sm font-mono font-bold uppercase tracking-wider text-[var(--color-ink)]">
-                                            ติดตามสถานะออเดอร์ (ORDER STATUS)
+                                            {tt('trackingTitle')}
                                         </h3>
                                         <p className="text-[10px] text-[var(--color-neutral)] font-mono uppercase mt-0.5">
-                                            Table {table?.table_name} · Queue #{getShortBookingId(activeBooking)}
+                                            {tt('trackingSubtitle', { table: table?.table_name, queue: getShortBookingId(activeBooking) })}
                                         </p>
                                     </div>
                                     <button 
@@ -2173,7 +2223,7 @@ export default function CustomerOrderLanding() {
                                     {/* Progress Steps */}
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4">
                                         <h4 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3">
-                                            ความคืบหน้า (PROGRESS)
+                                            {tt('progress')}
                                         </h4>
                                         <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-[var(--color-rule)]">
                                             {steps.map((step, idx) => {
@@ -2197,7 +2247,7 @@ export default function CustomerOrderLanding() {
                                                                 </span>
                                                                 {isCurrent && (
                                                                     <span className="bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-[8px] font-mono font-bold uppercase px-1.5 py-0.2 rounded-sm">
-                                                                        กำลังปรุง
+                                                                        {tt('cookingNow')}
                                                                     </span>
                                                                 )}
                                                             </div>
@@ -2212,7 +2262,7 @@ export default function CustomerOrderLanding() {
                                     {/* Order Items Ledger */}
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4">
                                         <h4 className="text-[9px] text-[var(--color-neutral)] font-mono font-bold uppercase tracking-widest mb-3">
-                                            รายการอาหารที่สั่ง (ORDER ITEMS)
+                                            {tt('orderItems')}
                                         </h4>
                                         <div className="space-y-2.5">
                                             {orderItems.map((item, idx) => (
@@ -2238,7 +2288,7 @@ export default function CustomerOrderLanding() {
                                                 </div>
                                             ))}
                                             <div className="border-t border-[var(--color-rule)] pt-2.5 mt-2 flex justify-between items-baseline">
-                                                <span className="text-[10px] text-[var(--color-neutral)] font-mono font-bold uppercase">ยอดรวมค่าอาหาร</span>
+                                                <span className="text-[10px] text-[var(--color-neutral)] font-mono font-bold uppercase">{tt('orderTotal')}</span>
                                                 <span className="text-base font-black text-[var(--color-ink)] font-mono">฿{Number(activeBooking.total_amount || 0).toLocaleString()}.-</span>
                                             </div>
                                         </div>
@@ -2254,21 +2304,21 @@ export default function CustomerOrderLanding() {
                                     <div className="bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm p-4 text-center">
                                         {!activeBooking.staff_remark?.includes('[CALL_BILL]') ? (
                                             <div className="space-y-2.5">
-                                                <h5 className="font-bold text-xs text-[var(--color-ink)]">ต้องการเช็คบิลชำระเงิน?</h5>
-                                                <p className="text-[10px] text-[var(--color-neutral)]">กดปุ่มเพื่อแจ้งพนักงานนำใบแจ้งยอดและ QR Code มาให้สแกนจ่ายที่โต๊ะ</p>
+                                                <h5 className="font-bold text-xs text-[var(--color-ink)]">{tt('billQuestion')}</h5>
+                                                <p className="text-[10px] text-[var(--color-neutral)]">{tt('billHint')}</p>
                                                 <button
                                                     onClick={handleRequestBill}
                                                     disabled={requestingBill}
                                                     className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                                                 >
                                                     <Receipt size={13} />
-                                                    <span>{requestingBill ? 'กำลังดำเนินการ...' : 'เรียกพนักงานเช็คบิล (Request Bill)'}</span>
+                                                    <span>{requestingBill ? tt('processing') : tt('requestBill')}</span>
                                                 </button>
                                             </div>
                                         ) : (
                                             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-sm text-xs font-mono font-bold flex items-center justify-center gap-2">
                                                 <CheckCircle size={14} className="text-emerald-600" />
-                                                <span>เรียกพนักงานเช็คบิลแล้ว พนักงานกำลังมาที่โต๊ะ</span>
+                                                <span>{tt('billRequested')}</span>
                                             </div>
                                         )}
                                     </div>
@@ -2285,8 +2335,8 @@ export default function CustomerOrderLanding() {
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)] animate-in fade-in zoom-in-95 duration-150">
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between">
                             <div>
-                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ระบุจำนวนลูกค้า (PARTY SIZE)</h3>
-                                <p className="text-[10px] text-[var(--color-neutral)] font-mono mt-0.5">โต๊ะ {table?.table_name}</p>
+                                <h3 className="font-bold text-sm">{tt('paxTitle')}</h3>
+                                <p className="text-xs text-[var(--color-neutral)] mt-0.5">{tt('tableName', { table: table?.table_name })}</p>
                             </div>
                             {activeBooking && (
                                 <button onClick={() => setShowPaxModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
@@ -2297,9 +2347,9 @@ export default function CustomerOrderLanding() {
                         
                         <div className="p-5 flex flex-col items-center gap-3 text-center">
                             <div className="text-xs font-bold text-[var(--color-ink)]">
-                                กรุณาระบุจำนวนลูกค้าสำหรับโต๊ะนี้
+                                {tt('paxQuestion')}
                             </div>
-                            <p className="text-[10px] text-[var(--color-neutral)]">เพื่อความสะดวกในการบริการและจัดเตรียมอุปกรณ์จานชาม</p>
+                            <p className="text-xs text-[var(--color-neutral)]">{tt('paxReason')}</p>
 
                             {/* Stepper */}
                             <div className="flex items-center gap-3 my-2">
@@ -2342,19 +2392,19 @@ export default function CustomerOrderLanding() {
                             <button
                                 onClick={async () => {
                                     if (!paxCount || paxCount <= 0) {
-                                        toast.error('กรุณาระบุจำนวนคน');
+                                        toast.error(tt('paxRequired'));
                                         return;
                                     }
                                     if (activeBooking?.id) {
                                         await supabase.from('bookings').update({ pax: paxCount }).eq('id', activeBooking.id);
-                                        toast.success(`อัปเดตจำนวนลูกค้าเป็น ${paxCount} คนแล้ว`);
+                                        toast.success(tt('paxUpdated', { n: paxCount }));
                                     }
                                     setShowPaxModal(false);
                                 }}
                                 className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                             >
                                 <Check size={14} />
-                                <span>ยืนยันจำนวนคน (Confirm)</span>
+                                <span>{tt('paxConfirm')}</span>
                             </button>
                         </div>
                     </div>
@@ -2367,7 +2417,7 @@ export default function CustomerOrderLanding() {
                     <div className="bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-sm w-full max-w-sm overflow-hidden shadow-2xl font-[var(--font-body)] text-[var(--color-ink)]">
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-mono font-bold text-xs uppercase tracking-wider">ระบบสมาชิก HAUS MEMBER</h3>
+                                <h3 className="font-bold text-sm">{tt('memberModalTitle')}</h3>
                             </div>
                             <button onClick={() => setShowMemberModal(false)} className="p-1 hover:bg-[var(--color-paper-2)] rounded-sm text-[var(--color-neutral)]">
                                 <X size={15} />
@@ -2378,14 +2428,14 @@ export default function CustomerOrderLanding() {
                             {memberProfile && (
                                 <div className="bg-emerald-50 border border-emerald-200 rounded-sm p-3 flex items-center justify-between text-xs">
                                     <div>
-                                        <span className="text-[9px] text-emerald-700 font-mono font-bold uppercase block">สมาชิกที่เชื่อมต่ออยู่</span>
+                                        <span className="text-[9px] text-emerald-700 font-mono font-bold uppercase block">{tt('memberLinked')}</span>
                                         <span className="font-bold text-emerald-900">{memberProfile.display_name} ({memberProfile.phone_number || 'Member'})</span>
                                     </div>
                                     <button
                                         onClick={handleUnlinkMember}
                                         className="text-[10px] text-red-600 font-mono font-bold underline cursor-pointer"
                                     >
-                                        เลิกเชื่อมต่อ
+                                        {tt('memberUnlink')}
                                     </button>
                                 </div>
                             )}
@@ -2393,7 +2443,7 @@ export default function CustomerOrderLanding() {
                             {!isNewMemberForm ? (
                                 <form onSubmit={handleMemberPhoneLookup} className="space-y-3">
                                     <label className="block text-xs font-bold text-[var(--color-ink)]">
-                                        ระบุเบอร์โทรศัพท์เพื่อค้นหาสมาชิก
+                                        {tt('memberPhonePrompt')}
                                     </label>
                                     <div className="relative">
                                         <input
@@ -2409,21 +2459,21 @@ export default function CustomerOrderLanding() {
                                         disabled={memberLookupLoading}
                                         className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
                                     >
-                                        {memberLookupLoading ? 'กำลังค้นหา...' : 'ค้นหาสมาชิก'}
+                                        {memberLookupLoading ? tt('memberSearching') : tt('memberSearch')}
                                     </button>
                                 </form>
                             ) : (
                                 <form onSubmit={handleRegisterMember} className="space-y-3">
                                     <div className="bg-amber-50 border border-amber-200 rounded-sm p-2.5 text-xs text-amber-800 leading-relaxed">
-                                        ไม่พบสมาชิกเบอร์ <strong>{newMemberForm.phone_number}</strong> สามารถระบุชื่อเพื่อสมัครสมาชิกทันที!
+                                        {tt('memberNotFoundPrefix')} <strong>{newMemberForm.phone_number}</strong> {tt('memberNotFoundSuffix')}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-[var(--color-ink)] mb-1">
-                                            ชื่อ-นามสกุล หรือ ชื่อเล่น
+                                            {tt('memberNameLabel')}
                                         </label>
                                         <input
                                             type="text"
-                                            placeholder="เช่น คุณปอนด์"
+                                            placeholder={tt('memberNamePlaceholder')}
                                             value={newMemberForm.display_name}
                                             onChange={(e) => setNewMemberForm(prev => ({ ...prev, display_name: e.target.value }))}
                                             className="w-full bg-[var(--color-paper-2)] border border-[var(--color-rule)] rounded-sm py-2 px-2.5 text-sm font-bold text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-ink)]"
@@ -2435,14 +2485,14 @@ export default function CustomerOrderLanding() {
                                         className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                                     >
                                         <Check size={14} />
-                                        <span>{memberLookupLoading ? 'กำลังบันทึก...' : 'ยืนยันสมัครสมาชิก & เชื่อมต่อ'}</span>
+                                        <span>{memberLookupLoading ? tt('memberSaving') : tt('memberRegister')}</span>
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setIsNewMemberForm(false)}
                                         className="w-full text-center text-xs text-[var(--color-neutral)] underline font-mono cursor-pointer"
                                     >
-                                        ย้อนกลับไปค้นหาใหม่
+                                        {tt('memberBackToSearch')}
                                     </button>
                                 </form>
                             )}
@@ -2458,7 +2508,7 @@ export default function CustomerOrderLanding() {
                         <div className="p-3.5 border-b border-[var(--color-rule)] flex items-center justify-between bg-[var(--color-paper)]">
                             <div className="flex items-center gap-2">
                                 <span className="font-mono font-bold text-xs uppercase tracking-wider text-[var(--color-ink)]">
-                                    TABLE VERIFICATION · โต๊ะ {table?.table_name}
+                                    {tt('verifyTitle', { table: table?.table_name })}
                                 </span>
                             </div>
                             <button 
@@ -2483,14 +2533,14 @@ export default function CustomerOrderLanding() {
                                     )}
                                 </div>
                                 <h4 className="font-mono font-bold text-sm tracking-wider uppercase text-[var(--color-ink)]">
-                                    {isCallingStaffOpen ? 'แจ้งพนักงานเรียบร้อย' : 'ยืนยันการนั่งที่โต๊ะ'}
+                                    {isCallingStaffOpen ? tt('verifyStaffNotified') : tt('verifySeat')}
                                 </h4>
                                 <p className="text-xs text-[var(--color-neutral)] leading-relaxed">
                                     {isCallingStaffOpen
-                                        ? 'ส่งสัญญาณแจ้งหน้าจอ POS เรียบร้อยแล้ว เมื่อพนักงานเปิดโต๊ะ ระบบจะปลดล็อกให้สั่งอาหารอัตโนมัติครับ'
+                                        ? tt('verifyStaffNotifiedBody')
                                         : gpsError 
-                                            ? gpsError 
-                                            : 'เพื่อความถูกต้องของออเดอร์ กรุณาแตะเรียกพนักงานเพื่อเปิดโต๊ะ หรือลองตรวจสอบพิกัด GPS อีกครั้ง'}
+                                            ? tt(gpsError.key, gpsError.vars)
+                                            : tt('verifyDefaultBody')}
                                 </p>
                             </div>
 
@@ -2505,7 +2555,7 @@ export default function CustomerOrderLanding() {
                                         }}
                                         className="w-full bg-[var(--color-ink)] hover:bg-[var(--color-ink)]/90 text-[var(--color-paper)] py-3 rounded-sm font-mono font-bold text-xs uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 border border-[var(--color-ink)] shadow-sm active:scale-98"
                                     >
-                                        <span>{submitting ? 'กำลังส่งออเดอร์…' : 'ส่งออเดอร์เข้า POS (รอพนักงานอนุมัติ)'}</span>
+                                        <span>{submitting ? tt('sendingOrderShort') : tt('sendToPos')}</span>
                                     </button>
                                 )}
 
@@ -2522,10 +2572,10 @@ export default function CustomerOrderLanding() {
                                     <Bell size={14} className={callingStaff ? 'animate-spin' : ''} />
                                     <span>
                                         {callingStaff 
-                                            ? 'กำลังส่งสัญญาณ…' 
+                                            ? tt('signalSending') 
                                             : isCallingStaffOpen 
-                                                ? 'ส่งสัญญาณเรียกซ้ำ (Call Staff Again)' 
-                                                : 'เรียกพนักงานเปิดโต๊ะ (Call Staff)'}
+                                                ? tt('callStaffAgain') 
+                                                : tt('callStaffToOpen')}
                                     </span>
                                 </button>
 
@@ -2536,7 +2586,7 @@ export default function CustomerOrderLanding() {
                                     className="w-full bg-[var(--color-paper)] hover:bg-[var(--color-paper-2)] border border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)] py-2 rounded-sm font-mono text-[11px] font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1.5"
                                 >
                                     <RefreshCw size={12} className={gpsChecking ? 'animate-spin' : ''} />
-                                    <span>{gpsChecking ? 'กำลังค้นหาพิกัด…' : 'ลองตรวจสอบพิกัด GPS อีกครั้ง'}</span>
+                                    <span>{gpsChecking ? tt('gpsChecking') : tt('gpsRetry')}</span>
                                 </button>
                             </div>
                         </div>
