@@ -37,7 +37,7 @@ function isBookingActiveAndFresh(booking) {
 
 export default function CustomerOrderStatus() {
     const { tableId } = useParams();
-    const { tt } = useTableStrings();
+    const { tt, loc } = useTableStrings();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
 
@@ -559,7 +559,7 @@ export default function CustomerOrderStatus() {
                                     <span className="font-bold font-mono text-[var(--color-accent)]">{item.quantity}x</span>
                                     <div>
                                         <span className="font-bold text-[var(--color-ink)] block leading-tight">
-                                            {item.custom_name || item.menu_items?.name || item.name || tt('stItemFallback')}
+                                            {item.custom_name || (item.menu_items && loc(item.menu_items)) || item.name || tt('stItemFallback')}
                                         </span>
                                         {item.selected_options && (
                                             <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono space-y-0.5">

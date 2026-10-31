@@ -21,7 +21,9 @@ const DEFAULT_LABELS = {
 
 const fill = (template, vars) => template.replace(/\{(\w+)\}/g, (match, name) => (vars[name] ?? match))
 
-export default function OptionSelectionModal({ item, onClose, onConfirm, labels }) {
+const showSource = (row, field) => row?.[field]
+
+export default function OptionSelectionModal({ item, onClose, onConfirm, labels, localize = showSource }) {
     const L = labels ? { ...DEFAULT_LABELS, ...labels } : DEFAULT_LABELS
     // Mono uppercase suits the English POS labels; translated (Thai) labels read better in the text face
     const labelFace = labels ? '' : 'font-mono uppercase'
@@ -120,7 +122,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm, labels 
             if (group.is_required) {
                 const selections = selectedOptions[group.id] || []
                 if (selections.length < (group.min_selection || 1)) {
-                    toast.error(fill(L.toastRequired, { group: group.name }))
+                    toast.error(fill(L.toastRequired, { group: localize(group, 'name') }))
                     return false
                 }
             }
@@ -206,8 +208,8 @@ export default function OptionSelectionModal({ item, onClose, onConfirm, labels 
                 {/* Header (Text only, no heavy image gradient) */}
                 <div className="flex items-start justify-between p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)] shrink-0">
                     <div className="pr-4">
-                        <h3 className="text-xl font-bold text-[var(--color-ink)] leading-tight">{item.name}</h3>
-                        {item.description && <p className="text-[var(--color-neutral)] text-sm mt-1">{item.description}</p>}
+                        <h3 className="text-xl font-bold text-[var(--color-ink)] leading-tight">{localize(item, 'name')}</h3>
+                        {localize(item, 'description') && <p className="text-[var(--color-neutral)] text-sm mt-1">{localize(item, 'description')}</p>}
                     </div>
                     <button onClick={onClose} className="shrink-0 p-2 text-[var(--color-neutral)] hover:text-[var(--color-ink)] active:bg-[var(--color-paper-2)] border border-[var(--color-rule)] touch-manipulation">
                         <X size={20} />
@@ -223,7 +225,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm, labels 
                         return (
                             <div key={group.id} className="mb-2 bg-[var(--color-paper)] border-b border-[var(--color-rule)]">
                                 <div className="flex justify-between items-baseline p-4 border-b border-[var(--color-rule)] bg-[var(--color-paper)]">
-                                    <h4 className="font-bold text-base text-[var(--color-ink)]">{group.name}</h4>
+                                    <h4 className="font-bold text-base text-[var(--color-ink)]">{localize(group, 'name')}</h4>
                                     <div className={`text-xs text-[var(--color-neutral)] whitespace-nowrap ${labels ? '' : 'font-mono'}`}>
                                         {group.is_required && <span className="text-[var(--color-accent)] font-bold mr-1">{L.required}</span>}
                                         {group.selection_type === 'single' ? L.pickOne : fill(L.pickMax, { n: group.max_selection })}
@@ -252,7 +254,7 @@ export default function OptionSelectionModal({ item, onClose, onConfirm, labels 
                                                         {isSelected && <div className={`w-2.5 h-2.5 bg-[var(--color-ink)] ${group.selection_type === 'single' ? 'rounded-full' : 'rounded-sm'}`} />}
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{choice.name}</span>
+                                                        <span className={`text-base ${isSelected ? 'font-bold text-[var(--color-ink)]' : 'text-[var(--color-ink)]'}`}>{localize(choice, 'name')}</span>
                                                         {isSoldOut && (
                                                             <span className="text-[10px] font-mono font-bold text-red-600 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-sm">
                                                                 {L.soldOut}

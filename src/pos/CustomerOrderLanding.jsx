@@ -88,7 +88,7 @@ function isBookingActiveAndFresh(booking) {
 
 export default function CustomerOrderLanding() {
     const { tableId } = useParams();
-    const { lang, setLanguage, hasChosenLanguage } = useTableStrings();
+    const { lang, setLanguage, hasChosenLanguage, loc } = useTableStrings();
     // Read the language through a ref so toasts fired from long-lived callbacks use the current choice
     const langRef = useRef(lang);
     langRef.current = lang;
@@ -1150,7 +1150,7 @@ export default function CustomerOrderLanding() {
             let matchesSearch = true;
             if (searchTerms.length > 0) {
                 const itemCat = categories.find(c => isItemInCategory(item, c));
-                const haystack = [item.name, item.description, item.category, itemCat?.name]
+                const haystack = [item.name, item.name_en, item.description, item.description_en, item.category, itemCat?.name, itemCat?.name_en]
                     .filter(Boolean)
                     .join(' ')
                     .toLowerCase();
@@ -1165,7 +1165,7 @@ export default function CustomerOrderLanding() {
     const groupedItems = useMemo(() => {
         if (activeCategory !== 'all' || search.trim()) return null;
         const groups = visibleCategories
-            .map(cat => ({ key: String(cat.id), title: cat.name, items: filteredItems.filter(item => isItemInCategory(item, cat)) }))
+            .map(cat => ({ key: String(cat.id), title: cat.name, cat, items: filteredItems.filter(item => isItemInCategory(item, cat)) }))
             .filter(group => group.items.length > 0);
         const groupedIds = new Set(groups.flatMap(group => group.items.map(item => item.id)));
         const ungrouped = filteredItems.filter(item => !groupedIds.has(item.id));
@@ -1581,6 +1581,9 @@ export default function CustomerOrderLanding() {
 
     const currentCategoryObj = categories.find(c => String(c.id) === String(activeCategory));
 
+    // Thai view shows the Thai description; translated views show only a translated one (no Thai fallback)
+    const cardDescription = (item) => (lang === 'th' ? item.description : (item[`description_${lang}`] || item.description_en || ''));
+
     const renderMenuCard = (item, keyPrefix = '') => {
         const inCartCount = cart.filter(c => c.id === item.id).reduce((sum, c) => sum + c.qty, 0);
         const hasOptions = item.menu_item_options && item.menu_item_options.length > 0;
@@ -1596,7 +1599,7 @@ export default function CustomerOrderLanding() {
                     {/* Image Frame */}
                     <div className="aspect-[4/3] rounded-sm bg-[var(--color-paper-2)] overflow-hidden relative border border-[var(--color-rule)] mb-2">
                         {item.image_url ? (
-                            <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" loading="lazy" />
+                            <img src={item.image_url} alt={loc(item)} className="w-full h-full object-cover" loading="lazy" />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-[var(--color-neutral)] font-bold text-lg uppercase font-mono">
                                 {item.name.charAt(0)}
@@ -1619,11 +1622,15 @@ export default function CustomerOrderLanding() {
 
                     {/* Item Title & Desc: 2 lines each. Line-height 1.5+ keeps stacked Thai marks of the clamped (hidden) line from showing */}
                     <h4 className="font-bold text-sm text-[var(--color-ink)] line-clamp-2 leading-normal">
-                        {item.name}
+                        {loc(item)}
                     </h4>
-                    {item.description && (
+                    {/* Translated view keeps the Thai name so guests can point it out to staff */}
+                    {lang !== 'th' && loc(item) !== item.name && (
+                        <p className="text-xs text-[var(--color-neutral)] truncate leading-normal mt-0.5">{item.name}</p>
+                    )}
+                    {cardDescription(item) && (
                         <p className="text-xs text-[var(--color-neutral)] line-clamp-2 mt-1.5 leading-relaxed">
-                            {item.description}
+                            {cardDescription(item)}
                         </p>
                     )}
                 </div>
@@ -1885,7 +1892,7 @@ export default function CustomerOrderLanding() {
                                             : 'bg-[var(--color-paper)] border-[var(--color-rule)] text-[var(--color-neutral)] hover:text-[var(--color-ink)]'
                                     }`}
                                 >
-                                    {cat.name} {count > 0 && `(${count})`}
+                                    {loc(cat)} {count > 0 && `(${count})`}
                                 </button>
                             );
                         })}
@@ -1950,7 +1957,7 @@ export default function CustomerOrderLanding() {
                                 ) : activeCategory === 'recommended' ? (
                                     tt('recommendedTitle')
                                 ) : (
-                                    currentCategoryObj?.name || tt('categoryFallback')
+                                    (currentCategoryObj && loc(currentCategoryObj)) || tt('categoryFallback')
                                 )}
                                 <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{filteredItems.length}</span>
                             </h3>
@@ -1962,7 +1969,7 @@ export default function CustomerOrderLanding() {
                             {groupedItems.map(group => (
                                 <section key={group.key} aria-labelledby={`cat-${group.key}`}>
                                     <h3 id={`cat-${group.key}`} className="mb-3 text-base font-bold text-[var(--color-ink)] leading-snug">
-                                        {group.title}
+                                        {group.cat ? loc(group.cat) : group.title}
                                         <span className="ml-1.5 text-sm font-normal text-[var(--color-neutral)]">{group.items.length}</span>
                                     </h3>
                                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
@@ -1998,6 +2005,7 @@ export default function CustomerOrderLanding() {
                         onClose={() => setSelectedItem(null)} 
                         onConfirm={handleConfirmOptions} 
                         labels={optionLabels}
+                        localize={loc}
                     />
                 )}
             </AnimatePresence>
@@ -2095,7 +2103,7 @@ export default function CustomerOrderLanding() {
                                 {cart.map((item, index) => (
                                     <div key={index} className="bg-[var(--color-paper-2)] p-3 rounded-sm border border-[var(--color-rule)] flex items-start gap-3">
                                         <div className="flex-1 min-w-0">
-                                            <h5 className="font-bold text-xs truncate text-[var(--color-ink)]">{item.name}</h5>
+                                            <h5 className="font-bold text-xs truncate text-[var(--color-ink)]">{loc(menuItems.find(m => m.id === item.id) || item)}</h5>
                                             {item.optionsSummary && item.optionsSummary.length > 0 && (
                                                 <div className="text-[9px] text-[var(--color-neutral)] mt-1 space-y-0.5 font-mono">
                                                     {item.optionsSummary.map((opt, i) => (
@@ -2270,7 +2278,7 @@ export default function CustomerOrderLanding() {
                                                     <div className="flex gap-2">
                                                         <span className="font-bold font-mono text-[var(--color-accent)]">{item.quantity}x</span>
                                                         <div>
-                                                            <span className="font-bold text-[var(--color-ink)] block leading-tight">{item.menu_items?.name}</span>
+                                                            <span className="font-bold text-[var(--color-ink)] block leading-tight">{loc(item.menu_items)}</span>
                                                             {item.selected_options && (
                                                                 <div className="text-[9px] text-[var(--color-neutral)] mt-0.5 font-mono">
                                                                     {Array.isArray(item.selected_options) ? (

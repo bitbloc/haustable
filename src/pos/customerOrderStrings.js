@@ -513,8 +513,19 @@ export const translateTable = (lang, key, vars) => {
     return template.replace(/\{(\w+)\}/g, (match, name) => (vars[name] ?? match));
 };
 
+// Display text for a menu row (item, category, option group or choice) in the chosen language.
+// Reads `${field}_${lang}` (zh falls back to en), then the Thai source field. Display only:
+// orders and kitchen slips keep using the Thai `name`.
+export const localizeField = (row, field, lang) => {
+    if (!row) return '';
+    if (lang === 'th') return row[field];
+    const translated = row[`${field}_${lang}`] || (lang !== 'en' ? row[`${field}_en`] : null);
+    return translated && String(translated).trim() ? translated : row[field];
+};
+
 export const useTableStrings = () => {
     const { lang, setLanguage, hasChosenLanguage } = useLanguage();
     const tt = (key, vars) => translateTable(lang, key, vars);
-    return { lang, setLanguage, hasChosenLanguage, tt };
+    const loc = (row, field = 'name') => localizeField(row, field, lang);
+    return { lang, setLanguage, hasChosenLanguage, tt, loc };
 };
