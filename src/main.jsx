@@ -7,9 +7,13 @@ import { Capacitor } from '@capacitor/core'
 import { CapacitorUpdater } from '@capgo/capacitor-updater'
 import { logger } from './utils/logger.js'
 import { initWmaNativeBridge } from './utils/wmaNativeBridge.js'
+import { inject } from '@vercel/analytics'
 
 // Initialize local crash reporting and debug logs
 logger.init();
+
+// Initialize Vercel Web Analytics
+inject();
 
 // Initialize native WMA thermal printer socket bridge (temporarily disabled per user request)
 // initWmaNativeBridge();
