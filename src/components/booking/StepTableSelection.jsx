@@ -188,8 +188,36 @@ export default function StepTableSelection() {
         };
     }, [isExpanded, dispatch]);
 
+    // Fit the 1000x562.5 canvas to its viewport. Floor keeps table labels tappable on phones (pan for the rest).
+    const CANVAS_W = 1000
+    const CANVAS_H = 562.5
+    const getFullFitScale = () => typeof window === 'undefined'
+        ? 1
+        : Math.round(Math.max(0.45, Math.min(window.innerWidth / CANVAS_W, (window.innerHeight - 64) / CANVAS_H) * 0.95) * 100) / 100
+    const cardViewportRef = useRef(null)
+    const [cardFitScale, setCardFitScale] = useState(null)
+    const [fullFitScale, setFullFitScale] = useState(getFullFitScale)
+
     // Toggle Expanded
-    const toggleExpanded = () => dispatch({ type: 'TOGGLE_EXPAND' })
+    const toggleExpanded = () => {
+        if (!isExpanded) setFullFitScale(getFullFitScale())
+        dispatch({ type: 'TOGGLE_EXPAND' })
+    }
+
+    useEffect(() => {
+        const el = cardViewportRef.current
+        if (!el) return
+        const measure = () => {
+            const width = el.clientWidth, height = el.clientHeight
+            if (!width || !height) return
+            const fit = Math.min(width / CANVAS_W, height / CANVAS_H) * 0.96
+            setCardFitScale(Math.round(Math.max(0.45, fit) * 100) / 100)
+        }
+        measure()
+        const ro = new ResizeObserver(measure)
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
 
     const renderTable = (table) => {
         const isBooked = bookedTableIds.includes(table.id)
@@ -254,22 +282,22 @@ export default function StepTableSelection() {
                 <div className="relative z-10 flex flex-col items-center justify-center w-full h-full p-1" style={{ transform: `rotate(${-rotation}deg)` }}>
                     {isBooked ? (
                         <>
-                            <span className="font-mono font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                            <span className="font-mono font-bold text-[10px] leading-tight uppercase tracking-wider" style={{ color: textColor }}>
                                 {statusType === 'walk_in' ? 'WALK-IN' : t('full')}
                             </span>
-                            <span className="font-mono text-[8px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
+                            <span className="font-mono text-[10px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : isLockedByOthers ? (
                         <>
-                            <span className="font-mono font-bold text-[8px] uppercase tracking-wider" style={{ color: textColor }}>
+                            <span className="font-mono font-bold text-[10px] leading-tight uppercase tracking-wider" style={{ color: textColor }}>
                                 LOCK
                             </span>
-                            <span className="font-mono text-[8px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
+                            <span className="font-mono text-[10px] opacity-80" style={{ color: textColor }}>{table.table_name}</span>
                         </>
                     ) : (
                         <>
-                            <span className="font-bold text-xs sm:text-sm truncate" style={{ color: textColor }}>{table.table_name}</span>
-                            <span className="font-mono text-[8px] sm:text-[9px] opacity-75" style={{ color: textColor }}>{table.capacity}p</span>
+                            <span className="font-bold text-sm leading-tight truncate max-w-full" style={{ color: textColor }}>{table.table_name}</span>
+                            <span className="font-mono text-[10px] opacity-75" style={{ color: textColor }}>{table.capacity}p</span>
                         </>
                     )}
                 </div>
@@ -278,9 +306,12 @@ export default function StepTableSelection() {
     }
 
     // Shared Floorplan Canvas Component
-    const renderFloorplanCanvas = (inFullscreen = false) => (
+    const renderFloorplanCanvas = (inFullscreen = false) => {
+        const fitScale = inFullscreen ? fullFitScale : cardFitScale
+        return (
         <div className="relative w-full h-full flex flex-col overflow-hidden bg-[oklch(94%_0.010_28)]">
-            <TransformWrapper initialScale={0.88} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
+            {fitScale && (
+            <TransformWrapper key={fitScale} initialScale={fitScale} minScale={0.2} maxScale={4} centerOnInit={true} limitToBounds={false}>
                 {({ zoomIn, zoomOut, resetTransform }) => (
                     <>
                         {/* Zoom Controls Panel */}
@@ -310,11 +341,11 @@ export default function StepTableSelection() {
 
                         {/* Interactive Zoom/Pan Component */}
                         <TransformComponent 
-                            wrapperClass="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing" 
+                            wrapperClass="!w-full !h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
                             contentStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                             <div
-                                className="relative w-[1000px] aspect-video bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-sm origin-center"
+                                className="relative w-[1000px] shrink-0 aspect-video bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] shadow-sm origin-center"
                                 style={{
                                     backgroundImage: safeCssUrl(settings.floorplanUrl),
                                     backgroundSize: '100% 100%',
@@ -328,6 +359,7 @@ export default function StepTableSelection() {
                     </>
                 )}
             </TransformWrapper>
+            )}
 
             {/* Selected Table Floating Card */}
             <AnimatePresence>
@@ -390,7 +422,8 @@ export default function StepTableSelection() {
                 )}
             </AnimatePresence>
         </div>
-    );
+        )
+    }
 
     return (
         <div className="h-full flex flex-col relative">
@@ -441,7 +474,7 @@ export default function StepTableSelection() {
             </div>
 
             {/* Standard In-card Floorplan View */}
-            <div className="flex-1 min-h-[420px] overflow-hidden relative rounded-xl border border-[oklch(85%_0.012_28)] shadow-inner">
+            <div ref={cardViewportRef} className="flex-1 min-h-[420px] overflow-hidden relative rounded-xl border border-[oklch(85%_0.012_28)] shadow-inner">
                 {renderFloorplanCanvas(false)}
             </div>
 

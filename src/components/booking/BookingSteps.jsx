@@ -54,7 +54,7 @@ export default function BookingSteps() {
                 </div>
             </div>
 
-            <div className="flex-1 max-w-lg mx-auto w-full relative">
+            <div className={`flex-1 mx-auto w-full relative transition-[max-width] duration-300 ${step === 2 ? 'max-w-lg md:max-w-4xl' : 'max-w-lg'}`}>
                 <AnimatePresence custom={direction} mode="wait">
                     {step === 1 && (
                         <motion.div
