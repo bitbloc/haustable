@@ -288,6 +288,7 @@ export default function BookingCheckout() {
     }
 
     const isContactValid = Boolean(localName?.trim() && localPhone?.trim()?.replace(/\D/g, '').length >= 9)
+    const isFreeBooking = !settings.bookingDepositRequired
 
     const handleSubmit = async () => {
         if (submitting) return
@@ -303,7 +304,7 @@ export default function BookingCheckout() {
             return alert('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Phone Number is required)')
         }
 
-        if (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
+        if (!isFreeBooking && settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback) {
             return alert('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
         }
 
@@ -497,10 +498,24 @@ export default function BookingCheckout() {
                 </div>
             </div>
 
+            {/* Free booking: no fee, staff call to confirm, table held for a fixed window */}
+            {isFreeBooking && (
+                <div className="bg-paper p-5 border border-ink rounded-rams space-y-2">
+                    <h3 className="text-sm font-bold text-ink">{t('freeBookingTitle')}</h3>
+                    <p className="text-sm text-ink leading-relaxed">
+                        {t('callConfirmNotice').replace('{phone}', localPhone?.trim() || '-')}
+                    </p>
+                    <p className="text-sm text-subInk leading-relaxed">
+                        {t('holdNotice').replace('{n}', settings.bookingHoldMinutes || 15)}
+                    </p>
+                </div>
+            )}
+
+            {(!isFreeBooking || cart.length > 0) && (
             <div className="bg-paper p-6 border border-[var(--color-rule)] rounded-rams space-y-4">
                 <div className="flex items-center justify-between border-b border-[var(--color-rule)] pb-3">
-                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">2. {t('paymentTitle')}</h3>
-                    <span className="text-[10px] font-mono text-subInk">ยอดคำนวณตามจริง</span>
+                    <h3 className="text-xs font-mono font-bold text-subInk uppercase">2. {isFreeBooking ? 'อาหารที่สั่งล่วงหน้า' : t('paymentTitle')}</h3>
+                    <span className="text-[10px] font-mono text-subInk">{isFreeBooking ? 'ชำระที่ร้าน' : 'ยอดคำนวณตามจริง'}</span>
                 </div>
 
                 {/* CRM Privileges: Free Drink & xhaus coins redemption */}
@@ -588,7 +603,8 @@ export default function BookingCheckout() {
                          <span className="text-subInk text-xs font-mono uppercase">{t('totalPrice')} (Food)</span>
                          <span className="text-xl font-bold font-mono tracking-tight text-ink">{finalTotal}.-</span>
                     </div>
-                    
+
+                    {!isFreeBooking && (<>
                     <div className="flex justify-between items-end border-t border-[var(--color-rule)] pt-2 mt-2 bg-canvas p-2.5 rounded-rams border border-ink">
                          <div>
                              <span className="text-ink text-xs font-mono font-bold block uppercase">
@@ -628,9 +644,11 @@ export default function BookingCheckout() {
                     </div>
 
                     <p className="text-[10px] text-subInk font-mono text-right mt-1">ขั้นต่ำ 150 บาท ต่อท่าน (Min Spend: {150 * pax}.-)</p>
+                    </>)}
                 </div>
 
                 {/* PAYMENT METHODS SELECTOR & QR (Dieter Rams Tabular Layout) */}
+                {!isFreeBooking && (
                 <div className="border-t border-[var(--color-rule)] pt-4 space-y-4">
                     <div className="flex items-center justify-between">
                         <h4 className="text-xs font-mono font-bold text-subInk uppercase">เลือกช่องทางชำระเงินมัดจำ 50%</h4>
@@ -842,8 +860,11 @@ export default function BookingCheckout() {
                         )}
                     </div>
                 </div>
+                )}
             </div>
+            )}
 
+            {!isFreeBooking && (
             <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] text-ink text-xs leading-relaxed space-y-2">
                 <h4 className="font-mono font-bold text-sm uppercase">📌 เงื่อนไขการจองโต๊ะ (Dine-in Conditions)</h4>
                 <ul className="text-subInk text-xs space-y-1 pl-4 list-disc font-mono">
@@ -855,6 +876,7 @@ export default function BookingCheckout() {
                     ⚠️ หมายเหตุ: หากยกเลิกกระทันหันน้อยกว่า 24 ชั่วโมงก่อนเวลานัดหมาย ระบบจะไม่สามารถคืนเงินมัดจำได้ กรุณาติดต่อทางร้านโดยตรง
                 </div>
             </div>
+            )}
 
             <label className="flex items-start gap-3 p-2 cursor-pointer">
                 <input type="checkbox" checked={isAgreed} onChange={e => updateForm('isAgreed', e.target.checked)} className="mt-1 w-4 h-4 accent-ink" />
@@ -865,7 +887,7 @@ export default function BookingCheckout() {
 
             <button
                 onClick={handleSubmit}
-                disabled={submitting || !isContactValid || !isAgreed || !slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)}
+                disabled={submitting || !isContactValid || !isAgreed || (!isFreeBooking && (!slipFile || isVerifyingSlip || (settings.easySlipEnabled !== false && !slipVerifyResult?.verified && !allowManualFallback)))}
                 className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-mono font-bold text-lg uppercase tracking-widest mt-4 hover:bg-paper disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 transition-colors"
             >
                 {submitting ? t('processing') : t('confirmBooking')}

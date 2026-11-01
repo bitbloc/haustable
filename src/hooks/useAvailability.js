@@ -16,7 +16,7 @@ export function useAvailability() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time, booking_type, status')
+                .select('table_id, booking_time, end_time, booking_type, status, staff_remark')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)

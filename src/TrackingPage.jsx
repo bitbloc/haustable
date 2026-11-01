@@ -20,6 +20,7 @@ import StatusTracker from './components/tracking/StatusTracker'
 import OrderSummary from './components/tracking/OrderSummary'
 import SlipPreviewModal from './components/tracking/SlipPreviewModal'
 import HausmadeShippingTracker from './components/tracking/HausmadeShippingTracker'
+import { getBookingHoldMinutes } from './utils/availabilityUtils'
 
 export default function TrackingPage() {
   const { token } = useParams()
@@ -251,7 +252,8 @@ export default function TrackingPage() {
           : currentStatus
   const currentStepIndex = steps.findIndex(s => s.key === normalizedStepStatus)
   const isCancelled = ['cancelled', 'void', 'rejected'].includes(currentStatus)
-  
+  const holdMinutes = getBookingHoldMinutes(data)
+
   // Logic to Enable Slip Download
   const isBookingConfirmed = !isPickup && ['confirmed', 'seated', 'preparing', 'completed'].includes(currentStatus)
   const isPickupReady = isPickup && ['ready', 'completed'].includes(currentStatus)
@@ -311,6 +313,19 @@ export default function TrackingPage() {
               <p className="text-xs text-[var(--color-muted)] mt-1 font-sans">
                  {isCancelled ? t('contactShop') : t('thankYouService')}
               </p>
+
+              {!isPickup && !isCancelled && ['pending', 'confirmed'].includes(currentStatus) && holdMinutes !== null && (
+                  <p className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-2">
+                      {currentStatus === 'pending' && <>ร้านจะโทรยืนยันการจอง • </>}
+                      ร้านเก็บโต๊ะไว้ให้ {holdMinutes} นาทีหลังเวลาจอง
+                  </p>
+              )}
+
+              {isPickup && currentStatus === 'pending' && (data.staff_remark || '').includes('[PAY_AT_STORE]') && (
+                  <p className="mt-3 inline-block text-sm leading-relaxed text-[var(--color-ink)] border border-[var(--color-rule)] bg-[var(--color-paper)] px-3 py-2">
+                      ร้านจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ก่อนเริ่มทำ • ชำระเงินที่หน้าร้านตอนมารับ
+                  </p>
+              )}
           </div>
       </div>
 

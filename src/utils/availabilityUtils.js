@@ -49,6 +49,29 @@ export function calculateEffectiveBookingEnd(booking, options = {}) {
 }
 
 /**
+ * Reads the table-hold window stamped on free online bookings (`[HOLD:15]` in staff_remark).
+ * @param {Object} booking
+ * @returns {number|null} minutes, or null when the booking has no hold cap
+ */
+export function getBookingHoldMinutes(booking) {
+    const match = /\[HOLD:(\d+)\]/.exec(booking?.staff_remark || '');
+    return match ? Number(match[1]) : null;
+}
+
+/**
+ * True when a held booking's guest has not been seated within its hold window,
+ * so the table goes back on sale.
+ * @param {Object} booking
+ * @param {Date} [now=new Date()]
+ * @returns {boolean}
+ */
+export function isHoldExpired(booking, now = new Date()) {
+    const hold = getBookingHoldMinutes(booking);
+    if (hold === null || !['pending', 'confirmed'].includes(booking?.status)) return false;
+    return now.getTime() > new Date(booking.booking_time).getTime() + hold * 60 * 1000;
+}
+
+/**
  * Checks if a requested time slot overlaps with an existing booking,
  * honoring Live Seated Protection and terminal status exclusions.
  * 
@@ -69,6 +92,11 @@ export function isBookingOverlap(requestStart, requestEnd, booking, optionsOrDur
 
     // Terminal statuses never cause overlap
     if (['completed', 'cancelled', 'void', 'no_show'].includes(bObj.status)) {
+        return false;
+    }
+
+    // Held online booking whose guest never arrived: release the table
+    if (isHoldExpired(bObj, options.now || new Date())) {
         return false;
     }
 

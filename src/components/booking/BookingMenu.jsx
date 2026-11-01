@@ -39,7 +39,7 @@ export default function BookingMenu() {
 
     const handleNext = () => {
         // Pre-check Min Spend
-        if (settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
+        if (settings.bookingDepositRequired && settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
             alert(`${t('minSpendError')} ${settings.minSpend}.- (${t('totalPrice')} ${settings.minSpend * pax}.-) \n${t('pleaseOrderMore')} ${(settings.minSpend * pax) - cartTotal}.-`)
             return
         }
@@ -48,6 +48,19 @@ export default function BookingMenu() {
 
     return (
         <div className="flex-1 flex flex-col min-h-0">
+            {/* Free booking: food is optional, so skipping is the primary path */}
+            {cart.length === 0 && !settings.bookingDepositRequired && (
+                <div className="mb-4 border border-[var(--color-rule)] bg-paper p-4 space-y-3 shrink-0">
+                    <p className="text-sm text-subInk leading-relaxed">{t('foodOptionalHint')}</p>
+                    <button
+                        onClick={handleNext}
+                        className="w-full bg-ink text-paper py-3.5 font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-[0.99]"
+                    >
+                        {t('bookTableOnly')} <ArrowRight size={16} />
+                    </button>
+                </div>
+            )}
+
             {/* Sticky Header: Search & Categories */}
             <div className="sticky top-0 bg-canvas z-30 pt-1 pb-4 space-y-3 shrink-0">
                 <div className="flex gap-2">
@@ -149,7 +162,7 @@ export default function BookingMenu() {
             </AnimatePresence>
 
             {/* Skip Button (Only specific cases, mainly hidden if cart has items generally, but keeping for logic) */}
-            {cart.length === 0 && (
+            {cart.length === 0 && settings.bookingDepositRequired && (
                 <div className="mt-4 pt-4 border-t border-[var(--color-rule)] shrink-0 text-center">
                     <button
                         onClick={handleNext}

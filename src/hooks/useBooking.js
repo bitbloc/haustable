@@ -69,7 +69,7 @@ export function useBooking() {
 
             const { data, error } = await supabase
                 .from('bookings')
-                .select('table_id, booking_time, end_time, booking_type, status')
+                .select('table_id, booking_time, end_time, booking_type, status, staff_remark')
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', dayStart)
                 .lte('booking_time', dayEnd)
@@ -101,12 +101,14 @@ export function useBooking() {
             const finalContactName = (overrides.contactName || state.contactName || '').trim()
             const finalContactPhone = (overrides.contactPhone || state.contactPhone || '').trim()
             const cleanPhone = finalContactPhone.replace(/\D/g, '')
-            const finalSlipFile = overrides.slipFile || state.slipFile
+            const isFreeBooking = !state.settings.bookingDepositRequired
+            const holdMinutes = state.settings.bookingHoldMinutes || 15
+            const finalSlipFile = isFreeBooking ? null : (overrides.slipFile || state.slipFile)
 
             if (!finalContactName) throw new Error('กรุณาระบุชื่อผู้จองโต๊ะ (Customer Name is required)')
             if (!finalContactPhone || cleanPhone.length < 9) throw new Error('กรุณาระบุเบอร์โทรศัพท์ติดต่อที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
             if (!state.isAgreed) throw new Error('Please agree to terms')
-            if (!finalSlipFile) throw new Error('Please upload payment slip')
+            if (!isFreeBooking && !finalSlipFile) throw new Error('Please upload payment slip')
             if (!state.selectedTable?.id) throw new Error('กรุณาเลือกโต๊ะที่ต้องการจอง')
 
             // Security Check: Blocked Date
@@ -124,7 +126,7 @@ export function useBooking() {
             const MIN_SPEND_PER_PAX = 150;
             const requiredSpend = MIN_SPEND_PER_PAX * state.pax;
             
-            if (cartTotal < requiredSpend) {
+            if (!isFreeBooking && cartTotal < requiredSpend) {
                 throw new Error(`ยอดขั้นต่ำต่อท่านคือ ${MIN_SPEND_PER_PAX} บาท (ขาดอีก ${requiredSpend - cartTotal} บาท)`)
             }
 
@@ -135,7 +137,7 @@ export function useBooking() {
 
             const { data: conflictBookings } = await supabase
                 .from('bookings')
-                .select('id, booking_time, end_time, status, booking_type')
+                .select('id, booking_time, end_time, status, booking_type, staff_remark')
                 .eq('table_id', state.selectedTable.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready', 'approved', 'paid'])
                 .gte('booking_time', `${state.date}T00:00:00+07:00`)
@@ -181,14 +183,16 @@ export function useBooking() {
             if (overrides.xhausRedeemed > 0) crmTag += ` | xhaus -฿${xhausDiscount}`
             if (overrides.useFreeDrinkQuota) crmTag += ` | แก้วฟรี -฿${freeDrinkDiscount}`
 
-            const staffRemarkContent = isAutoVerified
+            const staffRemarkContent = isFreeBooking
+                ? `[ONLINE] [CALL_CONFIRM] [HOLD:${holdMinutes}] จองโต๊ะ ไม่มีค่าจอง (โทรยืนยัน, เก็บโต๊ะ ${holdMinutes} นาที)${crmTag}`
+                : isAutoVerified
                 ? `[ONLINE] จองโต๊ะล่วงหน้า (${isFullPaid ? `ชำระเต็มจำนวน ฿${actualDepositPaid}` : `ตรวจมัดจำ Auto EasySlip ✓ ฿${actualDepositPaid}`}${bankLabel ? ' ' + bankLabel : ''}${crmTag})`
                 : (isFullPaid ? `[ONLINE] จองโต๊ะล่วงหน้า (โอนเต็มจำนวน ฿${actualDepositPaid}${crmTag})` : `[ONLINE] จองโต๊ะล่วงหน้า${crmTag}`)
 
             const bookingPayload = {
                 source: 'online',
                 booking_type: 'dine_in',
-                status: isAutoVerified ? 'confirmed' : 'pending',
+                status: !isFreeBooking && isAutoVerified ? 'confirmed' : 'pending',
                 booking_time: bookingDateTime,
                 table_id: state.selectedTable.id,
                 total_amount: finalTotal,
@@ -200,16 +204,18 @@ export function useBooking() {
                 pax: state.pax,
                 promotion_code_id: promotionData?.id || null, 
                 discount_amount: totalDiscountAmount,
-                deposit_amount: actualDepositPaid,
+                deposit_amount: isFreeBooking ? 0 : actualDepositPaid,
                 tracking_token: crypto.randomUUID(),
                 xhaus_redeemed: overrides.xhausRedeemed || 0,
                 xhaus_discount: xhausDiscount,
                 use_free_drink_quota: Boolean(overrides.useFreeDrinkQuota),
-                slip_verified: isAutoVerified,
-                slip_provider: overrides.slipVerifyResult?.provider || overrides.paymentMethod || 'bank',
-                slip_trans_ref: overrides.slipVerifyResult?.transRef || null,
-                slip_verification_status: isAutoVerified ? 'auto_verified' : (overrides.slipVerifyResult ? 'manual_pending' : 'pending'),
-                slip_verified_data: overrides.slipVerifyResult?.rawSlip || null
+                ...(isFreeBooking ? {} : {
+                    slip_verified: isAutoVerified,
+                    slip_provider: overrides.slipVerifyResult?.provider || overrides.paymentMethod || 'bank',
+                    slip_trans_ref: overrides.slipVerifyResult?.transRef || null,
+                    slip_verification_status: isAutoVerified ? 'auto_verified' : (overrides.slipVerifyResult ? 'manual_pending' : 'pending'),
+                    slip_verified_data: overrides.slipVerifyResult?.rawSlip || null
+                })
             }
 
             const orderItemsPayload = state.cart.map(item => ({

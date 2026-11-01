@@ -65,6 +65,8 @@ export default function PickupPage() {
 
     // Payment & Slip Verification State
     const [paymentMethod, setPaymentMethod] = useState('promptpay') // 'promptpay' | 'truewallet'
+    const [payTiming, setPayTiming] = useState('now') // 'now' (transfer + slip) | 'store' (pay on pickup, staff calls to confirm)
+    const [payAtStoreEnabled, setPayAtStoreEnabled] = useState(true)
     const [promptpayId, setPromptpayId] = useState('')
     const [promptpayName, setPromptpayName] = useState('')
     const [truewalletPhone, setTruewalletPhone] = useState('')
@@ -121,6 +123,7 @@ export default function PickupPage() {
                 if (map.closing_time) setClosingTime(map.closing_time)
                 if (map.crm_base_spend_amount) setCrmBaseSpendAmount(parseFloat(map.crm_base_spend_amount) || 100)
                 if (map.easyslip_enabled_pickup !== undefined) setEasySlipEnabled(map.easyslip_enabled_pickup !== 'false')
+                if (map.pickup_pay_at_store_enabled !== undefined) setPayAtStoreEnabled(map.pickup_pay_at_store_enabled !== 'false')
 
                 setCrmSettings(prev => ({
                     ...prev,
@@ -394,6 +397,7 @@ export default function PickupPage() {
     }
 
     const isContactValid = Boolean(contactName?.trim() && contactPhone?.trim()?.replace(/\D/g, '').length >= 9)
+    const isPayAtStore = payAtStoreEnabled && payTiming === 'store'
 
     const handleSubmit = async () => {
         if (submitting || isSubmitting) return
@@ -405,10 +409,10 @@ export default function PickupPage() {
         if (!trimmedName) return toast.error(t('fillContact') || 'กรุณากรอกชื่อผู้รับสินค้า (Name is required)')
         if (!trimmedPhone || cleanPhone.length < 9) return toast.error('กรุณากรอกเบอร์โทรศัพท์ที่ถูกต้องอย่างน้อย 9-10 หลัก (Valid Phone Number is required)')
         if (!isAgreed) return toast.error(t('agreeTerms'))
-        if (finalTotal > 0 && !slipFile) return toast.error(t('uploadSlipDesc'))
+        if (!isPayAtStore && finalTotal > 0 && !slipFile) return toast.error(t('uploadSlipDesc'))
         if (!pickupTime) return toast.error(t('selectPickupTime'))
 
-        if (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback) {
+        if (!isPayAtStore && easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback) {
             return toast.error('กรุณารอผลตรวจสลิปให้ผ่าน หรือกดเลือก "ส่งให้เจ้าหน้าที่ตรวจสอบด้วยตนเอง"')
         }
 
@@ -423,10 +427,12 @@ export default function PickupPage() {
             const bookingDateTime = toThaiISO(dateStr, pickupTime)
             const customerNoteContent = `Pickup Order` + (specialRequest ? `\nNote: ${specialRequest}` : '')
 
-            const isAutoVerified = Boolean(slipVerifyResult?.verified)
-            let staffRemarkText = isAutoVerified 
-                ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
-                : '[ONLINE_PICKUP] สั่งรับกลับ'
+            const isAutoVerified = !isPayAtStore && Boolean(slipVerifyResult?.verified)
+            let staffRemarkText = isPayAtStore
+                ? '[ONLINE_PICKUP] [PAY_AT_STORE] สั่งรับกลับ จ่ายที่ร้าน (โทรยืนยันก่อนทำ)'
+                : isAutoVerified
+                    ? `[ONLINE_PICKUP] สั่งรับกลับ (ตรวจสลิป Auto EasySlip ✓ ${typeof slipVerifyResult?.bankName === 'object' ? (slipVerifyResult?.bankName?.th || slipVerifyResult?.bankName?.en || '') : (slipVerifyResult?.bankName || '')})`
+                    : '[ONLINE_PICKUP] สั่งรับกลับ'
             
             const perksUsed = []
             if (useFreeDrinkQuota && freeDrinkDiscount > 0) perksUsed.push(`แก้วฟรี 10 แถม 1 (-฿${freeDrinkDiscount})`)
@@ -450,14 +456,14 @@ export default function PickupPage() {
                 xhaus_discount: effectiveXhausDiscount > 0 ? effectiveXhausDiscount : null,
                 use_free_drink_quota: Boolean(useFreeDrinkQuota && freeDrinkDiscount > 0),
                 total_amount: finalTotal,
-                deposit_amount: finalTotal, // 100% deposit for pickup
+                deposit_amount: isPayAtStore ? 0 : finalTotal, // 100% prepaid, or 0 when paying at the counter
                 tracking_token: crypto.randomUUID(),
                 payment_slip_url: null, // Will be handled by hook if slipFile present
                 slip_verified: isAutoVerified,
-                slip_provider: slipVerifyResult?.provider || paymentMethod,
-                slip_trans_ref: slipVerifyResult?.transRef || null,
-                slip_verification_status: isAutoVerified ? 'auto_verified' : (slipVerifyResult ? 'manual_pending' : 'pending'),
-                slip_verified_data: slipVerifyResult?.rawSlip || null
+                slip_provider: isPayAtStore ? null : (slipVerifyResult?.provider || paymentMethod),
+                slip_trans_ref: isPayAtStore ? null : (slipVerifyResult?.transRef || null),
+                slip_verification_status: isPayAtStore ? null : (isAutoVerified ? 'auto_verified' : (slipVerifyResult ? 'manual_pending' : 'pending')),
+                slip_verified_data: isPayAtStore ? null : (slipVerifyResult?.rawSlip || null)
             }
 
             const orderItemsPayload = cart.map(item => ({
@@ -476,12 +482,12 @@ export default function PickupPage() {
             const result = await submitOrder({
                 bookingPayload,
                 orderItemsPayload,
-                slipFile,
+                slipFile: isPayAtStore ? null : slipFile,
                 lineIdToken
             })
 
             if (result.success) {
-                toast.success(t('confirmOrder') + ' สำเร็จ!' + (isAutoVerified ? ' (สลิปผ่านการตรวจอัตโนมัติ ✓)' : ''))
+                toast.success(t('confirmOrder') + ' สำเร็จ!' + (isPayAtStore ? ' ร้านจะโทรยืนยันก่อนเริ่มทำ' : isAutoVerified ? ' (สลิปผ่านการตรวจอัตโนมัติ ✓)' : ''))
                 // Conversion: pickup order actually placed
                 await trackPickupComplete({
                     transactionId: result.trackingToken,
@@ -830,10 +836,42 @@ export default function PickupPage() {
                                 {/* PAYMENT METHODS SELECTOR & QR (Dieter Rams Tabular Layout) */}
                                 <div className="bg-paper p-6 rounded-rams border border-[var(--color-rule)] space-y-4">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="text-xs font-mono font-bold text-subInk uppercase">เลือกช่องทางชำระเงิน (100% Payment)</h3>
+                                        <h3 className="text-xs font-mono font-bold text-subInk uppercase">ชำระเงิน</h3>
                                         <span className="text-[10px] font-mono bg-ink text-paper px-2 py-0.5 rounded-none font-bold">฿{finalTotal}.-</span>
                                     </div>
 
+                                    {/* Pay now vs pay at store */}
+                                    {payAtStoreEnabled && finalTotal > 0 && (
+                                        <div className="grid grid-cols-2 border border-[var(--color-rule)] rounded-rams overflow-hidden bg-canvas">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPayTiming('now')}
+                                                className={`py-3 px-3 text-left transition-all ${payTiming === 'now' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
+                                            >
+                                                <span className="block text-sm font-bold leading-snug">โอนจ่ายตอนนี้</span>
+                                                <span className="block text-[11px] leading-snug opacity-80 mt-1">แนบสลิป ร้านเริ่มทำทันที</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPayTiming('store')}
+                                                className={`py-3 px-3 text-left transition-all border-l border-[var(--color-rule)] ${payTiming === 'store' ? 'bg-ink text-paper' : 'text-subInk hover:text-ink'}`}
+                                            >
+                                                <span className="block text-sm font-bold leading-snug">จ่ายที่ร้านตอนรับ</span>
+                                                <span className="block text-[11px] leading-snug opacity-80 mt-1">ร้านโทรยืนยันก่อนเริ่มทำ</span>
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {isPayAtStore ? (
+                                        <div className="bg-canvas p-4 rounded-rams border border-[var(--color-rule)] space-y-2 text-sm leading-relaxed">
+                                            <p className="text-ink">
+                                                พนักงานจะโทรยืนยัน<span className="whitespace-nowrap">ออเดอร์</span>ที่เบอร์ <strong className="font-mono">{contactPhone?.trim() || '-'}</strong> ก่อนเริ่มทำอาหาร
+                                            </p>
+                                            <p className="text-subInk text-xs">
+                                                ชำระ <strong className="font-mono text-ink">฿{finalTotal}.-</strong> ที่หน้าร้านตอนมารับ <span className="whitespace-nowrap">(เงินสด / สแกนจ่าย)</span> • หากติดต่อไม่ได้ ร้านขอสงวนสิทธิ์<span className="whitespace-nowrap">ยกเลิกออเดอร์</span>
+                                            </p>
+                                        </div>
+                                    ) : (<>
                                     {/* Tab Navigation */}
                                     <div className="grid grid-cols-2 border border-[var(--color-rule)] rounded-rams overflow-hidden bg-canvas">
                                         <button
@@ -1008,6 +1046,7 @@ export default function PickupPage() {
                                             </div>
                                         )}
                                     </div>
+                                    </>)}
 
                                     <label className="flex items-center gap-2 mt-2 cursor-pointer pt-2 border-t border-[var(--color-rule)]">
                                         <input type="checkbox" checked={isAgreed} onChange={e => setIsAgreed(e.target.checked)} className="accent-ink w-4 h-4" />
@@ -1017,7 +1056,7 @@ export default function PickupPage() {
 
                                 <button
                                     onClick={handleSubmit}
-                                    disabled={submitting || !isContactValid || !isAgreed || !pickupTime || (finalTotal > 0 && !slipFile) || isVerifyingSlip || (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback)}
+                                    disabled={submitting || !isContactValid || !isAgreed || !pickupTime || (!isPayAtStore && ((finalTotal > 0 && !slipFile) || isVerifyingSlip || (easySlipEnabled && finalTotal > 0 && !slipVerifyResult?.verified && !allowManualFallback)))}
                                     className="w-full bg-brand text-ink border border-ink py-4 rounded-none font-bold text-lg hover:bg-paper disabled:bg-canvas disabled:text-subInk disabled:border-[var(--color-rule)] disabled:cursor-not-allowed transition-all mt-4 font-mono uppercase tracking-widest flex items-center justify-center gap-2"
                                 >
                                     {submitting ? t('processing') : `${t('confirmOrder')} ${finalTotal}.-`}

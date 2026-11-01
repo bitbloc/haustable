@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
+import { getBookingHoldMinutes, isHoldExpired } from '../utils/availabilityUtils';
 import { 
     playOrderAlert, 
     playSystemAlertSound, 
@@ -540,6 +541,10 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         const isPaid = (order.deposit_amount >= order.total_amount && order.total_amount > 0) || order.status === 'paid' || isLineman;
         const isPending = order.status === 'pending';
         const isReady = order.status === 'ready';
+        const isPayAtStore = (order.staff_remark || '').includes('[PAY_AT_STORE]') || (order.staff_remark || '').includes('[CALL_CONFIRM]');
+        const awaitingCallConfirm = isPayAtStore && isPending;
+        const holdMinutes = getBookingHoldMinutes(order);
+        const holdExpired = order.booking_type === 'dine_in' && isHoldExpired(order);
 
         return (
             <motion.div 
@@ -594,8 +599,24 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                                 ? 'bg-emerald-100 text-emerald-900 border-emerald-300' 
                                 : 'bg-[oklch(94%_0.010_28)] text-[oklch(55%_0.010_28)] border-[oklch(85%_0.012_28)]'
                         }`}>
-                            {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : 'UNPAID'}
+                            {isPaid ? (isLineman ? 'PREPAID' : 'PAID') : (isPayAtStore ? 'PAY AT STORE' : 'UNPAID')}
                         </span>
+
+                        {awaitingCallConfirm && (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] px-1.5 py-0.5 rounded">
+                                รอโทรยืนยัน
+                            </span>
+                        )}
+
+                        {holdExpired ? (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded">
+                                เลยเวลา {holdMinutes} นาที · ปล่อยโต๊ะแล้ว
+                            </span>
+                        ) : holdMinutes !== null && order.booking_type === 'dine_in' && (isPending || order.status === 'confirmed') && (
+                            <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(94%_0.010_28)] text-[oklch(42%_0.010_28)] border border-[oklch(85%_0.012_28)] px-1.5 py-0.5 rounded">
+                                เก็บโต๊ะ {holdMinutes} นาที
+                            </span>
+                        )}
 
                         {isCustomerArrived && (
                             <span className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[oklch(52%_0.16_28)] text-white px-1.5 py-0.5 rounded animate-pulse">
@@ -809,15 +830,45 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
+                    {/* Free booking: phone the guest before confirming */}
+                    {!isLineman && order.booking_type === 'dine_in' && awaitingCallConfirm && phone && (
+                        <a
+                            href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+                            className="py-2 px-3 rounded-lg border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <Phone size={12} />
+                            <span>CALL</span>
+                        </a>
+                    )}
+
+                    {/* Guest missed the hold window: free the table for walk-ins */}
+                    {!isLineman && holdExpired && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (window.confirm(`ลูกค้า "${name}" ไม่มาตามเวลา ปล่อยโต๊ะ ${tableName || ''} (NO-SHOW)?`)) {
+                                    updateBookingStatus(order.id, 'no_show');
+                                }
+                            }}
+                            className="flex-1 py-2 rounded-lg border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        >
+                            <X size={12} />
+                            <span>NO-SHOW</span>
+                        </button>
+                    )}
+
                     {/* Standard Dine-in pending */}
                     {!isLineman && order.booking_type === 'dine_in' && order.status === 'pending' && !order.payment_slip_url && (
                         <button
                             type="button"
-                            onClick={() => updateBookingStatus(order.id, 'confirmed')}
+                            onClick={() => {
+                                if (awaitingCallConfirm && !window.confirm(`โทรคุยกับ "${name}" ยืนยันการจองโต๊ะ ${tableName || ''} แล้ว?`)) return;
+                                updateBookingStatus(order.id, 'confirmed');
+                            }}
                             className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                             <Check size={12} />
-                            <span>CONFIRM DINE-IN</span>
+                            <span>{awaitingCallConfirm ? 'ยืนยันทางโทรศัพท์แล้ว' : 'CONFIRM DINE-IN'}</span>
                         </button>
                     )}
 
@@ -842,8 +893,35 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
+                    {/* Pay-at-store pickup: staff must phone the customer before anything reaches the kitchen */}
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && awaitingCallConfirm && (
+                        <>
+                            {phone && (
+                                <a
+                                    href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+                                    className="py-2 px-3 rounded-lg border border-[oklch(18%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(94%_0.010_28)] transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                    <Phone size={12} />
+                                    <span>CALL</span>
+                                </a>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm(`โทรคุยกับ "${name}" ยืนยันออเดอร์ #${shortId} แล้ว?`)) {
+                                        updateBookingStatus(order.id, 'confirmed');
+                                    }
+                                }}
+                                className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                                <Check size={12} />
+                                <span>ยืนยันทางโทรศัพท์แล้ว</span>
+                            </button>
+                        </>
+                    )}
+
                     {/* Standard Pickup pending or confirmed -> ACCEPT & COOK (send to kitchen & print) */}
-                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && ((order.status === 'pending' && (!order.payment_slip_url || order.slip_verified)) || order.status === 'confirmed') && (
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && !awaitingCallConfirm && ((order.status === 'pending' && (!order.payment_slip_url || order.slip_verified)) || order.status === 'confirmed') && (
                         <button
                             type="button"
                             onClick={() => {
@@ -859,8 +937,8 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                         </button>
                     )}
 
-                    {/* Standard Pickup seated/confirmed/preparing -> MARK READY */}
-                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'confirmed' || order.status === 'preparing') && (
+                    {/* Standard Pickup seated/preparing -> MARK READY (confirmed orders go through COOK & PRINT first) */}
+                    {!isLineman && !isHausmade && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'preparing') && (
                         <button
                             type="button"
                             onClick={() => updateBookingStatus(order.id, 'ready')}

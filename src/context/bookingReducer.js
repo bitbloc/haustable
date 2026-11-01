@@ -36,6 +36,8 @@ export const initialState = {
         openingTime: '10:00',
         closingTime: '20:00',
         minSpend: 0,
+        bookingDepositRequired: false, // false = free booking, food optional, staff call to confirm
+        bookingHoldMinutes: 15, // table released if guest is not seated by booking time + this
         minAdvanceHours: 2,
         bookingTimeSlots: ['11:00', '12:00', '13:00', '14:00', '17:00', '18:00', '19:00', '20:00'],
         floorplanUrl: null,
