@@ -22,6 +22,7 @@ import {
 import ViewSlipModal from '../components/shared/ViewSlipModal';
 import { getShortBookingId } from '../utils/printerHelper';
 import { parseTableTransferInfo, isGhostPickupBooking, isDuplicateGhostBooking } from '../utils/tableTransferHelper';
+import { isAdvanceUnseatedReservation } from '../utils/availabilityUtils';
 
 export function getOrderCategoryType(order) {
     if (!order) return 'direct';
@@ -127,9 +128,10 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         }
     }, [isActive, refreshKey]);
 
-    // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills and duplicate ghost table sessions)
+    // Active & Stale (>48h) bills (filtering out empty 0-item ghost pickup bills, duplicate ghost table sessions, and unseated advance reservations)
     const activeOrders = orders.filter(o => {
-        if (o.status === 'completed' || o.status === 'void' || o.status === 'cancelled') return false;
+        if (o.status === 'completed' || o.status === 'void' || o.status === 'cancelled' || o.status === 'no_show') return false;
+        if (isAdvanceUnseatedReservation(o)) return false;
         return !isGhostPickupBooking(o) && !isDuplicateGhostBooking(o, orders);
     });
     
@@ -171,7 +173,7 @@ export default function POSOpenBillsGrid({ onSelectOrder, onOpenSlip, refreshKey
         const isGhost = isGhostPickupBooking(order) || isDuplicateGhostBooking(order, orders);
 
         // Status mode filter
-        if (statusMode === 'active' && (isVoid || isGhost)) return false;
+        if (statusMode === 'active' && (isVoid || isGhost || order.status === 'no_show' || isAdvanceUnseatedReservation(order))) return false;
         if (statusMode === 'void' && (!isVoid || transfer.isMergedSource)) return false;
         if (statusMode === 'merged' && !transfer.isMergedSource) return false;
         if (statusMode === 'stale' && (!isStale || isVoid)) return false;

@@ -27,6 +27,7 @@ import { posCache } from '../utils/offlineHelper';
 import { parseTableTransferInfo, isTableSessionActive } from '../utils/tableTransferHelper';
 export { isTableSessionActive };
 import { getBookingSplitRounds } from '../utils/splitPaymentHelper';
+import { isHoldExpired, getBookingHoldMinutes, isCallConfirmOrder } from '../utils/availabilityUtils';
 
 export const getReservationDiffMins = (bookingTime, now = new Date()) => {
     if (!bookingTime) return 9999;
@@ -142,8 +143,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                     const upcomingRes = tableBookings.find(b => {
                         if (b.id === booking?.id) return false;
                         if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
+                        if (isHoldExpired(b, now)) return false;
                         const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                        return isToday && (new Date(b.booking_time).getTime() > now.getTime() - 30 * 60000);
+                        const holdMins = getBookingHoldMinutes(b) ?? 30;
+                        return isToday && (new Date(b.booking_time).getTime() > now.getTime() - holdMins * 60000);
+                    });
+                    const expiredHoldRes = tableBookings.find(b => {
+                        if (b.id === booking?.id) return false;
+                        const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                        return isToday && isHoldExpired(b, now);
                     });
 
                     const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
@@ -166,6 +174,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         hasCallBill: tableBookings.some(b => (b.staff_remark || '').includes('[CALL_BILL]')),
                         booking: booking || null,
                         upcomingReservation: upcomingRes || null,
+                        expiredHoldReservation: expiredHoldRes || null,
                         isAdvanceReserved: Boolean(isUpcomingFar),
                         reservationDiffMins: diffMins,
                         upcomingConflict: hasRealConflict ? upcomingRes : null
@@ -500,9 +509,16 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const upcomingRes = tableBookings.find(b => {
                             if (b.id === activeBookingToUse?.id) return false;
                             if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
+                            if (isHoldExpired(b, now)) return false;
                             const bTime = new Date(b.booking_time);
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                            return isToday && (bTime.getTime() > now.getTime() - 30 * 60000);
+                            const holdMins = getBookingHoldMinutes(b) ?? 30;
+                            return isToday && (bTime.getTime() > now.getTime() - holdMins * 60000);
+                        });
+                        const expiredHoldRes = tableBookings.find(b => {
+                            if (b.id === activeBookingToUse?.id) return false;
+                            const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                            return isToday && isHoldExpired(b, now);
                         });
 
                         const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
@@ -530,6 +546,7 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                             hasCallBill: Boolean(tableHasCallBill || t.hasCallBill || prevTable?.hasCallBill),
                             booking: activeBookingToUse || prevTable?.booking || null,
                             upcomingReservation: upcomingRes || null,
+                            expiredHoldReservation: expiredHoldRes || null,
                             isAdvanceReserved: Boolean(isUpcomingFar),
                             reservationDiffMins: diffMins,
                             upcomingConflict: hasRealConflict ? upcomingRes : null
@@ -552,8 +569,15 @@ const POSTableGrid = memo(function POSTableGrid({ onSelectTable, onNewWalkInPick
                         const upcomingRes = tableBookings.find(b => {
                             if (b.id === booking?.id) return false;
                             if (['completed', 'void', 'cancelled', 'no_show', 'seated'].includes(b.status)) return false;
+                            if (isHoldExpired(b, now)) return false;
                             const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
-                            return isToday && (new Date(b.booking_time).getTime() > now.getTime() - 30 * 60000);
+                            const holdMins = getBookingHoldMinutes(b) ?? 30;
+                            return isToday && (new Date(b.booking_time).getTime() > now.getTime() - holdMins * 60000);
+                        });
+                        const expiredHoldRes = tableBookings.find(b => {
+                            if (b.id === booking?.id) return false;
+                            const isToday = b.booking_time >= startOfToday && b.booking_time <= endOfToday;
+                            return isToday && isHoldExpired(b, now);
                         });
 
                         const diffMins = upcomingRes ? getReservationDiffMins(upcomingRes.booking_time, now) : 9999;
@@ -1208,7 +1232,7 @@ const GridTableButton = memo(function GridTableButton({ table, onSelectTable }) 
                      )}
                      {isReserved && (
                          <span className="bg-amber-500 text-black text-[8px] font-mono font-bold px-1.5 py-0.5 rounded-xs tracking-wider leading-none uppercase shadow-xs">
-                             จองแล้ว · RESERVED
+                             {isReserved && table.upcomingReservation?.status === 'pending' && isCallConfirmOrder(table.upcomingReservation) ? 'จองแล้ว · รอโทรยืนยัน' : 'จองแล้ว · RESERVED'}
                          </span>
                      )}
                      {isAdvanceReserved && (

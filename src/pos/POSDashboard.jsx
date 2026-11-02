@@ -31,6 +31,7 @@ import { appendSplitRoundToRemark, getBookingSplitRounds, getSplitTotalPaid } fr
 import POSPinPad from './POSPinPad';
 import { printToSunmiBuiltIn, encodeShiftClosureReportData, compileShiftReportData, initPrinterConfigSync, autoPrintQROrder, silentPrintSlip, getShortBookingId, printSplitQrSlip } from '../utils/printerHelper';
 import { formatMergeSourceRemark, formatMergeTargetRemark, formatMoveRemark, isTableSessionActive } from '../utils/tableTransferHelper';
+import { getBookingHoldMinutes, isHoldExpired, isAdvanceUnseatedReservation, isPayAtStoreOrder, isCallConfirmOrder, refundBookingLoyaltyIfNeeded } from '../utils/availabilityUtils';
 import { resolveDominantCrmMember } from '../utils/crmHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast, subscribePOSBroadcast, prewarmPOSBroadcastChannel } from '../utils/realtimeNotifier';
@@ -652,16 +653,17 @@ export default function POSDashboard() {
                     if (isOnline()) {
                         const { data, error } = await supabase
                             .from('bookings')
-                            .select('id, table_id, status, booking_time, total_amount, staff_remark, customer_name, pickup_contact_name, tables_layout(table_name)')
+                            .select('id, table_id, status, booking_time, booking_type, order_type, source, total_amount, staff_remark, customer_name, pickup_contact_name, tables_layout(table_name)')
                             .in('status', ['seated', 'ready', 'pending'])
                             .order('booking_time', { ascending: true });
                         if (!error && data) {
-                            activeList = data.filter(b => b.table_id || b.status === 'seated' || b.status === 'ready');
+                            activeList = data.filter(b => !isAdvanceUnseatedReservation(b) && (b.table_id || b.status === 'seated' || b.status === 'ready'));
                         }
                     } else {
                         const cached = posCache.getBookings() || [];
                         activeList = cached.filter(b => 
                             b && 
+                            !isAdvanceUnseatedReservation(b) &&
                             !['completed', 'paid', 'void', 'cancelled', 'no_show'].includes(b.status) &&
                             (b.status === 'seated' || b.status === 'ready' || (b.status === 'pending' && b.table_id))
                         );
@@ -2148,7 +2150,7 @@ export default function POSDashboard() {
                         const oldSlip = oldRow?.payment_slip_url || '';
 
                         // 1. Pending Order Alert (New / Additional)
-                        if (newRow?.status === 'pending') {
+                        if (newRow?.status === 'pending' && !isAdvanceUnseatedReservation(newRow)) {
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_table_pending', { detail: { tableId } }));
                             }
@@ -2169,7 +2171,7 @@ export default function POSDashboard() {
                                 pushNotifHistory('ADD_ORDER', 'Add Order', `โต๊ะ ${tableName} สั่งอาหารเพิ่มเติม`, tableId);
                                 playOrderAlert(pendingOrderKey, 1200, 3.4);
                             }
-                        } else if (newRow?.status === 'seated' || newRow?.status === 'confirmed') {
+                        } else if (newRow?.status === 'seated' || (newRow?.status === 'confirmed' && !isAdvanceUnseatedReservation(newRow))) {
                             if (tableId) {
                                 window.dispatchEvent(new CustomEvent('pos_table_occupied', { detail: { tableId } }));
                             }
@@ -3484,13 +3486,13 @@ export default function POSDashboard() {
                             .update({ status: 'void' })
                             .eq('id', bookingId);
 
-                        // Also void any lingering orphaned/pending/seated/ready bookings on this table to guarantee table stays free
+                        // Also void any lingering seated/ready sessions on this table without wiping future advance reservations
                         if (targetTableId) {
                             await supabase
                                 .from('bookings')
                                 .update({ status: 'void' })
                                 .eq('table_id', targetTableId)
-                                .in('status', ['pending', 'seated', 'confirmed', 'ready']);
+                                .in('status', ['seated', 'ready']);
                         }
                     } else {
                         addToOfflineQueue('void_booking', { bookingId, tableId: targetTableId });
@@ -3513,11 +3515,11 @@ export default function POSDashboard() {
                         }
                     });
 
-                    // Update posCache: thoroughly purge all bookings matching targetTableId
+                    // Update posCache: purge active dining sessions matching targetTableId while preserving unseated future reservations
                     try {
                         const cached = (posCache.getBookings() || []).filter(b => {
                             if (b.id === bookingId) return false;
-                            if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                            if (targetTableId && String(b.table_id) === String(targetTableId) && !isAdvanceUnseatedReservation(b)) return false;
                             return true;
                         });
                         posCache.setBookings(cached);
@@ -3527,7 +3529,7 @@ export default function POSDashboard() {
                     try {
                         const cached = JSON.parse(localStorage.getItem('pos_cache_active_bookings') || '[]').filter(b => {
                             if (b.id === bookingId) return false;
-                            if (targetTableId && String(b.table_id) === String(targetTableId)) return false;
+                            if (targetTableId && String(b.table_id) === String(targetTableId) && !isAdvanceUnseatedReservation(b)) return false;
                             return true;
                         });
                         localStorage.setItem('pos_cache_active_bookings', JSON.stringify(cached));
@@ -3564,16 +3566,16 @@ export default function POSDashboard() {
                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId: targetTableId } }));
                 window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
                 if (isOnline()) {
-                    // Safety clean any unclosed bookings for this table in DB
+                    // Safety clean any unclosed seated/ready sessions for this table in DB (preserve advance reservations)
                     supabase
                         .from('bookings')
                         .update({ status: 'void' })
                         .eq('table_id', targetTableId)
-                        .in('status', ['pending', 'seated', 'confirmed', 'ready'])
+                        .in('status', ['seated', 'ready'])
                         .then(() => {}).catch(() => {});
                 }
                 try {
-                    const cached = (posCache.getBookings() || []).filter(b => String(b.table_id) !== String(targetTableId));
+                    const cached = (posCache.getBookings() || []).filter(b => String(b.table_id) !== String(targetTableId) || isAdvanceUnseatedReservation(b));
                     posCache.setBookings(cached);
                 } catch (e) {}
             }
@@ -5393,9 +5395,17 @@ export default function POSDashboard() {
                                 {(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number) && (
                                     <div className="flex justify-between items-center text-xs">
                                         <span className="text-[oklch(55%_0.010_28)] font-sans">เบอร์โทร:</span>
-                                        <span className="font-bold text-[oklch(18%_0.012_28)]">
-                                            {onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-[oklch(18%_0.012_28)]">
+                                                {onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number}
+                                            </span>
+                                            <a
+                                                href={`tel:${String(onlineReservationModalData.reservation.pickup_contact_phone || onlineReservationModalData.reservation.profiles?.phone_number || '').replace(/[^\d+]/g, '')}`}
+                                                className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[10px] font-mono font-bold rounded-xs uppercase"
+                                            >
+                                                CALL
+                                            </a>
+                                        </div>
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center text-xs">
@@ -5405,10 +5415,16 @@ export default function POSDashboard() {
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center text-xs">
-                                    <span className="text-[oklch(55%_0.010_28)] font-sans">สถานะมัดจำ:</span>
+                                    <span className="text-[oklch(55%_0.010_28)] font-sans">สถานะการจอง:</span>
                                     {onlineReservationModalData.reservation.payment_slip_url ? (
                                         <span className="text-emerald-700 font-bold">
                                             [DEPOSIT PAID] ฿{(onlineReservationModalData.reservation.total_amount || 0).toLocaleString()}
+                                        </span>
+                                    ) : isCallConfirmOrder(onlineReservationModalData.reservation) ? (
+                                        <span className="text-[oklch(52%_0.16_28)] font-bold">
+                                            {onlineReservationModalData.reservation.status === 'pending'
+                                                ? `จองฟรี · รอโทรยืนยัน (เก็บโต๊ะ ${getBookingHoldMinutes(onlineReservationModalData.reservation) || 30} นาที)`
+                                                : `โทรยืนยันแล้ว · เก็บโต๊ะ ${getBookingHoldMinutes(onlineReservationModalData.reservation) || 30} นาที`}
                                         </span>
                                     ) : (
                                         <span className="text-amber-800 font-bold">
@@ -5440,6 +5456,34 @@ export default function POSDashboard() {
 
                         {/* Action Buttons */}
                         <div className="p-4 border-t border-[oklch(85%_0.012_28)] bg-[oklch(94%_0.010_28)] flex flex-col gap-2">
+                            {/* Call Confirm Action when still pending */}
+                            {onlineReservationModalData.reservation.status === 'pending' && isCallConfirmOrder(onlineReservationModalData.reservation) && (
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const res = onlineReservationModalData.reservation;
+                                        const updates = {
+                                            status: 'confirmed',
+                                            staff_remark: `${res.staff_remark || ''} [STAFF_CONFIRMED]`.trim()
+                                        };
+                                        const { error } = await supabase.from('bookings').update(updates).eq('id', res.id);
+                                        if (!error) {
+                                            if (res.tracking_token) {
+                                                sendTrackingBroadcast(res.tracking_token, 'order_status_updated', { status: 'confirmed', booking_id: res.id });
+                                            }
+                                            sendPOSBroadcast('online_order_status_updated', { booking_id: res.id, status: 'confirmed' });
+                                            setOnlineReservationModalData(prev => prev ? { ...prev, reservation: { ...prev.reservation, ...updates } } : null);
+                                            toast.success('บันทึกสถานะโทรยืนยันคิวจองแล้ว');
+                                            checkPendingOrders();
+                                            triggerDebouncedRefresh();
+                                        }
+                                    }}
+                                    className="w-full bg-[oklch(52%_0.16_28)] hover:opacity-90 text-white py-2.5 rounded-sm font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                                >
+                                    ยืนยันทางโทรศัพท์แล้ว (CONFIRM BY PHONE)
+                                </button>
+                            )}
+
                             {/* Primary Action: Seat Guest Now */}
                             <button
                                 type="button"
@@ -5456,7 +5500,7 @@ export default function POSDashboard() {
                                 )}
                             </button>
 
-                            {/* Secondary Action: Walk-in with Notice */}
+                            {/* Secondary Actions: Walk-in, No-Show, Close */}
                             <div className="flex gap-2">
                                 <button
                                     type="button"
@@ -5471,6 +5515,31 @@ export default function POSDashboard() {
                                     className="flex-1 bg-white border border-[oklch(85%_0.012_28)] text-[oklch(18%_0.012_28)] hover:bg-[oklch(97%_0.008_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98 text-center"
                                 >
                                     เปิด Walk-in ชั่วคราว
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        const res = onlineReservationModalData.reservation;
+                                        const tbl = onlineReservationModalData.table;
+                                        const guestName = res.pickup_contact_name || res.customer_name || res.profiles?.display_name || 'ลูกค้า';
+                                        if (!window.confirm(`ยืนยันลูกค้า "${guestName}" ไม่มาตามเวลานัด และต้องการปล่อยโต๊ะ ${tbl.table_name} (NO-SHOW)?`)) return;
+                                        const refunded = await refundBookingLoyaltyIfNeeded(res, supabase);
+                                        const nextRemark = refunded ? `${res.staff_remark || ''} [LOYALTY_REFUNDED]`.trim() : (res.staff_remark || '');
+                                        const { error } = await supabase.from('bookings').update({ status: 'no_show', staff_remark: nextRemark }).eq('id', res.id);
+                                        if (!error) {
+                                            if (res.tracking_token) {
+                                                sendTrackingBroadcast(res.tracking_token, 'order_status_updated', { status: 'no_show', booking_id: res.id });
+                                            }
+                                            sendPOSBroadcast('online_order_status_updated', { booking_id: res.id, status: 'no_show' });
+                                            setOnlineReservationModalData(null);
+                                            toast.success(`บันทึก NO-SHOW และปล่อยโต๊ะ ${tbl.table_name} เรียบร้อยแล้ว`);
+                                            checkPendingOrders();
+                                            triggerDebouncedRefresh();
+                                        }
+                                    }}
+                                    className="px-3 bg-white border border-[oklch(52%_0.16_28)] text-[oklch(52%_0.16_28)] hover:bg-[oklch(94%_0.010_28)] py-2.5 rounded-sm font-mono text-[11px] font-bold transition-all cursor-pointer shadow-xs active:scale-98"
+                                >
+                                    NO-SHOW
                                 </button>
                                 <button
                                     type="button"
@@ -5521,6 +5590,9 @@ export default function POSDashboard() {
                                 const isStaffVerified = Boolean(item.staff_remark && item.staff_remark.includes('[SLIP_VERIFIED]'));
                                 const isVerified = isEasySlipVerified || isStaffVerified;
                                 const hasSlip = Boolean(item.payment_slip_url);
+                                const isPayAtStore = isPayAtStoreOrder(item) || isCallConfirmOrder(item);
+                                const holdMinutes = getBookingHoldMinutes(item);
+                                const guestPhone = item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || '';
 
                                 return (
                                     <div key={item.id || idx} className="bg-[oklch(97%_0.008_28)] border border-[oklch(85%_0.012_28)] rounded-xl p-4 shadow-sm flex flex-col gap-3">
@@ -5540,6 +5612,11 @@ export default function POSDashboard() {
                                                             {isEasySlipVerified ? '[ EASYSLIP ✓ ]' : '[ SLIP VERIFIED ]'}
                                                         </span>
                                                     )}
+                                                    {isPayAtStore && (
+                                                        <span className="bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded inline-block">
+                                                            รอโทรยืนยัน · {isPickup ? 'จ่ายที่ร้าน' : `เก็บโต๊ะ ${holdMinutes || 30} นาที`}
+                                                        </span>
+                                                    )}
                                                     <span className="text-[9px] font-bold uppercase tracking-wider text-[oklch(55%_0.010_28)] bg-[oklch(94%_0.010_28)] px-2 py-0.5 rounded border border-[oklch(85%_0.012_28)] inline-block">
                                                         QUEUE #{getShortBookingId(item)}
                                                     </span>
@@ -5548,9 +5625,19 @@ export default function POSDashboard() {
                                                 <h4 className="font-bold text-sm text-[oklch(18%_0.012_28)] leading-tight">
                                                     {item.profiles?.display_name || item.pickup_contact_name || item.customer_name || (isPickup ? 'ลูกค้าสั่ง Pickup' : 'ลูกค้าออนไลน์')}
                                                 </h4>
-                                                <p className="text-xs text-[oklch(55%_0.010_28)] font-mono mt-0.5">
-                                                    {item.profiles?.phone_number || item.pickup_contact_phone || item.customer_phone || 'ไม่ระบุเบอร์โทร'}
-                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-xs text-[oklch(55%_0.010_28)] font-mono">
+                                                        {guestPhone || 'ไม่ระบุเบอร์โทร'}
+                                                    </p>
+                                                    {guestPhone && (
+                                                        <a
+                                                            href={`tel:${guestPhone.replace(/[^\d+]/g, '')}`}
+                                                            className="px-2 py-0.5 bg-[oklch(18%_0.012_28)] text-[oklch(97%_0.008_28)] text-[9px] font-mono font-bold rounded uppercase tracking-wider"
+                                                        >
+                                                            [ CALL โทรออก ]
+                                                        </a>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="text-right font-mono shrink-0">
@@ -5589,7 +5676,7 @@ export default function POSDashboard() {
                                         )}
 
                                         {/* Deposit & Slip Section (Multi-Tier EasySlip & Fallback, Zero-Icon) */}
-                                        {(item.deposit_amount > 0 || item.total_amount > 0 || hasSlip) && (
+                                        {(item.deposit_amount > 0 || item.total_amount > 0 || hasSlip || isPayAtStore) && (
                                             <div className={`p-3 rounded-xl border font-mono text-xs flex flex-col gap-2 ${
                                                 isVerified 
                                                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-950' 
@@ -5598,7 +5685,11 @@ export default function POSDashboard() {
                                                 <div className="flex justify-between items-center flex-wrap gap-1">
                                                     <div className="flex items-center gap-2 font-bold">
                                                         {item.deposit_amount > 0 && <span>มัดจำ: ฿{item.deposit_amount.toLocaleString()}</span>}
-                                                        {item.total_amount > 0 && <span className="text-[oklch(42%_0.010_28)]">ยอดรวม: ฿{item.total_amount.toLocaleString()}</span>}
+                                                        {item.total_amount > 0 ? (
+                                                            <span className="text-[oklch(42%_0.010_28)]">ยอดรวม: ฿{item.total_amount.toLocaleString()}</span>
+                                                        ) : (
+                                                            <span className="text-[oklch(42%_0.010_28)]">จองโต๊ะอย่างเดียว (ไม่มีค่ามัดจำ)</span>
+                                                        )}
                                                     </div>
 
                                                     {/* Verification Status Tag */}
@@ -5613,7 +5704,11 @@ export default function POSDashboard() {
                                                             </span>
                                                         ) : hasSlip ? (
                                                             <span className="bg-amber-600 text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded animate-pulse">
-                                                                ⚠️ รอตรวจสลิปโอนเงิน
+                                                                รอตรวจสลิปโอนเงิน
+                                                            </span>
+                                                        ) : isPayAtStore ? (
+                                                            <span className="bg-[oklch(52%_0.16_28)] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                                                                {isPickup ? 'PAY AT STORE · ชำระที่ร้าน' : `FREE BOOKING · เก็บโต๊ะ ${holdMinutes || 30} นาที`}
                                                             </span>
                                                         ) : (
                                                             <span className="bg-[oklch(85%_0.012_28)] text-[oklch(42%_0.010_28)] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
@@ -5686,7 +5781,9 @@ export default function POSDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={async () => {
-                                                    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
+                                                    const refunded = await refundBookingLoyaltyIfNeeded(item, supabase);
+                                                    const nextRemark = refunded ? `${item.staff_remark || ''} [LOYALTY_REFUNDED]`.trim() : (item.staff_remark || '');
+                                                    const { error } = await supabase.from('bookings').update({ status: 'cancelled', staff_remark: nextRemark }).eq('id', item.id);
                                                     if (!error) {
                                                         if (item.tracking_token) {
                                                             sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
@@ -5713,7 +5810,7 @@ export default function POSDashboard() {
                                                     if (isPickup) {
                                                         const updates = {
                                                             status: 'preparing',
-                                                            staff_remark: `${item.staff_remark || ''} [STAFF_ACCEPTED]`.trim()
+                                                            staff_remark: `${item.staff_remark || ''} ${isPayAtStore ? '[STAFF_CONFIRMED] [STAFF_ACCEPTED]' : '[STAFF_ACCEPTED]'}`.trim()
                                                         };
                                                         const { error } = await supabase.from('bookings').update(updates).eq('id', item.id);
                                                         if (!error) {
@@ -5730,7 +5827,7 @@ export default function POSDashboard() {
                                                             if ((item.order_items || []).length > 0) {
                                                                 scheduleAutoPrint(item.id, 'PICKUP', 400);
                                                             }
-                                                            toast.success("รับออเดอร์เข้าครัวและสั่งพิมพ์ใบครัวแล้ว!");
+                                                            toast.success("โทรยืนยันรับออเดอร์เข้าครัวและสั่งพิมพ์ใบครัวแล้ว!");
                                                             checkPendingOrders();
                                                             triggerDebouncedRefresh();
                                                         }
@@ -5759,7 +5856,9 @@ export default function POSDashboard() {
                                                 }}
                                                 className="flex-2 py-2.5 bg-[oklch(18%_0.012_28)] hover:bg-[oklch(30%_0.012_28)] text-[oklch(97%_0.008_28)] border border-[oklch(18%_0.012_28)] rounded-xl font-bold text-xs transition-all active:scale-95 cursor-pointer shadow-sm text-center font-mono uppercase tracking-wider"
                                             >
-                                                {isPickup ? 'อนุมัติออเดอร์ (Pickup)' : 'อนุมัติ & ยืนยันคิว'}
+                                                {isPickup
+                                                    ? (isPayAtStore ? 'โทรยืนยันแล้ว + สั่งพิมพ์ใบครัวทันที' : 'อนุมัติออเดอร์ (Pickup)')
+                                                    : (isPayAtStore ? `โทรยืนยันแล้ว (เก็บโต๊ะ ${holdMinutes || 30} นาที)` : 'อนุมัติ & ยืนยันคิว')}
                                             </button>
                                         </div>
                                     </div>

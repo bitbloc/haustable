@@ -5,6 +5,7 @@ import { isOnline, addToOfflineQueue, posCache, syncOfflineQueue, getOfflineQueu
 import { recordShiftTransaction } from '../utils/shiftHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
+import { isAdvanceUnseatedReservation } from '../utils/availabilityUtils';
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
@@ -38,6 +39,12 @@ function isBookingSessionActive(b, startOfToday, endOfToday, now) {
             }
         }
     } catch (e) {}
+
+    // Unseated advance reservations (`pending` or `confirmed`) are upcoming reservations,
+    // not active seated sessions until checked in (`status === 'seated'`)
+    if (isAdvanceUnseatedReservation(b)) {
+        return false;
+    }
 
     // 1. Actively seated or confirmed in-store session
     if (['seated', 'confirmed'].includes(b.status)) {

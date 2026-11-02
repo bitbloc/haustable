@@ -50,6 +50,9 @@ export default function GeneralBookingSettingsTab({
             await handleSave('announcement_detail', settings.announcement_detail || '');
             await handleSave('booking_min_spend', settings.booking_min_spend || '');
             await handleSave('booking_min_advance_hours', settings.booking_min_advance_hours || '');
+            await handleSave('booking_hold_minutes', settings.booking_hold_minutes || '30');
+            await handleSave('booking_deposit_required', settings.booking_deposit_required === 'true' ? 'true' : 'false');
+            await handleSave('pickup_pay_at_store_enabled', settings.pickup_pay_at_store_enabled === 'false' ? 'false' : 'true');
             await handleSave('pickup_min_advance_hours', settings.pickup_min_advance_hours || '');
             await handleSave('booking_time_slots', settings.booking_time_slots || '');
             await handleSave('policy_dine_in', settings.policy_dine_in || '');
@@ -406,7 +409,7 @@ export default function GeneralBookingSettingsTab({
                 </div>
 
                 {/* Policy Numerical Parameters */}
-                <div className="pt-4 border-t border-[var(--color-rule)] grid md:grid-cols-3 gap-4">
+                <div className="pt-4 border-t border-[var(--color-rule)] grid md:grid-cols-4 gap-4">
                     <div>
                         <label className="block text-[10px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
                             ขั้นต่ำต่อท่าน (บาท)
@@ -435,6 +438,19 @@ export default function GeneralBookingSettingsTab({
 
                     <div>
                         <label className="block text-[10px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
+                            เวลา Hold โต๊ะจอง (นาที)
+                        </label>
+                        <input
+                            type="number"
+                            value={settings.booking_hold_minutes || '30'}
+                            onChange={(e) => handleSave('booking_hold_minutes', e.target.value)}
+                            placeholder="30"
+                            className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-[10px] font-mono font-bold text-[var(--color-ink)] uppercase mb-1">
                             Pickup ล่วงหน้าขั้นต่ำ (ชั่วโมง)
                         </label>
                         <input
@@ -445,6 +461,43 @@ export default function GeneralBookingSettingsTab({
                             className="w-full bg-[var(--color-paper)] border border-[var(--color-rule)] p-2.5 rounded-xl text-xs font-mono font-bold text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)]"
                         />
                     </div>
+                </div>
+
+                {/* Call-Confirm & Pay-at-Store Switches */}
+                <div className="grid md:grid-cols-2 gap-4 pt-2">
+                    <label className="bg-[var(--color-paper)] p-3.5 rounded-xl border border-[var(--color-rule)] flex items-center justify-between cursor-pointer">
+                        <div>
+                            <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                จองโต๊ะฟรี · โทรยืนยัน (ไม่บังคับโอนมัดจำ)
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--color-neutral)]">
+                                เปิดให้ลูกค้าจองโต๊ะโดยไม่ต้องโอนมัดจำ (เก็บโต๊ะ {settings.booking_hold_minutes || 30} นาทีหลังเวลานัด)
+                            </span>
+                        </div>
+                        <input
+                            type="checkbox"
+                            checked={settings.booking_deposit_required !== 'true'}
+                            onChange={(e) => handleSave('booking_deposit_required', e.target.checked ? 'false' : 'true')}
+                            className="accent-[var(--color-ink)] w-4 h-4 cursor-pointer shrink-0 ml-3"
+                        />
+                    </label>
+
+                    <label className="bg-[var(--color-paper)] p-3.5 rounded-xl border border-[var(--color-rule)] flex items-center justify-between cursor-pointer">
+                        <div>
+                            <span className="block font-mono font-bold text-xs text-[var(--color-ink)]">
+                                สั่งกลับบ้าน · จ่ายที่ร้านตอนรับ (Pay at Store)
+                            </span>
+                            <span className="text-[10px] font-mono text-[var(--color-neutral)]">
+                                เปิดตัวเลือกชำระเงินที่หน้าร้านสำหรับ Pickup (พนักงานโทรยืนยันแล้วส่งพิมพ์ใบครัวทันที)
+                            </span>
+                        </div>
+                        <input
+                            type="checkbox"
+                            checked={settings.pickup_pay_at_store_enabled !== 'false'}
+                            onChange={(e) => handleSave('pickup_pay_at_store_enabled', e.target.checked ? 'true' : 'false')}
+                            className="accent-[var(--color-ink)] w-4 h-4 cursor-pointer shrink-0 ml-3"
+                        />
+                    </label>
                 </div>
 
                 {/* Time Slot Studio Integration */}

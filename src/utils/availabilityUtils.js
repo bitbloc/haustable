@@ -1,9 +1,77 @@
-
 /**
  * availabilityUtils.js
  * Core availability and overlap calculations for online reservations and POS walk-in seating.
  * Implements Option 1: Smart Dynamic Turn + Live Seated Dining Protection.
  */
+
+export const DEFAULT_HOLD_MINUTES = 30;
+
+/**
+ * True when an order is marked for pay-at-store settlement (`[PAY_AT_STORE]`).
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isPayAtStoreOrder(booking) {
+    if (!booking) return false;
+    const remark = String(booking.staff_remark || '');
+    return remark.includes('[PAY_AT_STORE]');
+}
+
+/**
+ * True when a booking requires staff phone confirmation (`[CALL_CONFIRM]`).
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isCallConfirmOrder(booking) {
+    if (!booking) return false;
+    const remark = String(booking.staff_remark || '');
+    return remark.includes('[CALL_CONFIRM]');
+}
+
+/**
+ * True when a booking is an unseated advance table reservation (`pending` or `confirmed`)
+ * rather than an actively seated in-store dining session or walk-in/QR order.
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isAdvanceUnseatedReservation(booking) {
+    if (!booking) return false;
+    if (!['pending', 'confirmed'].includes(booking.status)) return false;
+
+    const bType = String(booking.booking_type || '').toLowerCase();
+    const oType = String(booking.order_type || '').toLowerCase();
+    if (bType === 'pickup' || oType === 'pickup' || bType === 'hausmade' || oType.startsWith('hausmade')) {
+        return false;
+    }
+
+    const remark = String(booking.staff_remark || '');
+    const remarkLower = remark.toLowerCase();
+    const isWalkInOrQR =
+        bType === 'walk_in' ||
+        bType === 'qr' ||
+        remarkLower.includes('walk-in') ||
+        remarkLower.includes('walk_in') ||
+        remarkLower.includes('qr walk-in') ||
+        remarkLower.startsWith('qr');
+
+    if (isWalkInOrQR) return false;
+
+    const source = String(booking.source || '').toLowerCase();
+    if (
+        remark.includes('[ONLINE]') ||
+        remark.includes('[CALL_CONFIRM]') ||
+        remark.includes('[MANUAL_ADMIN]') ||
+        source === 'online' ||
+        source === 'phone' ||
+        source === 'line' ||
+        source === 'facebook' ||
+        bType === 'dine_in'
+    ) {
+        return true;
+    }
+
+    return false;
+}
 
 /**
  * Calculates the effective end time of a booking.
@@ -49,13 +117,16 @@ export function calculateEffectiveBookingEnd(booking, options = {}) {
 }
 
 /**
- * Reads the table-hold window stamped on free online bookings (`[HOLD:15]` in staff_remark).
+ * Reads the table-hold window stamped on free online bookings (`[HOLD:30]` in staff_remark).
  * @param {Object} booking
  * @returns {number|null} minutes, or null when the booking has no hold cap
  */
 export function getBookingHoldMinutes(booking) {
-    const match = /\[HOLD:(\d+)\]/.exec(booking?.staff_remark || '');
-    return match ? Number(match[1]) : null;
+    const remark = booking?.staff_remark || '';
+    const match = /\[HOLD:(\d+)\]/.exec(remark);
+    if (match) return Number(match[1]);
+    if (remark.includes('[CALL_CONFIRM]')) return DEFAULT_HOLD_MINUTES;
+    return null;
 }
 
 /**
@@ -108,6 +179,64 @@ export function isBookingOverlap(requestStart, requestEnd, booking, optionsOrDur
 }
 
 /**
+ * Refunds xhaus coins and free drink quota back to member profile when an unpaid
+ * online booking or pickup order is cancelled, rejected, or marked no-show.
+ * @param {Object} booking
+ * @param {Object} supabaseClient
+ * @returns {Promise<boolean>} True if a refund was applied
+ */
+export async function refundBookingLoyaltyIfNeeded(booking, supabaseClient) {
+    if (!booking || !supabaseClient) return false;
+    const remark = String(booking.staff_remark || '');
+    if (remark.includes('[LOYALTY_REFUNDED]')) return false;
+
+    const userId = booking.user_id;
+    if (!userId) return false;
+
+    const note = String(booking.customer_note || '');
+    let xhausRedeemed = parseFloat(booking.xhaus_redeemed) || 0;
+    if (!xhausRedeemed) {
+        const match = note.match(/\[ใช้แต้ม xhaus:\s*(\d+(?:\.\d+)?)\s*เหรียญ/i);
+        if (match) xhausRedeemed = parseFloat(match[1]) || 0;
+    }
+
+    const isFreeDrinkUsed = Boolean(
+        booking.use_free_drink_quota ||
+        note.includes('[ใช้สิทธิ์แก้วฟรี 10 แถม 1') ||
+        remark.includes('| แก้วฟรี -฿')
+    );
+
+    if (xhausRedeemed <= 0 && !isFreeDrinkUsed) return false;
+
+    try {
+        const { data: prof } = await supabaseClient
+            .from('profiles')
+            .select('xhaus_balance, total_redeemed_xhaus, free_drink_quota')
+            .eq('id', userId)
+            .maybeSingle();
+
+        if (!prof) return false;
+
+        const updates = {};
+        if (xhausRedeemed > 0) {
+            updates.xhaus_balance = (parseFloat(prof.xhaus_balance) || 0) + xhausRedeemed;
+            updates.total_redeemed_xhaus = Math.max(0, (parseFloat(prof.total_redeemed_xhaus) || 0) - xhausRedeemed);
+        }
+        if (isFreeDrinkUsed) {
+            updates.free_drink_quota = (Number(prof.free_drink_quota) || 0) + 1;
+        }
+
+        if (Object.keys(updates).length > 0) {
+            await supabaseClient.from('profiles').update(updates).eq('id', userId);
+            return true;
+        }
+    } catch (err) {
+        console.warn('[refundBookingLoyaltyIfNeeded] Failed to refund loyalty:', err);
+    }
+    return false;
+}
+
+/**
  * Checks if a requested time slot overlaps with an existing booking.
  * Backward-compatible wrapper delegating to isBookingOverlap.
  * 
@@ -120,4 +249,3 @@ export function isBookingOverlap(requestStart, requestEnd, booking, optionsOrDur
 export const checkOverlap = (requestStart, requestEnd, bookingStart, bookingDurationHours = 2) => {
     return isBookingOverlap(requestStart, requestEnd, bookingStart, { defaultDurationHours: bookingDurationHours });
 };
-

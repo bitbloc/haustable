@@ -199,9 +199,13 @@ export default function POSPickupGrid({ onSelectOrder, hasPendingOrders, refresh
                                                 <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-widest uppercase">
                                                     [ AUTO-VERIFIED ✓ ]
                                                 </span>
-                                            ) : (order.deposit_amount >= order.total_amount && order.total_amount > 0) ? (
+                                            ) : (order.deposit_amount >= order.total_amount && order.total_amount > 0) || order.status === 'completed' ? (
                                                 <span className="bg-emerald-100 text-emerald-700 border border-emerald-200 text-[9px] font-mono font-bold px-2 py-0.5 rounded tracking-widest uppercase">
                                                     [ PAID ]
+                                                </span>
+                                            ) : (order.staff_remark || '').includes('[PAY_AT_STORE]') ? (
+                                                <span className="bg-[oklch(52%_0.16_28)] text-white border border-[oklch(52%_0.16_28)] text-[9px] font-mono font-bold px-1.5 py-0.5 rounded tracking-wider uppercase">
+                                                    [ จ่ายที่ร้าน · ฿{Number(order.total_amount || 0).toLocaleString()} ]
                                                 </span>
                                             ) : null}
                                         </div>

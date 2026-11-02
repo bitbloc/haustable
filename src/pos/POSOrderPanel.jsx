@@ -364,7 +364,7 @@ const POSOrderPanel = React.memo(function POSOrderPanel({
             const isOnlinePrepaid = (sourceLower === 'online' || booking?.booking_type === 'pickup' || (booking?.order_type || '').startsWith('hausmade') || remarkLower.includes('[online_pickup]') || remarkLower.includes('easyslip')) &&
                 (Number(booking?.deposit_amount) || 0) > 0 &&
                 (Number(booking?.deposit_amount) || 0) >= (Number(booking?.total_amount) || 0);
-            if (isOnlinePrepaid) {
+            if (isOnlinePrepaid || remarkLower.includes('[pay_at_store]') || remarkLower.includes('[online_pickup]')) {
                 setIncludeTax(false);
             } else {
                 setIncludeTax(defaultVatEnabled);

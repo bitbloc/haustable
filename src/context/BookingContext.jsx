@@ -63,7 +63,7 @@ export function BookingProvider({ children }) {
                     if (map.booking_min_spend) settings.minSpend = parseInt(map.booking_min_spend)
                     if (map.booking_min_advance_hours) settings.minAdvanceHours = Number(map.booking_min_advance_hours)
                     if (map.booking_deposit_required !== undefined) settings.bookingDepositRequired = map.booking_deposit_required === 'true'
-                    if (map.booking_hold_minutes) settings.bookingHoldMinutes = Number(map.booking_hold_minutes) || 15
+                    if (map.booking_hold_minutes) settings.bookingHoldMinutes = Number(map.booking_hold_minutes) || 30
                     if (map.booking_time_slots) settings.bookingTimeSlots = map.booking_time_slots.split(',').map(s => s.trim())
                     if (map.alert_sound_url) settings.soundAlertUrl = safeTimestampUrl(map.alert_sound_url)
                     

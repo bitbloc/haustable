@@ -126,11 +126,15 @@ export const getBookingPaymentBreakdown = (b) => {
     // 6. Remote / Online Reservation Fallback
     // If booked via remote channels (LINE, Facebook, Phone, Online booking, or [MANUAL_ADMIN])
     // and no cash payment was explicitly recorded, advance payment is almost exclusively Bank Transfer / QR.
-    const isRemoteBooking = source === 'phone' || 
+    // Exception: [PAY_AT_STORE] / [CALL_CONFIRM] orders with 0 deposit are settled in-store at the counter.
+    const isPayAtStoreZeroDeposit = (remark.includes('[pay_at_store]') || remark.includes('[call_confirm]')) && deposit === 0 && !b.payment_slip_url;
+    const isRemoteBooking = !isPayAtStoreZeroDeposit && (
+                            source === 'phone' || 
                             source === 'line' || 
                             source === 'facebook' || 
                             source === 'online' || 
-                            remark.includes('[manual_admin]');
+                            remark.includes('[manual_admin]')
+    );
 
     if (isRemoteBooking) {
         return { cash: 0, qr: total, credit: 0, isSplit: false, isOnline, methodLabel: 'QR Transfer' };

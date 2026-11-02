@@ -5,6 +5,7 @@
  */
 
 import { getShortBookingId } from './printerHelper';
+import { isAdvanceUnseatedReservation } from './availabilityUtils';
 
 /**
  * Parses all table transfer, move, and merge metadata from booking records and remarks.
@@ -179,21 +180,7 @@ export function parseTableTransferInfo(booking, allBookings = []) {
     }
 
     // 4. Generate clean human-readable remark without system tags
-    const cleanRemark = remark
-        .replace(/\[MERGED_TO:[^\]]+\]/gi, '')
-        .replace(/\[TARGET_BILL:[^\]]+\]/gi, '')
-        .replace(/\[MERGED_FROM:[^\]]+\]/gi, '')
-        .replace(/\[SOURCE_BILL:[^\]]+\]/gi, '')
-        .replace(/\[MOVED:[^\]]+\]/gi, '')
-        .replace(/\[ORIG(?:_AMT|INAL_TOTAL):[^\]]+\]/gi, '')
-        .replace(/\[CALL_STAFF\]/gi, '')
-        .replace(/\[CALL_BILL\]/gi, '')
-        .replace(/\[CASH:[^\]]+\]/gi, '')
-        .replace(/\[SPLIT:[^\]]+\]/gi, '')
-        .replace(/\[ONLINE\]/gi, '')
-        .replace(/Merged into Table\s+[A-Za-z0-9\-_]+(?:\s*\([A-Za-z0-9#]+\))?/gi, '')
-        .replace(/Merged offline/gi, '')
-        .trim();
+    const cleanRemark = stripInternalTransferTags(remark);
 
     // 5. Pre-formatted display strings for UI
     const targetTableDisplay = mergedToTable 
@@ -279,7 +266,18 @@ export function stripInternalTransferTags(remark = '') {
         .replace(/\[CALL_BILL\]/gi, '')
         .replace(/\[CASH:[^\]]+\]/gi, '')
         .replace(/\[SPLIT:[^\]]+\]/gi, '')
+        .replace(/\[ONLINE_PICKUP\]/gi, '')
         .replace(/\[ONLINE\]/gi, '')
+        .replace(/\[CALL_CONFIRM\]/gi, '')
+        .replace(/\[HOLD:\d+\]/gi, '')
+        .replace(/\[PAY_AT_STORE\]/gi, '')
+        .replace(/\[STAFF_CONFIRMED\]/gi, '')
+        .replace(/\[STAFF_ACCEPTED\]/gi, '')
+        .replace(/\[SLIP_VERIFIED\]/gi, '')
+        .replace(/\[LOYALTY_REFUNDED\]/gi, '')
+        .replace(/\[CUSTOMER_ARRIVED\]/gi, '')
+        .replace(/จองโต๊ะ ไม่มีค่าจอง\s*\([^)]*\)/gi, '')
+        .replace(/สั่งรับกลับ จ่ายที่ร้าน\s*\([^)]*\)/gi, '')
         .replace(/Merged into Table\s+[A-Za-z0-9\-_]+(?:\s*\([A-Za-z0-9#]+\))?/gi, '')
         .replace(/Merged offline/gi, '')
         .trim();
@@ -312,6 +310,8 @@ export function isGhostPickupBooking(booking) {
  */
 export function isDuplicateGhostBooking(booking, allBookings = []) {
     if (!booking || !booking.table_id) return false;
+    // Unseated advance reservations (even with 0 items / 0 deposit) are never duplicate walk-in ghosts
+    if (isAdvanceUnseatedReservation(booking)) return false;
     const isSeatedOrPending = ['seated', 'pending', 'confirmed'].includes(booking.status);
     if (!isSeatedOrPending) return false;
 
@@ -328,6 +328,7 @@ export function isDuplicateGhostBooking(booking, allBookings = []) {
     return allBookings.some(other => {
         if (!other || other.id === booking.id) return false;
         if (String(other.table_id) !== tableIdStr) return false;
+        if (isAdvanceUnseatedReservation(other)) return false;
         if (!['seated', 'pending', 'confirmed'].includes(other.status)) return false;
 
         const otherHasItems = other.order_items && other.order_items.length > 0;
@@ -402,6 +403,12 @@ export function isTableSessionActive(b, startOfToday, endOfToday, now = new Date
             }
         }
     } catch (e) {}
+
+    // Unseated advance reservations (`pending` or `confirmed`) are upcoming reservations,
+    // not active seated sessions on the floorplan until checked in (`status === 'seated'`)
+    if (isAdvanceUnseatedReservation(b)) {
+        return false;
+    }
 
     // 1. Actively seated or confirmed in-store session
     if (['seated', 'confirmed'].includes(b.status)) {

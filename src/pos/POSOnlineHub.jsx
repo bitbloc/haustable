@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getShortBookingId } from '../utils/printerHelper';
-import { getBookingHoldMinutes, isHoldExpired } from '../utils/availabilityUtils';
+import { getBookingHoldMinutes, isHoldExpired, refundBookingLoyaltyIfNeeded } from '../utils/availabilityUtils';
 import { 
     playOrderAlert, 
     playSystemAlertSound, 
@@ -354,15 +354,22 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
     const updateBookingStatus = async (id, newStatus, customData = {}) => {
         try {
+            const targetOrder = orders.find(o => o.id === id);
+            const payload = { status: newStatus, ...customData };
+            if (['cancelled', 'rejected', 'no_show'].includes(newStatus) && targetOrder) {
+                const refunded = await refundBookingLoyaltyIfNeeded(targetOrder, supabase);
+                if (refunded) {
+                    payload.staff_remark = `${payload.staff_remark || targetOrder.staff_remark || ''} [LOYALTY_REFUNDED]`.trim();
+                }
+            }
             const { error } = await supabase
                 .from('bookings')
-                .update({ status: newStatus, ...customData })
+                .update(payload)
                 .eq('id', id);
             if (error) throw error;
             toast.success(`อัปเดตสถานะเป็น [${newStatus.toUpperCase()}] สำเร็จ`);
 
             // Instant Realtime Broadcast to customer tracking page (< 50ms)
-            const targetOrder = orders.find(o => o.id === id);
             const trackingToken = targetOrder?.tracking_token || customData.tracking_token;
             if (trackingToken) {
                 sendTrackingBroadcast(trackingToken, 'order_status_updated', {
@@ -907,15 +914,19 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
                             )}
                             <button
                                 type="button"
-                                onClick={() => {
-                                    if (window.confirm(`โทรคุยกับ "${name}" ยืนยันออเดอร์ #${shortId} แล้ว?`)) {
-                                        updateBookingStatus(order.id, 'confirmed');
+                                onClick={async () => {
+                                    if (window.confirm(`โทรคุยกับ "${name}" ยืนยันออเดอร์ #${shortId} และสั่งพิมพ์ใบครัวทันที?`)) {
+                                        const nextRemark = `${order.staff_remark || ''} [STAFF_CONFIRMED] [STAFF_ACCEPTED]`.trim();
+                                        await updateBookingStatus(order.id, 'preparing', { staff_remark: nextRemark });
+                                        if (onOpenSlipModal && items.length > 0) {
+                                            onOpenSlipModal({ ...order, status: 'preparing', staff_remark: nextRemark }, 'kitchen');
+                                        }
                                     }
                                 }}
                                 className="flex-1 py-2 rounded-lg bg-[oklch(52%_0.16_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
                             >
-                                <Check size={12} />
-                                <span>ยืนยันทางโทรศัพท์แล้ว</span>
+                                <Printer size={12} />
+                                <span>โทรยืนยันแล้ว + สั่งพิมพ์ใบครัวทันที</span>
                             </button>
                         </>
                     )}
@@ -939,14 +950,26 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
 
                     {/* Standard Pickup seated/preparing -> MARK READY (confirmed orders go through COOK & PRINT first) */}
                     {!isLineman && !isHausmade && order.booking_type === 'pickup' && (order.status === 'seated' || order.status === 'preparing') && (
-                        <button
-                            type="button"
-                            onClick={() => updateBookingStatus(order.id, 'ready')}
-                            className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        >
-                            <Check size={12} />
-                            <span>MARK READY</span>
-                        </button>
+                        <>
+                            <button
+                                type="button"
+                                onClick={() => updateBookingStatus(order.id, 'ready')}
+                                className="flex-1 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            >
+                                <Check size={12} />
+                                <span>MARK READY</span>
+                            </button>
+                            {!isPaid && (
+                                <button
+                                    type="button"
+                                    onClick={() => onSelectOrder && onSelectOrder(order)}
+                                    className="py-2 px-3 rounded-lg bg-[oklch(18%_0.012_28)] text-white hover:opacity-90 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                    <CreditCard size={12} />
+                                    <span>CHECKOUT POS</span>
+                                </button>
+                            )}
+                        </>
                     )}
 
                     {/* Standard Pickup ready */}

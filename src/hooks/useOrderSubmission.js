@@ -433,7 +433,7 @@ export function useOrderSubmission() {
                 // Automatically trigger notification (Email, LINE, Webhook) for online orders (Hausmade, Food Pickup, Bookings)
                 try {
                     const isOnlineOrder = resultData.booking_type === 'hausmade' || 
-                        resultData.booking_type === 'pickup' || 
+                        resultData.booking_type === 'pickup' || resultData.booking_type === 'dine_in' || resultData.source === 'online' || 
                         resultData.order_type?.includes('hausmade') || 
                         resultData.order_type?.includes('pickup') || 
                         Boolean(resultData.shipping_address) ||

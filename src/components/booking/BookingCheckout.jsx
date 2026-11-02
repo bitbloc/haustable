@@ -506,7 +506,7 @@ export default function BookingCheckout() {
                         {t('callConfirmNotice').replace('{phone}', localPhone?.trim() || '-')}
                     </p>
                     <p className="text-sm text-subInk leading-relaxed">
-                        {t('holdNotice').replace('{n}', settings.bookingHoldMinutes || 15)}
+                        {t('holdNotice').replace('{n}', settings.bookingHoldMinutes || 30)}
                     </p>
                 </div>
             )}
