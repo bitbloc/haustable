@@ -4,6 +4,26 @@
  * and structured split history metadata serialization.
  */
 
+// [SPLIT_ROUNDS: [ {...}, ... ]] — round objects hold no ']' so the lazy match ends at the array's own ']'.
+// The tag's outer ']' is optional because checkouts before Nov 2026 cut it off.
+export const SPLIT_ROUNDS_TAG_RE = /\[SPLIT_ROUNDS:\s*(\[.*?\])\s*\]?/is;
+
+/**
+ * Tags a checkout must carry from the old staff_remark into the new one
+ * (table moves/merges and split-payment history), each kept whole.
+ * @param {string} remark
+ * @returns {string} Space-joined tags, or '' when there are none
+ */
+export function extractCarryOverTags(remark = '') {
+    const text = String(remark || '');
+    const tags = [];
+    const rounds = text.match(SPLIT_ROUNDS_TAG_RE);
+    if (rounds) tags.push(`[SPLIT_ROUNDS: ${rounds[1]}]`);
+    const withoutRounds = rounds ? text.replace(rounds[0], ' ') : text;
+    tags.push(...(withoutRounds.match(/\[(MERGED_FROM|MERGED_TO|MOVED|ORIG_AMT|SPLIT(?!_))[^\]]*\]/gi) || []));
+    return tags.join(' ');
+}
+
 /**
  * Parse split rounds from booking.staff_remark or metadata
  * @param {Object} booking - Booking object or { staff_remark: string }
@@ -14,8 +34,8 @@ export function getBookingSplitRounds(booking) {
     const remark = typeof booking.staff_remark === 'string' ? booking.staff_remark : '';
     if (!remark) return [];
 
-    // 1. Check for structured JSON [SPLIT_ROUNDS: [...]]
-    const roundsMatch = remark.match(/\[SPLIT_ROUNDS:\s*(\[.*?\])\s*\]/is);
+    // 1. Check for structured JSON [SPLIT_ROUNDS: [...]] (closing ']' optional: older checkouts dropped it)
+    const roundsMatch = remark.match(SPLIT_ROUNDS_TAG_RE);
     if (roundsMatch) {
         try {
             const parsed = JSON.parse(roundsMatch[1]);
@@ -184,7 +204,7 @@ export function appendSplitRoundToRemark(currentRemark = '', newRound = {}) {
 
     // Clean out previous split tags from remark string
     let baseRemark = (currentRemark || '')
-        .replace(/\[SPLIT_ROUNDS:\s*\[.*?\]\s*\]/gis, '')
+        .replace(/\[SPLIT_ROUNDS:\s*\[.*?\]\s*\]?/gis, '')
         .replace(/\[SPLIT:[^\]]+\]/gi, '')
         .replace(/Partial Split Paid ฿\d+(?:\.\d+)?/gi, '')
         .replace(/Split \(Round \d+\/\d+[^)]*\) Paid by \w+/gi, '')

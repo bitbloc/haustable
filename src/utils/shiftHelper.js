@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { addToOfflineQueue } from './offlineHelper';
+import { SPLIT_ROUNDS_TAG_RE } from './splitPaymentHelper';
 
 const CURRENT_SHIFT_KEY = 'pos_current_shift';
 const SHIFT_HISTORY_KEY = 'pos_shift_history';
@@ -25,7 +26,7 @@ export const getBookingPaymentBreakdown = (b) => {
     }
 
     // 1. Check for split payment annotation in remark, e.g. [SPLIT_ROUNDS: [...]] or [SPLIT: CASH=100, QR=200, CREDIT=0]
-    const splitRoundsMatch = remark.match(/\[SPLIT_ROUNDS:\s*(\[.*?\])\s*\]/is);
+    const splitRoundsMatch = remark.match(SPLIT_ROUNDS_TAG_RE);
     const splitMatch = remark.match(/\[split(?![_a-z0-9]):?\s*([^\]]+)\]/i) || remark.match(/\bsplit:\s*([^,\n\]]+(?:,[^,\n\]]+)*)/i);
     if (splitRoundsMatch || splitMatch) {
         let cash = 0, qr = 0, credit = 0;
@@ -54,7 +55,18 @@ export const getBookingPaymentBreakdown = (b) => {
                 }
             } catch (e) {}
         }
-        
+
+        // Split rounds record the partial payments only; whatever is left of the bill was settled at
+        // the final checkout ("Paid by CASH/QR/CREDIT ..."), so it belongs to that method.
+        const remainder = Math.round((total - cash - qr - credit) * 100) / 100;
+        if (remainder > 0.5) {
+            const finalCredit = remark.includes('paid by credit') || remark.includes('paid by card') || explicitMethod === 'credit' || explicitMethod === 'credit_card';
+            const finalQr = remark.includes('paid by qr') || remark.includes('paid by transfer') || remark.includes('paid by promptpay') || remark.includes('paid by truewallet') || explicitMethod === 'qr' || explicitMethod === 'promptpay' || explicitMethod === 'transfer';
+            if (finalCredit) credit += remainder;
+            else if (finalQr) qr += remainder;
+            else cash += remainder;
+        }
+
         const activeMethods = [];
         if (cash > 0) activeMethods.push('cash');
         if (qr > 0) activeMethods.push('qr');
@@ -818,14 +830,18 @@ export async function fetchShiftBookings(supabaseClient, shift, selectClause = '
         }
     }
 
-    // 2. Fetch bookings completed during this shift (updated_at between openedAt and closedAt)
+    // 2. Fetch bookings completed during this shift (updated_at between openedAt and closedAt).
+    // updated_at also moves when an old, long-paid bill is merely edited, so only bills opened within
+    // a day of the shift count here; older ones only enter through the shift's own transactions (step 1).
+    const oldestSessionStart = new Date(new Date(openedAt).getTime() - 24 * 60 * 60 * 1000).toISOString();
     try {
         const { data: byUpdated, error: upErr } = await supabaseClient
             .from('bookings')
             .select(effectiveSelect)
             .in('status', ['completed', 'paid', 'success'])
             .gte('updated_at', openedAt)
-            .lte('updated_at', closedAt);
+            .lte('updated_at', closedAt)
+            .gte('booking_time', oldestSessionStart);
         if (!upErr && byUpdated) {
             byUpdated.forEach(b => bookingsMap.set(b.id, b));
         }

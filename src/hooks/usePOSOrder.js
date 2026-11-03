@@ -6,6 +6,7 @@ import { recordShiftTransaction } from '../utils/shiftHelper';
 import { resolveMenuItemId } from '../utils/menuHelper';
 import { sendTrackingBroadcast, sendPOSBroadcast } from '../utils/realtimeNotifier';
 import { isAdvanceUnseatedReservation } from '../utils/availabilityUtils';
+import { extractCarryOverTags } from '../utils/splitPaymentHelper';
 
 /**
  * Robust dining session validation: ensures stale bookings from past days do NOT mark table occupied.
@@ -683,7 +684,7 @@ export function usePOSOrder() {
             const bookings = posCache.getBookings();
             const updatedBookings = bookings.map(b => {
                 if (b.id === bookingId) {
-                    const transferTags = (b.staff_remark?.match(/\[(MERGED_FROM|MERGED_TO|MOVED|SPLIT_ROUNDS|ORIG_AMT|SPLIT)[^\]]*\]/gi) || []).join(' ');
+                    const transferTags = extractCarryOverTags(b.staff_remark);
                     const baseRemark = rewardCode 
                         ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
                         : `Paid by ${paymentMethod.toUpperCase()}${cashTag}`;
@@ -739,7 +740,7 @@ export function usePOSOrder() {
                 existingTrackingToken = curB?.tracking_token || null;
             } catch (e) {}
 
-            const transferTags = (existingRemark.match(/\[(MERGED_FROM|MERGED_TO|MOVED|SPLIT_ROUNDS|ORIG_AMT|SPLIT)[^\]]*\]/gi) || []).join(' ');
+            const transferTags = extractCarryOverTags(existingRemark);
 
             const baseRemark = rewardCode 
                 ? `Paid by ${paymentMethod.toUpperCase()} | Reward: ${rewardCode}${cashTag}`
