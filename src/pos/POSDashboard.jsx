@@ -1475,19 +1475,32 @@ export default function POSDashboard() {
         // 1. Initial pending & unprinted orders safety heartbeat
         const isHeartbeatRunningRef = { current: false };
 
-        const runSafetyHeartbeat = async () => {
+        // While realtime is connected it already delivers order/bill events instantly, so the three
+        // safety queries only need to run every SAFETY_POLL_HEALTHY_MS. When the socket is down they
+        // run on every tick. Cuts steady-state polling ~3x on low-power terminals (Sunmi D2s).
+        const SAFETY_POLL_HEALTHY_MS = 10000;
+        const lastFullHeartbeatRef = { current: 0 };
+
+        const runSafetyHeartbeat = async (force = false) => {
             if (isHeartbeatRunningRef.current) return;
             if (typeof navigator !== 'undefined' && !navigator.onLine) return;
 
             isHeartbeatRunningRef.current = true;
             try {
                 // Realtime health auto-revival: if WebSocket socket dropped silently, re-establish connection immediately
+                let realtimeHealthy = false;
                 if (supabase.realtime && typeof supabase.realtime.isConnected === 'function') {
-                    if (!supabase.realtime.isConnected()) {
+                    realtimeHealthy = supabase.realtime.isConnected();
+                    if (!realtimeHealthy) {
                         console.warn('⚡ [Safety Heartbeat] Supabase Realtime socket is disconnected. Reviving connection...');
                         try { supabase.realtime.connect(); } catch (e) {}
                     }
                 }
+
+                if (force !== true && realtimeHealthy && Date.now() - lastFullHeartbeatRef.current < SAFETY_POLL_HEALTHY_MS) {
+                    return;
+                }
+                lastFullHeartbeatRef.current = Date.now();
                 prewarmPOSBroadcastChannel();
 
                 await Promise.allSettled([
@@ -1511,7 +1524,8 @@ export default function POSDashboard() {
             heartbeatInterval = setInterval(runSafetyHeartbeat, intervalMs);
         };
 
-        // High-frequency safety heartbeat: every 3.5s in foreground (sub-second reaction if WebSocket dropped, zero print delays). Background: every 8s
+        // Safety heartbeat tick: every 3.5s in foreground (fast recovery if the WebSocket drops), 8s in background.
+        // Each tick is cheap; the DB queries are throttled by SAFETY_POLL_HEALTHY_MS while realtime is healthy.
         const updateHeartbeatMode = () => {
             const isVisible = document.visibilityState === 'visible';
             startHeartbeat(isVisible ? 3500 : 8000);
@@ -1526,7 +1540,7 @@ export default function POSDashboard() {
                 console.log('⚡ [POS Lifecycle] App foregrounded. Synchronizing data & audio...');
                 unlockAudioEngine();
                 prewarmPOSBroadcastChannel();
-                runSafetyHeartbeat();
+                runSafetyHeartbeat(true);
                 triggerDebouncedRefresh();
             }
         };
@@ -1535,7 +1549,7 @@ export default function POSDashboard() {
             console.log('⚡ [POS Network] Network restored online. Synchronizing...');
             unlockAudioEngine();
             prewarmPOSBroadcastChannel();
-            runSafetyHeartbeat();
+            runSafetyHeartbeat(true);
             triggerDebouncedRefresh();
         };
 
