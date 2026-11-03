@@ -23,10 +23,10 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             num: '01',
             label: 'จองโต๊ะอาหาร',
             labelEn: 'Table Booking',
-            badgeText: isDepositRequired ? 'ชำระล่วงหน้าผ่านระบบ' : 'จองฟรี · ร้านโทรยืนยัน',
+            badgeText: isDepositRequired ? 'ชำระล่วงหน้าผ่านระบบ' : 'จองฟรีได้ · ร้านโทรยืนยัน',
             desc: isDepositRequired
                 ? 'จองโต๊ะล่วงหน้า เลือกโซนได้ ชำระค่าอาหารล่วงหน้าผ่านระบบ'
-                : 'จองล่วงหน้าฟรี เลือกโซนได้ ร้านจะโทรยืนยันการจองก่อนทุก⁠ครั้ง',
+                : 'จองโต๊ะฟรี (ร้านโทรยืนยัน) หรือเลือกอาหารล่วงหน้าและชำระผ่าน⁠ระบบ',
             path: '/booking',
             cta: 'จองเลย',
             statusText: tableStatus.isOpen ? 'เปิดรับจองโต๊ะออนไลน์' : 'ปิดรับจองชั่วคราว',

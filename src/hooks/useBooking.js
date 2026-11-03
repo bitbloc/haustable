@@ -38,6 +38,10 @@ export function useBooking() {
     }, [dispatch, closeOptionModal])
 
     const setCheckoutMode = useCallback((isCheckout) => dispatch({ type: 'SET_CHECKOUT_MODE', payload: isCheckout }), [dispatch])
+    const setBookingMode = useCallback((mode) => dispatch({ type: 'SET_BOOKING_MODE', payload: mode }), [dispatch])
+
+    // Free = table only, no payment, staff call to confirm. Shops that require a deposit only offer prepaid.
+    const isFreeBooking = !state.settings.bookingDepositRequired && state.bookingMode !== 'prepaid'
 
     const updateForm = useCallback((field, value) => dispatch({ type: 'UPDATE_FORM', payload: { field, value } }), [dispatch])
 
@@ -101,7 +105,6 @@ export function useBooking() {
             const finalContactName = (overrides.contactName || state.contactName || '').trim()
             const finalContactPhone = (overrides.contactPhone || state.contactPhone || '').trim()
             const cleanPhone = finalContactPhone.replace(/\D/g, '')
-            const isFreeBooking = !state.settings.bookingDepositRequired
             const holdMinutes = state.settings.bookingHoldMinutes || 30
             const finalSlipFile = isFreeBooking ? null : (overrides.slipFile || state.slipFile)
 
@@ -259,6 +262,7 @@ export function useBooking() {
         selectTable,
         addToCart, removeFromCart, openOptionModal, closeOptionModal, confirmOptionSelection,
         setCheckoutMode, updateForm, // Added updateForm to return
+        setBookingMode, isFreeBooking,
 
         // Async
         refreshAvailability,

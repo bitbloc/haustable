@@ -11,7 +11,7 @@ export default function BookingMenu() {
     const {
         menuItems, categories, cart,
         addToCart, removeFromCart,
-        setCheckoutMode, settings, pax
+        setCheckoutMode, settings, pax, isFreeBooking
     } = useBooking()
 
     const [activeCategory, setActiveCategory] = useState('All')
@@ -39,7 +39,7 @@ export default function BookingMenu() {
 
     const handleNext = () => {
         // Pre-check Min Spend
-        if (settings.bookingDepositRequired && settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
+        if (!isFreeBooking && settings.minSpend > 0 && cartTotal < (settings.minSpend * pax)) {
             alert(`${t('minSpendError')} ${settings.minSpend}.- (${t('totalPrice')} ${settings.minSpend * pax}.-) \n${t('pleaseOrderMore')} ${(settings.minSpend * pax) - cartTotal}.-`)
             return
         }
@@ -49,7 +49,7 @@ export default function BookingMenu() {
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Free booking: food is optional, so skipping is the primary path */}
-            {cart.length === 0 && !settings.bookingDepositRequired && (
+            {cart.length === 0 && isFreeBooking && (
                 <div className="mb-4 border border-[var(--color-rule)] bg-paper p-4 space-y-3 shrink-0">
                     <p className="text-sm text-subInk leading-relaxed">{t('foodOptionalHint')}</p>
                     <button
@@ -124,45 +124,62 @@ export default function BookingMenu() {
 
             {/* Footer Cart Bar - Full Width Floating */}
             <AnimatePresence>
-                {cart.length > 0 && (
+                {(cart.length > 0 || isFreeBooking) && (
                     <motion.div
                         initial={{ y: 100, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 100, opacity: 0 }}
                         transition={{ type: "tween", duration: 0.3, ease: "easeOut" }}
-                        className="fixed bottom-0 left-0 right-0 bg-paper/90 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50"
+                        className="fixed bottom-0 left-0 right-0 bg-paper/95 backdrop-blur-md border-t border-[var(--color-rule)] p-4 pb-8 z-50"
                     >
                         <div className="max-w-lg mx-auto flex items-center justify-between gap-4">
-                            {/* Left: Info */}
-                            <div className="flex flex-col">
-                                <div className="text-xs font-mono font-bold text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
-                                <div className="flex items-end gap-2">
-                                    <span className="font-mono text-sm bg-ink text-paper px-2 py-0.5 border border-[var(--color-rule)]">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
-                                    <motion.span
-                                        key={cartTotal}
-                                        initial={{ scale: 1.2, color: 'var(--color-accent)' }}
-                                        animate={{ scale: 1, color: 'var(--color-ink)' }}
-                                        className="font-mono font-bold text-2xl leading-none"
-                                    >
-                                        ฿{cartTotal}
-                                    </motion.span>
-                                </div>
-                            </div>
+                            {cart.length > 0 ? (
+                                <>
+                                    {/* Left: Info */}
+                                    <div className="flex flex-col">
+                                        <div className="text-xs font-mono font-bold text-subInk uppercase tracking-wider mb-0.5">{t('cartTotal')}</div>
+                                        <div className="flex items-end gap-2">
+                                            <span className="font-mono text-sm bg-ink text-paper px-2 py-0.5 border border-[var(--color-rule)]">{cart.reduce((a, b) => a + b.qty, 0)} {t('itemsCount')}</span>
+                                            <motion.span
+                                                key={cartTotal}
+                                                initial={{ scale: 1.2, color: 'var(--color-accent)' }}
+                                                animate={{ scale: 1, color: 'var(--color-ink)' }}
+                                                className="font-mono font-bold text-2xl leading-none"
+                                            >
+                                                ฿{cartTotal}
+                                            </motion.span>
+                                        </div>
+                                    </div>
 
-                            {/* Right: Action */}
-                            <button
-                                onClick={handleNext}
-                                className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95 uppercase tracking-widest font-mono"
-                            >
-                                {t('next')} <ArrowRight size={18} />
-                            </button>
+                                    {/* Right: Action */}
+                                    <button
+                                        onClick={handleNext}
+                                        className="bg-brand text-ink border border-ink px-8 py-3 rounded-none font-bold text-sm flex items-center gap-2 hover:bg-paper transition-all active:scale-95 uppercase tracking-widest font-mono cursor-pointer"
+                                    >
+                                        {t('next')} <ArrowRight size={18} />
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] font-mono font-bold text-ink uppercase">ยังไม่เลือกอาหารล่วงหน้า</span>
+                                        <span className="text-[11px] text-subInk">สามารถสั่งอาหารที่ร้านตอนมาถึงได้</span>
+                                    </div>
+                                    <button
+                                        onClick={handleNext}
+                                        className="bg-ink text-paper px-5 py-3 rounded-none font-bold text-xs flex items-center gap-2 hover:opacity-90 transition-all active:scale-95 uppercase tracking-wider font-mono shrink-0 cursor-pointer"
+                                    >
+                                        {t('bookTableOnly')} <ArrowRight size={16} />
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Skip Button (Only specific cases, mainly hidden if cart has items generally, but keeping for logic) */}
-            {cart.length === 0 && settings.bookingDepositRequired && (
+            {cart.length === 0 && !isFreeBooking && (
                 <div className="mt-4 pt-4 border-t border-[var(--color-rule)] shrink-0 text-center">
                     <button
                         onClick={handleNext}

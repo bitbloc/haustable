@@ -18,7 +18,7 @@ export default function BookingCheckout() {
     const {
         submitBooking, updateForm, setCheckoutMode,
         contactName, contactPhone, specialRequest, isAgreed, slipFile,
-        cart, settings, pax, date, time, selectedTable, table
+        cart, settings, pax, date, time, selectedTable, table, isFreeBooking
     } = useBooking()
 
     // Localize form state to prevent global re-renders on keystrokes
@@ -288,7 +288,6 @@ export default function BookingCheckout() {
     }
 
     const isContactValid = Boolean(localName?.trim() && localPhone?.trim()?.replace(/\D/g, '').length >= 9)
-    const isFreeBooking = !settings.bookingDepositRequired
 
     const handleSubmit = async () => {
         if (submitting) return
@@ -446,7 +445,7 @@ export default function BookingCheckout() {
                 ) : (
                     <div className="flex items-center justify-between text-xs font-mono text-subInk">
                         <span>รายการอาหาร: จองเฉพาะโต๊ะ (สั่งอาหารที่ร้าน)</span>
-                        {typeof setCheckoutMode === 'function' && settings.bookingDepositRequired && (
+                        {typeof setCheckoutMode === 'function' && !isFreeBooking && (
                             <button
                                 type="button"
                                 onClick={() => setCheckoutMode(false)}

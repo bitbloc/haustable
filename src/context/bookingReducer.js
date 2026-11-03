@@ -10,6 +10,7 @@ export const initialState = {
     // UI State
     isExpanded: false,
     isCheckoutMode: false,
+    bookingMode: null, // null = not chosen yet | 'free' (table only, call confirm) | 'prepaid' (pre-order food + pay online)
     isOptionModalOpen: false,
     selectedItemForOptions: null,
 
@@ -102,7 +103,8 @@ export function bookingReducer(state, action) {
                 ...state,
                 step: Math.max(1, state.step - 1),
                 direction: -1,
-                isCheckoutMode: false // Reset checkout mode when going back
+                isCheckoutMode: false, // Reset checkout mode when going back
+                bookingMode: null
             }
         case 'GO_TO_STEP':
             return {
@@ -162,6 +164,9 @@ export function bookingReducer(state, action) {
         // --- Checkout Flow ---
         case 'SET_CHECKOUT_MODE':
             return { ...state, isCheckoutMode: action.payload }
+        case 'SET_BOOKING_MODE':
+            // Leaving the prepaid path drops its cart so a free booking never carries food
+            return { ...state, bookingMode: action.payload, isCheckoutMode: false, cart: action.payload === 'prepaid' ? state.cart : [] }
         case 'UPDATE_FORM':
             return {
                 ...state,

@@ -17,7 +17,8 @@ export default function BookingSteps() {
     const navigate = useNavigate()
     const {
         step, direction, prevStep,
-        isCheckoutMode, setCheckoutMode, isLoading, settings
+        isCheckoutMode, setCheckoutMode, isLoading, settings,
+        bookingMode, setBookingMode, isFreeBooking
     } = useBooking()
 
     // Loading State (Global)
@@ -32,8 +33,13 @@ export default function BookingSteps() {
     }
 
     const handleBack = () => {
-        if (step === 3 && isCheckoutMode && settings.bookingDepositRequired) {
+        // Step 3 back: prepaid checkout -> menu -> booking-type choice -> table step
+        if (step === 3 && isCheckoutMode && !isFreeBooking) {
             setCheckoutMode(false)
+            return
+        }
+        if (step === 3 && bookingMode && !settings.bookingDepositRequired) {
+            setBookingMode(null)
             return
         }
         if (step === 1) navigate('/')
