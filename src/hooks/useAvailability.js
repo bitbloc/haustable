@@ -28,7 +28,7 @@ export function useAvailability() {
             const now = new Date()
 
             data.forEach(b => {
-                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: durationHours, liveBufferMinutes: 30 })) {
+                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: durationHours, liveBufferMinutes: 30, occupiedBlocksRestOfDay: true })) {
                     bookedIds.push(b.table_id)
                     statuses[b.table_id] = { type: b.booking_type }
                 }

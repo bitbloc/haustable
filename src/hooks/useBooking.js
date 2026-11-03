@@ -82,7 +82,7 @@ export function useBooking() {
 
             data.forEach(b => {
                 // Smart Dynamic Turn & Live Seated Protection
-                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30 })) {
+                if (isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30, occupiedBlocksRestOfDay: true })) {
                     bookedIds.push(b.table_id)
                     // Priority: Walk-in overrides Online (for display purpose if multiple? actually just taking last one is fine or first)
                     statuses[b.table_id] = { type: b.booking_type }
@@ -146,7 +146,7 @@ export function useBooking() {
             if (conflictBookings && conflictBookings.length > 0) {
                 const now = new Date()
                 const hasOverlap = conflictBookings.some(b => {
-                    return isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30 })
+                    return isBookingOverlap(requestedStart, requestedEnd, b, { now, defaultDurationHours: 2, liveBufferMinutes: 30, occupiedBlocksRestOfDay: true })
                 })
                 if (hasOverlap) {
                     throw new Error('ขออภัย โต๊ะนี้เพิ่งมีผู้ทำรายการจองเข้ามาในช่วงเวลาดังกล่าว กรุณาเลือกโต๊ะอื่น (Table was just reserved by another guest)')

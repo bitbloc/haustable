@@ -143,6 +143,18 @@ export function isHoldExpired(booking, now = new Date()) {
 }
 
 /**
+ * True while guests are physically at the table: a seated session, or a QR walk-in
+ * still waiting for staff approval.
+ * @param {Object} booking
+ * @returns {boolean}
+ */
+export function isTableOccupiedNow(booking) {
+    if (!booking) return false;
+    if (booking.status === 'seated') return true;
+    return booking.status === 'pending' && booking.booking_type === 'walk_in';
+}
+
+/**
  * Checks if a requested time slot overlaps with an existing booking,
  * honoring Live Seated Protection and terminal status exclusions.
  * 
@@ -169,6 +181,16 @@ export function isBookingOverlap(requestStart, requestEnd, booking, optionsOrDur
     // Held online booking whose guest never arrived: release the table
     if (isHoldExpired(bObj, options.now || new Date())) {
         return false;
+    }
+
+    // Guests sitting at the table right now: nobody knows when they will leave, so for online
+    // booking the table stays closed for any slot later today (Bangkok day), not just 2 hours.
+    if (options.occupiedBlocksRestOfDay && isTableOccupiedNow(bObj)) {
+        const now = options.now || new Date();
+        const bkkDay = (d) => new Date(new Date(d).getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (bkkDay(requestStart) === bkkDay(now) && requestEnd > new Date(bObj.booking_time)) {
+            return true;
+        }
     }
 
     const bStart = new Date(bObj.booking_time);
