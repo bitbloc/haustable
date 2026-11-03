@@ -37,6 +37,44 @@ const ASCII_ART_PRESETS = [
     }
 ];
 
+// Text columns per receipt line. 80mm printheads fit 48 (58mm: 32); narrower widths leave side margins
+// but are safe on every printer model. Unset = 36 / 26 (project default).
+const RECEIPT_WIDTH_OPTIONS = {
+    '80mm': [
+        { value: '', label: '36 ตัวอักษร · ปลอดภัยทุกรุ่น (ค่าเริ่มต้น)' },
+        { value: '42', label: '42 ตัวอักษร' },
+        { value: '48', label: '48 ตัวอักษร · เต็มแผ่น (Sunmi D2s / เครื่องในตัว)' }
+    ],
+    '58mm': [
+        { value: '', label: '26 ตัวอักษร · ปลอดภัยทุกรุ่น (ค่าเริ่มต้น)' },
+        { value: '32', label: '32 ตัวอักษร · เต็มแผ่น' }
+    ]
+};
+
+function ReceiptWidthSelect({ role, printerConfig, handleSavePrinter }) {
+    const paper = (role === 'kitchen' ? printerConfig.kitchen_paper_size : printerConfig.cashier_paper_size) === '58mm' ? '58mm' : '80mm';
+    const key = `${role}_max_cols`;
+    const options = RECEIPT_WIDTH_OPTIONS[paper];
+    const current = options.some(o => o.value === String(printerConfig[key] ?? '')) ? String(printerConfig[key] ?? '') : '';
+    return (
+        <div>
+            <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--color-ink)] mb-1">
+                Receipt Width (ความกว้างตัวอักษรบนสลิป)
+            </label>
+            <select
+                value={current}
+                onChange={(e) => handleSavePrinter({ ...printerConfig, [key]: e.target.value ? Number(e.target.value) : null })}
+                className="w-full px-3 py-2 bg-[var(--color-paper)] border border-[var(--color-rule)] rounded-lg text-xs font-mono text-[var(--color-ink)] outline-none focus:border-[var(--color-ink)] cursor-pointer"
+            >
+                {options.map(o => <option key={o.value || 'default'} value={o.value}>{o.label}</option>)}
+            </select>
+            <p className="text-[10px] text-[var(--color-neutral)] mt-1 leading-relaxed">
+                หลังเปลี่ยน ให้กดพิมพ์ทดสอบ ถ้าบรรทัดล้นหรือตกบรรทัด ให้ลดลงหนึ่งระดับ
+            </p>
+        </div>
+    );
+}
+
 export default function HardwarePrintersTab({
     printerConfig,
     setPrinterConfig,
@@ -442,6 +480,8 @@ export default function HardwarePrintersTab({
                                     <option value="58mm">58mm Thermal Paper</option>
                                 </select>
                             </div>
+
+                            <ReceiptWidthSelect role="cashier" printerConfig={printerConfig} handleSavePrinter={handleSavePrinter} />
                         </div>
                     </div>
 
@@ -525,6 +565,8 @@ export default function HardwarePrintersTab({
                                     <option value="58mm">58mm Thermal Paper</option>
                                 </select>
                             </div>
+
+                            <ReceiptWidthSelect role="kitchen" printerConfig={printerConfig} handleSavePrinter={handleSavePrinter} />
                         </div>
                     </div>
 

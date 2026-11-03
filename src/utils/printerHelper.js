@@ -534,7 +534,8 @@ export function generateDivider(style = 'dashed', maxCols = 48) {
 }
 
 // Resolve printer column width cleanly from configuration or fallback
-function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
+// role: 'cashier' | 'kitchen' picks the per-printer `<role>_max_cols` saved in Hardware Printers settings
+function resolveMaxCols(paperSize = '80mm', configuredMaxCols, role = 'cashier') {
     const configured = Number(configuredMaxCols);
     if (Number.isFinite(configured) && configured > 0) {
         return Math.max(20, Math.min(64, Math.floor(configured)));
@@ -545,6 +546,16 @@ function resolveMaxCols(paperSize = '80mm', configuredMaxCols) {
         normalized === '58' ||
         Number(paperSize) === 58
     );
+    // Per-printer width chosen by the shop (e.g. 48 = full 80mm width on Sunmi built-in printers).
+    // Never wider than the printhead's native column count, or lines hardware-wrap.
+    let savedCols = NaN;
+    try {
+        savedCols = Number(getPrinterConfig()?.[`${role}_max_cols`]);
+    } catch (e) {}
+    if (Number.isFinite(savedCols) && savedCols > 0) {
+        const hardwareCols = is58mm ? 32 : 48;
+        return Math.max(20, Math.min(hardwareCols, Math.floor(savedCols)));
+    }
     // Safe Column Limits: 36 for 80mm thermal paper rolls and 26 for 58mm rolls per Rule 3
     return is58mm ? 26 : 36;
 }
@@ -863,7 +874,7 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
     const encoder = new EscPosEncoder(false); // ALWAYS use TIS-620 for Thai POS printers
     encoder.initialize();
 
-    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols);
+    const maxCols = resolveMaxCols(paperSize, receiptConfig.maxCols, isKitchenTab ? 'kitchen' : 'cashier');
     const colOpts = { visualGraphemes: true };
 
     // CRITICAL TIS-620 CENTERING INTERCEPTOR:
@@ -928,7 +939,8 @@ export function encodeReceiptData(booking, activeTab, paymentMethod, optionMap =
                     const padding = targetCols - width;
                     processedLine = ' '.repeat(padding) + processedLine;
                 }
-                const effectiveGlobalLeftMargin = isKitchenTab ? '  ' : globalLeftMargin;
+                // Kitchen slips keep a 2-space gutter, but never more than the columns left over (none at full width)
+                const effectiveGlobalLeftMargin = isKitchenTab ? ' '.repeat(Math.min(2, paddingCols)) : globalLeftMargin;
                 return effectiveGlobalLeftMargin + processedLine;
             }
         });
