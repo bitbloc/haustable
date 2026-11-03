@@ -12,13 +12,21 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
     const pickupStatus = checkStatus(settings, 'shop_mode_pickup')
     const hausmadeStatus = checkStatus(settings, 'shop_mode_hausmade')
 
+    const isDepositRequired = settings?.booking_deposit_required === 'true'
+    const isPayAtStoreEnabled = settings?.pickup_pay_at_store_enabled !== 'false'
+    const shopPhone = settings?.contact_phone || '098-528-4217'
+    const cleanShopPhone = String(shopPhone).replace(/[^\d+]/g, '') || '0985284217'
+
     const primaryActions = [
         {
             id: 'table',
             num: '01',
             label: 'จองโต๊ะอาหาร',
             labelEn: 'Table Booking',
-            desc: 'จองโต๊ะล่วงหน้า เลือกลาน/โซน มัดจำหักเป็นเครดิต 100%',
+            badgeText: isDepositRequired ? 'ชำระล่วงหน้าผ่านระบบ' : 'จองฟรี · ร้านโทรยืนยัน',
+            desc: isDepositRequired
+                ? 'จองโต๊ะล่วงหน้า เลือกโซนได้ ชำระค่าอาหารล่วงหน้าผ่านระบบ'
+                : 'จองล่วงหน้าฟรี เลือกโซนได้ ร้านจะโทรยืนยันการจองก่อนทุก⁠ครั้ง',
             path: '/booking',
             cta: 'จองเลย',
             statusText: tableStatus.isOpen ? 'เปิดรับจองโต๊ะออนไลน์' : 'ปิดรับจองชั่วคราว',
@@ -30,7 +38,10 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
             num: '02',
             label: 'สั่งอาหารกลับบ้าน',
             labelEn: 'Order Pickup',
-            desc: 'สั่งล่วงหน้า เลือกเวลารับ จัดเตรียมสดใหม่พร้อมรับหน้าร้าน',
+            badgeText: isPayAtStoreEnabled ? 'จ่ายหน้าร้านได้' : 'สั่งล่วงหน้ารับที่ร้าน',
+            desc: isPayAtStoreEnabled
+                ? 'สั่งล่วงหน้า โอนจ่ายเลย หรือจ่ายที่ร้านตอนมารับ ร้านจะโทรยืนยันก่อนเริ่ม⁠ทำ'
+                : 'สั่งล่วงหน้า เลือกเวลารับ จัดเตรียมสดใหม่พร้อมรับหน้าร้าน',
             path: '/pickup',
             cta: 'สั่งเลย',
             statusText: pickupStatus.isOpen ? 'สั่งล่วงหน้ารับหน้าร้าน' : 'บริการปิดชั่วคราว',
@@ -100,15 +111,20 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                     const rowContent = (
                         <div className="flex items-center justify-between w-full p-4 sm:p-4.5">
                             <div className="flex flex-col text-left min-w-0 pr-4">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-[10px] sm:text-[11px] font-bold tracking-widest text-[var(--color-hallmark-ink-muted)] uppercase">
                                         {act.num} // {act.labelEn}
                                     </span>
+                                    {act.badgeText && (
+                                        <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 border border-[var(--color-hallmark-ink)] text-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-paper-dark)]">
+                                            {act.badgeText}
+                                        </span>
+                                    )}
                                 </div>
                                 <span className="font-bold text-[16px] sm:text-[17px] text-[var(--color-hallmark-ink)] leading-snug mt-0.5 truncate">
                                     {act.label}
                                 </span>
-                                <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-tight mt-0.5 line-clamp-1">
+                                <span className="text-[12px] text-[var(--color-hallmark-ink-muted)] leading-snug mt-0.5">
                                     {act.desc}
                                 </span>
                             </div>
@@ -144,6 +160,24 @@ export default function HomeActions({ settings, checkStatus, t, user, profile, s
                     )
                 })}
             </div>
+
+            {/* Confirmation Policy Notice Banner */}
+            {(!isDepositRequired || isPayAtStoreEnabled) && (
+                <div className="w-full px-4 py-3 border-t border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div className="text-[11px] sm:text-[12px] text-[var(--color-hallmark-ink)] leading-relaxed">
+                        <span className="font-mono font-bold uppercase tracking-wider mr-1.5">[ NOTICE ]</span>
+                        <span>
+                            การจองโต๊ะแบบไม่มีค่าใช้จ่าย และ การสั่งรับหน้าร้านแบบจ่ายที่ร้าน <strong>ต้องได้รับการยืนยันจากทางร้านเสมอ</strong> หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ที่แจ้ง
+                        </span>
+                    </div>
+                    <a
+                        href={`tel:${cleanShopPhone}`}
+                        className="font-mono text-[10px] font-bold px-2.5 py-1.5 border border-[var(--color-hallmark-ink)] bg-[var(--color-hallmark-ink)] text-[var(--color-hallmark-paper)] hover:opacity-90 transition-opacity shrink-0 self-start sm:self-center"
+                    >
+                        [ TEL: {shopPhone} ]
+                    </a>
+                </div>
+            )}
 
             {/* 2. Secondary Interactive Hub Header */}
             <div className="flex items-center justify-between w-full p-3 border-y border-[var(--color-hallmark-rule)] bg-[var(--color-hallmark-paper-dark)]">

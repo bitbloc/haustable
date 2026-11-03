@@ -9,19 +9,23 @@ import OptionSelectionModal from '../shared/OptionSelectionModal'
 export default function StepFood() {
     const { t } = useLanguage()
     const {
-        isCheckoutMode,
+        isCheckoutMode, settings,
         isOptionModalOpen, selectedItemForOptions,
         closeOptionModal, confirmOptionSelection
     } = useBooking()
 
+    // Free bookings are table-only (staff confirm by phone, food is ordered at the table),
+    // so the menu is skipped and step 3 is just the confirm page.
+    const showCheckout = isCheckoutMode || !settings.bookingDepositRequired
+
     return (
         <div className="h-full flex flex-col">
             <BookingHeader
-                title={isCheckoutMode ? t('confirmBooking') : t('foodAndDetail')}
+                title={showCheckout ? t('confirmBooking') : t('foodAndDetail')}
                 subtitle={t('stepFood')}
             />
 
-            {!isCheckoutMode ? <BookingMenu /> : <BookingCheckout />}
+            {!showCheckout ? <BookingMenu /> : <BookingCheckout />}
 
             {/* Option Modal */}
             {isOptionModalOpen && selectedItemForOptions && (

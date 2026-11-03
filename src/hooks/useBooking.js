@@ -218,7 +218,8 @@ export function useBooking() {
                 })
             }
 
-            const orderItemsPayload = state.cart.map(item => ({
+            // Free bookings never carry pre-ordered food (the menu step is skipped)
+            const orderItemsPayload = (isFreeBooking ? [] : state.cart).map(item => ({
                 menu_item_id: item.id,
                 name: item.name || item.title || item.custom_name || 'รายการอาหาร',
                 quantity: item.qty,

@@ -16,7 +16,7 @@ import { trackBookingComplete } from '../../utils/analyticsHelper'
 export default function BookingCheckout() {
     const { t } = useLanguage()
     const {
-        submitBooking, updateForm,
+        submitBooking, updateForm, setCheckoutMode,
         contactName, contactPhone, specialRequest, isAgreed, slipFile,
         cart, settings, pax, date, time, selectedTable, table
     } = useBooking()
@@ -431,7 +431,7 @@ export default function BookingCheckout() {
                         <span className="font-bold text-ink">{(selectedTable || table)?.table_name || 'Table'}</span>
                     </div>
                 </div>
-                {cart.length > 0 && (
+                {cart.length > 0 ? (
                     <div className="space-y-2">
                         {cart.map((item, index) => (
                             <div key={index} className="flex justify-between text-sm mb-3 border-b border-[var(--color-rule)] pb-2 last:border-0 last:pb-0">
@@ -442,6 +442,19 @@ export default function BookingCheckout() {
                                 <span className="font-bold font-mono text-ink">{((item.totalPricePerUnit || item.price) * item.qty)}.-</span>
                             </div>
                         ))}
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between text-xs font-mono text-subInk">
+                        <span>รายการอาหาร: จองเฉพาะโต๊ะ (สั่งอาหารที่ร้าน)</span>
+                        {typeof setCheckoutMode === 'function' && settings.bookingDepositRequired && (
+                            <button
+                                type="button"
+                                onClick={() => setCheckoutMode(false)}
+                                className="text-ink font-bold underline hover:opacity-75 cursor-pointer"
+                            >
+                                + เลือกอาหารล่วงหน้า
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -503,7 +516,12 @@ export default function BookingCheckout() {
                 <div className="bg-paper p-5 border border-ink rounded-rams space-y-2">
                     <h3 className="text-sm font-bold text-ink">{t('freeBookingTitle')}</h3>
                     <p className="text-sm text-ink leading-relaxed">
-                        {t('callConfirmNotice').replace('{phone}', localPhone?.trim() || '-')}
+                        {localPhone?.trim()
+                            ? t('callConfirmNotice').replace('{phone}', localPhone.trim())
+                            : 'พนักงานจะโทรยืนยันการจองตามเบอร์โทรศัพท์ที่ระบุก่อนถึงเวลานัด'}
+                    </p>
+                    <p className="text-xs font-mono font-bold text-[var(--color-accent)] leading-relaxed">
+                        * ต้องได้รับการยืนยันจากทางร้านในการจองฟรีเสมอ หากยังไม่ได้รับการติดต่อ กรุณาโทรตามเบอร์ <a href="tel:0985284217" className="underline">098-528-4217</a>
                     </p>
                     <p className="text-sm text-subInk leading-relaxed">
                         {t('holdNotice').replace('{n}', settings.bookingHoldMinutes || 30)}
@@ -881,7 +899,9 @@ export default function BookingCheckout() {
             <label className="flex items-start gap-3 p-2 cursor-pointer">
                 <input type="checkbox" checked={isAgreed} onChange={e => updateForm('isAgreed', e.target.checked)} className="mt-1 w-4 h-4 accent-ink" />
                 <span className="text-xs font-mono text-subInk leading-relaxed">
-                    {t('agreeTerms')}
+                    {isFreeBooking
+                        ? `ฉันรับทราบว่าพนักงานจะโทรยืนยันการจอง และร้านเก็บโต๊ะไว้ให้ ${settings.bookingHoldMinutes || 30} นาทีหลังเวลานัดหมาย`
+                        : t('agreeTerms')}
                 </span>
             </label>
 
