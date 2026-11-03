@@ -356,17 +356,16 @@ export default function POSOnlineHub({ activeShift, onOpenSlipModal, onViewSlipI
         try {
             const targetOrder = orders.find(o => o.id === id);
             const payload = { status: newStatus, ...customData };
-            if (['cancelled', 'rejected', 'no_show'].includes(newStatus) && targetOrder) {
-                const refunded = await refundBookingLoyaltyIfNeeded(targetOrder, supabase);
-                if (refunded) {
-                    payload.staff_remark = `${payload.staff_remark || targetOrder.staff_remark || ''} [LOYALTY_REFUNDED]`.trim();
-                }
-            }
             const { error } = await supabase
                 .from('bookings')
                 .update(payload)
                 .eq('id', id);
             if (error) throw error;
+
+            // Refund only after the status change is saved, so a failed update never refunds
+            if (['cancelled', 'rejected', 'no_show'].includes(newStatus) && targetOrder) {
+                await refundBookingLoyaltyIfNeeded({ ...targetOrder, staff_remark: payload.staff_remark ?? targetOrder.staff_remark }, supabase);
+            }
             toast.success(`อัปเดตสถานะเป็น [${newStatus.toUpperCase()}] สำเร็จ`);
 
             // Instant Realtime Broadcast to customer tracking page (< 50ms)

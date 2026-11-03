@@ -181,6 +181,9 @@ export function isBookingOverlap(requestStart, requestEnd, booking, optionsOrDur
 /**
  * Refunds xhaus coins and free drink quota back to member profile when an unpaid
  * online booking or pickup order is cancelled, rejected, or marked no-show.
+ * Call it AFTER the status change has been saved. The booking is tagged
+ * `[LOYALTY_REFUNDED]` only once the profile write is confirmed to have changed a row,
+ * so a blocked or failed write can be retried instead of being marked as done.
  * @param {Object} booking
  * @param {Object} supabaseClient
  * @returns {Promise<boolean>} True if a refund was applied
@@ -227,7 +230,24 @@ export async function refundBookingLoyaltyIfNeeded(booking, supabaseClient) {
         }
 
         if (Object.keys(updates).length > 0) {
-            await supabaseClient.from('profiles').update(updates).eq('id', userId);
+            // RLS denials come back as zero rows with no error, so require the updated row back
+            const { data: updatedRows, error: profileErr } = await supabaseClient
+                .from('profiles')
+                .update(updates)
+                .eq('id', userId)
+                .select('id');
+            if (profileErr || !updatedRows || updatedRows.length === 0) {
+                console.warn('[refundBookingLoyaltyIfNeeded] Profile refund not applied:', profileErr?.message || 'no row updated');
+                return false;
+            }
+
+            const { error: tagErr } = await supabaseClient
+                .from('bookings')
+                .update({ staff_remark: `${remark} [LOYALTY_REFUNDED]`.trim() })
+                .eq('id', booking.id);
+            if (tagErr) {
+                console.warn('[refundBookingLoyaltyIfNeeded] Refunded but failed to tag booking:', tagErr.message);
+            }
             return true;
         }
     } catch (err) {

@@ -55,6 +55,10 @@ import {
 import { useWakeLock } from '../hooks/useWakeLock';
 import { Users, Lock, Key, Plus, Minus, LogIn, LogOut, Printer, X, Search, Coins, Check, ReceiptText, AlertCircle, CheckCircle2, Clock, RefreshCw } from 'lucide-react';
 
+// Clearing a table voids its live sessions (incl. pending QR walk-ins) but never an unseated
+// advance dine_in reservation booked for later on the same table.
+const TABLE_CLEAR_VOID_FILTER = 'status.in.(seated,ready),and(status.in.(pending,confirmed),or(booking_type.is.null,booking_type.neq.dine_in))';
+
 const DEFAULT_BAR_CATS = [
     '7524bb8a-4698-45c6-aa17-d8ccc296f667', // Coffee
     '912683ef-fdc3-40a3-8dd8-b09507791240', // Soft Drink
@@ -3486,13 +3490,13 @@ export default function POSDashboard() {
                             .update({ status: 'void' })
                             .eq('id', bookingId);
 
-                        // Also void any lingering seated/ready sessions on this table without wiping future advance reservations
+                        // Also void any lingering live sessions on this table without wiping future advance reservations
                         if (targetTableId) {
                             await supabase
                                 .from('bookings')
                                 .update({ status: 'void' })
                                 .eq('table_id', targetTableId)
-                                .in('status', ['seated', 'ready']);
+                                .or(TABLE_CLEAR_VOID_FILTER);
                         }
                     } else {
                         addToOfflineQueue('void_booking', { bookingId, tableId: targetTableId });
@@ -3566,12 +3570,12 @@ export default function POSDashboard() {
                 window.dispatchEvent(new CustomEvent('pos_staff_call_cleared', { detail: { tableId: targetTableId } }));
                 window.dispatchEvent(new CustomEvent('pos_table_cleared', { detail: { tableId: targetTableId } }));
                 if (isOnline()) {
-                    // Safety clean any unclosed seated/ready sessions for this table in DB (preserve advance reservations)
+                    // Safety clean any unclosed live sessions for this table in DB (preserve advance reservations)
                     supabase
                         .from('bookings')
                         .update({ status: 'void' })
                         .eq('table_id', targetTableId)
-                        .in('status', ['seated', 'ready'])
+                        .or(TABLE_CLEAR_VOID_FILTER)
                         .then(() => {}).catch(() => {});
                 }
                 try {
@@ -5523,10 +5527,9 @@ export default function POSDashboard() {
                                         const tbl = onlineReservationModalData.table;
                                         const guestName = res.pickup_contact_name || res.customer_name || res.profiles?.display_name || 'ลูกค้า';
                                         if (!window.confirm(`ยืนยันลูกค้า "${guestName}" ไม่มาตามเวลานัด และต้องการปล่อยโต๊ะ ${tbl.table_name} (NO-SHOW)?`)) return;
-                                        const refunded = await refundBookingLoyaltyIfNeeded(res, supabase);
-                                        const nextRemark = refunded ? `${res.staff_remark || ''} [LOYALTY_REFUNDED]`.trim() : (res.staff_remark || '');
-                                        const { error } = await supabase.from('bookings').update({ status: 'no_show', staff_remark: nextRemark }).eq('id', res.id);
+                                        const { error } = await supabase.from('bookings').update({ status: 'no_show' }).eq('id', res.id);
                                         if (!error) {
+                                            await refundBookingLoyaltyIfNeeded(res, supabase);
                                             if (res.tracking_token) {
                                                 sendTrackingBroadcast(res.tracking_token, 'order_status_updated', { status: 'no_show', booking_id: res.id });
                                             }
@@ -5781,10 +5784,9 @@ export default function POSDashboard() {
                                             <button
                                                 type="button"
                                                 onClick={async () => {
-                                                    const refunded = await refundBookingLoyaltyIfNeeded(item, supabase);
-                                                    const nextRemark = refunded ? `${item.staff_remark || ''} [LOYALTY_REFUNDED]`.trim() : (item.staff_remark || '');
-                                                    const { error } = await supabase.from('bookings').update({ status: 'cancelled', staff_remark: nextRemark }).eq('id', item.id);
+                                                    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', item.id);
                                                     if (!error) {
+                                                        await refundBookingLoyaltyIfNeeded(item, supabase);
                                                         if (item.tracking_token) {
                                                             sendTrackingBroadcast(item.tracking_token, 'order_status_updated', {
                                                                 status: 'cancelled',

@@ -71,10 +71,15 @@ const SEARCH_ALIASES = {
     'ice cream': ['ไอศกรีม'],
 };
 
+// An unseated advance table reservation (dine_in, pending/confirmed) is not a live table session:
+// QR orders must never merge into it. Mirrors submit_customer_qr_order in the DB.
+const QR_SESSION_EXCLUDE_ADVANCE_RESERVATIONS = 'status.in.(seated,ready),booking_type.is.null,booking_type.neq.dine_in';
+
 // Session freshness validator (Discards sessions older than 16 hours from previous days)
 function isBookingActiveAndFresh(booking) {
     if (!booking) return false;
     if (!['pending', 'confirmed', 'seated', 'ready'].includes(booking.status)) return false;
+    if (booking.booking_type === 'dine_in' && ['pending', 'confirmed'].includes(booking.status)) return false;
     if (booking.booking_time) {
         const bookingAgeMs = Date.now() - new Date(booking.booking_time).getTime();
         const MAX_SESSION_AGE_MS = 16 * 60 * 60 * 1000; // 16 hours
@@ -339,6 +344,7 @@ export default function CustomerOrderLanding() {
                 .select('*, order_items(*, menu_items(*))')
                 .eq('table_id', targetId)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .or(QR_SESSION_EXCLUDE_ADVANCE_RESERVATIONS)
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -547,6 +553,7 @@ export default function CustomerOrderLanding() {
                 .select('*, order_items(*, menu_items(*))')
                 .eq('table_id', tableData.id)
                 .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                .or(QR_SESSION_EXCLUDE_ADVANCE_RESERVATIONS)
                 .order('booking_time', { ascending: false })
                 .limit(1)
                 .maybeSingle();
@@ -1333,6 +1340,7 @@ export default function CustomerOrderLanding() {
                     .select('*')
                     .eq('table_id', effectiveNumericTableId)
                     .in('status', ['pending', 'confirmed', 'seated', 'ready'])
+                    .or(QR_SESSION_EXCLUDE_ADVANCE_RESERVATIONS)
                     .order('booking_time', { ascending: false })
                     .limit(1)
                     .maybeSingle();
